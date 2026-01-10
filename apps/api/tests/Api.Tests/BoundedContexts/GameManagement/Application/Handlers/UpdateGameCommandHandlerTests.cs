@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Handlers;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
 using Api.Tests.TestHelpers;
@@ -217,6 +218,126 @@ public class UpdateGameCommandHandlerTests
         // Assert
         Assert.Equal(2025, result.YearPublished);
     }
+
+    // ===== VALIDATION TESTS =====
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Handle_EmptyOrWhitespaceTitle_ThrowsValidationException(string invalidTitle)
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var game = CreateTestGame(gameId);
+
+        _gameRepositoryMock
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        var command = new UpdateGameCommand(
+            GameId: gameId,
+            Title: invalidTitle);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_TitleExceedsMaxLength_ThrowsValidationException()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var game = CreateTestGame(gameId);
+
+        _gameRepositoryMock
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        var longTitle = new string('A', 201); // Exceeds 200 character limit
+        var command = new UpdateGameCommand(
+            GameId: gameId,
+            Title: longTitle);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        Assert.Contains("cannot exceed 200 characters", exception.Message);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(0, 4)]   // Min < 1
+    [InlineData(-1, 4)]  // Negative min
+    public async Task Handle_InvalidMinPlayers_ThrowsValidationException(int minPlayers, int maxPlayers)
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var game = CreateTestGame(gameId);
+
+        _gameRepositoryMock
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        var command = new UpdateGameCommand(
+            GameId: gameId,
+            MinPlayers: minPlayers,
+            MaxPlayers: maxPlayers);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        Assert.Contains("Minimum player count cannot be less than 1", exception.Message);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(2, 101)]  // Max > 100
+    [InlineData(1, 150)]  // Max far exceeds limit
+    public async Task Handle_MaxPlayersExceedsLimit_ThrowsValidationException(int minPlayers, int maxPlayers)
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var game = CreateTestGame(gameId);
+
+        _gameRepositoryMock
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        var command = new UpdateGameCommand(
+            GameId: gameId,
+            MinPlayers: minPlayers,
+            MaxPlayers: maxPlayers);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        Assert.Contains("Maximum player count cannot exceed 100", exception.Message);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static Game CreateTestGame(Guid id)
+    {
+        var title = new GameTitle("Test Game");
+        return new Game(
+            id: id,
+            title: title,
+            publisher: null,
+            yearPublished: null,
+            playerCount: null,
+            playTime: null
+        );
+    }
+
     [Fact]
     public async Task Handle_NonExistentGame_ThrowsInvalidOperationException()
     {

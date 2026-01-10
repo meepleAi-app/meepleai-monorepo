@@ -23,7 +23,14 @@ internal class ResetUserPasswordCommandHandler : ICommandHandler<ResetUserPasswo
     public async Task Handle(ResetUserPasswordCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var userId = Guid.Parse(command.UserId);
+
+        // Validate UserId format before parsing
+        if (string.IsNullOrWhiteSpace(command.UserId))
+            throw new ValidationException("UserId cannot be empty");
+
+        if (!Guid.TryParse(command.UserId, out var userId))
+            throw new ValidationException($"Invalid UserId format: {command.UserId}");
+
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)
             throw new DomainException($"User {command.UserId} not found");

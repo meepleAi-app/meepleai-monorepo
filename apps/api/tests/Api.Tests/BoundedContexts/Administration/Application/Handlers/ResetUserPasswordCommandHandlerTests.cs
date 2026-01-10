@@ -232,4 +232,76 @@ public class ResetUserPasswordCommandHandlerTests
             u => u.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
+
+    // === VALIDATION FAILURE TESTS (Week 10-11: Validation branch coverage) ===
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Handle_EmptyUserId_ThrowsValidationException(string emptyUserId)
+    {
+        // Arrange
+        var command = new ResetUserPasswordCommand(
+            UserId: emptyUserId,
+            NewPassword: "NewPassword123!");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+
+        _userRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("short")]
+    public async Task Handle_InvalidOrEmptyPassword_ThrowsValidationException(string invalidPassword)
+    {
+        // Arrange
+        var command = new ResetUserPasswordCommand(
+            UserId: Guid.NewGuid().ToString(),
+            NewPassword: invalidPassword);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+
+        _userRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_InvalidUserIdGuid_ThrowsValidationException()
+    {
+        // Arrange
+        var command = new ResetUserPasswordCommand(
+            UserId: "not-a-guid",
+            NewPassword: "NewPassword123!");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+
+        _userRepositoryMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_UserNotFound_ThrowsDomainException()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var command = new ResetUserPasswordCommand(
+            UserId: userId.ToString(),
+            NewPassword: "NewPassword123!");
+
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DomainException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+
+        _userRepositoryMock.Verify(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

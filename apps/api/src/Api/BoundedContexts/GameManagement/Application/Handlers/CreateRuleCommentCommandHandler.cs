@@ -91,15 +91,16 @@ internal partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateR
                 return new List<string>();
             }
 
-            // MA0011/MA0074/CA1304/CA1311: ToLower()/Contains()/StartsWith() required for EF Core SQL translation
+            // MA0011/MA0074/CA1304/CA1310/CA1311/CA1862: ToLower()/Contains()/StartsWith() required for EF Core SQL translation
             // EF Core translates these to SQL functions which are deterministic and culture-safe in database context
-#pragma warning disable MA0011, MA0074, CA1304, CA1311 // EF Core SQL translation limitation
+            // mentionedUsernames are already normalized to lowercase (line 85), so we compare with ToLowerInvariant()
+#pragma warning disable MA0011, MA0074, CA1304, CA1310, CA1311, CA1862 // EF Core SQL translation limitation
             var users = await _dbContext.Users
                 .AsNoTracking()
                 .Where(u =>
-                    (u.DisplayName != null && mentionedUsernames.Any(m => string.Equals(u.DisplayName, m, StringComparison.CurrentCultureIgnoreCase)))
-                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.StartsWith(m, StringComparison.OrdinalIgnoreCase))))
-#pragma warning restore MA0011, MA0074, CA1304, CA1311
+                    (u.DisplayName != null && mentionedUsernames.Any(m => u.DisplayName.ToLowerInvariant() == m))
+                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLowerInvariant().StartsWith(m))))
+#pragma warning restore MA0011, MA0074, CA1304, CA1310, CA1311, CA1862
                 .Select(u => u.Id.ToString())
                 .Distinct()
                 .ToListAsync(cancellationToken).ConfigureAwait(false);

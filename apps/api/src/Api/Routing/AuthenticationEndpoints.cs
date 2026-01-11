@@ -51,7 +51,7 @@ internal static class AuthenticationEndpoints
 
     private static void MapRegisterEndpoint(RouteGroupBuilder group)
     {
-        group.MapPost("/auth/register", async (RegisterPayload payload, IMediator mediator, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/auth/register", async ([FromBody] RegisterPayload payload, IMediator mediator, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
         {
             var displayName = string.IsNullOrWhiteSpace(payload.DisplayName)
                 ? payload.Email.Split('@')[0]

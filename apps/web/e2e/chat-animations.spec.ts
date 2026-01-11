@@ -5,11 +5,11 @@
  */
 
 import { test, expect } from './fixtures/chromatic';
+import { WaitHelper } from './helpers/WaitHelper';
 
 import type { Page } from '@playwright/test';
 
 import './fixtures/auth';
-import { WaitHelper } from './helpers/WaitHelper';
 
 /**
  * Helper: Navigate to chat page (auth handled by fixture)

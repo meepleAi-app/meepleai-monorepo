@@ -5,7 +5,6 @@
  */
 
 import { test as base, expect, Page } from './fixtures/chromatic';
-
 // ✅ REMOVED IMPORTS: mockGamesAPI, mockAgentsAPI, waitForAutoSelection (no longer needed)
 import { WaitHelper } from './helpers/WaitHelper';
 import { AuthHelper, USER_FIXTURES } from './pages';

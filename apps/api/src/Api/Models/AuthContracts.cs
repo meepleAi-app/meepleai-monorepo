@@ -3,11 +3,34 @@ using System.Text.Json.Serialization;
 #pragma warning disable MA0048 // File name must match type name - Multi-type DTO file
 namespace Api.Models;
 
-internal record RegisterPayload(
-    string Email,
-    string Password,
-    string? DisplayName,
-    string? Role);
+/// <summary>
+/// Registration payload supporting both camelCase (frontend) and PascalCase (backend) JSON formats.
+/// Case-insensitive matching is configured globally in Program.cs via ConfigureHttpJsonOptions.
+/// </summary>
+internal class RegisterPayload
+{
+    /// <summary>
+    /// User email address. Accepts both "email" (camelCase) and "Email" (PascalCase) in JSON.
+    /// </summary>
+    public string Email { get; set; } = string.Empty;
+
+    /// <summary>
+    /// User password. Accepts both "password" (camelCase) and "Password" (PascalCase) in JSON.
+    /// </summary>
+    public string Password { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional display name. Accepts both "displayName" (camelCase) and "DisplayName" (PascalCase) in JSON.
+    /// If not provided, defaults to email prefix in endpoint handler.
+    /// </summary>
+    public string? DisplayName { get; set; }
+
+    /// <summary>
+    /// Optional role assignment. Accepts both "role" (camelCase) and "Role" (PascalCase) in JSON.
+    /// If not provided, defaults to "User" role (or "Admin" for first user).
+    /// </summary>
+    public string? Role { get; set; }
+}
 
 /// <summary>
 /// Login payload supporting both camelCase (frontend) and PascalCase (backend) JSON formats.

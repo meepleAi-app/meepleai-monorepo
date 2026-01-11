@@ -131,10 +131,17 @@ describe('ApiKeysPageClient', () => {
       </AuthProvider>
     );
 
+    // Issue #2321: Fix async rendering race condition
+    // Root cause: getAllByText is synchronous - may execute before all table rows render
+    // Wait for both API keys to be rendered first
     await waitFor(() => {
-      const badges = screen.getAllByText('Active');
-      expect(badges).toHaveLength(2);
+      expect(screen.getByText('Production API Key')).toBeInTheDocument();
+      expect(screen.getByText('Development API Key')).toBeInTheDocument();
     });
+
+    // NOW both rows are guaranteed in DOM - safe to query badges
+    const badges = screen.getAllByText('Active');
+    expect(badges).toHaveLength(2);
   });
 
   it('opens create key dialog when button is clicked', async () => {

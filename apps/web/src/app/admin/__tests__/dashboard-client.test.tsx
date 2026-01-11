@@ -193,9 +193,15 @@ describe('DashboardClient', () => {
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
+    // Issue #2321: Fix React Query error state timing
+    // Root cause: React Query error state transition is async - default 1000ms timeout insufficient
+    // Wait for error state to be fully rendered before asserting button presence
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+      expect(screen.getByText('Error Loading Dashboard')).toBeInTheDocument();
     });
+
+    // NOW error state is guaranteed rendered - safe to query retry button
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
   });
 
   it('displays last updated time', async () => {

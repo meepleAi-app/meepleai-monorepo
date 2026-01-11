@@ -101,7 +101,7 @@ describe('useCurrentUser', () => {
     expect(mockGetCurrentUser).toHaveBeenCalledTimes(1);
   });
 
-  it('should cache user data', async () => {
+  it('should NOT cache user data for security (always verify with server)', async () => {
     const mockUser = {
       id: '990e8400-e29b-41d4-a716-000000000001',
       email: 'test@example.com',
@@ -119,13 +119,17 @@ describe('useCurrentUser', () => {
     const { result: result1 } = renderHook(() => useCurrentUser(), { wrapper });
     await waitFor(() => expect(result1.current.isSuccess).toBe(true));
 
-    // Second render (should use cache)
+    // Second render (should NOT use cache - security requirement)
     const { result: result2 } = renderHook(() => useCurrentUser(), { wrapper });
 
-    // Should immediately have data from cache
+    // Wait for second query to complete
+    await waitFor(() => expect(result2.current.isSuccess).toBe(true));
+
+    // Should verify data from server
     expect(result2.current.data).toEqual(mockUser);
 
-    // Should only call API once (cache hit)
-    expect(mockGetCurrentUser).toHaveBeenCalledTimes(1);
+    // Should call API twice (no cache, always verify for security)
+    // This is intentional: auth state must always be verified with server
+    expect(mockGetCurrentUser).toHaveBeenCalledTimes(2);
   });
 });

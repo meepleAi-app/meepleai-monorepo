@@ -49,7 +49,11 @@ export function useCurrentUser(): UseQueryResult<AuthUser | null, Error> {
     },
     // Refetch when user switches back to the tab (detect logout in other tab)
     refetchOnWindowFocus: true,
-    // Don't refetch on mount if data is fresh (reduce unnecessary API calls)
-    refetchOnMount: false,
+    // Always verify auth status on mount (don't trust cache for security-critical data)
+    refetchOnMount: true,
+    // Don't cache auth state (always verify with server)
+    staleTime: 0,
+    // Cache for at most 1 minute before considering data garbage
+    gcTime: 60 * 1000,
   });
 }

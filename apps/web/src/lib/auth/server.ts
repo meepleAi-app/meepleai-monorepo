@@ -25,8 +25,10 @@ import type { AuthUser } from '@/types/auth';
 /**
  * Backend API base URL for server-to-server calls
  * Uses internal Docker service name in production, localhost in dev
+ * Prioritizes API_BASE_URL (Docker internal) over NEXT_PUBLIC_API_BASE (browser)
  */
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+const API_BASE =
+  process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 /**
  * Session cookie name (matches middleware.ts and backend CookieHelpers.cs)

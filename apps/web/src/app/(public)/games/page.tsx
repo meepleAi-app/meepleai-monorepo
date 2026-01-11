@@ -28,8 +28,9 @@ import { Pagination } from './components/Pagination';
 import { SearchBar } from './components/SearchBar';
 import { ViewToggle } from './components/ViewToggle';
 
-// API base URL
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+// API base URL - prioritize internal Docker network URL for SSR
+const API_BASE =
+  process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 // ============================================================================
 // Types

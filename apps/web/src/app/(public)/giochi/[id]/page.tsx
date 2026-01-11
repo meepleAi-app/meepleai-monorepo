@@ -47,7 +47,9 @@ interface Game {
 // Data Fetching
 // ============================================================================
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+// API base URL - prioritize internal Docker network URL for SSR
+const API_BASE =
+  process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function fetchGame(id: string): Promise<Game | null> {
   try {

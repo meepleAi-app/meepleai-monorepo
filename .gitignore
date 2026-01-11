@@ -60,6 +60,16 @@ coverage/
 .nyc_output/
 .pytest_cache/
 TestResults/
+# Test artifacts
+test-results.log
+test-output.log
+e2e-test-results.log
+e2e-critical-paths.log
+build-analysis.log
+# Coverage reports (keep only versioned finals)
+coverage-*.txt
+!coverage-final-*.txt
+!coverage-report-*.txt
 
 # Python
 .venv/

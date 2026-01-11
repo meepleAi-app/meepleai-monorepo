@@ -20,7 +20,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 
-import { PublicLayoutWrapper } from '@/components/layouts';
 import { Button } from '@/components/ui/button';
 
 import { GameGrid } from './components/GameGrid';
@@ -136,37 +135,35 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
   const { games, total, totalPages } = await fetchGames(search, currentPage, 20);
 
   return (
-    <PublicLayoutWrapper containerWidth="xl">
-      <div>
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h1 className="font-heading text-3xl md:text-4xl font-bold mb-2">Catalogo Giochi</h1>
-            <p className="text-muted-foreground">
-              Esplora {total} giochi da tavolo. Cerca, filtra e scopri le regole.
-            </p>
-          </div>
-          <Link href="/games/add">
-            <Button>Aggiungi Gioco</Button>
-          </Link>
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="font-heading text-3xl md:text-4xl font-bold mb-2">Catalogo Giochi</h1>
+          <p className="text-muted-foreground">
+            Esplora {total} giochi da tavolo. Cerca, filtra e scopri le regole.
+          </p>
         </div>
-
-        {/* Toolbar: Search + View Toggle */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
-          <div className="w-full sm:w-96">
-            <SearchBar currentSearch={search} />
-          </div>
-          <ViewToggle currentView={view} />
-        </div>
-
-        {/* Games Grid/List */}
-        <GameGrid games={games} variant={view} />
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={total} />
-        )}
+        <Link href="/games/add">
+          <Button>Aggiungi Gioco</Button>
+        </Link>
       </div>
-    </PublicLayoutWrapper>
+
+      {/* Toolbar: Search + View Toggle */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
+        <div className="w-full sm:w-96">
+          <SearchBar currentSearch={search} />
+        </div>
+        <ViewToggle currentView={view} />
+      </div>
+
+      {/* Games Grid/List */}
+      <GameGrid games={games} variant={view} />
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={total} />
+      )}
+    </div>
   );
 }

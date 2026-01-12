@@ -92,6 +92,7 @@ internal sealed class SharedGameRepository : ISharedGameRepository
             entity.ModifiedBy,
             entity.CreatedAt,
             entity.ModifiedAt,
+            entity.IsDeleted,
             entity.BggId);
     }
 

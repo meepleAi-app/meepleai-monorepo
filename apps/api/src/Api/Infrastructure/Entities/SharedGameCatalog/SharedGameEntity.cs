@@ -22,7 +22,7 @@ public class SharedGameEntity
     public int Status { get; set; } // 0=Draft, 1=Published, 2=Archived
     public string? RulesContent { get; set; }
     public string? RulesLanguage { get; set; }
-    public string SearchVector { get; set; } = string.Empty; // Managed by PostgreSQL trigger
+    // SearchVector managed by PostgreSQL trigger - not mapped by EF Core
     public Guid CreatedBy { get; set; }
     public Guid? ModifiedBy { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -30,6 +30,8 @@ public class SharedGameEntity
     public bool IsDeleted { get; set; }
 
     // Navigation properties (many-to-many)
+    public ICollection<GameDesignerEntity> Designers { get; set; } = new List<GameDesignerEntity>();
+    public ICollection<GamePublisherEntity> Publishers { get; set; } = new List<GamePublisherEntity>();
     public ICollection<GameCategoryEntity> Categories { get; set; } = new List<GameCategoryEntity>();
     public ICollection<GameMechanicEntity> Mechanics { get; set; } = new List<GameMechanicEntity>();
 }

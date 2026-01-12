@@ -83,10 +83,6 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .HasColumnName("rules_language")
             .HasMaxLength(10);
 
-        builder.Property(e => e.SearchVector)
-            .HasColumnName("search_vector")
-            .HasColumnType("tsvector");
-
         builder.Property(e => e.CreatedBy)
             .HasColumnName("created_by")
             .IsRequired();
@@ -121,9 +117,7 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .HasDatabaseName("ix_shared_games_title")
             .HasFilter("is_deleted = false");
 
-        builder.HasIndex(e => e.SearchVector)
-            .HasDatabaseName("ix_shared_games_search_vector")
-            .HasMethod("gin");
+        // Note: SearchVector index will be added manually in migration with tsvector type
 
         // Constraints
         builder.ToTable(t =>

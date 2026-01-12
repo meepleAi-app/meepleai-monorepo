@@ -115,7 +115,7 @@ internal sealed class SharedGameRepository : ISharedGameRepository
             Status = (int)game.Status,
             RulesContent = game.Rules?.Content,
             RulesLanguage = game.Rules?.Language,
-            SearchVector = string.Empty, // Managed by PostgreSQL trigger
+            // SearchVector managed by PostgreSQL trigger
             CreatedBy = game.CreatedBy,
             ModifiedBy = game.ModifiedBy,
             CreatedAt = game.CreatedAt,

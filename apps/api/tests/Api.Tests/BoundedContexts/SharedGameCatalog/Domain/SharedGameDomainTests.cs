@@ -233,6 +233,78 @@ public class SharedGameDomainTests
                 null));
     }
 
+    #region GameDesigner Tests
+
+    [Fact]
+    public void GameDesigner_Create_WithValidName_CreatesSuccessfully()
+    {
+        // Arrange & Act
+        var designer = GameDesigner.Create("Reiner Knizia");
+
+        // Assert
+        Assert.NotEqual(Guid.Empty, designer.Id);
+        Assert.Equal("Reiner Knizia", designer.Name);
+        Assert.True(designer.CreatedAt <= DateTime.UtcNow);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void GameDesigner_Create_WithInvalidName_ThrowsArgumentException(string invalidName)
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentException>(() => GameDesigner.Create(invalidName));
+    }
+
+    [Fact]
+    public void GameDesigner_Create_WithNameTooLong_ThrowsArgumentException()
+    {
+        // Arrange
+        var longName = new string('A', 201);
+
+        // Act & Assert
+        Assert.Throws<ArgumentException>(() => GameDesigner.Create(longName));
+    }
+
+    #endregion
+
+    #region GamePublisher Tests
+
+    [Fact]
+    public void GamePublisher_Create_WithValidName_CreatesSuccessfully()
+    {
+        // Arrange & Act
+        var publisher = GamePublisher.Create("CMON");
+
+        // Assert
+        Assert.NotEqual(Guid.Empty, publisher.Id);
+        Assert.Equal("CMON", publisher.Name);
+        Assert.True(publisher.CreatedAt <= DateTime.UtcNow);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void GamePublisher_Create_WithInvalidName_ThrowsArgumentException(string invalidName)
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentException>(() => GamePublisher.Create(invalidName));
+    }
+
+    [Fact]
+    public void GamePublisher_Create_WithNameTooLong_ThrowsArgumentException()
+    {
+        // Arrange
+        var longName = new string('A', 201);
+
+        // Act & Assert
+        Assert.Throws<ArgumentException>(() => GamePublisher.Create(longName));
+    }
+
+    #endregion
+
     private static SharedGame CreateValidGame()
     {
         return SharedGame.Create(

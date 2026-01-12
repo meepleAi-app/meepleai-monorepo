@@ -123,4 +123,24 @@ internal sealed class SharedGameRepository : ISharedGameRepository
             IsDeleted = false
         };
     }
+
+    public async Task<SharedGame?> GetGameByFaqIdAsync(Guid faqId, CancellationToken cancellationToken = default)
+    {
+        var gameEntity = await _context.SharedGames
+            .Include(g => g.Faqs)
+            .Where(g => g.Faqs.Any(f => f.Id == faqId))
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        return gameEntity != null ? MapToDomain(gameEntity) : null;
+    }
+
+    public async Task<SharedGame?> GetGameByErrataIdAsync(Guid errataId, CancellationToken cancellationToken = default)
+    {
+        var gameEntity = await _context.SharedGames
+            .Include(g => g.Erratas)
+            .Where(g => g.Erratas.Any(e => e.Id == errataId))
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        return gameEntity != null ? MapToDomain(gameEntity) : null;
+    }
 }

@@ -49,6 +49,8 @@ public sealed class SharedGame : AggregateRoot<Guid>
     private readonly List<GamePublisher> _publishers = new();
     private readonly List<GameCategory> _categories = new();
     private readonly List<GameMechanic> _mechanics = new();
+    private readonly List<GameFaq> _faqs = new();
+    private readonly List<GameErrata> _erratas = new();
 
     /// <summary>
     /// Gets the unique identifier of this game.
@@ -164,6 +166,16 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Gets the mechanics this game uses.
     /// </summary>
     public IReadOnlyCollection<GameMechanic> Mechanics => _mechanics.AsReadOnly();
+
+    /// <summary>
+    /// Gets the FAQs for this game.
+    /// </summary>
+    public IReadOnlyCollection<GameFaq> Faqs => _faqs.AsReadOnly();
+
+    /// <summary>
+    /// Gets the errata for this game.
+    /// </summary>
+    public IReadOnlyCollection<GameErrata> Erratas => _erratas.AsReadOnly();
 
     /// <summary>
     /// Parameterless constructor for EF Core.
@@ -405,6 +417,146 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _modifiedAt = DateTime.UtcNow;
 
         AddDomainEvent(new SharedGameArchivedEvent(_id, archivedBy));
+    }
+
+    /// <summary>
+    /// Adds a FAQ to this game.
+    /// </summary>
+    /// <param name="faq">The FAQ to add</param>
+    /// <exception cref="ArgumentNullException">Thrown when faq is null</exception>
+    public void AddFaq(GameFaq faq)
+    {
+        ArgumentNullException.ThrowIfNull(faq);
+
+        if (faq.SharedGameId != _id)
+            throw new ArgumentException("FAQ does not belong to this game", nameof(faq));
+
+        _faqs.Add(faq);
+        AddDomainEvent(new GameFaqAddedEvent(_id, faq.Id, faq.Question));
+    }
+
+    /// <summary>
+    /// Updates an existing FAQ in this game.
+    /// </summary>
+    /// <param name="faqId">The ID of the FAQ to update</param>
+    /// <param name="question">The new question text</param>
+    /// <param name="answer">The new answer text</param>
+    /// <param name="order">The new display order</param>
+    /// <exception cref="InvalidOperationException">Thrown when FAQ is not found</exception>
+    public void UpdateFaq(Guid faqId, string question, string answer, int order)
+    {
+        if (faqId == Guid.Empty)
+            throw new ArgumentException("FaqId cannot be empty", nameof(faqId));
+
+        if (string.IsNullOrWhiteSpace(question))
+            throw new ArgumentException("Question is required", nameof(question));
+
+        if (question.Length > 500)
+            throw new ArgumentException("Question cannot exceed 500 characters", nameof(question));
+
+        if (string.IsNullOrWhiteSpace(answer))
+            throw new ArgumentException("Answer is required", nameof(answer));
+
+        if (order < 0)
+            throw new ArgumentException("Order cannot be negative", nameof(order));
+
+        var faq = _faqs.FirstOrDefault(f => f.Id == faqId);
+        if (faq is null)
+            throw new InvalidOperationException($"FAQ with ID {faqId} not found in this game");
+
+        // Create updated FAQ (recreate with new values since entity is immutable)
+        var updatedFaq = new GameFaq(faqId, _id, question, answer, order, faq.CreatedAt);
+
+        // Remove old and add updated
+        _faqs.Remove(faq);
+        _faqs.Add(updatedFaq);
+    }
+
+    /// <summary>
+    /// Removes an existing FAQ from this game.
+    /// </summary>
+    /// <param name="faqId">The ID of the FAQ to remove</param>
+    /// <exception cref="InvalidOperationException">Thrown when FAQ is not found</exception>
+    public void RemoveFaq(Guid faqId)
+    {
+        if (faqId == Guid.Empty)
+            throw new ArgumentException("FaqId cannot be empty", nameof(faqId));
+
+        var faq = _faqs.FirstOrDefault(f => f.Id == faqId);
+        if (faq is null)
+            throw new InvalidOperationException($"FAQ with ID {faqId} not found in this game");
+
+        _faqs.Remove(faq);
+    }
+
+    /// <summary>
+    /// Adds an erratum to this game.
+    /// </summary>
+    /// <param name="errata">The erratum to add</param>
+    /// <exception cref="ArgumentNullException">Thrown when errata is null</exception>
+    public void AddErrata(GameErrata errata)
+    {
+        ArgumentNullException.ThrowIfNull(errata);
+
+        if (errata.SharedGameId != _id)
+            throw new ArgumentException("Erratum does not belong to this game", nameof(errata));
+
+        _erratas.Add(errata);
+        AddDomainEvent(new GameErrataAddedEvent(_id, errata.Id, errata.Description));
+    }
+
+    /// <summary>
+    /// Updates an existing erratum in this game.
+    /// </summary>
+    /// <param name="errataId">The ID of the erratum to update</param>
+    /// <param name="description">The new description</param>
+    /// <param name="pageReference">The new page reference</param>
+    /// <param name="publishedDate">The new published date</param>
+    /// <exception cref="InvalidOperationException">Thrown when erratum is not found</exception>
+    public void UpdateErrata(Guid errataId, string description, string pageReference, DateTime publishedDate)
+    {
+        if (errataId == Guid.Empty)
+            throw new ArgumentException("ErrataId cannot be empty", nameof(errataId));
+
+        if (string.IsNullOrWhiteSpace(description))
+            throw new ArgumentException("Description is required", nameof(description));
+
+        if (string.IsNullOrWhiteSpace(pageReference))
+            throw new ArgumentException("PageReference is required", nameof(pageReference));
+
+        if (pageReference.Length > 100)
+            throw new ArgumentException("PageReference cannot exceed 100 characters", nameof(pageReference));
+
+        if (publishedDate > DateTime.UtcNow)
+            throw new ArgumentException("PublishedDate cannot be in the future", nameof(publishedDate));
+
+        var errata = _erratas.FirstOrDefault(e => e.Id == errataId);
+        if (errata is null)
+            throw new InvalidOperationException($"Erratum with ID {errataId} not found in this game");
+
+        // Create updated erratum (recreate with new values since entity is immutable)
+        var updatedErrata = new GameErrata(errataId, _id, description, pageReference, publishedDate, errata.CreatedAt);
+
+        // Remove old and add updated
+        _erratas.Remove(errata);
+        _erratas.Add(updatedErrata);
+    }
+
+    /// <summary>
+    /// Removes an existing erratum from this game.
+    /// </summary>
+    /// <param name="errataId">The ID of the erratum to remove</param>
+    /// <exception cref="InvalidOperationException">Thrown when erratum is not found</exception>
+    public void RemoveErrata(Guid errataId)
+    {
+        if (errataId == Guid.Empty)
+            throw new ArgumentException("ErrataId cannot be empty", nameof(errataId));
+
+        var errata = _erratas.FirstOrDefault(e => e.Id == errataId);
+        if (errata is null)
+            throw new InvalidOperationException($"Erratum with ID {errataId} not found in this game");
+
+        _erratas.Remove(errata);
     }
 
     // Validation Methods

@@ -34,4 +34,8 @@ public class SharedGameEntity
     public ICollection<GamePublisherEntity> Publishers { get; set; } = new List<GamePublisherEntity>();
     public ICollection<GameCategoryEntity> Categories { get; set; } = new List<GameCategoryEntity>();
     public ICollection<GameMechanicEntity> Mechanics { get; set; } = new List<GameMechanicEntity>();
+
+    // Navigation properties (one-to-many)
+    public ICollection<GameFaqEntity> Faqs { get; set; } = new List<GameFaqEntity>();
+    public ICollection<GameErrataEntity> Erratas { get; set; } = new List<GameErrataEntity>();
 }

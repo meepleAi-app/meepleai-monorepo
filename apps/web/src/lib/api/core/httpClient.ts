@@ -39,12 +39,27 @@ export interface RequestOptions extends RequestInit {
 
 /**
  * Get API base URL from environment with fallback
+ *
+ * In development (browser runtime), returns empty string to use Next.js API proxy (prevents CORS).
+ * In test/production, returns absolute URL from NEXT_PUBLIC_API_BASE or localhost.
+ *
+ * @see apps/web/src/app/api/v1/[...path]/route.ts - Next.js API proxy
+ * @see Issue #2366 - BGG search CORS fix
  */
 export function getApiBase(): string {
+  // Development (browser only): Use Next.js API proxy (relative paths, no CORS)
+  // Skip in test environment to maintain test mock compatibility
+  if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+    return '';
+  }
+
+  // Production/Test: Use absolute URL from environment
   const envBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
   if (envBase && envBase !== 'undefined' && envBase !== 'null') {
     return envBase;
   }
+
+  // Fallback for test environment and development SSR
   return 'http://localhost:8080';
 }
 
@@ -856,8 +871,8 @@ export class HttpClient {
       headers['Authorization'] = `ApiKey ${apiKey}`;
     }
 
-    if (typeof window !== 'undefined') {
-      // Correlation ID for distributed tracing
+    // Correlation ID for distributed tracing (browser or test mock)
+    if (typeof sessionStorage !== 'undefined' && typeof crypto !== 'undefined') {
       let correlationId = sessionStorage.getItem('correlation_id');
       if (!correlationId) {
         correlationId = crypto.randomUUID();

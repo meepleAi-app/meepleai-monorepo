@@ -103,6 +103,9 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .IsRequired()
             .HasDefaultValue(false);
 
+        // Global query filter for soft deletes
+        builder.HasQueryFilter(e => !e.IsDeleted);
+
         // Indexes
         builder.HasIndex(e => e.BggId)
             .IsUnique()

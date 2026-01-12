@@ -39,6 +39,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
 
     // Status & Metadata
     private GameStatus _status;
+    private bool _isDeleted;
     private Guid _createdBy;
     private Guid? _modifiedBy;
     private readonly DateTime _createdAt;
@@ -126,6 +127,11 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Gets the publication status of this game.
     /// </summary>
     public GameStatus Status => _status;
+
+    /// <summary>
+    /// Gets whether this game has been soft-deleted.
+    /// </summary>
+    public bool IsDeleted => _isDeleted;
 
     /// <summary>
     /// Gets the ID of the user who created this game entry.
@@ -218,6 +224,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _thumbnailUrl = thumbnailUrl;
         _rules = rules;
         _status = GameStatus.Draft;
+        _isDeleted = false;
         _createdBy = createdBy;
         _createdAt = DateTime.UtcNow;
         _bggId = bggId;
@@ -246,6 +253,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
         Guid? modifiedBy,
         DateTime createdAt,
         DateTime? modifiedAt,
+        bool isDeleted,
         int? bggId = null) : base(id)
     {
         _id = id;
@@ -262,6 +270,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _thumbnailUrl = thumbnailUrl;
         _rules = rules;
         _status = status;
+        _isDeleted = isDeleted;
         _createdBy = createdBy;
         _modifiedBy = modifiedBy;
         _createdAt = createdAt;
@@ -430,6 +439,10 @@ public sealed class SharedGame : AggregateRoot<Guid>
         if (deletedBy == Guid.Empty)
             throw new ArgumentException("DeletedBy cannot be empty", nameof(deletedBy));
 
+        if (_isDeleted)
+            throw new InvalidOperationException("Game is already deleted");
+
+        _isDeleted = true;
         _modifiedBy = deletedBy;
         _modifiedAt = DateTime.UtcNow;
 

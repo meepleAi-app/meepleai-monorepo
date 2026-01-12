@@ -44,10 +44,9 @@ public sealed class SharedGame : AggregateRoot<Guid>
     private readonly DateTime _createdAt;
     private DateTime? _modifiedAt;
 
-    // Full-Text Search (populated by PostgreSQL trigger)
-    private readonly string _searchVector = string.Empty;
-
     // Collections (navigation properties)
+    private readonly List<GameDesigner> _designers = new();
+    private readonly List<GamePublisher> _publishers = new();
     private readonly List<GameCategory> _categories = new();
     private readonly List<GameMechanic> _mechanics = new();
 
@@ -147,9 +146,14 @@ public sealed class SharedGame : AggregateRoot<Guid>
     public DateTime? ModifiedAt => _modifiedAt;
 
     /// <summary>
-    /// Gets the full-text search vector (managed by PostgreSQL).
+    /// Gets the designers who created this game.
     /// </summary>
-    public string SearchVector => _searchVector;
+    public IReadOnlyCollection<GameDesigner> Designers => _designers.AsReadOnly();
+
+    /// <summary>
+    /// Gets the publishers who published this game.
+    /// </summary>
+    public IReadOnlyCollection<GamePublisher> Publishers => _publishers.AsReadOnly();
 
     /// <summary>
     /// Gets the categories this game belongs to.

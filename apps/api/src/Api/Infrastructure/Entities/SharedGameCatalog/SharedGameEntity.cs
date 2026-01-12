@@ -28,4 +28,8 @@ public class SharedGameEntity
     public DateTime CreatedAt { get; set; }
     public DateTime? ModifiedAt { get; set; }
     public bool IsDeleted { get; set; }
+
+    // Navigation properties (many-to-many)
+    public ICollection<GameCategoryEntity> Categories { get; set; } = new List<GameCategoryEntity>();
+    public ICollection<GameMechanicEntity> Mechanics { get; set; } = new List<GameMechanicEntity>();
 }

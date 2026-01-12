@@ -47,6 +47,10 @@ public sealed class SharedGame : AggregateRoot<Guid>
     // Full-Text Search (populated by PostgreSQL trigger)
     private readonly string _searchVector = string.Empty;
 
+    // Collections (navigation properties)
+    private readonly List<GameCategory> _categories = new();
+    private readonly List<GameMechanic> _mechanics = new();
+
     /// <summary>
     /// Gets the unique identifier of this game.
     /// </summary>
@@ -146,6 +150,16 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Gets the full-text search vector (managed by PostgreSQL).
     /// </summary>
     public string SearchVector => _searchVector;
+
+    /// <summary>
+    /// Gets the categories this game belongs to.
+    /// </summary>
+    public IReadOnlyCollection<GameCategory> Categories => _categories.AsReadOnly();
+
+    /// <summary>
+    /// Gets the mechanics this game uses.
+    /// </summary>
+    public IReadOnlyCollection<GameMechanic> Mechanics => _mechanics.AsReadOnly();
 
     /// <summary>
     /// Parameterless constructor for EF Core.

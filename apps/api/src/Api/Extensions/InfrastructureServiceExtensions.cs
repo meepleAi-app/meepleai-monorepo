@@ -278,6 +278,13 @@ internal static class InfrastructureServiceExtensions
             client.BaseAddress = new Uri(config.BaseUrl);
             client.Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds);
             client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI/1.0 (https://meepleai.dev)");
+
+            // Add Authorization header if BGG API token is configured
+            // Token obtained from: https://boardgamegeek.com/applications
+            if (!string.IsNullOrWhiteSpace(config.ApiToken))
+            {
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {config.ApiToken}");
+            }
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {

@@ -12,8 +12,8 @@ internal static class WebApplicationExtensions
         this WebApplication app,
         bool forwardedHeadersEnabled)
     {
-        // PERF-11: Enable Response Compression (must be early in pipeline)
-        app.UseResponseCompression();
+        // PERF-11: Response Compression DISABLED - causing ERR_CONTENT_DECODING_FAILED
+        // app.UseResponseCompression();
 
         ConfigureSecurityMiddleware(app, forwardedHeadersEnabled);
         ConfigureObservabilityMiddleware(app);

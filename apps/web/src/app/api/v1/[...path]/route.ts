@@ -48,8 +48,8 @@ async function proxyRequest(request: NextRequest, method: string) {
       credentials: 'include',
     });
 
-    // Get response body
-    const responseBody = await response.text();
+    // Get response body as ArrayBuffer to avoid compression issues
+    const responseBody = await response.arrayBuffer();
 
     // Create Next.js response with same status
     const nextResponse = new NextResponse(responseBody, {
@@ -61,6 +61,9 @@ async function proxyRequest(request: NextRequest, method: string) {
     response.headers.forEach((value, key) => {
       nextResponse.headers.set(key, value);
     });
+
+    // Disable Next.js compression to prevent ERR_CONTENT_DECODING_FAILED
+    nextResponse.headers.set('x-no-compression', '1');
 
     return nextResponse;
   } catch (error) {

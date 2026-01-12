@@ -114,9 +114,17 @@ export type BggSearchResult = z.infer<typeof BggSearchResultSchema>;
 
 export const BggSearchResponseSchema = z.object({
   results: z.array(BggSearchResultSchema),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+  totalPages: z.number().int().nonnegative(),
 });
 
 export type BggSearchResponse = z.infer<typeof BggSearchResponseSchema>;
+
+export const BatchThumbnailsResponseSchema = z.record(z.string(), z.string().url().nullable());
+
+export type BatchThumbnailsResponse = z.infer<typeof BatchThumbnailsResponseSchema>;
 
 export const BggGameDetailsSchema = z.object({
   bggId: z.number().int().positive(),

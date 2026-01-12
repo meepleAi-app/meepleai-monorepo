@@ -3,17 +3,20 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Api.Migrations
+namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260112134441_AddGameFaqsErrata")]
+    partial class AddGameFaqsErrata
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2345,64 +2348,6 @@ namespace Api.Migrations
                     b.ToTable("game_publishers", (string)null);
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameDeleteRequestEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("reason");
-
-                    b.Property<Guid>("RequestedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("requested_by");
-
-                    b.Property<string>("ReviewComment")
-                        .HasColumnType("text")
-                        .HasColumnName("review_comment");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("reviewed_at");
-
-                    b.Property<Guid?>("ReviewedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("reviewed_by");
-
-                    b.Property<Guid>("SharedGameId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("shared_game_id");
-
-                    b.Property<int>("Status")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("status");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("ix_delete_requests_created_at");
-
-                    b.HasIndex("SharedGameId")
-                        .HasDatabaseName("ix_delete_requests_shared_game_id");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("ix_delete_requests_status");
-
-                    b.ToTable("shared_game_delete_requests", (string)null);
-                });
-
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3664,7 +3609,7 @@ namespace Api.Migrations
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.GameErrataEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
-                        .WithMany("Erratas")
+                        .WithMany()
                         .HasForeignKey("SharedGameId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -3673,17 +3618,6 @@ namespace Api.Migrations
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.GameFaqEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
-                        .WithMany("Faqs")
-                        .HasForeignKey("SharedGameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("SharedGame");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameDeleteRequestEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
                         .WithMany()
@@ -3887,13 +3821,6 @@ namespace Api.Migrations
             modelBuilder.Entity("Api.Infrastructure.Entities.RuleSpecEntity", b =>
                 {
                     b.Navigation("Atoms");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", b =>
-                {
-                    b.Navigation("Erratas");
-
-                    b.Navigation("Faqs");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserEntity", b =>

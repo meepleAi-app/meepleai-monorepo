@@ -1,6 +1,7 @@
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Entities.Authentication;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserNotifications;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
@@ -71,6 +72,14 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChatThreadCollectionEntity> ChatThreadCollections => Set<ChatThreadCollectionEntity>(); // ISSUE-2051: Chat-collection junction
     public DbSet<ShareLinkEntity> ShareLinks => Set<ShareLinkEntity>(); // ISSUE-2052: Shareable chat links
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>(); // ISSUE-2053: User notifications
+    public DbSet<SharedGameEntity> SharedGames => Set<SharedGameEntity>(); // ISSUE-2370: Shared game catalog
+    public DbSet<GameDesignerEntity> GameDesigners => Set<GameDesignerEntity>(); // ISSUE-2370: Game designers
+    public DbSet<GamePublisherEntity> GamePublishers => Set<GamePublisherEntity>(); // ISSUE-2370: Game publishers
+    public DbSet<GameCategoryEntity> GameCategories => Set<GameCategoryEntity>(); // ISSUE-2370: Game categories taxonomy
+    public DbSet<GameMechanicEntity> GameMechanics => Set<GameMechanicEntity>(); // ISSUE-2370: Game mechanics taxonomy
+    public DbSet<GameFaqEntity> GameFaqs => Set<GameFaqEntity>(); // ISSUE-2370: Game FAQs
+    public DbSet<GameErrataEntity> GameErrata => Set<GameErrataEntity>(); // ISSUE-2370: Game errata
+    public DbSet<SharedGameDeleteRequestEntity> SharedGameDeleteRequests => Set<SharedGameDeleteRequestEntity>(); // ISSUE-2370: Delete requests
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -107,6 +116,9 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.ReportExecution>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.DocumentCollection>(); // ISSUE-2051
+        modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame>(); // ISSUE-2370
+        modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.GameCategory>(); // ISSUE-2370
+        modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.GameMechanic>(); // ISSUE-2370
     }
 
     /// <summary>

@@ -7,11 +7,7 @@
 import { z } from 'zod';
 import { HttpClient, getApiBase } from '../core/httpClient';
 import { setStoredApiKey, clearStoredApiKey } from '../core/apiKeyStore';
-import {
-  UnauthorizedError,
-  NotFoundError,
-  SchemaValidationError,
-} from '../core/errors';
+import { UnauthorizedError, NotFoundError, SchemaValidationError } from '../core/errors';
 import {
   setupTestEnvironment,
   createSuccessResponse,
@@ -32,29 +28,65 @@ describe('getApiBase', () => {
     process.env = originalEnv;
   });
 
-  it('should return environment variable when set', () => {
-    process.env.NEXT_PUBLIC_API_BASE = 'https://api.meepleai.dev';
-    expect(getApiBase()).toBe('https://api.meepleai.dev');
+  describe('development mode', () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = 'development';
+    });
+
+    it('should return empty string in browser to use Next.js proxy (Issue #2366)', () => {
+      // Mock window object (browser environment)
+      global.window = {} as any;
+
+      expect(getApiBase()).toBe('');
+
+      // Cleanup
+      delete (global as any).window;
+    });
+
+    it('should return localhost in Node.js/SSR environment', () => {
+      // window is undefined in Node.js/test environment
+      expect(getApiBase()).toBe('http://localhost:8080');
+    });
+
+    it('should return empty string in browser even when NEXT_PUBLIC_API_BASE is set', () => {
+      global.window = {} as any;
+      process.env.NEXT_PUBLIC_API_BASE = 'https://api.meepleai.dev';
+
+      expect(getApiBase()).toBe('');
+
+      delete (global as any).window;
+    });
   });
 
-  it('should return localhost when env not set', () => {
-    delete process.env.NEXT_PUBLIC_API_BASE;
-    expect(getApiBase()).toBe('http://localhost:8080');
-  });
+  describe('production mode', () => {
+    beforeEach(() => {
+      process.env.NODE_ENV = 'production';
+    });
 
-  it('should return localhost when env is undefined string', () => {
-    process.env.NEXT_PUBLIC_API_BASE = 'undefined';
-    expect(getApiBase()).toBe('http://localhost:8080');
-  });
+    it('should return environment variable when set', () => {
+      process.env.NEXT_PUBLIC_API_BASE = 'https://api.meepleai.dev';
+      expect(getApiBase()).toBe('https://api.meepleai.dev');
+    });
 
-  it('should return localhost when env is null string', () => {
-    process.env.NEXT_PUBLIC_API_BASE = 'null';
-    expect(getApiBase()).toBe('http://localhost:8080');
-  });
+    it('should return localhost when env not set', () => {
+      delete process.env.NEXT_PUBLIC_API_BASE;
+      expect(getApiBase()).toBe('http://localhost:8080');
+    });
 
-  it('should trim whitespace from env variable', () => {
-    process.env.NEXT_PUBLIC_API_BASE = '  https://api.meepleai.dev  ';
-    expect(getApiBase()).toBe('https://api.meepleai.dev');
+    it('should return localhost when env is undefined string', () => {
+      process.env.NEXT_PUBLIC_API_BASE = 'undefined';
+      expect(getApiBase()).toBe('http://localhost:8080');
+    });
+
+    it('should return localhost when env is null string', () => {
+      process.env.NEXT_PUBLIC_API_BASE = 'null';
+      expect(getApiBase()).toBe('http://localhost:8080');
+    });
+
+    it('should trim whitespace from env variable', () => {
+      process.env.NEXT_PUBLIC_API_BASE = '  https://api.meepleai.dev  ';
+      expect(getApiBase()).toBe('https://api.meepleai.dev');
+    });
   });
 });
 
@@ -94,9 +126,7 @@ describe('HttpClient - HTTP Methods', () => {
     it('should validate response with Zod schema', async () => {
       const schema = z.object({ id: z.string(), name: z.string() });
 
-      setup.mockFetch.mockResolvedValueOnce(
-        createSuccessResponse({ id: '123', name: 'Test' })
-      );
+      setup.mockFetch.mockResolvedValueOnce(createSuccessResponse({ id: '123', name: 'Test' }));
 
       const result = await setup.client.get('/api/v1/test', schema);
 
@@ -110,9 +140,7 @@ describe('HttpClient - HTTP Methods', () => {
         createSuccessResponse({ id: 123 }) // Invalid: missing name, wrong id type
       );
 
-      await expect(setup.client.get('/api/v1/test', schema)).rejects.toThrow(
-        SchemaValidationError
-      );
+      await expect(setup.client.get('/api/v1/test', schema)).rejects.toThrow(SchemaValidationError);
     });
 
     it('should include Authorization header when an API key is stored', async () => {
@@ -163,9 +191,7 @@ describe('HttpClient - HTTP Methods', () => {
     });
 
     it('should throw error for 401 responses', async () => {
-      setup.mockFetch.mockResolvedValueOnce(
-        createErrorResponse(401, { error: 'Unauthorized' })
-      );
+      setup.mockFetch.mockResolvedValueOnce(createErrorResponse(401, { error: 'Unauthorized' }));
 
       await expect(setup.client.post('/api/v1/test', {})).rejects.toThrow(UnauthorizedError);
     });
@@ -222,9 +248,7 @@ describe('HttpClient - HTTP Methods', () => {
     });
 
     it('should throw error for 401 responses', async () => {
-      setup.mockFetch.mockResolvedValueOnce(
-        createErrorResponse(401, { error: 'Unauthorized' })
-      );
+      setup.mockFetch.mockResolvedValueOnce(createErrorResponse(401, { error: 'Unauthorized' }));
 
       await expect(setup.client.put('/api/v1/test', {})).rejects.toThrow(UnauthorizedError);
     });
@@ -256,9 +280,7 @@ describe('HttpClient - HTTP Methods', () => {
     });
 
     it('should throw error for 401 responses', async () => {
-      setup.mockFetch.mockResolvedValueOnce(
-        createErrorResponse(401, { error: 'Unauthorized' })
-      );
+      setup.mockFetch.mockResolvedValueOnce(createErrorResponse(401, { error: 'Unauthorized' }));
 
       await expect(setup.client.delete('/api/v1/test')).rejects.toThrow(UnauthorizedError);
     });
@@ -308,13 +330,9 @@ describe('HttpClient - HTTP Methods', () => {
     });
 
     it('should throw error for 401 responses', async () => {
-      setup.mockFetch.mockResolvedValueOnce(
-        createErrorResponse(401, { error: 'Unauthorized' })
-      );
+      setup.mockFetch.mockResolvedValueOnce(createErrorResponse(401, { error: 'Unauthorized' }));
 
-      await expect(setup.client.postFile('/api/v1/export', {})).rejects.toThrow(
-        UnauthorizedError
-      );
+      await expect(setup.client.postFile('/api/v1/export', {})).rejects.toThrow(UnauthorizedError);
     });
   });
 });

@@ -35,17 +35,8 @@ export function setupTestEnvironment(): TestSetup {
   const mockLocalStorage: { [key: string]: string } = {};
   const mockSessionStorage: { [key: string]: string } = {};
 
-  Object.defineProperty(window, 'localStorage', {
-    value: {
-      getItem: vi.fn((key: string) => mockLocalStorage[key] || null),
-      setItem: vi.fn((key: string, value: string) => {
-        mockLocalStorage[key] = value;
-      }),
-    },
-    writable: true,
-  });
-
-  Object.defineProperty(window, 'sessionStorage', {
+  // Mock sessionStorage globally (for both browser and Node.js test environments)
+  Object.defineProperty(global, 'sessionStorage', {
     value: {
       getItem: vi.fn((key: string) => mockSessionStorage[key] || null),
       setItem: vi.fn((key: string, value: string) => {
@@ -59,7 +50,33 @@ export function setupTestEnvironment(): TestSetup {
       }),
     },
     writable: true,
+    configurable: true,
   });
+
+  // Mock localStorage globally (for both browser and Node.js test environments)
+  Object.defineProperty(global, 'localStorage', {
+    value: {
+      getItem: vi.fn((key: string) => mockLocalStorage[key] || null),
+      setItem: vi.fn((key: string, value: string) => {
+        mockLocalStorage[key] = value;
+      }),
+    },
+    writable: true,
+    configurable: true,
+  });
+
+  // If window exists (jsdom), also set on window
+  if (typeof window !== 'undefined') {
+    Object.defineProperty(window, 'localStorage', {
+      value: global.localStorage,
+      writable: true,
+    });
+
+    Object.defineProperty(window, 'sessionStorage', {
+      value: global.sessionStorage,
+      writable: true,
+    });
+  }
 
   // Mock URL APIs
   if (typeof URL.createObjectURL !== 'function') {

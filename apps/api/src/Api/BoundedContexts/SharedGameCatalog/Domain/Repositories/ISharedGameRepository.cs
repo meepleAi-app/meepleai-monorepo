@@ -59,4 +59,12 @@ public interface ISharedGameRepository
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The game if found, null otherwise</returns>
     Task<SharedGame?> GetGameByErrataIdAsync(Guid errataId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a shared game by its ID, including soft-deleted games.
+    /// </summary>
+    /// <param name="id">The game ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The game if found, null otherwise</returns>
+    Task<SharedGame?> GetByIdWithDeletedAsync(Guid id, CancellationToken cancellationToken = default);
 }

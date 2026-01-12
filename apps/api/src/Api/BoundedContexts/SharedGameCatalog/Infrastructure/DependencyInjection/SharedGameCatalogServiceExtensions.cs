@@ -18,6 +18,7 @@ internal static class SharedGameCatalogServiceExtensions
     {
         // Register repositories
         services.AddScoped<ISharedGameRepository, SharedGameRepository>();
+        services.AddScoped<ISharedGameDeleteRequestRepository, SharedGameDeleteRequestRepository>();
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

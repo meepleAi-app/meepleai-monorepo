@@ -89,9 +89,9 @@ internal class QualityMetrics
 
     /// <summary>
     /// Determine quality tier based on overall confidence score.
-    /// - high: >= 0.80
-    /// - medium: >= 0.60 and < 0.80
-    /// - low: < 0.60
+    /// - high: &gt;= 0.80
+    /// - medium: &gt;= 0.60 and &lt; 0.80
+    /// - low: &lt; 0.60
     /// </summary>
     private static string DetermineQualityTier(double overallConfidence)
     {

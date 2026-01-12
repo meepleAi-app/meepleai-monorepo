@@ -56,6 +56,42 @@ Common functions and prerequisites checking:
 
 ---
 
+### 🧹 **Cleanup Scripts** - Maintenance Utilities
+Scripts for cleaning up temporary files and maintaining repository hygiene:
+
+#### **cleanup-tmpclaude**
+Removes temporary `tmpclaude-*` files created by Claude Code during operations.
+
+**Problem**: Claude Code occasionally creates temporary files during directory verification, file context operations, and session management that may not be automatically cleaned up.
+
+**Solution**: Run cleanup scripts periodically to remove orphaned files.
+
+**Usage:**
+```powershell
+# Windows PowerShell
+.\scripts\cleanup-tmpclaude.ps1
+
+# Linux/macOS Bash
+./scripts/cleanup-tmpclaude.sh
+```
+
+**Why These Files Are Created**:
+- Directory verification operations
+- File context operations
+- Tool execution requiring temporary state
+- Session management operations
+
+**Safety**: These files are safe to delete and do not contain important data.
+
+**Automatic Prevention**: The `.gitignore` file includes `tmpclaude*` pattern to prevent accidental commits.
+
+**Maintenance Recommendations**:
+1. **Weekly**: Run cleanup script to remove orphaned files
+2. **Before Commits**: Verify no tmpclaude files are staged (`git status`)
+3. **CI/CD**: Pre-commit hooks verify no tmpclaude files are committed
+
+---
+
 ## Platform Notes
 
 - **Windows:** All scripts are PowerShell-based and work natively

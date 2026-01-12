@@ -82,7 +82,7 @@ internal static class KnowledgeBaseMappers
 
     /// <summary>
     /// Extracts float[] from EmbeddingResult.
-    /// EmbeddingResult contains List<float[]>, we take the first one for single text queries.
+    /// EmbeddingResult contains List&lt;float[]&gt;, we take the first one for single text queries.
     /// </summary>
     public static float[] ToFloatArray(this EmbeddingResult embeddingResult)
     {

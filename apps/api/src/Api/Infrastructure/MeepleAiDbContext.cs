@@ -67,7 +67,6 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChunkedUploadSessionEntity> ChunkedUploadSessions => Set<ChunkedUploadSessionEntity>(); // Chunked PDF upload
     public DbSet<AdminReportEntity> AdminReports => Set<AdminReportEntity>(); // ISSUE-916: Report generation + scheduling
     public DbSet<ReportExecutionEntity> ReportExecutions => Set<ReportExecutionEntity>(); // ISSUE-916: Report execution history
-    public DbSet<GameFAQEntity> GameFAQs => Set<GameFAQEntity>(); // ISSUE-2028: Game-specific FAQs
     public DbSet<DocumentCollectionEntity> DocumentCollections => Set<DocumentCollectionEntity>(); // ISSUE-2051: Multi-document collections
     public DbSet<ChatThreadCollectionEntity> ChatThreadCollections => Set<ChatThreadCollectionEntity>(); // ISSUE-2051: Chat-collection junction
     public DbSet<ShareLinkEntity> ShareLinks => Set<ShareLinkEntity>(); // ISSUE-2052: Shareable chat links
@@ -112,7 +111,6 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameSession>();
         modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.Notification>(); // ISSUE-2053
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.Game>();
-        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.GameFAQ>(); // ISSUE-2028
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.AdminReport>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.Administration.Domain.Entities.ReportExecution>(); // ISSUE-916
         modelBuilder.Ignore<BoundedContexts.DocumentProcessing.Domain.Entities.DocumentCollection>(); // ISSUE-2051

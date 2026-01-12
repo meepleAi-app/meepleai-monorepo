@@ -1,0 +1,695 @@
+using Api.BoundedContexts.SharedGameCatalog.Application;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.Extensions;
+using Api.Models;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Api.Routing;
+
+/// <summary>
+/// SharedGameCatalog endpoints for public game search and admin management.
+/// Issue #2371 Phase 2
+/// </summary>
+internal static class SharedGameCatalogEndpoints
+{
+    public static RouteGroupBuilder MapSharedGameCatalogEndpoints(this RouteGroupBuilder group)
+    {
+        MapPublicEndpoints(group);
+        MapAdminEndpoints(group);
+
+        return group;
+    }
+
+    // ========================================
+    // PUBLIC ENDPOINTS (Unauthenticated)
+    // ========================================
+
+    private static void MapPublicEndpoints(RouteGroupBuilder group)
+    {
+        // Search shared games with filtering and full-text search
+        group.MapGet("/shared-games", HandleSearchGames)
+            .AllowAnonymous()
+            .WithName("SearchSharedGames")
+            .WithSummary("Search shared games catalog")
+            .WithDescription("Search games with full-text search, category/mechanic filters, player count, and playing time filters. Returns published games only for public access.")
+            .Produces<PagedResult<SharedGameDto>>();
+
+        // Get game details by ID
+        group.MapGet("/shared-games/{id:guid}", HandleGetGameById)
+            .AllowAnonymous()
+            .WithName("GetSharedGameById")
+            .WithSummary("Get shared game details")
+            .WithDescription("Get detailed information about a shared game including designers, publishers, categories, mechanics, FAQs, and errata. Returns only published games for public access.")
+            .Produces<SharedGameDetailDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Get all game categories
+        group.MapGet("/shared-games/categories", HandleGetCategories)
+            .AllowAnonymous()
+            .WithName("GetGameCategories")
+            .WithSummary("Get all game categories")
+            .WithDescription("Returns all available game categories for filtering.")
+            .Produces<List<GameCategoryDto>>();
+
+        // Get all game mechanics
+        group.MapGet("/shared-games/mechanics", HandleGetMechanics)
+            .AllowAnonymous()
+            .WithName("GetGameMechanics")
+            .WithSummary("Get all game mechanics")
+            .WithDescription("Returns all available game mechanics for filtering.")
+            .Produces<List<GameMechanicDto>>();
+    }
+
+    // ========================================
+    // ADMIN/EDITOR ENDPOINTS (Protected)
+    // ========================================
+
+    private static void MapAdminEndpoints(RouteGroupBuilder group)
+    {
+        // Create new shared game
+        group.MapPost("/admin/shared-games", HandleCreateGame)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("CreateSharedGame")
+            .WithSummary("Create new shared game (Admin/Editor)")
+            .Produces<Guid>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // Update existing shared game
+        group.MapPut("/admin/shared-games/{id:guid}", HandleUpdateGame)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("UpdateSharedGame")
+            .WithSummary("Update shared game (Admin/Editor)")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Publish game (Draft → Published)
+        group.MapPost("/admin/shared-games/{id:guid}/publish", HandlePublishGame)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("PublishSharedGame")
+            .WithSummary("Publish shared game (Admin/Editor)")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Archive game (Published → Archived)
+        group.MapPost("/admin/shared-games/{id:guid}/archive", HandleArchiveGame)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("ArchiveSharedGame")
+            .WithSummary("Archive shared game (Admin only)")
+            .Produces(StatusCodes.Status204NoContent);
+
+        // Import game from BoardGameGeek
+        group.MapPost("/admin/shared-games/import-bgg", HandleImportFromBgg)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("ImportGameFromBgg")
+            .WithSummary("Import game from BoardGameGeek (Admin/Editor)")
+            .Produces<Guid>(StatusCodes.Status201Created);
+
+        // Bulk import games
+        group.MapPost("/admin/shared-games/bulk-import", HandleBulkImport)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("BulkImportGames")
+            .WithSummary("Bulk import games (Admin only)")
+            .Produces<BulkImportResultDto>();
+
+        // Delete game (Admin direct delete, Editor creates request)
+        group.MapDelete("/admin/shared-games/{id:guid}", HandleDeleteGame)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("DeleteSharedGame")
+            .WithSummary("Delete shared game (Admin/Editor)")
+            .WithDescription("Admin: deletes directly. Editor: creates delete request for admin approval.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<Guid>(StatusCodes.Status202Accepted); // Editor case returns requestId
+
+        // Get pending delete requests (Admin only)
+        group.MapGet("/admin/shared-games/pending-deletes", HandleGetPendingDeletes)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("GetPendingDeleteRequests")
+            .WithSummary("Get pending delete requests (Admin only)")
+            .Produces<PagedResult<DeleteRequestDto>>();
+
+        // Approve delete request (Admin only)
+        group.MapPost("/admin/shared-games/approve-delete/{requestId:guid}", HandleApproveDelete)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("ApproveDeleteRequest")
+            .WithSummary("Approve delete request (Admin only)")
+            .Produces(StatusCodes.Status204NoContent);
+
+        // Reject delete request (Admin only)
+        group.MapPost("/admin/shared-games/reject-delete/{requestId:guid}", HandleRejectDelete)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("RejectDeleteRequest")
+            .WithSummary("Reject delete request (Admin only)")
+            .Produces(StatusCodes.Status204NoContent);
+
+        // FAQ Management
+        group.MapPost("/admin/shared-games/{id:guid}/faq", HandleAddFaq)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("AddGameFaq")
+            .WithSummary("Add FAQ to game (Admin/Editor)")
+            .Produces<Guid>(StatusCodes.Status201Created);
+
+        group.MapPut("/admin/shared-games/{id:guid}/faq/{faqId:guid}", HandleUpdateFaq)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("UpdateGameFaq")
+            .WithSummary("Update FAQ (Admin/Editor)")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapDelete("/admin/shared-games/{id:guid}/faq/{faqId:guid}", HandleDeleteFaq)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("DeleteGameFaq")
+            .WithSummary("Delete FAQ (Admin/Editor)")
+            .Produces(StatusCodes.Status204NoContent);
+
+        // Errata Management
+        group.MapPost("/admin/shared-games/{id:guid}/errata", HandleAddErrata)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("AddGameErrata")
+            .WithSummary("Add errata to game (Admin/Editor)")
+            .Produces<Guid>(StatusCodes.Status201Created);
+
+        group.MapPut("/admin/shared-games/{id:guid}/errata/{errataId:guid}", HandleUpdateErrata)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("UpdateGameErrata")
+            .WithSummary("Update errata (Admin/Editor)")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapDelete("/admin/shared-games/{id:guid}/errata/{errataId:guid}", HandleDeleteErrata)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("DeleteGameErrata")
+            .WithSummary("Delete errata (Admin/Editor)")
+            .Produces(StatusCodes.Status204NoContent);
+    }
+
+    // ========================================
+    // PUBLIC HANDLERS
+    // ========================================
+
+    private static async Task<IResult> HandleSearchGames(
+        IMediator mediator,
+        [FromQuery] string? search,
+        [FromQuery] Guid[]? categoryIds,
+        [FromQuery] Guid[]? mechanicIds,
+        [FromQuery] int? minPlayers,
+        [FromQuery] int? maxPlayers,
+        [FromQuery] int? maxPlayingTime,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string sortBy = "Title",
+        [FromQuery] bool sortDescending = false,
+        CancellationToken ct = default)
+    {
+        var query = new SearchSharedGamesQuery(
+            search,
+            categoryIds?.ToList(),
+            mechanicIds?.ToList(),
+            minPlayers,
+            maxPlayers,
+            maxPlayingTime,
+            Status: null, // Public always gets Published only (filtered in handler)
+            pageNumber,
+            pageSize,
+            sortBy,
+            sortDescending);
+
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetGameById(
+        IMediator mediator,
+        HttpContext context,
+        Guid id,
+        CancellationToken ct)
+    {
+        var query = new GetSharedGameByIdQuery(id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        // Public access: only return Published games
+        // Admin/Editor can see all statuses
+        if (result is not null)
+        {
+            var isAdminOrEditor = context.User.IsInRole("Admin") || context.User.IsInRole("Editor");
+            if (!isAdminOrEditor && result.Status != GameStatus.Published)
+            {
+                return Results.NotFound(); // Hide draft/archived games from public
+            }
+            return Results.Ok(result);
+        }
+
+        return Results.NotFound();
+    }
+
+    private static async Task<IResult> HandleGetCategories(
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetGameCategoriesQuery();
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetMechanics(
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetGameMechanicsQuery();
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    // ========================================
+    // ADMIN HANDLERS
+    // ========================================
+
+    private static async Task<IResult> HandleCreateGame(
+        CreateSharedGameRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Auth check (inline for now, policies handle authorization)
+        // Get userId from claims (policies already verified Admin/Editor role)
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new CreateSharedGameCommand(
+            request.Title,
+            request.YearPublished,
+            request.Description,
+            request.MinPlayers,
+            request.MaxPlayers,
+            request.PlayingTimeMinutes,
+            request.MinAge,
+            request.ComplexityRating,
+            request.AverageRating,
+            request.ImageUrl,
+            request.ThumbnailUrl,
+            request.Rules,
+            userId,
+            request.BggId);
+
+        var gameId = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Created($"/api/v1/shared-games/{gameId}", gameId);
+    }
+
+    private static async Task<IResult> HandleUpdateGame(
+        Guid id,
+        UpdateSharedGameRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var command = new UpdateSharedGameCommand(
+            id,
+            request.Title,
+            request.YearPublished,
+            request.Description,
+            request.MinPlayers,
+            request.MaxPlayers,
+            request.PlayingTimeMinutes,
+            request.MinAge,
+            request.ComplexityRating,
+            request.AverageRating,
+            request.ImageUrl,
+            request.ThumbnailUrl,
+            request.Rules,
+            session!.User!.Id);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandlePublishGame(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var command = new PublishSharedGameCommand(id, session!.User!.Id);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleArchiveGame(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new ArchiveSharedGameCommand(id, session!.User!.Id);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleImportFromBgg(
+        ImportFromBggRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Policies already verified Admin/Editor role - no additional check needed
+
+        var command = new ImportGameFromBggCommand(request.BggId);
+        var gameId = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Created($"/api/v1/shared-games/{gameId}", gameId);
+    }
+
+    private static async Task<IResult> HandleBulkImport(
+        BulkImportRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Policies already verified Admin role - no additional check needed
+
+        var command = new BulkImportGamesCommand(request.Games);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleDeleteGame(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        [FromBody] DeleteGameRequest? request,
+        CancellationToken ct)
+    {
+        // Get userId and role from claims (policies already verified Admin/Editor role)
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var isAdmin = context.User.IsInRole("Admin");
+
+        if (isAdmin)
+        {
+            // Admin: direct delete
+            var command = new DeleteSharedGameCommand(id, userId);
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        else
+        {
+            // Editor: create delete request for admin approval
+            var requestCommand = new RequestDeleteSharedGameCommand(
+                id,
+                userId,
+                request?.Reason ?? "Delete requested");
+
+            var requestId = await mediator.Send(requestCommand, ct).ConfigureAwait(false);
+            return Results.Accepted($"/api/v1/admin/shared-games/pending-deletes", requestId);
+        }
+    }
+
+    private static async Task<IResult> HandleGetPendingDeletes(
+        IMediator mediator,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var query = new GetPendingDeleteRequestsQuery(pageNumber, pageSize);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleApproveDelete(
+        Guid requestId,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Get userId from claims (policies already verified Admin role)
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+        var command = new ApproveDeleteRequestCommand(requestId, userId, Comment: null);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleRejectDelete(
+        Guid requestId,
+        [FromBody] RejectDeleteRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Get userId from claims (policies already verified Admin role)
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+        var command = new RejectDeleteRequestCommand(requestId, userId, request.Reason);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    // FAQ Handlers
+    private static async Task<IResult> HandleAddFaq(
+        Guid id,
+        [FromBody] AddFaqRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new AddGameFaqCommand(id, request.Question, request.Answer, request.Order);
+        var faqId = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Created($"/api/v1/admin/shared-games/{id}/faq/{faqId}", faqId);
+    }
+
+    private static async Task<IResult> HandleUpdateFaq(
+        Guid id,
+        Guid faqId,
+        [FromBody] UpdateFaqRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new UpdateGameFaqCommand(faqId, request.Question, request.Answer, request.Order);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleDeleteFaq(
+        Guid id,
+        Guid faqId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new DeleteGameFaqCommand(faqId);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    // Errata Handlers
+    private static async Task<IResult> HandleAddErrata(
+        Guid id,
+        [FromBody] AddErrataRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new AddGameErrataCommand(id, request.Description, request.PageReference, request.PublishedDate);
+        var errataId = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Created($"/api/v1/admin/shared-games/{id}/errata/{errataId}", errataId);
+    }
+
+    private static async Task<IResult> HandleUpdateErrata(
+        Guid id,
+        Guid errataId,
+        [FromBody] UpdateErrataRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new UpdateGameErrataCommand(errataId, request.Description, request.PageReference, request.PublishedDate);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleDeleteErrata(
+        Guid id,
+        Guid errataId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new DeleteGameErrataCommand(errataId);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+}
+
+// ========================================
+// REQUEST DTOS
+// ========================================
+
+/// <summary>
+/// Request DTO for creating a shared game.
+/// </summary>
+internal record CreateSharedGameRequest(
+    string Title,
+    int YearPublished,
+    string Description,
+    int MinPlayers,
+    int MaxPlayers,
+    int PlayingTimeMinutes,
+    int MinAge,
+    decimal? ComplexityRating,
+    decimal? AverageRating,
+    string ImageUrl,
+    string ThumbnailUrl,
+    GameRulesDto? Rules,
+    int? BggId);
+
+/// <summary>
+/// Request DTO for updating a shared game.
+/// </summary>
+internal record UpdateSharedGameRequest(
+    string Title,
+    int YearPublished,
+    string Description,
+    int MinPlayers,
+    int MaxPlayers,
+    int PlayingTimeMinutes,
+    int MinAge,
+    decimal? ComplexityRating,
+    decimal? AverageRating,
+    string ImageUrl,
+    string ThumbnailUrl,
+    GameRulesDto? Rules);
+
+/// <summary>
+/// Request DTO for importing a game from BoardGameGeek.
+/// </summary>
+internal record ImportFromBggRequest(int BggId);
+
+/// <summary>
+/// Request DTO for bulk importing games.
+/// </summary>
+internal record BulkImportRequest(List<BulkGameImportDto> Games);
+
+/// <summary>
+/// Request DTO for deleting a game (Editor provides reason).
+/// </summary>
+internal record DeleteGameRequest(string? Reason);
+
+/// <summary>
+/// Request DTO for rejecting a delete request.
+/// </summary>
+internal record RejectDeleteRequest(string Reason);
+
+/// <summary>
+/// Request DTO for adding a FAQ.
+/// </summary>
+internal record AddFaqRequest(string Question, string Answer, int Order);
+
+/// <summary>
+/// Request DTO for updating a FAQ.
+/// </summary>
+internal record UpdateFaqRequest(string Question, string Answer, int Order);
+
+/// <summary>
+/// Request DTO for adding an errata.
+/// </summary>
+internal record AddErrataRequest(string Description, string PageReference, DateTime PublishedDate);
+
+/// <summary>
+/// Request DTO for updating an errata.
+/// </summary>
+internal record UpdateErrataRequest(string Description, string PageReference, DateTime PublishedDate);

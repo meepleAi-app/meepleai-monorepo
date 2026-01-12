@@ -1,8 +1,12 @@
+using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Tests.Constants;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -13,6 +17,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 public class GetSharedGameByIdQueryHandlerTests
 {
     private readonly Mock<ISharedGameRepository> _repositoryMock;
+    private readonly HybridCache _cache;
     private readonly Mock<ILogger<GetSharedGameByIdQueryHandler>> _loggerMock;
     private readonly GetSharedGameByIdQueryHandler _handler;
 
@@ -20,8 +25,17 @@ public class GetSharedGameByIdQueryHandlerTests
     {
         _repositoryMock = new Mock<ISharedGameRepository>();
         _loggerMock = new Mock<ILogger<GetSharedGameByIdQueryHandler>>();
+
+        // Use real HybridCache for tests (with in-memory backend)
+        var services = new ServiceCollection();
+        services.AddMemoryCache();
+        services.AddHybridCache();
+        var serviceProvider = services.BuildServiceProvider();
+        _cache = serviceProvider.GetRequiredService<HybridCache>();
+
         _handler = new GetSharedGameByIdQueryHandler(
             _repositoryMock.Object,
+            _cache,
             _loggerMock.Object);
     }
 

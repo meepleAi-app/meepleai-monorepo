@@ -27,4 +27,19 @@ internal static class SharedGameCatalogServiceExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers authorization policies for SharedGameCatalog endpoints.
+    /// Issue #2371 Phase 2
+    /// </summary>
+    public static IServiceCollection AddSharedGameCatalogPolicies(this IServiceCollection services)
+    {
+        services.AddAuthorizationBuilder()
+            .AddPolicy("AdminOrEditorPolicy", policy =>
+                policy.RequireRole("Admin", "Editor"))
+            .AddPolicy("AdminOnlyPolicy", policy =>
+                policy.RequireRole("Admin"));
+
+        return services;
+    }
 }

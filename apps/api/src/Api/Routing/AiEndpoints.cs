@@ -24,6 +24,8 @@ namespace Api.Routing;
 /// </summary>
 internal static class AiEndpoints
 {
+    private static readonly string[] ParagraphSeparators = { "\n\n", "\n" };
+
     public static RouteGroupBuilder MapAiEndpoints(this RouteGroupBuilder group)
     {
         MapQaEndpoint(group);
@@ -1013,7 +1015,7 @@ internal static class AiEndpoints
 
         // Count paragraphs (split by double newlines or single newlines)
         var paragraphs = responseText
-            .Split(new[] { "\n\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+            .Split(ParagraphSeparators, StringSplitOptions.RemoveEmptyEntries)
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .ToArray();
 

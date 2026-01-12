@@ -20,7 +20,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
 /// Handler for StreamQaQuery.
-/// Implements streaming RAG Q&A with token-by-token delivery and chat context integration.
+/// Implements streaming RAG Q&amp;A with token-by-token delivery and chat context integration.
 /// CHAT-01: Integrates with ChatContextDomainService for conversation continuity
 /// AI-11: Tracks quality metrics and confidence scoring
 /// </summary>

@@ -11,9 +11,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Threshold: 0.70 (>95% accuracy target for board game rules)
 ///
 /// Validation Tiers:
-/// - ≥0.70: PASS (acceptable quality)
+/// - &gt;=0.70: PASS (acceptable quality)
 /// - 0.60-0.70: WARNING (below threshold but usable)
-/// - <0.60: CRITICAL (unacceptable quality)
+/// - &lt;0.60: CRITICAL (unacceptable quality)
 /// - null: UNKNOWN (no confidence score available)
 ///
 /// Integration: Used by RagService to validate responses before returning to users.

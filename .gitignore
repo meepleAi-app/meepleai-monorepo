@@ -91,6 +91,7 @@ temp/
 *.tmp
 *.temp
 .cache/
+tmpclaude*
 
 # Docker
 .dockerignore

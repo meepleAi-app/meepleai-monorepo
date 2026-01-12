@@ -92,7 +92,7 @@ internal sealed record EvaluationMetrics
     public bool MeetsPhase4Target() => RecallAt10 >= 0.60;
 
     /// <summary>
-    /// Checks if metrics meet Phase 5 target (Recall@10 >= 70%, P95 < 1.5s).
+    /// Checks if metrics meet Phase 5 target (Recall@10 &gt;= 70%, P95 &lt; 1.5s).
     /// </summary>
     public bool MeetsPhase5Target() =>
         RecallAt10 >= 0.70 && P95LatencyMs < 1500.0;

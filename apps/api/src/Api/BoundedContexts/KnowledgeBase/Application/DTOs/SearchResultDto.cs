@@ -34,7 +34,7 @@ internal record SearchResultDto(
 };
 
 /// <summary>
-/// DTO for Q&A response.
+/// DTO for Q&amp;A response.
 /// </summary>
 internal record QaResponseDto(
     string Answer,

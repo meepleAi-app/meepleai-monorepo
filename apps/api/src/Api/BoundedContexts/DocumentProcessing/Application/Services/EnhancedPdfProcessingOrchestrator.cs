@@ -403,10 +403,10 @@ internal class EnhancedPdfProcessingOrchestrator
     /// </summary>
     /// <remarks>
     /// Thresholds from ADR-003:
-    /// - High: ≥0.75 → 0.85
-    /// - Medium: 0.60-0.75 → 0.70
-    /// - Low: 0.40-0.60 → 0.50
-    /// - VeryLow: <0.40 → 0.25
+    /// - High: &gt;=0.75 to 0.85
+    /// - Medium: 0.60-0.75 to 0.70
+    /// - Low: 0.40-0.60 to 0.50
+    /// - VeryLow: &lt;0.40 to 0.25
     /// </remarks>
     private static double MapQualityToScore(ExtractionQuality quality)
     {

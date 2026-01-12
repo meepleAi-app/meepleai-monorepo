@@ -76,6 +76,9 @@ export function formatShortcut(shortcut: KeyboardShortcut): string {
  * Check if keyboard event matches shortcut
  */
 function matchesShortcut(event: KeyboardEvent, shortcut: KeyboardShortcut): boolean {
+  // Safety checks for undefined/null keys
+  if (!event.key || !shortcut.key) return false;
+
   const key = event.key.toLowerCase();
   const shortcutKey = shortcut.key.toLowerCase();
 

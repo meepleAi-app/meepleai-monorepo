@@ -90,28 +90,28 @@ if (builder.Environment.IsDevelopment())
     });
 }
 
-// PERF-11: Configure Response Compression (Brotli + Gzip)
-builder.Services.AddResponseCompression(options =>
-{
-    options.EnableForHttps = true; // Enable compression for HTTPS (secure)
-    options.Providers.Add<BrotliCompressionProvider>(); // Brotli (better compression)
-    options.Providers.Add<GzipCompressionProvider>(); // Gzip (fallback, widely supported)
+// PERF-11: Response Compression DISABLED - causing ERR_CONTENT_DECODING_FAILED in Docker
+// NOTE: Re-enable with proper configuration after investigating compression issue
+// builder.Services.AddResponseCompression(options =>
+// {
+//     options.EnableForHttps = true; // Enable compression for HTTPS (secure)
+//     options.Providers.Add<GzipCompressionProvider>(); // Gzip (fallback, widely supported)
+//
+//     // Compress these MIME types
+//     options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(AdditionalCompressedMimeTypes);
+// });
 
-    // Compress these MIME types
-    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(AdditionalCompressedMimeTypes);
-});
+// Configure Brotli compression level (optimal balance) - DISABLED
+// builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+// {
+//     options.Level = CompressionLevel.Fastest; // Fastest: lower CPU, good compression (1-5x faster than Optimal)
+// });
 
-// Configure Brotli compression level (optimal balance)
-builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
-{
-    options.Level = CompressionLevel.Fastest; // Fastest: lower CPU, good compression (1-5x faster than Optimal)
-});
-
-// Configure Gzip compression level (optimal balance)
-builder.Services.Configure<GzipCompressionProviderOptions>(options =>
-{
-    options.Level = CompressionLevel.Fastest; // Fastest: lower CPU, good compression
-});
+// Configure Gzip compression level (optimal balance) - DISABLED
+// builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+// {
+//     options.Level = CompressionLevel.Fastest; // Fastest: lower CPU, good compression
+// });
 
 var forwardedHeadersSection = builder.Configuration.GetSection("ForwardedHeaders");
 var forwardedHeadersEnabled = forwardedHeadersSection.GetValue<bool?>("Enabled") ?? true;

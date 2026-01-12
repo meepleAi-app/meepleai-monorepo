@@ -116,6 +116,7 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone', // Enable Docker-optimized output
+  compress: false, // Disable compression to prevent ERR_CONTENT_DECODING_FAILED in proxy
 
   // Issue #2209: Next.js Image optimization - configure remote image domains
   images: {

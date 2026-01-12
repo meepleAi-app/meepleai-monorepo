@@ -132,7 +132,6 @@ internal class BggApiService : IBggApiService
 
             var results = doc.Root?
                 .Elements("item")
-                .Take(5) // Top 5 results only
                 .Select(item => ParseSearchResult(item))
                 .Where(result => result != null)
                 .Cast<BggSearchResultDto>()

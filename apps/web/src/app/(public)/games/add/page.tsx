@@ -16,18 +16,46 @@ export default function AddGamePage() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<BggSearchResult[]>([]);
+  const [thumbnails, setThumbnails] = useState<Record<number, string | null>>({});
   const [loading, setLoading] = useState(false);
+  const [loadingThumbnails, setLoadingThumbnails] = useState(false);
   const [addingId, setAddingId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(0);
 
-  const handleSearch = async (e?: React.FormEvent) => {
+  const handleSearch = async (e?: React.FormEvent, page: number = 1) => {
     e?.preventDefault();
     if (!query.trim()) return;
 
     setLoading(true);
     setResults([]);
+    setThumbnails({});
     try {
-      const response = await api.bgg.search(query);
+      const response = await api.bgg.search(query, false, page, 20);
       setResults(response.results);
+      setCurrentPage(response.page);
+      setTotalPages(response.totalPages);
+      setTotal(response.total);
+
+      // Load thumbnails for current page results
+      if (response.results.length > 0) {
+        setLoadingThumbnails(true);
+        try {
+          const bggIds = response.results.map(r => r.bggId);
+          const thumbs = await api.bgg.batchThumbnails(bggIds);
+          // Convert string keys to numbers
+          const thumbsMap: Record<number, string | null> = {};
+          Object.entries(thumbs).forEach(([key, value]) => {
+            thumbsMap[parseInt(key)] = value as string | null;
+          });
+          setThumbnails(thumbsMap);
+        } catch (error) {
+          console.error('Failed to load thumbnails:', error);
+        } finally {
+          setLoadingThumbnails(false);
+        }
+      }
     } catch (error) {
       console.error('Search failed:', error);
       toast.error('Ricerca fallita. Riprova più tardi.');
@@ -96,10 +124,12 @@ export default function AddGamePage() {
             <Card key={game.bggId} className="flex flex-col">
               <CardHeader className="p-4">
                 <div className="aspect-square relative flex items-center justify-center bg-muted rounded-md overflow-hidden mb-2">
-                  {game.thumbnailUrl ? (
+                  {loadingThumbnails ? (
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                  ) : thumbnails[game.bggId] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={game.thumbnailUrl}
+                      src={thumbnails[game.bggId]!}
                       alt={game.name}
                       className="object-contain w-full h-full"
                     />
@@ -133,6 +163,29 @@ export default function AddGamePage() {
 
         {!loading && results.length === 0 && query && (
           <p className="text-center text-muted-foreground py-8">Nessun risultato trovato.</p>
+        )}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-8">
+            <Button
+              variant="outline"
+              onClick={() => handleSearch(undefined, currentPage - 1)}
+              disabled={currentPage === 1 || loading}
+            >
+              Precedente
+            </Button>
+            <span className="text-sm text-muted-foreground px-4">
+              Pagina {currentPage} di {totalPages} ({total} risultati totali)
+            </span>
+            <Button
+              variant="outline"
+              onClick={() => handleSearch(undefined, currentPage + 1)}
+              disabled={currentPage === totalPages || loading}
+            >
+              Successiva
+            </Button>
+          </div>
         )}
       </div>
     </div>

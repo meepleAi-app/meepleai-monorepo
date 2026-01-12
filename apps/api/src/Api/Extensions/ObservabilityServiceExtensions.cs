@@ -28,7 +28,6 @@ internal static class ObservabilityServiceExtensions
     private static readonly string[] QdrantTags = new[] { "vector", "qdrant" };
     private static readonly string[] QdrantCollectionTags = new[] { "vector", "qdrant", "collection" };
     private static readonly string[] N8nTags = new[] { "automation", "workflow" };
-    private static readonly string[] HyperDxTags = new[] { "observability", "monitoring" };
 
     private static IServiceCollection AddOpenTelemetryServices(
             this IServiceCollection services,
@@ -225,13 +224,11 @@ internal static class ObservabilityServiceExtensions
         const string DefaultRedisConnectionString = "localhost:6379";
         const string DefaultQdrantUrl = "http://localhost:6333";
         const string DefaultN8nUrl = "http://n8n:5678";
-        const string DefaultHyperDxUrl = "http://meepleai-hyperdx:8000";
 #pragma warning restore S1075
 
         var healthCheckRedisConnectionString = configuration["REDIS_URL"] ?? DefaultRedisConnectionString;
         var healthCheckQdrantUrl = configuration["QDRANT_URL"] ?? DefaultQdrantUrl;
         var n8nUrl = configuration["N8N_URL"] ?? DefaultN8nUrl;
-        var hyperDxUrl = configuration["HYPERDX_URL"] ?? DefaultHyperDxUrl;
 
         builder
             .AddRedis(
@@ -248,11 +245,12 @@ internal static class ObservabilityServiceExtensions
             .AddUrlGroup(
                 new Uri($"{n8nUrl}/healthz"),
                 name: "n8n",
-                tags: N8nTags)
-            .AddUrlGroup(
-                new Uri($"{hyperDxUrl}/health"),
-                name: "hyperdx",
-                tags: HyperDxTags);
+                tags: N8nTags);
+        // HyperDX health check disabled - service not in default docker-compose profile
+        // .AddUrlGroup(
+        //     new Uri($"{hyperDxUrl}/health"),
+        //     name: "hyperdx",
+        //     tags: HyperDxTags);
     }
 
     /// <summary>

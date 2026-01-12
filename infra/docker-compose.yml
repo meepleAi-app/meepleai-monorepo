@@ -613,6 +613,9 @@ services:
       EMBEDDING_FALLBACK_ENABLED: "false"
       # ADR-016 Phase 4: Reranker service configuration
       RERANKER_SERVICE_URL: http://reranker-service:8003
+      # AI-13: BoardGameGeek API token (optional - register at https://boardgamegeek.com/applications)
+      # Format: Bgg__ApiToken uses ASP.NET Core __ notation for nested config
+      Bgg__ApiToken: ${BGG_API_TOKEN:-}
       # SEC-708: OpenRouter API key from secret file
       OPENROUTER_API_KEY_FILE: /run/secrets/openrouter-api-key
       # Bootstrap: Initial admin user configuration (password from secret)

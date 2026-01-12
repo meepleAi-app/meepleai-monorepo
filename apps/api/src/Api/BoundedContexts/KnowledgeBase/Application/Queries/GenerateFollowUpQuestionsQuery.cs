@@ -4,7 +4,7 @@ using MediatR;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
-/// Query to generate AI-powered follow-up questions based on Q&A context.
+/// Query to generate AI-powered follow-up questions based on Q&amp;A context.
 /// CHAT-02: AI-Generated Follow-Up Questions
 /// </summary>
 internal sealed record GenerateFollowUpQuestionsQuery : IRequest<IReadOnlyList<string>>

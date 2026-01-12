@@ -20,7 +20,6 @@ internal static class GameEndpoints
         MapGameManagementEndpoints(group);
         MapSessionLifecycleEndpoints(group);
         MapSessionQueryEndpoints(group);
-        MapFaqEndpoints(group);
 
         return group;
     }
@@ -124,29 +123,6 @@ internal static class GameEndpoints
         .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
     }
 
-    private static void MapFaqEndpoints(RouteGroupBuilder group)
-    {
-        // ========================================
-        // GameFAQ CQRS Endpoints (Issue #2028)
-        // ========================================
-
-        // Get FAQs for a game (public, paginated)
-        group.MapGet("/games/{gameId}/faqs", HandleGetGameFaqs)
-        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
-
-        // Create FAQ for a game (admin/editor only)
-        group.MapPost("/games/{gameId}/faqs", HandleCreateGameFaq);
-
-        // Update FAQ (admin/editor only)
-        group.MapPut("/faqs/{id}", HandleUpdateGameFaq);
-
-        // Delete FAQ (admin/editor only)
-        group.MapDelete("/faqs/{id}", HandleDeleteGameFaq);
-
-        // Upvote FAQ (public)
-        group.MapPost("/faqs/{id}/upvote", HandleUpvoteGameFaq)
-        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
-    }
 
     private static async Task<IResult> HandleGetAllGames(
         [FromQuery] string? search,
@@ -447,93 +423,6 @@ internal static class GameEndpoints
         return Results.Ok(result);
     }
 
-    private static async Task<IResult> HandleGetGameFaqs(
-        Guid gameId,
-        [FromQuery] int? limit,
-        [FromQuery] int? offset,
-        IMediator mediator,
-                CancellationToken ct)
-    {
-        var query = new GetGameFAQsQuery(
-            GameId: gameId,
-            Limit: limit ?? 10,
-            Offset: offset ?? 0
-        );
-
-        var result = await mediator.Send(query, ct).ConfigureAwait(false);
-        return Results.Ok(result);
-    }
-
-    private static async Task<IResult> HandleCreateGameFaq(
-        Guid gameId,
-        CreateGameFAQRequest request,
-        IMediator mediator,
-        HttpContext context,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        // Auth check
-        var (authorized, _, error) = context.RequireAdminOrEditorSession();
-        if (!authorized) return error!;
-
-        var command = new CreateGameFAQCommand(
-            GameId: gameId,
-            Question: request.Question,
-            Answer: request.Answer
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        logger.LogInformation("Created FAQ {FAQId} for game {GameId}", result.Id, gameId);
-        return Results.Created($"/api/v1/faqs/{result.Id}", result);
-    }
-
-    private static async Task<IResult> HandleUpdateGameFaq(
-        Guid id,
-        UpdateGameFAQRequest request,
-        IMediator mediator,
-        HttpContext context,
-        CancellationToken ct)
-    {
-        // Auth check
-        var (authorized, _, error) = context.RequireAdminOrEditorSession();
-        if (!authorized) return error!;
-
-        var command = new UpdateGameFAQCommand(
-            Id: id,
-            Question: request.Question,
-            Answer: request.Answer
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        return Results.Ok(result);
-    }
-
-    private static async Task<IResult> HandleDeleteGameFaq(
-        Guid id,
-        IMediator mediator,
-        HttpContext context,
-        CancellationToken ct)
-    {
-        // Auth check
-        var (authorized, _, error) = context.RequireAdminOrEditorSession();
-        if (!authorized) return error!;
-
-        var command = new DeleteGameFAQCommand(Id: id);
-        await mediator.Send(command, ct).ConfigureAwait(false);
-
-        return Results.NoContent();
-    }
-
-    private static async Task<IResult> HandleUpvoteGameFaq(
-        Guid id,
-        IMediator mediator,
-                CancellationToken ct)
-    {
-        var command = new UpvoteGameFAQCommand(Id: id);
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-
-        return Results.Ok(result);
-    }
 
     private static async Task<IResult> HandleUploadGameImage(
         HttpContext context,

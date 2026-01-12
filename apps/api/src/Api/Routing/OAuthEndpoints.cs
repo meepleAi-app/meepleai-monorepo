@@ -174,11 +174,9 @@ Rate limited to 10 requests per minute per IP address.
 
     private static void MapAccountLinkingEndpoints(RouteGroupBuilder group)
     {
-        /// <summary>
-        /// Unlink OAuth provider from user account (DDD CQRS pattern).
-        /// Uses IMediator to send UnlinkOAuthAccountCommand instead of direct service call.
-        /// Business logic enforced in handler: Cannot unlink if only auth method (prevents lockout).
-        /// </summary>
+        // Unlink OAuth provider from user account (DDD CQRS pattern).
+        // Uses IMediator to send UnlinkOAuthAccountCommand instead of direct service call.
+        // Business logic enforced in handler: Cannot unlink if only auth method (prevents lockout).
         group.MapDelete("/auth/oauth/{provider}/unlink", async (
             string provider,
             HttpContext context,
@@ -227,11 +225,9 @@ User must have at least one authentication method remaining (password or another
         .Produces(401)
         .Produces(404);
 
-        /// <summary>
-        /// Get user's linked OAuth accounts (DDD CQRS pattern).
-        /// Uses IMediator to send GetLinkedOAuthAccountsQuery instead of direct service call.
-        /// Returns list of OAuth providers linked to authenticated user.
-        /// </summary>
+        // Get user's linked OAuth accounts (DDD CQRS pattern).
+        // Uses IMediator to send GetLinkedOAuthAccountsQuery instead of direct service call.
+        // Returns list of OAuth providers linked to authenticated user.
         group.MapGet("/users/me/oauth-accounts", async (
             HttpContext context,
             IMediator mediator,

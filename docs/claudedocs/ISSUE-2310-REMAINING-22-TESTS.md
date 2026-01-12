@@ -229,14 +229,8 @@ Analysis reveals 3 primary categories of missing test coverage:
 - Notification dispatch validation
 - Alert resolution and history tracking
 
-### Test 22: GameFAQUpvoteRaceConditionTests
-**File**: `apps/api/tests/Api.Tests/Integration/GameManagement/GameFAQUpvoteRaceConditionTests.cs`
-**Scenario**: Test concurrent upvotes to same FAQ, validate count accuracy
-**Bounded Context**: GameManagement
-**Priority**: LOW
-**Rationale**: Prevent vote count corruption on concurrent updates
-**Test Cases**:
-- 100 parallel upvotes result in correct count
+### Test 22: ~~GameFAQUpvoteRaceConditionTests~~ (REMOVED - Legacy System)
+**Status**: OBSOLETE - Legacy GameFAQ system removed in favor of GameFaq (ISSUE-2370)
 - No lost updates
 - Idempotency for same user upvoting twice
 
@@ -277,9 +271,9 @@ Analysis reveals 3 primary categories of missing test coverage:
 19. ChatThreadConcurrentMessageTests
 20. DocumentCollectionToRagPipelineIntegrationTests
 21. AlertRuleEvaluationWorkflowTests
-22. GameFAQUpvoteRaceConditionTests
+22. ~~GameFAQUpvoteRaceConditionTests~~ (REMOVED - Legacy System)
 
-**Total Estimated Effort**: ~7.5 hours for 22 tests
+**Total Estimated Effort**: ~7 hours for 21 active tests (1 test removed due to legacy system cleanup)
 
 ---
 

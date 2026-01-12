@@ -3,8 +3,8 @@ using System.Diagnostics.Metrics;
 namespace Api.Observability;
 
 /// <summary>
-/// OpenTelemetry metrics for Prompt Management system
-/// ADMIN-01 Phase 5: Deployment & Monitoring
+/// OpenTelemetry metrics for Prompt Management system.
+/// ADMIN-01 Phase 5: Deployment and Monitoring.
 /// </summary>
 internal static class PromptManagementMetrics
 {

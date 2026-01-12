@@ -45,7 +45,7 @@ internal static class InfrastructureServiceExtensions
                 if (key.Contains("POSTGRES", StringComparison.OrdinalIgnoreCase) || key.Contains("ConnectionStrings", StringComparison.OrdinalIgnoreCase))
                 {
                     var val = env.Value?.ToString() ?? "NULL";
-                    var maskedVal = val.Length > 50 ? val.Substring(0, 50) + "..." : val;
+                    var maskedVal = val.Length > 50 ? string.Concat(val.AsSpan(0, 50), "...") : val;
                     Console.WriteLine($"  {key} = {maskedVal}");
                 }
             }

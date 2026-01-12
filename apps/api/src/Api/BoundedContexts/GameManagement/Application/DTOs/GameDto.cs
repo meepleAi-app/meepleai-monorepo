@@ -90,6 +90,14 @@ internal record RuleAtomDto(
 /// DTO for rule specification.
 /// Issue #2055: Includes ETag for optimistic concurrency control.
 /// </summary>
+/// <param name="Id">Unique identifier for this rule specification.</param>
+/// <param name="GameId">ID of the game this specification belongs to.</param>
+/// <param name="Version">Version string of the specification.</param>
+/// <param name="CreatedAt">Timestamp when this version was created.</param>
+/// <param name="CreatedByUserId">Optional ID of the user who created this version.</param>
+/// <param name="ParentVersionId">Optional ID of the parent version for branching.</param>
+/// <param name="Atoms">List of rule atoms defining the specification.</param>
+/// <param name="ETag">Issue #2055: ETag (base64-encoded RowVersion) for optimistic concurrency. Send this value back when updating to detect concurrent modifications.</param>
 internal record RuleSpecDto(
     Guid Id,
     Guid GameId,
@@ -98,10 +106,6 @@ internal record RuleSpecDto(
     Guid? CreatedByUserId,
     Guid? ParentVersionId,
     IReadOnlyList<RuleAtomDto> Atoms,
-    /// <summary>
-    /// Issue #2055: ETag (base64-encoded RowVersion) for optimistic concurrency.
-    /// Send this value back when updating to detect concurrent modifications.
-    /// </summary>
     string? ETag = null
 );
 

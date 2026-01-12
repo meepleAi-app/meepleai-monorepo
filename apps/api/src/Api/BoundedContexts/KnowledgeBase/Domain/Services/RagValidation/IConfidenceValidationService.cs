@@ -69,7 +69,7 @@ public enum ValidationSeverity
     Warning,
 
     /// <summary>
-    /// Confidence critically low (<0.60)
+    /// Confidence critically low (&lt;0.60)
     /// </summary>
     Critical,
 

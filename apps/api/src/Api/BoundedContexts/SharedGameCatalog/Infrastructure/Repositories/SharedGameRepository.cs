@@ -143,4 +143,14 @@ internal sealed class SharedGameRepository : ISharedGameRepository
 
         return gameEntity != null ? MapToDomain(gameEntity) : null;
     }
+
+    public async Task<SharedGame?> GetByIdWithDeletedAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var gameEntity = await _context.SharedGames
+            .AsNoTracking()
+            .IgnoreQueryFilters() // Include soft-deleted games
+            .FirstOrDefaultAsync(g => g.Id == id, cancellationToken).ConfigureAwait(false);
+
+        return gameEntity != null ? MapToDomain(gameEntity) : null;
+    }
 }

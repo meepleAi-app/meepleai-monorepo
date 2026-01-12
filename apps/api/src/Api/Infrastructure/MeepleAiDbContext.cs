@@ -79,6 +79,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameMechanicEntity> GameMechanics => Set<GameMechanicEntity>(); // ISSUE-2370: Game mechanics taxonomy
     public DbSet<GameFaqEntity> GameFaqs => Set<GameFaqEntity>(); // ISSUE-2370: Game FAQs
     public DbSet<GameErrataEntity> GameErrata => Set<GameErrataEntity>(); // ISSUE-2370: Game errata
+    public DbSet<SharedGameDeleteRequestEntity> SharedGameDeleteRequests => Set<SharedGameDeleteRequestEntity>(); // ISSUE-2370: Delete requests
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

@@ -3,6 +3,17 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 namespace Api.BoundedContexts.SharedGameCatalog.Application;
 
 /// <summary>
+/// Data transfer object for delete request information.
+/// </summary>
+internal sealed record DeleteRequestDto(
+    Guid Id,
+    Guid SharedGameId,
+    string GameTitle,
+    Guid RequestedBy,
+    string Reason,
+    DateTime CreatedAt);
+
+/// <summary>
 /// Data transfer object for shared game basic information.
 /// </summary>
 public sealed record SharedGameDto(

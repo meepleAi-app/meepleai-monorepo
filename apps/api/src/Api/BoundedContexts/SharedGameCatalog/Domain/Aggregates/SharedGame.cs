@@ -420,6 +420,23 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Deletes the game by setting IsDeleted flag (soft delete).
+    /// Only games in non-draft status can be deleted.
+    /// </summary>
+    /// <param name="deletedBy">The ID of the user deleting the game</param>
+    /// <exception cref="ArgumentException">Thrown when deletedBy is empty</exception>
+    public void Delete(Guid deletedBy)
+    {
+        if (deletedBy == Guid.Empty)
+            throw new ArgumentException("DeletedBy cannot be empty", nameof(deletedBy));
+
+        _modifiedBy = deletedBy;
+        _modifiedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new SharedGameDeletedEvent(_id, deletedBy));
+    }
+
+    /// <summary>
     /// Adds a FAQ to this game.
     /// </summary>
     /// <param name="faq">The FAQ to add</param>

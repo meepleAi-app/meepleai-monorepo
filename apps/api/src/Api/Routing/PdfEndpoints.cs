@@ -27,7 +27,7 @@ internal static class PdfEndpoints
     {
         MapStandardUploadEndpoint(group);
         MapChunkedUploadEndpoints(group);
-        MapBggEndpoints(group);
+        // Removed: MapBggEndpoints(group) - BGG belongs to AiEndpoints (Issue #2366)
         MapRetrievalEndpoints(group);
         MapLifecycleEndpoints(group);
         MapProcessingStateEndpoints(group);
@@ -76,18 +76,6 @@ internal static class PdfEndpoints
         // Upload a single chunk
         group.MapPost("/ingest/pdf/chunked/chunk", HandleUploadChunk)
         .RequireSession();
-    }
-
-    private static void MapBggEndpoints(RouteGroupBuilder group)
-    {
-        // Note: Game listing is handled in GameEndpoints to avoid route duplication
-
-        // AI-13: BoardGameGeek API endpoints
-        group.MapGet("/bgg/search", HandleBggSearch)
-        .RequireSession(); // Issue #1446: Automatic session validation
-
-        group.MapGet("/bgg/games/{bggId:int}", HandleGetBggGameDetails)
-        .RequireSession(); // Issue #1446: Automatic session validation
     }
 
     private static void MapRetrievalEndpoints(RouteGroupBuilder group)
@@ -393,56 +381,6 @@ internal static class PdfEndpoints
             progressPercentage = result.ProgressPercentage,
             isComplete = result.IsComplete
         });
-    }
-
-    private static async Task<IResult> HandleBggSearch(
-                [FromQuery] string? q,
-        [FromQuery] bool exact,
-        IMediator mediator,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(q))
-        {
-            return Results.BadRequest(new { error = "Query parameter 'q' is required" });
-        }
-
-        var validatedQuery = q!;
-
-        // DDD Migration Phase 3.3: Use SearchBggGamesQuery via IMediator
-        var query = new SearchBggGamesQuery(
-            SearchTerm: validatedQuery,
-            ExactMatch: exact
-        );
-
-        var results = await mediator.Send(query, ct).ConfigureAwait(false);
-        logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, validatedQuery);
-        return Results.Json(new { results });
-    }
-
-    private static async Task<IResult> HandleGetBggGameDetails(
-        int bggId,
-        IMediator mediator,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        if (bggId <= 0)
-        {
-            return Results.BadRequest(new { error = "Invalid BGG ID. Must be a positive integer." });
-        }
-
-        // DDD Migration Phase 3.3: Use GetBggGameDetailsQuery via IMediator
-        var query = new GetBggGameDetailsQuery(BggId: bggId);
-        var details = await mediator.Send(query, ct).ConfigureAwait(false);
-
-        if (details == null)
-        {
-            logger.LogWarning("BGG game not found: {BggId}", bggId);
-            return Results.NotFound(new { error = $"Game with BGG ID {bggId} not found" });
-        }
-
-        logger.LogInformation("BGG game details retrieved: {BggId}, {Name}", bggId, details.Name);
-        return Results.Json(details);
     }
 
     private static async Task<IResult> HandleListPdfs(Guid gameId, IMediator mediator, CancellationToken ct)

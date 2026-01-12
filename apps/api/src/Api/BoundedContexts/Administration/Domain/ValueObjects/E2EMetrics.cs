@@ -1,4 +1,6 @@
+using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Guards;
 
 namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 
@@ -76,36 +78,16 @@ internal sealed class E2EMetrics : ValueObject
         DateTime lastRunAt,
         string status)
     {
-        if (coverage < 0 || coverage > 100)
-        {
-            throw new ArgumentOutOfRangeException(nameof(coverage), "Coverage must be between 0 and 100");
-        }
-
-        if (passRate < 0 || passRate > 100)
-        {
-            throw new ArgumentOutOfRangeException(nameof(passRate), "Pass rate must be between 0 and 100");
-        }
-
-        if (flakyRate < 0 || flakyRate > 100)
-        {
-            throw new ArgumentOutOfRangeException(nameof(flakyRate), "Flaky rate must be between 0 and 100");
-        }
-
-        if (totalTests < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(totalTests), "Total tests cannot be negative");
-        }
-
-        if (passedTests < 0) throw new ArgumentOutOfRangeException(nameof(passedTests), "Passed tests cannot be negative");
-        if (failedTests < 0) throw new ArgumentOutOfRangeException(nameof(failedTests), "Failed tests cannot be negative");
-        if (skippedTests < 0) throw new ArgumentOutOfRangeException(nameof(skippedTests), "Skipped tests cannot be negative");
-        if (flakyTests < 0) throw new ArgumentOutOfRangeException(nameof(flakyTests), "Flaky tests cannot be negative");
-        if (executionTime < 0) throw new ArgumentOutOfRangeException(nameof(executionTime), "Execution time cannot be negative");
-
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            throw new ArgumentException("Status cannot be empty", nameof(status));
-        }
+        Guard.AgainstOutOfRange(coverage, nameof(coverage), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
+        Guard.AgainstOutOfRange(passRate, nameof(passRate), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
+        Guard.AgainstOutOfRange(flakyRate, nameof(flakyRate), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
+        Guard.AgainstNegative(executionTime, nameof(executionTime));
+        Guard.AgainstNegative(totalTests, nameof(totalTests));
+        Guard.AgainstNegative(passedTests, nameof(passedTests));
+        Guard.AgainstNegative(failedTests, nameof(failedTests));
+        Guard.AgainstNegative(skippedTests, nameof(skippedTests));
+        Guard.AgainstNegative(flakyTests, nameof(flakyTests));
+        Guard.AgainstNullOrWhiteSpace(status, nameof(status));
 
         Coverage = coverage;
         PassRate = passRate;
@@ -121,13 +103,13 @@ internal sealed class E2EMetrics : ValueObject
     }
 
     /// <summary>
-    /// Determines if E2E metrics meet quality standards
-    /// (Coverage >= 90%, Pass rate >= 95%, Flaky rate <= 5%)
+    /// Determines if E2E metrics meet quality standards.
+    /// Coverage &gt;= 90%, Pass rate &gt;= 95%, Flaky rate &lt;= 5%.
     /// </summary>
     public bool MeetsQualityStandards =>
-        Coverage >= 90 &&
-        PassRate >= 95 &&
-        FlakyRate <= 5;
+        Coverage >= QualityThresholds.MinimumCoverage &&
+        PassRate >= QualityThresholds.MinimumPassRate &&
+        FlakyRate <= QualityThresholds.MaximumFlakyRate;
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {

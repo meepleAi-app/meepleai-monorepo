@@ -9,7 +9,7 @@ internal interface ICacheMetricsRecorder
     /// <summary>
     /// Records a cache hit metric with operation and cache type labels.
     /// Increments meepleai.cache.hits.total counter via OpenTelemetry.
-    /// Fire-and-forget pattern ensures <5ms latency impact on cache operations.
+    /// Fire-and-forget pattern ensures &lt;5ms latency impact on cache operations.
     /// </summary>
     /// <param name="operation">Cache operation type (e.g., "get", "set", "invalidate")</param>
     /// <param name="cacheType">Cache type (e.g., "ai_response", "vector_search")</param>

@@ -1,5 +1,7 @@
-using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Guards;
 
 namespace Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 
@@ -18,17 +20,17 @@ internal sealed class FileSize : ValueObject
     /// <summary>
     /// Size in kilobytes
     /// </summary>
-    public double Kilobytes => Bytes / 1024.0;
+    public double Kilobytes => Bytes / (double)FileSizeCategories.BytesPerKilobyte;
 
     /// <summary>
     /// Size in megabytes
     /// </summary>
-    public double Megabytes => Bytes / 1024.0 / 1024.0;
+    public double Megabytes => Bytes / (double)FileSizeCategories.BytesPerMegabyte;
 
     /// <summary>
     /// Size in gigabytes
     /// </summary>
-    public double Gigabytes => Bytes / 1024.0 / 1024.0 / 1024.0;
+    public double Gigabytes => Bytes / (double)FileSizeCategories.BytesPerGigabyte;
 
     /// <summary>
     /// Creates a file size with the specified byte count.
@@ -37,9 +39,7 @@ internal sealed class FileSize : ValueObject
     /// <exception cref="ValidationException">Thrown if size is invalid</exception>
     public FileSize(long bytes)
     {
-        if (bytes < 1)
-            throw new ValidationException("File size must be at least 1 byte");
-
+        Guard.AgainstTooSmall(bytes, nameof(bytes), FileSizeCategories.MinimumFileSize);
         Bytes = bytes;
     }
 
@@ -53,7 +53,7 @@ internal sealed class FileSize : ValueObject
         if (megabytes <= 0)
             throw new ValidationException("Megabytes must be greater than 0");
 
-        var bytes = (long)(megabytes * 1024 * 1024);
+        var bytes = (long)(megabytes * FileSizeCategories.BytesPerMegabyte);
         return new FileSize(bytes);
     }
 
@@ -67,7 +67,7 @@ internal sealed class FileSize : ValueObject
         if (kilobytes <= 0)
             throw new ValidationException("Kilobytes must be greater than 0");
 
-        var bytes = (long)(kilobytes * 1024);
+        var bytes = (long)(kilobytes * FileSizeCategories.BytesPerKilobyte);
         return new FileSize(bytes);
     }
 
@@ -75,7 +75,7 @@ internal sealed class FileSize : ValueObject
     /// Checks if the file size is within the specified limit (in bytes).
     /// </summary>
     /// <param name="maxBytes">Maximum allowed size in bytes</param>
-    /// <returns>True if size <= maxBytes</returns>
+    /// <returns>True if size &lt;= maxBytes</returns>
     public bool IsWithinLimit(long maxBytes)
     {
         if (maxBytes < 1)
@@ -85,37 +85,37 @@ internal sealed class FileSize : ValueObject
     }
 
     /// <summary>
-    /// Checks if the file is very small (business definition: < 1 KB).
+    /// Checks if the file is very small (business definition: &lt; 1 KB).
     /// </summary>
-    public bool IsVerySmall => Bytes < 1024;
+    public bool IsVerySmall => Bytes < FileSizeCategories.BytesPerKilobyte;
 
     /// <summary>
-    /// Checks if the file is small (business definition: < 1 MB).
+    /// Checks if the file is small (business definition: &lt; 1 MB).
     /// </summary>
-    public bool IsSmall => Bytes < 1024 * 1024;
+    public bool IsSmall => Bytes < FileSizeCategories.BytesPerMegabyte;
 
     /// <summary>
     /// Checks if the file is medium (business definition: 1-10 MB).
     /// </summary>
-    public bool IsMedium => Bytes >= 1024 * 1024 && Bytes <= 10 * 1024 * 1024;
+    public bool IsMedium => Bytes >= FileSizeCategories.BytesPerMegabyte && Bytes <= FileSizeCategories.MediumFileThreshold;
 
     /// <summary>
     /// Checks if the file is large (business definition: > 10 MB).
     /// </summary>
-    public bool IsLarge => Bytes > 10 * 1024 * 1024;
+    public bool IsLarge => Bytes > FileSizeCategories.MediumFileThreshold;
 
     /// <summary>
     /// Returns a human-readable string representation of the file size.
     /// </summary>
     public override string ToString()
     {
-        if (Bytes < 1024)
+        if (Bytes < FileSizeCategories.BytesPerKilobyte)
             return $"{Bytes} bytes";
 
-        if (Bytes < 1024 * 1024)
+        if (Bytes < FileSizeCategories.BytesPerMegabyte)
             return $"{Kilobytes:F1} KB";
 
-        if (Bytes < 1024 * 1024 * 1024)
+        if (Bytes < FileSizeCategories.BytesPerGigabyte)
             return $"{Megabytes:F1} MB";
 
         return $"{Gigabytes:F2} GB";
@@ -148,12 +148,7 @@ internal sealed class FileSize : ValueObject
     /// <summary>
     /// Common file sizes as static constants.
     /// </summary>
-    public static readonly FileSize OneByte = new(1);
-    public static readonly FileSize OneKilobyte = new(1024);
-    public static readonly FileSize OneMegabyte = new(1024 * 1024);
-
-    public long ToInt64()
-    {
-        throw new NotSupportedException("Use implicit conversion to long instead");
-    }
+    public static readonly FileSize OneByte = new(FileSizeCategories.MinimumFileSize);
+    public static readonly FileSize OneKilobyte = new(FileSizeCategories.BytesPerKilobyte);
+    public static readonly FileSize OneMegabyte = new(FileSizeCategories.BytesPerMegabyte);
 }

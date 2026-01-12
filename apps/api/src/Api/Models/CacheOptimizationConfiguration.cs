@@ -47,25 +47,25 @@ internal class CacheOptimizationConfiguration
 
     /// <summary>
     /// Minimum hit count for a query to be classified as "warm".
-    /// Queries with hit count >= WarmQueryThreshold and < HotQueryThreshold are warm.
+    /// Queries with hit count &gt;= WarmQueryThreshold and &lt; HotQueryThreshold are warm.
     /// Default: 3 hits.
     /// </summary>
     public int WarmQueryThreshold { get; set; } = 3;
 
     /// <summary>
-    /// TTL in hours for hot queries (>= HotQueryThreshold hits).
+    /// TTL in hours for hot queries (&gt;= HotQueryThreshold hits).
     /// Default: 24 hours (1 day).
     /// </summary>
     public int HotQueryTtlHours { get; set; } = 24;
 
     /// <summary>
-    /// TTL in hours for warm queries (>= WarmQueryThreshold, < HotQueryThreshold hits).
+    /// TTL in hours for warm queries (&gt;= WarmQueryThreshold, &lt; HotQueryThreshold hits).
     /// Default: 6 hours.
     /// </summary>
     public int WarmQueryTtlHours { get; set; } = 6;
 
     /// <summary>
-    /// TTL in hours for cold queries (< WarmQueryThreshold hits).
+    /// TTL in hours for cold queries (&lt; WarmQueryThreshold hits).
     /// Default: 1 hour.
     /// </summary>
     public int ColdQueryTtlHours { get; set; } = 1;

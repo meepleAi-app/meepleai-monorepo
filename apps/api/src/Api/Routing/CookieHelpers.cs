@@ -111,19 +111,17 @@ internal static class CookieHelpers
         var secure = configuration.Secure ?? isHttps;
         var secureForced = false;
 
-        // CRITICAL FIX: For localhost development with Secure=false
-        // Force SameSite=None BEFORE any other logic modifies it
+        // Use configured SameSite or sensible defaults
         SameSiteMode sameSite;
         if (configuration.Secure is false)
         {
-            // Explicitly configured for development (HTTP)
-            // Force SameSite=None for cross-port cookies
-            sameSite = SameSiteMode.None;
+            // Development (HTTP): Use configured SameSite (Lax recommended for same-origin)
+            sameSite = configuration.SameSite ?? SameSiteMode.Lax;
             secure = false; // Keep secure=false as configured
         }
         else
         {
-            // Default logic for production/HTTPS
+            // Production/HTTPS: Default to SameSite=None for cross-origin
             if (!secure && !configuration.Secure.HasValue)
             {
                 secure = true;

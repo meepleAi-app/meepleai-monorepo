@@ -177,6 +177,8 @@ function getSecurityHeaders(requestOrigin?: string) {
     // No request origin available (shouldn't happen), include API origin for safety
     connectSrcParts.push(apiOrigin);
   }
+  // Allow HyperDX observability telemetry
+  connectSrcParts.push('https://in-otel.hyperdx.io');
 
   return {
     // Content Security Policy - XSS protection
@@ -204,7 +206,7 @@ function getSecurityHeaders(requestOrigin?: string) {
     // Referrer policy
     'Referrer-Policy': 'strict-origin-when-cross-origin',
 
-    // Permissions policy
+    // Permissions policy - allow unload for observability (HyperDX session recording)
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
   };
 }

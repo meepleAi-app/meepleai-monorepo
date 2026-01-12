@@ -1,21 +1,27 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using MediatR;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 
 /// <summary>
 /// Handler for getting a shared game by ID.
+/// Uses HybridCache (L1: Memory 30min, L2: Redis 2h) for performance.
+/// Issue #2371 Phase 2
 /// </summary>
 internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedGameByIdQuery, SharedGameDetailDto?>
 {
     private readonly ISharedGameRepository _repository;
+    private readonly HybridCache _cache;
     private readonly ILogger<GetSharedGameByIdQueryHandler> _logger;
 
     public GetSharedGameByIdQueryHandler(
         ISharedGameRepository repository,
+        HybridCache cache,
         ILogger<GetSharedGameByIdQueryHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -23,12 +29,32 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        _logger.LogInformation("Getting shared game: {GameId}", query.GameId);
+        var cacheKey = $"shared-game:{query.GameId}";
 
-        var game = await _repository.GetByIdAsync(query.GameId, cancellationToken).ConfigureAwait(false);
+        // Try cache first (L1: 30min, L2: 2h)
+        var cachedGame = await _cache.GetOrCreateAsync<SharedGameDetailDto?>(
+            cacheKey,
+            async cancel =>
+            {
+                _logger.LogInformation("Cache miss for shared game: {GameId}", query.GameId);
+                return await FetchGameDetailsAsync(query.GameId, cancel).ConfigureAwait(false);
+            },
+            new HybridCacheEntryOptions
+            {
+                LocalCacheExpiration = TimeSpan.FromMinutes(30),  // L1
+                Expiration = TimeSpan.FromHours(2)  // L2
+            },
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        return cachedGame;
+    }
+
+    private async Task<SharedGameDetailDto?> FetchGameDetailsAsync(Guid gameId, CancellationToken cancellationToken)
+    {
+        var game = await _repository.GetByIdAsync(gameId, cancellationToken).ConfigureAwait(false);
         if (game is null)
         {
-            _logger.LogWarning("Shared game not found: {GameId}", query.GameId);
+            _logger.LogWarning("Shared game not found: {GameId}", gameId);
             return null;
         }
 

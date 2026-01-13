@@ -20,6 +20,9 @@ internal sealed class Game : AggregateRoot<Guid>
     public int? BggId { get; private set; }
     public string? BggMetadata { get; private set; }
 
+    // SharedGameCatalog Integration (Issue #2373)
+    public Guid? SharedGameId { get; private set; }
+
     // Admin Wizard: Game images
     public string? IconUrl { get; private set; }
     public string? ImageUrl { get; private set; }
@@ -95,6 +98,18 @@ internal sealed class Game : AggregateRoot<Guid>
         BggMetadata = metadata;
 
         AddDomainEvent(new GameLinkedToBggEvent(Id, bggId));
+    }
+
+    /// <summary>
+    /// Links game to SharedGameCatalog entry.
+    /// Issue #2373: Enables enriched game data from community catalog.
+    /// </summary>
+    public void LinkToSharedGame(Guid sharedGameId)
+    {
+        if (sharedGameId == Guid.Empty)
+            throw new ArgumentException("SharedGameId cannot be empty", nameof(sharedGameId));
+
+        SharedGameId = sharedGameId;
     }
 
     /// <summary>

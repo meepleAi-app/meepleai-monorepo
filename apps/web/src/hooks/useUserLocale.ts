@@ -106,7 +106,7 @@ export function useUserLocale(): SupportedLocale {
         // Step 1: Try to get user preference from profile
         // Uses centralized API client for circuit breaker, deduplication, metrics
         const profile = await api.auth.getProfile();
-        const userLanguage = profile?.Language;
+        const userLanguage = profile?.language;
 
         if (isSupportedLocale(userLanguage)) {
           setLocale(userLanguage);

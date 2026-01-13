@@ -62,7 +62,8 @@ internal class GetGameDetailsQueryHandler : IQueryHandler<GetGameDetailsQuery, G
             CreatedAt: game.CreatedAt,
             SupportsSolo: game.SupportsSolo,
             TotalSessionsPlayed: totalSessions,
-            LastPlayedAt: lastPlayed
+            LastPlayedAt: lastPlayed,
+            SharedGameId: game.SharedGameId
         );
     }
 }

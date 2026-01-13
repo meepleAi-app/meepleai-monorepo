@@ -5,6 +5,7 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs;
 
 /// <summary>
 /// Data transfer object for game information.
+/// Issue #2373: Added SharedGameId for catalog integration.
 /// </summary>
 internal record GameDto(
     Guid Id,
@@ -18,11 +19,13 @@ internal record GameDto(
     int? BggId,
     DateTime CreatedAt,
     string? IconUrl = null,
-    string? ImageUrl = null
+    string? ImageUrl = null,
+    Guid? SharedGameId = null
 );
 
 /// <summary>
 /// DTO for creating a game.
+/// Issue #2373: Added SharedGameId for catalog integration.
 /// </summary>
 internal record CreateGameRequest(
     string Title,
@@ -34,7 +37,8 @@ internal record CreateGameRequest(
     int? MaxPlayTimeMinutes = null,
     string? IconUrl = null,
     string? ImageUrl = null,
-    int? BggId = null
+    int? BggId = null,
+    Guid? SharedGameId = null
 );
 
 /// <summary>
@@ -52,6 +56,7 @@ internal record UpdateGameRequest(
 
 /// <summary>
 /// Extended DTO for game detail page with additional metadata and statistics.
+/// Issue #2373: Added SharedGameId for catalog integration.
 /// </summary>
 internal record GameDetailsDto(
     Guid Id,
@@ -72,7 +77,9 @@ internal record GameDetailsDto(
     DateTime? LastPlayedAt,
     // Game images
     string? IconUrl = null,
-    string? ImageUrl = null
+    string? ImageUrl = null,
+    // SharedGameCatalog integration
+    Guid? SharedGameId = null
 );
 
 /// <summary>

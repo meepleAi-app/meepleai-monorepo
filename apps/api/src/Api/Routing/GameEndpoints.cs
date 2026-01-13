@@ -208,7 +208,8 @@ internal static class GameEndpoints
             MaxPlayTimeMinutes: request.MaxPlayTimeMinutes,
             IconUrl: request.IconUrl,
             ImageUrl: request.ImageUrl,
-            BggId: request.BggId
+            BggId: request.BggId,
+            SharedGameId: request.SharedGameId // Issue #2373: Link to SharedGameCatalog
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -424,6 +425,7 @@ internal static class GameEndpoints
     }
 
 
+#pragma warning disable MA0051 // Method is too long - Complex image upload endpoint with security validation
     private static async Task<IResult> HandleUploadGameImage(
         HttpContext context,
         IMediator mediator,

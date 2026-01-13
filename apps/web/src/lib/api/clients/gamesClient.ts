@@ -68,6 +68,7 @@ export interface GameSortOptions {
 
 /**
  * Admin Wizard: Create game request with optional image URLs
+ * Issue #2373: Added sharedGameId for catalog integration
  */
 export interface CreateGameRequest {
   name: string;
@@ -80,6 +81,8 @@ export interface CreateGameRequest {
   iconUrl?: string | null;
   imageUrl?: string | null;
   bggId?: number | null;
+  /** Issue #2373: Link to SharedGameCatalog entry for enriched data */
+  sharedGameId?: string | null;
 }
 
 /**

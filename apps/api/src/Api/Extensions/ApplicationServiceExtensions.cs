@@ -64,6 +64,9 @@ internal static class ApplicationServiceExtensions
         // ISSUE-2370: SharedGameCatalog bounded context
         services.AddSharedGameCatalogContext();
 
+        // ISSUE-2371: SharedGameCatalog authorization policies
+        services.AddSharedGameCatalogPolicies();
+
         return services;
     }
 

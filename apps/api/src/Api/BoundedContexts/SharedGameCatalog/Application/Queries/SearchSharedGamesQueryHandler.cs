@@ -1,32 +1,43 @@
+using System.Security.Cryptography;
+using System.Text;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 
 /// <summary>
 /// Handler for searching shared games with full-text search and filtering.
 /// Uses PostgreSQL full-text search for optimal Italian language support.
+/// Uses HybridCache (L1: 15min, L2: 1h) with query parameter hashing.
+/// Issue #2371 Phase 2
 /// </summary>
 internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchSharedGamesQuery, PagedResult<SharedGameDto>>
 {
     private readonly MeepleAiDbContext _context;
+    private readonly HybridCache _cache;
     private readonly ILogger<SearchSharedGamesQueryHandler> _logger;
 
     public SearchSharedGamesQueryHandler(
         MeepleAiDbContext context,
+        HybridCache cache,
         ILogger<SearchSharedGamesQueryHandler> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<PagedResult<SharedGameDto>> Handle(SearchSharedGamesQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
+
+        // Generate cache key from query parameters
+        var cacheKey = GenerateCacheKey(query);
 
         _logger.LogInformation(
             "Searching shared games: SearchTerm={SearchTerm}, Categories={CategoryCount}, Mechanics={MechanicCount}, Page={Page}",
@@ -35,6 +46,20 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             query.MechanicIds?.Count ?? 0,
             query.PageNumber);
 
+        // Try cache first (L1: 15min, L2: 1h)
+        return await _cache.GetOrCreateAsync<PagedResult<SharedGameDto>>(
+            cacheKey,
+            async cancel => await ExecuteSearchAsync(query, cancel).ConfigureAwait(false),
+            new HybridCacheEntryOptions
+            {
+                LocalCacheExpiration = TimeSpan.FromMinutes(15),  // L1
+                Expiration = TimeSpan.FromHours(1)  // L2
+            },
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<PagedResult<SharedGameDto>> ExecuteSearchAsync(SearchSharedGamesQuery query, CancellationToken cancellationToken)
+    {
         var dbQuery = _context.SharedGames.AsNoTracking();
 
         // Default filter: Published games only (unless specific Status is requested)
@@ -139,5 +164,27 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             Total: total,
             Page: query.PageNumber,
             PageSize: query.PageSize);
+    }
+
+    private static string GenerateCacheKey(SearchSharedGamesQuery query)
+    {
+        // Build cache key from all query parameters
+        var categoryIds = query.CategoryIds is not null && query.CategoryIds.Count > 0
+            ? string.Join(",", query.CategoryIds.OrderBy(x => x))
+            : "none";
+
+        var mechanicIds = query.MechanicIds is not null && query.MechanicIds.Count > 0
+            ? string.Join(",", query.MechanicIds.OrderBy(x => x))
+            : "none";
+
+        var searchTerm = query.SearchTerm ?? "none";
+        var statusStr = query.Status?.ToString() ?? "null";
+
+        // Create compact hash for long parameter combinations
+        var keyComponents = $"{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}";
+
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(keyComponents)));
+
+        return $"search-games:{hash}";
     }
 }

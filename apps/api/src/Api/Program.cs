@@ -377,6 +377,7 @@ v1Api.MapAuthEndpoints();
 v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
+v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
 v1Api.MapAiEndpoints();
 v1Api.MapPdfEndpoints();
 v1Api.MapDocumentCollectionEndpoints();

@@ -15,6 +15,7 @@ import {
   GameSchema,
   GameSessionDtoSchema,
   GetGameFAQsResultSchema,
+  PaginatedGamesResponseSchema,
   RuleSpecDiffSchema,
   RuleSpecHistorySchema,
   RuleSpecSchema,
@@ -103,8 +104,10 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       pageSize: number = 20
     ): Promise<PaginatedGamesResponse> {
       // Fetch all games from backend with Zod validation
+      // Backend returns paginated response: { games, total, page, pageSize, totalPages }
       // Backend serializes to camelCase (Program.cs:204 - JsonNamingPolicy.CamelCase)
-      const allGames: Game[] = (await httpClient.get('/api/v1/games', z.array(GameSchema))) ?? [];
+      const response = await httpClient.get('/api/v1/games', PaginatedGamesResponseSchema);
+      const allGames: Game[] = response?.games ?? [];
 
       // Client-side filtering
       let filtered = allGames;

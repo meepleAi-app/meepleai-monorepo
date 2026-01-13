@@ -113,7 +113,6 @@ playwright-report/
 test-results/
 
 # Misc
-.zencoder/
 .vscode/
 *.swp
 *.swo
@@ -126,3 +125,5 @@ test-results/
 
 # Playwright MCP temp files
 tmpclaude-*-cwd
+nul
+docs/02-development/MeepleAI_Configuration_Variables.xlsx

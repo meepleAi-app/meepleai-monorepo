@@ -28,9 +28,9 @@ describe('AuthClient - Sessions & 2FA', () => {
     describe('getSessionStatus', () => {
       it('should get current session status', async () => {
         const mockResponse: SessionStatusResponse = {
-          ExpiresAt: '2025-11-17T12:00:00Z',
-          LastSeenAt: '2025-11-17T11:00:00Z',
-          RemainingMinutes: 30,
+          expiresAt: '2025-11-17T12:00:00Z',
+          lastSeenAt: '2025-11-17T11:00:00Z',
+          remainingMinutes: 30,
         };
 
         mockFetch.mockResolvedValueOnce({
@@ -65,9 +65,9 @@ describe('AuthClient - Sessions & 2FA', () => {
     describe('extendSession', () => {
       it('should extend current session', async () => {
         const mockResponse: SessionStatusResponse = {
-          ExpiresAt: '2025-11-17T13:00:00Z',
-          LastSeenAt: '2025-11-17T11:00:00Z',
-          RemainingMinutes: 60,
+          expiresAt: '2025-11-17T13:00:00Z',
+          lastSeenAt: '2025-11-17T11:00:00Z',
+          remainingMinutes: 60,
         };
 
         mockFetch.mockResolvedValueOnce({
@@ -199,9 +199,9 @@ describe('AuthClient - Sessions & 2FA', () => {
     describe('getTwoFactorStatus', () => {
       it('should get 2FA status', async () => {
         const mockResponse: TwoFactorStatusDto = {
-          IsEnabled: true,
-          EnabledAt: '2025-11-01T10:00:00Z',
-          UnusedBackupCodesCount: 8,
+          isEnabled: true,
+          enabledAt: '2025-11-01T10:00:00Z',
+          unusedBackupCodesCount: 8,
         };
 
         mockFetch.mockResolvedValueOnce({
@@ -234,9 +234,9 @@ describe('AuthClient - Sessions & 2FA', () => {
     describe('setup2FA', () => {
       it('should setup 2FA and return QR code + backup codes', async () => {
         const mockResponse: TotpSetupResponse = {
-          Secret: 'JBSWY3DPEHPK3PXP',
-          QrCodeUrl: 'otpauth://totp/MeepleAI:user@example.com?secret=JBSWY3DPEHPK3PXP',
-          BackupCodes: [
+          secret: 'JBSWY3DPEHPK3PXP',
+          qrCodeUrl: 'otpauth://totp/MeepleAI:user@example.com?secret=JBSWY3DPEHPK3PXP',
+          backupCodes: [
             '12345678',
             '23456789',
             '34567890',
@@ -271,9 +271,9 @@ describe('AuthClient - Sessions & 2FA', () => {
           ok: true,
           status: 200,
           json: async () => ({
-            Success: true,
-            BackupCodes: ['12345678', '23456789'],
-            ErrorMessage: null,
+            success: true,
+            backupCodes: ['12345678', '23456789'],
+            errorMessage: null,
           }),
           headers: new Headers(),
         });
@@ -281,9 +281,9 @@ describe('AuthClient - Sessions & 2FA', () => {
         const result = await authClient.enable2FA('123456');
 
         expect(result).toEqual({
-          Success: true,
-          BackupCodes: ['12345678', '23456789'],
-          ErrorMessage: null,
+          success: true,
+          backupCodes: ['12345678', '23456789'],
+          errorMessage: null,
         });
         expect(mockFetch).toHaveBeenCalledWith(
           expect.stringContaining('/api/v1/auth/2fa/enable'),
@@ -321,8 +321,8 @@ describe('AuthClient - Sessions & 2FA', () => {
           ok: true,
           status: 200,
           json: async () => ({
-            Success: true,
-            ErrorMessage: null,
+            success: true,
+            errorMessage: null,
           }),
           headers: new Headers(),
         });
@@ -330,8 +330,8 @@ describe('AuthClient - Sessions & 2FA', () => {
         const result = await authClient.disable2FA('password123', '123456');
 
         expect(result).toEqual({
-          Success: true,
-          ErrorMessage: null,
+          success: true,
+          errorMessage: null,
         });
         expect(mockFetch).toHaveBeenCalledWith(
           expect.stringContaining('/api/v1/auth/2fa/disable'),

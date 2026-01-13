@@ -129,7 +129,7 @@ internal sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<Provi
                     ? gameGuid
                     : null,
                 UserId = userGuid,
-                Outcome = request.Outcome,
+                Outcome = request.Outcome!, // Not null here - validated in caller with IsNullOrWhiteSpace check
                 CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
                 UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime
             };
@@ -147,7 +147,7 @@ internal sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<Provi
             existing.GameId = !string.IsNullOrWhiteSpace(request.GameId) && Guid.TryParse(request.GameId, out var gameGuid)
                 ? gameGuid
                 : null;
-            existing.Outcome = request.Outcome;
+            existing.Outcome = request.Outcome!; // Not null here - validated in caller with IsNullOrWhiteSpace check
             existing.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
             _logger.LogInformation(

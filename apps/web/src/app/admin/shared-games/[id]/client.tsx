@@ -26,6 +26,7 @@ import {
   RefreshCw,
   ExternalLink,
   AlertTriangle,
+  Files,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -37,6 +38,7 @@ import {
   PlayersBadge,
   PlayTimeBadge,
   ComplexityBadge,
+  PdfDocumentList,
 } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -47,7 +49,7 @@ import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { api, type SharedGameDetail } from '@/lib/api';
+import { api, type SharedGameDetail, type SharedGameDocument } from '@/lib/api';
 
 // Game status numeric values (matches C# GameStatus enum)
 const GAME_STATUS = {
@@ -56,7 +58,7 @@ const GAME_STATUS = {
   Archived: 2,
 } as const;
 
-type TabValue = 'details' | 'categories' | 'rules' | 'history';
+type TabValue = 'details' | 'categories' | 'rules' | 'documents' | 'history';
 
 type ConfirmDialogState = {
   isOpen: boolean;
@@ -75,6 +77,7 @@ export function EditGameClient() {
   // State
   const [activeTab, setActiveTab] = useState<TabValue>('details');
   const [game, setGame] = useState<SharedGameDetail | null>(null);
+  const [documents, setDocuments] = useState<SharedGameDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
@@ -104,9 +107,23 @@ export function EditGameClient() {
     }
   }, [gameId]);
 
+  // Fetch documents (Issue #2391 Sprint 1)
+  const fetchDocuments = useCallback(async () => {
+    if (!gameId) return;
+
+    try {
+      const result = await api.sharedGames.getDocuments(gameId);
+      setDocuments(result);
+    } catch (error) {
+      console.error('Failed to fetch documents:', error);
+      toast.error('Errore nel caricamento dei documenti');
+    }
+  }, [gameId]);
+
   useEffect(() => {
     fetchGame();
-  }, [fetchGame]);
+    fetchDocuments();
+  }, [fetchGame, fetchDocuments]);
 
   // Handle missing ID
   if (!gameId) {
@@ -233,6 +250,47 @@ export function EditGameClient() {
         } catch (error) {
           console.error('Failed to delete game:', error);
           toast.error("Errore nell'eliminazione del gioco");
+        } finally {
+          setIsActionLoading(false);
+        }
+      },
+    });
+  };
+
+  // Document handlers (Issue #2391 Sprint 1)
+  const handleSetActiveDocument = async (documentId: string) => {
+    if (!gameId) return;
+
+    setIsActionLoading(true);
+    try {
+      await api.sharedGames.setActiveDocument(gameId, documentId);
+      toast.success('Versione impostata come attiva');
+      await fetchDocuments();
+    } catch (error) {
+      console.error('Failed to set active document:', error);
+      toast.error("Errore nell'impostazione della versione attiva");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleRemoveDocument = (documentId: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Rimuovi Documento',
+      message: 'Sei sicuro di voler rimuovere questo documento dal gioco?',
+      variant: 'destructive',
+      onConfirm: async () => {
+        if (!gameId) return;
+
+        setIsActionLoading(true);
+        try {
+          await api.sharedGames.removeDocument(gameId, documentId);
+          toast.success('Documento rimosso');
+          await fetchDocuments();
+        } catch (error: unknown) {
+          console.error('Failed to remove document:', error);
+          toast.error('Errore nella rimozione del documento');
         } finally {
           setIsActionLoading(false);
         }
@@ -382,6 +440,10 @@ export function EditGameClient() {
               <FileText className="h-4 w-4" />
               Regole
             </TabsTrigger>
+            <TabsTrigger value="documents" className="gap-2">
+              <Files className="h-4 w-4" />
+              Documenti
+            </TabsTrigger>
             <TabsTrigger value="history" className="gap-2">
               <History className="h-4 w-4" />
               Cronologia
@@ -454,6 +516,26 @@ export function EditGameClient() {
                     regole.
                   </p>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Documents Tab (Issue #2391 Sprint 1) */}
+          <TabsContent value="documents">
+            <Card>
+              <CardHeader>
+                <CardTitle>Documenti Associati</CardTitle>
+                <CardDescription>
+                  PDF associati a questo gioco: Rulebook, Errata, Homerule con gestione versioni
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PdfDocumentList
+                  documents={documents}
+                  onSetActive={handleSetActiveDocument}
+                  onRemove={handleRemoveDocument}
+                  isLoading={isActionLoading}
+                />
               </CardContent>
             </Card>
           </TabsContent>

@@ -534,8 +534,10 @@ internal class RagService : IRagService
             return await operationFunc().ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - must return error response instead of throwing
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: must return error response instead of throwing
         // This single catch block replaces 5+ duplicate catch blocks per method (Issue #1441)
+#pragma warning restore S125
         catch (Exception ex)
         {
             return RagExceptionHandler.HandleExceptionDispatch(

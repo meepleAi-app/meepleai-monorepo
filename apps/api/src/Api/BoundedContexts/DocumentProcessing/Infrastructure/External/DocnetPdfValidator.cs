@@ -379,8 +379,10 @@ internal class DocnetPdfValidator : IPdfValidator
             errors["pdfStructure"] = $"Unsupported PDF format: {ex.Message}";
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Validation pattern - all PDF parsing errors must be captured and returned as validation errors
+#pragma warning disable S125 // Sections of code should not be commented out
+        // VALIDATION PATTERN: All PDF parsing errors must be captured and returned as validation errors
         // PDF structure validation must convert all exceptions to user-friendly validation messages
+#pragma warning restore S125
         catch (Exception ex)
         {
             errors["pdfStructure"] = $"Unable to read PDF structure: {ex.Message}";
@@ -452,16 +454,17 @@ internal class DocnetPdfValidator : IPdfValidator
             _logger.LogWarning(ex, "Access denied deleting temporary validation file {TempFile}", tempFile);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: CLEANUP PATTERN - temp file deletion failures must not affect validation result
-        // Validation is complete; file cleanup is best-effort only
+#pragma warning disable S125 // Sections of code should not be commented out
+        // CLEANUP PATTERN: Temp file deletion failures must not affect validation result
+        // Validation is complete; file cleanup is best-effort only.
+        // Rationale: Validation is already complete and result determined. Temporary file
+        // cleanup is a best-effort operation - failing to delete the temp file should not
+        // change the validation result or fail the upload. OS will eventually clean up temp
+        // directory, and we log for monitoring filesystem issues.
+        // Context: File failures are typically permission/locking (antivirus, backup processes)
+#pragma warning restore S125
         catch (Exception ex)
         {
-            // CLEANUP PATTERN: Temp file deletion failures are logged but not thrown
-            // Rationale: Validation is already complete and result determined. Temporary file
-            // cleanup is a best-effort operation - failing to delete the temp file should not
-            // change the validation result or fail the upload. OS will eventually clean up temp
-            // directory, and we log for monitoring filesystem issues.
-            // Context: File failures are typically permission/locking (antivirus, backup processes)
             _logger.LogWarning(ex, "Unexpected error deleting temporary validation file {TempFile}", tempFile);
         }
 #pragma warning restore CA1031

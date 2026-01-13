@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +20,10 @@ internal static class SharedGameCatalogServiceExtensions
         // Register repositories
         services.AddScoped<ISharedGameRepository, SharedGameRepository>();
         services.AddScoped<ISharedGameDeleteRequestRepository, SharedGameDeleteRequestRepository>();
+        services.AddScoped<ISharedGameDocumentRepository, SharedGameDocumentRepository>(); // Issue #2391 Sprint 1
+
+        // Register domain services
+        services.AddScoped<DocumentVersioningService>(); // Issue #2391 Sprint 1
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

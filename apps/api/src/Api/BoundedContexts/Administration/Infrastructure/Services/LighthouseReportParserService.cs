@@ -88,9 +88,11 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
             return metrics;
         }
 #pragma warning disable CA1031
-        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
         // Catches all file I/O and JSON parsing failures. Returns null instead of throwing
         // to allow dashboard to handle missing metrics gracefully. Non-critical data retrieval.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error parsing Lighthouse accessibility metrics");
@@ -162,9 +164,11 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
             return metrics;
         }
 #pragma warning disable CA1031
-        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
         // Catches all file I/O and JSON parsing failures. Returns null instead of throwing
         // to allow dashboard to handle missing metrics gracefully. Non-critical data retrieval.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error parsing Lighthouse performance metrics");

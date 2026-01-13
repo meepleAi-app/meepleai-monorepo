@@ -18,7 +18,7 @@ internal class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimeline
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
-    private record RawVersionData(Guid Id, string Version, DateTime CreatedAt, Guid? ParentVersionId, string MergedFromVersionIds, int AtomCount, string AuthorName);
+    private sealed record RawVersionData(Guid Id, string Version, DateTime CreatedAt, Guid? ParentVersionId, string MergedFromVersionIds, int AtomCount, string AuthorName);
 
     public async Task<VersionTimelineDto> Handle(GetVersionTimelineQuery query, CancellationToken cancellationToken)
     {
@@ -79,7 +79,7 @@ internal class GetVersionTimelineQueryHandler : IQueryHandler<GetVersionTimeline
                 r.Version,
                 r.CreatedAt,
                 r.ParentVersionId,
-                r.MergedFromVersionIds,
+                r.MergedFromVersionIds ?? string.Empty,
                 r.Atoms.Count,
                 r.CreatedBy != null
                     ? r.CreatedBy.DisplayName ?? r.CreatedBy.Email ?? "Unknown"

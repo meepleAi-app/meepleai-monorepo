@@ -150,9 +150,11 @@ internal class UploadChunkCommandHandler : ICommandHandler<UploadChunkCommand, U
             );
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+#pragma warning disable S125 // Sections of code should not be commented out
+        // COMMAND HANDLER PATTERN: CQRS handler boundary
         // Generic catch handles unexpected infrastructure failures (DB, network, memory)
         // to prevent exception propagation to API layer. Returns Result/Response pattern.
+#pragma warning restore S125
         catch (Exception ex)
 #pragma warning restore CA1031
         {

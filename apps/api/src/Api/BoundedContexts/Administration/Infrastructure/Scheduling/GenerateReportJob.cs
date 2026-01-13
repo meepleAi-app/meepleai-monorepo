@@ -107,9 +107,11 @@ internal sealed class GenerateReportJob : IJob
             };
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: BACKGROUND TASK PATTERN - Scheduled task error isolation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // BACKGROUND SERVICE: BACKGROUND TASK PATTERN - Scheduled task error isolation
         // Background tasks must not throw exceptions (would terminate task scheduler).
         // Errors logged for monitoring; task failures don't impact main application.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex,
@@ -165,9 +167,11 @@ internal sealed class GenerateReportJob : IJob
                 report.Name, report.EmailRecipients.Count);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: BACKGROUND TASK PATTERN - Scheduled task error isolation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // BACKGROUND SERVICE: BACKGROUND TASK PATTERN - Scheduled task error isolation
         // Background tasks must not throw exceptions (would terminate task scheduler).
         // Errors logged for monitoring; failed email delivery doesn't prevent report generation.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex,
@@ -200,9 +204,11 @@ internal sealed class GenerateReportJob : IJob
                 report.Name, report.EmailRecipients.Count);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: BACKGROUND TASK PATTERN - Scheduled task error isolation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // BACKGROUND SERVICE: BACKGROUND TASK PATTERN - Scheduled task error isolation
         // Background tasks must not throw exceptions (would terminate task scheduler).
         // Errors logged for monitoring; failed failure notification doesn't impact report status.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex,

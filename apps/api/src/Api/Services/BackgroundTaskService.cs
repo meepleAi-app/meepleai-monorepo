@@ -28,10 +28,12 @@ internal class BackgroundTaskService : IBackgroundTaskService
                 _logger.LogError(ex, "Invalid operation in background task");
             }
 #pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Background service boundary - prevents task crash in fire-and-forget
+#pragma warning disable S125 // Sections of code should not be commented out
+            // BACKGROUND SERVICE: Background service boundary - prevents task crash in fire-and-forget
             // Background service: Generic catch prevents task exception from crashing host process
             // Fire-and-forget tasks must not throw unhandled exceptions
             // Catch-all for unexpected errors in fire-and-forget tasks
+#pragma warning restore S125
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error in background task");
@@ -71,8 +73,10 @@ internal class BackgroundTaskService : IBackgroundTaskService
                 _logger.LogError(ex, "Invalid operation in background task {TaskId}", taskId);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Background service boundary - prevents task crash in fire-and-forget
+#pragma warning disable S125 // Sections of code should not be commented out
+            // BACKGROUND SERVICE: Background service boundary - prevents task crash in fire-and-forget
             // Catch-all for unexpected errors in fire-and-forget tasks
+#pragma warning restore S125
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error in background task {TaskId}", taskId);

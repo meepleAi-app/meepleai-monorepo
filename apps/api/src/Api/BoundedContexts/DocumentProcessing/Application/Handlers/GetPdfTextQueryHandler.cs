@@ -51,9 +51,11 @@ internal class GetPdfTextQueryHandler : IQueryHandler<GetPdfTextQuery, PdfTextRe
             return pdf;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+#pragma warning disable S125 // Sections of code should not be commented out
+        // QUERY HANDLER PATTERN: CQRS query boundary
         // Generic catch handles unexpected infrastructure failures (DB, network)
         // to prevent exception propagation to API layer. Returns null on failure.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving PDF text for {PdfId}", query.PdfId);

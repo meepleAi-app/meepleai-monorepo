@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable MA0051 // Method is too long - auto-generated EF Core migration
 namespace Api.Infrastructure.Migrations
 {
     /// <inheritdoc />

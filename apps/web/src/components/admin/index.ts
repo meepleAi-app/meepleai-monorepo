@@ -79,6 +79,9 @@ export {
   MechanicPill,
   MechanicPillList,
   GameForm,
+  VersionBadge,
+  TagInput,
+  PdfDocumentList,
 } from './shared-games';
 export type {
   GameStatusBadgeProps,
@@ -92,4 +95,7 @@ export type {
   MechanicPillProps,
   MechanicPillListProps,
   GameFormProps,
+  VersionBadgeProps,
+  TagInputProps,
+  PdfDocumentListProps,
 } from './shared-games';

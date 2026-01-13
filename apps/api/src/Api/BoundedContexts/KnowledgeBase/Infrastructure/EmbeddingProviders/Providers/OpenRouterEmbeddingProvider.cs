@@ -87,7 +87,9 @@ internal sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
             return EmbeddingProviderResult.CreateSuccess(allEmbeddings, _modelName, totalTokens);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Infrastructure adapter - Wraps OpenRouter API exceptions (HTTP, JSON, timeout) into domain-friendly EmbeddingProviderResult
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Infrastructure adapter - Wraps OpenRouter API exceptions (HTTP, JSON, timeout) into domain-friendly EmbeddingProviderResult
+#pragma warning restore S125
         catch (HttpRequestException ex)
         {
             Logger.LogError(ex, "HTTP error calling OpenRouter API");
@@ -189,7 +191,9 @@ internal sealed class OpenRouterEmbeddingProvider : EmbeddingProviderBase
             return result.Success;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - Health checks must not propagate exceptions, return false to indicate unhealthy state
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: Health checks must not propagate exceptions, return false to indicate unhealthy state
+#pragma warning restore S125
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "OpenRouter health check failed");
@@ -253,4 +257,3 @@ internal sealed record OpenRouterUsage
     [JsonPropertyName("total_tokens")]
     public int TotalTokens { get; init; }
 }
-

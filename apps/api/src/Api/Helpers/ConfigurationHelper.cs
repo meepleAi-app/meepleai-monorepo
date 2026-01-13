@@ -71,8 +71,10 @@ internal class ConfigurationHelper
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - 3-tier configuration fallback (DB → appsettings → default);
-        // database failures must not prevent application startup or config reads
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: 3-tier configuration fallback (DB → appsettings → default);
+        // database failures must not prevent application startup or config reads.
+#pragma warning restore S125
         catch (Exception ex)
 #pragma warning restore CA1031
         {
@@ -101,8 +103,10 @@ internal class ConfigurationHelper
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - 3-tier configuration fallback (DB → appsettings → default);
-        // appsettings parse failures must not prevent application startup or config reads
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: 3-tier configuration fallback (DB → appsettings → default);
+        // appsettings parse failures must not prevent application startup or config reads.
+#pragma warning restore S125
         catch (Exception ex)
 #pragma warning restore CA1031
         {

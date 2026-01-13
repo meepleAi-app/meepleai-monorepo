@@ -256,9 +256,11 @@ internal class N8NConfigService
             return new N8NTestResult(success, message, latency);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - external API calls with result pattern
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: External API calls with result pattern
         // Service layer: Catches all exceptions to return domain result object
         // Connection test failures logged, returned as test result with error details
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to test n8n connection for config {ConfigId}", configId);

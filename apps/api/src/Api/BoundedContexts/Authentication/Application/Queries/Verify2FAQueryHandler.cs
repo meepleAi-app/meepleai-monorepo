@@ -54,9 +54,11 @@ internal class Verify2FAQueryHandler : IQueryHandler<Verify2FAQuery, Verify2FARe
             return new Verify2FAResult(IsValid: isValid);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HANDLER BOUNDARY: QUERY HANDLER PATTERN - CQRS query boundary
         // Generic catch handles unexpected infrastructure failures (DB, network)
         // to prevent exception propagation to API layer. Returns Result pattern.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying 2FA code for email {Email}", DataMasking.MaskEmail(query.Email));

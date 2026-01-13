@@ -139,14 +139,137 @@ Per sviluppo locale senza token BGG:
 2. **Mock service**: Crea mock del BggApiService per testing
 3. **Richiedi token di sviluppo**: BGG può fornire token limitato per development
 
+## BGG Files API (Rulebook Fetch)
+
+MeepleAI utilizza anche l'API interna di BGG per scaricare PDF dei regolamenti direttamente da BoardGameGeek.
+
+### Architettura
+
+L'API interna BGG (`api.geekdo.com/api/files`) è un'API JSON non documentata che:
+- **Non richiede autenticazione** per l'accesso pubblico ai file
+- **Non ha CORS** - funziona solo da server, non da browser
+- Restituisce metadati dei file uploadati dagli utenti BGG
+
+### Endpoint API
+
+```
+POST /api/v1/bgg/games/{bggId}/rulebook
+```
+
+**Request Body**:
+```json
+{
+  "gameId": "uuid",           // ID del gioco in MeepleAI (opzionale)
+  "preferredLanguage": "en",  // Lingua preferita: en, it, de, fr, es, etc.
+  "documentType": "base",     // Tipo: base, expansion, faq, reference
+  "isPublic": false           // Se rendere il documento pubblico
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "documentId": "uuid",
+  "fileName": "wingspan_rules.pdf",
+  "title": "Wingspan Rules",
+  "fileSizeBytes": 5242880,
+  "language": "en",
+  "totalRulebooksFound": 15,
+  "selectedRulebookScore": 95,
+  "bggFilePageUrl": "https://boardgamegeek.com/filepage/12345"
+}
+```
+
+### Algoritmo di Selezione Rulebook
+
+Il sistema utilizza un algoritmo di scoring per selezionare il miglior regolamento:
+
+1. **Categoria** (priorità massima):
+   - `Rules` → score base alto
+   - `RulesSummary`, `Reference` → score medio
+   - Altre categorie → escluse
+
+2. **Lingua**:
+   - Corrispondenza esatta con `preferredLanguage` → +50 punti
+   - Fallback su inglese se non trovata
+
+3. **Popolarità**:
+   - ThumbsUp e commenti degli utenti BGG
+
+4. **Recency**:
+   - File più recenti preferiti
+
+### Tool CLI (Development)
+
+Per testare lo scraper direttamente:
+
+```bash
+cd tools/game-scraper
+
+# Installa dipendenze
+pnpm install
+
+# Scarica tutti i file per un gioco
+pnpm scraper:rulebook 266192  # Wingspan
+
+# Output: tools/game-scraper/output/266192.json
+```
+
+### Configurazione
+
+```json
+// appsettings.json
+{
+  "BggFiles": {
+    "TimeoutSeconds": 60,
+    "MaxRetries": 3,
+    "DelayBetweenRequestsMs": 500
+  }
+}
+```
+
+### Rate Limiting
+
+Per rispettare i server BGG:
+- Delay di 500ms tra richieste multiple
+- Retry con backoff esponenziale
+- Cache dei risultati per 24 ore
+
+### Troubleshooting
+
+#### 500 Internal Server Error (dal browser)
+
+**Causa**: CORS bloccato - l'API `api.geekdo.com` non permette richieste cross-origin
+
+**Soluzione**: Le richieste devono passare dal backend, non direttamente dal browser
+
+#### Nessun Regolamento Trovato
+
+**Causa**: Il gioco non ha PDF uploadati su BGG
+
+**Soluzioni**:
+1. Verifica manualmente su BGG: `https://boardgamegeek.com/boardgame/{bggId}/files`
+2. Alcuni giochi hanno solo immagini, non PDF
+3. Prova con lingua diversa (alcuni giochi hanno solo regolamenti in tedesco/francese)
+
+#### File Scaricato Corrotto
+
+**Causa**: Timeout durante download di file grandi
+
+**Soluzioni**:
+1. Aumenta `TimeoutSeconds` in configurazione
+2. Verifica connessione internet stabile
+3. Riprova - il sistema ha retry automatico
+
 ## Riferimenti
 
-- **BGG API Docs**: https://boardgamegeek.com/wiki/page/BGG_XML_API2
+- **BGG XML API Docs**: https://boardgamegeek.com/wiki/page/BGG_XML_API2
 - **Registrazione App**: https://boardgamegeek.com/applications
 - **API Usage Guide**: https://boardgamegeek.com/using_the_xml_api
-- **Issue Tracking**: https://github.com/yourusername/meepleai/issues/AI-13
+- **BGG Files Page**: https://boardgamegeek.com/boardgame/{bggId}/files
 
 ---
 
-**Ultima Modifica**: 2026-01-12
-**Versione**: 1.0
+**Ultima Modifica**: 2026-01-13
+**Versione**: 1.1

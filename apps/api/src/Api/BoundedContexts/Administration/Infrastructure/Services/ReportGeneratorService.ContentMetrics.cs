@@ -28,9 +28,9 @@ internal sealed partial class ReportGeneratorService
         return (true, null);
     }
 
-    private record PdfMetric(DateTime Date, int Count, long TotalSize);
-    private record VectorMetric(DateTime Date, int Count);
-    private record GameMetric(int TotalGames, int ActiveGames);
+    private sealed record PdfMetric(DateTime Date, int Count, long TotalSize);
+    private sealed record VectorMetric(DateTime Date, int Count);
+    private sealed record GameMetric(int TotalGames, int ActiveGames);
 
     private async Task<ReportContent> GenerateContentMetricsReportAsync(
         IReadOnlyDictionary<string, object> parameters,

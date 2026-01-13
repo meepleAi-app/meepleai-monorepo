@@ -107,8 +107,10 @@ internal class TesseractOcrAdapter : IOcrService, IDisposable
             return OcrResult.CreateSuccess(text, confidence, pageCount: 1);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Infrastructure adapter - Tesseract OCR can throw various exceptions
-        // from native library; wrap all failures into domain result object
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Infrastructure adapter - Tesseract OCR can throw various exceptions
+        // from native library; wrap all failures into domain result object.
+#pragma warning restore S125
         catch (Exception ex)
 #pragma warning restore CA1031
         {
@@ -155,8 +157,10 @@ internal class TesseractOcrAdapter : IOcrService, IDisposable
             throw;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Infrastructure adapter - Tesseract multi-page OCR can throw various exceptions;
-        // wrap all failures into domain result object
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Infrastructure adapter - Tesseract multi-page OCR can throw various exceptions;
+        // wrap all failures into domain result object.
+#pragma warning restore S125
         catch (Exception ex)
 #pragma warning restore CA1031
         {

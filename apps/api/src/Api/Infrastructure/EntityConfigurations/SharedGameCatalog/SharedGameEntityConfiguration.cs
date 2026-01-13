@@ -9,7 +9,9 @@ namespace Api.Infrastructure.EntityConfigurations.SharedGameCatalog;
 /// </summary>
 internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGameEntity>
 {
+#pragma warning disable MA0051 // Method is too long - EF Core fluent configuration is necessarily verbose
     public void Configure(EntityTypeBuilder<SharedGameEntity> builder)
+#pragma warning restore MA0051
     {
         builder.ToTable("shared_games");
 

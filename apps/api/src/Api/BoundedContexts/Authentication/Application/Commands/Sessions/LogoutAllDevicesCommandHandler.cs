@@ -156,8 +156,10 @@ internal class LogoutAllDevicesCommandHandler : ICommandHandler<LogoutAllDevices
                 await _sessionCache.InvalidateAsync(tokenHash, cancellationToken).ConfigureAwait(false);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Service boundary - cache failure resilience for batch session operations
+#pragma warning disable S125 // Sections of code should not be commented out
+            // ADAPTER PATTERN: Service boundary - cache failure resilience for batch session operations
             // RESILIENCE: Cache failures should not prevent batch session revocation
+#pragma warning restore S125
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to invalidate cache for session, continuing batch revocation");

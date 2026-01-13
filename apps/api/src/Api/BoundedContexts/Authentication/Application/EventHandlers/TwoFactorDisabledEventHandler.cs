@@ -48,9 +48,11 @@ internal sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<Two
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: EVENT HANDLER PATTERN - Background event processing
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HANDLER BOUNDARY: EVENT HANDLER PATTERN - Background event processing
         // Event handlers must not throw exceptions (violates mediator/event pattern).
         // Errors logged for monitoring; failed email delivery doesn't block 2FA operations.
+#pragma warning restore S125
         catch (Exception ex)
         {
             // Log error but don't fail the event handler - email is non-critical

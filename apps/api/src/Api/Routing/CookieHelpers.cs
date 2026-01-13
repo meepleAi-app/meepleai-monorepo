@@ -88,7 +88,7 @@ internal static class CookieHelpers
     {
         ArgumentNullException.ThrowIfNull(context);
         var options = BuildSessionCookieOptions(context);
-        options.Expires = expiresAt;
+        options.Expires = new DateTimeOffset(expiresAt, TimeSpan.Zero);
         return options;
     }
 
@@ -100,12 +100,10 @@ internal static class CookieHelpers
         var isHttps = context.Request.IsHttps;
 
         if (!isHttps && configuration.UseForwardedProto &&
-            context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto))
+            context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto) &&
+            forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
         {
-            if (forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
-            {
-                isHttps = true;
-            }
+            isHttps = true;
         }
 
         var secure = configuration.Secure ?? isHttps;
@@ -167,7 +165,7 @@ internal static class CookieHelpers
         var options = BuildApiKeyCookieOptions(context);
         if (expiresAt.HasValue)
         {
-            options.Expires = expiresAt.Value;
+            options.Expires = new DateTimeOffset(expiresAt.Value, TimeSpan.Zero);
         }
         else
         {
@@ -184,12 +182,10 @@ internal static class CookieHelpers
         var isHttps = context.Request.IsHttps;
 
         if (!isHttps && configuration.UseForwardedProto &&
-            context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto))
+            context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto) &&
+            forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
         {
-            if (forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
-            {
-                isHttps = true;
-            }
+            isHttps = true;
         }
 
         var secure = configuration.Secure ?? isHttps;

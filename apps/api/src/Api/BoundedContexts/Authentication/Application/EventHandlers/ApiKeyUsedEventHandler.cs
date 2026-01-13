@@ -46,9 +46,11 @@ internal class ApiKeyUsedEventHandler : INotificationHandler<ApiKeyUsedEvent>
                 notification.UsedAt);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: EVENT HANDLER PATTERN - Background event processing
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HANDLER BOUNDARY: EVENT HANDLER PATTERN - Background event processing
         // Event handlers must not throw exceptions (violates mediator/event pattern).
         // Errors logged for monitoring; failed usage logging doesn't break API requests.
+#pragma warning restore S125
         catch (Exception ex)
         {
             // Log error but don't throw - usage logging should not break the request

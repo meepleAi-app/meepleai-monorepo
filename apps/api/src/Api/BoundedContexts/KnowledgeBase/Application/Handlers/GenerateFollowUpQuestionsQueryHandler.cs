@@ -110,13 +110,10 @@ internal sealed class GenerateFollowUpQuestionsQueryHandler
 
             return validQuestions.AsReadOnly();
         }
-        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            // User-initiated cancellation - propagate
-            _logger.LogInformation(ex,
-                "Follow-up question generation cancelled by user for game {GameName}",
-                request.GameName);
-
+            // S2139: User-initiated cancellation - just propagate without logging
+            // (logging + throw violates "either log or rethrow" rule)
             throw;
         }
 #pragma warning disable CA1031 // Do not catch general exception types

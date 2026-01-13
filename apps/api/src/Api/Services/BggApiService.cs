@@ -147,8 +147,10 @@ internal class BggApiService : IBggApiService
             throw new InvalidOperationException("BoardGameGeek API is currently unavailable", ex);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - BGG API integration with optional result pattern, gracefully handles XML parsing errors
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: BGG API integration with optional result pattern, gracefully handles XML parsing errors
         // Issue #1444: Use centralized exception handling for optional result pattern (nullable)
+#pragma warning restore S125
         catch (Exception ex)
         {
             return RagExceptionHandler.HandleServiceException<List<BggSearchResultDto>?>(
@@ -204,8 +206,10 @@ internal class BggApiService : IBggApiService
             throw new InvalidOperationException("BoardGameGeek API is currently unavailable", ex);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - BGG API integration with optional result pattern, gracefully handles XML parsing errors
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: BGG API integration with optional result pattern, gracefully handles XML parsing errors
         // Issue #1444: Use centralized exception handling for optional result pattern (nullable)
+#pragma warning restore S125
         catch (Exception ex)
         {
             return RagExceptionHandler.HandleServiceException<BggGameDetailsDto?>(
@@ -239,8 +243,10 @@ internal class BggApiService : IBggApiService
             );
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Infrastructure adapter - Gracefully handles malformed BGG XML data, skips invalid search results without failing entire operation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Gracefully handles malformed BGG XML data, skips invalid search results without failing entire operation
         // Issue #1444: Graceful handling of malformed BGG API data
+#pragma warning restore S125
         catch (Exception ex) when (ex is FormatException or OverflowException)
         {
             // BGG API occasionally returns malformed data - skip this result (log at Debug level)
@@ -290,33 +296,10 @@ internal class BggApiService : IBggApiService
             var averageWeight = ParseDouble(stats?.Element("averageweight")?.Attribute("value")?.Value);
 
             // Categories, Mechanics, Designers, Publishers
-            var categories = item.Elements("link")
-                .Where(l => string.Equals(l.Attribute("type")?.Value, "boardgamecategory", StringComparison.Ordinal))
-                .Select(l => l.Attribute("value")?.Value)
-                .Where(v => !string.IsNullOrEmpty(v))
-                .Cast<string>()
-                .ToList();
-
-            var mechanics = item.Elements("link")
-                .Where(l => string.Equals(l.Attribute("type")?.Value, "boardgamemechanic", StringComparison.Ordinal))
-                .Select(l => l.Attribute("value")?.Value)
-                .Where(v => !string.IsNullOrEmpty(v))
-                .Cast<string>()
-                .ToList();
-
-            var designers = item.Elements("link")
-                .Where(l => string.Equals(l.Attribute("type")?.Value, "boardgamedesigner", StringComparison.Ordinal))
-                .Select(l => l.Attribute("value")?.Value)
-                .Where(v => !string.IsNullOrEmpty(v))
-                .Cast<string>()
-                .ToList();
-
-            var publishers = item.Elements("link")
-                .Where(l => string.Equals(l.Attribute("type")?.Value, "boardgamepublisher", StringComparison.Ordinal))
-                .Select(l => l.Attribute("value")?.Value)
-                .Where(v => !string.IsNullOrEmpty(v))
-                .Cast<string>()
-                .ToList();
+            var categories = ExtractLinks(item, "boardgamecategory");
+            var mechanics = ExtractLinks(item, "boardgamemechanic");
+            var designers = ExtractLinks(item, "boardgamedesigner");
+            var publishers = ExtractLinks(item, "boardgamepublisher");
 
             return new BggGameDetailsDto(
                 bggId,
@@ -342,8 +325,10 @@ internal class BggApiService : IBggApiService
             );
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Infrastructure adapter - Gracefully handles malformed BGG XML data, returns null for invalid game details without failing entire operation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Gracefully handles malformed BGG XML data, returns null for invalid game details without failing entire operation
         // Issue #1444: Graceful handling of malformed BGG API data
+#pragma warning restore S125
         catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
         {
             // BGG API occasionally returns malformed data (log at Debug level to avoid noise)
@@ -366,5 +351,15 @@ internal class BggApiService : IBggApiService
         }
 
         return null;
+    }
+
+    private static List<string> ExtractLinks(XElement item, string linkType)
+    {
+        return item.Elements("link")
+            .Where(l => string.Equals(l.Attribute("type")?.Value, linkType, StringComparison.Ordinal))
+            .Select(l => l.Attribute("value")?.Value)
+            .Where(v => !string.IsNullOrEmpty(v))
+            .Cast<string>()
+            .ToList();
     }
 }

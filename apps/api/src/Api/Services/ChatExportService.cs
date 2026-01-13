@@ -81,9 +81,10 @@ internal class ChatExportService : IChatExportService
             throw;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - Returns domain result object (ExportResult) instead of throwing, multi-tier error handling for export operations
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: Returns domain result object (ExportResult) instead of throwing, multi-tier error handling for export operations
+#pragma warning restore S125
         catch (Exception ex)
-#pragma warning restore CA1031
         {
             // Service layer: Catches all exceptions to return domain result object
             // Detailed error logged, returned as failure result for caller handling

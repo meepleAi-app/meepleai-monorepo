@@ -58,9 +58,11 @@ internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComm
             newRole = Role.Parse(command.NewRole);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: VALIDATION PATTERN - Role parsing failure handling
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HANDLER BOUNDARY: VALIDATION PATTERN - Role parsing failure handling
         // Wraps Role.Parse exceptions (ArgumentException, FormatException) in DomainException
         // for consistent API validation error response. Preserves inner exception for diagnostics.
+#pragma warning restore S125
         catch (Exception ex)
         {
             throw new DomainException($"Invalid role: {command.NewRole}", ex);
@@ -92,10 +94,12 @@ internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComm
                     successCount++;
                 }
 #pragma warning disable CA1031 // Do not catch general exception types
-                // Justification: BULK OPERATION PATTERN - Individual role change failure handling
+#pragma warning disable S125 // Sections of code should not be commented out
+                // HANDLER BOUNDARY: BULK OPERATION PATTERN - Individual role change failure handling
                 // Catches all exceptions during role update (validation, DB constraints, etc.)
                 // to collect errors without stopping batch processing. Each failure is logged
                 // and added to error list for reporting. Allows partial success in bulk operation.
+#pragma warning restore S125
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error changing role for user {UserId}", userId);
@@ -124,9 +128,11 @@ internal class BulkRoleChangeCommandHandler : ICommandHandler<BulkRoleChangeComm
             );
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: COMMAND HANDLER PATTERN - Wraps unexpected infrastructure failures
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HANDLER BOUNDARY: COMMAND HANDLER PATTERN - Wraps unexpected infrastructure failures
         // Generic catch wraps unexpected exceptions (DB, network, memory) in DomainException
         // for consistent API error handling. Logs with full context before wrapping.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Critical error during bulk role change");

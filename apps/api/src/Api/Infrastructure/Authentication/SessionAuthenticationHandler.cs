@@ -102,8 +102,10 @@ internal class SessionAuthenticationHandler : AuthenticationHandler<Authenticati
             return AuthenticateResult.Success(ticket);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Authentication handler boundary - must not propagate exceptions
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HANDLER BOUNDARY: Authentication handler boundary - must not propagate exceptions
         // Any exception during authentication should result in NoResult to allow proper 401 response
+#pragma warning restore S125
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Session validation failed in SessionAuthenticationHandler");

@@ -246,11 +246,13 @@ internal static class ObservabilityServiceExtensions
                 new Uri($"{n8nUrl}/healthz"),
                 name: "n8n",
                 tags: N8nTags);
+#pragma warning disable S125 // Sections of code should not be commented out
         // HyperDX health check disabled - service not in default docker-compose profile
         // .AddUrlGroup(
         //     new Uri($"{hyperDxUrl}/health"),
         //     name: "hyperdx",
         //     tags: HyperDxTags);
+#pragma warning restore S125
     }
 
     /// <summary>

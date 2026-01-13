@@ -210,8 +210,10 @@ internal class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePro
             await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Cleanup operation - Transaction rollback must not throw;
-        // log rollback failure but preserve original exception for caller
+#pragma warning disable S125 // Sections of code should not be commented out
+        // CLEANUP PATTERN: Transaction rollback must not throw;
+        // log rollback failure but preserve original exception for caller.
+#pragma warning restore S125
         catch (Exception rollbackEx)
 #pragma warning restore CA1031
         {

@@ -239,17 +239,17 @@ describe('AuthClient - Profile & Preferences', () => {
     describe('updatePreferences', () => {
       it('should update language preference', async () => {
         const mockResponse: UserProfile = {
-          Id: mockUserId,
-          Email: 'test@example.com',
-          DisplayName: 'Test User',
-          Role: 'User',
-          CreatedAt: new Date().toISOString(),
-          IsTwoFactorEnabled: false,
-          TwoFactorEnabledAt: null,
-          Language: 'it',
-          EmailNotifications: true,
-          Theme: 'dark',
-          DataRetentionDays: 30,
+          id: mockUserId,
+          email: 'test@example.com',
+          displayName: 'Test User',
+          role: 'User',
+          createdAt: new Date().toISOString(),
+          isTwoFactorEnabled: false,
+          twoFactorEnabledAt: null,
+          language: 'it',
+          emailNotifications: true,
+          theme: 'dark',
+          dataRetentionDays: 30,
         };
 
         mockFetch.mockResolvedValueOnce({
@@ -275,17 +275,17 @@ describe('AuthClient - Profile & Preferences', () => {
 
       it('should update theme preference', async () => {
         const mockResponse: UserProfile = {
-          Id: mockUserId,
-          Email: 'test@example.com',
-          DisplayName: 'Test User',
-          Role: 'User',
-          CreatedAt: new Date().toISOString(),
-          IsTwoFactorEnabled: false,
-          TwoFactorEnabledAt: null,
-          Language: 'en',
-          EmailNotifications: true,
-          Theme: 'light',
-          DataRetentionDays: 30,
+          id: mockUserId,
+          email: 'test@example.com',
+          displayName: 'Test User',
+          role: 'User',
+          createdAt: new Date().toISOString(),
+          isTwoFactorEnabled: false,
+          twoFactorEnabledAt: null,
+          language: 'en',
+          emailNotifications: true,
+          theme: 'light',
+          dataRetentionDays: 30,
         };
 
         mockFetch.mockResolvedValueOnce({
@@ -311,17 +311,17 @@ describe('AuthClient - Profile & Preferences', () => {
 
       it('should update email notifications', async () => {
         const mockResponse: UserProfile = {
-          Id: mockUserId,
-          Email: 'test@example.com',
-          DisplayName: 'Test User',
-          Role: 'User',
-          CreatedAt: new Date().toISOString(),
-          IsTwoFactorEnabled: false,
-          TwoFactorEnabledAt: null,
-          Language: 'en',
-          EmailNotifications: false,
-          Theme: 'dark',
-          DataRetentionDays: 30,
+          id: mockUserId,
+          email: 'test@example.com',
+          displayName: 'Test User',
+          role: 'User',
+          createdAt: new Date().toISOString(),
+          isTwoFactorEnabled: false,
+          twoFactorEnabledAt: null,
+          language: 'en',
+          emailNotifications: false,
+          theme: 'dark',
+          dataRetentionDays: 30,
         };
 
         mockFetch.mockResolvedValueOnce({
@@ -340,17 +340,17 @@ describe('AuthClient - Profile & Preferences', () => {
 
       it('should update data retention days', async () => {
         const mockResponse: UserProfile = {
-          Id: mockUserId,
-          Email: 'test@example.com',
-          DisplayName: 'Test User',
-          Role: 'User',
-          CreatedAt: new Date().toISOString(),
-          IsTwoFactorEnabled: false,
-          TwoFactorEnabledAt: null,
-          Language: 'en',
-          EmailNotifications: true,
-          Theme: 'dark',
-          DataRetentionDays: 90,
+          id: mockUserId,
+          email: 'test@example.com',
+          displayName: 'Test User',
+          role: 'User',
+          createdAt: new Date().toISOString(),
+          isTwoFactorEnabled: false,
+          twoFactorEnabledAt: null,
+          language: 'en',
+          emailNotifications: true,
+          theme: 'dark',
+          dataRetentionDays: 90,
         };
 
         mockFetch.mockResolvedValueOnce({
@@ -369,17 +369,17 @@ describe('AuthClient - Profile & Preferences', () => {
 
       it('should update multiple preferences at once', async () => {
         const mockResponse: UserProfile = {
-          Id: mockUserId,
-          Email: 'test@example.com',
-          DisplayName: 'Test User',
-          Role: 'User',
-          CreatedAt: new Date().toISOString(),
-          IsTwoFactorEnabled: false,
-          TwoFactorEnabledAt: null,
-          Language: 'it',
-          EmailNotifications: false,
-          Theme: 'system',
-          DataRetentionDays: 60,
+          id: mockUserId,
+          email: 'test@example.com',
+          displayName: 'Test User',
+          role: 'User',
+          createdAt: new Date().toISOString(),
+          isTwoFactorEnabled: false,
+          twoFactorEnabledAt: null,
+          language: 'it',
+          emailNotifications: false,
+          theme: 'system',
+          dataRetentionDays: 60,
         };
 
         mockFetch.mockResolvedValueOnce({

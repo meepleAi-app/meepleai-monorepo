@@ -123,6 +123,9 @@ test-results/
 # Code Assistant Claude
 .claude/settings.local.json
 .claude/.mcp.local.json
+nul
+docs/02-development/MeepleAI_Configuration_Variables.xlsx
+
 
 # Playwright MCP temp files
 tmpclaude-*-cwd

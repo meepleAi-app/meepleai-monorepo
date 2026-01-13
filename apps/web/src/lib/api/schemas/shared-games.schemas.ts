@@ -21,6 +21,18 @@ export type GameStatus = z.infer<typeof GameStatusSchema>;
 export const GameStatusNumericSchema = z.number().int().min(0).max(2);
 export type GameStatusNumeric = z.infer<typeof GameStatusNumericSchema>;
 
+/**
+ * Document type enum (Issue #2391 Sprint 1)
+ */
+export const SharedGameDocumentTypeSchema = z.enum(['Rulebook', 'Errata', 'Homerule']);
+export type SharedGameDocumentType = z.infer<typeof SharedGameDocumentTypeSchema>;
+
+/**
+ * Numeric document type (for API storage - matches C# enum)
+ */
+export const SharedGameDocumentTypeNumericSchema = z.number().int().min(0).max(2);
+export type SharedGameDocumentTypeNumeric = z.infer<typeof SharedGameDocumentTypeNumericSchema>;
+
 // ========== Reference Data ==========
 
 /**
@@ -84,6 +96,25 @@ export const GameErrataSchema = z.object({
 });
 
 export type GameErrata = z.infer<typeof GameErrataSchema>;
+
+// ========== Documents (Issue #2391 Sprint 1) ==========
+
+/**
+ * Shared Game Document DTO
+ */
+export const SharedGameDocumentSchema = z.object({
+  id: z.string().uuid(),
+  sharedGameId: z.string().uuid(),
+  pdfDocumentId: z.string().uuid(),
+  documentType: SharedGameDocumentTypeNumericSchema,
+  version: z.string().regex(/^\d+\.\d+$/),
+  isActive: z.boolean(),
+  tags: z.array(z.string()).default([]),
+  createdAt: z.string().datetime(),
+  createdBy: z.string().uuid(),
+});
+
+export type SharedGameDocument = z.infer<typeof SharedGameDocumentSchema>;
 
 /**
  * Game Designer DTO
@@ -337,6 +368,21 @@ export const UpdateErrataRequestSchema = z.object({
 });
 
 export type UpdateErrataRequest = z.infer<typeof UpdateErrataRequestSchema>;
+
+// ========== Document Requests (Issue #2391 Sprint 1) ==========
+
+/**
+ * Add document to shared game request
+ */
+export const AddDocumentRequestSchema = z.object({
+  pdfDocumentId: z.string().uuid(),
+  documentType: SharedGameDocumentTypeNumericSchema,
+  version: z.string().regex(/^\d+\.\d+$/),
+  tags: z.array(z.string()).max(10).optional().nullable(),
+  setAsActive: z.boolean(),
+});
+
+export type AddDocumentRequest = z.infer<typeof AddDocumentRequestSchema>;
 
 // ========== Search Params ==========
 

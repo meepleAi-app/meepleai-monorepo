@@ -73,9 +73,11 @@ internal sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThr
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+#pragma warning disable S125 // Sections of code should not be commented out
+        // QUERY HANDLER PATTERN: CQRS query boundary
         // Analytics tracking is non-critical. Generic catch prevents analytics failures
         // from blocking the main thread retrieval response. Logs warning and continues.
+#pragma warning restore S125
         catch (Exception ex)
         {
             // Analytics errors should not fail the main request

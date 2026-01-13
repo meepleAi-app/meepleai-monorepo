@@ -37,9 +37,11 @@ internal class Get2FAStatusQueryHandler : IQueryHandler<Get2FAStatusQuery, TwoFa
             };
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: QUERY HANDLER PATTERN - CQRS query boundary
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HANDLER BOUNDARY: QUERY HANDLER PATTERN - CQRS query boundary
         // Generic catch handles unexpected infrastructure failures (DB, network)
         // to prevent exception propagation to API layer. Returns null on failure.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting 2FA status for user {UserId}", query.UserId);

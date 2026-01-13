@@ -36,11 +36,9 @@ internal class ApiExceptionHandlerMiddleware
             await _next(context).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: MIDDLEWARE BOUNDARY PATTERN - Global exception handler
-        // Rationale: This is the global exception handler middleware for API endpoints. Its purpose
-        // is to catch ALL unhandled exceptions from the request pipeline and convert them to
-        // structured JSON error responses. This prevents raw exceptions from reaching clients.
-        // Context: This is the top-level exception boundary for /api/* routes
+#pragma warning disable S125 // Sections of code should not be commented out
+        // MIDDLEWARE BOUNDARY PATTERN: Global exception handler
+#pragma warning restore S125
         catch (Exception ex)
         {
             // Only handle /api/* paths

@@ -115,7 +115,7 @@ describe('SettingsPage', () => {
         // Wait for heading to appear
         expect(screen.getByTestId('settings-heading')).toBeInTheDocument();
         // Wait for profile to load - check for actual profile content, not just heading
-        const emailInput = screen.queryByDisplayValue(mockUserProfile.Email);
+        const emailInput = screen.queryByDisplayValue(mockUserProfile.email);
         expect(emailInput).toBeInTheDocument();
       },
       { timeout: 5000 }
@@ -124,25 +124,27 @@ describe('SettingsPage', () => {
 
   const mockUserProfile = {
     id: 'user-1',
-    Email: 'user@example.com',
-    DisplayName: 'John Doe',
-    Role: 'User',
-    CreatedAt: '2024-01-01',
-    Language: 'en',
-    Theme: 'system',
-    EmailNotifications: true,
-    DataRetentionDays: 90,
+    email: 'user@example.com',
+    displayName: 'John Doe',
+    role: 'User',
+    createdAt: '2024-01-01',
+    isTwoFactorEnabled: false,
+    twoFactorEnabledAt: null,
+    language: 'en',
+    theme: 'system',
+    emailNotifications: true,
+    dataRetentionDays: 90,
   };
 
   const mockTwoFactorStatus = {
-    IsEnabled: false,
-    UnusedBackupCodesCount: 0,
+    isEnabled: false,
+    unusedBackupCodesCount: 0,
   };
 
   const mockTotpSetup = {
-    Secret: 'JBSWY3DPEBLW64TMMQ======',
-    QrCodeUrl: 'data:image/png;base64,...',
-    BackupCodes: [
+    secret: 'JBSWY3DPEBLW64TMMQ======',
+    qrCodeUrl: 'data:image/png;base64,...',
+    backupCodes: [
       'AAAA-BBBB',
       'CCCC-DDDD',
       'EEEE-FFFF',

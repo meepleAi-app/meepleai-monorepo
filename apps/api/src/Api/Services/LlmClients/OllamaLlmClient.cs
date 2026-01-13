@@ -101,6 +101,9 @@ internal class OllamaLlmClient : ILlmClient
             return LlmCompletionResult.CreateFailure("Invalid response format");
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: Wraps unexpected Ollama API errors into domain-friendly LlmCompletionResult
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during Ollama completion");
@@ -254,7 +257,9 @@ internal class OllamaLlmClient : ILlmClient
             yield break;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Streaming generator boundary - must handle all errors gracefully
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: Streaming generator boundary - must handle all errors gracefully
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error initiating Ollama streaming");

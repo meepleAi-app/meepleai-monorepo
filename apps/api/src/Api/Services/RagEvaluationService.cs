@@ -145,8 +145,10 @@ internal class RagEvaluationService : IRagEvaluationService
             throw new InvalidOperationException($"Invalid JSON in dataset file: {filePath}", ex);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - File I/O operations may throw various unexpected exceptions (IO, access, format), wrap with domain context
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: File I/O operations may throw various unexpected exceptions (IO, access, format), wrap with domain context
         // File loading may throw various exceptions; we wrap them with context for callers
+#pragma warning restore S125
         catch (Exception ex) when (ex is not FileNotFoundException && ex is not ArgumentException)
         {
             _logger.LogError(ex, "Error loading dataset from {Path}", filePath);
@@ -719,4 +721,3 @@ internal record AggregateStatistics
     public double LatencyP95 { get; init; }
     public double LatencyP99 { get; init; }
 }
-

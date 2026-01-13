@@ -1,3 +1,4 @@
+#pragma warning disable MA0048 // File name must match type name - command and result DTO kept together
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.SharedKernel.Application.Interfaces;
 

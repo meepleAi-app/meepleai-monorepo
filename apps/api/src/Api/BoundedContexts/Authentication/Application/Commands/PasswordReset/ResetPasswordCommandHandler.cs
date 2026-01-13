@@ -81,10 +81,12 @@ internal sealed class ResetPasswordCommandHandler : ICommandHandler<ResetPasswor
             };
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HANDLER BOUNDARY: COMMAND HANDLER PATTERN - CQRS handler boundary
         // Specific exceptions (ArgumentException) caught separately above.
         // Generic catch handles unexpected infrastructure failures (DB, network, memory)
         // to prevent exception propagation to API layer. Returns Result pattern.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during password reset");

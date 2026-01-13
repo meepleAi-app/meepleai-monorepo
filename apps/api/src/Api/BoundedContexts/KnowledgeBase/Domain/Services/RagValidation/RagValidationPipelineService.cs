@@ -127,12 +127,14 @@ internal class RagValidationPipelineService : IRagValidationPipelineService
         };
     }
 
+#pragma warning disable S1172 // Unused method parameters - CancellationToken intentionally ignored, using CancellationToken.None for validation tasks
     private async Task<(CitationValidationResult, HallucinationValidationResult)> ExecuteStandardParallelValidationAsync(
         List<Snippet> snippets,
         string gameId,
         string answerText,
         string language,
         CancellationToken cancellationToken)
+#pragma warning restore S1172
     {
         var citationTask = EnsureCitationTask(
             _citationValidation.ValidateCitationsAsync(snippets, gameId, CancellationToken.None),

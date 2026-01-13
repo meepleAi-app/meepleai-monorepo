@@ -172,12 +172,14 @@ etc.";
             );
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - graceful degradation for AI/LLM operations
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: Graceful degradation for AI/LLM operations
         // GRACEFUL DEGRADATION: Setup guide generation failures return default steps
         // Rationale: Setup guide is a helpful feature but not critical. If RAG/LLM pipeline
         // fails, returning default steps allows the API to respond successfully and
         // lets the UI display fallback content. Throwing would cause stream errors and poor UX.
         // Context: Failures typically from Qdrant/OpenRouter/LLM timeout or rate limiting
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error generating setup guide for game {GameId}", gameId);
@@ -343,12 +345,14 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - graceful degradation for LLM parsing
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: Graceful degradation for LLM parsing
         // GRACEFUL DEGRADATION: LLM parsing failures return empty list for fallback handling
         // Rationale: Caller checks for empty list and uses default steps as fallback.
         // Parsing failure indicates malformed LLM output (unexpected format, hallucination).
         // Returning empty list triggers graceful degradation to generic setup steps.
         // Context: LLM output format can vary due to model changes or prompt drift
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error parsing LLM steps response");
@@ -497,12 +501,14 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
                 }
             }
 #pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Service boundary - fallback pattern for database prompt retrieval
+#pragma warning disable S125 // Sections of code should not be commented out
+            // SERVICE BOUNDARY: Fallback pattern for database prompt retrieval
             // FALLBACK PATTERN: Database prompt retrieval failures use hardcoded prompt
             // Rationale: Dynamic prompt loading from DB is an enhancement (ADMIN-01 Phase 3).
             // If PromptTemplateService fails (DB unavailable, Redis timeout), we must still
             // generate setup guides. Fallback to hardcoded prompt ensures feature availability.
             // Context: DB/Redis failures are typically transient (connection loss, resource exhaustion)
+#pragma warning restore S125
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to retrieve setup guide system prompt from database, falling back to hardcoded prompt");

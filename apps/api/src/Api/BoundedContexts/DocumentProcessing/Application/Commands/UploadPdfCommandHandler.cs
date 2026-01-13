@@ -445,8 +445,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             throw new PdfStorageException("Failed to save PDF metadata: Database error occurred.", ex);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: CQRS handler boundary - Wrap all unexpected exceptions during PDF upload
+#pragma warning disable S125 // Sections of code should not be commented out
+        // CQRS HANDLER BOUNDARY: Wrap all unexpected exceptions during PDF upload
         // into domain-specific PdfStorageException for consistent error handling upstream
+#pragma warning restore S125
         catch (Exception ex)
 #pragma warning restore CA1031
         {
@@ -631,8 +633,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             await HandleProcessingErrorAsync(pdfId, userId, db, quotaService, startTime, ex, "Database error occurred", cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Background service - PDF processing runs async; must catch all exceptions
+#pragma warning disable S125 // Sections of code should not be commented out
+        // BACKGROUND SERVICE: PDF processing runs async; must catch all exceptions
         // to properly update document status, release quota, and prevent background task crash
+#pragma warning restore S125
         catch (Exception ex)
 #pragma warning restore CA1031
         {
@@ -1231,8 +1235,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             _logger.LogWarning(ex, "Database error updating progress for PDF {PdfId}", pdfId);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Cleanup operation - Progress updates are non-critical telemetry;
-        // failures must not interrupt PDF processing workflow
+#pragma warning disable S125 // Sections of code should not be commented out
+        // CLEANUP PATTERN: Progress updates are non-critical telemetry;
+        // failures must not interrupt PDF processing workflow.
+#pragma warning restore S125
         catch (Exception ex)
 #pragma warning restore CA1031
         {
@@ -1255,8 +1261,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
             _logger.LogWarning(ex, "Invalid operation invalidating AI cache for game {GameId} after {Operation}", gameId, operation);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Cleanup operation - Cache invalidation is best-effort optimization;
-        // failures must not interrupt PDF processing workflow
+#pragma warning disable S125 // Sections of code should not be commented out
+        // CLEANUP PATTERN: Cache invalidation is best-effort optimization;
+        // failures must not interrupt PDF processing workflow.
+#pragma warning restore S125
         catch (Exception ex)
 #pragma warning restore CA1031
         {

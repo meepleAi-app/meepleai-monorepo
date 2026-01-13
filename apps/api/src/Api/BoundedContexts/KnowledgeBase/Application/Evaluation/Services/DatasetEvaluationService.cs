@@ -146,9 +146,11 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
             };
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: BACKGROUND TASK PATTERN - Dataset evaluation error isolation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // BACKGROUND SERVICE: BACKGROUND TASK PATTERN - Dataset evaluation error isolation
         // Background tasks must not throw exceptions (would terminate evaluation batch).
         // Errors logged for monitoring; failed samples recorded with error state for analysis.
+#pragma warning restore S125
         catch (Exception ex)
         {
             stopwatch.Stop();

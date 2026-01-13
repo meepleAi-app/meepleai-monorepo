@@ -31,12 +31,12 @@ public interface ILlmCostLogRepository
     /// <summary>
     /// Get costs grouped by provider for a date range
     /// </summary>
-    Task<Dictionary<string, decimal>> GetCostsByProviderAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
+    Task<IDictionary<string, decimal>> GetCostsByProviderAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get costs grouped by user role for a date range
     /// </summary>
-    Task<Dictionary<string, decimal>> GetCostsByRoleAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
+    Task<IDictionary<string, decimal>> GetCostsByRoleAsync(DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get costs for a specific user

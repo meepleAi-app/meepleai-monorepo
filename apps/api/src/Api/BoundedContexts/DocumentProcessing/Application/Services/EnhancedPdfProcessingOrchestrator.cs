@@ -244,9 +244,11 @@ internal class EnhancedPdfProcessingOrchestrator
             }
         }
 #pragma warning disable CA1031
-        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // INFRASTRUCTURE SERVICE PATTERN: Graceful degradation
         // Catches all PDF extractor failures. Returns null to allow fallback to next stage.
         // Multi-stage pipeline continues with Stage 2 or Stage 3. Logs full exception context.
+#pragma warning restore S125
         catch (Exception ex)
         {
             stageStopwatch.Stop();
@@ -528,9 +530,11 @@ internal class EnhancedPdfProcessingOrchestrator
             }
         }
 #pragma warning disable CA1031
-        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // INFRASTRUCTURE SERVICE PATTERN: Graceful degradation
         // Catches all PDF extractor failures. Returns null to allow fallback to next stage.
         // Multi-stage pipeline continues with Stage 2 or Stage 3. Logs full exception context.
+#pragma warning restore S125
         catch (Exception ex)
         {
             stageStopwatch.Stop();
@@ -681,9 +685,11 @@ internal class EnhancedPdfProcessingOrchestrator
         _ = Task.Run(() =>
         {
 #pragma warning disable CA1031
-            // Justification: FAIL-OPEN PATTERN - Infrastructure resilience
+#pragma warning disable S125 // Sections of code should not be commented out
+            // FAIL-OPEN PATTERN: Infrastructure resilience
             // Catches all metrics recording failures. Fails open to prioritize availability.
             // Metric recording is non-critical; extraction pipeline continues regardless.
+#pragma warning restore S125
             try
             {
                 MeepleAiMetrics.RecordPdfExtractionStage(stageName, success, durationMs, qualityScore);

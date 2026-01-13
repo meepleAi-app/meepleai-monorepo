@@ -26,7 +26,7 @@ internal sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShar
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(request);
+
         // Load share link via repository
         var shareLink = await _shareLinkRepository.GetByIdAsync(request.ShareLinkId, cancellationToken).ConfigureAwait(false);
 
@@ -46,7 +46,9 @@ internal sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShar
         // Key format: "revoked_share_link:{share_link_id}"
         // TTL: Time until expiration (no need to keep blacklisted after natural expiry)
         var blacklistKey = $"revoked_share_link:{shareLink.Id}";
+#pragma warning disable MA0132 // Do not convert implicitly to DateTimeOffset - Intentional DateTime/DateTimeOffset comparison for TTL
         var ttl = shareLink.ExpiresAt - DateTime.UtcNow;
+#pragma warning restore MA0132
 
         if (ttl > TimeSpan.Zero)
         {

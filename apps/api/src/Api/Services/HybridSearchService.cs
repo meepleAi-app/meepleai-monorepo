@@ -81,7 +81,9 @@ internal class HybridSearchService : IHybridSearchService
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - Coordinates vector (Qdrant) and keyword (PostgreSQL) search with centralized exception logging
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: Coordinates vector (Qdrant) and keyword (PostgreSQL) search with centralized exception logging
+#pragma warning restore S125
         catch (Exception ex)
         {
             // Issue #1444: Use centralized exception handling (log and re-throw pattern)

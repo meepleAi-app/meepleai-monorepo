@@ -33,8 +33,9 @@ internal class QdrantHealthCheck : IHealthCheck
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Health check boundary - must return Unhealthy status instead of throwing
-        // Health checks are required to handle all exceptions and return appropriate status
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HEALTH CHECK PATTERN: Must return Unhealthy status instead of throwing
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Qdrant health check failed");

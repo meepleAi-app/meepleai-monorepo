@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 
-import { AlertDialog, type AlertVariant } from '@/components/ui/alert-dialog';
+import { AlertDialog, type AlertVariant } from '@/components/ui/feedback/alert-dialog';
 
 export interface AlertOptions {
   title: string;

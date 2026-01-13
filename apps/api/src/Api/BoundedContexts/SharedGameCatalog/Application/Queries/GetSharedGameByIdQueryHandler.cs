@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// <summary>
 /// Handler for getting a shared game by ID.
 /// Uses HybridCache (L1: Memory 30min, L2: Redis 2h) for performance.
-/// Issue #2371 Phase 2
+/// Issue #2371 Phase 2, Extended Issue #2373 Phase 4
 /// </summary>
 internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedGameByIdQuery, SharedGameDetailDto?>
 {
@@ -64,6 +64,38 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             rulesDto = new GameRulesDto(game.Rules.Content, game.Rules.Language);
         }
 
+        // Map FAQs (ordered by Order property)
+        var faqDtos = game.Faqs
+            .OrderBy(f => f.Order)
+            .Select(f => new GameFaqDto(f.Id, f.Question, f.Answer, f.Order, f.CreatedAt))
+            .ToList();
+
+        // Map Errata (ordered by PublishedDate descending)
+        var errataDtos = game.Erratas
+            .OrderByDescending(e => e.PublishedDate)
+            .Select(e => new GameErrataDto(e.Id, e.Description, e.PageReference, e.PublishedDate, e.CreatedAt))
+            .ToList();
+
+        // Map Designers
+        var designerDtos = game.Designers
+            .Select(d => new GameDesignerDto(d.Id, d.Name))
+            .ToList();
+
+        // Map Publishers
+        var publisherDtos = game.Publishers
+            .Select(p => new GamePublisherDto(p.Id, p.Name))
+            .ToList();
+
+        // Map Categories
+        var categoryDtos = game.Categories
+            .Select(c => new GameCategorySimpleDto(c.Id, c.Name, c.Slug))
+            .ToList();
+
+        // Map Mechanics
+        var mechanicDtos = game.Mechanics
+            .Select(m => new GameMechanicSimpleDto(m.Id, m.Name, m.Slug))
+            .ToList();
+
         return new SharedGameDetailDto(
             game.Id,
             game.BggId,
@@ -83,6 +115,12 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             game.CreatedBy,
             game.ModifiedBy,
             game.CreatedAt,
-            game.ModifiedAt);
+            game.ModifiedAt,
+            faqDtos,
+            errataDtos,
+            designerDtos,
+            publisherDtos,
+            categoryDtos,
+            mechanicDtos);
     }
 }

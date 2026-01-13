@@ -1,3 +1,14 @@
+/**
+ * Add Game Page (Issue #2373: Phase 4)
+ *
+ * Integrates SharedGameSearch for catalog-first game discovery.
+ * Users can add games from:
+ * 1. SharedGameCatalog (preferred - enriched data)
+ * 2. BoardGameGeek (fallback - basic data)
+ *
+ * @see claudedocs/shared-game-catalog-spec.md (Section: User-Facing)
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -6,187 +17,219 @@ import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import {
+  SharedGameSearch,
+  SharedGameDetailModal,
+  type SharedGameSearchResult,
+} from '@/components/shared-games';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
-import { BggSearchResult } from '@/lib/api/schemas/games.schemas';
 
 export default function AddGamePage() {
   const router = useRouter();
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<BggSearchResult[]>([]);
-  const [thumbnails, setThumbnails] = useState<Record<number, string | null>>({});
-  const [loading, setLoading] = useState(false);
-  const [loadingThumbnails, setLoadingThumbnails] = useState(false);
-  const [addingId, setAddingId] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [total, setTotal] = useState(0);
+  const [selectedGame, setSelectedGame] = useState<SharedGameSearchResult | null>(null);
+  const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
+  const [isBggDialogOpen, setIsBggDialogOpen] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
 
-  const handleSearch = async (e?: React.FormEvent, page: number = 1) => {
-    e?.preventDefault();
-    if (!query.trim()) return;
-
-    setLoading(true);
-    setResults([]);
-    setThumbnails({});
-    try {
-      const response = await api.bgg.search(query, false, page, 20);
-      setResults(response.results);
-      setCurrentPage(response.page);
-      setTotalPages(response.totalPages);
-      setTotal(response.total);
-
-      // Load thumbnails for current page results
-      if (response.results.length > 0) {
-        setLoadingThumbnails(true);
-        try {
-          const bggIds = response.results.map(r => r.bggId);
-          const thumbs = await api.bgg.batchThumbnails(bggIds);
-          // Convert string keys to numbers
-          const thumbsMap: Record<number, string | null> = {};
-          Object.entries(thumbs).forEach(([key, value]) => {
-            thumbsMap[parseInt(key)] = value as string | null;
-          });
-          setThumbnails(thumbsMap);
-        } catch (error) {
-          console.error('Failed to load thumbnails:', error);
-        } finally {
-          setLoadingThumbnails(false);
-        }
-      }
-    } catch (error) {
-      console.error('Search failed:', error);
-      toast.error('Ricerca fallita. Riprova più tardi.');
-    } finally {
-      setLoading(false);
+  /**
+   * Handle game selection from search results
+   */
+  const handleGameSelect = (game: SharedGameSearchResult) => {
+    setSelectedGame(game);
+    if (game.source === 'catalog') {
+      setIsCatalogModalOpen(true);
+    } else {
+      // BGG-only game - show simple confirmation
+      setIsBggDialogOpen(true);
     }
   };
 
-  const handleAddGame = async (game: BggSearchResult) => {
-    if (addingId) return;
-    setAddingId(game.bggId);
+  /**
+   * Add game from SharedGameCatalog (preferred)
+   * Links the new game to the catalog entry for enriched data
+   */
+  const handleAddFromCatalog = async (gameId: string) => {
+    setIsAdding(true);
 
     try {
-      // 1. Get full details from BGG
-      const details = await api.bgg.getGameDetails(game.bggId);
+      // Get full game details from catalog
+      const catalogGame = await api.sharedGames.getById(gameId);
 
-      // 2. Create game in our system
+      if (!catalogGame) {
+        toast.error('Gioco non trovato nel catalogo.');
+        return;
+      }
+
+      // Extract publisher name from first publisher object
+      const publisherName = catalogGame.publishers?.[0]?.name ?? null;
+
+      // Create game in user's collection with catalog link
       await api.games.create({
-        name: details.name,
-        publisher: details.publishers?.[0] || null,
-        yearPublished: details.yearPublished,
-        minPlayers: details.minPlayers,
-        maxPlayers: details.maxPlayers,
-        minPlayTimeMinutes: details.minPlayTime || details.playingTime,
-        maxPlayTimeMinutes: details.maxPlayTime || details.playingTime,
-        iconUrl: details.thumbnailUrl,
-        imageUrl: details.imageUrl,
-        bggId: details.bggId,
+        name: catalogGame.title,
+        publisher: publisherName,
+        yearPublished: catalogGame.yearPublished,
+        minPlayers: catalogGame.minPlayers,
+        maxPlayers: catalogGame.maxPlayers,
+        minPlayTimeMinutes: catalogGame.playingTimeMinutes,
+        maxPlayTimeMinutes: catalogGame.playingTimeMinutes,
+        iconUrl: catalogGame.thumbnailUrl,
+        imageUrl: catalogGame.imageUrl,
+        bggId: catalogGame.bggId ?? null,
+        sharedGameId: catalogGame.id, // Link to catalog!
       });
 
       toast.success('Gioco aggiunto con successo!');
+      setIsCatalogModalOpen(false);
       router.push('/games');
       router.refresh();
     } catch (error) {
-      console.error('Failed to add game:', error);
+      console.error('Failed to add game from catalog:', error);
       toast.error("Errore durante l'aggiunta del gioco.");
-      setAddingId(null);
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  /**
+   * Add game from BGG (fallback)
+   * No catalog link, just BGG data
+   */
+  const handleAddFromBgg = async () => {
+    if (!selectedGame?.bggId) return;
+
+    setIsAdding(true);
+
+    try {
+      // Get full details from BGG
+      const details = await api.bgg.getGameDetails(selectedGame.bggId);
+
+      // Create game in user's collection (no catalog link)
+      await api.games.create({
+        name: details.name,
+        publisher: details.publishers?.[0] ?? null,
+        yearPublished: details.yearPublished,
+        minPlayers: details.minPlayers,
+        maxPlayers: details.maxPlayers,
+        minPlayTimeMinutes: details.minPlayTime ?? details.playingTime ?? null,
+        maxPlayTimeMinutes: details.maxPlayTime ?? details.playingTime ?? null,
+        iconUrl: details.thumbnailUrl,
+        imageUrl: details.imageUrl,
+        bggId: details.bggId,
+        // No sharedGameId - BGG only
+      });
+
+      toast.success('Gioco aggiunto con successo!');
+      setIsBggDialogOpen(false);
+      router.push('/games');
+      router.refresh();
+    } catch (error) {
+      console.error('Failed to add game from BGG:', error);
+      toast.error("Errore durante l'aggiunta del gioco.");
+    } finally {
+      setIsAdding(false);
     }
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Aggiungi Gioco</h1>
           <p className="text-muted-foreground">
-            Cerca un gioco su BoardGameGeek per aggiungerlo alla tua collezione.
+            Cerca un gioco nel nostro catalogo o su BoardGameGeek per aggiungerlo alla tua
+            collezione.
           </p>
         </div>
 
-        <form noValidate onSubmit={handleSearch} className="flex gap-4 mb-8">
-          <Input
-            placeholder="Cerca su BoardGameGeek..."
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            className="flex-1"
-          />
-          <Button type="submit" disabled={loading || !query.trim()}>
-            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-            Cerca
-          </Button>
-        </form>
+        {/* SharedGameSearch with catalog-first approach */}
+        <SharedGameSearch
+          onSelect={handleGameSelect}
+          placeholder="Cerca un gioco..."
+          autoFocus
+          showFilters
+          className="mb-8"
+        />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {results.map(game => (
-            <Card key={game.bggId} className="flex flex-col">
-              <CardHeader className="p-4">
-                <div className="aspect-square relative flex items-center justify-center bg-muted rounded-md overflow-hidden mb-2">
-                  {loadingThumbnails ? (
-                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                  ) : thumbnails[game.bggId] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={thumbnails[game.bggId]!}
-                      alt={game.name}
-                      className="object-contain w-full h-full"
-                    />
-                  ) : (
-                    <div className="text-muted-foreground text-sm">No Image</div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 p-4 pt-0">
-                <h3 className="font-semibold text-lg line-clamp-2">{game.name}</h3>
-                {game.yearPublished && (
-                  <p className="text-sm text-muted-foreground">{game.yearPublished}</p>
-                )}
-              </CardContent>
-              <CardFooter className="p-4 pt-0">
-                <Button
-                  className="w-full"
-                  onClick={() => handleAddGame(game)}
-                  disabled={addingId !== null}
-                  variant="secondary"
-                >
-                  {addingId === game.bggId ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : null}
-                  Aggiungi
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+        {/* Info about catalog vs BGG */}
+        <div className="mt-8 p-4 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+          <p className="font-medium mb-2">💡 Come funziona?</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li>
+              <strong>Catalogo</strong>: Giochi verificati con FAQ, regole e dati arricchiti
+            </li>
+            <li>
+              <strong>BGG</strong>: Giochi da BoardGameGeek con dati base
+            </li>
+          </ul>
         </div>
 
-        {!loading && results.length === 0 && query && (
-          <p className="text-center text-muted-foreground py-8">Nessun risultato trovato.</p>
+        {/* Catalog Detail Modal - for catalog games with rich content */}
+        {selectedGame?.source === 'catalog' && (
+          <SharedGameDetailModal
+            open={isCatalogModalOpen}
+            onClose={() => setIsCatalogModalOpen(false)}
+            gameId={selectedGame.id}
+            onAddToCollection={handleAddFromCatalog}
+          />
         )}
 
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <Button
-              variant="outline"
-              onClick={() => handleSearch(undefined, currentPage - 1)}
-              disabled={currentPage === 1 || loading}
-            >
-              Precedente
-            </Button>
-            <span className="text-sm text-muted-foreground px-4">
-              Pagina {currentPage} di {totalPages} ({total} risultati totali)
-            </span>
-            <Button
-              variant="outline"
-              onClick={() => handleSearch(undefined, currentPage + 1)}
-              disabled={currentPage === totalPages || loading}
-            >
-              Successiva
-            </Button>
-          </div>
-        )}
+        {/* BGG Confirmation Dialog - for BGG-only games */}
+        <AlertDialog open={isBggDialogOpen} onOpenChange={setIsBggDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Aggiungi gioco da BGG</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3">
+                <div className="flex items-center gap-3 mt-2">
+                  {selectedGame?.thumbnailUrl && (
+                    <img
+                      src={selectedGame.thumbnailUrl}
+                      alt={selectedGame.title}
+                      className="w-16 h-16 rounded object-cover"
+                    />
+                  )}
+                  <div>
+                    <p className="font-semibold text-foreground">{selectedGame?.title}</p>
+                    {selectedGame?.yearPublished && (
+                      <p className="text-sm text-muted-foreground">
+                        ({selectedGame.yearPublished})
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">BGG</Badge>
+                  <span className="text-sm">
+                    Questo gioco verrà aggiunto con i dati base di BoardGameGeek.
+                  </span>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isAdding}>Annulla</AlertDialogCancel>
+              <AlertDialogAction onClick={handleAddFromBgg} disabled={isAdding}>
+                {isAdding ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Aggiungendo...
+                  </>
+                ) : (
+                  'Aggiungi alla Collezione'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

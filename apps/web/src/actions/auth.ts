@@ -257,8 +257,8 @@ export async function extendSessionAction(): Promise<SessionActionState> {
 
     return {
       success: true,
-      expiresAt: response.ExpiresAt,
-      remainingMinutes: response.RemainingMinutes,
+      expiresAt: response.expiresAt,
+      remainingMinutes: response.remainingMinutes,
       message: successMessages.sessionExtended,
     };
   } catch (error) {

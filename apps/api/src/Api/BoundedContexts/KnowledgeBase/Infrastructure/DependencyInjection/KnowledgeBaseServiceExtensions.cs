@@ -99,6 +99,9 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ILlmClient, OllamaLlmClient>();
         services.AddSingleton<ILlmClient, OpenRouterLlmClient>();
 
+        // ISSUE-2391 Sprint 2: LLM Provider Factory
+        services.AddSingleton<LlmProviderFactory>();
+
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
         services.AddScoped<ILlmService, HybridLlmService>();
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());

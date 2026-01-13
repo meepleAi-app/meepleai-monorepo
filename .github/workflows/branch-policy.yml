@@ -4,13 +4,10 @@ on:
   pull_request:
     branches:
       - main
-      - main-dev
 
 jobs:
   validate-source-branch:
     runs-on: ubuntu-latest
-    # Skip validation for Dependabot PRs
-    if: github.actor != 'dependabot[bot]'
     steps:
       - name: Validate PR source branch
         env:
@@ -19,6 +16,7 @@ jobs:
         run: |
           echo "PR: $SOURCE_BRANCH -> $BASE_BRANCH"
 
+          # main can only be updated from main-dev
           if [[ "$BASE_BRANCH" == "main" ]]; then
             if [[ "$SOURCE_BRANCH" != "main-dev" ]]; then
               echo "::error::Branch 'main' can only be updated from 'main-dev'"
@@ -28,13 +26,6 @@ jobs:
             echo "Valid: main-dev -> main"
           fi
 
-          if [[ "$BASE_BRANCH" == "main-dev" ]]; then
-            if [[ "$SOURCE_BRANCH" != "frontend-dev" && "$SOURCE_BRANCH" != "backend-dev" ]]; then
-              echo "::error::Branch 'main-dev' can only be updated from 'frontend-dev' or 'backend-dev'"
-              echo "::error::Attempted merge from: $SOURCE_BRANCH"
-              exit 1
-            fi
-            echo "Valid: $SOURCE_BRANCH -> main-dev"
-          fi
+          # main-dev can be updated from any branch (no restrictions)
 
           echo "Branch policy validated successfully"

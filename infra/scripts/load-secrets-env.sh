@@ -44,6 +44,14 @@ fi
 load_secret "openrouter-api-key" "OPENROUTER_API_KEY"
 load_secret "initial-admin-password" "INITIAL_ADMIN_PASSWORD"
 
+# OAuth provider credentials
+load_secret "google-oauth-client-id" "GOOGLE_OAUTH_CLIENT_ID"
+load_secret "google-oauth-client-secret" "GOOGLE_OAUTH_CLIENT_SECRET"
+load_secret "discord-oauth-client-id" "DISCORD_OAUTH_CLIENT_ID"
+load_secret "discord-oauth-client-secret" "DISCORD_OAUTH_CLIENT_SECRET"
+load_secret "github-oauth-client-id" "GITHUB_OAUTH_CLIENT_ID"
+load_secret "github-oauth-client-secret" "GITHUB_OAUTH_CLIENT_SECRET"
+
 # Observability
 load_secret "gmail-app-password" "GMAIL_APP_PASSWORD"
 load_secret "grafana-admin-password" "GF_SECURITY_ADMIN_PASSWORD"

@@ -113,7 +113,6 @@ playwright-report/
 test-results/
 
 # Misc
-.zencoder/
 .vscode/
 *.swp
 *.swo

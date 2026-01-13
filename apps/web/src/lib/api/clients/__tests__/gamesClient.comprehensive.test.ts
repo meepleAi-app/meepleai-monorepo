@@ -85,8 +85,17 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
       },
     ];
 
+    // Helper to create mock paginated response
+    const createMockPaginatedResponse = (games: Game[]) => ({
+      games,
+      total: games.length,
+      page: 1,
+      pageSize: 20,
+      totalPages: Math.ceil(games.length / 20),
+    });
+
     it('should fetch all games without filters', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll();
 
@@ -99,7 +108,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should filter by search term (title)', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll({ search: 'chess' });
 
@@ -108,7 +117,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should filter by search term (publisher)', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll({ search: 'kosmos' });
 
@@ -117,7 +126,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should filter by minPlayers', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll({ minPlayers: 3 });
 
@@ -126,7 +135,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should filter by maxPlayers', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll({ maxPlayers: 3 });
 
@@ -135,7 +144,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should filter by minPlayTime', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll({ minPlayTime: 60 });
 
@@ -144,7 +153,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should filter by maxPlayTime', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll({ maxPlayTime: 90 });
 
@@ -153,7 +162,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should filter by yearFrom', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll({ yearFrom: 1990 });
 
@@ -162,7 +171,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should filter by yearTo', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll({ yearTo: 1950 });
 
@@ -171,7 +180,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
 
     it('should filter by bggOnly', async () => {
       const gamesWithNoBgg = [...mockGames, { ...mockGames[0], id: 'game-4', bggId: null }];
-      mockHttpClient.get.mockResolvedValueOnce(gamesWithNoBgg);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(gamesWithNoBgg));
 
       const result = await gamesClient.getAll({ bggOnly: true });
 
@@ -180,7 +189,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should apply multiple filters simultaneously', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll({
         minPlayers: 2,
@@ -193,7 +202,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should sort by title ascending', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll(undefined, { field: 'title', direction: 'asc' });
 
@@ -203,7 +212,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should sort by title descending', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll(undefined, { field: 'title', direction: 'desc' });
 
@@ -213,7 +222,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should sort by yearPublished ascending', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll(undefined, {
         field: 'yearPublished',
@@ -227,7 +236,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
 
     it('should handle null values in sorting', async () => {
       const gamesWithNulls = [...mockGames, { ...mockGames[0], id: 'game-4', yearPublished: null }];
-      mockHttpClient.get.mockResolvedValueOnce(gamesWithNulls);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(gamesWithNulls));
 
       const result = await gamesClient.getAll(undefined, {
         field: 'yearPublished',
@@ -239,7 +248,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should paginate results correctly', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll(undefined, undefined, 1, 2);
 
@@ -251,7 +260,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should handle page 2 pagination', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(mockGames);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
 
       const result = await gamesClient.getAll(undefined, undefined, 2, 2);
 
@@ -261,7 +270,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
     });
 
     it('should handle empty results', async () => {
-      mockHttpClient.get.mockResolvedValueOnce([]);
+      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse([]));
 
       const result = await gamesClient.getAll();
 

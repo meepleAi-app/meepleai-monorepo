@@ -39,3 +39,6 @@ export * from './testing.schemas';
 
 // ShareLinks schemas (Issue #2052)
 export * from './share-links.schemas';
+
+// Shared Game Catalog schemas (Issue #2372)
+export * from './shared-games.schemas';

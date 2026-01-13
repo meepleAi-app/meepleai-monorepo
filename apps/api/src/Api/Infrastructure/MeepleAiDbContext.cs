@@ -1,6 +1,7 @@
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Entities.Authentication;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserNotifications;
 using Api.SharedKernel.Application.Services;
@@ -44,6 +45,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
+    public DbSet<AgentConfigurationEntity> AgentConfigurations => Set<AgentConfigurationEntity>(); // ISSUE-2391 Sprint 2
     public DbSet<N8NConfigEntity> N8NConfigs => Set<N8NConfigEntity>();
     public DbSet<RuleSpecCommentEntity> RuleSpecComments => Set<RuleSpecCommentEntity>();
     public DbSet<PromptTemplateEntity> PromptTemplates => Set<PromptTemplateEntity>();

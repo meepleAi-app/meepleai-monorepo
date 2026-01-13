@@ -46,7 +46,8 @@ export interface LoggerConfig {
  */
 const DEFAULT_CONFIG: LoggerConfig = {
   enableConsole: process.env.NODE_ENV === 'development',
-  enableRemote: process.env.NEXT_PUBLIC_ENABLE_REMOTE_LOGS !== 'false',
+  // Disable custom remote logging - using HyperDX instead
+  enableRemote: process.env.NEXT_PUBLIC_ENABLE_REMOTE_LOGS === 'true',
   // Prefer explicit env; otherwise fall back to same-origin relative path to avoid mixed-origin failures
   remoteEndpoint: process.env.NEXT_PUBLIC_LOG_ENDPOINT || '/api/v1/logs',
   minLevel: LogLevel.INFO,

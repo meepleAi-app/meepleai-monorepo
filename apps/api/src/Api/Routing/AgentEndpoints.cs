@@ -13,7 +13,7 @@ namespace Api.Routing;
 
 /// <summary>
 /// DDD-PHASE3: Agent management endpoints for KnowledgeBase bounded context.
-/// Issue #866: AI Agents Entity & Configuration
+/// Issue 866: AI Agents Entity and Configuration.
 /// </summary>
 internal static class AgentEndpoints
 {

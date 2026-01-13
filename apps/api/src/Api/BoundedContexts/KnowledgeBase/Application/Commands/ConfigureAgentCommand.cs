@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Command to configure an agent with a new strategy.
-/// Issue #866: AI Agents Entity & Configuration
+/// Issue 866: AI Agents Entity and Configuration.
 /// </summary>
 internal record ConfigureAgentCommand(
     Guid AgentId,

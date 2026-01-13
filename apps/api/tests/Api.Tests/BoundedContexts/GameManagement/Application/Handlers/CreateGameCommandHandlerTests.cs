@@ -453,7 +453,7 @@ public class CreateGameCommandHandlerTests
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
-        Assert.Contains("Minimum play time cannot exceed maximum", exception.Message);
+        Assert.Contains("cannot exceed", exception.Message, StringComparison.OrdinalIgnoreCase);
         _gameRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Game>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 

@@ -63,3 +63,33 @@ export {
   type UserActivityFiltersProps,
   type UserActivityFilters as UserActivityFiltersType,
 } from './UserActivityFilters';
+
+// Issue #2372: Shared Game Catalog components
+export {
+  GameStatusBadge,
+  getStatusLabel,
+  getStatusColorClass,
+  PlayersBadge,
+  PlayTimeBadge,
+  ComplexityBadge,
+  RatingBadge,
+  AgeBadge,
+  CategoryPill,
+  CategoryPillList,
+  MechanicPill,
+  MechanicPillList,
+  GameForm,
+} from './shared-games';
+export type {
+  GameStatusBadgeProps,
+  PlayersBadgeProps,
+  PlayTimeBadgeProps,
+  ComplexityBadgeProps,
+  RatingBadgeProps,
+  AgeBadgeProps,
+  CategoryPillProps,
+  CategoryPillListProps,
+  MechanicPillProps,
+  MechanicPillListProps,
+  GameFormProps,
+} from './shared-games';

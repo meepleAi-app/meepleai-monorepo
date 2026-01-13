@@ -16,7 +16,6 @@ internal static class EndpointFilterExtensions
     ///
     /// The validated ActiveSession is available in HttpContext.Items[nameof(ActiveSession)].
     /// </summary>
-    /// <typeparam name="TBuilder">The route handler builder type.</typeparam>
     /// <param name="builder">The route handler builder.</param>
     /// <returns>The builder for method chaining.</returns>
     /// <example>
@@ -42,7 +41,6 @@ internal static class EndpointFilterExtensions
     /// Returns 401 Unauthorized if session is invalid, 403 Forbidden if not Admin.
     /// The validated ActiveSession is available in HttpContext.Items[nameof(ActiveSession)].
     /// </summary>
-    /// <typeparam name="TBuilder">The route handler builder type.</typeparam>
     /// <param name="builder">The route handler builder.</param>
     /// <returns>The builder for method chaining.</returns>
     /// <example>
@@ -69,7 +67,6 @@ internal static class EndpointFilterExtensions
     /// The validated ActiveSession (if session auth) is available in HttpContext.Items[nameof(ActiveSession)].
     /// If API key auth, user claims are available via HttpContext.User.
     /// </summary>
-    /// <typeparam name="TBuilder">The route handler builder type.</typeparam>
     /// <param name="builder">The route handler builder.</param>
     /// <returns>The builder for method chaining.</returns>
     /// <example>

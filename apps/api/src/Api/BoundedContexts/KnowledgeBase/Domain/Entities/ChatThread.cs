@@ -8,7 +8,7 @@ using System.Globalization;
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 
 /// <summary>
-/// ChatThread aggregate root representing a conversation thread with Q&A history.
+/// ChatThread aggregate root representing a conversation thread with Q&amp;A history.
 /// </summary>
 internal sealed class ChatThread : AggregateRoot<Guid>
 {

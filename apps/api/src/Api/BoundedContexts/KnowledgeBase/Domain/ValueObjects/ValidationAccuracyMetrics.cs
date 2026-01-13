@@ -180,7 +180,7 @@ public record ValidationAccuracyMetrics
 /// </summary>
 public enum ValidationAccuracyLevel
 {
-    /// <summary>Critical: Accuracy < 60% - System unreliable</summary>
+    /// <summary>Critical: Accuracy &lt; 60% - System unreliable</summary>
     Critical = 0,
 
     /// <summary>Poor: Accuracy 60-69% - Needs improvement</summary>

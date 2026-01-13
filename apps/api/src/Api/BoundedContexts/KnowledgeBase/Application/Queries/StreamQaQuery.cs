@@ -4,7 +4,7 @@ using Api.SharedKernel.Application.Interfaces;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
-/// Streaming query for RAG-based Q&A with token-by-token delivery.
+/// Streaming query for RAG-based Q&amp;A with token-by-token delivery.
 /// Returns progressive events: StateUpdate → Citations → Token(s) → Complete
 /// CHAT-01: Supports chat context integration via ThreadId
 /// Issue #2051: Supports document filtering via DocumentIds

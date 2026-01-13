@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Query to get all agents with optional filtering.
-/// Issue #866: AI Agents Entity & Configuration
+/// Issue 866: AI Agents Entity and Configuration
 /// </summary>
 internal record GetAllAgentsQuery(
     bool? ActiveOnly = null,

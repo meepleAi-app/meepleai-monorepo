@@ -622,11 +622,24 @@ services:
       INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
       INITIAL_ADMIN_PASSWORD_FILE: /run/secrets/initial-admin-password
       INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-System Admin}
+      # OAuth provider credentials from secret files
+      GOOGLE_OAUTH_CLIENT_ID_FILE: /run/secrets/google-oauth-client-id
+      GOOGLE_OAUTH_CLIENT_SECRET_FILE: /run/secrets/google-oauth-client-secret
+      DISCORD_OAUTH_CLIENT_ID_FILE: /run/secrets/discord-oauth-client-id
+      DISCORD_OAUTH_CLIENT_SECRET_FILE: /run/secrets/discord-oauth-client-secret
+      GITHUB_OAUTH_CLIENT_ID_FILE: /run/secrets/github-oauth-client-id
+      GITHUB_OAUTH_CLIENT_SECRET_FILE: /run/secrets/github-oauth-client-secret
     secrets:
       - postgres-password
       - redis-password
       - openrouter-api-key
       - initial-admin-password
+      - google-oauth-client-id
+      - google-oauth-client-secret
+      - discord-oauth-client-id
+      - discord-oauth-client-secret
+      - github-oauth-client-id
+      - github-oauth-client-secret
     volumes:
       - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
     entrypoint: ["/scripts/load-secrets-env.sh"]
@@ -756,3 +769,16 @@ secrets:
     file: ./secrets/grafana-admin-password.txt
   initial-admin-password:
     file: ./secrets/initial-admin-password.txt
+  # OAuth provider secrets for external authentication
+  google-oauth-client-id:
+    file: ./secrets/google-oauth-client-id.txt
+  google-oauth-client-secret:
+    file: ./secrets/google-oauth-client-secret.txt
+  discord-oauth-client-id:
+    file: ./secrets/discord-oauth-client-id.txt
+  discord-oauth-client-secret:
+    file: ./secrets/discord-oauth-client-secret.txt
+  github-oauth-client-id:
+    file: ./secrets/github-oauth-client-id.txt
+  github-oauth-client-secret:
+    file: ./secrets/github-oauth-client-secret.txt

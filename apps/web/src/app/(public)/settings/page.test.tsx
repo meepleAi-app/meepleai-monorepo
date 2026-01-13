@@ -247,8 +247,8 @@ describe('SettingsPage', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByDisplayValue(mockUserProfile.Email)).toBeInTheDocument();
-          expect(screen.getByDisplayValue(mockUserProfile.DisplayName)).toBeInTheDocument();
+          expect(screen.getByDisplayValue(mockUserProfile.email)).toBeInTheDocument();
+          expect(screen.getByDisplayValue(mockUserProfile.displayName)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -261,12 +261,12 @@ describe('SettingsPage', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByDisplayValue(mockUserProfile.DisplayName)).toBeInTheDocument();
+          expect(screen.getByDisplayValue(mockUserProfile.displayName)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
-      const displayNameInput = screen.getByDisplayValue(mockUserProfile.DisplayName);
+      const displayNameInput = screen.getByDisplayValue(mockUserProfile.displayName);
       await user.clear(displayNameInput);
       await user.type(displayNameInput, 'Jane Doe');
 
@@ -331,12 +331,12 @@ describe('SettingsPage', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByDisplayValue(mockUserProfile.DisplayName)).toBeInTheDocument();
+          expect(screen.getByDisplayValue(mockUserProfile.displayName)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
-      const displayNameInput = screen.getByDisplayValue(mockUserProfile.DisplayName);
+      const displayNameInput = screen.getByDisplayValue(mockUserProfile.displayName);
       await user.clear(displayNameInput);
       await user.type(displayNameInput, 'Jane Doe');
 
@@ -731,12 +731,12 @@ describe('SettingsPage', () => {
     it('should allow revoking sessions', async () => {
       const mockSessions = [
         {
-          Id: 'session-1',
-          UserAgent: 'Mozilla/5.0...',
-          IpAddress: '192.168.1.1',
-          CreatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
-          LastSeenAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-          ExpiresAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day from now
+          id: 'session-1',
+          userAgent: 'Mozilla/5.0...',
+          ipAddress: '192.168.1.1',
+          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
+          lastSeenAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+          expiresAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day from now
         },
       ];
 
@@ -903,12 +903,12 @@ describe('SettingsPage', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByDisplayValue(mockUserProfile.DisplayName)).toBeInTheDocument();
+          expect(screen.getByDisplayValue(mockUserProfile.displayName)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
-      const displayNameInput = screen.getByDisplayValue(mockUserProfile.DisplayName);
+      const displayNameInput = screen.getByDisplayValue(mockUserProfile.displayName);
       await user.clear(displayNameInput);
       await user.type(displayNameInput, 'Jane Doe');
 
@@ -933,12 +933,12 @@ describe('SettingsPage', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByDisplayValue(mockUserProfile.DisplayName)).toBeInTheDocument();
+          expect(screen.getByDisplayValue(mockUserProfile.displayName)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
-      const displayNameInput = screen.getByDisplayValue(mockUserProfile.DisplayName);
+      const displayNameInput = screen.getByDisplayValue(mockUserProfile.displayName);
       await user.clear(displayNameInput);
       await user.type(displayNameInput, 'Jane Doe');
 

@@ -28,6 +28,18 @@ export const SharedGameDocumentTypeSchema = z.enum(['Rulebook', 'Errata', 'Homer
 export type SharedGameDocumentType = z.infer<typeof SharedGameDocumentTypeSchema>;
 
 /**
+ * Agent mode enum (Issue #2391 Sprint 2)
+ */
+export const AgentModeSchema = z.enum(['Chat', 'Player', 'Ledger']);
+export type AgentMode = z.infer<typeof AgentModeSchema>;
+
+/**
+ * LLM Provider enum (Issue #2391 Sprint 2)
+ */
+export const LlmProviderSchema = z.enum(['OpenRouter', 'Ollama']);
+export type LlmProvider = z.infer<typeof LlmProviderSchema>;
+
+/**
  * Numeric document type (for API storage - matches C# enum)
  */
 export const SharedGameDocumentTypeNumericSchema = z.number().int().min(0).max(2);

@@ -143,7 +143,7 @@ internal sealed class EvaluationDataset
 
     /// <summary>
     /// Validates the dataset meets minimum requirements.
-    /// Phase 0 requires at least 30 Q&A pairs.
+    /// Phase 0 requires at least 30 Q&amp;A pairs.
     /// </summary>
     public (bool IsValid, List<string> Errors) Validate()
     {

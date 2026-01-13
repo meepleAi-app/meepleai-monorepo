@@ -1,5 +1,7 @@
-using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Guards;
 
 namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 
@@ -8,22 +10,14 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// </summary>
 internal sealed class PlayTime : ValueObject
 {
-    private const int MinPlayTimeMinutes = 1;
-    private const int MaxPlayTimeMinutes = 1440; // 24 hours
-
     public int MinMinutes { get; }
     public int MaxMinutes { get; }
 
     public PlayTime(int minMinutes, int maxMinutes)
     {
-        if (minMinutes < MinPlayTimeMinutes)
-            throw new ValidationException($"Minimum play time cannot be less than {MinPlayTimeMinutes} minute");
-
-        if (maxMinutes > MaxPlayTimeMinutes)
-            throw new ValidationException($"Maximum play time cannot exceed {MaxPlayTimeMinutes} minutes (24 hours)");
-
-        if (minMinutes > maxMinutes)
-            throw new ValidationException("Minimum play time cannot exceed maximum");
+        Guard.AgainstOutOfRange(minMinutes, nameof(minMinutes), PlayTimeCategories.MinimumPlayTime, PlayTimeCategories.MaximumPlayTime);
+        Guard.AgainstOutOfRange(maxMinutes, nameof(maxMinutes), PlayTimeCategories.MinimumPlayTime, PlayTimeCategories.MaximumPlayTime);
+        Guard.AgainstInvalidRange(minMinutes, maxMinutes, nameof(minMinutes), nameof(maxMinutes));
 
         MinMinutes = minMinutes;
         MaxMinutes = maxMinutes;
@@ -35,19 +29,19 @@ internal sealed class PlayTime : ValueObject
     public int AverageMinutes => (MinMinutes + MaxMinutes) / 2;
 
     /// <summary>
-    /// Checks if game is quick (<= 30 minutes).
+    /// Checks if game is quick (&lt;= 30 minutes).
     /// </summary>
-    public bool IsQuick => MaxMinutes <= 30;
+    public bool IsQuick => MaxMinutes <= PlayTimeCategories.QuickGameThreshold;
 
     /// <summary>
     /// Checks if game is medium length (30-90 minutes).
     /// </summary>
-    public bool IsMedium => MinMinutes >= 30 && MaxMinutes <= 90;
+    public bool IsMedium => MinMinutes >= PlayTimeCategories.QuickGameThreshold && MaxMinutes <= PlayTimeCategories.MediumGameThreshold;
 
     /// <summary>
     /// Checks if game is long (> 90 minutes).
     /// </summary>
-    public bool IsLong => MinMinutes > 90;
+    public bool IsLong => MinMinutes > PlayTimeCategories.MediumGameThreshold;
 
     /// <summary>
     /// Creates play time for quick games (15-30 min).

@@ -68,7 +68,7 @@ internal sealed record GridSearchResult
     public int SuccessfulCount => ConfigurationResults.Count(r => r.IsSuccess);
 
     /// <summary>
-    /// Whether any configuration meets the Phase 5 target (Recall@10 >= 70%, P95 < 1.5s).
+    /// Whether any configuration meets the Phase 5 target (Recall@10 &gt;= 70%, P95 &lt; 1.5s).
     /// </summary>
     public bool MeetsPhase5Target =>
         ConfigurationResults.Any(r => r.Metrics.MeetsPhase5Target());

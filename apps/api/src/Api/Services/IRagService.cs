@@ -10,7 +10,7 @@ internal interface IRagService
 {
     /// <summary>
     /// Answer a question using RAG with LLM generation and anti-hallucination.
-    /// AI-04: Core Q&A functionality
+    /// AI-04: Core Q&amp;A functionality
     /// AI-05: Supports caching for reduced latency
     /// PERF-03: Supports cache bypass for fresh responses
     /// AI-09: Supports multilingual queries

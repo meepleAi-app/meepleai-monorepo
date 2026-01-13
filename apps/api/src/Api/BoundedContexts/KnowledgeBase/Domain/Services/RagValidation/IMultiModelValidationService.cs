@@ -162,7 +162,7 @@ internal enum ConsensusSeverity
     Low,
 
     /// <summary>
-    /// No consensus (similarity <0.50)
+    /// No consensus (similarity &lt;0.50)
     /// </summary>
     None,
 

@@ -16,7 +16,7 @@ namespace Api.Routing;
 
 /// <summary>
 /// DDD-PHASE3: KnowledgeBase bounded context endpoints.
-/// Provides vector search and RAG Q&A via CQRS handlers.
+/// Provides vector search and RAG Q&amp;A via CQRS handlers.
 /// </summary>
 internal static class KnowledgeBaseEndpoints
 {
@@ -46,7 +46,7 @@ internal static class KnowledgeBaseEndpoints
 
     private static void MapAskEndpoint(RouteGroupBuilder group)
     {
-        // DDD-PHASE3: RAG Q&A endpoint using MediatR
+        // DDD-PHASE3: RAG Q&amp;A endpoint using MediatR
         group.MapPost("/knowledge-base/ask", HandleAsk)
         .WithName("KnowledgeBaseAsk")
         .RequireSession()
@@ -221,7 +221,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         logger.LogInformation(
-            "KnowledgeBase Q&A request from user {UserId} for game {GameId}: {Query}",
+            "KnowledgeBase Q&amp;A request from user {UserId} for game {GameId}: {Query}",
             session!.User!.Id, gameId, req.query);
 
         var query = new AskQuestionQuery(
@@ -234,7 +234,7 @@ internal static class KnowledgeBaseEndpoints
         var response = await mediator.Send(query, ct).ConfigureAwait(false);
 
         logger.LogInformation(
-            "KnowledgeBase Q&A completed: Confidence={Confidence}, IsLowQuality={IsLowQuality}",
+            "KnowledgeBase Q&amp;A completed: Confidence={Confidence}, IsLowQuality={IsLowQuality}",
             response.OverallConfidence, response.IsLowQuality);
 
         return Results.Ok(new

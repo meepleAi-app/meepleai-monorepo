@@ -1,4 +1,6 @@
+using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Guards;
 
 namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 
@@ -70,23 +72,15 @@ internal sealed class PerformanceMetrics : ValueObject
         string budgetStatus,
         DateTime lastRunAt)
     {
-        if (performanceScore < 0 || performanceScore > 100)
-        {
-            throw new ArgumentOutOfRangeException(nameof(performanceScore), "Performance score must be between 0 and 100");
-        }
-
-        if (lcp < 0) throw new ArgumentOutOfRangeException(nameof(lcp), "LCP cannot be negative");
-        if (fid < 0) throw new ArgumentOutOfRangeException(nameof(fid), "FID cannot be negative");
-        if (cls < 0) throw new ArgumentOutOfRangeException(nameof(cls), "CLS cannot be negative");
-        if (fcp < 0) throw new ArgumentOutOfRangeException(nameof(fcp), "FCP cannot be negative");
-        if (tti < 0) throw new ArgumentOutOfRangeException(nameof(tti), "TTI cannot be negative");
-        if (tbt < 0) throw new ArgumentOutOfRangeException(nameof(tbt), "TBT cannot be negative");
-        if (speedIndex < 0) throw new ArgumentOutOfRangeException(nameof(speedIndex), "Speed Index cannot be negative");
-
-        if (string.IsNullOrWhiteSpace(budgetStatus))
-        {
-            throw new ArgumentException("Budget status cannot be empty", nameof(budgetStatus));
-        }
+        Guard.AgainstOutOfRange(performanceScore, nameof(performanceScore), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
+        Guard.AgainstNegative(lcp, nameof(lcp));
+        Guard.AgainstNegative(fid, nameof(fid));
+        Guard.AgainstNegative(cls, nameof(cls));
+        Guard.AgainstNegative(fcp, nameof(fcp));
+        Guard.AgainstNegative(tti, nameof(tti));
+        Guard.AgainstNegative(tbt, nameof(tbt));
+        Guard.AgainstNegative(speedIndex, nameof(speedIndex));
+        Guard.AgainstNullOrWhiteSpace(budgetStatus, nameof(budgetStatus));
 
         Lcp = lcp;
         Fid = fid;
@@ -101,14 +95,14 @@ internal sealed class PerformanceMetrics : ValueObject
     }
 
     /// <summary>
-    /// Determines if performance metrics meet Core Web Vitals thresholds
-    /// LCP <= 2500ms, FID <= 100ms, CLS <= 0.1, Performance Score >= 90
+    /// Determines if performance metrics meet Core Web Vitals thresholds.
+    /// LCP &lt;= 2500ms, FID &lt;= 100ms, CLS &lt;= 0.1, Performance Score &gt;= 90.
     /// </summary>
     public bool MeetsCoreWebVitals =>
-        Lcp <= 2500 &&
-        Fid <= 100 &&
-        Cls <= 0.1m &&
-        PerformanceScore >= 90;
+        Lcp <= WebVitalThresholds.LcpGoodThreshold &&
+        Fid <= WebVitalThresholds.FidGoodThreshold &&
+        Cls <= WebVitalThresholds.ClsGoodThreshold &&
+        PerformanceScore >= WebVitalThresholds.MinimumPerformanceScore;
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {

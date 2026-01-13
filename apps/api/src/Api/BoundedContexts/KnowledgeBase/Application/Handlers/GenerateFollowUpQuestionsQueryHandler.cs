@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
 /// Handler for GenerateFollowUpQuestionsQuery.
-/// Generates AI-powered follow-up questions based on Q&A context.
+/// Generates AI-powered follow-up questions based on Q&amp;A context.
 /// CHAT-02: AI-Generated Follow-Up Questions
 /// </summary>
 internal sealed class GenerateFollowUpQuestionsQueryHandler

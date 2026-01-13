@@ -1,5 +1,7 @@
-using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Guards;
 
 namespace Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 
@@ -21,9 +23,7 @@ internal sealed class PageCount : ValueObject
     /// <exception cref="DomainException">Thrown if page count is invalid</exception>
     public PageCount(int value)
     {
-        if (value < 1)
-            throw new DomainException("Page count must be at least 1");
-
+        Guard.AgainstTooSmall(value, nameof(value), PageCountCategories.MinimumPageCount);
         Value = value;
     }
 
@@ -31,7 +31,7 @@ internal sealed class PageCount : ValueObject
     /// Checks if the page count is within the specified limit.
     /// </summary>
     /// <param name="maxPages">Maximum allowed pages</param>
-    /// <returns>True if page count <= maxPages</returns>
+    /// <returns>True if page count &lt;= maxPages</returns>
     public bool IsWithinLimit(int maxPages)
     {
         if (maxPages < 1)
@@ -48,17 +48,17 @@ internal sealed class PageCount : ValueObject
     /// <summary>
     /// Checks if this is a large PDF (business definition: > 100 pages).
     /// </summary>
-    public bool IsLargePdf => Value > 100;
+    public bool IsLargePdf => Value > PageCountCategories.MediumPdfThreshold;
 
     /// <summary>
-    /// Checks if this is a small PDF (business definition: <= 10 pages).
+    /// Checks if this is a small PDF (business definition: &lt;= 10 pages).
     /// </summary>
-    public bool IsSmallPdf => Value <= 10;
+    public bool IsSmallPdf => Value <= PageCountCategories.SmallPdfThreshold;
 
     /// <summary>
     /// Checks if this is a medium PDF (business definition: 11-100 pages).
     /// </summary>
-    public bool IsMediumPdf => Value > 10 && Value <= 100;
+    public bool IsMediumPdf => Value > PageCountCategories.SmallPdfThreshold && Value <= PageCountCategories.MediumPdfThreshold;
 
     /// <summary>
     /// Returns the page count as a string.
@@ -81,11 +81,6 @@ internal sealed class PageCount : ValueObject
     /// <summary>
     /// Common page counts as static constants.
     /// </summary>
-    public static readonly PageCount SinglePage = new(1);
+    public static readonly PageCount SinglePage = new(PageCountCategories.MinimumPageCount);
     public static readonly PageCount TwoPages = new(2);
-
-    public int ToInt32()
-    {
-        throw new NotSupportedException("Use implicit conversion to int instead");
-    }
 }

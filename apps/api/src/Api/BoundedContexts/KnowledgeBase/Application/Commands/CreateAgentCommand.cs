@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
 /// Command to create a new agent.
-/// Issue #866: AI Agents Entity & Configuration
+/// Issue 866: AI Agents Entity and Configuration.
 /// </summary>
 internal record CreateAgentCommand(
     string Name,

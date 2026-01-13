@@ -36,11 +36,11 @@ internal static class WebApplicationExtensions
             app.UseForwardedHeaders();
         }
 
-        // Issue #1447: Security headers (must be before CORS to ensure headers on all responses including preflight)
-        app.UseSecurityHeaders();
-
-        // CORS
+        // CORS (must be before other middleware to handle preflight requests)
         app.UseCors("web");
+
+        // Issue #1447: Security headers (after CORS to avoid interfering with preflight)
+        app.UseSecurityHeaders();
     }
 
     private static void ConfigureObservabilityMiddleware(WebApplication app)

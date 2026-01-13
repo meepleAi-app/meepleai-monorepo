@@ -8,6 +8,8 @@ namespace Api.Infrastructure.Migrations
     /// <inheritdoc />
     public partial class AddGameFaqsErrata : Migration
     {
+        private static readonly string[] GameFaqOrderIndexColumns = { "shared_game_id", "order" };
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -69,7 +71,7 @@ namespace Api.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "ix_game_faqs_order",
                 table: "game_faqs",
-                columns: new[] { "shared_game_id", "order" });
+                columns: GameFaqOrderIndexColumns);
 
             migrationBuilder.CreateIndex(
                 name: "ix_game_faqs_shared_game_id",

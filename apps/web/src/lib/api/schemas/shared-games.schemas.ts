@@ -1,5 +1,5 @@
 /**
- * Shared Game Catalog API Schemas (Issue #2372)
+ * Shared Game Catalog API Schemas (Issue #2372, Extended #2373)
  *
  * Zod schemas for validating SharedGameCatalog bounded context responses.
  * Covers: Games CRUD, Categories, Mechanics, FAQs, Errata, Delete Workflow
@@ -57,6 +57,54 @@ export const GameRulesSchema = z.object({
 
 export type GameRules = z.infer<typeof GameRulesSchema>;
 
+// ========== FAQ & Errata (Issue #2373) ==========
+
+/**
+ * Game FAQ DTO
+ */
+export const GameFaqSchema = z.object({
+  id: z.string().uuid(),
+  question: z.string().min(1),
+  answer: z.string().min(1),
+  order: z.number().int().nonnegative(),
+  createdAt: z.string().datetime(),
+});
+
+export type GameFaq = z.infer<typeof GameFaqSchema>;
+
+/**
+ * Game Errata DTO
+ */
+export const GameErrataSchema = z.object({
+  id: z.string().uuid(),
+  description: z.string().min(1),
+  pageReference: z.string().min(1),
+  publishedDate: z.string().datetime(),
+  createdAt: z.string().datetime(),
+});
+
+export type GameErrata = z.infer<typeof GameErrataSchema>;
+
+/**
+ * Game Designer DTO
+ */
+export const GameDesignerSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+});
+
+export type GameDesigner = z.infer<typeof GameDesignerSchema>;
+
+/**
+ * Game Publisher DTO
+ */
+export const GamePublisherSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+});
+
+export type GamePublisher = z.infer<typeof GamePublisherSchema>;
+
 // ========== Shared Game DTOs ==========
 
 /**
@@ -85,6 +133,7 @@ export type SharedGame = z.infer<typeof SharedGameSchema>;
 
 /**
  * Shared game detail DTO (single game view with full info)
+ * Issue #2373 Phase 4: Extended with FAQs, Errata, Designers, Publishers, Categories, Mechanics
  */
 export const SharedGameDetailSchema = z.object({
   id: z.string().uuid(),
@@ -106,6 +155,13 @@ export const SharedGameDetailSchema = z.object({
   modifiedBy: z.string().uuid().nullable(),
   createdAt: z.string().datetime(),
   modifiedAt: z.string().datetime().nullable(),
+  // Extended fields (Issue #2373)
+  faqs: z.array(GameFaqSchema),
+  erratas: z.array(GameErrataSchema),
+  designers: z.array(GameDesignerSchema),
+  publishers: z.array(GamePublisherSchema),
+  categories: z.array(GameCategorySchema),
+  mechanics: z.array(GameMechanicSchema),
 });
 
 export type SharedGameDetail = z.infer<typeof SharedGameDetailSchema>;

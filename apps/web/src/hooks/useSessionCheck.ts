@@ -51,14 +51,14 @@ export function useSessionCheck(): UseSessionCheckResult {
         return;
       }
 
-      setRemainingMinutes(status.RemainingMinutes);
+      setRemainingMinutes(status.remainingMinutes);
 
       // Check if near expiry (< 5 minutes remaining)
-      const nearExpiry = status.RemainingMinutes < NEAR_EXPIRY_THRESHOLD_MINUTES;
+      const nearExpiry = status.remainingMinutes < NEAR_EXPIRY_THRESHOLD_MINUTES;
       setIsNearExpiry(nearExpiry);
 
       // Auto-redirect to login when session expires
-      if (status.RemainingMinutes <= 0) {
+      if (status.remainingMinutes <= 0) {
         window.location.href = '/login?reason=session_expired';
       }
     } catch (err) {

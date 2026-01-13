@@ -28,3 +28,9 @@ using System.Diagnostics.CodeAnalysis;
 
 // CA1062: Validate arguments of public methods
 [assembly: SuppressMessage("Design", "CA1062:Validate arguments of public methods", Justification = "Auto-generated migration code - EF Core guarantees non-null parameters", Scope = "namespaceanddescendants", Target = "~N:Api.Migrations")]
+
+// MA0048: File name must match type name - EF Core migrations have timestamps in filenames but not class names
+[assembly: SuppressMessage("Design", "MA0048:File name must match type name", Justification = "EF Core auto-generates migration class names without file timestamp prefix", Scope = "namespaceanddescendants", Target = "~N:Api.Infrastructure.Migrations")]
+
+// MA0048: File name must match type name - CQRS pattern: Commands/Queries paired with DTOs/Handlers in same file
+[assembly: SuppressMessage("Design", "MA0048:File name must match type name", Justification = "CQRS pattern groups related types (Command+Handler, Query+DTO) in single files for cohesion", Scope = "namespaceanddescendants", Target = "~N:Api.BoundedContexts")]

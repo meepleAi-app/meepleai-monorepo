@@ -108,10 +108,12 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
                 weeklyReset);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: FAIL-OPEN PATTERN - Infrastructure resilience for quota enforcement
+#pragma warning disable S125 // Sections of code should not be commented out
+        // FAIL-OPEN PATTERN: Infrastructure resilience for quota enforcement
         // Catches all Redis/network failures during quota check. Fails open (allows upload)
         // to prioritize availability over quota enforcement. Without this, Redis downtime
         // would block all uploads. Logs error for monitoring.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking PDF upload quota for user {UserId}", userId);
@@ -155,14 +157,15 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
             _logger.LogDebug("Incremented PDF upload count for user {UserId}", userId);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: NON-CRITICAL OPERATION PATTERN - Usage tracking failure tolerance
-        // Catches all Redis failures during upload count increment. This is pure tracking/analytics;
-        // failure doesn't impact upload functionality. Logs warning for monitoring but swallows
-        // exception to avoid disrupting main upload flow. Fail-safe for non-critical operations.
+#pragma warning disable S125 // Sections of code should not be commented out
+        // NON-CRITICAL OPERATION: Usage tracking failure tolerance.
+        // Catches all Redis failures during upload count increment.
+        // This is pure tracking/analytics - failure doesn't impact upload functionality.
+        // Logs warning for monitoring but swallows exception to avoid disrupting main upload flow.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to increment upload count for user {UserId}", userId);
-            // Non-critical error, continue without throwing
         }
 #pragma warning restore CA1031
     }
@@ -199,10 +202,12 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
             return QuotaReservationResult.Success(expiresAt);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation on Redis failure
+#pragma warning disable S125 // Sections of code should not be commented out
+        // INFRASTRUCTURE SERVICE PATTERN: Graceful degradation on Redis failure
         // Catches all Redis/network failures during quota reservation. Returns failure result
         // instead of throwing to allow caller to handle gracefully (e.g., retry, fallback).
         // Logs error for monitoring. Prevents infrastructure failures from propagating.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to reserve quota for user {UserId}, PDF {PdfId}", userId, pdfId);
@@ -235,10 +240,12 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
                 userId, pdfId);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: NON-CRITICAL OPERATION PATTERN - Reservation cleanup failure tolerance
+#pragma warning disable S125 // Sections of code should not be commented out
+        // NON-CRITICAL OPERATION PATTERN: Reservation cleanup failure tolerance
         // Catches all Redis failures during quota confirmation (reservation cleanup).
         // Cleanup failure is non-critical; logs warning but doesn't throw. Reservations
         // auto-expire via TTL anyway. Fail-safe for cleanup operations.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to confirm quota for user {UserId}, PDF {PdfId}", userId, pdfId);
@@ -271,10 +278,12 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
                 userId, pdfId);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: NON-CRITICAL OPERATION PATTERN - Quota release failure tolerance
+#pragma warning disable S125 // Sections of code should not be commented out
+        // NON-CRITICAL OPERATION PATTERN: Quota release failure tolerance
         // Catches all Redis failures during quota release (decrement + cleanup).
         // Release failure is non-critical; logs warning but doesn't throw. Quotas reset
         // automatically via TTL. Fail-safe for cleanup operations.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to release quota for user {UserId}, PDF {PdfId}", userId, pdfId);
@@ -311,10 +320,12 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
             _logger.LogDebug("Decremented PDF upload count for user {UserId}", userId);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: NON-CRITICAL OPERATION PATTERN - Usage tracking decrement failure tolerance
-        // Catches all Redis failures during upload count decrement. This is tracking/analytics only;
-        // failure doesn't impact functionality. Logs warning but swallows exception.
-        // Fail-safe for non-critical operations.
+#pragma warning disable S125 // Sections of code should not be commented out
+        // NON-CRITICAL OPERATION: Usage tracking decrement failure tolerance.
+        // Catches all Redis failures during upload count decrement.
+        // This is tracking/analytics only - failure doesn't impact functionality.
+        // Logs warning but swallows exception. Fail-safe for non-critical operations.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to decrement upload count for user {UserId}", userId);

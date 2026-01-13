@@ -34,17 +34,17 @@ describe('AuthClient - Profile & Preferences', () => {
     describe('getProfile', () => {
       it('should get current user profile', async () => {
         const mockResponse: UserProfile = {
-          Id: mockUserId,
-          Email: 'user@meepleai.dev',
-          DisplayName: 'Test User',
-          Role: 'User',
-          CreatedAt: '2025-01-01T00:00:00Z',
-          IsTwoFactorEnabled: true,
-          TwoFactorEnabledAt: '2025-11-01T10:00:00Z',
-          Language: 'en',
-          Theme: 'dark',
-          EmailNotifications: true,
-          DataRetentionDays: 30,
+          id: mockUserId,
+          email: 'user@meepleai.dev',
+          displayName: 'Test User',
+          role: 'User',
+          createdAt: '2025-01-01T00:00:00Z',
+          isTwoFactorEnabled: true,
+          twoFactorEnabledAt: '2025-11-01T10:00:00Z',
+          language: 'en',
+          theme: 'dark',
+          emailNotifications: true,
+          dataRetentionDays: 30,
         };
 
         mockFetch.mockResolvedValueOnce({

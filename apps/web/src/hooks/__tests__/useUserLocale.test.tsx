@@ -60,17 +60,17 @@ describe('useUserLocale', () => {
     it('should return user preference locale from profile', async () => {
       // Mock API response with Italian preference
       mockGetProfile.mockResolvedValueOnce({
-        Language: 'it',
-        Email: 'test@example.com',
-        DisplayName: 'Test User',
-        Id: 'test-id',
-        Role: 'User',
-        CreatedAt: new Date().toISOString(),
-        IsTwoFactorEnabled: false,
-        TwoFactorEnabledAt: null,
-        Theme: 'system',
-        EmailNotifications: true,
-        DataRetentionDays: 90,
+        language: 'it',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        id: 'test-id',
+        role: 'User',
+        createdAt: new Date().toISOString(),
+        isTwoFactorEnabled: false,
+        twoFactorEnabledAt: null,
+        theme: 'system',
+        emailNotifications: true,
+        dataRetentionDays: 90,
       });
 
       const { result } = renderHook(() => useUserLocale());
@@ -88,17 +88,17 @@ describe('useUserLocale', () => {
 
     it('should return English when user prefers English', async () => {
       mockGetProfile.mockResolvedValueOnce({
-        Language: 'en',
-        Email: 'test@example.com',
-        DisplayName: 'Test User',
-        Id: 'test-id',
-        Role: 'User',
-        CreatedAt: new Date().toISOString(),
-        IsTwoFactorEnabled: false,
-        TwoFactorEnabledAt: null,
-        Theme: 'system',
-        EmailNotifications: true,
-        DataRetentionDays: 90,
+        language: 'en',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        id: 'test-id',
+        role: 'User',
+        createdAt: new Date().toISOString(),
+        isTwoFactorEnabled: false,
+        twoFactorEnabledAt: null,
+        theme: 'system',
+        emailNotifications: true,
+        dataRetentionDays: 90,
       });
 
       const { result } = renderHook(() => useUserLocale());
@@ -113,17 +113,17 @@ describe('useUserLocale', () => {
 
       for (const locale of locales) {
         mockGetProfile.mockResolvedValueOnce({
-          Language: locale,
-          Email: 'test@example.com',
-          DisplayName: 'Test User',
-          Id: 'test-id',
-          Role: 'User',
-          CreatedAt: new Date().toISOString(),
-          IsTwoFactorEnabled: false,
-          TwoFactorEnabledAt: null,
-          Theme: 'system',
-          EmailNotifications: true,
-          DataRetentionDays: 90,
+          language: locale,
+          email: 'test@example.com',
+          displayName: 'Test User',
+          id: 'test-id',
+          role: 'User',
+          createdAt: new Date().toISOString(),
+          isTwoFactorEnabled: false,
+          twoFactorEnabledAt: null,
+          theme: 'system',
+          emailNotifications: true,
+          dataRetentionDays: 90,
         });
 
         const { result } = renderHook(() => useUserLocale());
@@ -208,17 +208,17 @@ describe('useUserLocale', () => {
 
     it('should fallback to default when user preference is invalid', async () => {
       mockGetProfile.mockResolvedValueOnce({
-        Language: 'invalid-locale',
-        Email: 'test@example.com',
-        DisplayName: 'Test User',
-        Id: 'test-id',
-        Role: 'User',
-        CreatedAt: new Date().toISOString(),
-        IsTwoFactorEnabled: false,
-        TwoFactorEnabledAt: null,
-        Theme: 'system',
-        EmailNotifications: true,
-        DataRetentionDays: 90,
+        language: 'invalid-locale',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        id: 'test-id',
+        role: 'User',
+        createdAt: new Date().toISOString(),
+        isTwoFactorEnabled: false,
+        twoFactorEnabledAt: null,
+        theme: 'system',
+        emailNotifications: true,
+        dataRetentionDays: 90,
       } as any); // Type assertion needed for invalid locale test
       mockNavigatorLanguage('zh-CN', ['zh-CN']);
 
@@ -312,17 +312,17 @@ describe('useUserLocale', () => {
   describe('Integration Scenarios', () => {
     it('should prioritize user preference over browser language', async () => {
       mockGetProfile.mockResolvedValueOnce({
-        Language: 'it',
-        Email: 'test@example.com',
-        DisplayName: 'Test User',
-        Id: 'test-id',
-        Role: 'User',
-        CreatedAt: new Date().toISOString(),
-        IsTwoFactorEnabled: false,
-        TwoFactorEnabledAt: null,
-        Theme: 'system',
-        EmailNotifications: true,
-        DataRetentionDays: 90,
+        language: 'it',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        id: 'test-id',
+        role: 'User',
+        createdAt: new Date().toISOString(),
+        isTwoFactorEnabled: false,
+        twoFactorEnabledAt: null,
+        theme: 'system',
+        emailNotifications: true,
+        dataRetentionDays: 90,
       });
       mockNavigatorLanguage('en-US', ['en-US']);
 
@@ -335,17 +335,17 @@ describe('useUserLocale', () => {
 
     it('should use browser language when user has no preference', async () => {
       mockGetProfile.mockResolvedValueOnce({
-        Language: null,
-        Email: 'test@example.com',
-        DisplayName: 'Test User',
-        Id: 'test-id',
-        Role: 'User',
-        CreatedAt: new Date().toISOString(),
-        IsTwoFactorEnabled: false,
-        TwoFactorEnabledAt: null,
-        Theme: 'system',
-        EmailNotifications: true,
-        DataRetentionDays: 90,
+        language: null,
+        email: 'test@example.com',
+        displayName: 'Test User',
+        id: 'test-id',
+        role: 'User',
+        createdAt: new Date().toISOString(),
+        isTwoFactorEnabled: false,
+        twoFactorEnabledAt: null,
+        theme: 'system',
+        emailNotifications: true,
+        dataRetentionDays: 90,
       } as any);
       mockNavigatorLanguage('es-MX', ['es-MX']);
 

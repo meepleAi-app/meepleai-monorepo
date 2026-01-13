@@ -66,10 +66,12 @@ internal sealed class GenerateReportCommandHandler : ICommandHandler<GenerateRep
                 FileSizeBytes: reportData.FileSizeBytes);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: COMMAND HANDLER PATTERN - DB status update before rethrow
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HANDLER BOUNDARY: COMMAND HANDLER PATTERN - DB status update before rethrow
         // Catches all exceptions during report generation to update execution status in DB
         // before rethrowing. No logging here to avoid double logging (caller logs exception).
         // Ensures DB reflects failed execution state for audit/monitoring.
+#pragma warning restore S125
         catch (Exception ex)
         {
             // S2139: Logging removed to avoid double logging (caller will log).

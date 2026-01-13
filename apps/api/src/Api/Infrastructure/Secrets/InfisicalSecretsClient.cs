@@ -92,9 +92,11 @@ internal class InfisicalSecretsClient : IInfisicalClient
             throw new InvalidOperationException($"HTTP error fetching secret {secretName}: {ex.StatusCode}", ex);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: EXCEPTION WRAPPING PATTERN - Domain boundary
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: EXCEPTION WRAPPING PATTERN - Domain boundary
         // Wraps infrastructure exceptions (JSON, network, unexpected) into domain exception.
         // Preserves inner exception for debugging. HttpRequestException caught separately.
+#pragma warning restore S125
         catch (Exception ex)
         {
             // Wrap in a more meaningful exception for the domain
@@ -164,9 +166,11 @@ internal class InfisicalSecretsClient : IInfisicalClient
             return Array.Empty<SecretVersion>();
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: EXCEPTION WRAPPING PATTERN - Domain boundary
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: EXCEPTION WRAPPING PATTERN - Domain boundary
         // Wraps infrastructure exceptions into domain exception. Preserves inner exception.
         // HttpRequestException with NotFound caught separately above.
+#pragma warning restore S125
         catch (Exception ex)
         {
             // S2139: Do not log and rethrow.
@@ -214,8 +218,10 @@ internal class InfisicalSecretsClient : IInfisicalClient
             return false; // Timeout is unhealthy
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: HEALTH CHECK PATTERN - Non-critical monitoring
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: HEALTH CHECK PATTERN - Non-critical monitoring
         // Health check failures return false; don't throw. Specific HTTP/timeout caught separately.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during Infisical health check");
@@ -269,6 +275,7 @@ internal class InfisicalSecretsClient : IInfisicalClient
                 "Successfully authenticated with Infisical (token expires at {ExpiresAt})",
                 _tokenExpiresAt);
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both - Intentional: log for diagnostics AND propagate for caller handling
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "HTTP error authenticating with Infisical");
@@ -279,10 +286,13 @@ internal class InfisicalSecretsClient : IInfisicalClient
             _logger.LogError(ex, "Timeout authenticating with Infisical");
             throw; // Rethrow - authentication timeout prevents secret access
         }
+#pragma warning restore S2139
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: EXCEPTION WRAPPING PATTERN - Authentication boundary
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: EXCEPTION WRAPPING PATTERN - Authentication boundary
         // Wraps infrastructure exceptions into domain exception. Specific HTTP/timeout caught separately.
         // Authentication failures must propagate to prevent secret access with invalid credentials.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error authenticating with Infisical");

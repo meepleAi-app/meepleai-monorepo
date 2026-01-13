@@ -138,15 +138,16 @@ internal class RagAccuracyEvaluator : IRagAccuracyEvaluator
 
         var answer = actualResponse.answer ?? string.Empty;
 
-        foreach (var forbiddenKeyword in testCase.ForbiddenKeywords)
+        // S3267: Use LINQ FirstOrDefault instead of foreach with early return (preserves logging)
+        var foundKeyword = testCase.ForbiddenKeywords
+            .FirstOrDefault(keyword => answer.Contains(keyword, StringComparison.InvariantCultureIgnoreCase));
+
+        if (foundKeyword != null)
         {
-            if (answer.Contains(forbiddenKeyword, StringComparison.InvariantCultureIgnoreCase))
-            {
-                _logger.LogWarning(
-                    "Test case {TestCaseId}: Forbidden keyword '{Keyword}' found in answer (hallucination detected)",
-                    testCase.Id, forbiddenKeyword);
-                return false; // Hallucination detected
-            }
+            _logger.LogWarning(
+                "Test case {TestCaseId}: Forbidden keyword '{Keyword}' found in answer (hallucination detected)",
+                testCase.Id, foundKeyword);
+            return false; // Hallucination detected
         }
 
         return true; // No forbidden keywords found

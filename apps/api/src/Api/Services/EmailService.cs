@@ -72,8 +72,10 @@ internal class EmailService : IEmailService
                 DataMasking.MaskEmail(toEmail));
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Infrastructure adapter - Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
         // External service integration requires catching all SMTP exceptions to provide consistent error handling
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(
@@ -119,8 +121,10 @@ internal class EmailService : IEmailService
                 wasAdminOverride);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Infrastructure adapter - Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
         // External service integration requires catching all SMTP exceptions to provide consistent error handling
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(
@@ -305,7 +309,9 @@ internal class EmailService : IEmailService
                 reportName, recipients.Count);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Infrastructure adapter - Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(
@@ -361,7 +367,9 @@ internal class EmailService : IEmailService
                 reportName, recipients.Count);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Background operation - Failure notification email is best-effort, must not propagate exceptions
+#pragma warning disable S125 // Sections of code should not be commented out
+        // BACKGROUND SERVICE: Failure notification email is best-effort, must not propagate exceptions
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(

@@ -271,7 +271,7 @@ internal class AdminStatsService : IAdminStatsService
         return totalCount > 0 ? (double)errorCount / totalCount : 0.0;
     }
 
-    private record BasicMetricsResult(
+    private sealed record BasicMetricsResult(
         int TotalUsers,
         int ActiveSessions,
         int ApiRequestsToday,
@@ -281,7 +281,7 @@ internal class AdminStatsService : IAdminStatsService
         int TotalRagRequests,
         long TotalTokens);
 
-    private record AdditionalMetricsResult(
+    private sealed record AdditionalMetricsResult(
         int TotalGames,
         int ApiRequests7d,
         int ApiRequests30d,

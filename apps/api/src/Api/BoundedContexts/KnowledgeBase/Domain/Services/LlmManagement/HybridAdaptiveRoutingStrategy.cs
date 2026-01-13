@@ -86,12 +86,27 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         // Traffic split: Random selection based on configured percentage
         var useOpenRouter = ShouldUseOpenRouter(openRouterPercent);
 
+        // S3358: Extract nested ternary to separate logic
         // Determine primary choice
-        var primaryProvider = useOpenRouter ? "OpenRouter" : (ollamaModel.Contains('/') ? "OpenRouter" : "Ollama");
+        var primaryProvider = DeterminePrimaryProvider(useOpenRouter, ollamaModel);
         var primaryModel = useOpenRouter ? openRouterModel : ollamaModel;
 
         // BGAI-022 Step 3: Check if selected provider is enabled
         return GetValidatedDecision(primaryProvider, primaryModel, userRole, userId, settings, openRouterPercent);
+    }
+
+    /// <summary>
+    /// S3358: Extracted helper to determine primary provider (avoids nested ternary).
+    /// </summary>
+    private static string DeterminePrimaryProvider(bool useOpenRouter, string ollamaModel)
+    {
+        if (useOpenRouter)
+        {
+            return "OpenRouter";
+        }
+
+        // If ollamaModel contains '/', it's actually an OpenRouter model ID
+        return ollamaModel.Contains('/') ? "OpenRouter" : "Ollama";
     }
 
     private bool TryGetPreferredDecision(AiProviderSettings settings, Role userRole, string userId, out LlmRoutingDecision? decision)

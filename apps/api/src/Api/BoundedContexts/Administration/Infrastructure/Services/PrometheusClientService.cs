@@ -73,9 +73,11 @@ internal class PrometheusClientService : IPrometheusClientService
             return null;
         }
 #pragma warning disable CA1031
-        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
         // Catches all Prometheus API failures. Returns null instead of throwing
         // to allow caller to handle gracefully. Prevents infrastructure failures from propagating.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error querying Prometheus: {Query}", query);
@@ -98,9 +100,11 @@ internal class PrometheusClientService : IPrometheusClientService
             return isHealthy;
         }
 #pragma warning disable CA1031
-        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
         // Catches all health check failures. Returns false instead of throwing
         // to allow monitoring to continue. Non-critical infrastructure check.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Prometheus health check failed");

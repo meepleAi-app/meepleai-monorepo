@@ -54,26 +54,10 @@ internal class AlertingService : IAlertingService
         }
 
         // Check throttling
-        if (await IsThrottledAsync(alertType, cancellationToken).ConfigureAwait(false))
+        var throttledResult = await HandleThrottledAlertAsync(alertType, cancellationToken).ConfigureAwait(false);
+        if (throttledResult != null)
         {
-            _logger.LogInformation(
-                "Alert {AlertType} is throttled. Skipping send (throttle window: {ThrottleMinutes} minutes)",
-                alertType,
-                _config.ThrottleMinutes);
-
-            // Return most recent alert instead
-            var existingAlert = await _dbContext.Alerts
-                .AsNoTracking()
-                .Where(a => a.AlertType == alertType && a.IsActive)
-                .OrderByDescending(a => a.TriggeredAt)
-                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-
-            if (existingAlert != null)
-            {
-                return MapToDto(existingAlert);
-            }
-
-            throw new InvalidOperationException($"Alert {alertType} is currently throttled");
+            return throttledResult;
         }
 
         // Create alert entity
@@ -88,54 +72,7 @@ internal class AlertingService : IAlertingService
         };
 
         // Send to all enabled channels
-        var channelResults = new Dictionary<string, bool>(StringComparer.Ordinal);
-        foreach (var channel in _alertChannels)
-        {
-            try
-            {
-                var success = await channel.SendAsync(
-                    alertType,
-                    severity,
-                    message,
-                    metadata,
-                    cancellationToken).ConfigureAwait(false);
-
-                channelResults[channel.ChannelName] = success;
-
-                if (success)
-                {
-                    _logger.LogInformation(
-                        "Alert {AlertType} sent successfully via {Channel}",
-                        alertType,
-                        channel.ChannelName);
-                }
-                else
-                {
-                    _logger.LogWarning(
-                        "Failed to send alert {AlertType} via {Channel}",
-                        alertType,
-                        channel.ChannelName);
-                }
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Background service boundary - alert channel failure isolation
-            // RESILIENCE PATTERN: Alert channel failures must not stop other alert channels
-            // Rationale: Multi-channel alerting requires fault isolation - if email fails,
-            // Slack/PagerDuty should still deliver. We track per-channel results and log
-            // failures for monitoring. This enables graceful degradation when channels fail.
-            // Context: Channel failures are typically external (SMTP down, Slack API timeout)
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Error sending alert {AlertType} via {Channel}",
-                    alertType,
-                    channel.ChannelName);
-                channelResults[channel.ChannelName] = false;
-            }
-#pragma warning restore CA1031
-        }
-
+        var channelResults = await SendToChannelsAsync(alertType, severity, message, metadata, cancellationToken).ConfigureAwait(false);
         alertEntity.ChannelSent = JsonSerializer.Serialize(channelResults);
 
         // Save to database
@@ -149,6 +86,74 @@ internal class AlertingService : IAlertingService
             string.Join(", ", channelResults.Where(c => c.Value).Select(c => c.Key)));
 
         return MapToDto(alertEntity);
+    }
+
+    private async Task<AlertDto?> HandleThrottledAlertAsync(string alertType, CancellationToken cancellationToken)
+    {
+        if (!await IsThrottledAsync(alertType, cancellationToken).ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        _logger.LogInformation(
+            "Alert {AlertType} is throttled. Skipping send (throttle window: {ThrottleMinutes} minutes)",
+            alertType,
+            _config.ThrottleMinutes);
+
+        var existingAlert = await _dbContext.Alerts
+            .AsNoTracking()
+            .Where(a => a.AlertType == alertType && a.IsActive)
+            .OrderByDescending(a => a.TriggeredAt)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        if (existingAlert != null)
+        {
+            return MapToDto(existingAlert);
+        }
+
+        throw new InvalidOperationException($"Alert {alertType} is currently throttled");
+    }
+
+    private async Task<Dictionary<string, bool>> SendToChannelsAsync(
+        string alertType,
+        string severity,
+        string message,
+        IDictionary<string, object>? metadata,
+        CancellationToken cancellationToken)
+    {
+        var channelResults = new Dictionary<string, bool>(StringComparer.Ordinal);
+
+        foreach (var channel in _alertChannels)
+        {
+            try
+            {
+                var success = await channel.SendAsync(alertType, severity, message, metadata, cancellationToken).ConfigureAwait(false);
+                channelResults[channel.ChannelName] = success;
+                LogChannelResult(alertType, channel.ChannelName, success);
+            }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // FAIL-OPEN PATTERN: Alert channel failures must not stop other alert channels
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending alert {AlertType} via {Channel}", alertType, channel.ChannelName);
+                channelResults[channel.ChannelName] = false;
+            }
+#pragma warning restore CA1031
+        }
+
+        return channelResults;
+    }
+
+    private void LogChannelResult(string alertType, string channelName, bool success)
+    {
+        if (success)
+        {
+            _logger.LogInformation("Alert {AlertType} sent successfully via {Channel}", alertType, channelName);
+        }
+        else
+        {
+            _logger.LogWarning("Failed to send alert {AlertType} via {Channel}", alertType, channelName);
+        }
     }
 
     public async Task<bool> ResolveAlertAsync(

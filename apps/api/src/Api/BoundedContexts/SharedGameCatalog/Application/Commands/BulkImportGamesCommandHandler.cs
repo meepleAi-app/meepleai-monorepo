@@ -87,7 +87,9 @@ internal sealed class BulkImportGamesCommandHandler : ICommandHandler<BulkImport
                     return (Success: true, GameId: gameId, Error: (string?)null);
                 }
 #pragma warning disable CA1031 // Do not catch general exception types
-                // Justification: Bulk import should continue even if individual imports fail
+#pragma warning disable S125 // Sections of code should not be commented out
+                // HANDLER BOUNDARY: Bulk import should continue even if individual imports fail
+#pragma warning restore S125
                 catch (Exception ex)
 #pragma warning restore CA1031
                 {

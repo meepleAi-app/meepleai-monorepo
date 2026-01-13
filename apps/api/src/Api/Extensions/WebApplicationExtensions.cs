@@ -12,8 +12,10 @@ internal static class WebApplicationExtensions
         this WebApplication app,
         bool forwardedHeadersEnabled)
     {
+#pragma warning disable S125 // Sections of code should not be commented out
         // PERF-11: Response Compression DISABLED - causing ERR_CONTENT_DECODING_FAILED
         // app.UseResponseCompression();
+#pragma warning restore S125
 
         ConfigureSecurityMiddleware(app, forwardedHeadersEnabled);
         ConfigureObservabilityMiddleware(app);

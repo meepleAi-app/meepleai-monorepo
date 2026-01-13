@@ -93,9 +93,11 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
                 "Invalid JSON response from Unstructured service");
         }
 #pragma warning disable CA1031
-        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // INFRASTRUCTURE SERVICE PATTERN: Graceful degradation
         // Catches all Unstructured API failures. Returns error result instead of throwing
         // to allow PDF pipeline orchestrator to fall back to next stage. External service adapter boundary.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex,
@@ -114,7 +116,9 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
     {
         var content = new MultipartFormDataContent();
 #pragma warning disable CA2000 // Dispose objects before losing scope
-        // Justification: MultipartFormDataContent takes ownership of added content and disposes them when it is disposed
+#pragma warning disable S125 // Sections of code should not be commented out
+        // OWNERSHIP TRANSFER: MultipartFormDataContent takes ownership of added content and disposes them when it is disposed
+#pragma warning restore S125
         var streamContent = new StreamContent(pdfStream);
         var strategyContent = new StringContent("fast");
         var languageContent = new StringContent("ita");

@@ -76,7 +76,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
     }
 
     /// <inheritdoc/>
-    public async Task<Dictionary<string, decimal>> GetCostsByProviderAsync(
+    public async Task<IDictionary<string, decimal>> GetCostsByProviderAsync(
         DateOnly startDate,
         DateOnly endDate,
         CancellationToken cancellationToken = default)
@@ -89,7 +89,7 @@ public class LlmCostLogRepository : ILlmCostLogRepository
     }
 
     /// <inheritdoc/>
-    public async Task<Dictionary<string, decimal>> GetCostsByRoleAsync(
+    public async Task<IDictionary<string, decimal>> GetCostsByRoleAsync(
         DateOnly startDate,
         DateOnly endDate,
         CancellationToken cancellationToken = default)

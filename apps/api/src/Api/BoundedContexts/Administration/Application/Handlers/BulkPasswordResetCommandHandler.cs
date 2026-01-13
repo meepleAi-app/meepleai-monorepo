@@ -85,10 +85,12 @@ internal class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordRes
                     successCount++;
                 }
 #pragma warning disable CA1031 // Do not catch general exception types
-                // Justification: BULK OPERATION PATTERN - Individual password reset failure handling
+#pragma warning disable S125 // Sections of code should not be commented out
+                // HANDLER BOUNDARY: BULK OPERATION PATTERN - Individual password reset failure handling
                 // Catches all exceptions during password reset (validation, DB constraints, etc.)
                 // to collect errors without stopping batch processing. Each failure is logged
                 // and added to error list for reporting. Allows partial success in bulk operation.
+#pragma warning restore S125
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error resetting password for user {UserId}", userId);
@@ -117,9 +119,11 @@ internal class BulkPasswordResetCommandHandler : ICommandHandler<BulkPasswordRes
             );
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: COMMAND HANDLER PATTERN - Wraps unexpected infrastructure failures
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HANDLER BOUNDARY: COMMAND HANDLER PATTERN - Wraps unexpected infrastructure failures
         // Generic catch wraps unexpected exceptions (DB, network, memory) in DomainException
         // for consistent API error handling. Logs with full context before wrapping.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Critical error during bulk password reset");

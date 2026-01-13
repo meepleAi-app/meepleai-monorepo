@@ -33,8 +33,8 @@ internal record LlmCostReportDto
     public required DateOnly StartDate { get; init; }
     public required DateOnly EndDate { get; init; }
     public required decimal TotalCost { get; init; }
-    public required Dictionary<string, decimal> CostsByProvider { get; init; }
-    public required Dictionary<string, decimal> CostsByRole { get; init; }
+    public required IDictionary<string, decimal> CostsByProvider { get; init; }
+    public required IDictionary<string, decimal> CostsByRole { get; init; }
     public required decimal DailyCost { get; init; }
     public required bool ExceedsThreshold { get; init; }
     public required decimal ThresholdAmount { get; init; }

@@ -37,10 +37,12 @@ internal class Disable2FACommandHandler : ICommandHandler<Disable2FACommand, Dis
             return new Disable2FAResult(Success: false, ErrorMessage: ex.Message);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HANDLER BOUNDARY: COMMAND HANDLER PATTERN - CQRS handler boundary
         // Specific exceptions (UnauthorizedAccessException) caught separately above.
         // Generic catch handles unexpected infrastructure failures (DB, network, memory)
         // to prevent exception propagation to API layer. Returns Result pattern.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error disabling 2FA for user {UserId}", command.UserId);

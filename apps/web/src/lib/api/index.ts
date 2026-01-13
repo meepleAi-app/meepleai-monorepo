@@ -33,6 +33,7 @@ import {
   createDocumentsClient,
   createShareLinksClient,
   createNotificationsClient,
+  createSharedGamesClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -46,6 +47,7 @@ import {
   type DocumentsClient,
   type ShareLinksClient,
   type NotificationsClient,
+  type SharedGamesClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -167,6 +169,9 @@ export interface ApiClient {
   /** User Notifications (Issue #2053) */
   notifications: NotificationsClient;
 
+  /** Shared Game Catalog Admin (Issue #2372) */
+  sharedGames: SharedGamesClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -230,6 +235,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     documents: createDocumentsClient({ httpClient }),
     shareLinks: createShareLinksClient({ httpClient }), // ISSUE-2052
     notifications: createNotificationsClient({ httpClient }), // ISSUE-2053
+    sharedGames: createSharedGamesClient({ httpClient }), // ISSUE-2372
     delete: (path: string) => httpClient.delete(path),
   };
 

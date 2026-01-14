@@ -333,6 +333,18 @@ using (var scope = app.Services.CreateScope())
         {
             await EnsureTestUserExistsAsync(app, db, scope.ServiceProvider).ConfigureAwait(false);
         }
+
+        // Seed SharedGameCatalog from PDF rulebooks (Issue: SharedGame seed from rulebooks ≤ 10MB)
+        if (app.Environment.IsDevelopment())
+        {
+            var adminUser = await db.Users.FirstOrDefaultAsync(u => u.Role == "admin").ConfigureAwait(false);
+            if (adminUser != null)
+            {
+                var bggService = scope.ServiceProvider.GetRequiredService<IBggApiService>();
+                await Api.Infrastructure.Seeders.SharedGameSeeder.SeedSharedGamesAsync(
+                    db, bggService, adminUser.Id, app.Logger).ConfigureAwait(false);
+            }
+        }
     }
 }
 

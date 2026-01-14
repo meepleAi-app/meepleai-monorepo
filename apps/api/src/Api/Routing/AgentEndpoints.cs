@@ -24,6 +24,8 @@ internal static class AgentEndpoints
         MapGetAllAgentsEndpoint(group);
         MapConfigureAgentEndpoint(group);
         MapInvokeAgentEndpoint(group);
+        MapUpdateAgentDocumentsEndpoint(group);
+        MapGetAgentDocumentsEndpoint(group);
 
         return group;
     }
@@ -214,6 +216,86 @@ internal static class AgentEndpoints
         .Produces(404)
         .Produces(500);
     }
+
+    private static void MapUpdateAgentDocumentsEndpoint(RouteGroupBuilder group)
+    {
+        // Update agent document selection - Issue #2399: Knowledge Base Document Selection
+        group.MapPut("/agents/{id:guid}/documents", async (
+            Guid id,
+            UpdateAgentDocumentsRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            // Session validated AND Admin role checked by RequireAdminSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new UpdateAgentDocumentsCommand(
+                AgentId: id,
+                DocumentIds: req.DocumentIds ?? Array.Empty<Guid>()
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            if (!result.Success)
+            {
+                return result.ErrorCode switch
+                {
+                    "AGENT_NOT_FOUND" => Results.NotFound(new { error = result.Message }),
+                    "NO_CONFIGURATION" => Results.BadRequest(new { error = result.Message }),
+                    "DOCUMENTS_NOT_FOUND" => Results.BadRequest(new { error = result.Message }),
+                    "DOCUMENTS_REQUIRED" => Results.BadRequest(new { error = result.Message }),
+                    _ => Results.Problem(
+                        detail: result.Message,
+                        statusCode: 500,
+                        title: "Update documents failed")
+                };
+            }
+
+            logger.LogInformation(
+                "Updated documents for agent {AgentId} by user {UserId}: {DocumentCount} documents",
+                id, session!.User!.Id, result.DocumentCount);
+
+            return Results.Ok(result);
+        })
+        .RequireAdminSession() // Issue #1446: Automatic admin session validation
+        .WithName("UpdateAgentDocuments")
+        .Produces(200)
+        .Produces(400)
+        .Produces(404)
+        .Produces(500);
+    }
+
+    private static void MapGetAgentDocumentsEndpoint(RouteGroupBuilder group)
+    {
+        // Get agent document selection - Issue #2399: Knowledge Base Document Selection
+        group.MapGet("/agents/{id:guid}/documents", async (
+            Guid id,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            // Session validated by RequireSessionFilter
+            _ = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var query = new GetAgentDocumentsQuery(id);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            if (result == null)
+            {
+                return Results.NotFound(new { error = $"Agent {id} not found or has no configuration" });
+            }
+
+            return Results.Ok(result);
+        })
+        .RequireSession() // Issue #1446: Automatic session validation
+        .WithName("GetAgentDocuments")
+        .Produces(200)
+        .Produces(404)
+        .Produces(500);
+    }
 }
 
 // Request DTOs
@@ -234,4 +316,12 @@ internal record InvokeAgentRequest(
     string Query,
     Guid? GameId = null,
     Guid? ChatThreadId = null
+);
+
+/// <summary>
+/// Request to update agent document selection.
+/// Issue #2399: Knowledge Base Document Selection.
+/// </summary>
+internal record UpdateAgentDocumentsRequest(
+    IReadOnlyList<Guid>? DocumentIds
 );

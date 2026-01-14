@@ -270,6 +270,25 @@ internal static class InfrastructureServiceExtensions
             EnableMultipleHttp2Connections = true
         });
 
+        // External embedding service client (Python microservice)
+        services.AddHttpClient("EmbeddingService", client =>
+        {
+#pragma warning disable S1075 // URIs should not be hardcoded - Default fallback for external service
+            var serviceUrl = configuration["LOCAL_EMBEDDING_URL"]
+                ?? configuration["Embedding:LocalServiceUrl"]
+                ?? "http://embedding-service:8000";
+#pragma warning restore S1075
+            client.BaseAddress = new Uri(serviceUrl);
+            client.Timeout = TimeSpan.FromSeconds(60);
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+            MaxConnectionsPerServer = 20,
+            EnableMultipleHttp2Connections = true
+        });
+
         // AI-13: BoardGameGeek API client with retry logic and connection pooling
         services.Configure<BggConfiguration>(configuration.GetSection("Bgg"));
 

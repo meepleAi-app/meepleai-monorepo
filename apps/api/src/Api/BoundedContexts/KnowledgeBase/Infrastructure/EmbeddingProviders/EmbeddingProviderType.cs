@@ -36,7 +36,14 @@ public enum EmbeddingProviderType
     /// HuggingFace with BGE-M3 (1024 dimensions, 8K context)
     /// Multilingual support, free
     /// </summary>
-    HuggingFaceBgeM3
+    HuggingFaceBgeM3,
+
+    /// <summary>
+    /// External embedding service (Python microservice)
+    /// Offloads embedding generation to avoid OOM in API container
+    /// Model: intfloat/multilingual-e5-large (1024 dimensions)
+    /// </summary>
+    External
 }
 
 /// <summary>
@@ -54,6 +61,7 @@ public static class EmbeddingProviderTypeExtensions
         EmbeddingProviderType.OllamaNomic => "nomic-embed-text",
         EmbeddingProviderType.OllamaMxbai => "mxbai-embed-large",
         EmbeddingProviderType.HuggingFaceBgeM3 => "BAAI/bge-m3",
+        EmbeddingProviderType.External => "intfloat/multilingual-e5-large",
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown provider type")
     };
 
@@ -67,6 +75,7 @@ public static class EmbeddingProviderTypeExtensions
         EmbeddingProviderType.OllamaNomic => 768,
         EmbeddingProviderType.OllamaMxbai => 1024,
         EmbeddingProviderType.HuggingFaceBgeM3 => 1024,
+        EmbeddingProviderType.External => 1024,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown provider type")
     };
 
@@ -80,6 +89,7 @@ public static class EmbeddingProviderTypeExtensions
         EmbeddingProviderType.OllamaNomic => 8192,
         EmbeddingProviderType.OllamaMxbai => 512,
         EmbeddingProviderType.HuggingFaceBgeM3 => 8192,
+        EmbeddingProviderType.External => 8192,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown provider type")
     };
 
@@ -98,6 +108,7 @@ public static class EmbeddingProviderTypeExtensions
             "OLLAMANOMIC" or "OLLAMA_NOMIC" or "OLLAMA-NOMIC" or "OLLAMA" => EmbeddingProviderType.OllamaNomic,
             "OLLAMAMXBAI" or "OLLAMA_MXBAI" or "OLLAMA-MXBAI" => EmbeddingProviderType.OllamaMxbai,
             "HUGGINGFACEBGEM3" or "HUGGINGFACE_BGE_M3" or "HUGGINGFACE-BGE-M3" or "BGE-M3" or "BGEM3" => EmbeddingProviderType.HuggingFaceBgeM3,
+            "EXTERNAL" or "EXTERNAL_SERVICE" or "PYTHON_SERVICE" => EmbeddingProviderType.External,
             _ => null
         };
     }

@@ -188,7 +188,7 @@ internal sealed class PerformanceMetrics : ValueObject
         if (lcp <= WebVitalThresholds.LcpNeedsImprovementThreshold &&
             fid <= WebVitalThresholds.FidNeedsImprovementThreshold &&
             cls <= WebVitalThresholds.ClsNeedsImprovementThreshold &&
-            performanceScore >= 50)
+            performanceScore >= WebVitalThresholds.WarningPerformanceScore)
             return "warning";
 
         // Fail: At least one metric fails thresholds
@@ -196,9 +196,33 @@ internal sealed class PerformanceMetrics : ValueObject
     }
 
     /// <summary>
-    /// Determines if performance metrics meet Core Web Vitals thresholds.
-    /// LCP &lt;= 2500ms, FID &lt;= 100ms, CLS &lt;= 0.1, Performance Score &gt;= 90.
+    /// Determines if frontend performance metrics meet Google's Core Web Vitals standards.
     /// </summary>
+    /// <remarks>
+    /// Core Web Vitals thresholds based on Google's web performance standards (https://web.dev/vitals/):
+    /// <list type="bullet">
+    /// <item><description>LCP (Largest Contentful Paint): &lt;= 2500ms (measures loading performance, threshold for "Good" user experience)</description></item>
+    /// <item><description>FID (First Input Delay): &lt;= 100ms (measures interactivity, threshold for responsive user interactions)</description></item>
+    /// <item><description>CLS (Cumulative Layout Shift): &lt;= 0.1 (measures visual stability, prevents unexpected layout shifts)</description></item>
+    /// <item><description>Performance Score: &gt;= 90 (Lighthouse overall performance score, "Good" rating indicating optimal frontend performance)</description></item>
+    /// </list>
+    /// These thresholds represent industry best practices for delivering excellent user experiences and are used by Google
+    /// for search ranking signals. Meeting all Core Web Vitals indicates the application provides a fast, responsive,
+    /// and stable user experience.
+    /// </remarks>
+    /// <returns>
+    /// <c>true</c> if all Core Web Vitals thresholds are met; otherwise <c>false</c>.
+    /// </returns>
+    /// <example>
+    /// <code>
+    /// var metrics = PerformanceMetrics.FromLighthouseReport(2400, 95, 0.08m, 92, DateTime.UtcNow);
+    /// if (metrics.MeetsCoreWebVitals)
+    ///     logger.LogInformation("Frontend performance excellent: LCP={Lcp}ms, FID={Fid}ms, CLS={Cls}, Score={Score}",
+    ///         metrics.Lcp, metrics.Fid, metrics.Cls, metrics.PerformanceScore);
+    /// else
+    ///     logger.LogWarning("Performance optimization needed: {Metrics}", metrics);
+    /// </code>
+    /// </example>
     public bool MeetsCoreWebVitals =>
         Lcp <= WebVitalThresholds.LcpGoodThreshold &&
         Fid <= WebVitalThresholds.FidGoodThreshold &&

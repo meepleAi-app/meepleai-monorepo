@@ -31,6 +31,13 @@ internal static class WebVitalThresholds
     public const decimal MinimumPerformanceScore = 90;
 
     /// <summary>
+    /// Warning Lighthouse performance score threshold (below MinimumPerformanceScore but acceptable).
+    /// Lighthouse scoring: 50-89 is "Needs Improvement" (warning state).
+    /// Used to indicate degraded performance requiring optimization.
+    /// </summary>
+    public const decimal WarningPerformanceScore = 50;
+
+    /// <summary>
     /// Largest Contentful Paint "Needs Improvement" threshold (milliseconds).
     /// Google Core Web Vitals: LCP between 2500-4000ms needs improvement.
     /// </summary>

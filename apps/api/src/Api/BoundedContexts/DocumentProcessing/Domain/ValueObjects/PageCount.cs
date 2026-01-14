@@ -35,7 +35,7 @@ internal sealed class PageCount : ValueObject
     public bool IsWithinLimit(int maxPages)
     {
         if (maxPages < 1)
-            throw new ArgumentException("Maximum page limit must be at least 1", nameof(maxPages));
+            throw new ValidationException("Maximum page limit must be at least 1");
 
         return Value <= maxPages;
     }

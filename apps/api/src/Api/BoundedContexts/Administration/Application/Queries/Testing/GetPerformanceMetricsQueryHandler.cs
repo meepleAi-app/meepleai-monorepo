@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Administration.Application.Queries.Testing;
@@ -42,7 +43,7 @@ internal class GetPerformanceMetricsQueryHandler : IQueryHandler<GetPerformanceM
                 Tbt: 0,
                 SpeedIndex: 0,
                 PerformanceScore: 0,
-                BudgetStatus: "no-data",
+                BudgetStatus: PerformanceBudgetStatus.NoData,
                 LastRunAt: DateTime.UtcNow,
                 MeetsCoreWebVitals: false);
         }

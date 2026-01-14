@@ -1,4 +1,5 @@
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Enums;
 
 namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 
@@ -29,16 +30,17 @@ internal sealed class AccessibilityMetrics : ValueObject
     public DateTime LastRunAt { get; }
 
     /// <summary>
-    /// Status of accessibility tests ("pass", "warning", "fail")
+    /// Status of accessibility tests (Pass, Warning, Fail, NoData).
+    /// Indicates whether accessibility tests meet quality standards.
     /// </summary>
-    public string Status { get; }
+    public TestExecutionStatus Status { get; }
 
     public AccessibilityMetrics(
         decimal lighthouseScore,
         int axeViolations,
         IReadOnlyList<string> wcagLevels,
         DateTime lastRunAt,
-        string status)
+        TestExecutionStatus status)
     {
         if (lighthouseScore < 0 || lighthouseScore > 100)
         {
@@ -50,10 +52,7 @@ internal sealed class AccessibilityMetrics : ValueObject
             throw new ArgumentOutOfRangeException(nameof(axeViolations), "Axe violations cannot be negative");
         }
 
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            throw new ArgumentException("Status cannot be empty", nameof(status));
-        }
+        // Note: No validation needed for status enum - type-safe by design
 
         LighthouseScore = lighthouseScore;
         AxeViolations = axeViolations;

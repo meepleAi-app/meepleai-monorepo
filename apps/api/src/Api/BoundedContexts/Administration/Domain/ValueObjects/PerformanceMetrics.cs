@@ -1,5 +1,6 @@
 using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Enums;
 using Api.SharedKernel.Guards;
 
 namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
@@ -51,9 +52,10 @@ internal sealed class PerformanceMetrics : ValueObject
     public decimal PerformanceScore { get; }
 
     /// <summary>
-    /// Performance budget status ("pass", "warning", "fail")
+    /// Performance budget compliance status (Pass, Warning, Fail).
+    /// Indicates whether performance metrics meet defined budget thresholds.
     /// </summary>
-    public string BudgetStatus { get; }
+    public PerformanceBudgetStatus BudgetStatus { get; }
 
     /// <summary>
     /// Timestamp of the last performance test run
@@ -69,7 +71,7 @@ internal sealed class PerformanceMetrics : ValueObject
         decimal tbt,
         decimal speedIndex,
         decimal performanceScore,
-        string budgetStatus,
+        PerformanceBudgetStatus budgetStatus,
         DateTime lastRunAt)
     {
         Guard.AgainstOutOfRange(performanceScore, nameof(performanceScore), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
@@ -80,7 +82,7 @@ internal sealed class PerformanceMetrics : ValueObject
         Guard.AgainstNegative(tti, nameof(tti));
         Guard.AgainstNegative(tbt, nameof(tbt));
         Guard.AgainstNegative(speedIndex, nameof(speedIndex));
-        Guard.AgainstNullOrWhiteSpace(budgetStatus, nameof(budgetStatus));
+        // Note: No validation needed for enum - type-safe by design
 
         Lcp = lcp;
         Fid = fid;

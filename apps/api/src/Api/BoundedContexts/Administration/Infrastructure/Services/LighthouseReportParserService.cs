@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Globalization;
 using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
+using Api.SharedKernel.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -54,21 +55,12 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
             if (accessibilityScore >= 75) wcagLevels.Add("AA");
             if (accessibilityScore >= 90) wcagLevels.Add("AAA");
 
-            // Determine status
-            // Determine status
-            string status;
-            if (accessibilityScore >= 90)
-            {
-                status = "pass";
-            }
-            else if (accessibilityScore >= 75)
-            {
-                status = "warning";
-            }
-            else
-            {
-                status = "fail";
-            }
+            // Determine status based on accessibility score thresholds
+            var status = accessibilityScore >= 90
+                ? TestExecutionStatus.Pass
+                : accessibilityScore >= 75
+                    ? TestExecutionStatus.Warning
+                    : TestExecutionStatus.Fail;
 
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 
@@ -124,21 +116,12 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
             var tbt = GetNumericValue(latestReport, "audits", "total-blocking-time", "numericValue");
             var speedIndex = GetNumericValue(latestReport, "audits", "speed-index", "numericValue");
 
-            // Determine budget status based on Core Web Vitals
-            // Determine budget status based on Core Web Vitals
-            string budgetStatus;
-            if (lcp <= 2500 && fid <= 100 && cls <= 0.1)
-            {
-                budgetStatus = "pass";
-            }
-            else if (lcp <= 4000 && fid <= 300 && cls <= 0.25)
-            {
-                budgetStatus = "warning";
-            }
-            else
-            {
-                budgetStatus = "fail";
-            }
+            // Determine budget status based on Core Web Vitals thresholds
+            var budgetStatus = lcp <= 2500 && fid <= 100 && cls <= 0.1
+                ? PerformanceBudgetStatus.Pass
+                : lcp <= 4000 && fid <= 300 && cls <= 0.25
+                    ? PerformanceBudgetStatus.Warning
+                    : PerformanceBudgetStatus.Fail;
 
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 

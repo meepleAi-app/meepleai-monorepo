@@ -15,7 +15,7 @@ namespace Api.SharedKernel.Enums;
 /// </list>
 /// Status is determined by comparing actual metrics against budget thresholds.
 /// </remarks>
-internal enum PerformanceBudgetStatus
+public enum PerformanceBudgetStatus
 {
     /// <summary>
     /// Performance meets all budget targets.

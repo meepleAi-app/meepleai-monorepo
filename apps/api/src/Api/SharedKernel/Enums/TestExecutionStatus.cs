@@ -13,7 +13,7 @@ namespace Api.SharedKernel.Enums;
 ///   <item><description><see cref="NoData"/>: No test execution data available yet</description></item>
 /// </list>
 /// </remarks>
-internal enum TestExecutionStatus
+public enum TestExecutionStatus
 {
     /// <summary>
     /// Tests passed with excellent quality metrics.

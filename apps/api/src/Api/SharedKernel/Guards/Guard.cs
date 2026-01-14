@@ -137,4 +137,69 @@ internal static class Guard
         if (min > max)
             throw new ValidationException($"{minParamName} cannot exceed {maxParamName}");
     }
+
+    /// <summary>
+    /// Ensures Guid is not empty (domain business rule).
+    /// </summary>
+    /// <param name="value">Guid to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <exception cref="ValidationException">Guid is empty</exception>
+    public static void AgainstEmptyGuid(Guid value, string paramName)
+    {
+        if (value == Guid.Empty)
+            throw new ValidationException($"{paramName} cannot be empty");
+    }
+
+    /// <summary>
+    /// Ensures value is one of the allowed values.
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="allowedValues">Collection of allowed values</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <exception cref="ValidationException">Value is not in allowed values</exception>
+    public static void AgainstInvalidValue(string value, IEnumerable<string> allowedValues, string paramName)
+    {
+        if (!allowedValues.Contains(value, StringComparer.OrdinalIgnoreCase))
+            throw new ValidationException($"{paramName} must be one of: {string.Join(", ", allowedValues)}");
+    }
+
+    /// <summary>
+    /// Ensures double value is within specified range (inclusive, domain business rule).
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <param name="min">Minimum allowed value (inclusive)</param>
+    /// <param name="max">Maximum allowed value (inclusive)</param>
+    /// <exception cref="ValidationException">Value outside range</exception>
+    public static void AgainstOutOfRange(double value, string paramName, double min, double max)
+    {
+        if (value < min || value > max)
+            throw new ValidationException($"{paramName} must be between {min} and {max}");
+    }
+
+    /// <summary>
+    /// Ensures collection is not null or empty (domain business rule).
+    /// </summary>
+    /// <typeparam name="T">Collection element type</typeparam>
+    /// <param name="collection">Collection to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <exception cref="ValidationException">Collection is null or empty</exception>
+    public static void AgainstEmptyCollection<T>(IEnumerable<T>? collection, string paramName)
+    {
+        if (collection == null || !collection.Any())
+            throw new ValidationException($"{paramName} cannot be empty");
+    }
+
+    /// <summary>
+    /// Ensures string has minimum length (domain business rule).
+    /// </summary>
+    /// <param name="value">String to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <param name="minLength">Minimum required length</param>
+    /// <exception cref="ValidationException">String is shorter than minimum length</exception>
+    public static void AgainstTooShort(string value, string paramName, int minLength)
+    {
+        if (value == null || value.Length < minLength)
+            throw new ValidationException($"{paramName} must be at least {minLength} characters");
+    }
 }

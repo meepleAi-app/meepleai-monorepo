@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.SharedKernel.Guards;
 using MediatR;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers.AlertRules;
@@ -14,6 +15,11 @@ internal class EnableAlertRuleCommandHandler : IRequestHandler<EnableAlertRuleCo
     public async Task<Unit> Handle(EnableAlertRuleCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        // Validate input before repository operations
+        Guard.AgainstEmptyGuid(request.Id, nameof(request.Id));
+        Guard.AgainstNullOrWhiteSpace(request.UpdatedBy, nameof(request.UpdatedBy));
+
         var rule = await _repository.GetByIdAsync(request.Id, cancellationToken).ConfigureAwait(false);
         if (rule == null) throw new InvalidOperationException($"AlertRule {request.Id} not found");
 

@@ -117,9 +117,7 @@ export class ValidationError extends ApiError {
 export class RateLimitError extends ApiError {
   public readonly retryAfter?: number;
 
-  constructor(
-    details: Omit<ApiErrorDetails, 'statusCode'> & { retryAfter?: number }
-  ) {
+  constructor(details: Omit<ApiErrorDetails, 'statusCode'> & { retryAfter?: number }) {
     super({ ...details, statusCode: 429 });
     this.name = 'RateLimitError';
     this.retryAfter = details.retryAfter;
@@ -253,9 +251,7 @@ export class NetworkError extends ApiError {
 export class SchemaValidationError extends ApiError {
   public readonly zodError: unknown;
 
-  constructor(
-    details: Omit<ApiErrorDetails, 'statusCode'> & { zodError: unknown }
-  ) {
+  constructor(details: Omit<ApiErrorDetails, 'statusCode'> & { zodError: unknown }) {
     super({ ...details, statusCode: 500, message: `Schema validation failed: ${details.message}` });
     this.name = 'SchemaValidationError';
     this.zodError = details.zodError;
@@ -272,10 +268,7 @@ export class SchemaValidationError extends ApiError {
 /**
  * Creates appropriate error instance from HTTP response
  */
-export async function createApiError(
-  endpoint: string,
-  response: Response
-): Promise<ApiError> {
+export async function createApiError(endpoint: string, response: Response): Promise<ApiError> {
   const correlationId = response.headers.get('X-Correlation-Id') || undefined;
   const statusCode = response.status;
 
@@ -285,10 +278,11 @@ export async function createApiError(
 
   try {
     const body = await response.json();
-    if (body?.error) {
-      message = body.error;
-    } else if (body?.message) {
+    // Prefer body.message (user-friendly message) over body.error (error type)
+    if (body?.message) {
       message = body.message;
+    } else if (body?.error) {
+      message = body.error;
     }
 
     // Extract validation errors if present (422 response)

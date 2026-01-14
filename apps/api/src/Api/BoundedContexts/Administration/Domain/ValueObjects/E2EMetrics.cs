@@ -1,5 +1,6 @@
 using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Enums;
 using Api.SharedKernel.Guards;
 
 namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
@@ -61,9 +62,10 @@ internal sealed class E2EMetrics : ValueObject
     public DateTime LastRunAt { get; }
 
     /// <summary>
-    /// Overall test suite status ("pass", "warning", "fail")
+    /// Overall test suite status (Pass, Warning, Fail, NoData).
+    /// Indicates whether tests meet quality standards.
     /// </summary>
-    public string Status { get; }
+    public TestExecutionStatus Status { get; }
 
     public E2EMetrics(
         decimal coverage,
@@ -76,7 +78,7 @@ internal sealed class E2EMetrics : ValueObject
         int skippedTests,
         int flakyTests,
         DateTime lastRunAt,
-        string status)
+        TestExecutionStatus status)
     {
         Guard.AgainstOutOfRange(coverage, nameof(coverage), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
         Guard.AgainstOutOfRange(passRate, nameof(passRate), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
@@ -87,7 +89,7 @@ internal sealed class E2EMetrics : ValueObject
         Guard.AgainstNegative(failedTests, nameof(failedTests));
         Guard.AgainstNegative(skippedTests, nameof(skippedTests));
         Guard.AgainstNegative(flakyTests, nameof(flakyTests));
-        Guard.AgainstNullOrWhiteSpace(status, nameof(status));
+        // Note: No validation needed for enum - type-safe by design
 
         Coverage = coverage;
         PassRate = passRate;

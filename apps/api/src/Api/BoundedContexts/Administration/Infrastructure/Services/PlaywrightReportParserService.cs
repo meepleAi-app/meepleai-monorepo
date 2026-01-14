@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
+using Api.SharedKernel.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -64,21 +65,12 @@ internal class PlaywrightReportParserService : IPlaywrightReportParserService
             // For now, use a simple heuristic based on number of tests
             var coverage = totalTests > 0 ? Math.Min(100, totalTests * 0.5m) : 0;
 
-            // Determine status
-            // Determine status
-            string status;
-            if (passRate >= 95 && flakyRate <= 5)
-            {
-                status = "pass";
-            }
-            else if (passRate >= 80 && flakyRate <= 10)
-            {
-                status = "warning";
-            }
-            else
-            {
-                status = "fail";
-            }
+            // Determine status based on pass rate and flaky rate thresholds
+            var status = passRate >= 95 && flakyRate <= 5
+                ? TestExecutionStatus.Pass
+                : passRate >= 80 && flakyRate <= 10
+                    ? TestExecutionStatus.Warning
+                    : TestExecutionStatus.Fail;
 
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 

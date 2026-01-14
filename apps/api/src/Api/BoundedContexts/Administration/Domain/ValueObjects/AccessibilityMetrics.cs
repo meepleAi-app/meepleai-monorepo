@@ -1,3 +1,4 @@
+using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Enums;
 
@@ -44,12 +45,12 @@ internal sealed class AccessibilityMetrics : ValueObject
     {
         if (lighthouseScore < 0 || lighthouseScore > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(lighthouseScore), "Lighthouse score must be between 0 and 100");
+            throw new ValidationException("Lighthouse score must be between 0 and 100");
         }
 
         if (axeViolations < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(axeViolations), "Axe violations cannot be negative");
+            throw new ValidationException("Axe violations cannot be negative");
         }
 
         // Note: No validation needed for status enum - type-safe by design

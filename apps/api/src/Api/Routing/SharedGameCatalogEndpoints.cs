@@ -33,6 +33,7 @@ internal static class SharedGameCatalogEndpoints
         // Search shared games with filtering and full-text search
         group.MapGet("/shared-games", HandleSearchGames)
             .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
             .WithName("SearchSharedGames")
             .WithSummary("Search shared games catalog")
             .WithDescription("Search games with full-text search, category/mechanic filters, player count, and playing time filters. Returns published games only for public access.")
@@ -41,6 +42,7 @@ internal static class SharedGameCatalogEndpoints
         // Get game details by ID
         group.MapGet("/shared-games/{id:guid}", HandleGetGameById)
             .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
             .WithName("GetSharedGameById")
             .WithSummary("Get shared game details")
             .WithDescription("Get detailed information about a shared game including designers, publishers, categories, mechanics, FAQs, and errata. Returns only published games for public access.")
@@ -50,6 +52,7 @@ internal static class SharedGameCatalogEndpoints
         // Get all game categories
         group.MapGet("/shared-games/categories", HandleGetCategories)
             .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
             .WithName("GetGameCategories")
             .WithSummary("Get all game categories")
             .WithDescription("Returns all available game categories for filtering.")
@@ -58,6 +61,7 @@ internal static class SharedGameCatalogEndpoints
         // Get all game mechanics
         group.MapGet("/shared-games/mechanics", HandleGetMechanics)
             .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
             .WithName("GetGameMechanics")
             .WithSummary("Get all game mechanics")
             .WithDescription("Returns all available game mechanics for filtering.")
@@ -74,6 +78,7 @@ internal static class SharedGameCatalogEndpoints
         // Create new shared game
         group.MapPost("/admin/shared-games", HandleCreateGame)
             .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
             .WithName("CreateSharedGame")
             .WithSummary("Create new shared game (Admin/Editor)")
             .Produces<Guid>(StatusCodes.Status201Created)
@@ -83,6 +88,7 @@ internal static class SharedGameCatalogEndpoints
         // Update existing shared game
         group.MapPut("/admin/shared-games/{id:guid}", HandleUpdateGame)
             .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
             .WithName("UpdateSharedGame")
             .WithSummary("Update shared game (Admin/Editor)")
             .Produces(StatusCodes.Status204NoContent)

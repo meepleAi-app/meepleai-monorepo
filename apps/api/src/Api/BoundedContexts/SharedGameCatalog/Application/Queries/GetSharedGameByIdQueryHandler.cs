@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Services;
 using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
 

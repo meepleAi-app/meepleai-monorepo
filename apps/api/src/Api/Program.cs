@@ -226,6 +226,9 @@ builder.Services.AddAuthenticationServices(builder.Configuration);
 // Observability services (OpenTelemetry, Health checks, Swagger)
 builder.Services.AddObservabilityServices(builder.Configuration, builder.Environment);
 
+// ISSUE #2424: Rate limiting for API protection
+builder.Services.AddRateLimitingServices();
+
 // Configure JSON serialization for ASP.NET Core Minimal APIs
 // Accept camelCase from frontend (JavaScript convention) while backend uses PascalCase (C# convention)
 // NOTE: ASP.NET Core 9.0 Minimal APIs require unified JsonOptions configuration

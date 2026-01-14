@@ -38,9 +38,10 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
+        var game = CreateTestGame(gameId);
         _gameRepositoryMock
-            .Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
 
         var command = new StartGameSessionCommand(
             GameId: gameId,
@@ -72,7 +73,7 @@ public class StartGameSessionCommandHandlerTests
 
         // Verify repository interactions
         _gameRepositoryMock.Verify(
-            r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()),
+            r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()),
             Times.Once);
         _sessionRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()),
@@ -87,9 +88,10 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
+        var game = CreateTestGame(gameId, minPlayers: 2, maxPlayers: 6);
         _gameRepositoryMock
-            .Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
 
         var command = new StartGameSessionCommand(
             GameId: gameId,
@@ -118,9 +120,10 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
+        var game = CreateTestGame(gameId);
         _gameRepositoryMock
-            .Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
 
         var command = new StartGameSessionCommand(
             GameId: gameId,
@@ -144,9 +147,10 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
+        var game = CreateTestGame(gameId);
         _gameRepositoryMock
-            .Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
 
         var command = new StartGameSessionCommand(
             GameId: gameId,
@@ -259,8 +263,8 @@ public class StartGameSessionCommandHandlerTests
         // Arrange
         var gameId = Guid.NewGuid();
         _gameRepositoryMock
-            .Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Game?)null);
 
         var command = new StartGameSessionCommand(
             GameId: gameId,
@@ -287,9 +291,10 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
+        var game = CreateTestGame(gameId, minPlayers: 2, maxPlayers: 6);
         _gameRepositoryMock
-            .Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
 
         var command = new StartGameSessionCommand(
             GameId: gameId,
@@ -313,9 +318,10 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
+        var game = CreateTestGame(gameId);
         _gameRepositoryMock
-            .Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
 
         var command = new StartGameSessionCommand(
             GameId: gameId,
@@ -333,7 +339,7 @@ public class StartGameSessionCommandHandlerTests
 
         // Assert
         _gameRepositoryMock.Verify(
-            r => r.ExistsAsync(gameId, cancellationToken),
+            r => r.GetByIdAsync(gameId, cancellationToken),
             Times.Once);
         _sessionRepositoryMock.Verify(
             r => r.AddAsync(It.IsAny<GameSession>(), cancellationToken),
@@ -347,9 +353,10 @@ public class StartGameSessionCommandHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
+        var game = CreateTestGame(gameId);
         _gameRepositoryMock
-            .Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
 
         var command = new StartGameSessionCommand(
             GameId: gameId,

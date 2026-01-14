@@ -272,6 +272,16 @@ internal static class InfrastructureServiceExtensions
 
         // AI-13: BoardGameGeek API client with retry logic and connection pooling
         services.Configure<BggConfiguration>(configuration.GetSection("Bgg"));
+
+        // Load BGG API token from secret file (required as of Jan 2026)
+        // Register at: https://boardgamegeek.com/using_the_xml_api
+        var bggToken = SecretsHelper.GetSecretOrValue(
+            configuration,
+            "BGG_API_TOKEN",
+            logger: null,
+            required: false
+        );
+
         services.AddHttpClient("BggApi", (serviceProvider, client) =>
         {
             var config = serviceProvider.GetRequiredService<IOptions<BggConfiguration>>().Value;
@@ -280,10 +290,11 @@ internal static class InfrastructureServiceExtensions
             client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI/1.0 (https://meepleai.dev)");
 
             // Add Authorization header if BGG API token is configured
-            // Token obtained from: https://boardgamegeek.com/applications
-            if (!string.IsNullOrWhiteSpace(config.ApiToken))
+            // REQUIRED as of Jan 2026 - BGG now enforces authentication for XML API
+            var token = bggToken ?? config.ApiToken;
+            if (!string.IsNullOrWhiteSpace(token))
             {
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {config.ApiToken}");
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
             }
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler

@@ -111,7 +111,7 @@ export function GameCreationStep({
     try {
       // Step 1: Create game first (without images) to get gameId
       const result = await api.games.create({
-        name: gameName.trim(),
+        title: gameName.trim(),
         publisher: publisher.trim() || null,
         yearPublished: yearPublished ?? null,
         iconUrl: null,

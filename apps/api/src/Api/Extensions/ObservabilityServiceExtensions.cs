@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -28,6 +29,7 @@ internal static class ObservabilityServiceExtensions
     private static readonly string[] QdrantTags = new[] { "vector", "qdrant" };
     private static readonly string[] QdrantCollectionTags = new[] { "vector", "qdrant", "collection" };
     private static readonly string[] N8nTags = new[] { "automation", "workflow" };
+    private static readonly string[] SharedCatalogTags = new[] { "database", "fts", "shared-catalog" };
 
     private static IServiceCollection AddOpenTelemetryServices(
             this IServiceCollection services,
@@ -242,6 +244,10 @@ internal static class ObservabilityServiceExtensions
             .AddCheck<QdrantHealthCheck>(
                 "qdrant-collection",
                 tags: QdrantCollectionTags)
+            .AddCheck<Api.Infrastructure.HealthChecks.SharedGameCatalogHealthCheck>(
+                "shared-catalog-fts",
+                failureStatus: HealthStatus.Degraded,
+                tags: SharedCatalogTags)
             .AddUrlGroup(
                 new Uri($"{n8nUrl}/healthz"),
                 name: "n8n",

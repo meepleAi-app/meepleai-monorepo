@@ -74,15 +74,15 @@ internal static class Guard
     }
 
     /// <summary>
-    /// Ensures string is not null, empty, or whitespace.
+    /// Ensures string is not null, empty, or whitespace (domain business rule).
     /// </summary>
     /// <param name="value">String to validate</param>
     /// <param name="paramName">Parameter name for error message</param>
-    /// <exception cref="ArgumentException">String is null, empty, or whitespace</exception>
+    /// <exception cref="ValidationException">String is null, empty, or whitespace</exception>
     public static void AgainstNullOrWhiteSpace(string value, string paramName)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new ArgumentException($"{paramName} cannot be empty", paramName);
+            throw new ValidationException($"{paramName} cannot be empty");
     }
 
     /// <summary>

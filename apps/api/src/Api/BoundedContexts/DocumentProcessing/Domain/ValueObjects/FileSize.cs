@@ -79,7 +79,7 @@ internal sealed class FileSize : ValueObject
     public bool IsWithinLimit(long maxBytes)
     {
         if (maxBytes < 1)
-            throw new ArgumentException("Maximum size limit must be at least 1 byte", nameof(maxBytes));
+            throw new ValidationException("Maximum size limit must be at least 1 byte");
 
         return Bytes <= maxBytes;
     }

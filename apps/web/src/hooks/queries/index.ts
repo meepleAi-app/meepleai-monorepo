@@ -34,6 +34,18 @@ export {
   adminKeys,
 } from './useDashboardData';
 
+// User Library queries and mutations
+export {
+  useLibrary,
+  useLibraryStats,
+  useGameInLibraryStatus,
+  useAddGameToLibrary,
+  useRemoveGameFromLibrary,
+  useUpdateLibraryEntry,
+  useToggleLibraryFavorite,
+  libraryKeys,
+} from './useLibrary';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

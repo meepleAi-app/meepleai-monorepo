@@ -9,3 +9,10 @@ export type { AgentModeSelectorProps } from './AgentModeSelector';
 
 export { LlmProviderSelector } from './LlmProviderSelector';
 export type { LlmProviderSelectorProps } from './LlmProviderSelector';
+
+// Issue #2399: Knowledge Base Document Selection
+export { DocumentSelector } from './DocumentSelector';
+export type { DocumentSelectorProps } from './DocumentSelector';
+
+export { SelectedDocumentsList } from './SelectedDocumentsList';
+export type { SelectedDocumentsListProps } from './SelectedDocumentsList';

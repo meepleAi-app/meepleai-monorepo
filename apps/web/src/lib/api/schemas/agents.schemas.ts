@@ -187,3 +187,60 @@ export const SetupGuideResponseSchema = z.object({
 });
 
 export type SetupGuideResponse = z.infer<typeof SetupGuideResponseSchema>;
+
+// ========== Agent Documents (Issue #2399) ==========
+
+/**
+ * Selected Document DTO Schema
+ * Matches SelectedDocumentDto from backend
+ * Issue #2399: Knowledge Base Document Selection
+ */
+export const SelectedDocumentDtoSchema = z.object({
+  id: z.string().uuid(),
+  sharedGameId: z.string().uuid(),
+  pdfDocumentId: z.string().uuid(),
+  documentType: z.number().int().min(0).max(2), // Rulebook=0, Errata=1, Homerule=2
+  version: z.string(),
+  isActive: z.boolean(),
+  tags: z.array(z.string()),
+  gameName: z.string().nullable(),
+});
+
+export type SelectedDocumentDto = z.infer<typeof SelectedDocumentDtoSchema>;
+
+/**
+ * Agent Documents DTO Schema
+ * Matches AgentDocumentsDto from backend
+ * Issue #2399: Knowledge Base Document Selection
+ */
+export const AgentDocumentsDtoSchema = z.object({
+  agentId: z.string().uuid(),
+  documents: z.array(SelectedDocumentDtoSchema),
+});
+
+export type AgentDocumentsDto = z.infer<typeof AgentDocumentsDtoSchema>;
+
+/**
+ * Update Agent Documents Request Schema
+ * Issue #2399: Knowledge Base Document Selection
+ */
+export const UpdateAgentDocumentsRequestSchema = z.object({
+  documentIds: z.array(z.string().uuid()).max(50),
+});
+
+export type UpdateAgentDocumentsRequest = z.infer<typeof UpdateAgentDocumentsRequestSchema>;
+
+/**
+ * Update Agent Documents Response Schema
+ * Matches UpdateAgentDocumentsResult from backend
+ * Issue #2399: Knowledge Base Document Selection
+ */
+export const UpdateAgentDocumentsResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  agentId: z.string().uuid(),
+  documentCount: z.number().int().nonnegative(),
+  errorCode: z.string().nullable().optional(),
+});
+
+export type UpdateAgentDocumentsResponse = z.infer<typeof UpdateAgentDocumentsResponseSchema>;

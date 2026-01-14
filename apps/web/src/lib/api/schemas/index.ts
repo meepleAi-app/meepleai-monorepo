@@ -42,3 +42,6 @@ export * from './share-links.schemas';
 
 // Shared Game Catalog schemas (Issue #2372)
 export * from './shared-games.schemas';
+
+// User Library schemas
+export * from './library.schemas';

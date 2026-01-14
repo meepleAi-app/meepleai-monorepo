@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.UserLibrary.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 using Api.Helpers;
@@ -60,6 +61,9 @@ internal static class ApplicationServiceExtensions
 
         // ISSUE-2053: UserNotifications bounded context
         services.AddUserNotificationsContext();
+
+        // UserLibrary bounded context
+        services.AddUserLibraryContext();
 
         // ISSUE-2370: SharedGameCatalog bounded context
         services.AddSharedGameCatalogContext();

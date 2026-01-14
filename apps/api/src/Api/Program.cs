@@ -333,6 +333,18 @@ using (var scope = app.Services.CreateScope())
         {
             await EnsureTestUserExistsAsync(app, db, scope.ServiceProvider).ConfigureAwait(false);
         }
+
+        // Seed SharedGameCatalog from PDF rulebooks (Issue: SharedGame seed from rulebooks ≤ 10MB)
+        if (app.Environment.IsDevelopment())
+        {
+            var adminUser = await db.Users.FirstOrDefaultAsync(u => u.Role == "admin").ConfigureAwait(false);
+            if (adminUser != null)
+            {
+                var bggService = scope.ServiceProvider.GetRequiredService<IBggApiService>();
+                await Api.Infrastructure.Seeders.SharedGameSeeder.SeedSharedGamesAsync(
+                    db, bggService, adminUser.Id, app.Logger).ConfigureAwait(false);
+            }
+        }
     }
 }
 
@@ -398,6 +410,7 @@ v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
+v1Api.MapUserLibraryEndpoints();       // User game library
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation

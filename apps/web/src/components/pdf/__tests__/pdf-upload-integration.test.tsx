@@ -439,11 +439,14 @@ describe('PDF Upload Integration Tests - Issue #2307', () => {
       const user = userEvent.setup();
       render(<PdfUploadForm />);
 
-      // Create large file (51MB)
-      const largeContent = new Array(51 * 1024 * 1024).fill('x').join('');
-      const largeFile = new File([largeContent], 'large-rulebook.pdf', {
+      // Create file with mocked size (using Object.defineProperty to avoid memory allocation timeout)
+      // Previously: new Array(51 * 1024 * 1024).fill('x').join('') caused 30s+ timeout
+      const smallContent = 'x';
+      const largeFile = new File([smallContent], 'large-rulebook.pdf', {
         type: 'application/pdf',
       });
+      // Mock the size property to simulate a 51MB file without allocating memory
+      Object.defineProperty(largeFile, 'size', { value: 51 * 1024 * 1024, writable: false });
 
       const fileInput = screen.getByLabelText(/file input/i);
       await user.upload(fileInput, largeFile);

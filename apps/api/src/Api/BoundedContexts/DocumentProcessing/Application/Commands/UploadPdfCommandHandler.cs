@@ -582,6 +582,8 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     }
     private async Task ProcessPdfAsync(string pdfId, string filePath, Guid userId, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("🔄 [PDF-DEBUG] ProcessPdfAsync START for PDF {PdfId}, User {UserId}", pdfId, userId);
+
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var quotaService = scope.ServiceProvider.GetRequiredService<IPdfUploadQuotaService>();
@@ -589,36 +591,57 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         try
         {
+            _logger.LogInformation("🔍 [PDF-DEBUG] Calling ValidateAndPrepareProcessingAsync for {PdfId}", pdfId);
             var pdfDoc = await ValidateAndPrepareProcessingAsync(pdfId, userId, db, quotaService, cancellationToken).ConfigureAwait(false);
-            if (pdfDoc == null) return; // Validation failed
+            if (pdfDoc == null)
+            {
+                _logger.LogWarning("⚠️ [PDF-DEBUG] ValidateAndPrepareProcessingAsync returned null for {PdfId} - EARLY EXIT", pdfId);
+                return; // Validation failed
+            }
+            _logger.LogInformation("✅ [PDF-DEBUG] Validation passed for {PdfId}, Status: {Status}", pdfId, pdfDoc.ProcessingStatus);
 
             // Step 1: Extract text with page tracking (20-40%)
+            _logger.LogInformation("📄 [PDF-DEBUG] Step 1: Starting ExtractPdfContentAsync for {PdfId}", pdfId);
             var (extractionSuccess, fullText, extractResult) = await ExtractPdfContentAsync(
                 pdfId, filePath, pdfDoc, db, scope, startTime, cancellationToken).ConfigureAwait(false);
 
             if (!extractionSuccess)
             {
+                _logger.LogWarning("❌ [PDF-DEBUG] Extraction FAILED for {PdfId} - releasing quota and exiting", pdfId);
                 await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
                 return;
             }
+            _logger.LogInformation("✅ [PDF-DEBUG] Extraction SUCCESS for {PdfId}: {CharCount} chars, {Pages} pages", pdfId, fullText?.Length ?? 0, extractResult?.TotalPages ?? 0);
 
             // Step 2: Chunk text with page tracking (40-60%)
+            _logger.LogInformation("✂️ [PDF-DEBUG] Step 2: Starting ChunkExtractedTextAsync for {PdfId}", pdfId);
             var allDocumentChunks = await ChunkExtractedTextAsync(
                 pdfId, fullText!, extractResult!, db, scope, startTime, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("✅ [PDF-DEBUG] Chunking SUCCESS: {ChunkCount} chunks created", allDocumentChunks.Count);
 
             // Step 3: Generate embeddings (60-80%)
+            _logger.LogInformation("🧠 [PDF-DEBUG] Step 3: Starting GenerateAndValidateEmbeddingsAsync for {ChunkCount} chunks", allDocumentChunks.Count);
             var (embeddingsSuccess, embeddings) = await GenerateAndValidateEmbeddingsAsync(
                 pdfId, userId, allDocumentChunks, pdfDoc, db, quotaService, scope, startTime, cancellationToken).ConfigureAwait(false);
 
-            if (!embeddingsSuccess) return;
+            if (!embeddingsSuccess)
+            {
+                _logger.LogWarning("❌ [PDF-DEBUG] Embeddings FAILED for {PdfId} - exiting", pdfId);
+                return;
+            }
+            _logger.LogInformation("✅ [PDF-DEBUG] Embeddings SUCCESS: {EmbeddingCount} vectors generated", embeddings!.Count);
 
             // Step 4: Index in Qdrant (80-100%)
+            _logger.LogInformation("🔍 [PDF-DEBUG] Step 4: Starting IndexInVectorStoreAsync for {PdfId}", pdfId);
             await IndexInVectorStoreAsync(
                 pdfId, userId, pdfDoc, allDocumentChunks, embeddings!,
                 db, scope, startTime, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("✅ [PDF-DEBUG] Indexing completed for {PdfId}", pdfId);
 
             // Complete processing
+            _logger.LogInformation("🎉 [PDF-DEBUG] Step 5: Finalizing processing for {PdfId}", pdfId);
             await FinalizeProcessingAsync(pdfId, pdfDoc, userId, db, quotaService, startTime, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("✅ [PDF-DEBUG] ProcessPdfAsync COMPLETE for {PdfId}", pdfId);
         }
         catch (OperationCanceledException)
         {
@@ -654,26 +677,31 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         IPdfUploadQuotaService quotaService,
         CancellationToken cancellationToken)
     {
+        _logger.LogInformation("🔍 [PDF-DEBUG-VALIDATE] START validation for {PdfId}", pdfId);
+
         if (!Guid.TryParse(pdfId, out var pdfGuid))
         {
-            _logger.LogError("Invalid PDF ID format {PdfId}", pdfId);
+            _logger.LogError("❌ [PDF-DEBUG-VALIDATE] Invalid PDF ID format {PdfId}", pdfId);
             await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
             return null;
         }
 
+        _logger.LogInformation("🔍 [PDF-DEBUG-VALIDATE] Querying database for PDF {PdfId}", pdfId);
         var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
         if (pdfDoc == null)
         {
-            _logger.LogError("PDF document {PdfId} not found for processing", pdfId);
+            _logger.LogError("❌ [PDF-DEBUG-VALIDATE] PDF document {PdfId} NOT FOUND in database", pdfId);
             await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
             return null;
         }
+
+        _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] PDF found, current status: {Status}", pdfDoc.ProcessingStatus);
 
         // IDEMPOTENCY CHECK (#1742): Skip if already processing/processed
         if (!string.Equals(pdfDoc.ProcessingStatus, "pending", StringComparison.Ordinal))
         {
             _logger.LogInformation(
-                "PDF {PdfId} already processed (status: {Status}), skipping duplicate background task",
+                "⏭️ [PDF-DEBUG-VALIDATE] PDF {PdfId} already processed (status: {Status}), skipping duplicate background task",
                 pdfId, pdfDoc.ProcessingStatus);
 
             if (string.Equals(pdfDoc.ProcessingStatus, "failed", StringComparison.Ordinal))
@@ -685,8 +713,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         }
 
         // Mark as processing (optimistic locking)
+        _logger.LogInformation("🔄 [PDF-DEBUG-VALIDATE] Updating status from 'pending' to 'processing'");
         pdfDoc.ProcessingStatus = "processing";
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] Status updated, proceeding with processing");
 
         return pdfDoc;
     }
@@ -840,7 +870,8 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     }
 
     /// <summary>
-    /// Generates and validates embeddings for document chunks.
+    /// Generates and validates embeddings for document chunks using BATCH PROCESSING.
+    /// Processes chunks in batches to avoid OutOfMemoryException with large PDFs.
     /// Returns (success, embeddings list).
     /// </summary>
     private async Task<(bool success, List<float[]>? embeddings)> GenerateAndValidateEmbeddingsAsync(
@@ -854,93 +885,100 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         DateTime startTime,
         CancellationToken cancellationToken)
     {
+        const int BATCH_SIZE = 20; // Process 20 chunks at a time to avoid OOM
         var totalPages = pdfDoc.PageCount ?? 0;
+        var totalChunks = allDocumentChunks.Count;
+
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, 0, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
 
-        // Generate embeddings
+        _logger.LogInformation("🧠 [BATCH-EMBED] Starting batch embedding generation: {TotalChunks} chunks, batch size: {BatchSize}",
+            totalChunks, BATCH_SIZE);
+
+        // Generate embeddings in batches
         var embeddingStopwatch = Stopwatch.StartNew();
         var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
-        var texts = allDocumentChunks.Select(c => c.Text).ToList();
-        var embeddingResult = await embeddingService.GenerateEmbeddingsAsync(texts).ConfigureAwait(false);
-        embeddingStopwatch.Stop();
+        var allEmbeddings = new List<float[]>();
+        var batchCount = (int)Math.Ceiling((double)totalChunks / BATCH_SIZE);
 
-        RecordPipelineMetricSafely("embedding", embeddingStopwatch.Elapsed.TotalMilliseconds);
-
-        if (!embeddingResult.Success)
+        for (var batchIndex = 0; batchIndex < batchCount; batchIndex++)
         {
-            await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime,
-                $"Embedding generation failed: {embeddingResult.ErrorMessage}", cancellationToken).ConfigureAwait(false);
-            return (false, null);
-        }
+            var skip = batchIndex * BATCH_SIZE;
+            var batchChunks = allDocumentChunks.Skip(skip).Take(BATCH_SIZE).ToList();
+            var batchTexts = batchChunks.Select(c => c.Text).ToList();
 
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, totalPages, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("📦 [BATCH-EMBED] Processing batch {Current}/{Total}: {ChunkCount} chunks",
+                batchIndex + 1, batchCount, batchTexts.Count);
 
-        var embeddings = embeddingResult.Embeddings ?? new List<float[]>();
+            var batchResult = await embeddingService.GenerateEmbeddingsAsync(batchTexts).ConfigureAwait(false);
 
-        // Validate embedding count matches chunks
-        var countValidation = await ValidateEmbeddingCountAsync(
-            pdfId, userId, embeddings.Count, allDocumentChunks.Count, pdfDoc, db, quotaService, startTime, cancellationToken).ConfigureAwait(false);
-        if (!countValidation) return (false, null);
-
-        // Validate embedding quality (no NaN/Infinity vectors)
-        var qualityValidation = await ValidateEmbeddingQualityAsync(
-            pdfId, userId, embeddings, pdfDoc, db, quotaService, startTime, cancellationToken).ConfigureAwait(false);
-        if (!qualityValidation) return (false, null);
-
-        return (true, embeddings);
-    }
-
-    /// <summary>
-    /// Validates that embedding count matches chunk count.
-    /// </summary>
-    private async Task<bool> ValidateEmbeddingCountAsync(
-        string pdfId,
-        Guid userId,
-        int embeddingCount,
-        int chunkCount,
-        PdfDocumentEntity pdfDoc,
-        MeepleAiDbContext db,
-        IPdfUploadQuotaService quotaService,
-        DateTime startTime,
-        CancellationToken cancellationToken)
-    {
-        if (embeddingCount == chunkCount) return true;
-
-        var mismatchMessage = $"Embedding service returned {embeddingCount} vectors for {chunkCount} chunks";
-        _logger.LogWarning("Embedding count mismatch for PDF {PdfId}: {Message}", pdfId, mismatchMessage);
-        await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime, mismatchMessage, cancellationToken).ConfigureAwait(false);
-        return false;
-    }
-
-    /// <summary>
-    /// Validates embedding quality by checking for NaN/Infinity values.
-    /// </summary>
-    private async Task<bool> ValidateEmbeddingQualityAsync(
-        string pdfId,
-        Guid userId,
-        List<float[]> embeddings,
-        PdfDocumentEntity pdfDoc,
-        MeepleAiDbContext db,
-        IPdfUploadQuotaService quotaService,
-        DateTime startTime,
-        CancellationToken cancellationToken)
-    {
-        var invalidEmbeddingIndexes = new List<int>();
-        for (var i = 0; i < embeddings.Count; i++)
-        {
-            if (IsInvalidVector(embeddings[i]))
+            if (!batchResult.Success)
             {
-                invalidEmbeddingIndexes.Add(i);
+                _logger.LogError("❌ [BATCH-EMBED] Batch {Current}/{Total} FAILED: {Error}",
+                    batchIndex + 1, batchCount, batchResult.ErrorMessage);
+                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime,
+                    $"Embedding generation failed at batch {batchIndex + 1}/{batchCount}: {batchResult.ErrorMessage}", cancellationToken).ConfigureAwait(false);
+                return (false, null);
+            }
+
+            if (batchResult.Embeddings == null || batchResult.Embeddings.Count != batchTexts.Count)
+            {
+                var mismatch = $"Batch {batchIndex + 1} returned {batchResult.Embeddings?.Count ?? 0} embeddings for {batchTexts.Count} texts";
+                _logger.LogError("❌ [BATCH-EMBED] {Mismatch}", mismatch);
+                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime, mismatch, cancellationToken).ConfigureAwait(false);
+                return (false, null);
+            }
+
+            // Validate batch quality
+            foreach (var embedding in batchResult.Embeddings)
+            {
+                if (IsInvalidVector(embedding))
+                {
+                    var error = $"Invalid embedding detected in batch {batchIndex + 1}";
+                    _logger.LogError("❌ [BATCH-EMBED] {Error}", error);
+                    await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime, error, cancellationToken).ConfigureAwait(false);
+                    return (false, null);
+                }
+            }
+
+            allEmbeddings.AddRange(batchResult.Embeddings);
+
+            _logger.LogInformation("✅ [BATCH-EMBED] Batch {Current}/{Total} completed: {Count} embeddings generated",
+                batchIndex + 1, batchCount, batchResult.Embeddings.Count);
+
+            // Update progress incrementally
+            var chunksProcessed = Math.Min(skip + BATCH_SIZE, totalChunks);
+            var progressPercent = (int)((double)chunksProcessed / totalChunks * totalPages);
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, progressPercent, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
+
+            // Force garbage collection between batches to release memory
+            if (batchIndex < batchCount - 1) // Don't GC on last batch
+            {
+#pragma warning disable S1215 // GC.Collect should not be called - Justified for batch processing to prevent OOM
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+#pragma warning restore S1215
             }
         }
 
-        if (invalidEmbeddingIndexes.Count == 0) return true;
+        embeddingStopwatch.Stop();
+        RecordPipelineMetricSafely("embedding", embeddingStopwatch.Elapsed.TotalMilliseconds);
 
-        var detail = string.Join(", ", invalidEmbeddingIndexes);
-        var error = $"Embedding service returned invalid vectors for chunk indices: {detail}";
-        _logger.LogWarning("Invalid embeddings detected for PDF {PdfId}: {Detail}", pdfId, detail);
-        await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime, error, cancellationToken).ConfigureAwait(false);
-        return false;
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, totalPages, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation("✅ [BATCH-EMBED] All batches completed: {TotalEmbeddings} total embeddings generated in {Duration}ms",
+            allEmbeddings.Count, embeddingStopwatch.Elapsed.TotalMilliseconds);
+
+        // Final validation: total count
+        if (allEmbeddings.Count != allDocumentChunks.Count)
+        {
+            var mismatch = $"Total embeddings {allEmbeddings.Count} != total chunks {allDocumentChunks.Count}";
+            _logger.LogError("❌ [BATCH-EMBED] {Mismatch}", mismatch);
+            await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, quotaService, startTime, mismatch, cancellationToken).ConfigureAwait(false);
+            return (false, null);
+        }
+
+        return (true, allEmbeddings);
     }
 
     /// <summary>

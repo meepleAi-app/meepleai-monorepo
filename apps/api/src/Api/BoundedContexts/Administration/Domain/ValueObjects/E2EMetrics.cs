@@ -65,7 +65,11 @@ internal sealed class E2EMetrics : ValueObject
     /// </summary>
     public string Status { get; }
 
-    public E2EMetrics(
+    /// <summary>
+    /// Private constructor for factory methods.
+    /// Use FromTestRun() or CreateDefault() to create instances.
+    /// </summary>
+    private E2EMetrics(
         decimal coverage,
         decimal passRate,
         decimal flakyRate,
@@ -100,6 +104,100 @@ internal sealed class E2EMetrics : ValueObject
         FlakyTests = flakyTests;
         LastRunAt = lastRunAt;
         Status = status;
+    }
+
+    /// <summary>
+    /// Creates E2EMetrics from Playwright test run results.
+    /// Automatically calculates coverage, pass rate, flaky rate, and status.
+    /// </summary>
+    /// <param name="totalTests">Total number of tests executed</param>
+    /// <param name="passedTests">Number of tests that passed</param>
+    /// <param name="failedTests">Number of tests that failed</param>
+    /// <param name="skippedTests">Number of tests that were skipped</param>
+    /// <param name="flakyTests">Number of tests that exhibited flaky behavior</param>
+    /// <param name="durationMs">Total execution duration in milliseconds</param>
+    /// <param name="lastRunAt">Timestamp when the test run occurred</param>
+    /// <returns>New E2EMetrics instance with calculated metrics</returns>
+    public static E2EMetrics FromTestRun(
+        int totalTests,
+        int passedTests,
+        int failedTests,
+        int skippedTests,
+        int flakyTests,
+        long durationMs,
+        DateTime lastRunAt)
+    {
+        Guard.AgainstNegative(totalTests, nameof(totalTests));
+        Guard.AgainstNegative(passedTests, nameof(passedTests));
+        Guard.AgainstNegative(failedTests, nameof(failedTests));
+        Guard.AgainstNegative(skippedTests, nameof(skippedTests));
+        Guard.AgainstNegative(flakyTests, nameof(flakyTests));
+        Guard.AgainstNegative(durationMs, nameof(durationMs));
+
+        // Calculate coverage (placeholder logic - will be replaced with actual coverage data from test framework)
+        var coverage = totalTests > 0 ? (decimal)passedTests / totalTests * 100 : 0m;
+
+        // Calculate pass rate
+        var passRate = totalTests > 0 ? (decimal)passedTests / totalTests * 100 : 0m;
+
+        // Calculate flaky rate
+        var flakyRate = totalTests > 0 ? (decimal)flakyTests / totalTests * 100 : 0m;
+
+        // Calculate average execution time
+        var executionTime = totalTests > 0 ? (decimal)durationMs / totalTests : 0m;
+
+        // Determine status based on quality thresholds
+        var status = CalculateStatus(passRate, flakyRate);
+
+        return new E2EMetrics(
+            coverage: coverage,
+            passRate: passRate,
+            flakyRate: flakyRate,
+            executionTime: executionTime,
+            totalTests: totalTests,
+            passedTests: passedTests,
+            failedTests: failedTests,
+            skippedTests: skippedTests,
+            flakyTests: flakyTests,
+            lastRunAt: lastRunAt,
+            status: status);
+    }
+
+    /// <summary>
+    /// Creates default E2EMetrics instance for testing or initialization.
+    /// All metrics are set to zero and status is "unknown".
+    /// </summary>
+    public static E2EMetrics CreateDefault() => new(
+        coverage: 0m,
+        passRate: 0m,
+        flakyRate: 0m,
+        executionTime: 0m,
+        totalTests: 0,
+        passedTests: 0,
+        failedTests: 0,
+        skippedTests: 0,
+        flakyTests: 0,
+        lastRunAt: DateTime.UtcNow,
+        status: "unknown");
+
+    /// <summary>
+    /// Empty E2EMetrics instance with zero values.
+    /// </summary>
+    public static readonly E2EMetrics Empty = CreateDefault();
+
+    /// <summary>
+    /// Calculates test suite status based on pass rate and flaky rate.
+    /// Pass: PassRate greater than or equal to 95% AND FlakyRate less than or equal to 5%
+    /// Warning: PassRate greater than or equal to 80% AND FlakyRate less than or equal to 10%
+    /// Fail: Otherwise
+    /// </summary>
+    private static string CalculateStatus(decimal passRate, decimal flakyRate)
+    {
+        if (passRate >= QualityThresholds.MinimumPassRate && flakyRate <= QualityThresholds.MaximumFlakyRate)
+            return "pass";
+        if (passRate >= 80 && flakyRate <= 10)
+            return "warning";
+        return "fail";
     }
 
     /// <summary>

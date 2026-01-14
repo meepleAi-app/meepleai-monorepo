@@ -1,5 +1,6 @@
 using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Enums;
 using Api.SharedKernel.Guards;
 
 namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
@@ -51,9 +52,10 @@ internal sealed class PerformanceMetrics : ValueObject
     public decimal PerformanceScore { get; }
 
     /// <summary>
-    /// Performance budget status ("pass", "warning", "fail")
+    /// Performance budget compliance status (Pass, Warning, Fail).
+    /// Indicates whether performance metrics meet defined budget thresholds.
     /// </summary>
-    public string BudgetStatus { get; }
+    public PerformanceBudgetStatus BudgetStatus { get; }
 
     /// <summary>
     /// Timestamp of the last performance test run
@@ -73,7 +75,7 @@ internal sealed class PerformanceMetrics : ValueObject
         decimal tbt,
         decimal speedIndex,
         decimal performanceScore,
-        string budgetStatus,
+        PerformanceBudgetStatus budgetStatus,
         DateTime lastRunAt)
     {
         Guard.AgainstOutOfRange(performanceScore, nameof(performanceScore), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
@@ -84,7 +86,7 @@ internal sealed class PerformanceMetrics : ValueObject
         Guard.AgainstNegative(tti, nameof(tti));
         Guard.AgainstNegative(tbt, nameof(tbt));
         Guard.AgainstNegative(speedIndex, nameof(speedIndex));
-        Guard.AgainstNullOrWhiteSpace(budgetStatus, nameof(budgetStatus));
+        // Note: No validation needed for enum - type-safe by design
 
         Lcp = lcp;
         Fid = fid;
@@ -150,7 +152,7 @@ internal sealed class PerformanceMetrics : ValueObject
 
     /// <summary>
     /// Creates default PerformanceMetrics instance for testing or initialization.
-    /// All metrics are set to zero and budget status is "unknown".
+    /// All metrics are set to zero and budget status is NoData.
     /// </summary>
     public static PerformanceMetrics CreateDefault() => new(
         lcp: 0m,
@@ -161,7 +163,7 @@ internal sealed class PerformanceMetrics : ValueObject
         tbt: 0m,
         speedIndex: 0m,
         performanceScore: 0m,
-        budgetStatus: "unknown",
+        budgetStatus: PerformanceBudgetStatus.NoData,
         lastRunAt: DateTime.UtcNow);
 
     /// <summary>
@@ -175,24 +177,24 @@ internal sealed class PerformanceMetrics : ValueObject
     /// Warning: All Core Web Vitals meet needs-improvement thresholds (LCP under 4000ms, FID under 300ms, CLS under 0.25, Score over 50)
     /// Fail: Otherwise
     /// </summary>
-    private static string CalculateBudgetStatus(decimal lcp, decimal fid, decimal cls, decimal performanceScore)
+    private static PerformanceBudgetStatus CalculateBudgetStatus(decimal lcp, decimal fid, decimal cls, decimal performanceScore)
     {
         // Pass: All metrics meet "good" thresholds
         if (lcp <= WebVitalThresholds.LcpGoodThreshold &&
             fid <= WebVitalThresholds.FidGoodThreshold &&
             cls <= WebVitalThresholds.ClsGoodThreshold &&
             performanceScore >= WebVitalThresholds.MinimumPerformanceScore)
-            return "pass";
+            return PerformanceBudgetStatus.Pass;
 
         // Warning: All metrics meet "needs improvement" thresholds
         if (lcp <= WebVitalThresholds.LcpNeedsImprovementThreshold &&
             fid <= WebVitalThresholds.FidNeedsImprovementThreshold &&
             cls <= WebVitalThresholds.ClsNeedsImprovementThreshold &&
             performanceScore >= WebVitalThresholds.WarningPerformanceScore)
-            return "warning";
+            return PerformanceBudgetStatus.Warning;
 
         // Fail: At least one metric fails thresholds
-        return "fail";
+        return PerformanceBudgetStatus.Fail;
     }
 
     /// <summary>

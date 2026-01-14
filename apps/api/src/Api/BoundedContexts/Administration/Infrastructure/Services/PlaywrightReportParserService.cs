@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
+using Api.SharedKernel.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 

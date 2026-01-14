@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Administration.Application.Queries.Testing;
@@ -44,7 +45,7 @@ internal class GetE2EMetricsQueryHandler : IQueryHandler<GetE2EMetricsQuery, E2E
                 SkippedTests: 0,
                 FlakyTests: 0,
                 LastRunAt: DateTime.UtcNow,
-                Status: "no-data",
+                Status: TestExecutionStatus.NoData,
                 MeetsQualityStandards: false);
         }
 

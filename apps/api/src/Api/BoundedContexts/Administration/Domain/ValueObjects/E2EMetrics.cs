@@ -195,15 +195,34 @@ internal sealed class E2EMetrics : ValueObject
     {
         if (passRate >= QualityThresholds.MinimumPassRate && flakyRate <= QualityThresholds.MaximumFlakyRate)
             return "pass";
-        if (passRate >= 80 && flakyRate <= 10)
+        if (passRate >= QualityThresholds.WarningPassRate && flakyRate <= QualityThresholds.WarningFlakyRate)
             return "warning";
         return "fail";
     }
 
     /// <summary>
-    /// Determines if E2E metrics meet quality standards.
-    /// Coverage &gt;= 90%, Pass rate &gt;= 95%, Flaky rate &lt;= 5%.
+    /// Determines if E2E test metrics meet MeepleAI quality standards.
     /// </summary>
+    /// <remarks>
+    /// Quality standards defined in ADR-006 (Multi-Layer Validation Architecture):
+    /// <list type="bullet">
+    /// <item><description>Coverage: &gt;= 90% (industry best practice for critical systems, ensures comprehensive test coverage)</description></item>
+    /// <item><description>Pass Rate: &gt;= 95% (allows 5% tolerance for known flaky tests under investigation)</description></item>
+    /// <item><description>Flaky Rate: &lt;= 5% (acceptable threshold before CI becomes unreliable, prevents false positives)</description></item>
+    /// </list>
+    /// These thresholds balance rigorous quality enforcement with practical CI/CD workflow requirements.
+    /// </remarks>
+    /// <returns>
+    /// <c>true</c> if all quality thresholds are met; otherwise <c>false</c>.
+    /// </returns>
+    /// <example>
+    /// <code>
+    /// var metrics = E2EMetrics.FromTestRun(100, 98, 2, 0, 3, 1500);
+    /// if (!metrics.MeetsQualityStandards)
+    ///     logger.LogWarning("E2E quality not met: Coverage={Coverage}%, Pass={PassRate}%, Flaky={FlakyRate}%",
+    ///         metrics.Coverage, metrics.PassRate, metrics.FlakyRate);
+    /// </code>
+    /// </example>
     public bool MeetsQualityStandards =>
         Coverage >= QualityThresholds.MinimumCoverage &&
         PassRate >= QualityThresholds.MinimumPassRate &&

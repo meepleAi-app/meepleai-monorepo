@@ -6,9 +6,12 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -35,9 +38,15 @@ public class AddDocumentToSharedGameCommandHandlerTests
         // Mock DocumentVersioningService requires ISharedGameDocumentRepository
         _versioningServiceMock = new Mock<DocumentVersioningService>(_documentRepositoryMock.Object);
 
-        _contextMock = new Mock<MeepleAiDbContext>();
-        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector.Setup(e => e.GetAndClearEvents()).Returns(new List<IDomainEvent>());
+
         _mediatorMock = new Mock<IMediator>();
+        _contextMock = new Mock<MeepleAiDbContext>(options, _mediatorMock.Object, mockEventCollector.Object);
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<AddDocumentToSharedGameCommandHandler>>();
 
         _handler = new AddDocumentToSharedGameCommandHandler(

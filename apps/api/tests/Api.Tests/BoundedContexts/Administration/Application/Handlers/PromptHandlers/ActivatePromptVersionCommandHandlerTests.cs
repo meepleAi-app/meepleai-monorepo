@@ -2,10 +2,12 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
 using FluentAssertions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -13,32 +15,30 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers.PromptHandlers;
 
 [Trait("Category", TestCategories.Unit)]
-public class ActivatePromptVersionCommandHandlerTests
+public class ActivatePromptVersionCommandHandlerTests : IDisposable
 {
-    private readonly Mock<MeepleAiDbContext> _mockDbContext;
+    private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<TimeProvider> _mockTimeProvider;
     private readonly Mock<ILogger<ActivatePromptVersionCommandHandler>> _mockLogger;
     private readonly ActivatePromptVersionCommandHandler _handler;
-    private readonly Mock<DbSet<PromptVersionEntity>> _mockVersionSet;
-    private readonly Mock<DbSet<PromptAuditLogEntity>> _mockAuditLogSet;
 
     public ActivatePromptVersionCommandHandlerTests()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(databaseName: $"ActivatePromptVersionTests_{Guid.NewGuid()}")
+            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
-        _mockDbContext = new Mock<MeepleAiDbContext>(options);
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector.Setup(e => e.GetAndClearEvents()).Returns(new List<IDomainEvent>());
+
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
         _mockTimeProvider = new Mock<TimeProvider>();
         _mockLogger = new Mock<ILogger<ActivatePromptVersionCommandHandler>>();
-        _mockVersionSet = new Mock<DbSet<PromptVersionEntity>>();
-        _mockAuditLogSet = new Mock<DbSet<PromptAuditLogEntity>>();
-
-        _mockDbContext.Setup(db => db.PromptVersions).Returns(_mockVersionSet.Object);
-        _mockDbContext.Setup(db => db.PromptAuditLogs).Returns(_mockAuditLogSet.Object);
 
         _handler = new ActivatePromptVersionCommandHandler(
-            _mockDbContext.Object,
+            _dbContext,
             _mockLogger.Object,
             _mockTimeProvider.Object
         );
@@ -97,27 +97,13 @@ public class ActivatePromptVersionCommandHandlerTests
             CreatedBy = user
         };
 
+        // Seed the database
+        await _dbContext.Set<UserEntity>().AddAsync(user);
+        await _dbContext.Set<PromptTemplateEntity>().AddAsync(template);
+        await _dbContext.PromptVersions.AddRangeAsync(versionToActivate, activeVersion);
+        await _dbContext.SaveChangesAsync();
+
         _mockTimeProvider.Setup(t => t.GetUtcNow()).Returns(now);
-
-        // Setup for LoadAndValidateVersionAsync
-        var versionList = new List<PromptVersionEntity> { versionToActivate }.AsQueryable();
-        _mockVersionSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.Provider).Returns(versionList.Provider);
-        _mockVersionSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.Expression).Returns(versionList.Expression);
-        _mockVersionSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.ElementType).Returns(versionList.ElementType);
-        _mockVersionSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.GetEnumerator()).Returns(versionList.GetEnumerator());
-
-        // Setup for DeactivateOtherVersionsAsync
-        var otherVersionsList = new List<PromptVersionEntity> { activeVersion }.AsQueryable();
-        var mockOtherVersionsSet = new Mock<DbSet<PromptVersionEntity>>();
-        mockOtherVersionsSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.Provider).Returns(otherVersionsList.Provider);
-        mockOtherVersionsSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.Expression).Returns(otherVersionsList.Expression);
-        mockOtherVersionsSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.ElementType).Returns(otherVersionsList.ElementType);
-        mockOtherVersionsSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.GetEnumerator()).Returns(otherVersionsList.GetEnumerator());
-
-        // Mock transaction
-        var mockTransaction = new Mock<IDbContextTransaction>();
-        _mockDbContext.Setup(db => db.Database.BeginTransactionAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mockTransaction.Object);
 
         var command = new ActivatePromptVersionCommand(
             TemplateId: templateId,
@@ -136,12 +122,16 @@ public class ActivatePromptVersionCommandHandlerTests
         result.ActivatedByUserId.Should().Be(userId.ToString());
         result.ActivationReason.Should().Be("Testing improved version");
 
-        _mockAuditLogSet.Verify(s => s.Add(It.Is<PromptAuditLogEntity>(log =>
-            log.Action == "version_activated"
-        )), Times.Once);
+        // Verify in database
+        var activatedVersion = await _dbContext.PromptVersions.FindAsync(versionId);
+        activatedVersion!.IsActive.Should().BeTrue();
 
-        _mockDbContext.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-        mockTransaction.Verify(t => t.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        var deactivatedVersion = await _dbContext.PromptVersions.FindAsync(otherVersionId);
+        deactivatedVersion!.IsActive.Should().BeFalse();
+
+        // Verify audit log was created
+        var auditLogs = await _dbContext.PromptAuditLogs.ToListAsync();
+        auditLogs.Should().ContainSingle(log => log.Action == "version_activated");
     }
 
     [Fact]
@@ -183,11 +173,11 @@ public class ActivatePromptVersionCommandHandlerTests
             CreatedBy = user
         };
 
-        var versionList = new List<PromptVersionEntity> { activeVersion }.AsQueryable();
-        _mockVersionSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.Provider).Returns(versionList.Provider);
-        _mockVersionSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.Expression).Returns(versionList.Expression);
-        _mockVersionSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.ElementType).Returns(versionList.ElementType);
-        _mockVersionSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.GetEnumerator()).Returns(versionList.GetEnumerator());
+        // Seed the database
+        await _dbContext.Set<UserEntity>().AddAsync(user);
+        await _dbContext.Set<PromptTemplateEntity>().AddAsync(template);
+        await _dbContext.PromptVersions.AddAsync(activeVersion);
+        await _dbContext.SaveChangesAsync();
 
         var command = new ActivatePromptVersionCommand(
             TemplateId: templateId,
@@ -202,9 +192,9 @@ public class ActivatePromptVersionCommandHandlerTests
         result.Should().NotBeNull();
         result.IsActive.Should().BeTrue();
 
-        // Should not start transaction for already active version
-        _mockDbContext.Verify(db => db.Database.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
-        _mockDbContext.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // No audit log should be created for already active version
+        var auditLogs = await _dbContext.PromptAuditLogs.ToListAsync();
+        auditLogs.Should().BeEmpty();
     }
 
     [Fact]
@@ -245,12 +235,6 @@ public class ActivatePromptVersionCommandHandlerTests
         var versionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
-        var versionList = new List<PromptVersionEntity>().AsQueryable();
-        _mockVersionSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.Provider).Returns(versionList.Provider);
-        _mockVersionSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.Expression).Returns(versionList.Expression);
-        _mockVersionSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.ElementType).Returns(versionList.ElementType);
-        _mockVersionSet.As<IQueryable<PromptVersionEntity>>().Setup(m => m.GetEnumerator()).Returns(versionList.GetEnumerator());
-
         var command = new ActivatePromptVersionCommand(
             TemplateId: templateId,
             VersionId: versionId,
@@ -262,5 +246,19 @@ public class ActivatePromptVersionCommandHandlerTests
             _handler.Handle(command, CancellationToken.None));
 
         exception.Message.Should().Contain("not found");
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _dbContext?.Dispose();
+        }
     }
 }

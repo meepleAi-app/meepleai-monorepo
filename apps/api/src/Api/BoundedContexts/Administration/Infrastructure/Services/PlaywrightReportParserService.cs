@@ -53,47 +53,27 @@ internal class PlaywrightReportParserService : IPlaywrightReportParserService
             var skippedTests = stats.TryGetProperty("skipped", out var skipped) ? skipped.GetInt32() : 0;
             var flakyTests = stats.TryGetProperty("flaky", out var flaky) ? flaky.GetInt32() : 0;
 
-            // Calculate metrics
-            var passRate = totalTests > 0 ? (decimal)passedTests / totalTests * 100 : 0;
-            var flakyRate = totalTests > 0 ? (decimal)flakyTests / totalTests * 100 : 0;
-
             // Parse execution time (milliseconds)
             var duration = stats.TryGetProperty("duration", out var dur) ? dur.GetInt64() : 0;
-            var executionTime = totalTests > 0 ? (decimal)duration / totalTests : 0;
-
-            // Calculate coverage (placeholder - actual coverage requires separate coverage report)
-            // For now, use a simple heuristic based on number of tests
-            var coverage = totalTests > 0 ? Math.Min(100, totalTests * 0.5m) : 0;
-
-            // Determine status based on pass rate and flaky rate thresholds
-            var status = passRate >= 95 && flakyRate <= 5
-                ? TestExecutionStatus.Pass
-                : passRate >= 80 && flakyRate <= 10
-                    ? TestExecutionStatus.Warning
-                    : TestExecutionStatus.Fail;
-
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 
-            var metrics = new E2EMetrics(
-                coverage: coverage,
-                passRate: passRate,
-                flakyRate: flakyRate,
-                executionTime: executionTime,
+            // Use factory method to create metrics (calculates coverage, passRate, flakyRate, status automatically)
+            var metrics = E2EMetrics.FromTestRun(
                 totalTests: totalTests,
                 passedTests: passedTests,
                 failedTests: failedTests,
                 skippedTests: skippedTests,
                 flakyTests: flakyTests,
-                lastRunAt: lastRunAt,
-                status: status);
+                durationMs: duration,
+                lastRunAt: lastRunAt);
 
             _logger.LogInformation(
                 "Parsed E2E metrics: Total={Total}, Passed={Passed}, Failed={Failed}, PassRate={PassRate}%, Status={Status}",
-                totalTests,
-                passedTests,
-                failedTests,
-                passRate,
-                status);
+                metrics.TotalTests,
+                metrics.PassedTests,
+                metrics.FailedTests,
+                metrics.PassRate,
+                metrics.Status);
 
             return metrics;
         }

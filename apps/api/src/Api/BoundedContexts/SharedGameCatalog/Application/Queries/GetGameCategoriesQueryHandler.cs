@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -14,21 +15,28 @@ internal sealed class GetGameCategoriesQueryHandler : IRequestHandler<GetGameCat
 {
     private readonly MeepleAiDbContext _context;
     private readonly HybridCache _cache;
+    private readonly ICacheMetricsRecorder _cacheMetrics;
 
-    public GetGameCategoriesQueryHandler(MeepleAiDbContext context, HybridCache cache)
+    public GetGameCategoriesQueryHandler(MeepleAiDbContext context, HybridCache cache, ICacheMetricsRecorder cacheMetrics)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _cacheMetrics = cacheMetrics ?? throw new ArgumentNullException(nameof(cacheMetrics));
     }
 
     public async Task<List<GameCategoryDto>> Handle(GetGameCategoriesQuery query, CancellationToken cancellationToken)
     {
         const string cacheKey = "game-categories";
+        bool cacheHit = true;
 
-        return await _cache.GetOrCreateAsync<List<GameCategoryDto>>(
+        // Try cache first (24h TTL - categories rarely change)
+        var result = await _cache.GetOrCreateAsync<List<GameCategoryDto>>(
             cacheKey,
             async cancel =>
             {
+                cacheHit = false;
+                await _cacheMetrics.RecordCacheMissAsync("get_categories", "shared_games").ConfigureAwait(false);
+
                 var categories = await _context.GameCategories
                     .AsNoTracking()
                     .OrderBy(c => c.Name)
@@ -43,5 +51,12 @@ internal sealed class GetGameCategoriesQueryHandler : IRequestHandler<GetGameCat
                 Expiration = TimeSpan.FromHours(24)  // Categories rarely change
             },
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (cacheHit)
+        {
+            await _cacheMetrics.RecordCacheHitAsync("get_categories", "shared_games").ConfigureAwait(false);
+        }
+
+        return result;
     }
 }

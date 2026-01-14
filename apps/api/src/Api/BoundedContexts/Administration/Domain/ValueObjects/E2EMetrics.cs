@@ -111,6 +111,62 @@ internal sealed class E2EMetrics : ValueObject
         PassRate >= QualityThresholds.MinimumPassRate &&
         FlakyRate <= QualityThresholds.MaximumFlakyRate;
 
+    /// <summary>
+    /// Creates an empty E2EMetrics instance for initial state.
+    /// </summary>
+    public static E2EMetrics Empty() => new(
+        coverage: 0m,
+        passRate: 0m,
+        flakyRate: 0m,
+        executionTime: 0m,
+        totalTests: 0,
+        passedTests: 0,
+        failedTests: 0,
+        skippedTests: 0,
+        flakyTests: 0,
+        lastRunAt: DateTime.MinValue,
+        status: "pending");
+
+    /// <summary>
+    /// Creates E2EMetrics from raw test results.
+    /// </summary>
+    /// <param name="passedTests">Number of tests that passed</param>
+    /// <param name="failedTests">Number of tests that failed</param>
+    /// <param name="skippedTests">Number of tests that were skipped</param>
+    /// <param name="flakyTests">Number of tests identified as flaky</param>
+    /// <param name="executionTimeMs">Total execution time in milliseconds</param>
+    /// <param name="coveragePercent">Code coverage percentage (0-100)</param>
+    /// <returns>Calculated E2EMetrics instance</returns>
+    public static E2EMetrics FromTestResults(
+        int passedTests,
+        int failedTests,
+        int skippedTests,
+        int flakyTests,
+        decimal executionTimeMs,
+        decimal coveragePercent)
+    {
+        var totalTests = passedTests + failedTests + skippedTests;
+        var passRate = totalTests > 0 ? (decimal)passedTests / totalTests * 100 : 0m;
+        var flakyRate = totalTests > 0 ? (decimal)flakyTests / totalTests * 100 : 0m;
+
+        var status = failedTests > 0 ? "fail"
+            : flakyTests > 0 ? "warning"
+            : "pass";
+
+        return new E2EMetrics(
+            coverage: coveragePercent,
+            passRate: passRate,
+            flakyRate: flakyRate,
+            executionTime: executionTimeMs,
+            totalTests: totalTests,
+            passedTests: passedTests,
+            failedTests: failedTests,
+            skippedTests: skippedTests,
+            flakyTests: flakyTests,
+            lastRunAt: DateTime.UtcNow,
+            status: status);
+    }
+
     protected override IEnumerable<object?> GetEqualityComponents()
     {
         yield return Coverage;

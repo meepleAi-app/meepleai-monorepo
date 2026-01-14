@@ -104,6 +104,63 @@ internal sealed class PerformanceMetrics : ValueObject
         Cls <= WebVitalThresholds.ClsGoodThreshold &&
         PerformanceScore >= WebVitalThresholds.MinimumPerformanceScore;
 
+    /// <summary>
+    /// Creates an empty PerformanceMetrics instance for initial state.
+    /// </summary>
+    public static PerformanceMetrics Empty() => new(
+        lcp: 0m,
+        fid: 0m,
+        cls: 0m,
+        fcp: 0m,
+        tti: 0m,
+        tbt: 0m,
+        speedIndex: 0m,
+        performanceScore: 0m,
+        budgetStatus: "pending",
+        lastRunAt: DateTime.MinValue);
+
+    /// <summary>
+    /// Creates PerformanceMetrics from Lighthouse report data.
+    /// </summary>
+    /// <param name="lcpMs">Largest Contentful Paint in milliseconds</param>
+    /// <param name="fidMs">First Input Delay in milliseconds</param>
+    /// <param name="cls">Cumulative Layout Shift score</param>
+    /// <param name="fcpMs">First Contentful Paint in milliseconds</param>
+    /// <param name="ttiMs">Time to Interactive in milliseconds</param>
+    /// <param name="tbtMs">Total Blocking Time in milliseconds</param>
+    /// <param name="speedIndex">Speed Index score</param>
+    /// <param name="performanceScore">Lighthouse performance score (0-100)</param>
+    /// <returns>PerformanceMetrics instance with calculated budget status</returns>
+    public static PerformanceMetrics FromLighthouseReport(
+        decimal lcpMs,
+        decimal fidMs,
+        decimal cls,
+        decimal fcpMs,
+        decimal ttiMs,
+        decimal tbtMs,
+        decimal speedIndex,
+        decimal performanceScore)
+    {
+        var budgetStatus = performanceScore >= WebVitalThresholds.MinimumPerformanceScore
+            && lcpMs <= WebVitalThresholds.LcpGoodThreshold
+            && fidMs <= WebVitalThresholds.FidGoodThreshold
+            && cls <= WebVitalThresholds.ClsGoodThreshold
+                ? "pass"
+                : performanceScore >= 50 ? "warning" : "fail";
+
+        return new PerformanceMetrics(
+            lcp: lcpMs,
+            fid: fidMs,
+            cls: cls,
+            fcp: fcpMs,
+            tti: ttiMs,
+            tbt: tbtMs,
+            speedIndex: speedIndex,
+            performanceScore: performanceScore,
+            budgetStatus: budgetStatus,
+            lastRunAt: DateTime.UtcNow);
+    }
+
     protected override IEnumerable<object?> GetEqualityComponents()
     {
         yield return Lcp;

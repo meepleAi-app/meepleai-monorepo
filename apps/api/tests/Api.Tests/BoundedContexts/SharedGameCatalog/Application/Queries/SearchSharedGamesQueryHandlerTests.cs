@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Services;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain;
 using Api.SharedKernel.Domain.Interfaces;
@@ -72,8 +73,9 @@ public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime
         var cache = serviceProvider.GetRequiredService<HybridCache>();
 
         var loggerMock = new Mock<ILogger<SearchSharedGamesQueryHandler>>();
+        var cacheMetricsMock = new Mock<ICacheMetricsRecorder>();
 
-        _handler = new SearchSharedGamesQueryHandler(_dbContext, cache, loggerMock.Object);
+        _handler = new SearchSharedGamesQueryHandler(_dbContext, cache, cacheMetricsMock.Object, loggerMock.Object);
     }
 
     public async ValueTask DisposeAsync()

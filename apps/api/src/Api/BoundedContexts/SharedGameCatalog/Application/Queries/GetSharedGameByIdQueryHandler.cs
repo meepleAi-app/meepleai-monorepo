@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Services;
 using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
 
@@ -13,15 +14,18 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
 {
     private readonly ISharedGameRepository _repository;
     private readonly HybridCache _cache;
+    private readonly ICacheMetricsRecorder _cacheMetrics;
     private readonly ILogger<GetSharedGameByIdQueryHandler> _logger;
 
     public GetSharedGameByIdQueryHandler(
         ISharedGameRepository repository,
         HybridCache cache,
+        ICacheMetricsRecorder cacheMetrics,
         ILogger<GetSharedGameByIdQueryHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _cacheMetrics = cacheMetrics ?? throw new ArgumentNullException(nameof(cacheMetrics));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -30,12 +34,15 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
         ArgumentNullException.ThrowIfNull(query);
 
         var cacheKey = $"shared-game:{query.GameId}";
+        bool cacheHit = true;
 
         // Try cache first (L1: 30min, L2: 2h)
         var cachedGame = await _cache.GetOrCreateAsync<SharedGameDetailDto?>(
             cacheKey,
             async cancel =>
             {
+                cacheHit = false;
+                await _cacheMetrics.RecordCacheMissAsync("get_by_id", "shared_games").ConfigureAwait(false);
                 _logger.LogInformation("Cache miss for shared game: {GameId}", query.GameId);
                 return await FetchGameDetailsAsync(query.GameId, cancel).ConfigureAwait(false);
             },
@@ -45,6 +52,12 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
                 Expiration = TimeSpan.FromHours(2)  // L2
             },
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (cacheHit)
+        {
+            await _cacheMetrics.RecordCacheHitAsync("get_by_id", "shared_games").ConfigureAwait(false);
+            _logger.LogDebug("Cache hit for shared game: {GameId}", query.GameId);
+        }
 
         return cachedGame;
     }

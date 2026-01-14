@@ -613,15 +613,14 @@ services:
       EMBEDDING_FALLBACK_ENABLED: "false"
       # ADR-016 Phase 4: Reranker service configuration
       RERANKER_SERVICE_URL: http://reranker-service:8003
-      # AI-13: BoardGameGeek API token (optional - register at https://boardgamegeek.com/applications)
+      # AI-13: BoardGameGeek API token (REQUIRED as of Jan 2026 - register at https://boardgamegeek.com/using_the_xml_api)
       # Format: Bgg__ApiToken uses ASP.NET Core __ notation for nested config
-      Bgg__ApiToken: ${BGG_API_TOKEN:-}
+      BGG_API_TOKEN_FILE: /run/secrets/bgg-api-token
       # SEC-708: OpenRouter API key from secret file
       OPENROUTER_API_KEY_FILE: /run/secrets/openrouter-api-key
-      # Bootstrap: Initial admin user configuration (password from secret)
-      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+      # Bootstrap: Initial admin user configuration (email and display name from api.env.dev, password from secret)
+      # Note: INITIAL_ADMIN_EMAIL is defined in ./env/api.env.dev
       INITIAL_ADMIN_PASSWORD_FILE: /run/secrets/initial-admin-password
-      INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-System Admin}
       # OAuth provider credentials from secret files
       GOOGLE_OAUTH_CLIENT_ID_FILE: /run/secrets/google-oauth-client-id
       GOOGLE_OAUTH_CLIENT_SECRET_FILE: /run/secrets/google-oauth-client-secret
@@ -633,6 +632,7 @@ services:
       - postgres-password
       - redis-password
       - openrouter-api-key
+      - bgg-api-token
       - initial-admin-password
       - google-oauth-client-id
       - google-oauth-client-secret
@@ -759,6 +759,8 @@ secrets:
     file: ./secrets/redis-password.txt
   openrouter-api-key:
     file: ./secrets/openrouter-api-key.txt
+  bgg-api-token:
+    file: ./secrets/bgg-api-token.txt
   n8n-encryption-key:
     file: ./secrets/n8n-encryption-key.txt
   n8n-basic-auth-password:

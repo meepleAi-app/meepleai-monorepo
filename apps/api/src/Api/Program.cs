@@ -90,6 +90,7 @@ if (builder.Environment.IsDevelopment())
     });
 }
 
+#pragma warning disable S125 // Sections of code should not be commented out
 // PERF-11: Response Compression DISABLED - causing ERR_CONTENT_DECODING_FAILED in Docker
 // NOTE: Re-enable with proper configuration after investigating compression issue
 // builder.Services.AddResponseCompression(options =>
@@ -112,6 +113,7 @@ if (builder.Environment.IsDevelopment())
 // {
 //     options.Level = CompressionLevel.Fastest; // Fastest: lower CPU, good compression
 // });
+#pragma warning restore S125
 
 var forwardedHeadersSection = builder.Configuration.GetSection("ForwardedHeaders");
 var forwardedHeadersEnabled = forwardedHeadersSection.GetValue<bool?>("Enabled") ?? true;
@@ -378,6 +380,7 @@ v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
+v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
 v1Api.MapAiEndpoints();
 v1Api.MapPdfEndpoints();
 v1Api.MapDocumentCollectionEndpoints();

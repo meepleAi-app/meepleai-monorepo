@@ -84,23 +84,23 @@ export type ConfirmPasswordResetResponse = z.infer<typeof ConfirmPasswordResetRe
 // ========== Session Management ==========
 
 export const SessionStatusResponseSchema = z.object({
-  ExpiresAt: z.string().datetime(),
-  LastSeenAt: z.string().datetime().nullable(),
-  RemainingMinutes: z.number().int().nonnegative(),
+  expiresAt: z.string().datetime(),
+  lastSeenAt: z.string().datetime().nullable(),
+  remainingMinutes: z.number().int().nonnegative(),
 });
 
 export type SessionStatusResponse = z.infer<typeof SessionStatusResponseSchema>;
 
 export const UserSessionInfoSchema = z.object({
-  Id: z.string().uuid(),
-  UserId: z.string().uuid(),
-  UserEmail: z.string().email(),
-  CreatedAt: z.string().datetime(),
-  ExpiresAt: z.string().datetime(),
-  LastSeenAt: z.string().datetime().nullable(),
-  RevokedAt: z.string().datetime().nullable(),
-  IpAddress: z.string().nullable(),
-  UserAgent: z.string().nullable(),
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  userEmail: z.string().email(),
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  lastSeenAt: z.string().datetime().nullable(),
+  revokedAt: z.string().datetime().nullable(),
+  ipAddress: z.string().nullable(),
+  userAgent: z.string().nullable(),
 });
 
 export type UserSessionInfo = z.infer<typeof UserSessionInfoSchema>;
@@ -115,32 +115,32 @@ export type RevokeSessionResponse = z.infer<typeof RevokeSessionResponseSchema>;
 // ========== Two-Factor Authentication ==========
 
 export const TotpSetupResponseSchema = z.object({
-  Secret: z.string().min(1),
-  QrCodeUrl: z.string().url(),
-  BackupCodes: z.array(z.string().min(1)),
+  secret: z.string().min(1),
+  qrCodeUrl: z.string().url(),
+  backupCodes: z.array(z.string().min(1)),
 });
 
 export type TotpSetupResponse = z.infer<typeof TotpSetupResponseSchema>;
 
 export const TwoFactorStatusDtoSchema = z.object({
-  IsEnabled: z.boolean(),
-  EnabledAt: z.string().datetime().nullable(),
-  UnusedBackupCodesCount: z.number().int().nonnegative(),
+  isEnabled: z.boolean(),
+  enabledAt: z.string().datetime().nullable(),
+  unusedBackupCodesCount: z.number().int().nonnegative(),
 });
 
 export type TwoFactorStatusDto = z.infer<typeof TwoFactorStatusDtoSchema>;
 
 export const Enable2FAResultSchema = z.object({
-  Success: z.boolean(),
-  BackupCodes: z.array(z.string().min(1)).nullable().optional(),
-  ErrorMessage: z.string().nullable().optional(),
+  success: z.boolean(),
+  backupCodes: z.array(z.string().min(1)).nullable().optional(),
+  errorMessage: z.string().nullable().optional(),
 });
 
 export type Enable2FAResult = z.infer<typeof Enable2FAResultSchema>;
 
 export const Disable2FAResultSchema = z.object({
-  Success: z.boolean(),
-  ErrorMessage: z.string().nullable().optional(),
+  success: z.boolean(),
+  errorMessage: z.string().nullable().optional(),
 });
 
 export type Disable2FAResult = z.infer<typeof Disable2FAResultSchema>;
@@ -148,18 +148,18 @@ export type Disable2FAResult = z.infer<typeof Disable2FAResultSchema>;
 // ========== User Profile ==========
 
 export const UserProfileSchema = z.object({
-  Id: z.string().uuid(),
-  Email: z.string().email(),
-  DisplayName: z.string().min(1),
-  Role: z.string().min(1),
-  CreatedAt: z.string().datetime(),
-  IsTwoFactorEnabled: z.boolean(),
-  TwoFactorEnabledAt: z.string().datetime().nullable(),
+  id: z.string().uuid(),
+  email: z.string().email(),
+  displayName: z.string().min(1),
+  role: z.string().min(1),
+  createdAt: z.string().datetime(),
+  isTwoFactorEnabled: z.boolean(),
+  twoFactorEnabledAt: z.string().datetime().nullable(),
   // User preferences (included in profile after Issue #1675)
-  Language: z.string().min(1),
-  Theme: z.string().min(1),
-  EmailNotifications: z.boolean(),
-  DataRetentionDays: z.number().int().positive(),
+  language: z.string().min(1),
+  theme: z.string().min(1),
+  emailNotifications: z.boolean(),
+  dataRetentionDays: z.number().int().positive(),
 });
 
 export type UserProfile = z.infer<typeof UserProfileSchema>;

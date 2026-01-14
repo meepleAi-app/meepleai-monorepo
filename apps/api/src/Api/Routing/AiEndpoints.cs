@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Configuration;
@@ -196,8 +197,10 @@ internal static class AiEndpoints
             streamContext.StreamErrorMessage = "Client disconnected";
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
+#pragma warning disable S125 // Sections of code should not be commented out
+        // STREAMING BOUNDARY: Streaming generator boundary - must handle all errors gracefully without throwing
         // All expected exceptions are caught above; this ensures cleanup and error event on unexpected errors
+#pragma warning restore S125
         catch (Exception ex)
         {
             // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
@@ -218,8 +221,10 @@ internal static class AiEndpoints
                 await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Cleanup operation - must not throw during disposal/cleanup
+#pragma warning disable S125 // Sections of code should not be commented out
+            // CLEANUP PATTERN: Cleanup operation - must not throw during disposal/cleanup
             // Error event sending failure is logged but suppressed to ensure graceful stream termination
+#pragma warning restore S125
             catch
             {
                 // If we can't send error event, client connection is likely broken
@@ -369,19 +374,7 @@ internal static class AiEndpoints
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         // Map QaResponseDto to legacy QaResponse format (for backward compatibility)
-        var snippets = qaResponse.Sources.Select(src => new Snippet(
-            text: src.TextContent,
-            source: $"PDF:{src.VectorDocumentId}",
-            page: src.PageNumber,
-            line: 0,
-            score: (float)src.RelevanceScore
-        )).ToList();
-
-        var resp = new QaResponse(
-            answer: qaResponse.Answer,
-            snippets: snippets,
-            confidence: qaResponse.OverallConfidence
-        );
+        var resp = MapToLegacyQaResponse(qaResponse);
 
         // CHAT-02: Generate follow-up questions if enabled
         IReadOnlyList<string>? followUpQuestions = null;
@@ -408,18 +401,7 @@ internal static class AiEndpoints
         logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
 
         // AI-11: Build quality scores from handler-calculated metrics
-        // Handler already calculated SearchConfidence, LlmConfidence, OverallConfidence via QualityTrackingDomainService
-        // Only need to calculate CitationQuality here (simple ratio calculation)
-        var citationQuality = CalculateCitationQuality(resp.snippets.Count, resp.answer);
-
-        var qualityScores = new QualityScores
-        {
-            RagConfidence = qaResponse.SearchConfidence, // From handler
-            LlmConfidence = qaResponse.LlmConfidence, // From handler
-            CitationQuality = citationQuality, // Calculated locally
-            OverallConfidence = qaResponse.OverallConfidence, // From handler
-            IsLowQuality = qaResponse.IsLowQuality // From handler
-        };
+        var qualityScores = BuildQualityScores(qaResponse, resp.snippets.Count, resp.answer);
 
         // AI-11: Debug logging for quality scores
         logger.LogInformation(
@@ -786,8 +768,10 @@ internal static class AiEndpoints
             streamContext.StreamErrorMessage = "Client disconnected";
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
+#pragma warning disable S125 // Sections of code should not be commented out
+        // STREAMING BOUNDARY: Streaming generator boundary - must handle all errors gracefully without throwing
         // All expected exceptions are caught above; this ensures cleanup and error event on unexpected errors
+#pragma warning restore S125
         catch (Exception ex)
         {
             // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
@@ -922,8 +906,10 @@ internal static class AiEndpoints
             logger.LogInformation(ex, "Streaming explain cancelled by client for game {GameId}, topic: {Topic}", req.gameId, req.topic);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
+#pragma warning disable S125 // Sections of code should not be commented out
+        // STREAMING BOUNDARY: Streaming generator boundary - must handle all errors gracefully without throwing
         // All expected exceptions are caught above; this ensures cleanup and error event on unexpected errors
+#pragma warning restore S125
         catch (Exception ex)
         {
             // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
@@ -942,8 +928,10 @@ internal static class AiEndpoints
                 await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Cleanup operation - must not throw during disposal/cleanup
+#pragma warning disable S125 // Sections of code should not be commented out
+            // CLEANUP PATTERN: Cleanup operation - must not throw during disposal/cleanup
             // Error event sending failure is logged but suppressed to ensure graceful stream termination
+#pragma warning restore S125
             catch
             {
                 // If we can't send error event, client connection is likely broken
@@ -999,6 +987,43 @@ internal static class AiEndpoints
             }, ct).ConfigureAwait(false);
         }
         return null;
+    }
+
+    /// <summary>
+    /// Map QaResponseDto to legacy QaResponse format for backward compatibility.
+    /// </summary>
+    private static QaResponse MapToLegacyQaResponse(QaResponseDto qaResponse)
+    {
+        var snippets = qaResponse.Sources.Select(src => new Snippet(
+            text: src.TextContent,
+            source: $"PDF:{src.VectorDocumentId}",
+            page: src.PageNumber,
+            line: 0,
+            score: (float)src.RelevanceScore
+        )).ToList();
+
+        return new QaResponse(
+            answer: qaResponse.Answer,
+            snippets: snippets,
+            confidence: qaResponse.OverallConfidence
+        );
+    }
+
+    /// <summary>
+    /// Build QualityScores from handler-calculated metrics.
+    /// </summary>
+    private static QualityScores BuildQualityScores(QaResponseDto qaResponse, int citationCount, string? answer)
+    {
+        var citationQuality = CalculateCitationQuality(citationCount, answer);
+
+        return new QualityScores
+        {
+            RagConfidence = qaResponse.SearchConfidence,
+            LlmConfidence = qaResponse.LlmConfidence,
+            CitationQuality = citationQuality,
+            OverallConfidence = qaResponse.OverallConfidence,
+            IsLowQuality = qaResponse.IsLowQuality
+        };
     }
 
     /// <summary>
@@ -1168,6 +1193,7 @@ internal static class AiEndpoints
         }
     }
 
+#pragma warning disable S1172 // Unused method parameters - CancellationToken intentionally ignored, using CancellationToken.None for logging
     private static async Task LogSetupGuideRequestAsync(
         string gameId,
         string userId,
@@ -1175,7 +1201,8 @@ internal static class AiEndpoints
         IMediator mediator,
         SetupGuideStreamContext streamContext,
         int latencyMs,
-        CancellationToken cancellationToken)
+        CancellationToken _)
+#pragma warning restore S1172
     {
         var responseSnippet = streamContext.Steps.Count > 0
             ? string.Join("; ", streamContext.Steps.Take(3).Select(s => s.instruction))

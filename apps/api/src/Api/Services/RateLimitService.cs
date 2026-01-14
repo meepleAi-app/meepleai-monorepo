@@ -130,8 +130,10 @@ internal class RateLimitService : IRateLimitService
             return new RateLimitResult(allowed, tokensRemaining, retryAfter);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Fail-open resilience pattern - rate limiting failures must not block legitimate traffic
+#pragma warning disable S125 // Sections of code should not be commented out
+        // FAIL-OPEN PATTERN: rate limiting failures must not block legitimate traffic
         // We favor availability over strict rate enforcement during infrastructure failures
+#pragma warning restore S125
         catch (Exception ex)
         {
             // FAIL-OPEN PATTERN: Rate limiting failures must not block legitimate traffic

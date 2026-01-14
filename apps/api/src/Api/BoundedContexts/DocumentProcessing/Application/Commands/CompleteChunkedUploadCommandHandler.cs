@@ -110,10 +110,12 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             );
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+#pragma warning disable S125 // Sections of code should not be commented out
+        // COMMAND HANDLER PATTERN: CQRS handler boundary
         // Generic catch handles unexpected failures during chunked upload completion
         // (validation, assembly, storage, DB operations). Returns Result pattern with error.
         // Prevents exception propagation to API layer.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to complete chunked upload {SessionId}", request.SessionId);
@@ -351,10 +353,12 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: CLEANUP PATTERN - Best-effort resource cleanup
+#pragma warning disable S125 // Sections of code should not be commented out
+        // CLEANUP PATTERN: Best-effort resource cleanup
         // Catches all exceptions during temp directory deletion (permissions, file locks, etc.).
         // Cleanup failure is non-critical; logs warning but doesn't throw to avoid disrupting
         // main operation flow. Fail-safe pattern for resource management.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to cleanup temp directory: {TempDirectory}", tempDirectory);
@@ -420,10 +424,12 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 pdfId, totalPages, allDocumentChunks.Count, totalTime);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: BACKGROUND PROCESSING PATTERN - PDF processing failure recovery
+#pragma warning disable S125 // Sections of code should not be commented out
+        // BACKGROUND PROCESSING PATTERN: PDF processing failure recovery
         // Catches all exceptions during PDF text extraction, chunking, and embedding generation.
         // Delegates to HandleProcessingFailureAsync to update PDF status as "failed" in DB.
         // Background processing must handle errors gracefully without propagating to command handler.
+#pragma warning restore S125
         catch (Exception ex)
         {
             await HandleProcessingFailureAsync(pdfId, db, ex, cancellationToken).ConfigureAwait(false);
@@ -741,10 +747,12 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             }
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: ERROR RECOVERY PATTERN - Nested error handling during failure recovery
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ERROR RECOVERY PATTERN: Nested error handling during failure recovery
         // Catches exceptions when attempting to update PDF status to "failed" after processing error.
         // If status update fails (DB unavailable, etc.), only logs error - nothing more can be done.
         // Prevents cascading failures in error handling path.
+#pragma warning restore S125
         catch (Exception saveEx)
         {
             _logger.LogError(saveEx, "Failed to update PDF status after processing error for {PdfId}", pdfId);

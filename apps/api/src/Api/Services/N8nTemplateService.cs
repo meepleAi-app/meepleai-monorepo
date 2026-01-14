@@ -118,12 +118,13 @@ internal class N8NTemplateService : IN8NTemplateService
                 }
             }
 #pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Service boundary - resilience pattern for template gallery loading
+#pragma warning disable S125 // Sections of code should not be commented out
             // RESILIENCE PATTERN: Individual template load failures must not break gallery
             // Rationale: N8N template loading iterates through multiple JSON files. A malformed
             // or corrupted template file should not prevent other valid templates from loading.
             // We log the error for debugging and continue processing remaining templates.
             // Context: Template failures are typically file-related (malformed JSON, missing file)
+#pragma warning restore S125
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to load template from {File}", file);
@@ -191,13 +192,14 @@ internal class N8NTemplateService : IN8NTemplateService
             );
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - returns null for missing/corrupt templates
+#pragma warning disable S125 // Sections of code should not be commented out
         // RESILIENCE PATTERN: Single template load failure returns null instead of throwing
         // Rationale: GetTemplateByIdAsync is called by API endpoints that display template
         // details. Returning null allows the API to respond with 404 Not Found, which is
         // the appropriate HTTP response for missing/corrupt templates. Throwing would cause
         // a 500 Internal Server Error instead.
         // Context: Template failures are typically file-related (malformed JSON, missing file)
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load template {TemplateId}", templateId);

@@ -15,8 +15,10 @@ internal class PagerDutyAlertChannel : IAlertChannel
     private readonly ILogger<PagerDutyAlertChannel> _logger;
 
 #pragma warning disable S1075 // URIs should not be hardcoded
-    // Justification: Official PagerDuty Events API endpoint (public contract, never changes)
+#pragma warning disable S125 // Sections of code should not be commented out
+    // ADAPTER PATTERN: Official PagerDuty Events API endpoint (public contract, never changes)
     // https://developer.pagerduty.com/api-reference/368ae3d8c8b4e-send-an-event-to-pager-duty
+#pragma warning restore S125
     private const string PagerDutyEventsApiUrl = "https://events.pagerduty.com/v2/enqueue";
 #pragma warning restore S1075
 
@@ -90,6 +92,13 @@ internal class PagerDutyAlertChannel : IAlertChannel
             return false;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+        // RESILIENCE PATTERN: PagerDuty alert channel failures must return false, not throw
+        // Rationale: Alert channels implement IAlertChannel which requires returning success/
+        // failure status. Throwing would prevent other channels from executing (email, Slack).
+        // Caller (AlertingService) tracks per-channel results for graceful degradation.
+        // Context: PagerDuty failures are typically external (API timeout, rate limit, auth)
+#pragma warning restore S125
         catch (Exception ex)
 #pragma warning restore CA1031
         {

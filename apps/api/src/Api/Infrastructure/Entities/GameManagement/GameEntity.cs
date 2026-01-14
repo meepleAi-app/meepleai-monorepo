@@ -1,3 +1,5 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
+
 namespace Api.Infrastructure.Entities;
 
 public class GameEntity
@@ -38,6 +40,14 @@ public class GameEntity
     /// Version number: 1.0, 2.0, 1.5, etc.
     /// </summary>
     public string? VersionNumber { get; set; }
+
+    // Issue #2373 Phase 4: SharedGameCatalog integration
+    /// <summary>
+    /// Optional link to SharedGameCatalog for enhanced game details.
+    /// When set, the game is linked to community-curated content (rules, FAQs, errata).
+    /// </summary>
+    public Guid? SharedGameId { get; set; }
+    public SharedGameEntity? SharedGame { get; set; }
 
     public ICollection<RuleSpecEntity> RuleSpecs { get; set; } = new List<RuleSpecEntity>();
     public ICollection<AgentEntity> Agents { get; set; } = new List<AgentEntity>();

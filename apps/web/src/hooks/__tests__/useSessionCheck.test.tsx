@@ -26,7 +26,7 @@ describe('useSessionCheck', () => {
 
   it('should check session on mount', async () => {
     vi.mocked(api.auth.getSessionStatus).mockResolvedValueOnce({
-      RemainingMinutes: 30,
+      remainingMinutes: 30,
     });
 
     const { result } = renderHook(() => useSessionCheck());
@@ -41,7 +41,7 @@ describe('useSessionCheck', () => {
 
   it('should set isNearExpiry when less than 5 minutes', async () => {
     vi.mocked(api.auth.getSessionStatus).mockResolvedValueOnce({
-      RemainingMinutes: 3,
+      remainingMinutes: 3,
     });
 
     const { result } = renderHook(() => useSessionCheck());
@@ -85,8 +85,8 @@ describe('useSessionCheck', () => {
 
   it('should allow manual check with checkNow', async () => {
     vi.mocked(api.auth.getSessionStatus)
-      .mockResolvedValueOnce({ RemainingMinutes: 30 })
-      .mockResolvedValueOnce({ RemainingMinutes: 20 });
+      .mockResolvedValueOnce({ remainingMinutes: 30 })
+      .mockResolvedValueOnce({ remainingMinutes: 20 });
 
     const { result } = renderHook(() => useSessionCheck());
 

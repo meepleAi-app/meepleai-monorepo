@@ -128,17 +128,26 @@ internal class HybridCacheService : IHybridCacheService
         Func<CancellationToken, Task<T>> factory,
         CancellationToken ct) where T : class
     {
-        var logLevel = ex is RedisTimeoutException ? LogLevel.Warning : LogLevel.Error;
-        var message = ex switch
+        // CA2254: Use separate log calls with static templates to satisfy analyzer
+        switch (ex)
         {
-            RedisConnectionException => "Redis connection failed for key {CacheKey}. Falling back to factory.",
-            RedisTimeoutException => "Redis timeout for key {CacheKey}. Falling back to factory.",
-            InvalidOperationException => "Invalid cache operation for key {CacheKey}. Falling back to factory.",
-            JsonException => "JSON serialization error for key {CacheKey}. Falling back to factory.",
-            _ => "Cache error for key {CacheKey}. Falling back to factory."
-        };
+            case RedisConnectionException:
+                _logger.LogError(ex, "Redis connection failed for key {CacheKey}. Falling back to factory.", cacheKey);
+                break;
+            case RedisTimeoutException:
+                _logger.LogWarning(ex, "Redis timeout for key {CacheKey}. Falling back to factory.", cacheKey);
+                break;
+            case InvalidOperationException:
+                _logger.LogError(ex, "Invalid cache operation for key {CacheKey}. Falling back to factory.", cacheKey);
+                break;
+            case JsonException:
+                _logger.LogError(ex, "JSON serialization error for key {CacheKey}. Falling back to factory.", cacheKey);
+                break;
+            default:
+                _logger.LogError(ex, "Cache error for key {CacheKey}. Falling back to factory.", cacheKey);
+                break;
+        }
 
-        _logger.Log(logLevel, ex, message, cacheKey);
         return await factory(ct).ConfigureAwait(false);
     }
 

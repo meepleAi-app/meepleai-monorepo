@@ -1180,6 +1180,9 @@ namespace Api.Migrations
                     b.Property<string>("Publisher")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("SharedGameId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("VersionNumber")
                         .HasColumnType("text");
 
@@ -1194,50 +1197,10 @@ namespace Api.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
+                    b.HasIndex("SharedGameId")
+                        .HasDatabaseName("IX_Games_SharedGameId");
+
                     b.ToTable("games", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.GameFAQEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Answer")
-                        .IsRequired()
-                        .HasMaxLength(5000)
-                        .HasColumnType("character varying(5000)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("GameId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Question")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Upvotes")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GameId", "Upvotes", "CreatedAt")
-                        .HasDatabaseName("IX_GameFAQs_GameId_Upvotes_CreatedAt");
-
-                    b.ToTable("GameFAQs", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameSessionEntity", b =>
@@ -1286,6 +1249,87 @@ namespace Api.Migrations
                         .HasDatabaseName("IX_GameSessions_Status_StartedAt");
 
                     b.ToTable("GameSessions", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentConfigurationEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_id");
+
+                    b.Property<int>("AgentMode")
+                        .HasColumnType("integer")
+                        .HasColumnName("agent_mode");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<bool>("IsCurrent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_current");
+
+                    b.Property<string>("LlmModel")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("llm_model");
+
+                    b.Property<int>("LlmProvider")
+                        .HasColumnType("integer")
+                        .HasColumnName("llm_provider");
+
+                    b.Property<int>("MaxTokens")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(4096)
+                        .HasColumnName("max_tokens");
+
+                    b.Property<string>("SelectedDocumentIdsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("selected_document_ids_json");
+
+                    b.Property<string>("SystemPromptOverride")
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)")
+                        .HasColumnName("system_prompt_override");
+
+                    b.Property<decimal>("Temperature")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3, 2)
+                        .HasColumnType("numeric(3,2)")
+                        .HasDefaultValue(0.7m)
+                        .HasColumnName("temperature");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentId")
+                        .HasDatabaseName("ix_agent_configurations_agent_id");
+
+                    b.HasIndex("AgentId", "IsCurrent")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agent_configurations_current")
+                        .HasFilter("is_current = true");
+
+                    b.ToTable("agent_configurations", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_agent_configurations_max_tokens", "max_tokens > 0 AND max_tokens <= 32000");
+
+                            t.HasCheckConstraint("ck_agent_configurations_temperature", "temperature >= 0.0 AND temperature <= 2.0");
+                        });
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.LlmCostLogEntity", b =>
@@ -2403,6 +2447,69 @@ namespace Api.Migrations
                     b.ToTable("shared_game_delete_requests", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameDocumentEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("DocumentType")
+                        .HasColumnType("integer")
+                        .HasColumnName("document_type");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_active");
+
+                    b.Property<Guid>("PdfDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pdf_document_id");
+
+                    b.Property<Guid>("SharedGameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shared_game_id");
+
+                    b.Property<string>("TagsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("tags_json");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PdfDocumentId")
+                        .HasDatabaseName("ix_shared_game_documents_pdf_document_id");
+
+                    b.HasIndex("SharedGameId")
+                        .HasDatabaseName("ix_shared_game_documents_shared_game_id");
+
+                    b.HasIndex("SharedGameId", "DocumentType", "IsActive")
+                        .HasDatabaseName("ix_shared_game_documents_active_version");
+
+                    b.HasIndex("SharedGameId", "DocumentType", "Version")
+                        .IsUnique()
+                        .HasDatabaseName("ix_shared_game_documents_version_unique");
+
+                    b.ToTable("shared_game_documents", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3430,15 +3537,14 @@ namespace Api.Migrations
                     b.Navigation("Game");
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.GameFAQEntity", b =>
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
                         .WithMany()
-                        .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("SharedGameId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("Game");
+                    b.Navigation("SharedGame");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameSessionEntity", b =>
@@ -3450,6 +3556,17 @@ namespace Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Game");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentConfigurationEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.AgentEntity", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Agent");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.LlmCostLogEntity", b =>
@@ -3694,6 +3811,25 @@ namespace Api.Migrations
                     b.Navigation("SharedGame");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameDocumentEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.PdfDocumentEntity", "PdfDocument")
+                        .WithMany()
+                        .HasForeignKey("PdfDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
+                        .WithMany("Documents")
+                        .HasForeignKey("SharedGameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PdfDocument");
+
+                    b.Navigation("SharedGame");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfigurationEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "CreatedBy")
@@ -3891,6 +4027,8 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", b =>
                 {
+                    b.Navigation("Documents");
+
                     b.Navigation("Erratas");
 
                     b.Navigation("Faqs");

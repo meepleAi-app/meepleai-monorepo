@@ -249,18 +249,17 @@ internal class HallucinationDetectionService : IHallucinationDetectionService
             ["es"] = new[] { "no lo sé", "no puedo", "no estoy seguro", "no estoy segura" }
         };
 
-        foreach (var (lang, phrases) in criticalPhrasesMap)
+        // S3267: Use LINQ SelectMany + FirstOrDefault instead of nested foreach
+        var match = criticalPhrasesMap
+            .SelectMany(kvp => kvp.Value.Select(phrase => new { Lang = kvp.Key, Phrase = phrase }))
+            .FirstOrDefault(x => text.Contains(x.Phrase, StringComparison.OrdinalIgnoreCase));
+
+        if (match != null)
         {
-            foreach (var phrase in phrases)
-            {
-                if (text.Contains(phrase, StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogDebug(
-                        "Detected language '{Language}' from critical phrase '{Phrase}'",
-                        lang, phrase);
-                    return lang;
-                }
-            }
+            _logger.LogDebug(
+                "Detected language '{Language}' from critical phrase '{Phrase}'",
+                match.Lang, match.Phrase);
+            return match.Lang;
         }
 
         return null;
@@ -283,12 +282,10 @@ internal class HallucinationDetectionService : IHallucinationDetectionService
             "cannot find", "non riesco", "ne trouve pas", "kann nicht", "no puedo"
         };
 
-        foreach (var phrase in criticalPhrases)
+        // S3267: Use LINQ Any() instead of foreach with early return
+        if (criticalPhrases.Any(phrase => responseText.Contains(phrase, StringComparison.OrdinalIgnoreCase)))
         {
-            if (responseText.Contains(phrase, StringComparison.OrdinalIgnoreCase))
-            {
-                return HallucinationSeverity.High;
-            }
+            return HallucinationSeverity.High;
         }
 
         // Severity based on count

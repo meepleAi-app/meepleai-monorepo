@@ -1,5 +1,6 @@
 using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Enums;
 using Api.SharedKernel.Guards;
 
 namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
@@ -61,9 +62,10 @@ internal sealed class E2EMetrics : ValueObject
     public DateTime LastRunAt { get; }
 
     /// <summary>
-    /// Overall test suite status ("pass", "warning", "fail")
+    /// Overall test suite status (Pass, Warning, Fail, NoData).
+    /// Indicates whether tests meet quality standards.
     /// </summary>
-    public string Status { get; }
+    public TestExecutionStatus Status { get; }
 
     /// <summary>
     /// Private constructor for factory methods.
@@ -80,7 +82,7 @@ internal sealed class E2EMetrics : ValueObject
         int skippedTests,
         int flakyTests,
         DateTime lastRunAt,
-        string status)
+        TestExecutionStatus status)
     {
         Guard.AgainstOutOfRange(coverage, nameof(coverage), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
         Guard.AgainstOutOfRange(passRate, nameof(passRate), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
@@ -91,7 +93,7 @@ internal sealed class E2EMetrics : ValueObject
         Guard.AgainstNegative(failedTests, nameof(failedTests));
         Guard.AgainstNegative(skippedTests, nameof(skippedTests));
         Guard.AgainstNegative(flakyTests, nameof(flakyTests));
-        Guard.AgainstNullOrWhiteSpace(status, nameof(status));
+        // Note: No validation needed for enum - type-safe by design
 
         Coverage = coverage;
         PassRate = passRate;
@@ -165,7 +167,7 @@ internal sealed class E2EMetrics : ValueObject
 
     /// <summary>
     /// Creates default E2EMetrics instance for testing or initialization.
-    /// All metrics are set to zero and status is "unknown".
+    /// All metrics are set to zero and status is NoData.
     /// </summary>
     public static E2EMetrics CreateDefault() => new(
         coverage: 0m,
@@ -178,7 +180,7 @@ internal sealed class E2EMetrics : ValueObject
         skippedTests: 0,
         flakyTests: 0,
         lastRunAt: DateTime.UtcNow,
-        status: "unknown");
+        status: TestExecutionStatus.NoData);
 
     /// <summary>
     /// Empty E2EMetrics instance with zero values.
@@ -191,13 +193,13 @@ internal sealed class E2EMetrics : ValueObject
     /// Warning: PassRate greater than or equal to 80% AND FlakyRate less than or equal to 10%
     /// Fail: Otherwise
     /// </summary>
-    private static string CalculateStatus(decimal passRate, decimal flakyRate)
+    private static TestExecutionStatus CalculateStatus(decimal passRate, decimal flakyRate)
     {
         if (passRate >= QualityThresholds.MinimumPassRate && flakyRate <= QualityThresholds.MaximumFlakyRate)
-            return "pass";
+            return TestExecutionStatus.Pass;
         if (passRate >= QualityThresholds.WarningPassRate && flakyRate <= QualityThresholds.WarningFlakyRate)
-            return "warning";
-        return "fail";
+            return TestExecutionStatus.Warning;
+        return TestExecutionStatus.Fail;
     }
 
     /// <summary>

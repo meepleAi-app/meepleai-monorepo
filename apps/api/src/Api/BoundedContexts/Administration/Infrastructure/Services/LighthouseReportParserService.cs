@@ -64,7 +64,7 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
 
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 
-            var metrics = new AccessibilityMetrics(
+            var metrics = AccessibilityMetrics.Create(
                 lighthouseScore: (decimal)accessibilityScore,
                 axeViolations: violationCount,
                 wcagLevels: wcagLevels,

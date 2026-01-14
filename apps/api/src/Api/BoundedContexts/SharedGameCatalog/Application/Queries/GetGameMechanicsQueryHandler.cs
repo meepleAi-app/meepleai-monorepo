@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;

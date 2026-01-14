@@ -60,7 +60,11 @@ internal sealed class PerformanceMetrics : ValueObject
     /// </summary>
     public DateTime LastRunAt { get; }
 
-    public PerformanceMetrics(
+    /// <summary>
+    /// Private constructor for factory methods.
+    /// Use FromLighthouseReport() or CreateDefault() to create instances.
+    /// </summary>
+    private PerformanceMetrics(
         decimal lcp,
         decimal fid,
         decimal cls,
@@ -92,6 +96,103 @@ internal sealed class PerformanceMetrics : ValueObject
         PerformanceScore = performanceScore;
         BudgetStatus = budgetStatus;
         LastRunAt = lastRunAt;
+    }
+
+    /// <summary>
+    /// Creates PerformanceMetrics from Lighthouse test results.
+    /// Automatically calculates budget status based on Core Web Vitals thresholds.
+    /// </summary>
+    /// <param name="lcp">Largest Contentful Paint in milliseconds</param>
+    /// <param name="fid">First Input Delay in milliseconds</param>
+    /// <param name="cls">Cumulative Layout Shift score</param>
+    /// <param name="fcp">First Contentful Paint in milliseconds</param>
+    /// <param name="tti">Time to Interactive in milliseconds</param>
+    /// <param name="tbt">Total Blocking Time in milliseconds</param>
+    /// <param name="speedIndex">Speed Index score</param>
+    /// <param name="performanceScore">Lighthouse performance score (0-100)</param>
+    /// <param name="lastRunAt">Timestamp when the test run occurred</param>
+    /// <returns>New PerformanceMetrics instance with calculated budget status</returns>
+    public static PerformanceMetrics FromLighthouseReport(
+        decimal lcp,
+        decimal fid,
+        decimal cls,
+        decimal fcp,
+        decimal tti,
+        decimal tbt,
+        decimal speedIndex,
+        decimal performanceScore,
+        DateTime lastRunAt)
+    {
+        Guard.AgainstNegative(lcp, nameof(lcp));
+        Guard.AgainstNegative(fid, nameof(fid));
+        Guard.AgainstNegative(cls, nameof(cls));
+        Guard.AgainstNegative(fcp, nameof(fcp));
+        Guard.AgainstNegative(tti, nameof(tti));
+        Guard.AgainstNegative(tbt, nameof(tbt));
+        Guard.AgainstNegative(speedIndex, nameof(speedIndex));
+        Guard.AgainstOutOfRange(performanceScore, nameof(performanceScore), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
+
+        // Calculate budget status based on Core Web Vitals
+        var budgetStatus = CalculateBudgetStatus(lcp, fid, cls, performanceScore);
+
+        return new PerformanceMetrics(
+            lcp: lcp,
+            fid: fid,
+            cls: cls,
+            fcp: fcp,
+            tti: tti,
+            tbt: tbt,
+            speedIndex: speedIndex,
+            performanceScore: performanceScore,
+            budgetStatus: budgetStatus,
+            lastRunAt: lastRunAt);
+    }
+
+    /// <summary>
+    /// Creates default PerformanceMetrics instance for testing or initialization.
+    /// All metrics are set to zero and budget status is "unknown".
+    /// </summary>
+    public static PerformanceMetrics CreateDefault() => new(
+        lcp: 0m,
+        fid: 0m,
+        cls: 0m,
+        fcp: 0m,
+        tti: 0m,
+        tbt: 0m,
+        speedIndex: 0m,
+        performanceScore: 0m,
+        budgetStatus: "unknown",
+        lastRunAt: DateTime.UtcNow);
+
+    /// <summary>
+    /// Empty PerformanceMetrics instance with zero values.
+    /// </summary>
+    public static readonly PerformanceMetrics Empty = CreateDefault();
+
+    /// <summary>
+    /// Calculates performance budget status based on Core Web Vitals thresholds.
+    /// Pass: All Core Web Vitals meet good thresholds (LCP under 2500ms, FID under 100ms, CLS under 0.1, Score over 90)
+    /// Warning: All Core Web Vitals meet needs-improvement thresholds (LCP under 4000ms, FID under 300ms, CLS under 0.25, Score over 50)
+    /// Fail: Otherwise
+    /// </summary>
+    private static string CalculateBudgetStatus(decimal lcp, decimal fid, decimal cls, decimal performanceScore)
+    {
+        // Pass: All metrics meet "good" thresholds
+        if (lcp <= WebVitalThresholds.LcpGoodThreshold &&
+            fid <= WebVitalThresholds.FidGoodThreshold &&
+            cls <= WebVitalThresholds.ClsGoodThreshold &&
+            performanceScore >= WebVitalThresholds.MinimumPerformanceScore)
+            return "pass";
+
+        // Warning: All metrics meet "needs improvement" thresholds
+        if (lcp <= WebVitalThresholds.LcpNeedsImprovementThreshold &&
+            fid <= WebVitalThresholds.FidNeedsImprovementThreshold &&
+            cls <= WebVitalThresholds.ClsNeedsImprovementThreshold &&
+            performanceScore >= 50)
+            return "warning";
+
+        // Fail: At least one metric fails thresholds
+        return "fail";
     }
 
     /// <summary>

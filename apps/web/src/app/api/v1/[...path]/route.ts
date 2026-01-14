@@ -2,6 +2,7 @@
  * API Proxy Route - Forwards /api/v1/* to backend
  *
  * Issue #703: Preserves Set-Cookie headers from backend
+ * Issue #2432: Fix JSON body corruption during proxy
  *
  * This catch-all route proxies all /api/v1/* requests to the backend API,
  * ensuring proper cookie handling for authentication.
@@ -27,9 +28,12 @@ async function proxyRequest(request: NextRequest, method: string) {
     const targetUrl = `${API_BASE}${apiPath}${request.nextUrl.search}`;
 
     // Get request body for methods that support it
+    // Issue #2432: Use arrayBuffer() instead of text() to preserve exact binary content
+    // text() can corrupt special characters in JSON (e.g., '!' in passwords),
+    // causing "invalid escapable character" deserialization errors on the backend
     let body: BodyInit | null = null;
     if (['POST', 'PUT', 'PATCH'].includes(method)) {
-      body = await request.text();
+      body = await request.arrayBuffer();
     }
 
     // Forward headers (exclude host, connection)

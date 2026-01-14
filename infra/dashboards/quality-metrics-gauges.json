@@ -50,7 +50,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "Average overall confidence score across all AI responses. Thresholds: High ≥0.80 (green), Medium ≥0.60 (yellow), Low <0.60 (red)",
       "fieldConfig": {
@@ -107,7 +107,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "avg(meepleai_quality_score{dimension=\"overall_confidence\"})",
           "legendFormat": "Overall Confidence",
@@ -120,7 +120,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "RAG (Retrieval-Augmented Generation) confidence score measuring the quality and relevance of retrieved documents. High values indicate accurate document retrieval.",
       "fieldConfig": {
@@ -177,7 +177,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "avg(meepleai_quality_score{dimension=\"rag_confidence\"})",
           "legendFormat": "RAG Confidence",
@@ -190,7 +190,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "LLM (Large Language Model) confidence score measuring the quality of generated responses. High values indicate coherent and accurate AI-generated text.",
       "fieldConfig": {
@@ -247,7 +247,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "avg(meepleai_quality_score{dimension=\"llm_confidence\"})",
           "legendFormat": "LLM Confidence",
@@ -260,7 +260,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "Citation quality score measuring the accuracy and relevance of source references in AI responses. High values indicate proper citation of game rules and sources.",
       "fieldConfig": {
@@ -317,7 +317,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "avg(meepleai_quality_score{dimension=\"citation_quality\"})",
           "legendFormat": "Citation Quality",
@@ -330,7 +330,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "Percentage of AI responses with low quality (overall confidence <0.60). Lower is better. Alert triggers at >20% (yellow), >30% (orange), >50% (red).",
       "fieldConfig": {
@@ -391,7 +391,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "(\n  rate(meepleai_quality_low_quality_responses_total[5m]) \n  / \n  rate(meepleai_quality_score_count{dimension=\"overall_confidence\"}[5m])\n) * 100 OR on() vector(0)",
           "legendFormat": "Low Quality Rate",
@@ -404,7 +404,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "Summary statistics for all 5 quality metrics showing current values at a glance",
       "fieldConfig": {
@@ -536,7 +536,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "avg(meepleai_quality_score{dimension=\"overall_confidence\"})",
           "format": "table",
@@ -547,7 +547,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "avg(meepleai_quality_score{dimension=\"rag_confidence\"})",
           "format": "table",
@@ -558,7 +558,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "avg(meepleai_quality_score{dimension=\"llm_confidence\"})",
           "format": "table",
@@ -569,7 +569,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "avg(meepleai_quality_score{dimension=\"citation_quality\"})",
           "format": "table",
@@ -580,7 +580,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "(\n  rate(meepleai_quality_low_quality_responses_total[5m]) \n  / \n  rate(meepleai_quality_score_count{dimension=\"overall_confidence\"}[5m])\n) OR on() vector(0)",
           "format": "table",

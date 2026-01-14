@@ -71,7 +71,7 @@ export interface GameSortOptions {
  * Issue #2373: Added sharedGameId for catalog integration
  */
 export interface CreateGameRequest {
-  name: string;
+  title: string;
   publisher?: string | null;
   yearPublished?: number | null;
   minPlayers?: number | null;
@@ -286,7 +286,7 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       request: CreateGameRequest | string
     ): Promise<{ id: string; title: string; createdAt: string }> {
       // Support both legacy (string) and new (object) signatures
-      const payload = typeof request === 'string' ? { name: request } : request;
+      const payload = typeof request === 'string' ? { title: request } : request;
       return httpClient.post<{ id: string; title: string; createdAt: string }>(
         '/api/v1/games',
         payload

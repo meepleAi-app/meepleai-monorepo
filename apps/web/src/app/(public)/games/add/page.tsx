@@ -92,7 +92,7 @@ export default function AddGamePage() {
 
       // Create game in user's collection with catalog link
       await api.games.create({
-        name: catalogGame.title,
+        title: catalogGame.title,
         publisher: publisherName,
         yearPublished: catalogGame.yearPublished,
         minPlayers: catalogGame.minPlayers,
@@ -132,7 +132,7 @@ export default function AddGamePage() {
 
       // Create game in user's collection (no catalog link)
       await api.games.create({
-        name: details.name,
+        title: details.name,
         publisher: details.publishers?.[0] ?? null,
         yearPublished: details.yearPublished,
         minPlayers: details.minPlayers,

@@ -20,7 +20,7 @@
   "liveNow": true,
   "panels": [
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "Real-time LLM cost tracking by model and provider with hourly, daily, and monthly aggregations",
       "fieldConfig": {
         "defaults": {
@@ -57,19 +57,19 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "expr": "sum(increase(meepleai_llm_cost_usd[1h])) by (model_id)",
           "legendFormat": "{{model_id}} (hourly)",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "expr": "sum(increase(meepleai_llm_cost_usd[1d])) by (model_id)",
           "legendFormat": "{{model_id}} (daily)",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "expr": "sum(increase(meepleai_llm_cost_usd[30d])) by (model_id)",
           "legendFormat": "{{model_id}} (monthly)",
           "refId": "C"
@@ -79,7 +79,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "Token usage breakdown: prompt vs completion tokens with rate analysis",
       "fieldConfig": {
         "defaults": {
@@ -112,13 +112,13 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "expr": "sum(rate(gen_ai_client_token_usage{gen_ai_token_type=\"input\"}[5m])) by (gen_ai_request_model)",
           "legendFormat": "{{gen_ai_request_model}} (prompt)",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "expr": "sum(rate(gen_ai_client_token_usage{gen_ai_token_type=\"output\"}[5m])) by (gen_ai_request_model)",
           "legendFormat": "{{gen_ai_request_model}} (completion)",
           "refId": "B"
@@ -128,7 +128,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "Cost per query and latency vs cost trade-off analysis",
       "fieldConfig": {
         "defaults": {
@@ -160,7 +160,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "expr": "sum(rate(meepleai_llm_cost_usd[5m])) / sum(rate(meepleai_agent_invocations_total[5m]))",
           "legendFormat": "Cost per query",
           "refId": "A"
@@ -170,7 +170,7 @@
       "type": "gauge"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "Budget tracking with daily/monthly thresholds and burn rate forecast",
       "fieldConfig": {
         "defaults": {
@@ -205,13 +205,13 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "expr": "sum(increase(meepleai_llm_cost_usd[30d]))",
           "legendFormat": "Monthly spend",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "expr": "1000 - sum(increase(meepleai_llm_cost_usd[30d]))",
           "legendFormat": "Remaining budget",
           "refId": "B"

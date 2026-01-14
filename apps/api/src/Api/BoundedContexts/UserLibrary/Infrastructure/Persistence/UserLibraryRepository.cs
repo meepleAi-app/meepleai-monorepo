@@ -1,0 +1,247 @@
+using Api.BoundedContexts.UserLibrary.Domain.Entities;
+using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities.UserLibrary;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+
+namespace Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
+
+/// <summary>
+/// EF Core implementation of UserLibrary repository.
+/// Maps between domain UserLibraryEntry entity and UserLibraryEntryEntity persistence model.
+/// </summary>
+internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
+{
+    public UserLibraryRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+        : base(dbContext, eventCollector)
+    {
+    }
+
+    public async Task<UserLibraryEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
+    public async Task<IReadOnlyList<UserLibraryEntry>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .OrderByDescending(e => e.AddedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<UserLibraryEntry?> GetByUserAndGameAsync(
+        Guid userId,
+        Guid gameId,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.UserId == userId && e.GameId == gameId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
+    public async Task<(IReadOnlyList<UserLibraryEntry> Entries, int Total)> GetUserLibraryPaginatedAsync(
+        Guid userId,
+        string? search,
+        bool? favoritesOnly,
+        string? sortBy,
+        bool descending,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        // Validate pagination parameters
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        var query = DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .Include(e => e.Game)
+            .Where(e => e.UserId == userId);
+
+        // Apply search filter (by game title)
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(e => e.Game != null && EF.Functions.ILike(e.Game.Name, $"%{search}%"));
+        }
+
+        // Apply favorites filter
+        if (favoritesOnly == true)
+        {
+            query = query.Where(e => e.IsFavorite);
+        }
+
+        // Get total count before pagination
+        var total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
+
+        // Apply sorting
+        query = ApplySorting(query, sortBy, descending);
+
+        // Apply pagination
+        var entities = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        var entries = entities.Select(MapToDomain).ToList();
+
+        return (entries, total);
+    }
+
+    public async Task<int> GetUserLibraryCountAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .CountAsync(e => e.UserId == userId, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<int> GetFavoriteCountAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .CountAsync(e => e.UserId == userId && e.IsFavorite, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<bool> IsGameInLibraryAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .AnyAsync(e => e.UserId == userId && e.GameId == gameId, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<(DateTime? Oldest, DateTime? Newest)> GetLibraryDateRangeAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var dates = await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .Where(e => e.UserId == userId)
+            .Select(e => e.AddedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (dates.Count == 0)
+            return (null, null);
+
+        return (dates.Min(), dates.Max());
+    }
+
+    public async Task AddAsync(UserLibraryEntry entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        CollectDomainEvents(entry);
+
+        var entity = MapToPersistence(entry);
+        await DbContext.UserLibraryEntries.AddAsync(entity, cancellationToken).ConfigureAwait(false);
+    }
+
+    public Task UpdateAsync(UserLibraryEntry entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        CollectDomainEvents(entry);
+
+        var entity = MapToPersistence(entry);
+        DbContext.UserLibraryEntries.Update(entity);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(UserLibraryEntry entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        CollectDomainEvents(entry);
+
+        var entity = MapToPersistence(entry);
+        DbContext.UserLibraryEntries.Remove(entity);
+        return Task.CompletedTask;
+    }
+
+    public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .AnyAsync(e => e.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static IQueryable<UserLibraryEntryEntity> ApplySorting(
+        IQueryable<UserLibraryEntryEntity> query,
+        string? sortBy,
+        bool descending)
+    {
+        return sortBy?.ToLowerInvariant() switch
+        {
+            "title" => descending
+                ? query.OrderByDescending(e => e.Game != null ? e.Game.Name : "")
+                : query.OrderBy(e => e.Game != null ? e.Game.Name : ""),
+            "favorite" => descending
+                ? query.OrderByDescending(e => e.IsFavorite).ThenByDescending(e => e.AddedAt)
+                : query.OrderBy(e => e.IsFavorite).ThenByDescending(e => e.AddedAt),
+            "addedat" or _ => descending
+                ? query.OrderByDescending(e => e.AddedAt)
+                : query.OrderBy(e => e.AddedAt),
+        };
+    }
+
+    /// <summary>
+    /// Maps persistence entity to domain entity.
+    /// </summary>
+    private static UserLibraryEntry MapToDomain(UserLibraryEntryEntity entity)
+    {
+        var entry = new UserLibraryEntry(entity.Id, entity.UserId, entity.GameId);
+
+        // Set notes if present
+        if (!string.IsNullOrWhiteSpace(entity.Notes))
+        {
+            entry.UpdateNotes(new LibraryNotes(entity.Notes));
+        }
+
+        // Set favorite status
+        if (entity.IsFavorite)
+        {
+            entry.MarkAsFavorite();
+        }
+
+        // Override AddedAt from DB using reflection (same pattern as GameRepository)
+        var addedAtProp = typeof(UserLibraryEntry).GetProperty("AddedAt");
+        addedAtProp?.SetValue(entry, entity.AddedAt);
+
+        // Clear domain events that were raised during construction
+        // (we don't want to re-raise events for existing entities)
+        entry.ClearDomainEvents();
+
+        return entry;
+    }
+
+    /// <summary>
+    /// Maps domain entity to persistence entity.
+    /// </summary>
+    private static UserLibraryEntryEntity MapToPersistence(UserLibraryEntry domainEntity)
+    {
+        ArgumentNullException.ThrowIfNull(domainEntity);
+        return new UserLibraryEntryEntity
+        {
+            Id = domainEntity.Id,
+            UserId = domainEntity.UserId,
+            GameId = domainEntity.GameId,
+            AddedAt = domainEntity.AddedAt,
+            Notes = domainEntity.Notes?.Value,
+            IsFavorite = domainEntity.IsFavorite
+        };
+    }
+}

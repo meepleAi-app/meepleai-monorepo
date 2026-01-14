@@ -2934,6 +2934,47 @@ namespace Api.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsFavorite")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AddedAt")
+                        .HasDatabaseName("IX_UserLibraryEntries_AddedAt");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_UserLibraryEntries_UserId");
+
+                    b.HasIndex("UserId", "GameId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UserLibraryEntries_UserId_GameId");
+
+                    b.ToTable("user_library_entries", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.UserNotifications.NotificationEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3885,6 +3926,25 @@ namespace Api.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Game");
 
                     b.Navigation("User");
                 });

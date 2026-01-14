@@ -68,8 +68,18 @@ internal sealed class EmbeddingProviderFactory : IEmbeddingProviderFactory
             EmbeddingProviderType.HuggingFaceBgeM3 =>
                 CreateHuggingFaceProvider(),
 
+            EmbeddingProviderType.External =>
+                CreateExternalProvider(),
+
             _ => throw new ArgumentException($"Unknown provider type: {type}", nameof(type))
         };
+    }
+
+    private HttpEmbeddingProvider CreateExternalProvider()
+    {
+        var httpClient = _httpClientFactory.CreateClient("EmbeddingService");
+        var logger = _loggerFactory.CreateLogger<HttpEmbeddingProvider>();
+        return new HttpEmbeddingProvider(httpClient, logger, _config);
     }
 
     private OpenRouterEmbeddingProvider CreateOpenRouterProvider(EmbeddingProviderType type)

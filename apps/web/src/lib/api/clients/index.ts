@@ -18,3 +18,4 @@ export * from './documentsClient';
 export * from './shareLinksClient'; // ISSUE-2052
 export * from './notifications'; // ISSUE-2053
 export * from './sharedGamesClient'; // ISSUE-2372
+export * from './libraryClient'; // User library

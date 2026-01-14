@@ -18,6 +18,10 @@ public class NotFoundException : Exception
     /// </summary>
     public string? ResourceId { get; }
 
+    public NotFoundException()
+    {
+    }
+
     [SetsRequiredMembers]
     public NotFoundException(string resourceType, string? resourceId = null)
         : base(FormatMessage(resourceType, resourceId))
@@ -39,8 +43,5 @@ public class NotFoundException : Exception
         return resourceId is not null
             ? $"{resourceType} with identifier '{resourceId}' was not found"
             : $"{resourceType} not found";
-    }
-    public NotFoundException()
-    {
     }
 }

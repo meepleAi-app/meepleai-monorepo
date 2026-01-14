@@ -42,7 +42,58 @@ public sealed record GameRulesDto(
     string Language);
 
 /// <summary>
+/// Data transfer object for game FAQ.
+/// </summary>
+public sealed record GameFaqDto(
+    Guid Id,
+    string Question,
+    string Answer,
+    int Order,
+    DateTime CreatedAt);
+
+/// <summary>
+/// Data transfer object for game errata.
+/// </summary>
+public sealed record GameErrataDto(
+    Guid Id,
+    string Description,
+    string PageReference,
+    DateTime PublishedDate,
+    DateTime CreatedAt);
+
+/// <summary>
+/// Data transfer object for game designer.
+/// </summary>
+public sealed record GameDesignerDto(
+    Guid Id,
+    string Name);
+
+/// <summary>
+/// Data transfer object for game publisher.
+/// </summary>
+public sealed record GamePublisherDto(
+    Guid Id,
+    string Name);
+
+/// <summary>
+/// Data transfer object for game category (simple).
+/// </summary>
+public sealed record GameCategorySimpleDto(
+    Guid Id,
+    string Name,
+    string Slug);
+
+/// <summary>
+/// Data transfer object for game mechanic (simple).
+/// </summary>
+public sealed record GameMechanicSimpleDto(
+    Guid Id,
+    string Name,
+    string Slug);
+
+/// <summary>
 /// Data transfer object for detailed shared game information.
+/// Issue #2373 Phase 4: Extended with FAQs, Errata, Designers, Publishers, Categories, Mechanics.
 /// </summary>
 public sealed record SharedGameDetailDto(
     Guid Id,
@@ -63,4 +114,10 @@ public sealed record SharedGameDetailDto(
     Guid CreatedBy,
     Guid? ModifiedBy,
     DateTime CreatedAt,
-    DateTime? ModifiedAt);
+    DateTime? ModifiedAt,
+    IReadOnlyList<GameFaqDto> Faqs,
+    IReadOnlyList<GameErrataDto> Erratas,
+    IReadOnlyList<GameDesignerDto> Designers,
+    IReadOnlyList<GamePublisherDto> Publishers,
+    IReadOnlyList<GameCategorySimpleDto> Categories,
+    IReadOnlyList<GameMechanicSimpleDto> Mechanics);

@@ -139,9 +139,11 @@ internal class WeeklyEvaluationService : BackgroundService
                 break;
             }
 #pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Background service boundary - prevents service crash
-            // Background service: Generic catch prevents service from crashing host process
+#pragma warning disable S125 // Sections of code should not be commented out
+            // BACKGROUND SERVICE: Background service boundary - prevents service crash
+            // Generic catch prevents service from crashing host process
             // Evaluation failure logged but service continues scheduled execution
+#pragma warning restore S125
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error running weekly evaluation");

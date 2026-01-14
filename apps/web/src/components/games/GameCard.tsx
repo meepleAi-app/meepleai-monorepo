@@ -131,6 +131,8 @@ export const GameCard = React.memo(function GameCard({
   const hasRating = showRating && game.averageRating != null;
   // eslint-disable-next-line eqeqeq -- Intentional null/undefined coalescing check
   const hasFaqCount = game.faqCount != null && game.faqCount > 0;
+  // Issue #2373: SharedGameCatalog integration - show catalog badge if linked
+  const isFromCatalog = !!game.sharedGameId;
 
   return (
     <Card
@@ -172,7 +174,12 @@ export const GameCard = React.memo(function GameCard({
         {/* Grid: Top-right badges overlay */}
         {variant === 'grid' && (
           <div className="absolute top-2 right-2 flex flex-col gap-1">
-            {game.bggId && (
+            {isFromCatalog && (
+              <Badge variant="default" className="text-xs shadow-sm">
+                Catalogo
+              </Badge>
+            )}
+            {game.bggId && !isFromCatalog && (
               <Badge variant="secondary" className="text-xs shadow-sm">
                 BGG
               </Badge>
@@ -203,7 +210,12 @@ export const GameCard = React.memo(function GameCard({
             {/* List: Right-side badges */}
             {variant === 'list' && (
               <div className="flex items-center gap-2 flex-shrink-0">
-                {game.bggId && (
+                {isFromCatalog && (
+                  <Badge variant="default" className="text-xs">
+                    Catalogo
+                  </Badge>
+                )}
+                {game.bggId && !isFromCatalog && (
                   <Badge variant="secondary" className="text-xs">
                     BGG
                   </Badge>

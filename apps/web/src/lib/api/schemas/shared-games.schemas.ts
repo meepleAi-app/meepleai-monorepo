@@ -1,5 +1,5 @@
 /**
- * Shared Game Catalog API Schemas (Issue #2372)
+ * Shared Game Catalog API Schemas (Issue #2372, Extended #2373)
  *
  * Zod schemas for validating SharedGameCatalog bounded context responses.
  * Covers: Games CRUD, Categories, Mechanics, FAQs, Errata, Delete Workflow
@@ -20,6 +20,30 @@ export type GameStatus = z.infer<typeof GameStatusSchema>;
  */
 export const GameStatusNumericSchema = z.number().int().min(0).max(2);
 export type GameStatusNumeric = z.infer<typeof GameStatusNumericSchema>;
+
+/**
+ * Document type enum (Issue #2391 Sprint 1)
+ */
+export const SharedGameDocumentTypeSchema = z.enum(['Rulebook', 'Errata', 'Homerule']);
+export type SharedGameDocumentType = z.infer<typeof SharedGameDocumentTypeSchema>;
+
+/**
+ * Agent mode enum (Issue #2391 Sprint 2)
+ */
+export const AgentModeSchema = z.enum(['Chat', 'Player', 'Ledger']);
+export type AgentMode = z.infer<typeof AgentModeSchema>;
+
+/**
+ * LLM Provider enum (Issue #2391 Sprint 2)
+ */
+export const LlmProviderSchema = z.enum(['OpenRouter', 'Ollama']);
+export type LlmProvider = z.infer<typeof LlmProviderSchema>;
+
+/**
+ * Numeric document type (for API storage - matches C# enum)
+ */
+export const SharedGameDocumentTypeNumericSchema = z.number().int().min(0).max(2);
+export type SharedGameDocumentTypeNumeric = z.infer<typeof SharedGameDocumentTypeNumericSchema>;
 
 // ========== Reference Data ==========
 
@@ -57,6 +81,73 @@ export const GameRulesSchema = z.object({
 
 export type GameRules = z.infer<typeof GameRulesSchema>;
 
+// ========== FAQ & Errata (Issue #2373) ==========
+
+/**
+ * Game FAQ DTO
+ */
+export const GameFaqSchema = z.object({
+  id: z.string().uuid(),
+  question: z.string().min(1),
+  answer: z.string().min(1),
+  order: z.number().int().nonnegative(),
+  createdAt: z.string().datetime(),
+});
+
+export type GameFaq = z.infer<typeof GameFaqSchema>;
+
+/**
+ * Game Errata DTO
+ */
+export const GameErrataSchema = z.object({
+  id: z.string().uuid(),
+  description: z.string().min(1),
+  pageReference: z.string().min(1),
+  publishedDate: z.string().datetime(),
+  createdAt: z.string().datetime(),
+});
+
+export type GameErrata = z.infer<typeof GameErrataSchema>;
+
+// ========== Documents (Issue #2391 Sprint 1) ==========
+
+/**
+ * Shared Game Document DTO
+ */
+export const SharedGameDocumentSchema = z.object({
+  id: z.string().uuid(),
+  sharedGameId: z.string().uuid(),
+  pdfDocumentId: z.string().uuid(),
+  documentType: SharedGameDocumentTypeNumericSchema,
+  version: z.string().regex(/^\d+\.\d+$/),
+  isActive: z.boolean(),
+  tags: z.array(z.string()).default([]),
+  createdAt: z.string().datetime(),
+  createdBy: z.string().uuid(),
+});
+
+export type SharedGameDocument = z.infer<typeof SharedGameDocumentSchema>;
+
+/**
+ * Game Designer DTO
+ */
+export const GameDesignerSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+});
+
+export type GameDesigner = z.infer<typeof GameDesignerSchema>;
+
+/**
+ * Game Publisher DTO
+ */
+export const GamePublisherSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+});
+
+export type GamePublisher = z.infer<typeof GamePublisherSchema>;
+
 // ========== Shared Game DTOs ==========
 
 /**
@@ -85,6 +176,7 @@ export type SharedGame = z.infer<typeof SharedGameSchema>;
 
 /**
  * Shared game detail DTO (single game view with full info)
+ * Issue #2373 Phase 4: Extended with FAQs, Errata, Designers, Publishers, Categories, Mechanics
  */
 export const SharedGameDetailSchema = z.object({
   id: z.string().uuid(),
@@ -106,6 +198,13 @@ export const SharedGameDetailSchema = z.object({
   modifiedBy: z.string().uuid().nullable(),
   createdAt: z.string().datetime(),
   modifiedAt: z.string().datetime().nullable(),
+  // Extended fields (Issue #2373)
+  faqs: z.array(GameFaqSchema),
+  erratas: z.array(GameErrataSchema),
+  designers: z.array(GameDesignerSchema),
+  publishers: z.array(GamePublisherSchema),
+  categories: z.array(GameCategorySchema),
+  mechanics: z.array(GameMechanicSchema),
 });
 
 export type SharedGameDetail = z.infer<typeof SharedGameDetailSchema>;
@@ -281,6 +380,21 @@ export const UpdateErrataRequestSchema = z.object({
 });
 
 export type UpdateErrataRequest = z.infer<typeof UpdateErrataRequestSchema>;
+
+// ========== Document Requests (Issue #2391 Sprint 1) ==========
+
+/**
+ * Add document to shared game request
+ */
+export const AddDocumentRequestSchema = z.object({
+  pdfDocumentId: z.string().uuid(),
+  documentType: SharedGameDocumentTypeNumericSchema,
+  version: z.string().regex(/^\d+\.\d+$/),
+  tags: z.array(z.string()).max(10).optional().nullable(),
+  setAsActive: z.boolean(),
+});
+
+export type AddDocumentRequest = z.infer<typeof AddDocumentRequestSchema>;
 
 // ========== Search Params ==========
 

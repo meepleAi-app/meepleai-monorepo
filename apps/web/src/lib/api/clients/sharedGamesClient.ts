@@ -16,6 +16,7 @@ import {
   PagedDeleteRequestsSchema,
   CreatedResponseSchema,
   DeleteRequestAcceptedSchema,
+  SharedGameDocumentSchema,
   type SharedGameDetail,
   type PagedSharedGames,
   type GameCategory,
@@ -33,6 +34,9 @@ import {
   type SearchSharedGamesParams,
   type CreatedResponse,
   type DeleteRequestAccepted,
+  type SharedGameDocument,
+  type SharedGameDocumentTypeNumeric,
+  type AddDocumentRequest,
 } from '../schemas/shared-games.schemas';
 
 export interface CreateSharedGamesClientParams {
@@ -352,6 +356,80 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      */
     async deleteErrata(gameId: string, errataId: string): Promise<void> {
       await httpClient.delete(`/api/v1/admin/shared-games/${gameId}/errata/${errataId}`);
+    },
+
+    // ========== Document Management (Issue #2391 Sprint 1) ==========
+
+    /**
+     * Get all documents for a shared game (Admin/Editor)
+     *
+     * @param gameId - The game UUID
+     * @param type - Optional filter by document type
+     * @returns List of documents
+     */
+    async getDocuments(
+      gameId: string,
+      type?: SharedGameDocumentTypeNumeric
+    ): Promise<SharedGameDocument[]> {
+      const queryParams = type !== undefined ? `?type=${type}` : '';
+      const result = await httpClient.get(
+        `/api/v1/admin/shared-games/${gameId}/documents${queryParams}`,
+        z.array(SharedGameDocumentSchema)
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Get active documents for a shared game (Admin/Editor)
+     *
+     * @param gameId - The game UUID
+     * @returns List of active documents
+     */
+    async getActiveDocuments(gameId: string): Promise<SharedGameDocument[]> {
+      const result = await httpClient.get(
+        `/api/v1/admin/shared-games/${gameId}/documents/active`,
+        z.array(SharedGameDocumentSchema)
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Add a document to a shared game (Admin/Editor)
+     *
+     * @param gameId - The game UUID
+     * @param request - Document data
+     * @returns Created document ID
+     */
+    async addDocument(gameId: string, request: AddDocumentRequest): Promise<CreatedResponse> {
+      const result = await httpClient.post(
+        `/api/v1/admin/shared-games/${gameId}/documents`,
+        request,
+        CreatedResponseSchema
+      );
+      return result;
+    },
+
+    /**
+     * Set a document version as active (Admin/Editor)
+     *
+     * @param gameId - The game UUID
+     * @param documentId - The document UUID
+     */
+    async setActiveDocument(gameId: string, documentId: string): Promise<void> {
+      await httpClient.post(
+        `/api/v1/admin/shared-games/${gameId}/documents/${documentId}/set-active`,
+        {}
+      );
+    },
+
+    /**
+     * Remove a document from a shared game (Admin/Editor)
+     *
+     * @param gameId - The game UUID
+     * @param documentId - The document UUID
+     */
+    async removeDocument(gameId: string, documentId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/shared-games/${gameId}/documents/${documentId}`);
     },
   };
 }

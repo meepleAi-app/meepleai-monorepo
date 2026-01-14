@@ -66,6 +66,12 @@ internal class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, Gam
             game.LinkToBgg(command.BggId.Value);
         }
 
+        // Link to SharedGameCatalog if ID provided (Issue #2373)
+        if (command.SharedGameId.HasValue)
+        {
+            game.LinkToSharedGame(command.SharedGameId.Value);
+        }
+
         // Persist
         await _gameRepository.AddAsync(game, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -88,7 +94,8 @@ internal class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, Gam
             BggId: game.BggId,
             CreatedAt: game.CreatedAt,
             IconUrl: game.IconUrl,
-            ImageUrl: game.ImageUrl
+            ImageUrl: game.ImageUrl,
+            SharedGameId: game.SharedGameId
         );
     }
 }

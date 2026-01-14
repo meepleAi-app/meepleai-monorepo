@@ -53,8 +53,10 @@ internal class ConfigurationService : IConfigurationService
             return DeserializeValue<T>(config.Value, config.ValueType);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - Configuration deserialization failures must not crash application;
-        // return default value to allow graceful degradation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: Configuration deserialization failures must not crash application;
+        // return default value to allow graceful degradation.
+#pragma warning restore S125
         catch (Exception ex)
 #pragma warning restore CA1031
         {

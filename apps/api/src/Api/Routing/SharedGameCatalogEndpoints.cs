@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Extensions;
@@ -67,6 +68,7 @@ internal static class SharedGameCatalogEndpoints
     // ADMIN/EDITOR ENDPOINTS (Protected)
     // ========================================
 
+#pragma warning disable MA0051 // Method is too long - endpoint registration methods are inherently long
     private static void MapAdminEndpoints(RouteGroupBuilder group)
     {
         // Create new shared game
@@ -181,6 +183,37 @@ internal static class SharedGameCatalogEndpoints
             .RequireAuthorization("AdminOrEditorPolicy")
             .WithName("DeleteGameErrata")
             .WithSummary("Delete errata (Admin/Editor)")
+            .Produces(StatusCodes.Status204NoContent);
+
+        // Document Management (Issue #2391 Sprint 1)
+        group.MapGet("/admin/shared-games/{id:guid}/documents", HandleGetDocuments)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetGameDocuments")
+            .WithSummary("Get all documents for a game (Admin/Editor)")
+            .Produces<List<SharedGameDocumentDto>>();
+
+        group.MapGet("/admin/shared-games/{id:guid}/documents/active", HandleGetActiveDocuments)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetActiveGameDocuments")
+            .WithSummary("Get active documents for a game (Admin/Editor)")
+            .Produces<List<SharedGameDocumentDto>>();
+
+        group.MapPost("/admin/shared-games/{id:guid}/documents", HandleAddDocument)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("AddGameDocument")
+            .WithSummary("Add document to game (Admin/Editor)")
+            .Produces<Guid>(StatusCodes.Status201Created);
+
+        group.MapPost("/admin/shared-games/{id:guid}/documents/{documentId:guid}/set-active", HandleSetActiveDocument)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("SetActiveGameDocument")
+            .WithSummary("Set document version as active (Admin/Editor)")
+            .Produces(StatusCodes.Status204NoContent);
+
+        group.MapDelete("/admin/shared-games/{id:guid}/documents/{documentId:guid}", HandleRemoveDocument)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("RemoveGameDocument")
+            .WithSummary("Remove document from game (Admin/Editor)")
             .Produces(StatusCodes.Status204NoContent);
     }
 
@@ -382,10 +415,11 @@ internal static class SharedGameCatalogEndpoints
         }
     }
 
+#pragma warning disable S1172 // Unused method parameters - HttpContext required by ASP.NET routing
     private static async Task<IResult> HandleImportFromBgg(
         ImportFromBggRequest request,
         IMediator mediator,
-        HttpContext context,
+        HttpContext _,
         CancellationToken ct)
     {
         // Policies already verified Admin/Editor role - no additional check needed
@@ -398,7 +432,7 @@ internal static class SharedGameCatalogEndpoints
     private static async Task<IResult> HandleBulkImport(
         BulkImportRequest request,
         IMediator mediator,
-        HttpContext context,
+        HttpContext _,
         CancellationToken ct)
     {
         // Policies already verified Admin role - no additional check needed
@@ -407,6 +441,7 @@ internal static class SharedGameCatalogEndpoints
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
+#pragma warning restore S1172
 
     private static async Task<IResult> HandleDeleteGame(
         Guid id,
@@ -524,8 +559,9 @@ internal static class SharedGameCatalogEndpoints
         return Results.Created($"/api/v1/admin/shared-games/{id}/faq/{faqId}", faqId);
     }
 
+#pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding, command uses faqId directly
     private static async Task<IResult> HandleUpdateFaq(
-        Guid id,
+        Guid _,
         Guid faqId,
         [FromBody] UpdateFaqRequest request,
         IMediator mediator,
@@ -545,7 +581,7 @@ internal static class SharedGameCatalogEndpoints
     }
 
     private static async Task<IResult> HandleDeleteFaq(
-        Guid id,
+        Guid _,
         Guid faqId,
         IMediator mediator,
         CancellationToken ct)
@@ -562,6 +598,7 @@ internal static class SharedGameCatalogEndpoints
             return Results.NotFound();
         }
     }
+#pragma warning restore S1172
 
     // Errata Handlers
     private static async Task<IResult> HandleAddErrata(
@@ -575,8 +612,9 @@ internal static class SharedGameCatalogEndpoints
         return Results.Created($"/api/v1/admin/shared-games/{id}/errata/{errataId}", errataId);
     }
 
+#pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding, command uses errataId directly
     private static async Task<IResult> HandleUpdateErrata(
-        Guid id,
+        Guid _,
         Guid errataId,
         [FromBody] UpdateErrataRequest request,
         IMediator mediator,
@@ -596,7 +634,7 @@ internal static class SharedGameCatalogEndpoints
     }
 
     private static async Task<IResult> HandleDeleteErrata(
-        Guid id,
+        Guid _,
         Guid errataId,
         IMediator mediator,
         CancellationToken ct)
@@ -613,6 +651,97 @@ internal static class SharedGameCatalogEndpoints
             return Results.NotFound();
         }
     }
+#pragma warning restore S1172
+
+    // ========================================
+    // DOCUMENT HANDLERS (Issue #2391 Sprint 1)
+    // ========================================
+
+    private static async Task<IResult> HandleGetDocuments(
+        Guid id,
+        IMediator mediator,
+        [FromQuery] SharedGameDocumentType? type,
+        CancellationToken ct)
+    {
+        var query = new GetDocumentsBySharedGameQuery(id, type);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetActiveDocuments(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetActiveDocumentsQuery(id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleAddDocument(
+        Guid id,
+        [FromBody] AddDocumentRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new AddDocumentToSharedGameCommand(
+            id,
+            request.PdfDocumentId,
+            request.DocumentType,
+            request.Version,
+            request.Tags,
+            request.SetAsActive);
+
+        try
+        {
+            var documentId = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Created($"/api/v1/admin/shared-games/{id}/documents/{documentId}", documentId);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    }
+
+#pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding
+    private static async Task<IResult> HandleSetActiveDocument(
+        Guid _,
+        Guid documentId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new SetActiveDocumentVersionCommand(_, documentId);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleRemoveDocument(
+        Guid id,
+        Guid documentId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new RemoveDocumentFromSharedGameCommand(id, documentId);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    }
+#pragma warning restore S1172
 }
 
 // ========================================
@@ -693,3 +822,13 @@ internal record AddErrataRequest(string Description, string PageReference, DateT
 /// Request DTO for updating an errata.
 /// </summary>
 internal record UpdateErrataRequest(string Description, string PageReference, DateTime PublishedDate);
+
+/// <summary>
+/// Request DTO for adding a document to a game.
+/// </summary>
+internal record AddDocumentRequest(
+    Guid PdfDocumentId,
+    SharedGameDocumentType DocumentType,
+    string Version,
+    List<string>? Tags,
+    bool SetAsActive);

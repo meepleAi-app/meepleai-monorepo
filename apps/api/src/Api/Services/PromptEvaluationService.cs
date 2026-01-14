@@ -113,8 +113,10 @@ internal class PromptEvaluationService : IPromptEvaluationService
             throw; // Re-throw security exceptions as-is
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - converts unexpected exceptions to domain exceptions
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: Converts unexpected exceptions to domain exceptions
         // File loading may throw various exceptions; we wrap them with context for callers
+#pragma warning restore S125
         catch (Exception ex) when (ex is not FileNotFoundException && ex is not JsonException && ex is not ArgumentException)
         {
             throw new InvalidOperationException($"Failed to load dataset: {ex.Message}", ex);

@@ -238,8 +238,10 @@ internal class PdfExportFormatter : IExportFormatter
                     citations.Add(new CitationMetadata(source, page));
                 }
 #pragma warning disable CA1031 // Do not catch general exception types
-                // Justification: Data robustness pattern - malformed citation entries are skipped
+#pragma warning disable S125 // Sections of code should not be commented out
+                // DATA ROBUSTNESS PATTERN: Malformed citation entries are skipped
                 // Chat export with incomplete/malformed citations should still succeed
+#pragma warning restore S125
                 catch (Exception ex)
                 {
                     // DATA ROBUSTNESS PATTERN: Malformed citation entries are skipped, not fatal

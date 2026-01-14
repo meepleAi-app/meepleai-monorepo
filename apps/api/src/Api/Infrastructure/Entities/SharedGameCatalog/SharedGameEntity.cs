@@ -38,4 +38,5 @@ public class SharedGameEntity
     // Navigation properties (one-to-many)
     public ICollection<GameFaqEntity> Faqs { get; set; } = new List<GameFaqEntity>();
     public ICollection<GameErrataEntity> Erratas { get; set; } = new List<GameErrataEntity>();
+    public ICollection<SharedGameDocumentEntity> Documents { get; set; } = new List<SharedGameDocumentEntity>();
 }

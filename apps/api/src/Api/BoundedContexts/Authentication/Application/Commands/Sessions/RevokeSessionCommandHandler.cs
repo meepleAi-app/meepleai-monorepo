@@ -71,8 +71,10 @@ internal class RevokeSessionCommandHandler : ICommandHandler<RevokeSessionComman
                     await _sessionCache.InvalidateAsync(session.TokenHash, cancellationToken).ConfigureAwait(false);
                 }
 #pragma warning disable CA1031 // Do not catch general exception types
-                // Justification: Service boundary - cache failure resilience
+#pragma warning disable S125 // Sections of code should not be commented out
+                // ADAPTER PATTERN: Service boundary - cache failure resilience
                 // RESILIENCE: Cache failures should not prevent session revocation
+#pragma warning restore S125
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to invalidate cache for session {SessionId}, session revoked in database", command.SessionId);

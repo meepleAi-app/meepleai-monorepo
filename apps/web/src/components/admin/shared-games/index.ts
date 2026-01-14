@@ -36,3 +36,11 @@ export type { MechanicPillProps, MechanicPillListProps } from './MechanicPill';
 // Game Form
 export { GameForm } from './GameForm';
 export type { GameFormProps } from './GameForm';
+
+// Document Management (Issue #2391 Sprint 1)
+export { VersionBadge } from './VersionBadge';
+export type { VersionBadgeProps } from './VersionBadge';
+export { TagInput } from './TagInput';
+export type { TagInputProps } from './TagInput';
+export { PdfDocumentList } from './PdfDocumentList';
+export type { PdfDocumentListProps } from './PdfDocumentList';

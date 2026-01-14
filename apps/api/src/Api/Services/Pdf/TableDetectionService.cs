@@ -226,7 +226,7 @@ internal class TableDetectionService : ITableDetectionService
         }
     }
 
-    private class DetectionContext
+    private sealed class DetectionContext
     {
         public DetectionContext(int pageNum)
         {

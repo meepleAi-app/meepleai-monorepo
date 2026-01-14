@@ -23,8 +23,8 @@ internal sealed partial class ReportGeneratorService
         return (true, null);
     }
 
-    private record UserMetrics(int TotalUsers, int ActiveUsers, int TotalSessions, int ActiveSessions);
-    private record SystemContentMetrics(int TotalGames, int TotalPdfs, int RecentPdfs, int TotalChatThreads, int RecentChats);
+    private sealed record UserMetrics(int TotalUsers, int ActiveUsers, int TotalSessions, int ActiveSessions);
+    private sealed record SystemContentMetrics(int TotalGames, int TotalPdfs, int RecentPdfs, int TotalChatThreads, int RecentChats);
 
     private async Task<ReportContent> GenerateSystemHealthReportAsync(
         IReadOnlyDictionary<string, object> parameters,

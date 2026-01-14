@@ -52,7 +52,9 @@ internal class CacheMetricsRecorder : ICacheMetricsRecorder
                 MeepleAiMetrics.CacheHitsTotal.Add(1, tags);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Background operation - Fire-and-forget metrics recording must not break cache operations, telemetry is non-critical
+#pragma warning disable S125 // Sections of code should not be commented out
+            // BACKGROUND SERVICE: Fire-and-forget metrics recording must not break cache operations, telemetry is non-critical
+#pragma warning restore S125
             catch (Exception ex)
 #pragma warning restore CA1031
             {
@@ -87,7 +89,9 @@ internal class CacheMetricsRecorder : ICacheMetricsRecorder
                 MeepleAiMetrics.CacheMissesTotal.Add(1, tags);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Background operation - Fire-and-forget metrics recording must not break cache operations, telemetry is non-critical
+#pragma warning disable S125 // Sections of code should not be commented out
+            // BACKGROUND SERVICE: Fire-and-forget metrics recording must not break cache operations, telemetry is non-critical
+#pragma warning restore S125
             catch (Exception ex)
 #pragma warning restore CA1031
             {
@@ -120,7 +124,9 @@ internal class CacheMetricsRecorder : ICacheMetricsRecorder
                 MeepleAiMetrics.CacheEvictionsTotal.Add(1, tags);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: Background operation - Fire-and-forget metrics recording must not break cache operations, telemetry is non-critical
+#pragma warning disable S125 // Sections of code should not be commented out
+            // BACKGROUND SERVICE: Fire-and-forget metrics recording must not break cache operations, telemetry is non-critical
+#pragma warning restore S125
             catch (Exception ex)
 #pragma warning restore CA1031
             {

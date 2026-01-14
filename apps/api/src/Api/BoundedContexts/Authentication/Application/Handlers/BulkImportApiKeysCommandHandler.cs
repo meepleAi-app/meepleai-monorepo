@@ -82,10 +82,12 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
             throw;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: COMMAND HANDLER PATTERN - CQRS handler boundary
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HANDLER BOUNDARY: COMMAND HANDLER PATTERN - CQRS handler boundary
         // Specific DomainException is handled above and re-thrown
         // Generic catch handles unexpected infrastructure failures (DB, network, memory)
         // to prevent exception propagation to API layer. Returns Result/Response pattern.
+#pragma warning restore S125
         catch (Exception ex)
 #pragma warning restore CA1031
         {
@@ -228,10 +230,12 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
                 successCount++;
             }
 #pragma warning disable CA1031 // Do not catch general exception types
-            // Justification: BULK OPERATION PATTERN - Individual import failure handling
+#pragma warning disable S125 // Sections of code should not be commented out
+            // HANDLER BOUNDARY: BULK OPERATION PATTERN - Individual import failure handling
             // Allows bulk operation to continue processing remaining items when individual
             // API key creation fails due to validation, DB constraints, or infrastructure issues.
             // Each failure is logged and tracked in errors collection for reporting.
+#pragma warning restore S125
             catch (Exception ex)
 #pragma warning restore CA1031
             {

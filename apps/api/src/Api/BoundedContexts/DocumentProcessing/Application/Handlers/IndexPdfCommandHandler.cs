@@ -90,8 +90,10 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 vectorDoc.IndexedAt!.Value);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
-        // Justification: Service boundary - error state management for complex multi-system operation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY PATTERN: Error state management for complex multi-system operation
         // PDF indexing involves multiple external systems (Qdrant, DB, file system) that must maintain consistency
+#pragma warning restore S125
         catch (Exception ex)
         {
             // ERROR STATE MANAGEMENT: Top-level catch ensures graceful failure handling

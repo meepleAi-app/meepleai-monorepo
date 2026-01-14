@@ -98,8 +98,6 @@ tmpclaude*
 docker-compose.override.yml
 
 # Data
-data/
-**/data/
 
 # Serena MCP
 .serena/

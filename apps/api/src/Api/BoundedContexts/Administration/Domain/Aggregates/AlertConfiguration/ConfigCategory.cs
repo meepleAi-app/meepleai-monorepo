@@ -1,3 +1,4 @@
+#pragma warning disable MA0048 // File name must match type name - related types kept together
 namespace Api.BoundedContexts.Administration.Domain.Aggregates.AlertConfigurations;
 
 internal enum ConfigCategory

@@ -41,6 +41,7 @@ export { ChatPage } from './chat/ChatPage';
 
 // Pages - Games
 export { GamePage } from './game/GamePage';
+export { SharedGameCatalogPage } from './game/SharedGameCatalogPage';
 
 // Pages - Upload/PDF
 export { UploadPage } from './upload/UploadPage';

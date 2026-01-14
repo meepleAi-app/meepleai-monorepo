@@ -108,9 +108,11 @@ internal class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             return TextExtractionResult.CreateFailure("Invalid response format from SmolDocling service");
         }
 #pragma warning disable CA1031
-        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // INFRASTRUCTURE SERVICE PATTERN: Graceful degradation
         // Catches all SmolDocling API failures. Returns error result instead of throwing
         // to allow PDF pipeline orchestrator to fall back to next stage. External service adapter boundary.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{RequestId}] Unexpected error during SmolDocling extraction", requestId);
@@ -171,9 +173,11 @@ internal class SmolDoclingPdfTextExtractor : IPdfTextExtractor
             return PagedTextExtractionResult.CreateFailure("Extraction timeout");
         }
 #pragma warning disable CA1031
-        // Justification: INFRASTRUCTURE SERVICE PATTERN - Graceful degradation
+#pragma warning disable S125 // Sections of code should not be commented out
+        // INFRASTRUCTURE SERVICE PATTERN: Graceful degradation
         // Catches all SmolDocling API failures. Returns error result instead of throwing
         // to allow PDF pipeline orchestrator to fall back to next stage. External service adapter boundary.
+#pragma warning restore S125
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{RequestId}] Unexpected error", requestId);
@@ -212,7 +216,9 @@ internal class SmolDoclingPdfTextExtractor : IPdfTextExtractor
         }
 
 #pragma warning disable CA2000 // Dispose objects before losing scope
-        // Justification: MultipartFormDataContent takes ownership of StreamContent and disposes it
+#pragma warning disable S125 // Sections of code should not be commented out
+        // OWNERSHIP TRANSFER: MultipartFormDataContent takes ownership of StreamContent and disposes it
+#pragma warning restore S125
         var streamContent = new StreamContent(new MemoryStream(pdfBytes));
         streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
         content.Add(streamContent, "file", "document.pdf");

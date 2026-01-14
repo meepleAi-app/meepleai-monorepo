@@ -18,7 +18,9 @@ RUN apt-get update \
 
 # Create non-root user for security
 RUN adduser --disabled-password --gecos '' --uid 1001 apiuser \
-    && chown -R apiuser:apiuser /app
+    && chown -R apiuser:apiuser /app \
+    && mkdir -p /app/pdf_uploads \
+    && chown -R apiuser:apiuser /app/pdf_uploads
 
 # Switch to non-root user
 USER apiuser

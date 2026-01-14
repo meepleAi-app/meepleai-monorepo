@@ -582,6 +582,8 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     }
     private async Task ProcessPdfAsync(string pdfId, string filePath, Guid userId, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("🔄 [PDF-DEBUG] ProcessPdfAsync START for PDF {PdfId}, User {UserId}", pdfId, userId);
+
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var quotaService = scope.ServiceProvider.GetRequiredService<IPdfUploadQuotaService>();
@@ -589,36 +591,57 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         try
         {
+            _logger.LogInformation("🔍 [PDF-DEBUG] Calling ValidateAndPrepareProcessingAsync for {PdfId}", pdfId);
             var pdfDoc = await ValidateAndPrepareProcessingAsync(pdfId, userId, db, quotaService, cancellationToken).ConfigureAwait(false);
-            if (pdfDoc == null) return; // Validation failed
+            if (pdfDoc == null)
+            {
+                _logger.LogWarning("⚠️ [PDF-DEBUG] ValidateAndPrepareProcessingAsync returned null for {PdfId} - EARLY EXIT", pdfId);
+                return; // Validation failed
+            }
+            _logger.LogInformation("✅ [PDF-DEBUG] Validation passed for {PdfId}, Status: {Status}", pdfId, pdfDoc.ProcessingStatus);
 
             // Step 1: Extract text with page tracking (20-40%)
+            _logger.LogInformation("📄 [PDF-DEBUG] Step 1: Starting ExtractPdfContentAsync for {PdfId}", pdfId);
             var (extractionSuccess, fullText, extractResult) = await ExtractPdfContentAsync(
                 pdfId, filePath, pdfDoc, db, scope, startTime, cancellationToken).ConfigureAwait(false);
 
             if (!extractionSuccess)
             {
+                _logger.LogWarning("❌ [PDF-DEBUG] Extraction FAILED for {PdfId} - releasing quota and exiting", pdfId);
                 await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
                 return;
             }
+            _logger.LogInformation("✅ [PDF-DEBUG] Extraction SUCCESS for {PdfId}: {CharCount} chars, {Pages} pages", pdfId, fullText?.Length ?? 0, extractResult?.TotalPages ?? 0);
 
             // Step 2: Chunk text with page tracking (40-60%)
+            _logger.LogInformation("✂️ [PDF-DEBUG] Step 2: Starting ChunkExtractedTextAsync for {PdfId}", pdfId);
             var allDocumentChunks = await ChunkExtractedTextAsync(
                 pdfId, fullText!, extractResult!, db, scope, startTime, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("✅ [PDF-DEBUG] Chunking SUCCESS: {ChunkCount} chunks created", allDocumentChunks.Count);
 
             // Step 3: Generate embeddings (60-80%)
+            _logger.LogInformation("🧠 [PDF-DEBUG] Step 3: Starting GenerateAndValidateEmbeddingsAsync for {ChunkCount} chunks", allDocumentChunks.Count);
             var (embeddingsSuccess, embeddings) = await GenerateAndValidateEmbeddingsAsync(
                 pdfId, userId, allDocumentChunks, pdfDoc, db, quotaService, scope, startTime, cancellationToken).ConfigureAwait(false);
 
-            if (!embeddingsSuccess) return;
+            if (!embeddingsSuccess)
+            {
+                _logger.LogWarning("❌ [PDF-DEBUG] Embeddings FAILED for {PdfId} - exiting", pdfId);
+                return;
+            }
+            _logger.LogInformation("✅ [PDF-DEBUG] Embeddings SUCCESS: {EmbeddingCount} vectors generated", embeddings!.Count);
 
             // Step 4: Index in Qdrant (80-100%)
+            _logger.LogInformation("🔍 [PDF-DEBUG] Step 4: Starting IndexInVectorStoreAsync for {PdfId}", pdfId);
             await IndexInVectorStoreAsync(
                 pdfId, userId, pdfDoc, allDocumentChunks, embeddings!,
                 db, scope, startTime, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("✅ [PDF-DEBUG] Indexing completed for {PdfId}", pdfId);
 
             // Complete processing
+            _logger.LogInformation("🎉 [PDF-DEBUG] Step 5: Finalizing processing for {PdfId}", pdfId);
             await FinalizeProcessingAsync(pdfId, pdfDoc, userId, db, quotaService, startTime, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("✅ [PDF-DEBUG] ProcessPdfAsync COMPLETE for {PdfId}", pdfId);
         }
         catch (OperationCanceledException)
         {
@@ -654,26 +677,31 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         IPdfUploadQuotaService quotaService,
         CancellationToken cancellationToken)
     {
+        _logger.LogInformation("🔍 [PDF-DEBUG-VALIDATE] START validation for {PdfId}", pdfId);
+
         if (!Guid.TryParse(pdfId, out var pdfGuid))
         {
-            _logger.LogError("Invalid PDF ID format {PdfId}", pdfId);
+            _logger.LogError("❌ [PDF-DEBUG-VALIDATE] Invalid PDF ID format {PdfId}", pdfId);
             await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
             return null;
         }
 
+        _logger.LogInformation("🔍 [PDF-DEBUG-VALIDATE] Querying database for PDF {PdfId}", pdfId);
         var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
         if (pdfDoc == null)
         {
-            _logger.LogError("PDF document {PdfId} not found for processing", pdfId);
+            _logger.LogError("❌ [PDF-DEBUG-VALIDATE] PDF document {PdfId} NOT FOUND in database", pdfId);
             await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
             return null;
         }
+
+        _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] PDF found, current status: {Status}", pdfDoc.ProcessingStatus);
 
         // IDEMPOTENCY CHECK (#1742): Skip if already processing/processed
         if (!string.Equals(pdfDoc.ProcessingStatus, "pending", StringComparison.Ordinal))
         {
             _logger.LogInformation(
-                "PDF {PdfId} already processed (status: {Status}), skipping duplicate background task",
+                "⏭️ [PDF-DEBUG-VALIDATE] PDF {PdfId} already processed (status: {Status}), skipping duplicate background task",
                 pdfId, pdfDoc.ProcessingStatus);
 
             if (string.Equals(pdfDoc.ProcessingStatus, "failed", StringComparison.Ordinal))
@@ -685,8 +713,10 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         }
 
         // Mark as processing (optimistic locking)
+        _logger.LogInformation("🔄 [PDF-DEBUG-VALIDATE] Updating status from 'pending' to 'processing'");
         pdfDoc.ProcessingStatus = "processing";
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] Status updated, proceeding with processing");
 
         return pdfDoc;
     }

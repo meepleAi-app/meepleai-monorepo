@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Enums;
 
 namespace Api.BoundedContexts.Administration.Application.Queries.Testing;
 
@@ -23,7 +24,7 @@ internal record E2EMetricsDto(
     int SkippedTests,
     int FlakyTests,
     DateTime LastRunAt,
-    string Status,
+    TestExecutionStatus Status,
     bool MeetsQualityStandards)
 {
     /// <summary>

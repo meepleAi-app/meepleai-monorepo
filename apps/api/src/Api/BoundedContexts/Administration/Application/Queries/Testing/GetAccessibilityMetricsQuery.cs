@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Enums;
 
 namespace Api.BoundedContexts.Administration.Application.Queries.Testing;
 
@@ -17,7 +18,7 @@ internal record AccessibilityMetricsDto(
     int AxeViolations,
     IReadOnlyList<string> WcagLevels,
     DateTime LastRunAt,
-    string Status,
+    TestExecutionStatus Status,
     bool MeetsQualityStandards)
 {
     /// <summary>

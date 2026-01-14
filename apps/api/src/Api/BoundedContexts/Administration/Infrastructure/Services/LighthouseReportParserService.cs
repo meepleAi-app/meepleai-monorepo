@@ -116,16 +116,10 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
             var tbt = GetNumericValue(latestReport, "audits", "total-blocking-time", "numericValue");
             var speedIndex = GetNumericValue(latestReport, "audits", "speed-index", "numericValue");
 
-            // Determine budget status based on Core Web Vitals thresholds
-            var budgetStatus = lcp <= 2500 && fid <= 100 && cls <= 0.1
-                ? PerformanceBudgetStatus.Pass
-                : lcp <= 4000 && fid <= 300 && cls <= 0.25
-                    ? PerformanceBudgetStatus.Warning
-                    : PerformanceBudgetStatus.Fail;
-
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 
-            var metrics = new PerformanceMetrics(
+            // Use factory method to create metrics (calculates budgetStatus automatically)
+            var metrics = PerformanceMetrics.FromLighthouseReport(
                 lcp: (decimal)lcp,
                 fid: (decimal)fid,
                 cls: (decimal)cls,
@@ -134,15 +128,14 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
                 tbt: (decimal)tbt,
                 speedIndex: (decimal)speedIndex,
                 performanceScore: (decimal)performanceScore,
-                budgetStatus: budgetStatus,
                 lastRunAt: lastRunAt);
 
             _logger.LogInformation(
                 "Parsed performance metrics: Score={Score}, LCP={Lcp}ms, FID={Fid}ms, CLS={Cls}",
-                performanceScore,
-                lcp,
-                fid,
-                cls);
+                metrics.PerformanceScore,
+                metrics.Lcp,
+                metrics.Fid,
+                metrics.Cls);
 
             return metrics;
         }

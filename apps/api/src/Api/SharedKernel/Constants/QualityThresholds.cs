@@ -22,6 +22,18 @@ internal static class QualityThresholds
     public const decimal MaximumFlakyRate = 5;
 
     /// <summary>
+    /// Warning pass rate threshold (below MinimumPassRate but acceptable temporarily during investigation).
+    /// Used to indicate degraded quality that needs attention.
+    /// </summary>
+    public const decimal WarningPassRate = 80;
+
+    /// <summary>
+    /// Warning flaky rate threshold (above MaximumFlakyRate but not critical).
+    /// Used to indicate increased instability requiring investigation.
+    /// </summary>
+    public const decimal WarningFlakyRate = 10;
+
+    /// <summary>
     /// Minimum percentage value (0%).
     /// </summary>
     public const decimal MinimumPercentage = 0;

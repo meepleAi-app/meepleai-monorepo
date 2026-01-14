@@ -2,8 +2,11 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
 using FluentAssertions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
@@ -11,33 +14,28 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers.PromptHandlers;
 
 [Trait("Category", TestCategories.Unit)]
-public class CreatePromptTemplateCommandHandlerTests
+public class CreatePromptTemplateCommandHandlerTests : IDisposable
 {
-    private readonly Mock<MeepleAiDbContext> _mockDbContext;
+    private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<TimeProvider> _mockTimeProvider;
     private readonly CreatePromptTemplateCommandHandler _handler;
-    private readonly Mock<DbSet<PromptTemplateEntity>> _mockTemplateSet;
-    private readonly Mock<DbSet<PromptVersionEntity>> _mockVersionSet;
-    private readonly Mock<DbSet<UserEntity>> _mockUserSet;
 
     public CreatePromptTemplateCommandHandlerTests()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(databaseName: $"CreatePromptTemplateTests_{Guid.NewGuid()}")
+            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
-        _mockDbContext = new Mock<MeepleAiDbContext>(options);
-        _mockTimeProvider = new Mock<TimeProvider>();
-        _mockTemplateSet = new Mock<DbSet<PromptTemplateEntity>>();
-        _mockVersionSet = new Mock<DbSet<PromptVersionEntity>>();
-        _mockUserSet = new Mock<DbSet<UserEntity>>();
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector.Setup(e => e.GetAndClearEvents()).Returns(new List<IDomainEvent>());
 
-        _mockDbContext.Setup(db => db.Set<PromptTemplateEntity>()).Returns(_mockTemplateSet.Object);
-        _mockDbContext.Setup(db => db.Set<PromptVersionEntity>()).Returns(_mockVersionSet.Object);
-        _mockDbContext.Setup(db => db.Set<UserEntity>()).Returns(_mockUserSet.Object);
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
+        _mockTimeProvider = new Mock<TimeProvider>();
 
         _handler = new CreatePromptTemplateCommandHandler(
-            _mockDbContext.Object,
+            _dbContext,
             _mockTimeProvider.Object
         );
     }
@@ -56,16 +54,11 @@ public class CreatePromptTemplateCommandHandlerTests
             CreatedAt = now.UtcDateTime
         };
 
+        // Seed the user
+        await _dbContext.Set<UserEntity>().AddAsync(user);
+        await _dbContext.SaveChangesAsync();
+
         _mockTimeProvider.Setup(t => t.GetUtcNow()).Returns(now);
-
-        var templateList = new List<PromptTemplateEntity>().AsQueryable();
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Provider).Returns(templateList.Provider);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Expression).Returns(templateList.Expression);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.ElementType).Returns(templateList.ElementType);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.GetEnumerator()).Returns(templateList.GetEnumerator());
-
-        _mockUserSet.Setup(s => s.FindAsync(new object[] { userId }, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(user);
 
         var command = new CreatePromptTemplateCommand(
             Name: "qa-system-prompt",
@@ -89,13 +82,15 @@ public class CreatePromptTemplateCommandHandlerTests
         result.VersionCount.Should().Be(1);
         result.ActiveVersionNumber.Should().Be(1);
 
-        _mockTemplateSet.Verify(s => s.Add(It.Is<PromptTemplateEntity>(t => t.Name == "qa-system-prompt")), Times.Once);
-        _mockVersionSet.Verify(s => s.Add(It.Is<PromptVersionEntity>(v =>
+        // Verify in database
+        var templates = await _dbContext.Set<PromptTemplateEntity>().ToListAsync();
+        templates.Should().ContainSingle(t => t.Name == "qa-system-prompt");
+
+        var versions = await _dbContext.Set<PromptVersionEntity>().ToListAsync();
+        versions.Should().ContainSingle(v =>
             v.VersionNumber == 1 &&
             v.IsActive &&
-            v.Content == "You are a board game rules assistant."
-        )), Times.Once);
-        _mockDbContext.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+            v.Content == "You are a board game rules assistant.");
     }
 
     [Fact]
@@ -103,20 +98,28 @@ public class CreatePromptTemplateCommandHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
+        var now = new DateTimeOffset(2025, 1, 6, 12, 0, 0, TimeSpan.Zero);
+        var user = new UserEntity
+        {
+            Id = userId,
+            Email = "admin@test.com",
+            DisplayName = "Admin",
+            CreatedAt = now.UtcDateTime
+        };
+
         var existingTemplate = new PromptTemplateEntity
         {
             Id = Guid.NewGuid(),
             Name = "qa-system-prompt",
             CreatedByUserId = userId,
-            CreatedAt = DateTime.UtcNow,
-            CreatedBy = null!
+            CreatedAt = now.UtcDateTime,
+            CreatedBy = user
         };
 
-        var templateList = new List<PromptTemplateEntity> { existingTemplate }.AsQueryable();
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Provider).Returns(templateList.Provider);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Expression).Returns(templateList.Expression);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.ElementType).Returns(templateList.ElementType);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.GetEnumerator()).Returns(templateList.GetEnumerator());
+        // Seed the database
+        await _dbContext.Set<UserEntity>().AddAsync(user);
+        await _dbContext.Set<PromptTemplateEntity>().AddAsync(existingTemplate);
+        await _dbContext.SaveChangesAsync();
 
         var command = new CreatePromptTemplateCommand(
             Name: "qa-system-prompt",
@@ -132,7 +135,10 @@ public class CreatePromptTemplateCommandHandlerTests
             _handler.Handle(command, CancellationToken.None));
 
         exception.Message.Should().Contain("already exists");
-        _mockDbContext.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+        // Verify no additional templates were created
+        var templates = await _dbContext.Set<PromptTemplateEntity>().ToListAsync();
+        templates.Should().ContainSingle();
     }
 
     [Fact]
@@ -140,15 +146,6 @@ public class CreatePromptTemplateCommandHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-
-        var templateList = new List<PromptTemplateEntity>().AsQueryable();
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Provider).Returns(templateList.Provider);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Expression).Returns(templateList.Expression);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.ElementType).Returns(templateList.ElementType);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.GetEnumerator()).Returns(templateList.GetEnumerator());
-
-        _mockUserSet.Setup(s => s.FindAsync(new object[] { userId }, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((UserEntity?)null);
 
         var command = new CreatePromptTemplateCommand(
             Name: "qa-system-prompt",
@@ -164,6 +161,23 @@ public class CreatePromptTemplateCommandHandlerTests
             _handler.Handle(command, CancellationToken.None));
 
         exception.Message.Should().Contain("not found");
-        _mockDbContext.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+        // Verify no templates were created
+        var templates = await _dbContext.Set<PromptTemplateEntity>().ToListAsync();
+        templates.Should().BeEmpty();
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _dbContext?.Dispose();
+        }
     }
 }

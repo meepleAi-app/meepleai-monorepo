@@ -1,39 +1,47 @@
 # Pre-push hook for MeepleAI
-# Runs quick tests before pushing to remote
+# Build verification only - tests are delegated to CI
 
 echo "🚀 Running pre-push checks..."
 
 # Get the current branch name
 CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+echo "📌 Pushing from branch: $CURRENT_BRANCH"
 
-# Skip checks for certain branches if needed
+# ============================================
+# Branch Warnings
+# ============================================
+
 if [ "$CURRENT_BRANCH" = "main" ]; then
-  echo "⚠️  Warning: Pushing directly to main. Consider using a feature branch."
+  echo ""
+  echo "⚠️  WARNING: Pushing directly to main!"
+  echo "   Recommended flow: feature → frontend-dev → main-dev → main"
+  echo ""
 fi
 
 # ============================================
-# Quick Frontend Tests
+# Frontend Build Check
 # ============================================
 
-echo "🧪 Running quick frontend tests..."
+echo "🔨 Verifying frontend builds..."
 
 if [ -d "apps/web" ]; then
-  # Run a quick subset of tests (smoke tests)
-  # Use --run to prevent watch mode, --reporter=dot for minimal output
-  (cd apps/web && pnpm test -- --run --reporter=dot --testTimeout=10000 2>/dev/null) || {
-    echo ""
-    echo "❌ Frontend tests failed. Please fix failing tests before pushing."
-    echo ""
-    echo "Run 'cd apps/web && pnpm test' to see detailed results."
-    exit 1
+  (cd apps/web && pnpm build --no-lint 2>/dev/null) || {
+    # Try with full build if quick fails
+    (cd apps/web && pnpm build) || {
+      echo ""
+      echo "❌ Frontend build failed. Please fix build errors before pushing."
+      echo ""
+      echo "Run 'cd apps/web && pnpm build' to see detailed errors."
+      exit 1
+    }
   }
-  echo "✅ Frontend tests passed!"
+  echo "✅ Frontend build verified!"
 else
-  echo "⚠️  Warning: apps/web directory not found, skipping frontend tests."
+  echo "⚠️  Warning: apps/web directory not found, skipping frontend build check."
 fi
 
 # ============================================
-# Quick Backend Build Check
+# Backend Build Check
 # ============================================
 
 echo "🔨 Verifying backend builds..."
@@ -59,13 +67,21 @@ fi
 # Branch Name Validation
 # ============================================
 
-# Validate branch naming convention (optional, warning only)
 if [ -n "$CURRENT_BRANCH" ]; then
-  # Expected patterns: feature/*, fix/*, docs/*, test/*, refactor/*, main
-  if ! echo "$CURRENT_BRANCH" | grep -qE '^(feature|fix|docs|test|refactor|chore|release)/|^main$'; then
+  # Expected patterns based on parent branch:
+  # - feature/frontend-dev-{issue}-{desc} for frontend-dev children
+  # - feature/{type}-{desc} for main-dev children
+  # - main, main-dev, frontend-dev for main branches
+
+  VALID_PATTERN='^(feature|fix|docs|test|refactor|chore|release)/|^main$|^main-dev$|^frontend-dev$'
+
+  if ! echo "$CURRENT_BRANCH" | grep -qE "$VALID_PATTERN"; then
     echo ""
     echo "⚠️  Warning: Branch name '$CURRENT_BRANCH' doesn't follow naming convention."
-    echo "   Expected: feature/*, fix/*, docs/*, test/*, refactor/*, chore/*, release/*"
+    echo "   Expected patterns:"
+    echo "     - feature/frontend-dev-{issue}-{desc}  (from frontend-dev)"
+    echo "     - feature/{issue}-{desc}              (from main-dev)"
+    echo "     - fix/*, docs/*, test/*, refactor/*, chore/*, release/*"
     echo "   This is a warning only - push will continue."
     echo ""
   fi

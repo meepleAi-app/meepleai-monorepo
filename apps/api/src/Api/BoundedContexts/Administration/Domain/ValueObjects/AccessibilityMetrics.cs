@@ -63,6 +63,31 @@ internal sealed class AccessibilityMetrics : ValueObject
     }
 
     /// <summary>
+    /// Creates AccessibilityMetrics from test results.
+    /// Uses Percentage ValueObject for type-safe score handling.
+    /// </summary>
+    /// <param name="lighthouseScore">Lighthouse accessibility score (0-100)</param>
+    /// <param name="axeViolations">Number of axe-core violations</param>
+    /// <param name="wcagLevels">WCAG compliance levels passed</param>
+    /// <param name="lastRunAt">Timestamp of the test run</param>
+    /// <param name="status">Test execution status</param>
+    /// <returns>New AccessibilityMetrics instance</returns>
+    public static AccessibilityMetrics Create(
+        decimal lighthouseScore,
+        int axeViolations,
+        IReadOnlyList<string> wcagLevels,
+        DateTime lastRunAt,
+        TestExecutionStatus status)
+    {
+        return new AccessibilityMetrics(
+            lighthouseScore,
+            axeViolations,
+            wcagLevels,
+            lastRunAt,
+            status);
+    }
+
+    /// <summary>
     /// Determines if accessibility metrics meet quality standards
     /// (Lighthouse >= 90, no violations, WCAG AA minimum)
     /// </summary>

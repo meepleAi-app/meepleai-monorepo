@@ -152,5 +152,5 @@ internal static class SharedGameSeeder
         };
     }
 
-    private record GameSeedData(string Name, int? BggId, string Language);
+    private sealed record GameSeedData(string Name, int? BggId, string Language);
 }

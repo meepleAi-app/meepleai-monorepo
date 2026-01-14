@@ -141,6 +141,56 @@ create_secret \
     "Admin123!ChangeMe" \
     false
 
+# Redis Password (auto-generate)
+create_secret \
+    "redis-password" \
+    "Redis cache password (auto-generated secure random)" \
+    "" \
+    true
+
+# OAuth Provider Secrets (for external authentication)
+# Note: For development, you can use mock values or leave empty
+# For production, obtain real OAuth credentials from provider consoles
+
+# Google OAuth
+create_secret \
+    "google-oauth-client-id" \
+    "Google OAuth Client ID (get from https://console.cloud.google.com/)" \
+    "mock-google-dev-client-id" \
+    false
+
+create_secret \
+    "google-oauth-client-secret" \
+    "Google OAuth Client Secret" \
+    "mock-google-dev-secret" \
+    false
+
+# Discord OAuth
+create_secret \
+    "discord-oauth-client-id" \
+    "Discord OAuth Client ID (get from https://discord.com/developers/applications)" \
+    "mock-discord-dev-client-id" \
+    false
+
+create_secret \
+    "discord-oauth-client-secret" \
+    "Discord OAuth Client Secret" \
+    "mock-discord-dev-secret" \
+    false
+
+# GitHub OAuth
+create_secret \
+    "github-oauth-client-id" \
+    "GitHub OAuth Client ID (get from https://github.com/settings/developers)" \
+    "mock-github-dev-client-id" \
+    false
+
+create_secret \
+    "github-oauth-client-secret" \
+    "GitHub OAuth Client Secret" \
+    "mock-github-dev-secret" \
+    false
+
 echo ""
 echo -e "${GREEN}=========================================="
 echo "✅ Secret initialization complete!"

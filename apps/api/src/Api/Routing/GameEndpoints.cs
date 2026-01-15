@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries;
@@ -584,6 +585,18 @@ internal static class GameEndpoints
         // Restore from snapshot
         group.MapPost("/sessions/{sessionId}/state/restore/{snapshotId}", HandleRestoreStateSnapshot)
         .RequireSession();
+
+        // ========================================
+        // Player Mode Move Suggestions - Issue #2404
+        // ========================================
+
+        // Suggest moves for current game state
+        group.MapPost("/sessions/{sessionId}/suggest-move", HandleSuggestMove)
+        .RequireSession();
+
+        // Apply a move suggestion to game state
+        group.MapPost("/sessions/{sessionId}/apply-suggestion", HandleApplySuggestion)
+        .RequireSession();
     }
 
     // Issue #2403: GameSessionState handlers
@@ -689,6 +702,47 @@ internal static class GameEndpoints
         var command = new RestoreStateSnapshotCommand(
             SessionStateId: state.Id,
             SnapshotId: snapshotId
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    // Issue #2404: Player Mode Move Suggestion handlers
+    private static async Task<IResult> HandleSuggestMove(
+        Guid sessionId,
+        [FromBody] SuggestMoveRequest request,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+        var command = new SuggestMoveCommand(
+            SessionId: sessionId,
+            AgentId: request.AgentId,
+            Query: request.Query,
+            UserId: session.User!.Id
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleApplySuggestion(
+        Guid sessionId,
+        [FromBody] ApplySuggestionRequest request,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+        var command = new ApplySuggestionCommand(
+            SessionId: sessionId,
+            SuggestionId: request.SuggestionId,
+            StateChanges: request.StateChanges,
+            UserId: session.User!.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);

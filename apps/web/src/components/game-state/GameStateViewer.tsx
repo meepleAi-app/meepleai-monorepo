@@ -21,15 +21,17 @@ interface GameStateViewerProps {
 
 export function GameStateViewer({ state, currentPlayerIndex }: GameStateViewerProps) {
   return (
-    <div className="space-y-6" data-testid="game-state-viewer">
+    <div className="space-y-4 sm:space-y-6" data-testid="game-state-viewer">
       {/* Game Info */}
       <Card>
-        <CardHeader>
-          <CardTitle>Game Information</CardTitle>
-          <CardDescription>Current game session state</CardDescription>
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-base sm:text-lg">Game Information</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
+            Current game session state
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <CardContent className="space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             {state.phase && (
               <div>
                 <p className="text-sm text-muted-foreground">Phase</p>
@@ -60,7 +62,7 @@ export function GameStateViewer({ state, currentPlayerIndex }: GameStateViewerPr
               <Separator />
               <div>
                 <p className="text-sm font-medium mb-3">Global Resources</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
                   {Object.entries(state.globalResources).map(([key, value]) => (
                     <div
                       key={key}
@@ -99,8 +101,10 @@ export function GameStateViewer({ state, currentPlayerIndex }: GameStateViewerPr
 
       {/* Players */}
       <div>
-        <h3 className="text-lg font-semibold mb-4">Players ({state.players.length})</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
+          Players ({state.players.length})
+        </h3>
+        <div className="grid grid-cols-1 gap-3 sm:gap-4">
           {state.players.map((player, index) => (
             <PlayerStateCard
               key={`${player.playerName}-${index}`}

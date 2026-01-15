@@ -14,7 +14,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 import { Brain, Check, Lightbulb, Sparkles, X } from 'lucide-react';
 
@@ -83,11 +83,13 @@ export function PlayerModeControls({
 }: PlayerModeControlsProps) {
   const [userQuery, setUserQuery] = useState(query || '');
 
-  const [suggestionState, suggestionControls] = usePlayerAISuggestion({
-    onSuggestionReceived: (suggestion, confidence) => {
-      console.log('Received suggestion:', suggestion, 'Confidence:', confidence);
-    },
-    onSuggestionApplied: suggestion => {
+  // Memoize callbacks to prevent hook recreation
+  const handleSuggestionReceived = useCallback((suggestion: any, confidence: number) => {
+    console.log('Received suggestion:', suggestion, 'Confidence:', confidence);
+  }, []);
+
+  const handleSuggestionApplied = useCallback(
+    (suggestion: any) => {
       if (onSuggestionApplied) {
         onSuggestionApplied({
           action: suggestion.action,
@@ -95,27 +97,37 @@ export function PlayerModeControls({
         });
       }
     },
-    onSuggestionIgnored: () => {
-      if (onSuggestionIgnored) {
-        onSuggestionIgnored();
-      }
-    },
-    onError: error => {
-      console.error('Suggestion error:', error);
-    },
+    [onSuggestionApplied]
+  );
+
+  const handleSuggestionIgnored = useCallback(() => {
+    if (onSuggestionIgnored) {
+      onSuggestionIgnored();
+    }
+  }, [onSuggestionIgnored]);
+
+  const handleError = useCallback((error: string) => {
+    console.error('Suggestion error:', error);
+  }, []);
+
+  const [suggestionState, suggestionControls] = usePlayerAISuggestion({
+    onSuggestionReceived: handleSuggestionReceived,
+    onSuggestionApplied: handleSuggestionApplied,
+    onSuggestionIgnored: handleSuggestionIgnored,
+    onError: handleError,
   });
 
-  const handleSuggestMove = async () => {
+  const handleSuggestMove = useCallback(async () => {
     await suggestionControls.suggestMove(gameId, gameState, userQuery || undefined);
-  };
+  }, [gameId, gameState, userQuery, suggestionControls]);
 
-  const handleApply = () => {
+  const handleApply = useCallback(() => {
     suggestionControls.applySuggestion();
-  };
+  }, [suggestionControls]);
 
-  const handleIgnore = () => {
+  const handleIgnore = useCallback(() => {
     suggestionControls.ignoreSuggestion();
-  };
+  }, [suggestionControls]);
 
   return (
     <div className="space-y-4">

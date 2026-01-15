@@ -153,6 +153,36 @@ internal static class SharedGameCatalogEndpoints
             .WithSummary("Reject delete request (Admin only)")
             .Produces(StatusCodes.Status204NoContent);
 
+        // Quick Questions Management
+        group.MapGet("/games/{id:guid}/quick-questions", HandleGetQuickQuestions)
+            .WithName("GetQuickQuestions")
+            .WithSummary("Get quick questions for game")
+            .Produces<IReadOnlyCollection<QuickQuestionDto>>(StatusCodes.Status200OK);
+
+        group.MapPost("/admin/shared-games/{id:guid}/quick-questions/generate", HandleGenerateQuickQuestions)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GenerateQuickQuestions")
+            .WithSummary("Generate quick questions using AI (Admin/Editor)")
+            .Produces<GenerateQuickQuestionsResultDto>(StatusCodes.Status201Created);
+
+        group.MapPost("/admin/shared-games/{id:guid}/quick-questions", HandleAddManualQuickQuestion)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("AddManualQuickQuestion")
+            .WithSummary("Manually add quick question (Admin/Editor)")
+            .Produces<Guid>(StatusCodes.Status201Created);
+
+        group.MapPut("/admin/quick-questions/{questionId:guid}", HandleUpdateQuickQuestion)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("UpdateQuickQuestion")
+            .WithSummary("Update quick question (Admin/Editor)")
+            .Produces<QuickQuestionDto>(StatusCodes.Status200OK);
+
+        group.MapDelete("/admin/quick-questions/{questionId:guid}", HandleDeleteQuickQuestion)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("DeleteQuickQuestion")
+            .WithSummary("Delete quick question (Admin/Editor)")
+            .Produces(StatusCodes.Status204NoContent);
+
         // FAQ Management
         group.MapPost("/admin/shared-games/{id:guid}/faq", HandleAddFaq)
             .RequireAuthorization("AdminOrEditorPolicy")
@@ -593,6 +623,59 @@ internal static class SharedGameCatalogEndpoints
         }
     }
 
+    // Quick Question Handlers
+    private static async Task<IResult> HandleGetQuickQuestions(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var query = new GetQuickQuestionsQuery(id, ActiveOnly: true);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGenerateQuickQuestions(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var command = new GenerateQuickQuestionsCommand(id);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Created($"/games/{id}/quick-questions", result);
+    }
+
+    private static async Task<IResult> HandleAddManualQuickQuestion(
+        Guid id,
+        [FromBody] AddQuickQuestionRequest request,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var command = new AddManualQuickQuestionCommand(id, request.Text, request.Emoji, request.Category, request.DisplayOrder);
+        var questionId = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Created($"/admin/quick-questions/{questionId}", questionId);
+    }
+
+    private static async Task<IResult> HandleUpdateQuickQuestion(
+        Guid questionId,
+        [FromBody] UpdateQuickQuestionRequest request,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var command = new UpdateQuickQuestionCommand(questionId, request.Text, request.Emoji, request.Category, request.DisplayOrder);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleDeleteQuickQuestion(
+        Guid questionId,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var command = new DeleteQuickQuestionCommand(questionId);
+        await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
     // FAQ Handlers
     private static async Task<IResult> HandleAddFaq(
         Guid id,
@@ -942,6 +1025,16 @@ internal record DeleteGameRequest(string? Reason);
 /// Request DTO for rejecting a delete request.
 /// </summary>
 internal record RejectDeleteRequest(string Reason);
+
+/// <summary>
+/// Request DTO for adding a quick question manually.
+/// </summary>
+internal record AddQuickQuestionRequest(string Text, string Emoji, QuestionCategory Category, int DisplayOrder);
+
+/// <summary>
+/// Request DTO for updating a quick question.
+/// </summary>
+internal record UpdateQuickQuestionRequest(string Text, string Emoji, QuestionCategory Category, int DisplayOrder);
 
 /// <summary>
 /// Request DTO for adding a FAQ.

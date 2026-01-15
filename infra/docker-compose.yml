@@ -625,6 +625,8 @@ services:
       # Bootstrap: Initial admin user configuration (email and display name from api.env.dev, password from secret)
       # Note: INITIAL_ADMIN_EMAIL is defined in ./env/api.env.dev
       INITIAL_ADMIN_PASSWORD_FILE: /run/secrets/initial-admin-password
+      # SEC-2459: JWT signing secret from secret file
+      JWT_SECRET_FILE: /run/secrets/jwt-secret
       # OAuth provider credentials from secret files
       GOOGLE_OAUTH_CLIENT_ID_FILE: /run/secrets/google-oauth-client-id
       GOOGLE_OAUTH_CLIENT_SECRET_FILE: /run/secrets/google-oauth-client-secret
@@ -635,6 +637,7 @@ services:
     secrets:
       - postgres-password
       - redis-password
+      - jwt-secret
       - openrouter-api-key
       - bgg-api-token
       - initial-admin-password
@@ -764,6 +767,8 @@ secrets:
     file: ./secrets/postgres-password.txt
   redis-password:
     file: ./secrets/redis-password.txt
+  jwt-secret:
+    file: ./secrets/jwt-secret.txt
   openrouter-api-key:
     file: ./secrets/openrouter-api-key.txt
   bgg-api-token:

@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import { api } from '@/lib/api';
 import type {
   GameState,
   GameStateSnapshot,
@@ -177,15 +178,14 @@ export const useGameStateStore = create<GameStateStore>()(
       canUndo: () => get().undoStack.length > 0,
       canRedo: () => get().redoStack.length > 0,
 
-      loadTemplate: async _sessionId => {
+      loadTemplate: async sessionId => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement API call to fetch template
-          // const template = await api.gameState.getTemplate(_sessionId);
-          // set({ template, isLoading: false });
-
-          // Mock for now
-          throw new Error('API not implemented');
+          // TODO: Backend should expose template via state endpoint
+          // For now, template comes with state response
+          const state = await api.sessions.getState(sessionId);
+          const template = (state as { template?: GameStateTemplate })?.template;
+          set({ template: template || null, isLoading: false });
         } catch (err) {
           set({
             error: err instanceof Error ? err.message : 'Failed to load template',
@@ -194,15 +194,16 @@ export const useGameStateStore = create<GameStateStore>()(
         }
       },
 
-      loadState: async _sessionId => {
+      loadState: async sessionId => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement API call to fetch state
-          // const state = await api.gameState.getState(_sessionId);
-          // set({ currentState: state, isLoading: false });
-
-          // Mock for now
-          throw new Error('API not implemented');
+          const response = await api.sessions.getState(sessionId);
+          const state = (response as { currentState?: GameState })?.currentState;
+          if (state) {
+            set({ currentState: state, isLoading: false });
+          } else {
+            throw new Error('No state returned from API');
+          }
         } catch (err) {
           set({
             error: err instanceof Error ? err.message : 'Failed to load state',
@@ -211,18 +212,15 @@ export const useGameStateStore = create<GameStateStore>()(
         }
       },
 
-      saveState: async _sessionId => {
+      saveState: async sessionId => {
         const state = get().currentState;
         if (!state) return;
 
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement API call to save state
-          // await api.gameState.saveState(_sessionId, state);
-          // set({ isLoading: false });
-
-          // Mock for now
-          throw new Error('API not implemented');
+          const stateJson = JSON.stringify(state);
+          await api.sessions.updateState(sessionId, stateJson);
+          set({ isLoading: false });
         } catch (err) {
           set({
             error: err instanceof Error ? err.message : 'Failed to save state',

@@ -43,6 +43,8 @@ internal static class AiEndpoints
 
         MapChessAgentEndpoint(group);
 
+        MapPlayerModeSuggestionEndpoint(group);
+
         MapBggEndpoints(group);
 
         MapChessKnowledgeEndpoints(group);
@@ -119,6 +121,20 @@ internal static class AiEndpoints
         // CHESS-04: Chess conversational agent endpoint
         // Migrated to CQRS: Uses InvokeChessAgentCommand via MediatR (Issue #1188)
         group.MapPost("/agents/chess", HandleChessAgent)
+        .RequireSession(); // Issue #1446: Automatic session validation
+    }
+
+    private static void MapPlayerModeSuggestionEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #2421: Player Mode UI Controls - AI move suggestion endpoint
+        // Uses SuggestPlayerMoveCommand via MediatR
+        group.MapPost("/agents/player-mode/suggest", HandlePlayerModeSuggestion)
+        .WithName("PlayerModeSuggestion")
+        .WithDescription("Suggest optimal player move based on current game state using AI analysis")
+        .WithTags("AI Agents")
+        .Produces<PlayerModeSuggestionResponse>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
         .RequireSession(); // Issue #1446: Automatic session validation
     }
 
@@ -872,6 +888,40 @@ internal static class AiEndpoints
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             context.Request.Headers.UserAgent.ToString(),
             mediator, ct).ConfigureAwait(false);
+
+        return Results.Json(resp);
+    }
+
+    private static async Task<IResult> HandlePlayerModeSuggestion(
+        PlayerModeSuggestionRequest req,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        // Session validated by RequireSessionFilter
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+        var startTime = DateTime.UtcNow;
+        logger.LogInformation(
+            "Player mode suggestion request from user {UserId} for game {GameId}",
+            session.User!.Id,
+            req.gameId);
+
+        // Send command via MediatR
+        var resp = await mediator.Send(new SuggestPlayerMoveCommand
+        {
+            GameId = req.gameId,
+            GameState = req.gameState,
+            Query = req.query,
+            ChatThreadId = req.chatThreadId
+        }, ct).ConfigureAwait(false);
+
+        logger.LogInformation(
+            "Player move suggestion delivered in {Latency}ms: confidence {Confidence}, alternatives {AlternativeCount}",
+            (int)(DateTime.UtcNow - startTime).TotalMilliseconds,
+            resp.overallConfidence,
+            resp.alternativeMoves?.Count ?? 0);
 
         return Results.Json(resp);
     }

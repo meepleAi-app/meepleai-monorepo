@@ -291,6 +291,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Issue #2406: SignalR for real-time game state updates
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -421,6 +424,7 @@ v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
+v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
 v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
 v1Api.MapAiEndpoints();
 v1Api.MapPdfEndpoints();
@@ -451,6 +455,7 @@ v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
 
 // DDD-PHASE3: KnowledgeBase bounded context endpoints
 v1Api.MapKnowledgeBaseEndpoints();
+v1Api.MapLedgerModeEndpoints();     // Issue #2405: Ledger Mode endpoints
 
 // Issue #866: Agent management endpoints
 v1Api.MapAgentEndpoints();
@@ -461,6 +466,9 @@ v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint
 
 // Issue #2004: Runbook validation test endpoints
 v1Api.MapTestEndpoints();
+
+// Issue #2406: SignalR hub for real-time game state updates
+app.MapHub<Api.Hubs.GameStateHub>("/hubs/gamestate");
 
 await app.RunAsync().ConfigureAwait(false);
 

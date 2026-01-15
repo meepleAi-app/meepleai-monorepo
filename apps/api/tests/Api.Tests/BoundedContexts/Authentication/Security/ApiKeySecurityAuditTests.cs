@@ -13,6 +13,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Diagnostics;
+using Api.Tests.TestHelpers;
+using Api.Tests.Constants;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Authentication.Security;
@@ -49,28 +51,11 @@ public sealed class ApiKeySecurityAuditTests : IDisposable
 
     public ApiKeySecurityAuditTests()
     {
-        // Setup in-memory database for fast security tests
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: $"ApiKeySecurityTest_{Guid.NewGuid()}")
-            .ConfigureWarnings(warnings =>
-                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
-            .Options;
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
+        var eventCollectorMock = TestDbContextFactory.CreateMockEventCollector();
 
-        // Create mocks for DbContext dependencies
-        var mediatorMock = new Mock<IMediator>();
-        var eventCollectorMock = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
-
-        // Setup event collector to return empty list (no events to publish)
-        eventCollectorMock
-            .Setup(x => x.GetAndClearEvents())
-            .Returns(new List<Api.SharedKernel.Domain.Events.DomainEventBase>());
-
-        _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
-
-        // Create repository with event collector
         _apiKeyRepository = new ApiKeyRepository(_dbContext, eventCollectorMock.Object);
         _unitOfWork = new EfCoreUnitOfWork(_dbContext);
-
         _mockLogger = new Mock<ILogger<CreateApiKeyCommandHandler>>();
     }
 

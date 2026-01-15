@@ -1,7 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
-using Api.Tests.Helpers;
+using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -24,7 +24,7 @@ public class GetAllUsersQueryHandlerTests
     /// </summary>
     private static MeepleAiDbContext CreateFreshDbContext()
     {
-        return DbContextHelper.CreateInMemoryDbContext();
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
     [Fact]
     public void Constructor_WithValidDbContext_CreatesInstance()

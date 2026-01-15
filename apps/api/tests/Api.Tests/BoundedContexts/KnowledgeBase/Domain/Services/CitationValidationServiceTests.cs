@@ -29,20 +29,7 @@ public class CitationValidationServiceTests
     /// </summary>
     private static MeepleAiDbContext CreateFreshDbContext()
     {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: $"CitationValidationTestDb_{Guid.NewGuid()}")
-            .Options;
-
-        var mockMediator = new Mock<IMediator>();
-        var mockEventCollector = new Mock<IDomainEventCollector>();
-
-        // FIX: Configure GetAndClearEvents() to return empty collection instead of null
-        // This prevents NullReferenceException in MeepleAiDbContext.SaveChangesAsync(TestContext.Current.CancellationToken) line 90
-        mockEventCollector
-            .Setup(ec => ec.GetAndClearEvents())
-            .Returns(Array.Empty<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
-
-        return new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
 
     /// <summary>
@@ -658,4 +645,3 @@ public class CitationValidationServiceTests
         Assert.Contains(CitationErrorType.MalformedSource, errorTypes);
     }
 }
-

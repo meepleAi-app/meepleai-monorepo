@@ -4,7 +4,7 @@ using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
-using Api.Tests.Helpers;
+using Api.Tests.TestHelpers;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 using Api.Tests.Constants;
@@ -27,7 +27,7 @@ public class GetUserByIdQueryHandlerTests
     /// </summary>
     private static MeepleAiDbContext CreateFreshDbContext()
     {
-        return DbContextHelper.CreateInMemoryDbContext();
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
 
     private static GetUserByIdQueryHandler CreateHandler(MeepleAiDbContext context)

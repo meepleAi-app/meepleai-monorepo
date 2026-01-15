@@ -1,3 +1,4 @@
+#pragma warning disable MA0002 // Dictionary without StringComparer
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
@@ -11,6 +12,16 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// </summary>
 internal sealed record LedgerStateSchema
 {
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false
+    };
+
+    private static readonly JsonSerializerOptions DeserializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
     /// <summary>
     /// Current game phase.
     /// </summary>
@@ -75,12 +86,7 @@ internal sealed record LedgerStateSchema
     /// </summary>
     public JsonDocument ToJsonDocument()
     {
-        var json = JsonSerializer.Serialize(this, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = false
-        });
-
+        var json = JsonSerializer.Serialize(this, SerializerOptions);
         return JsonDocument.Parse(json);
     }
 
@@ -92,10 +98,8 @@ internal sealed record LedgerStateSchema
         ArgumentNullException.ThrowIfNull(document);
 
         var json = document.RootElement.GetRawText();
-        return JsonSerializer.Deserialize<LedgerStateSchema>(json, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        }) ?? throw new InvalidOperationException("Failed to deserialize LedgerStateSchema");
+        return JsonSerializer.Deserialize<LedgerStateSchema>(json, DeserializerOptions)
+            ?? throw new InvalidOperationException("Failed to deserialize LedgerStateSchema");
     }
 }
 

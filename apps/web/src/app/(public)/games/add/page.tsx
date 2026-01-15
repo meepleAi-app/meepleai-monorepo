@@ -40,7 +40,6 @@ const SharedGameDetailModal = dynamic(
 
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -56,7 +55,7 @@ export default function AddGamePage() {
   const [selectedGame, setSelectedGame] = useState<SharedGameSearchResult | null>(null);
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
   const [isBggDialogOpen, setIsBggDialogOpen] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
+  const [_isAdding, setIsAdding] = useState(false);
 
   /**
    * Handle game selection from search results
@@ -72,86 +71,27 @@ export default function AddGamePage() {
   };
 
   /**
-   * Add game from SharedGameCatalog (preferred)
-   * Links the new game to the catalog entry for enriched data
+   * Add game from SharedGameCatalog to user's personal library
+   * Issue #2440: Uses library endpoint instead of games.create (which requires Admin)
    */
   const handleAddFromCatalog = async (gameId: string) => {
     setIsAdding(true);
 
     try {
-      // Get full game details from catalog
-      const catalogGame = await api.sharedGames.getById(gameId);
+      // Add shared game to user's personal library
+      await api.library.addGame(gameId);
 
-      if (!catalogGame) {
-        toast.error('Gioco non trovato nel catalogo.');
-        return;
-      }
-
-      // Extract publisher name from first publisher object
-      const publisherName = catalogGame.publishers?.[0]?.name ?? null;
-
-      // Create game in user's collection with catalog link
-      await api.games.create({
-        title: catalogGame.title,
-        publisher: publisherName,
-        yearPublished: catalogGame.yearPublished,
-        minPlayers: catalogGame.minPlayers,
-        maxPlayers: catalogGame.maxPlayers,
-        minPlayTimeMinutes: catalogGame.playingTimeMinutes,
-        maxPlayTimeMinutes: catalogGame.playingTimeMinutes,
-        iconUrl: catalogGame.thumbnailUrl,
-        imageUrl: catalogGame.imageUrl,
-        bggId: catalogGame.bggId ?? null,
-        sharedGameId: catalogGame.id, // Link to catalog!
-      });
-
-      toast.success('Gioco aggiunto con successo!');
+      toast.success('Gioco aggiunto alla tua libreria!');
       setIsCatalogModalOpen(false);
       router.push('/games');
       router.refresh();
     } catch (error) {
       console.error('Failed to add game from catalog:', error);
-      toast.error("Errore durante l'aggiunta del gioco.");
-    } finally {
-      setIsAdding(false);
-    }
-  };
-
-  /**
-   * Add game from BGG (fallback)
-   * No catalog link, just BGG data
-   */
-  const handleAddFromBgg = async () => {
-    if (!selectedGame?.bggId) return;
-
-    setIsAdding(true);
-
-    try {
-      // Get full details from BGG
-      const details = await api.bgg.getGameDetails(selectedGame.bggId);
-
-      // Create game in user's collection (no catalog link)
-      await api.games.create({
-        title: details.name,
-        publisher: details.publishers?.[0] ?? null,
-        yearPublished: details.yearPublished,
-        minPlayers: details.minPlayers,
-        maxPlayers: details.maxPlayers,
-        minPlayTimeMinutes: details.minPlayTime ?? details.playingTime ?? null,
-        maxPlayTimeMinutes: details.maxPlayTime ?? details.playingTime ?? null,
-        iconUrl: details.thumbnailUrl,
-        imageUrl: details.imageUrl,
-        bggId: details.bggId,
-        // No sharedGameId - BGG only
-      });
-
-      toast.success('Gioco aggiunto con successo!');
-      setIsBggDialogOpen(false);
-      router.push('/games');
-      router.refresh();
-    } catch (error) {
-      console.error('Failed to add game from BGG:', error);
-      toast.error("Errore durante l'aggiunta del gioco.");
+      const errorMessage =
+        error instanceof Error && error.message.includes('already in')
+          ? 'Questo gioco è già nella tua libreria.'
+          : "Errore durante l'aggiunta del gioco.";
+      toast.error(errorMessage);
     } finally {
       setIsAdding(false);
     }
@@ -200,11 +140,11 @@ export default function AddGamePage() {
           />
         )}
 
-        {/* BGG Confirmation Dialog - for BGG-only games */}
+        {/* BGG Info Dialog - for BGG-only games (not in catalog) */}
         <AlertDialog open={isBggDialogOpen} onOpenChange={setIsBggDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Aggiungi gioco da BGG</AlertDialogTitle>
+              <AlertDialogTitle>Gioco non disponibile</AlertDialogTitle>
               <AlertDialogDescription className="space-y-3">
                 <div className="flex items-center gap-3 mt-2">
                   {selectedGame?.thumbnailUrl && (
@@ -226,23 +166,18 @@ export default function AddGamePage() {
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">BGG</Badge>
                   <span className="text-sm">
-                    Questo gioco verrà aggiunto con i dati base di BoardGameGeek.
+                    Questo gioco non è ancora nel nostro catalogo. Solo i giochi presenti nel
+                    catalogo possono essere aggiunti alla tua libreria personale.
                   </span>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  Contatta un amministratore se desideri che questo gioco venga aggiunto al
+                  catalogo.
+                </p>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isAdding}>Annulla</AlertDialogCancel>
-              <AlertDialogAction onClick={handleAddFromBgg} disabled={isAdding}>
-                {isAdding ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Aggiungendo...
-                  </>
-                ) : (
-                  'Aggiungi alla Collezione'
-                )}
-              </AlertDialogAction>
+              <AlertDialogCancel>Chiudi</AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

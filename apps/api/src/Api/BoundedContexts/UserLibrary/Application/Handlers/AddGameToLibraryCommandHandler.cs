@@ -1,4 +1,4 @@
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
@@ -12,20 +12,21 @@ namespace Api.BoundedContexts.UserLibrary.Application.Handlers;
 
 /// <summary>
 /// Handler for adding a game to user's library.
+/// Uses SharedGameCatalog for game validation - users add games from the shared catalog to their personal library.
 /// </summary>
 internal class AddGameToLibraryCommandHandler : ICommandHandler<AddGameToLibraryCommand, UserLibraryEntryDto>
 {
     private readonly IUserLibraryRepository _libraryRepository;
-    private readonly IGameRepository _gameRepository;
+    private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public AddGameToLibraryCommandHandler(
         IUserLibraryRepository libraryRepository,
-        IGameRepository gameRepository,
+        ISharedGameRepository sharedGameRepository,
         IUnitOfWork unitOfWork)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
-        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
@@ -33,9 +34,9 @@ internal class AddGameToLibraryCommandHandler : ICommandHandler<AddGameToLibrary
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // Validate game exists
-        var game = await _gameRepository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false)
-            ?? throw new DomainException($"Game with ID {command.GameId} not found");
+        // Validate shared game exists in catalog
+        var sharedGame = await _sharedGameRepository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false)
+            ?? throw new DomainException($"Game with ID {command.GameId} not found in catalog");
 
         // Check if already in library
         if (await _libraryRepository.IsGameInLibraryAsync(command.UserId, command.GameId, cancellationToken).ConfigureAwait(false))
@@ -43,7 +44,7 @@ internal class AddGameToLibraryCommandHandler : ICommandHandler<AddGameToLibrary
             throw new DomainException("Game is already in your library");
         }
 
-        // Create library entry
+        // Create library entry referencing the shared game
         var entry = new UserLibraryEntry(Guid.NewGuid(), command.UserId, command.GameId);
 
         // Set notes if provided
@@ -65,11 +66,11 @@ internal class AddGameToLibraryCommandHandler : ICommandHandler<AddGameToLibrary
             Id: entry.Id,
             UserId: entry.UserId,
             GameId: entry.GameId,
-            GameTitle: game.Title.Value,
-            GamePublisher: game.Publisher?.Name,
-            GameYearPublished: game.YearPublished?.Value,
-            GameIconUrl: game.IconUrl,
-            GameImageUrl: game.ImageUrl,
+            GameTitle: sharedGame.Title,
+            GamePublisher: sharedGame.Publishers.FirstOrDefault()?.Name,
+            GameYearPublished: sharedGame.YearPublished,
+            GameIconUrl: sharedGame.ThumbnailUrl,
+            GameImageUrl: sharedGame.ImageUrl,
             AddedAt: entry.AddedAt,
             Notes: entry.Notes?.Value,
             IsFavorite: entry.IsFavorite

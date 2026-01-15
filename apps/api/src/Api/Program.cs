@@ -456,6 +456,9 @@ v1Api.MapKnowledgeBaseEndpoints();
 // Issue #866: Agent management endpoints
 v1Api.MapAgentEndpoints();
 
+// Issue #2405: Ledger Mode endpoints
+v1Api.MapLedgerModeEndpoints();
+
 // Issue #1565: Telemetry test endpoints for HyperDX integration testing
 v1Api.MapTelemetryTestEndpoints();
 v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint

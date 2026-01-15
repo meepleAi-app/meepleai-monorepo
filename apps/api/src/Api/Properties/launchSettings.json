@@ -10,17 +10,7 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "QDRANT_URL": "http://localhost:6333",
-        "OLLAMA_URL": "http://localhost:11434",
-        "OPENROUTER_API_KEY": "PLACEHOLDER-get-from-infra-secrets-openrouter-api-key-txt",
-        "GOOGLE_OAUTH_CLIENT_ID": "PLACEHOLDER-get-from-infra-secrets-google-oauth-client-id-txt",
-        "GOOGLE_OAUTH_CLIENT_SECRET": "PLACEHOLDER-get-from-infra-secrets-google-oauth-client-secret-txt",
-        "DISCORD_OAUTH_CLIENT_ID": "PLACEHOLDER-get-from-infra-secrets-discord-oauth-client-id-txt",
-        "DISCORD_OAUTH_CLIENT_SECRET": "PLACEHOLDER-get-from-infra-secrets-discord-oauth-client-secret-txt",
-        "GITHUB_OAUTH_CLIENT_ID": "PLACEHOLDER-get-from-infra-secrets-github-oauth-client-id-txt",
-        "GITHUB_OAUTH_CLIENT_SECRET": "PLACEHOLDER-get-from-infra-secrets-github-oauth-client-secret-txt",
-        "INITIAL_ADMIN_EMAIL": "admin@meepleai.dev",
-        "INITIAL_ADMIN_PASSWORD": "PLACEHOLDER-get-from-infra-secrets-initial-admin-password-txt",
-        "INITIAL_ADMIN_DISPLAY_NAME": "System Admin"
+        "OLLAMA_URL": "http://localhost:11434"
       }
     }
   }

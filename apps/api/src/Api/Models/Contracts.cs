@@ -309,6 +309,34 @@ internal record ChessAnalysis(
     IReadOnlyList<string> keyConsiderations
 );
 
+// Issue #2421: Player Mode AI Suggestion models
+internal record PlayerModeSuggestionRequest(
+    [Required] string gameId,
+    [Required] IReadOnlyDictionary<string, object> gameState,
+    string? query = null,
+    Guid? chatThreadId = null
+);
+
+internal record PlayerModeSuggestionResponse(
+    SuggestedMove primarySuggestion,
+    IReadOnlyList<SuggestedMove>? alternativeMoves,
+    double overallConfidence,
+    string? strategicContext,
+    IReadOnlyList<Snippet>? sources,
+    int promptTokens = 0,
+    int completionTokens = 0,
+    int totalTokens = 0,
+    int processingTimeMs = 0,
+    IReadOnlyDictionary<string, object>? metadata = null
+);
+
+internal record SuggestedMove(
+    string action,
+    string rationale,
+    string? expectedOutcome,
+    double confidence
+);
+
 // CHAT-05: Chat Export models
 internal record ExportChatRequest(
     string Format,

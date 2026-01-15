@@ -84,6 +84,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<SharedGameDeleteRequestEntity> SharedGameDeleteRequests => Set<SharedGameDeleteRequestEntity>(); // ISSUE-2370: Delete requests
     public DbSet<SharedGameDocumentEntity> SharedGameDocuments => Set<SharedGameDocumentEntity>(); // ISSUE-2391: Sprint 1 - PDF association
     public DbSet<GameStateTemplateEntity> GameStateTemplates => Set<GameStateTemplateEntity>(); // ISSUE-2400: Sprint 3 - Game state templates
+    public DbSet<RulebookAnalysisEntity> RulebookAnalyses => Set<RulebookAnalysisEntity>(); // ISSUE-2402: Sprint 3 - Rulebook analysis service
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
 
@@ -125,6 +126,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.GameCategory>(); // ISSUE-2370
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.GameMechanic>(); // ISSUE-2370
         modelBuilder.Ignore<BoundedContexts.UserLibrary.Domain.Entities.UserLibraryEntry>(); // User Library feature
+        modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.RulebookAnalysis>(); // ISSUE-2402
     }
 
     /// <summary>

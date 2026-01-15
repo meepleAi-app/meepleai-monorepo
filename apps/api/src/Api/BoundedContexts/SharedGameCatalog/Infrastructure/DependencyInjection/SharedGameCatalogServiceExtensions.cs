@@ -23,6 +23,7 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<ISharedGameDeleteRequestRepository, SharedGameDeleteRequestRepository>();
         services.AddScoped<ISharedGameDocumentRepository, SharedGameDocumentRepository>(); // Issue #2391 Sprint 1
         services.AddScoped<IGameStateTemplateRepository, GameStateTemplateRepository>(); // Issue #2400 Sprint 3
+        services.AddScoped<IRulebookAnalysisRepository, RulebookAnalysisRepository>(); // Issue #2402 Sprint 3
 
         // Register domain services
         services.AddScoped<DocumentVersioningService>(); // Issue #2391 Sprint 1
@@ -31,6 +32,7 @@ internal static class SharedGameCatalogServiceExtensions
         // Register application services
         services.AddScoped<IGameStateSchemaGenerator, LlmGameStateSchemaGenerator>(); // Issue #2400 Sprint 3
         services.AddScoped<IQuickQuestionGenerator, LlmQuickQuestionGenerator>(); // Issue #2401 Sprint 3
+        services.AddScoped<IRulebookAnalyzer, LlmRulebookAnalyzer>(); // Issue #2402 Sprint 3
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

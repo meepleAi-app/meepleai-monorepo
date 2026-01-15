@@ -92,9 +92,11 @@ export function GameStateEditor({ sessionId, onSave, onCancel }: GameStateEditor
   if (!currentState) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>No State Available</CardTitle>
-          <CardDescription>Load a game state to start editing</CardDescription>
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-base sm:text-lg">No State Available</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
+            Load a game state to start editing
+          </CardDescription>
         </CardHeader>
       </Card>
     );
@@ -103,16 +105,18 @@ export function GameStateEditor({ sessionId, onSave, onCancel }: GameStateEditor
   if (!schema) {
     // Fallback: Show manual editor without schema-driven form
     return (
-      <div className="space-y-6" data-testid="game-state-editor">
+      <div className="space-y-4 sm:space-y-6" data-testid="game-state-editor">
         {/* Manual Editor (when no schema available) */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+          <CardHeader className="pb-3 sm:pb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <CardTitle>Game State Editor</CardTitle>
-                <CardDescription>Manually edit game state</CardDescription>
+                <CardTitle className="text-base sm:text-lg">Game State Editor</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Manually edit game state
+                </CardDescription>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -143,13 +147,13 @@ export function GameStateEditor({ sessionId, onSave, onCancel }: GameStateEditor
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6">
             {/* Players Editor */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
                 Players ({currentState.players.length})
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:gap-4">
                 {currentState.players.map((player, index) => (
                   <PlayerStateCard
                     key={`${player.playerName}-${index}`}
@@ -178,17 +182,17 @@ export function GameStateEditor({ sessionId, onSave, onCancel }: GameStateEditor
 
   // Schema-driven form with RJSF
   return (
-    <div className="space-y-6" data-testid="game-state-editor-schema">
+    <div className="space-y-4 sm:space-y-6" data-testid="game-state-editor-schema">
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3 sm:pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <CardTitle>Game State Editor</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-base sm:text-lg">Game State Editor</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Editing with schema: {template?.name} (v{template?.version})
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               <Button
                 variant="outline"
                 size="sm"

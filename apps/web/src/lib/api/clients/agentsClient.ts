@@ -14,6 +14,7 @@ import {
   SetupGuideResponseSchema,
   AgentDocumentsDtoSchema,
   UpdateAgentDocumentsResponseSchema,
+  PlayerModeSuggestionResponseSchema,
   type AgentDto,
   type AgentResponseDto,
   type InvokeAgentRequest,
@@ -24,6 +25,8 @@ import {
   type SetupGuideResponse,
   type AgentDocumentsDto,
   type UpdateAgentDocumentsResponse,
+  type PlayerModeSuggestionRequest,
+  type PlayerModeSuggestionResponse,
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -175,6 +178,26 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       );
       if (!response) {
         throw new Error('Failed to generate setup guide: no response from server');
+      }
+      return response;
+    },
+
+    /**
+     * Suggest player move (convenience wrapper)
+     * POST /api/v1/agents/player-mode/suggest
+     *
+     * Issue #2421: Player Mode UI Controls
+     */
+    async suggestPlayerMove(
+      request: PlayerModeSuggestionRequest
+    ): Promise<PlayerModeSuggestionResponse> {
+      const response = await httpClient.post(
+        '/api/v1/agents/player-mode/suggest',
+        request,
+        PlayerModeSuggestionResponseSchema
+      );
+      if (!response) {
+        throw new Error('Failed to suggest player move: no response from server');
       }
       return response;
     },

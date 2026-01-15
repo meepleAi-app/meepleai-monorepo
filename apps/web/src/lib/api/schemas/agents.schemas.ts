@@ -244,3 +244,50 @@ export const UpdateAgentDocumentsResponseSchema = z.object({
 });
 
 export type UpdateAgentDocumentsResponse = z.infer<typeof UpdateAgentDocumentsResponseSchema>;
+
+// ========== Player Mode AI Suggestion (Issue #2421) ==========
+
+/**
+ * Player Mode Suggestion Request Schema
+ * Issue #2421: Player Mode UI Controls
+ */
+export const PlayerModeSuggestionRequestSchema = z.object({
+  gameId: z.string().uuid(),
+  gameState: z.record(z.string(), z.any()), // Flexible game state object
+  query: z.string().optional(), // Optional context/question from player
+  chatThreadId: z.string().uuid().optional(),
+});
+
+export type PlayerModeSuggestionRequest = z.infer<typeof PlayerModeSuggestionRequestSchema>;
+
+/**
+ * Suggested Move Schema
+ * Represents a single move suggestion from AI
+ */
+export const SuggestedMoveSchema = z.object({
+  action: z.string(), // e.g., "Place resource token on space 5"
+  rationale: z.string(), // Why this move is suggested
+  expectedOutcome: z.string().optional(), // What happens after this move
+  confidence: z.number().min(0).max(1), // Move-specific confidence (0.0-1.0)
+});
+
+export type SuggestedMove = z.infer<typeof SuggestedMoveSchema>;
+
+/**
+ * Player Mode Suggestion Response Schema
+ * Issue #2421: Player Mode UI Controls
+ */
+export const PlayerModeSuggestionResponseSchema = z.object({
+  primarySuggestion: SuggestedMoveSchema,
+  alternativeMoves: z.array(SuggestedMoveSchema).max(3).optional(),
+  overallConfidence: z.number().min(0).max(1), // Overall AI confidence
+  strategicContext: z.string().optional(), // High-level strategic advice
+  sources: z.array(SnippetSchema).optional(), // Rule references if applicable
+  promptTokens: z.number().int().nonnegative(),
+  completionTokens: z.number().int().nonnegative(),
+  totalTokens: z.number().int().nonnegative(),
+  processingTimeMs: z.number().int().nonnegative(),
+  metadata: z.record(z.string(), z.any()).nullable(),
+});
+
+export type PlayerModeSuggestionResponse = z.infer<typeof PlayerModeSuggestionResponseSchema>;

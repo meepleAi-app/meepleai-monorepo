@@ -188,6 +188,77 @@ export function createSessionsClient({ httpClient }: CreateSessionsClientParams)
         GameSessionDtoSchema
       );
     },
+
+    // ========== Game State Management (Issue #2406) ==========
+
+    /**
+     * Initialize game state for a session
+     * @param sessionId Session ID
+     * @param templateId GameStateTemplate ID
+     */
+    async initializeState(sessionId: string, templateId: string): Promise<unknown> {
+      return httpClient.post(`/api/v1/sessions/${encodeURIComponent(sessionId)}/state/initialize`, {
+        templateId,
+      });
+    },
+
+    /**
+     * Get current game state
+     * @param sessionId Session ID
+     */
+    async getState(sessionId: string): Promise<unknown> {
+      return httpClient.get(`/api/v1/sessions/${encodeURIComponent(sessionId)}/state`);
+    },
+
+    /**
+     * Update game state
+     * @param sessionId Session ID
+     * @param stateJson Updated state as JSON
+     */
+    async updateState(sessionId: string, stateJson: string): Promise<unknown> {
+      return httpClient.patch(`/api/v1/sessions/${encodeURIComponent(sessionId)}/state`, {
+        stateJson,
+      });
+    },
+
+    /**
+     * Create state snapshot
+     * @param sessionId Session ID
+     * @param description Snapshot description
+     * @param turnNumber Optional turn number
+     */
+    async createSnapshot(
+      sessionId: string,
+      description: string,
+      turnNumber?: number
+    ): Promise<unknown> {
+      return httpClient.post(`/api/v1/sessions/${encodeURIComponent(sessionId)}/state/snapshots`, {
+        description,
+        turnNumber,
+      });
+    },
+
+    /**
+     * Get state snapshots
+     * @param sessionId Session ID
+     */
+    async getSnapshots(sessionId: string): Promise<unknown[]> {
+      const response = await httpClient.get<unknown[]>(
+        `/api/v1/sessions/${encodeURIComponent(sessionId)}/state/snapshots`
+      );
+      return response || [];
+    },
+
+    /**
+     * Restore state from snapshot
+     * @param sessionId Session ID
+     * @param snapshotId Snapshot ID
+     */
+    async restoreSnapshot(sessionId: string, snapshotId: string): Promise<unknown> {
+      return httpClient.post(
+        `/api/v1/sessions/${encodeURIComponent(sessionId)}/state/restore/${encodeURIComponent(snapshotId)}`
+      );
+    },
   };
 }
 

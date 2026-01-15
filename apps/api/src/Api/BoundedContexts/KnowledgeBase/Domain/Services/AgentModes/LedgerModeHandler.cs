@@ -51,6 +51,8 @@ internal sealed class LedgerModeHandler : IAgentModeHandler
 
         // Get current game state if GameId provided
         JsonDocument? currentState = null;
+        DateTime stateLastUpdatedAt = DateTime.UtcNow;
+
         if (context.GameId.HasValue)
         {
             var sessionState = await _sessionStateRepository
@@ -60,6 +62,7 @@ internal sealed class LedgerModeHandler : IAgentModeHandler
             if (sessionState != null)
             {
                 currentState = sessionState.CurrentState;
+                stateLastUpdatedAt = sessionState.LastUpdatedAt;
                 _logger.LogDebug(
                     "Retrieved current state for session {SessionId}",
                     context.GameId.Value);
@@ -86,6 +89,7 @@ internal sealed class LedgerModeHandler : IAgentModeHandler
             conflicts = (await _stateParser.DetectConflictsAsync(
                 extraction,
                 currentState,
+                stateLastUpdatedAt,
                 cancellationToken)
                 .ConfigureAwait(false))
                 .ToList();

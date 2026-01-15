@@ -41,12 +41,12 @@ internal class LoginPayload
     /// <summary>
     /// User email address. Accepts both "email" (camelCase) and "Email" (PascalCase) in JSON.
     /// </summary>
-    public string Email { get; set; } = default!;
+    public string Email { get; set; } = string.Empty;
 
     /// <summary>
     /// User password. Accepts both "password" (camelCase) and "Password" (PascalCase) in JSON.
     /// </summary>
-    public string Password { get; set; } = default!;
+    public string Password { get; set; } = string.Empty;
 }
 
 internal record RegisterCommand(

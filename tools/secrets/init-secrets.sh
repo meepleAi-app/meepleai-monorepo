@@ -148,6 +148,13 @@ create_secret \
     "" \
     true
 
+# JWT Secret (auto-generate)
+create_secret \
+    "jwt-secret" \
+    "JWT signing secret (auto-generated secure random)" \
+    "" \
+    true
+
 # OAuth Provider Secrets (for external authentication)
 # Note: For development, you can use mock values or leave empty
 # For production, obtain real OAuth credentials from provider consoles

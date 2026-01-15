@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
@@ -444,13 +445,7 @@ public class ChatExportServiceTests
 
     private static MeepleAiDbContext CreateDbContext()
     {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        var mediator = new Mock<IMediator>().Object;
-        var collectorMock = new Mock<IDomainEventCollector>();
-        collectorMock.Setup(c => c.GetAndClearEvents()).Returns(Array.Empty<IDomainEvent>());
-        return new MeepleAiDbContext(options, mediator, collectorMock.Object);
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
 
     private static IEnumerable<IExportFormatter> CreateMockFormatters(params string[] formats)

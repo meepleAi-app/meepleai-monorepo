@@ -32,6 +32,7 @@ load_secret "postgres-password" "DB_POSTGRESDB_PASSWORD"  # n8n variable name
 load_secret "n8n-basic-auth-password" "N8N_BASIC_AUTH_PASSWORD"
 load_secret "n8n-encryption-key" "N8N_ENCRYPTION_KEY"
 load_secret "redis-password" "REDIS_PASSWORD"
+load_secret "jwt-secret" "JWT_SECRET"
 
 # Build Redis connection string with password from secret
 if [ -f "$SECRETS_DIR/redis-password" ]; then

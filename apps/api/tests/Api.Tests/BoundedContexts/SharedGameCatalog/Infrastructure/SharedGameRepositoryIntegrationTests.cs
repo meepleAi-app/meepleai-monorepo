@@ -12,6 +12,8 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Npgsql;
+using Api.Tests.TestHelpers;
+using Api.Tests.Constants;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
@@ -56,7 +58,7 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
         eventCollectorMock.Setup(x => x.GetAndClearEvents())
             .Returns(new List<IDomainEvent>().AsReadOnly());
 
-        _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         await _dbContext.Database.MigrateAsync();
 
         // Initialize repository (only needs DbContext)

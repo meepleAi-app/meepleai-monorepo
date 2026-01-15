@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers.OAuth;
 
@@ -50,13 +51,7 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
         _timeProviderMock = new Mock<TimeProvider>();
 
         // Create real InMemoryDatabase for testing DbContext operations
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-        var mediatorMock = new Mock<IMediator>();
-        var eventCollectorMock = new Mock<IDomainEventCollector>();
-        eventCollectorMock.Setup(e => e.GetAndClearEvents()).Returns(new List<IDomainEvent>() as IReadOnlyList<IDomainEvent>);
-        _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
 
         // Setup TimeProvider default
         _timeProviderMock.Setup(t => t.GetUtcNow()).Returns(DateTimeOffset.UtcNow);

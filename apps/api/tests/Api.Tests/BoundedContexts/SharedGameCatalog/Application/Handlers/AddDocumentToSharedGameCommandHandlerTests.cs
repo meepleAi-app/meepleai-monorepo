@@ -10,6 +10,7 @@ using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,13 +19,20 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
+/// <summary>
+/// NOTE: These tests currently fail because DocumentVersioningService methods are not virtual.
+/// This is a pre-existing issue not related to #2430. To fix:
+/// 1. Make DocumentVersioningService methods virtual, OR
+/// 2. Extract IDocumentVersioningService interface, OR
+/// 3. Use concrete DocumentVersioningService instead of mock
+/// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class AddDocumentToSharedGameCommandHandlerTests
 {
     private readonly Mock<ISharedGameRepository> _gameRepositoryMock;
     private readonly Mock<ISharedGameDocumentRepository> _documentRepositoryMock;
     private readonly Mock<DocumentVersioningService> _versioningServiceMock;
-    private readonly Mock<MeepleAiDbContext> _contextMock;
+    private readonly MeepleAiDbContext _context;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IMediator> _mediatorMock;
     private readonly Mock<ILogger<AddDocumentToSharedGameCommandHandler>> _loggerMock;
@@ -38,22 +46,17 @@ public class AddDocumentToSharedGameCommandHandlerTests
         // Mock DocumentVersioningService requires ISharedGameDocumentRepository
         _versioningServiceMock = new Mock<DocumentVersioningService>(_documentRepositoryMock.Object);
 
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-        var mockEventCollector = new Mock<IDomainEventCollector>();
-        mockEventCollector.Setup(e => e.GetAndClearEvents()).Returns(new List<IDomainEvent>());
-
-        _mediatorMock = new Mock<IMediator>();
-        _contextMock = new Mock<MeepleAiDbContext>(options, _mediatorMock.Object, mockEventCollector.Object);
+        // Use TestDbContextFactory instead of Mock<MeepleAiDbContext> (Issue #2430)
+        _context = TestDbContextFactory.CreateInMemoryDbContext();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _mediatorMock = new Mock<IMediator>();
         _loggerMock = new Mock<ILogger<AddDocumentToSharedGameCommandHandler>>();
 
         _handler = new AddDocumentToSharedGameCommandHandler(
             _gameRepositoryMock.Object,
             _documentRepositoryMock.Object,
             _versioningServiceMock.Object,
-            _contextMock.Object,
+            _context,
             _unitOfWorkMock.Object,
             _mediatorMock.Object,
             _loggerMock.Object);
@@ -79,12 +82,6 @@ public class AddDocumentToSharedGameCommandHandlerTests
         _gameRepositoryMock
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
-
-        // Mock PDF exists
-        var mockDbSet = new Mock<Microsoft.EntityFrameworkCore.DbSet<PdfDocumentEntity>>();
-        mockDbSet.Setup(d => d.AsQueryable()).Returns(new[] {
-            new PdfDocumentEntity { Id = pdfId }
-        }.AsQueryable());
 
         // Mock version doesn't exist
         _versioningServiceMock

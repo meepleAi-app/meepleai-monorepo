@@ -41,6 +41,30 @@ else
 fi
 
 # ============================================
+# Testcontainers & Process Cleanup
+# ============================================
+
+echo "🧹 Cleaning up orphaned test containers and processes..."
+
+# Cleanup orphaned Testcontainers (postgres, redis from previous test runs)
+if command -v docker &> /dev/null; then
+  ORPHANED=$(docker ps -a --filter "label=org.testcontainers=true" -q 2>/dev/null)
+  if [ -n "$ORPHANED" ]; then
+    echo "$ORPHANED" | xargs docker rm -f 2>/dev/null || true
+    echo "   Removed orphaned Testcontainers"
+  fi
+fi
+
+# Cleanup hanging testhost processes (Windows DLL locking fix)
+if [ -f "tools/cleanup/cleanup-test-processes.ps1" ]; then
+  if command -v powershell &> /dev/null; then
+    powershell -ExecutionPolicy Bypass -File "tools/cleanup/cleanup-test-processes.ps1" -TestHostOnly 2>/dev/null || true
+  fi
+fi
+
+echo "✅ Cleanup complete!"
+
+# ============================================
 # Backend Build Check
 # ============================================
 

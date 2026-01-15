@@ -44,8 +44,8 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
 
         try
         {
-            // Step 1: Validate CSV and parse records
-            var keyRecords = await ValidateCsvAndParseAsync(command.CsvContent).ConfigureAwait(false);
+            // Step 1: Validate CSV and parse records (captures parsing errors)
+            var (keyRecords, parsingErrors, totalRowsAttempted) = await ValidateCsvAndParseAsync(command.CsvContent).ConfigureAwait(false);
 
             // Step 2: Validate all user IDs exist
             await ValidateUserExistenceAsync(keyRecords, cancellationToken).ConfigureAwait(false);
@@ -54,15 +54,19 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
             await ValidateDuplicatesAsync(keyRecords, cancellationToken).ConfigureAwait(false);
 
             // Step 4: Process all API key imports
-            var (successCount, errors, importedKeys) = await ProcessApiKeyImportsAsync(
+            var (successCount, processingErrors, importedKeys) = await ProcessApiKeyImportsAsync(
                 keyRecords, cancellationToken).ConfigureAwait(false);
+
+            // Merge parsing errors with processing errors
+            var allErrors = new List<string>(parsingErrors);
+            allErrors.AddRange(processingErrors);
 
             // Commit transaction if any success
             if (successCount > 0)
             {
                 await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 _logger.LogInformation("Bulk API key import completed: {SuccessCount} succeeded, {FailedCount} failed",
-                    successCount, errors.Count);
+                    successCount, allErrors.Count);
             }
             else
             {
@@ -70,10 +74,10 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
             }
 
             return new BulkOperationResult<ApiKeyImportResultDto>(
-                TotalRequested: keyRecords.Count,
+                TotalRequested: totalRowsAttempted,
                 SuccessCount: successCount,
-                FailedCount: errors.Count,
-                Errors: errors,
+                FailedCount: allErrors.Count,
+                Errors: allErrors,
                 Data: importedKeys
             );
         }
@@ -98,10 +102,10 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
 
     /// <summary>
     /// Validates CSV content and parses API key records.
+    /// Returns (parsedRecords, parsingErrors, totalRowsAttempted).
     /// </summary>
-    private async Task<List<ApiKeyImportRecord>> ValidateCsvAndParseAsync(
-        string csvContent
-                )
+    private async Task<(List<ApiKeyImportRecord> Records, List<string> ParsingErrors, int TotalRowsAttempted)> ValidateCsvAndParseAsync(
+        string csvContent)
     {
         if (string.IsNullOrWhiteSpace(csvContent))
         {
@@ -114,15 +118,15 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
             throw new DomainException($"CSV file size ({csvSizeBytes} bytes) exceeds maximum limit of {MaxCsvSizeBytes} bytes");
         }
 
-        var errors = new List<string>();
-        var keyRecords = ParseCsv(csvContent, errors);
+        var parsingErrors = new List<string>();
+        var (keyRecords, totalRowsAttempted) = ParseCsv(csvContent, parsingErrors);
 
         if (keyRecords.Count > MaxBulkSize)
         {
             throw new DomainException($"Bulk operation exceeds maximum limit of {MaxBulkSize} API keys");
         }
 
-        return await Task.FromResult(keyRecords).ConfigureAwait(false);
+        return await Task.FromResult((keyRecords, parsingErrors, totalRowsAttempted)).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -249,7 +253,7 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
 
     private static readonly char[] CsvSeparators = { '\r', '\n' };
 
-    private static List<ApiKeyImportRecord> ParseCsv(string csvContent, List<string> errors)
+    private static (List<ApiKeyImportRecord> Records, int TotalRowsAttempted) ParseCsv(string csvContent, List<string> errors)
     {
         var records = new List<ApiKeyImportRecord>();
         var lines = csvContent.Split(CsvSeparators, StringSplitOptions.RemoveEmptyEntries);
@@ -261,9 +265,19 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
 
         ValidateHeader(lines[0]);
 
+        // Track total non-empty data rows attempted
+        var totalRowsAttempted = 0;
+
         // Parse data rows
         for (int i = 1; i < lines.Length; i++)
         {
+            var line = lines[i].Trim();
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue; // Skip empty lines without counting them
+            }
+
+            totalRowsAttempted++;
             var record = ParseAndValidateLine(lines[i], i + 1, errors);
             if (record != null)
             {
@@ -271,7 +285,7 @@ internal class BulkImportApiKeysCommandHandler : ICommandHandler<BulkImportApiKe
             }
         }
 
-        return records;
+        return (records, totalRowsAttempted);
     }
 
     private static void ValidateHeader(string headerLine)

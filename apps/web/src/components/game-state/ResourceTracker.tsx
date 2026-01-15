@@ -36,12 +36,12 @@ export function ResourceTracker({
   const canIncrement = editable && value + step <= max;
 
   return (
-    <div className={`flex items-center gap-2 ${className}`} data-testid={testId}>
+    <div className={`flex items-center gap-1.5 sm:gap-2 ${className}`} data-testid={testId}>
       {editable && (
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8"
+          className="h-8 w-8 sm:h-9 sm:w-9"
           onClick={() => onChange(-step)}
           disabled={!canDecrement}
           aria-label="Decrease value"
@@ -52,7 +52,7 @@ export function ResourceTracker({
       )}
 
       <div
-        className="min-w-[3rem] text-center font-semibold tabular-nums"
+        className="min-w-[2.5rem] sm:min-w-[3rem] text-center text-sm sm:text-base font-semibold tabular-nums"
         aria-label={`Current value: ${value}`}
         data-testid={`${testId}-value`}
       >
@@ -63,7 +63,7 @@ export function ResourceTracker({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8"
+          className="h-8 w-8 sm:h-9 sm:w-9"
           onClick={() => onChange(step)}
           disabled={!canIncrement}
           aria-label="Increase value"

@@ -37,28 +37,34 @@ export function PlayerStateCard({
 
   return (
     <Card className={isCurrentPlayer ? 'ring-2 ring-primary' : ''} data-testid="player-state-card">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <CardHeader className="pb-2 sm:pb-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Avatar
-              className="h-10 w-10 flex items-center justify-center font-semibold"
+              className="h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center font-semibold"
               style={{ backgroundColor: player.color || '#666' }}
               aria-label={`Player ${player.playerName} color: ${player.color || 'default'}`}
             >
-              <span className="text-white text-sm">
+              <span className="text-white text-xs sm:text-sm">
                 {player.playerName.charAt(0).toUpperCase()}
               </span>
             </Avatar>
             <div>
-              <CardTitle className="text-lg">{player.playerName}</CardTitle>
-              <p className="text-sm text-muted-foreground">Player {player.playerOrder}</p>
+              <CardTitle className="text-sm sm:text-base md:text-lg">{player.playerName}</CardTitle>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Player {player.playerOrder}
+              </p>
             </div>
           </div>
-          {isCurrentPlayer && <Badge variant="default">Current Turn</Badge>}
+          {isCurrentPlayer && (
+            <Badge variant="default" className="text-xs">
+              Current Turn
+            </Badge>
+          )}
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4">
         {/* Score */}
         {player.score !== undefined && (
           <div className="flex items-center justify-between">
@@ -75,8 +81,8 @@ export function PlayerStateCard({
         {/* Resources */}
         {player.resources && Object.keys(player.resources).length > 0 && (
           <div className="space-y-2">
-            <label className="text-sm font-medium">Resources</label>
-            <div className="space-y-2">
+            <label className="text-xs sm:text-sm font-medium">Resources</label>
+            <div className="space-y-1.5 sm:space-y-2">
               {Object.entries(player.resources).map(([key, value]) => (
                 <div key={key} className="flex items-center justify-between">
                   <span className="text-sm capitalize">{key.replace(/_/g, ' ')}</span>

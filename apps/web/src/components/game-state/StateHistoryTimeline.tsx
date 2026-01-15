@@ -43,12 +43,14 @@ export function StateHistoryTimeline({ sessionId: _sessionId }: StateHistoryTime
   if (snapshots.length === 0) {
     return (
       <Card data-testid="state-history-timeline">
-        <CardHeader>
-          <CardTitle>State History</CardTitle>
-          <CardDescription>No snapshots available yet</CardDescription>
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-base sm:text-lg">State History</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
+            No snapshots available yet
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Snapshots will appear here as the game progresses
           </p>
         </CardContent>
@@ -58,13 +60,15 @@ export function StateHistoryTimeline({ sessionId: _sessionId }: StateHistoryTime
 
   return (
     <Card data-testid="state-history-timeline">
-      <CardHeader>
-        <CardTitle>State History</CardTitle>
-        <CardDescription>{snapshots.length} snapshots available</CardDescription>
+      <CardHeader className="pb-3 sm:pb-6">
+        <CardTitle className="text-base sm:text-lg">State History</CardTitle>
+        <CardDescription className="text-xs sm:text-sm">
+          {snapshots.length} snapshots available
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[400px] pr-4">
-          <div className="space-y-4">
+        <ScrollArea className="h-[300px] sm:h-[350px] md:h-[400px] pr-2 sm:pr-4">
+          <div className="space-y-3 sm:space-y-4">
             {snapshots
               .slice()
               .reverse()

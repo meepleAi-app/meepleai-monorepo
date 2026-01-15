@@ -142,3 +142,21 @@ export const DarkMode: Story = {
     ),
   ],
 };
+
+/**
+ * Mobile Viewport - Issue #2406 Mobile-friendly compact view
+ */
+export const Mobile: Story = {
+  args: {
+    state: mockState,
+    currentPlayerIndex: 0,
+  },
+  parameters: {
+    viewport: {
+      defaultViewport: 'mobile1',
+    },
+    chromatic: {
+      viewports: [375],
+    },
+  },
+};

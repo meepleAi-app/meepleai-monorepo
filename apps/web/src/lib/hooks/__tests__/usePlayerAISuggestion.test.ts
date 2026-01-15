@@ -6,31 +6,26 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 
-import { usePlayerAISuggestion } from '../usePlayerAISuggestion';
-
 import type { PlayerModeSuggestionResponse, SuggestedMove } from '@/lib/api/schemas';
 
-// Mock createApiClient
+// Mock api singleton - must be before import
 vi.mock('@/lib/api', () => ({
-  createApiClient: vi.fn(),
+  api: {
+    agents: {
+      suggestPlayerMove: vi.fn(),
+    },
+  },
 }));
 
-// Import after mock to get mocked version
-import { createApiClient } from '@/lib/api';
+// Import after mock
+import { api } from '@/lib/api';
+import { usePlayerAISuggestion } from '../usePlayerAISuggestion';
 
 describe('usePlayerAISuggestion', () => {
-  const mockSuggestPlayerMove = vi.fn();
   const mockGameState = { players: [{ id: '1', name: 'Alice' }] };
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    // Setup mock API client
-    (createApiClient as any).mockReturnValue({
-      agents: {
-        suggestPlayerMove: mockSuggestPlayerMove,
-      },
-    });
   });
 
   afterEach(() => {
@@ -93,7 +88,7 @@ describe('usePlayerAISuggestion', () => {
 
     it('should set isLoading to true when requesting suggestion', async () => {
       // Mock pending promise
-      mockSuggestPlayerMove.mockImplementation(() => new Promise(() => {}));
+      (api.agents.suggestPlayerMove as any).mockImplementation(() => new Promise(() => {}));
 
       const { result } = renderHook(() => usePlayerAISuggestion());
       const [, controls] = result.current;
@@ -109,7 +104,7 @@ describe('usePlayerAISuggestion', () => {
     });
 
     it('should call API with correct parameters', async () => {
-      mockSuggestPlayerMove.mockResolvedValue(mockResponse);
+      (api.agents.suggestPlayerMove as any).mockResolvedValue(mockResponse);
 
       const { result } = renderHook(() => usePlayerAISuggestion());
       const [, controls] = result.current;
@@ -118,7 +113,7 @@ describe('usePlayerAISuggestion', () => {
         await controls.suggestMove('game-456', mockGameState, 'Should I focus on wood?');
       });
 
-      expect(mockSuggestPlayerMove).toHaveBeenCalledWith({
+      expect(api.agents.suggestPlayerMove as any).toHaveBeenCalledWith({
         gameId: 'game-456',
         gameState: mockGameState,
         query: 'Should I focus on wood?',
@@ -126,7 +121,7 @@ describe('usePlayerAISuggestion', () => {
     });
 
     it('should handle successful response', async () => {
-      mockSuggestPlayerMove.mockResolvedValue(mockResponse);
+      (api.agents.suggestPlayerMove as any).mockResolvedValue(mockResponse);
 
       const { result } = renderHook(() => usePlayerAISuggestion());
       const [, controls] = result.current;
@@ -146,7 +141,7 @@ describe('usePlayerAISuggestion', () => {
     });
 
     it('should call onSuggestionReceived callback on success', async () => {
-      mockSuggestPlayerMove.mockResolvedValue(mockResponse);
+      (api.agents.suggestPlayerMove as any).mockResolvedValue(mockResponse);
       const onSuggestionReceived = vi.fn();
 
       const { result } = renderHook(() => usePlayerAISuggestion({ onSuggestionReceived }));
@@ -161,7 +156,7 @@ describe('usePlayerAISuggestion', () => {
 
     it('should handle API error', async () => {
       const errorMessage = 'Backend endpoint not implemented';
-      mockSuggestPlayerMove.mockRejectedValue(new Error(errorMessage));
+      (api.agents.suggestPlayerMove as any).mockRejectedValue(new Error(errorMessage));
 
       const { result } = renderHook(() => usePlayerAISuggestion());
       const [, controls] = result.current;
@@ -178,7 +173,7 @@ describe('usePlayerAISuggestion', () => {
 
     it('should call onError callback on failure', async () => {
       const errorMessage = 'Network error';
-      mockSuggestPlayerMove.mockRejectedValue(new Error(errorMessage));
+      (api.agents.suggestPlayerMove as any).mockRejectedValue(new Error(errorMessage));
       const onError = vi.fn();
 
       const { result } = renderHook(() => usePlayerAISuggestion({ onError }));
@@ -192,7 +187,7 @@ describe('usePlayerAISuggestion', () => {
     });
 
     it('should handle non-Error exceptions', async () => {
-      mockSuggestPlayerMove.mockRejectedValue('String error');
+      (api.agents.suggestPlayerMove as any).mockRejectedValue('String error');
 
       const { result } = renderHook(() => usePlayerAISuggestion());
       const [, controls] = result.current;
@@ -222,7 +217,7 @@ describe('usePlayerAISuggestion', () => {
     };
 
     it('should call onSuggestionApplied callback', async () => {
-      mockSuggestPlayerMove.mockResolvedValue(mockResponse);
+      (api.agents.suggestPlayerMove as any).mockResolvedValue(mockResponse);
       const onSuggestionApplied = vi.fn();
 
       const { result } = renderHook(() => usePlayerAISuggestion({ onSuggestionApplied }));
@@ -241,7 +236,7 @@ describe('usePlayerAISuggestion', () => {
     });
 
     it('should reset state after applying', async () => {
-      mockSuggestPlayerMove.mockResolvedValue(mockResponse);
+      (api.agents.suggestPlayerMove as any).mockResolvedValue(mockResponse);
 
       const { result } = renderHook(() => usePlayerAISuggestion());
 
@@ -279,7 +274,7 @@ describe('usePlayerAISuggestion', () => {
     };
 
     it('should call onSuggestionIgnored callback', async () => {
-      mockSuggestPlayerMove.mockResolvedValue(mockResponse);
+      (api.agents.suggestPlayerMove as any).mockResolvedValue(mockResponse);
       const onSuggestionIgnored = vi.fn();
 
       const { result } = renderHook(() => usePlayerAISuggestion({ onSuggestionIgnored }));
@@ -298,7 +293,7 @@ describe('usePlayerAISuggestion', () => {
     });
 
     it('should reset state after ignoring', async () => {
-      mockSuggestPlayerMove.mockResolvedValue(mockResponse);
+      (api.agents.suggestPlayerMove as any).mockResolvedValue(mockResponse);
 
       const { result } = renderHook(() => usePlayerAISuggestion());
 
@@ -337,7 +332,7 @@ describe('usePlayerAISuggestion', () => {
     };
 
     it('should reset state to initial values', async () => {
-      mockSuggestPlayerMove.mockResolvedValue(mockResponse);
+      (api.agents.suggestPlayerMove as any).mockResolvedValue(mockResponse);
 
       const { result } = renderHook(() => usePlayerAISuggestion());
 
@@ -385,7 +380,7 @@ describe('usePlayerAISuggestion', () => {
         metadata: null,
       };
 
-      mockSuggestPlayerMove.mockResolvedValue(responseWithoutAlternatives);
+      (api.agents.suggestPlayerMove as any).mockResolvedValue(responseWithoutAlternatives);
 
       const { result } = renderHook(() => usePlayerAISuggestion());
       const [, controls] = result.current;
@@ -400,7 +395,7 @@ describe('usePlayerAISuggestion', () => {
     });
 
     it('should handle concurrent suggest requests', async () => {
-      mockSuggestPlayerMove.mockImplementation(
+      (api.agents.suggestPlayerMove as any).mockImplementation(
         () =>
           new Promise(resolve =>
             setTimeout(
@@ -438,7 +433,7 @@ describe('usePlayerAISuggestion', () => {
       });
 
       // Should have been called twice
-      expect(mockSuggestPlayerMove).toHaveBeenCalledTimes(2);
+      expect(api.agents.suggestPlayerMove as any).toHaveBeenCalledTimes(2);
     });
   });
 });

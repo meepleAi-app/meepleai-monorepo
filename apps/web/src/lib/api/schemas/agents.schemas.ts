@@ -287,7 +287,7 @@ export const PlayerModeSuggestionResponseSchema = z.object({
   completionTokens: z.number().int().nonnegative(),
   totalTokens: z.number().int().nonnegative(),
   processingTimeMs: z.number().int().nonnegative(),
-  metadata: z.record(z.string(), z.any()).nullable().optional(),
+  metadata: z.record(z.string(), z.any()).nullable(),
 });
 
 export type PlayerModeSuggestionResponse = z.infer<typeof PlayerModeSuggestionResponseSchema>;

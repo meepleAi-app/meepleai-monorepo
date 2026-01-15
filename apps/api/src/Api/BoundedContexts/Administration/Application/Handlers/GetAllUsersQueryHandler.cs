@@ -39,7 +39,8 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
         // Role filter
         if (!string.IsNullOrWhiteSpace(query.RoleFilter) && !string.Equals(query.RoleFilter, "all", StringComparison.Ordinal))
         {
-            dbQuery = dbQuery.Where(u => string.Equals(u.Role, query.RoleFilter, StringComparison.OrdinalIgnoreCase));
+            // Direct comparison - Role values are standardized (admin/user/editor)
+            dbQuery = dbQuery.Where(u => u.Role == query.RoleFilter);
         }
 
         // Sorting

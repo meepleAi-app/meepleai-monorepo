@@ -46,6 +46,13 @@ export {
   libraryKeys,
 } from './useLibrary';
 
+// Agent Documents queries and mutations (Issue #2399)
+export {
+  useAgentDocuments,
+  useUpdateAgentDocuments,
+  agentDocumentsKeys,
+} from './useAgentDocuments';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

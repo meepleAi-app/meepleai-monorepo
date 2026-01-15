@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
@@ -75,7 +76,7 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
         _serviceProvider = services.BuildServiceProvider();
         _eventCollector = _serviceProvider.GetRequiredService<IDomainEventCollector>();
-        _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
 
         // Apply migrations
         await _dbContext.Database.MigrateAsync();

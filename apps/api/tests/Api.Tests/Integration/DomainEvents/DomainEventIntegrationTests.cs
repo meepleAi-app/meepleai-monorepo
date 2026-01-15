@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.EventHandlers;
 using Api.SharedKernel.Application.Services;
@@ -42,7 +43,7 @@ public class DomainEventIntegrationTests : IAsyncLifetime
 
         var serviceProvider = services.BuildServiceProvider();
         _mediator = serviceProvider.GetRequiredService<IMediator>();
-        _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
 
 
 

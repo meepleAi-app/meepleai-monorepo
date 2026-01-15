@@ -3,7 +3,7 @@ using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
-using Api.Tests.Helpers;
+using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -32,7 +32,7 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
 
     private static MeepleAiDbContext CreateFreshDbContext()
     {
-        return DbContextHelper.CreateInMemoryDbContext();
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
 
     [Fact]

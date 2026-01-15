@@ -3,7 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 using Api.Infrastructure;
 using Api.Services;
-using Api.Tests.Helpers;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -29,7 +29,7 @@ public class IndexPdfCommandHandlerTests
     /// </summary>
     private static MeepleAiDbContext CreateFreshDbContext()
     {
-        return DbContextHelper.CreateInMemoryDbContext();
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
 
     /// <summary>

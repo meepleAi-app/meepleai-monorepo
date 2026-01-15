@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
+using Api.Tests.TestHelpers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -25,10 +26,8 @@ public static class TestHelpers
             .EnableSensitiveDataLogging()
             .Options;
 
-        var mockMediator = new Mock<IMediator>();
-        var mockEventCollector = new Mock<IDomainEventCollector>();
-        mockEventCollector.Setup(x => x.GetAndClearEvents())
-            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
+        var mockMediator = TestDbContextFactory.CreateMockMediator();
+        var mockEventCollector = TestDbContextFactory.CreateMockEventCollector();
 
         var dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
 

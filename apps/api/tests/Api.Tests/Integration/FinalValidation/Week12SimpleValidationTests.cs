@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
@@ -61,7 +62,7 @@ public sealed class Week12SimpleValidationTests : IAsyncLifetime
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
 
         _serviceProvider = services.BuildServiceProvider();
-        _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
 
         await _dbContext.Database.MigrateAsync();
     }

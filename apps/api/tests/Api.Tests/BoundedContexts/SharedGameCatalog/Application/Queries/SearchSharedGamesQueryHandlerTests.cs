@@ -16,6 +16,8 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Api.Tests.TestHelpers;
+using Api.Tests.Constants;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries;
@@ -58,7 +60,7 @@ public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime
         eventCollectorMock.Setup(x => x.GetAndClearEvents())
             .Returns(new List<IDomainEvent>().AsReadOnly());
 
-        _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         await _dbContext.Database.MigrateAsync();
 
         // Seed test user (FK requirement)

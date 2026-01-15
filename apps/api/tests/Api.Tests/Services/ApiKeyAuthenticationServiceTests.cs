@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.SharedKernel.Application.Services;
@@ -78,13 +79,7 @@ public class ApiKeyAuthenticationServiceTests
 
     private static MeepleAiDbContext CreateDbContext()
     {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        var mediator = new Mock<IMediator>().Object;
-        var collectorMock = new Mock<IDomainEventCollector>();
-        collectorMock.Setup(c => c.GetAndClearEvents()).Returns(Array.Empty<IDomainEvent>());
-        return new MeepleAiDbContext(options, mediator, collectorMock.Object);
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
 
     private sealed class FakePasswordHashingService : IPasswordHashingService
@@ -96,4 +91,3 @@ public class ApiKeyAuthenticationServiceTests
         public bool VerifySecret(string secret, string storedHash) => storedHash == HashSecret(secret);
     }
 }
-

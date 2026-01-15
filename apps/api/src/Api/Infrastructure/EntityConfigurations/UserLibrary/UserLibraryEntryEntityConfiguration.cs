@@ -44,7 +44,8 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
             .HasForeignKey(e => e.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne(e => e.Game)
+        // Relationship to SharedGameCatalog (not legacy games table)
+        builder.HasOne(e => e.SharedGame)
             .WithMany()
             .HasForeignKey(e => e.GameId)
             .OnDelete(DeleteBehavior.Cascade);

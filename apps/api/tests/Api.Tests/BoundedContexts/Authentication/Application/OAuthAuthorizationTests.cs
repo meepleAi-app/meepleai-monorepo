@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Moq;
 using Xunit;
 
@@ -47,10 +48,10 @@ public sealed class OAuthAuthorizationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.NotNull(result.AuthorizationUrl);
-        Assert.Contains(provider, result.AuthorizationUrl, StringComparison.OrdinalIgnoreCase);
-        Assert.Null(result.ErrorMessage);
+        result.Success.Should().BeTrue();
+        result.AuthorizationUrl.Should().NotBeNull();
+        result.AuthorizationUrl.Should().ContainEquivalentOf(provider);
+        result.ErrorMessage.Should().BeNull();
 
         // Verify state was stored
         _helper.OAuthServiceMock.Verify(
@@ -82,11 +83,11 @@ public sealed class OAuthAuthorizationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Contains("accounts.google.com", result.AuthorizationUrl);
-        Assert.Contains("client_id=", result.AuthorizationUrl);
-        Assert.Contains("state=", result.AuthorizationUrl);
-        Assert.Contains("scope=", result.AuthorizationUrl);
+        result.Success.Should().BeTrue();
+        result.AuthorizationUrl.Should().Contain("accounts.google.com");
+        result.AuthorizationUrl.Should().Contain("client_id=");
+        result.AuthorizationUrl.Should().Contain("state=");
+        result.AuthorizationUrl.Should().Contain("scope=");
     }
 
     [Fact]
@@ -108,10 +109,10 @@ public sealed class OAuthAuthorizationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Contains("discord.com", result.AuthorizationUrl);
-        Assert.Contains("client_id=", result.AuthorizationUrl);
-        Assert.Contains("state=", result.AuthorizationUrl);
+        result.Success.Should().BeTrue();
+        result.AuthorizationUrl.Should().Contain("discord.com");
+        result.AuthorizationUrl.Should().Contain("client_id=");
+        result.AuthorizationUrl.Should().Contain("state=");
     }
 
     [Fact]
@@ -133,10 +134,10 @@ public sealed class OAuthAuthorizationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Contains("github.com", result.AuthorizationUrl);
-        Assert.Contains("client_id=", result.AuthorizationUrl);
-        Assert.Contains("state=", result.AuthorizationUrl);
+        result.Success.Should().BeTrue();
+        result.AuthorizationUrl.Should().Contain("github.com");
+        result.AuthorizationUrl.Should().Contain("client_id=");
+        result.AuthorizationUrl.Should().Contain("state=");
     }
 
     [Fact]
@@ -149,10 +150,10 @@ public sealed class OAuthAuthorizationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.AuthorizationUrl);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("provider must be specified", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.AuthorizationUrl.Should().BeNull();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("provider must be specified");
 
         // Verify state was NOT stored
         _helper.OAuthServiceMock.Verify(
@@ -170,11 +171,11 @@ public sealed class OAuthAuthorizationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.AuthorizationUrl);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("unsupported", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("facebook", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.AuthorizationUrl.Should().BeNull();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("unsupported");
+        result.ErrorMessage.Should().ContainEquivalentOf("facebook");
 
         // Verify state was NOT stored
         _helper.OAuthServiceMock.Verify(
@@ -202,17 +203,17 @@ public sealed class OAuthAuthorizationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.NotNull(capturedState);
+        result.Success.Should().BeTrue();
+        capturedState.Should().NotBeNull();
 
         // Verify state is Base64-encoded and has sufficient entropy (min 32 bytes = 44 Base64 chars)
-        Assert.True(capturedState.Length >= 44, "State token should have at least 32 bytes of entropy");
+        capturedState.Length.Should().BeGreaterThanOrEqualTo(44, "State token should have at least 32 bytes of entropy");
 
         // Verify it's valid Base64
         try
         {
             var decoded = Convert.FromBase64String(capturedState);
-            Assert.True(decoded.Length >= 32, "Decoded state should be at least 32 bytes");
+            decoded.Length.Should().BeGreaterThanOrEqualTo(32, "Decoded state should be at least 32 bytes");
         }
         catch (FormatException)
         {
@@ -241,9 +242,9 @@ public sealed class OAuthAuthorizationTests : IDisposable
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert - Verify correct order
-        Assert.Equal(2, callSequence.Count);
-        Assert.Equal("StoreState", callSequence[0]);
-        Assert.Equal("GetAuthUrl", callSequence[1]);
+        callSequence.Should().HaveCount(2);
+        callSequence[0].Should().Be("StoreState");
+        callSequence[1].Should().Be("GetAuthUrl");
     }
 
     [Fact]
@@ -265,8 +266,8 @@ public sealed class OAuthAuthorizationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Contains("redirect_uri=", result.AuthorizationUrl);
+        result.Success.Should().BeTrue();
+        result.AuthorizationUrl.Should().Contain("redirect_uri=");
     }
 
     [Fact]
@@ -283,10 +284,10 @@ public sealed class OAuthAuthorizationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.AuthorizationUrl);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("not available", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.AuthorizationUrl.Should().BeNull();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("not available");
     }
 
     [Fact]
@@ -307,10 +308,10 @@ public sealed class OAuthAuthorizationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.AuthorizationUrl);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("not available", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.AuthorizationUrl.Should().BeNull();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("not available");
     }
 
     public void Dispose() => _helper.Dispose();

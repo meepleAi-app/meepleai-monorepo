@@ -16,6 +16,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 using Api.Services;
 using Api.Services.LlmClients;
 
@@ -52,6 +53,10 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #2404: Agent Mode Handlers (Scoped - use repositories and LLM services)
         services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.PlayerModeHandler>();
         services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.ChatModeHandler>();
+
+        // Issue #2405: Ledger Mode Handler + State Parser
+        services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.LedgerModeHandler>();
+        services.AddScoped<IStateParser, NaturalLanguageStateParser>();
     }
 
     private static void AddValidationServices(IServiceCollection services)

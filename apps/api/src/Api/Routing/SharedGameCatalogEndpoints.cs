@@ -221,6 +221,46 @@ internal static class SharedGameCatalogEndpoints
             .WithName("RemoveGameDocument")
             .WithSummary("Remove document from game (Admin/Editor)")
             .Produces(StatusCodes.Status204NoContent);
+
+        // Game State Template Management (Issue #2400)
+        group.MapGet("/admin/shared-games/{id:guid}/state-template", HandleGetActiveStateTemplate)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetActiveGameStateTemplate")
+            .WithSummary("Get active game state template (Admin/Editor)")
+            .WithDescription("Returns the currently active game state template for tracking game state. Returns null if no active template exists.")
+            .Produces<GameStateTemplateDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
+        group.MapGet("/admin/shared-games/{id:guid}/state-template/versions", HandleGetStateTemplateVersions)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetGameStateTemplateVersions")
+            .WithSummary("Get all game state template versions (Admin/Editor)")
+            .WithDescription("Returns all versions of game state templates for a game, ordered by version descending.")
+            .Produces<IReadOnlyList<GameStateTemplateDto>>();
+
+        group.MapPost("/admin/shared-games/{id:guid}/state-template/generate", HandleGenerateStateTemplate)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GenerateGameStateTemplate")
+            .WithSummary("Generate game state template using AI (Admin/Editor)")
+            .WithDescription("Uses AI to analyze the game's rulebook and generate a JSON Schema for tracking game state. Requires an active rulebook document.")
+            .Produces<GameStateTemplateDto>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest);
+
+        group.MapPut("/admin/shared-games/{id:guid}/state-template/{templateId:guid}", HandleUpdateStateTemplate)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("UpdateGameStateTemplate")
+            .WithSummary("Update game state template (Admin/Editor)")
+            .WithDescription("Updates the JSON Schema of an existing template. Creates a new version.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
+        group.MapPost("/admin/shared-games/{id:guid}/state-template/{templateId:guid}/activate", HandleActivateStateTemplate)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("ActivateGameStateTemplate")
+            .WithSummary("Activate game state template version (Admin/Editor)")
+            .WithDescription("Sets the specified template version as active. Deactivates all other versions for this game.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
     }
 
     // ========================================
@@ -748,6 +788,100 @@ internal static class SharedGameCatalogEndpoints
         }
     }
 #pragma warning restore S1172
+
+    // ========================================
+    // GAME STATE TEMPLATE HANDLERS (Issue #2400)
+    // ========================================
+
+    private static async Task<IResult> HandleGetActiveStateTemplate(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetActiveGameStateTemplateQuery(id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        return result is not null
+            ? Results.Ok(result)
+            : Results.NotFound();
+    }
+
+    private static async Task<IResult> HandleGetStateTemplateVersions(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetGameStateTemplateVersionsQuery(id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGenerateStateTemplate(
+        Guid id,
+        [FromBody] GenerateStateTemplateRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new GenerateGameStateTemplateCommand(
+            id,
+            request.Name,
+            request.SetAsActive);
+
+        try
+        {
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Created($"/api/v1/admin/shared-games/{id}/state-template/{result.Id}", result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    }
+
+#pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding
+    private static async Task<IResult> HandleUpdateStateTemplate(
+        Guid _,
+        Guid templateId,
+        [FromBody] UpdateStateTemplateRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new UpdateGameStateTemplateCommand(
+            templateId,
+            request.Name,
+            request.SchemaJson,
+            request.Version);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleActivateStateTemplate(
+        Guid _,
+        Guid templateId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new ActivateGameStateTemplateCommand(templateId);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+#pragma warning restore S1172
 }
 
 // ========================================
@@ -838,3 +972,20 @@ internal record AddDocumentRequest(
     string Version,
     List<string>? Tags,
     bool SetAsActive);
+
+/// <summary>
+/// Request DTO for generating a game state template using AI.
+/// Issue #2400
+/// </summary>
+internal record GenerateStateTemplateRequest(
+    string Name,
+    bool SetAsActive = false);
+
+/// <summary>
+/// Request DTO for updating a game state template.
+/// Issue #2400
+/// </summary>
+internal record UpdateStateTemplateRequest(
+    string? Name,
+    string SchemaJson,
+    string Version);

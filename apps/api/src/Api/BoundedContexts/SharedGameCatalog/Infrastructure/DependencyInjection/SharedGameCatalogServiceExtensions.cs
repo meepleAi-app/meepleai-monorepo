@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
@@ -21,9 +22,14 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<ISharedGameRepository, SharedGameRepository>();
         services.AddScoped<ISharedGameDeleteRequestRepository, SharedGameDeleteRequestRepository>();
         services.AddScoped<ISharedGameDocumentRepository, SharedGameDocumentRepository>(); // Issue #2391 Sprint 1
+        services.AddScoped<IGameStateTemplateRepository, GameStateTemplateRepository>(); // Issue #2400 Sprint 3
 
         // Register domain services
         services.AddScoped<DocumentVersioningService>(); // Issue #2391 Sprint 1
+        services.AddScoped<TemplateVersioningService>(); // Issue #2400 Sprint 3
+
+        // Register application services
+        services.AddScoped<IGameStateSchemaGenerator, LlmGameStateSchemaGenerator>(); // Issue #2400 Sprint 3
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

@@ -52,6 +52,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
     private readonly List<GameMechanic> _mechanics = new();
     private readonly List<GameFaq> _faqs = new();
     private readonly List<GameErrata> _erratas = new();
+    private readonly List<QuickQuestion> _quickQuestions = new();
 
     /// <summary>
     /// Gets the unique identifier of this game.
@@ -182,6 +183,11 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Gets the errata for this game.
     /// </summary>
     public IReadOnlyCollection<GameErrata> Erratas => _erratas.AsReadOnly();
+
+    /// <summary>
+    /// Gets the quick questions for this game.
+    /// </summary>
+    public IReadOnlyCollection<QuickQuestion> QuickQuestions => _quickQuestions.AsReadOnly();
 
     /// <summary>
     /// Parameterless constructor for EF Core.
@@ -587,6 +593,50 @@ public sealed class SharedGame : AggregateRoot<Guid>
             throw new InvalidOperationException($"Erratum with ID {errataId} not found in this game");
 
         _erratas.Remove(errata);
+    }
+
+    /// <summary>
+    /// Adds a quick question to this game.
+    /// </summary>
+    /// <param name="question">The quick question to add</param>
+    /// <exception cref="ArgumentNullException">Thrown when question is null</exception>
+    public void AddQuickQuestion(QuickQuestion question)
+    {
+        ArgumentNullException.ThrowIfNull(question);
+
+        if (question.SharedGameId != _id)
+            throw new ArgumentException("Quick question does not belong to this game", nameof(question));
+
+        _quickQuestions.Add(question);
+    }
+
+    /// <summary>
+    /// Removes a quick question from this game.
+    /// </summary>
+    /// <param name="questionId">The ID of the question to remove</param>
+    /// <exception cref="InvalidOperationException">Thrown when question is not found</exception>
+    public void RemoveQuickQuestion(Guid questionId)
+    {
+        if (questionId == Guid.Empty)
+            throw new ArgumentException("QuestionId cannot be empty", nameof(questionId));
+
+        var question = _quickQuestions.FirstOrDefault(q => q.Id == questionId);
+        if (question is null)
+            throw new InvalidOperationException($"Quick question with ID {questionId} not found in this game");
+
+        _quickQuestions.Remove(question);
+    }
+
+    /// <summary>
+    /// Clears all quick questions and replaces them with a new set (used during AI regeneration).
+    /// </summary>
+    /// <param name="questions">The new questions to set</param>
+    public void ReplaceQuickQuestions(IEnumerable<QuickQuestion> questions)
+    {
+        ArgumentNullException.ThrowIfNull(questions);
+
+        _quickQuestions.Clear();
+        _quickQuestions.AddRange(questions);
     }
 
     // Validation Methods

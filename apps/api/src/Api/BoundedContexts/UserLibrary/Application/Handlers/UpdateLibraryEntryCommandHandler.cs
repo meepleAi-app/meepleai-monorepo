@@ -1,4 +1,4 @@
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -11,20 +11,21 @@ namespace Api.BoundedContexts.UserLibrary.Application.Handlers;
 
 /// <summary>
 /// Handler for updating a library entry (notes, favorite status).
+/// Fetches game details from SharedGameCatalog.
 /// </summary>
 internal class UpdateLibraryEntryCommandHandler : ICommandHandler<UpdateLibraryEntryCommand, UserLibraryEntryDto>
 {
     private readonly IUserLibraryRepository _libraryRepository;
-    private readonly IGameRepository _gameRepository;
+    private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public UpdateLibraryEntryCommandHandler(
         IUserLibraryRepository libraryRepository,
-        IGameRepository gameRepository,
+        ISharedGameRepository sharedGameRepository,
         IUnitOfWork unitOfWork)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
-        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
@@ -37,9 +38,9 @@ internal class UpdateLibraryEntryCommandHandler : ICommandHandler<UpdateLibraryE
             .ConfigureAwait(false)
             ?? throw new DomainException("Game is not in your library");
 
-        // Get game for DTO
-        var game = await _gameRepository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false)
-            ?? throw new DomainException($"Game with ID {command.GameId} not found");
+        // Get shared game for DTO
+        var sharedGame = await _sharedGameRepository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false)
+            ?? throw new DomainException($"Game with ID {command.GameId} not found in catalog");
 
         // Update notes if provided (null means clear, not provided means keep)
         if (command.Notes != null)
@@ -60,11 +61,11 @@ internal class UpdateLibraryEntryCommandHandler : ICommandHandler<UpdateLibraryE
             Id: entry.Id,
             UserId: entry.UserId,
             GameId: entry.GameId,
-            GameTitle: game.Title.Value,
-            GamePublisher: game.Publisher?.Name,
-            GameYearPublished: game.YearPublished?.Value,
-            GameIconUrl: game.IconUrl,
-            GameImageUrl: game.ImageUrl,
+            GameTitle: sharedGame.Title,
+            GamePublisher: sharedGame.Publishers.FirstOrDefault()?.Name,
+            GameYearPublished: sharedGame.YearPublished,
+            GameIconUrl: sharedGame.ThumbnailUrl,
+            GameImageUrl: sharedGame.ImageUrl,
             AddedAt: entry.AddedAt,
             Notes: entry.Notes?.Value,
             IsFavorite: entry.IsFavorite

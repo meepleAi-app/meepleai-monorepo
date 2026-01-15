@@ -1,4 +1,4 @@
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -8,18 +8,19 @@ namespace Api.BoundedContexts.UserLibrary.Application.Handlers;
 
 /// <summary>
 /// Handler for getting paginated user library.
+/// Fetches game details from SharedGameCatalog.
 /// </summary>
 internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, PaginatedLibraryResponseDto>
 {
     private readonly IUserLibraryRepository _libraryRepository;
-    private readonly IGameRepository _gameRepository;
+    private readonly ISharedGameRepository _sharedGameRepository;
 
     public GetUserLibraryQueryHandler(
         IUserLibraryRepository libraryRepository,
-        IGameRepository gameRepository)
+        ISharedGameRepository sharedGameRepository)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
-        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
     }
 
     public async Task<PaginatedLibraryResponseDto> Handle(GetUserLibraryQuery query, CancellationToken cancellationToken)
@@ -37,22 +38,22 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
             cancellationToken
         ).ConfigureAwait(false);
 
-        // Get game details for each entry
+        // Get shared game details for each entry
         var entryDtos = new List<UserLibraryEntryDto>();
         foreach (var entry in entries)
         {
-            var game = await _gameRepository.GetByIdAsync(entry.GameId, cancellationToken).ConfigureAwait(false);
-            if (game != null)
+            var sharedGame = await _sharedGameRepository.GetByIdAsync(entry.GameId, cancellationToken).ConfigureAwait(false);
+            if (sharedGame != null)
             {
                 entryDtos.Add(new UserLibraryEntryDto(
                     Id: entry.Id,
                     UserId: entry.UserId,
                     GameId: entry.GameId,
-                    GameTitle: game.Title.Value,
-                    GamePublisher: game.Publisher?.Name,
-                    GameYearPublished: game.YearPublished?.Value,
-                    GameIconUrl: game.IconUrl,
-                    GameImageUrl: game.ImageUrl,
+                    GameTitle: sharedGame.Title,
+                    GamePublisher: sharedGame.Publishers.FirstOrDefault()?.Name,
+                    GameYearPublished: sharedGame.YearPublished,
+                    GameIconUrl: sharedGame.ThumbnailUrl,
+                    GameImageUrl: sharedGame.ImageUrl,
                     AddedAt: entry.AddedAt,
                     Notes: entry.Notes?.Value,
                     IsFavorite: entry.IsFavorite

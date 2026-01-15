@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -58,12 +59,15 @@ internal sealed class ParseLedgerMessageCommandHandler
             cancellationToken)
             .ConfigureAwait(false);
 
-        // Detect conflicts
-        var conflicts = await _stateParser.DetectConflictsAsync(
-            extraction,
-            sessionState.CurrentState,
-            cancellationToken)
-            .ConfigureAwait(false);
+        // Detect conflicts only if extraction has state changes
+        var conflicts = extraction.HasStateChanges
+            ? (await _stateParser.DetectConflictsAsync(
+                extraction,
+                sessionState.CurrentState,
+                sessionState.LastUpdatedAt,
+                cancellationToken)
+              .ConfigureAwait(false)).ToList()
+            : new List<StateConflict>();
 
         _logger.LogDebug(
             "Parsing completed: ChangeType={ChangeType}, Confidence={Confidence}, Conflicts={ConflictCount}",

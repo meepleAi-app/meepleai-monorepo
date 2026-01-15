@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
@@ -83,8 +84,21 @@ internal sealed class ConfirmStateChangeCommandHandler
                 command.Description);
         }
 
-        // Persist changes
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Persist changes with concurrency check
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(ex,
+                "Concurrency conflict for session {SessionId}. State was modified by another user.",
+                command.SessionId);
+
+            throw new InvalidOperationException(
+                "The game state was modified by another user. Please refresh and try again.",
+                ex);
+        }
 
         _logger.LogInformation(
             "State change confirmed for session {SessionId}, new version: {Version}",

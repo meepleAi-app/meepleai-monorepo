@@ -150,6 +150,7 @@ internal sealed partial class NaturalLanguageStateParser : IStateParser
     public async Task<IReadOnlyList<StateConflict>> DetectConflictsAsync(
         StateExtractionResult extractedState,
         JsonDocument currentState,
+        DateTime stateLastUpdatedAt,
         CancellationToken cancellationToken = default)
     {
         var conflicts = new List<StateConflict>();
@@ -179,7 +180,7 @@ internal sealed partial class NaturalLanguageStateParser : IStateParser
                         conflictingMessage: extractedState.OriginalMessage,
                         existingValue: existingValue,
                         newValue: newValue,
-                        lastUpdatedAt: DateTime.UtcNow, // TODO: Get from GameSessionState
+                        lastUpdatedAt: stateLastUpdatedAt,
                         severity: severity,
                         playerName: extractedState.PlayerName);
 
@@ -426,10 +427,11 @@ internal sealed partial class NaturalLanguageStateParser : IStateParser
         if (value1 == null && value2 == null) return true;
         if (value1 == null || value2 == null) return false;
 
-        // Handle numeric comparisons
+        // Handle numeric comparisons with epsilon tolerance for floating point
         if (IsNumeric(value1) && IsNumeric(value2))
         {
-            return Convert.ToDouble(value1) == Convert.ToDouble(value2);
+            const double epsilon = 0.0001;
+            return Math.Abs(Convert.ToDouble(value1) - Convert.ToDouble(value2)) < epsilon;
         }
 
         return value1.Equals(value2);
@@ -511,42 +513,42 @@ internal sealed partial class NaturalLanguageStateParser : IStateParser
     /// Matches score/points patterns in Italian
     /// Examples: "ho 5 punti", "sono a 10", "passo da 3 a 5 punti"
     /// </summary>
-    [GeneratedRegex(@"(?:ho|sono a|passo (?:da \d+ )?a)\s*(\d+)\s*(?:punti?|pt)?", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    [GeneratedRegex(@"(?:ho|sono a|passo (?:da \d{1,5} )?a)\s{0,10}(\d{1,5})\s{0,10}(?:punti?|pt)?", RegexOptions.IgnoreCase | RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
     private static partial Regex ScoreRegex();
 
     /// <summary>
     /// Matches resource patterns in Italian
     /// Examples: "ho 3 legno", "guadagnato 2 pietra", "perso 1 grano"
     /// </summary>
-    [GeneratedRegex(@"(?:ho|guadagnato|perso|gained|lost)\s*(\d+)\s*(legno|pietra|grano|argilla|pecora|wood|stone|wheat|clay|sheep)", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    [GeneratedRegex(@"(?:ho|guadagnato|perso|gained|lost)\s{0,10}(\d{1,5})\s{0,10}(legno|pietra|grano|argilla|pecora|wood|stone|wheat|clay|sheep)", RegexOptions.IgnoreCase | RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
     private static partial Regex ResourceRegex();
 
     /// <summary>
     /// Matches player action patterns in Italian
     /// Examples: "ho costruito una strada", "ho comprato una carta"
     /// </summary>
-    [GeneratedRegex(@"ho\s+(costruito|comprato|build|bought)\s+(?:una?\s+)?(strada|insediamento|città|carta|road|settlement|city|card)", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    [GeneratedRegex(@"ho\s{1,10}(costruito|comprato|build|bought)\s{1,10}(?:una?\s{1,5})?(strada|insediamento|città|carta|road|settlement|city|card)", RegexOptions.IgnoreCase | RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
     private static partial Regex ActionRegex();
 
     /// <summary>
     /// Matches turn change patterns in Italian
     /// Examples: "tocca a Marco", "è il turno di Luca"
     /// </summary>
-    [GeneratedRegex(@"(?:tocca a|è il turno di|turn of)\s+([A-Z][a-z]+)", RegexOptions.Compiled)]
+    [GeneratedRegex(@"(?:tocca a|è il turno di|turn of)\s{1,10}([A-Z][a-z]{1,30})", RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
     private static partial Regex TurnRegex();
 
     /// <summary>
     /// Matches phase change patterns in Italian
     /// Examples: "fase di costruzione", "inizia il round 3"
     /// </summary>
-    [GeneratedRegex(@"(?:fase di|inizia il round|phase)\s+([a-zA-Z0-9\s]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    [GeneratedRegex(@"(?:fase di|inizia il round|phase)\s{1,10}([a-zA-Z0-9\s]{1,50})", RegexOptions.IgnoreCase | RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PhaseRegex();
 
     /// <summary>
     /// Matches player names (capitalized words)
     /// Examples: "Marco ha", "Luca gioca"
     /// </summary>
-    [GeneratedRegex(@"^([A-Z][a-z]+)\s+(?:ha|gioca|plays|è)", RegexOptions.Compiled)]
+    [GeneratedRegex(@"^([A-Z][a-z]{1,30})\s{1,10}(?:ha|gioca|plays|è)", RegexOptions.Compiled, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PlayerNameRegex();
 
     #endregion

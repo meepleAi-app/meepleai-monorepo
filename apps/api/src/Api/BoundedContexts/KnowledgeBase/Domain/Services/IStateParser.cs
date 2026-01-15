@@ -27,11 +27,13 @@ internal interface IStateParser
     /// </summary>
     /// <param name="extractedState">State extracted from message</param>
     /// <param name="currentState">Current game state</param>
+    /// <param name="stateLastUpdatedAt">Timestamp of last state update</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of detected conflicts</returns>
     Task<IReadOnlyList<StateConflict>> DetectConflictsAsync(
         StateExtractionResult extractedState,
         JsonDocument currentState,
+        DateTime stateLastUpdatedAt,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -455,12 +455,10 @@ v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
 
 // DDD-PHASE3: KnowledgeBase bounded context endpoints
 v1Api.MapKnowledgeBaseEndpoints();
+v1Api.MapLedgerModeEndpoints();     // Issue #2405: Ledger Mode endpoints
 
 // Issue #866: Agent management endpoints
 v1Api.MapAgentEndpoints();
-
-// Issue #2405: Ledger Mode endpoints
-v1Api.MapLedgerModeEndpoints();
 
 // Issue #1565: Telemetry test endpoints for HyperDX integration testing
 v1Api.MapTelemetryTestEndpoints();

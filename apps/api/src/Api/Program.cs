@@ -291,6 +291,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Issue #2406: SignalR for real-time game state updates
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -465,6 +468,9 @@ v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint
 
 // Issue #2004: Runbook validation test endpoints
 v1Api.MapTestEndpoints();
+
+// Issue #2406: SignalR hub for real-time game state updates
+app.MapHub<Api.Hubs.GameStateHub>("/hubs/gamestate");
 
 await app.RunAsync().ConfigureAwait(false);
 

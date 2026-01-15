@@ -1,3 +1,4 @@
+#pragma warning disable MA0002 // Dictionary without StringComparer
 using System.Text.Json.Serialization;
 
 namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;

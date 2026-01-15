@@ -387,6 +387,32 @@ app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthC
     Predicate = _ => false // Just check if the app is running
 });
 
+// CA1869: Cache JsonSerializerOptions for health check endpoints
+var healthCheckJsonOptions = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+
+app.MapHealthChecks("/health/config", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("configuration"),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                duration = e.Value.Duration.TotalMilliseconds,
+                data = e.Value.Data
+            }),
+            totalDuration = report.TotalDuration.TotalMilliseconds
+        }, healthCheckJsonOptions);
+        await context.Response.WriteAsync(result).ConfigureAwait(false);
+    }
+});
+
 // API-01: Create v1 API route group and map routing files
 var v1Api = app.MapGroup("/api/v1");
 

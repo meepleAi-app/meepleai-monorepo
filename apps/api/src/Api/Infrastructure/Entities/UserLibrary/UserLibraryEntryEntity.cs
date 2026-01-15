@@ -1,8 +1,10 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
+
 namespace Api.Infrastructure.Entities.UserLibrary;
 
 /// <summary>
 /// UserLibraryEntry entity - persistence model for user's game library.
-/// Represents the junction between Users and Games with library-specific metadata.
+/// Represents the junction between Users and SharedGames (from SharedGameCatalog) with library-specific metadata.
 /// </summary>
 public class UserLibraryEntryEntity
 {
@@ -35,5 +37,9 @@ public class UserLibraryEntryEntity
 
     // Navigation properties
     public UserEntity? User { get; set; }
-    public GameEntity? Game { get; set; }
+
+    /// <summary>
+    /// Navigation property to SharedGameEntity (from SharedGameCatalog).
+    /// </summary>
+    public SharedGameEntity? SharedGame { get; set; }
 }

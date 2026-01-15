@@ -45,6 +45,9 @@ internal class ConfigurationHealthCheck : IHealthCheck
         // Secrets validation
         ValidateSecretsConfiguration(errors, warnings, data);
 
+        // OAuth provider validation
+        ValidateOAuthConfiguration(errors, warnings, data);
+
         // Environment info
         data["environment"] = _environment.EnvironmentName;
         data["configurationSources"] = GetConfigurationSources();
@@ -328,6 +331,94 @@ internal class ConfigurationHealthCheck : IHealthCheck
         else if (secretsMissing.Count > 0)
         {
             warnings.Add($"Missing secrets (may use defaults): {string.Join(", ", secretsMissing)}");
+        }
+    }
+
+    private void ValidateOAuthConfiguration(List<string> errors, List<string> warnings, Dictionary<string, object> data)
+    {
+        var oauthProviders = new[] { "Google", "Discord", "GitHub" };
+        var configuredProviders = new List<string>();
+        var misconfiguredProviders = new List<string>();
+        var placeholderDetected = new List<string>();
+
+        foreach (var provider in oauthProviders)
+        {
+            // Check environment variables FIRST (Docker secrets loaded by load-secrets-env.sh)
+            // Then fall back to appsettings.json configuration
+            var clientId = Environment.GetEnvironmentVariable($"{provider.ToUpperInvariant()}_OAUTH_CLIENT_ID")
+                ?? _configuration[$"Authentication:OAuth:Providers:{provider}:ClientId"];
+
+            var clientSecret = Environment.GetEnvironmentVariable($"{provider.ToUpperInvariant()}_OAUTH_CLIENT_SECRET")
+                ?? _configuration[$"Authentication:OAuth:Providers:{provider}:ClientSecret"];
+
+            // Check if configured
+            var hasClientId = !string.IsNullOrWhiteSpace(clientId);
+            var hasClientSecret = !string.IsNullOrWhiteSpace(clientSecret);
+
+            if (hasClientId && hasClientSecret)
+            {
+                // Check for placeholder values
+                var isPlaceholder = (clientId?.StartsWith("${", StringComparison.Ordinal) ?? false) ||
+                                   (clientId?.Contains("your-", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                                   (clientId?.Contains("PLACEHOLDER", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                                   (clientSecret?.StartsWith("${", StringComparison.Ordinal) ?? false) ||
+                                   (clientSecret?.Contains("your-", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                                   (clientSecret?.Contains("PLACEHOLDER", StringComparison.OrdinalIgnoreCase) ?? false);
+
+                if (isPlaceholder)
+                {
+                    placeholderDetected.Add(provider);
+                    warnings.Add($"OAuth {provider}: Placeholder credentials detected (update with real values)");
+                }
+                else
+                {
+                    // Basic validation: client IDs should have reasonable length
+                    var validClientId = clientId!.Length >= 10 && !clientId.Contains(' ');
+                    var validClientSecret = clientSecret!.Length >= 10 && !clientSecret.Contains(' ');
+
+                    if (validClientId && validClientSecret)
+                    {
+                        configuredProviders.Add(provider);
+                    }
+                    else
+                    {
+                        misconfiguredProviders.Add(provider);
+                        warnings.Add($"OAuth {provider}: Invalid credentials format (check for whitespace or too short)");
+                    }
+                }
+            }
+            else if (hasClientId || hasClientSecret)
+            {
+                // Partial configuration (missing one of client ID or secret)
+                misconfiguredProviders.Add(provider);
+                warnings.Add($"OAuth {provider}: Incomplete configuration (missing {(hasClientId ? "client secret" : "client ID")})");
+            }
+        }
+
+        data["oauth_configured_providers"] = configuredProviders;
+        data["oauth_misconfigured_providers"] = misconfiguredProviders;
+        data["oauth_placeholder_providers"] = placeholderDetected;
+
+        // Optional: warn if no OAuth providers are configured in production
+        if (configuredProviders.Count == 0 && _environment.IsProduction())
+        {
+            warnings.Add("No OAuth providers configured (users won't be able to login with social accounts)");
+        }
+
+        // Add provider-specific details (masked)
+        foreach (var provider in configuredProviders)
+        {
+            var clientId = Environment.GetEnvironmentVariable($"{provider.ToUpperInvariant()}_OAUTH_CLIENT_ID")
+                ?? _configuration[$"Authentication:OAuth:Providers:{provider}:ClientId"];
+
+            if (!string.IsNullOrEmpty(clientId))
+            {
+                // Mask client ID (show only first 4 and last 4 characters)
+                var maskedId = clientId.Length > 8
+                    ? $"{clientId[..4]}...{clientId[^4..]}"
+                    : "***";
+                data[$"oauth_{provider.ToLowerInvariant()}_client_id"] = maskedId;
+            }
         }
     }
 

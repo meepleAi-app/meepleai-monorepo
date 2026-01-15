@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
+using Api.Models.Requests;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,6 +21,7 @@ internal static class GameEndpoints
         MapGameManagementEndpoints(group);
         MapSessionLifecycleEndpoints(group);
         MapSessionQueryEndpoints(group);
+        MapSessionStateEndpoints(group); // Issue #2403
 
         return group;
     }
@@ -551,5 +553,145 @@ internal static class GameEndpoints
             // Code review finding: Proper disposal of IDisposable resources
             await memoryStream.DisposeAsync().ConfigureAwait(false);
         }
+    }
+
+    private static void MapSessionStateEndpoints(RouteGroupBuilder group)
+    {
+        // ========================================
+        // GameSessionState Endpoints - Issue #2403
+        // ========================================
+
+        // Initialize game state
+        group.MapPost("/sessions/{sessionId}/state/initialize", HandleInitializeGameState)
+        .RequireSession();
+
+        // Get current game state
+        group.MapGet("/sessions/{sessionId}/state", HandleGetGameState)
+        .RequireAuthenticatedUser();
+
+        // Update game state
+        group.MapPatch("/sessions/{sessionId}/state", HandleUpdateGameState)
+        .RequireSession();
+
+        // Create state snapshot
+        group.MapPost("/sessions/{sessionId}/state/snapshots", HandleCreateStateSnapshot)
+        .RequireSession();
+
+        // Get state snapshots
+        group.MapGet("/sessions/{sessionId}/state/snapshots", HandleGetStateSnapshots)
+        .RequireAuthenticatedUser();
+
+        // Restore from snapshot
+        group.MapPost("/sessions/{sessionId}/state/restore/{snapshotId}", HandleRestoreStateSnapshot)
+        .RequireSession();
+    }
+
+    // Issue #2403: GameSessionState handlers
+    private static async Task<IResult> HandleInitializeGameState(
+        Guid sessionId,
+        [FromBody] InitializeGameStateRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new InitializeGameStateCommand(
+            GameSessionId: sessionId,
+            TemplateId: request.TemplateId,
+            InitialState: request.InitialState
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetGameState(
+        Guid sessionId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetGameStateQuery(sessionId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        return result != null ? Results.Ok(result) : Results.NotFound();
+    }
+
+    private static async Task<IResult> HandleUpdateGameState(
+        Guid sessionId,
+        [FromBody] UpdateGameStateRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetGameStateQuery(sessionId);
+        var state = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        if (state == null)
+            return Results.NotFound();
+
+        var command = new UpdateGameStateCommand(
+            SessionStateId: state.Id,
+            NewState: request.NewState
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleCreateStateSnapshot(
+        Guid sessionId,
+        [FromBody] CreateStateSnapshotRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetGameStateQuery(sessionId);
+        var state = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        if (state == null)
+            return Results.NotFound();
+
+        var command = new CreateStateSnapshotCommand(
+            SessionStateId: state.Id,
+            TurnNumber: request.TurnNumber,
+            Description: request.Description
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Created($"/sessions/{sessionId}/state/snapshots/{result.Id}", result);
+    }
+
+    private static async Task<IResult> HandleGetStateSnapshots(
+        Guid sessionId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetGameStateQuery(sessionId);
+        var state = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        if (state == null)
+            return Results.NotFound();
+
+        var snapshotsQuery = new GetStateSnapshotsQuery(state.Id);
+        var result = await mediator.Send(snapshotsQuery, ct).ConfigureAwait(false);
+
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleRestoreStateSnapshot(
+        Guid sessionId,
+        Guid snapshotId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetGameStateQuery(sessionId);
+        var state = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        if (state == null)
+            return Results.NotFound();
+
+        var command = new RestoreStateSnapshotCommand(
+            SessionStateId: state.Id,
+            SnapshotId: snapshotId
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 }

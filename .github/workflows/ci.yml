@@ -157,6 +157,9 @@ jobs:
             Write-Host "✅ No orphaned containers found" -ForegroundColor Green
           }
 
+      - name: Install Redis CLI
+        run: sudo apt-get update && sudo apt-get install -y redis-tools
+
       - name: Wait for Services
         timeout-minutes: 2
         run: |

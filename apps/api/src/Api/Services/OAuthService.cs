@@ -313,6 +313,9 @@ internal class OAuthService : IOAuthService
             var jsonResponse = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             var userData = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
 
+            // DEBUG: Log user data from OAuth provider
+            _logger.LogDebug("OAuth user data from {Provider}: {UserData}", provider, jsonResponse);
+
             // Parse user info based on provider
             var (id, email, name) = provider.ToLowerInvariant() switch
             {
@@ -334,7 +337,15 @@ internal class OAuthService : IOAuthService
 
     private static (string Id, string Email, string? Name) ParseGoogleUserInfo(JsonElement userData)
     {
-        var id = userData.GetProperty("sub").GetString() ?? throw new InvalidOperationException("No user ID");
+        // Google OAuth v1 API uses "id" field, JWT tokens use "sub"
+        // Try "id" first (userinfo v1), fallback to "sub" (OpenID Connect)
+        var id = userData.TryGetProperty("id", out var idProp)
+            ? idProp.GetString()
+            : userData.GetProperty("sub").GetString();
+
+        if (string.IsNullOrEmpty(id))
+            throw new InvalidOperationException("No user ID found in Google response");
+
         var email = userData.GetProperty("email").GetString() ?? throw new InvalidOperationException("No email");
         var name = userData.TryGetProperty("name", out var n) ? n.GetString() : null;
         return (id, email, name);

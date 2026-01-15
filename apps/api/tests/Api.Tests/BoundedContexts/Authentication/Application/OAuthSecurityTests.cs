@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -51,13 +52,13 @@ public sealed class OAuthSecurityTests : IDisposable
         var result = await _callbackHandler.Handle(attackerCommand, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("invalid", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("state", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().ContainEquivalentOf("invalid");
+        result.ErrorMessage.Should().ContainEquivalentOf("state");
 
         // Verify no user was created (CSRF prevented)
         var userCount = await _helper.DbContext.Users.CountAsync();
-        Assert.Equal(0, userCount);
+        userCount.Should().Be(0);
 
         // Verify token exchange was NOT attempted
         _helper.OAuthServiceMock.Verify(
@@ -88,17 +89,14 @@ public sealed class OAuthSecurityTests : IDisposable
         }
 
         // Assert
-        Assert.Equal(5, capturedStates.Count);
+        capturedStates.Should().HaveCount(5);
 
         // Verify all states are unique (no collisions)
         var uniqueStates = capturedStates.Distinct().Count();
-        Assert.Equal(5, uniqueStates);
+        uniqueStates.Should().Be(5);
 
         // Verify minimum entropy (32 bytes = 44 Base64 chars)
-        Assert.All(capturedStates, state =>
-        {
-            Assert.True(state.Length >= 44, $"State '{state}' has insufficient entropy");
-        });
+        capturedStates.Should().OnlyContain(state => state.Length >= 44);
     }
 
     [Fact]
@@ -117,8 +115,8 @@ public sealed class OAuthSecurityTests : IDisposable
         var result = await _callbackHandler.Handle(attackCommand, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("invalid", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().ContainEquivalentOf("invalid");
     }
 
     #endregion
@@ -153,7 +151,7 @@ public sealed class OAuthSecurityTests : IDisposable
         var firstResult = await _callbackHandler.Handle(command, CancellationToken.None);
 
         // Assert first request succeeded
-        Assert.True(firstResult.Success);
+        firstResult.Success.Should().BeTrue();
 
         // Simulate state invalidation after first use
         _helper.MockInvalidState(command.State);
@@ -162,9 +160,9 @@ public sealed class OAuthSecurityTests : IDisposable
         var replayResult = await _callbackHandler.Handle(command, CancellationToken.None);
 
         // Assert replay was blocked
-        Assert.False(replayResult.Success);
-        Assert.Contains("invalid", replayResult.ErrorMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("state", replayResult.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        replayResult.Success.Should().BeFalse();
+        replayResult.ErrorMessage.Should().ContainEquivalentOf("invalid");
+        replayResult.ErrorMessage.Should().ContainEquivalentOf("state");
     }
 
     [Fact]
@@ -180,8 +178,8 @@ public sealed class OAuthSecurityTests : IDisposable
         var result = await _callbackHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("invalid", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().ContainEquivalentOf("invalid");
     }
 
     [Fact]
@@ -213,7 +211,7 @@ public sealed class OAuthSecurityTests : IDisposable
 
         // Act - First request succeeds
         var firstResult = await _callbackHandler.Handle(command1, CancellationToken.None);
-        Assert.True(firstResult.Success);
+        firstResult.Success.Should().BeTrue();
 
         // Setup second request (different state, same code)
         _helper.MockValidState(command2.State);
@@ -223,7 +221,7 @@ public sealed class OAuthSecurityTests : IDisposable
         var secondResult = await _callbackHandler.Handle(command2, CancellationToken.None);
 
         // Assert
-        Assert.False(secondResult.Success);
+        secondResult.Success.Should().BeFalse();
     }
 
     #endregion
@@ -249,11 +247,11 @@ public sealed class OAuthSecurityTests : IDisposable
         var result = await _initiateHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Contains("redirect_uri=", result.AuthorizationUrl);
+        result.Success.Should().BeTrue();
+        result.AuthorizationUrl.Should().Contain("redirect_uri=");
 
         // Verify redirect URI is present (OAuth providers validate this)
-        Assert.Contains("localhost:3000", result.AuthorizationUrl);
+        result.AuthorizationUrl.Should().Contain("localhost:3000");
     }
 
     [Fact]
@@ -283,11 +281,11 @@ public sealed class OAuthSecurityTests : IDisposable
         var result = await _callbackHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // Verify result contains valid session token
         // (Frontend should only redirect to pre-configured URLs based on Success flag)
-        Assert.NotNull(result.SessionToken);
+        result.SessionToken.Should().NotBeNull();
     }
 
     #endregion
@@ -321,7 +319,7 @@ public sealed class OAuthSecurityTests : IDisposable
         var result = await _callbackHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // Verify encryption was called with access token
         _helper.EncryptionServiceMock.Verify(
@@ -330,9 +328,9 @@ public sealed class OAuthSecurityTests : IDisposable
 
         // Verify plaintext token is NOT stored in database
         var oauthAccount = await _helper.DbContext.OAuthAccounts.FirstOrDefaultAsync();
-        Assert.NotNull(oauthAccount);
-        Assert.NotEqual(tokenResponse.AccessToken, oauthAccount.AccessTokenEncrypted);
-        Assert.Equal("encrypted_token", oauthAccount.AccessTokenEncrypted);
+        oauthAccount.Should().NotBeNull();
+        oauthAccount.AccessTokenEncrypted.Should().NotBe(tokenResponse.AccessToken);
+        oauthAccount.AccessTokenEncrypted.Should().Be("encrypted_token");
     }
 
     [Fact]
@@ -364,7 +362,7 @@ public sealed class OAuthSecurityTests : IDisposable
         var result = await _callbackHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // Verify encryption was called with refresh token
         _helper.EncryptionServiceMock.Verify(
@@ -373,8 +371,8 @@ public sealed class OAuthSecurityTests : IDisposable
 
         // Verify plaintext refresh token is NOT stored
         var oauthAccount = await _helper.DbContext.OAuthAccounts.FirstOrDefaultAsync();
-        Assert.NotNull(oauthAccount);
-        Assert.NotEqual(tokenResponse.RefreshToken, oauthAccount.RefreshTokenEncrypted);
+        oauthAccount.Should().NotBeNull();
+        oauthAccount.RefreshTokenEncrypted.Should().NotBe(tokenResponse.RefreshToken);
     }
 
     [Fact]
@@ -404,8 +402,8 @@ public sealed class OAuthSecurityTests : IDisposable
         var result = await _callbackHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(sessionResponse.SessionToken, result.SessionToken);
+        result.Success.Should().BeTrue();
+        result.SessionToken.Should().Be(sessionResponse.SessionToken);
 
         // Verify session token is NOT logged (security best practice)
         _helper.CallbackLoggerMock.Verify(
@@ -445,7 +443,7 @@ public sealed class OAuthSecurityTests : IDisposable
         }
 
         // Assert - All states are unique (no predictability)
-        Assert.Equal(100, capturedStates.Count);
+        capturedStates.Should().HaveCount(100);
     }
 
     [Fact]
@@ -475,11 +473,11 @@ public sealed class OAuthSecurityTests : IDisposable
         var result = await _callbackHandler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // Verify NEW session was created (not reused)
-        Assert.NotNull(result.SessionToken);
-        Assert.Equal(sessionResponse.SessionToken, result.SessionToken);
+        result.SessionToken.Should().NotBeNull();
+        result.SessionToken.Should().Be(sessionResponse.SessionToken);
 
         // Verify CreateSessionCommand was called
         _helper.MediatorMock.Verify(

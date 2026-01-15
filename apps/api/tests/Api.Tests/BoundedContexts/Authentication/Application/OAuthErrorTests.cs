@@ -2,6 +2,7 @@ using System.Net;
 using Api.BoundedContexts.Authentication.Application.Commands.OAuth;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Moq;
 using Xunit;
 
@@ -41,12 +42,12 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.UserId);
-        Assert.Null(result.SessionToken);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("invalid", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("state", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.UserId.Should().BeNull();
+        result.SessionToken.Should().BeNull();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("invalid");
+        result.ErrorMessage.Should().ContainEquivalentOf("state");
 
         // Verify token exchange was NOT attempted
         _helper.OAuthServiceMock.Verify(
@@ -67,9 +68,9 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("invalid", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("invalid");
     }
 
     [Theory]
@@ -88,11 +89,11 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.UserId);
-        Assert.Null(result.SessionToken);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("token", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.UserId.Should().BeNull();
+        result.SessionToken.Should().BeNull();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("token");
 
         // Verify user info retrieval was NOT attempted
         _helper.OAuthServiceMock.Verify(
@@ -119,8 +120,8 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     [Fact]
@@ -142,9 +143,9 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("error", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("error");
     }
 
     [Fact]
@@ -163,8 +164,8 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     [Fact]
@@ -182,10 +183,10 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.UserId);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("user", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.UserId.Should().BeNull();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("user");
     }
 
     [Fact]
@@ -207,8 +208,8 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     [Fact]
@@ -227,8 +228,8 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     [Fact]
@@ -249,8 +250,8 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     [Fact]
@@ -269,9 +270,9 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("email", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("email");
     }
 
     [Fact]
@@ -284,9 +285,9 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("provider", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("provider");
 
         // Verify no OAuth service calls were made
         _helper.OAuthServiceMock.Verify(
@@ -304,10 +305,10 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("unsupported", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("facebook", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("unsupported");
+        result.ErrorMessage.Should().ContainEquivalentOf("facebook");
 
         // Verify no OAuth service calls were made
         _helper.OAuthServiceMock.Verify(
@@ -327,9 +328,9 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("code", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("code");
 
         // Verify token exchange was NOT attempted
         _helper.OAuthServiceMock.Verify(
@@ -357,8 +358,8 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     [Fact]
@@ -380,8 +381,8 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     [Theory]
@@ -406,8 +407,8 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     [Fact]
@@ -426,8 +427,8 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     [Fact]
@@ -448,9 +449,9 @@ public sealed class OAuthErrorTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("user", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("user");
     }
 
     public void Dispose() => _helper.Dispose();

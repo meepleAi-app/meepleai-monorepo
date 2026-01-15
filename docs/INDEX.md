@@ -203,6 +203,29 @@ export async function askQuestion(
 
 ## Migration History
 
+### v1.2 (2026-01-15) - Documentation Consolidation
+
+**Removed** (81% reduction: 79 → 1 claudedocs files):
+- ❌ `/claudedocs/` (root) → Entire directory removed
+- ❌ Issue completion reports (29 files)
+- ❌ Week implementation summaries (14 files)
+- ❌ Cleanup & migration reports (9 files)
+- ❌ Research & planning docs (4 files)
+- ❌ Test reports & error analysis (6 files)
+- ❌ Miscellaneous completions (2 files)
+
+**Reorganized** (16 files moved to standard structure):
+- ✅ Security audits → `docs/06-security/`
+- ✅ Configuration guides → `docs/04-deployment/secrets/`
+- ✅ Monitoring reports → `docs/04-deployment/monitoring/`
+- ✅ Development guides → `docs/01-architecture/ddd/`, `docs/02-development/troubleshooting/`
+- ✅ Testing & validation → `docs/05-testing/`, `docs/03-api/`, `docs/04-deployment/validation/`
+- ✅ Architecture specs → `docs/01-architecture/components/`
+
+**Backup**: `docs-backup-consolidation-2026-01-15/`
+
+**Purpose**: Remove historical implementation reports, focus on operational documentation
+
 ### v1.1 (2026-01-01)
 
 **Added**:
@@ -244,6 +267,6 @@ export async function askQuestion(
 
 ---
 
-**Version**: 1.1
-**Last Updated**: 2026-01-01
+**Version**: 1.2
+**Last Updated**: 2026-01-15
 **Maintainers**: Engineering Team

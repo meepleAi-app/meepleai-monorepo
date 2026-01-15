@@ -4,12 +4,15 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Guards;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers;
 
 internal class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleCommand, UserDto>
 {
+    private static readonly string[] AllowedRoles = { "Admin", "Editor", "User" };
+
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -24,7 +27,14 @@ internal class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleComm
     public async Task<UserDto> Handle(ChangeUserRoleCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var userId = Guid.Parse(command.UserId);
+
+        // Validate input before domain operations
+        Guard.AgainstNullOrWhiteSpace(command.UserId, nameof(command.UserId));
+        if (!Guid.TryParse(command.UserId, out var userId))
+            throw new ValidationException($"Invalid UserId format: {command.UserId}");
+        Guard.AgainstNullOrWhiteSpace(command.NewRole, nameof(command.NewRole));
+        Guard.AgainstInvalidValue(command.NewRole, AllowedRoles, nameof(command.NewRole));
+
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)
             throw new DomainException($"User {command.UserId} not found");

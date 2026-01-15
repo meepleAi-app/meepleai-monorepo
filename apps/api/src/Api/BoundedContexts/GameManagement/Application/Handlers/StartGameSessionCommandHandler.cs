@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Guards;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.GameManagement.Application.Handlers;
@@ -31,10 +32,27 @@ internal class StartGameSessionCommandHandler : ICommandHandler<StartGameSession
     public async Task<GameSessionDto> Handle(StartGameSessionCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        // Verify game exists
-        var gameExists = await _gameRepository.ExistsAsync(command.GameId, cancellationToken).ConfigureAwait(false);
-        if (!gameExists)
+
+        // Validate input before repository operations
+        Guard.AgainstEmptyGuid(command.GameId, nameof(command.GameId));
+        Guard.AgainstEmptyCollection(command.Players, nameof(command.Players));
+
+        // Get game to validate existence and player count
+        var game = await _gameRepository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false);
+        if (game == null)
             throw new InvalidOperationException($"Game with ID {command.GameId} not found");
+
+        // Validate player count against game's limits
+        var playerCount = command.Players.Count;
+        if (game.PlayerCount != null)
+        {
+            if (playerCount < game.PlayerCount.Min || playerCount > game.PlayerCount.Max)
+            {
+                throw new SharedKernel.Domain.Exceptions.ValidationException(
+                    nameof(command.Players),
+                    $"Player count ({playerCount}) must be between {game.PlayerCount.Min} and {game.PlayerCount.Max} for this game");
+            }
+        }
 
         // Create SessionPlayer value objects
         var players = command.Players.Select(p =>

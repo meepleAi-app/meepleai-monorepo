@@ -42,6 +42,7 @@ fi
 
 # Application / API keys
 load_secret "openrouter-api-key" "OPENROUTER_API_KEY"
+load_secret "bgg-api-token" "BGG_API_TOKEN"
 load_secret "initial-admin-password" "INITIAL_ADMIN_PASSWORD"
 
 # OAuth provider credentials

@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Handlers;
 using Api.Infrastructure;
-using Api.Tests.Helpers;
+using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
@@ -24,7 +24,7 @@ public class DeleteRuleCommentCommandHandlerTests
     /// </summary>
     private static MeepleAiDbContext CreateFreshDbContext()
     {
-        return DbContextHelper.CreateInMemoryDbContext();
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()

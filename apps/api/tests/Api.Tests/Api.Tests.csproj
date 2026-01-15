@@ -10,6 +10,7 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <!--
       Suppress xUnit analyzer warnings for test project:
+      - xUnit1000: Test classes must be public (using internal with InternalsVisibleTo)
       - xUnit1051: CancellationToken usage (best practice, not required for correctness)
       - xUnit2012: Assert.True for collections (FluentAssertions preferred)
       - xUnit2002: Assert.NotNull on value types (DateTime)
@@ -22,8 +23,9 @@
 
       These are code style warnings, not bugs. Tests pass correctly.
       Tracked in: BGAI-083 - Phase 1A Bug Fixes
+      - CS0060: Inconsistent accessibility (public test classes inherit from internal base)
     -->
-    <NoWarn>$(NoWarn);xUnit1051;xUnit2012;xUnit2002;xUnit1031;EF1002;CA1707;CA1711;CA2007;CA2000;MA0001;MA0002;MA0003;MA0004;MA0005;MA0006;MA0007;MA0048;MA0011;MA0051;MA0074;S101;S1450;S1481;S1501;S2234;S2325;S2925;S3626;S3981;S6608;S6562;S1172;S3878;S6966;S108;S1854;MA0132;MA0015;MA0158</NoWarn>
+    <NoWarn>$(NoWarn);xUnit1000;xUnit1051;xUnit2012;xUnit2002;xUnit1031;EF1002;CA1707;CA1711;CA2007;CA2000;CS0060;MA0001;MA0002;MA0003;MA0004;MA0005;MA0006;MA0007;MA0048;MA0011;MA0051;MA0074;S101;S1450;S1481;S1501;S2234;S2325;S2925;S3626;S3981;S6608;S6562;S1172;S3878;S6966;S108;S1854;MA0132;MA0015;MA0158</NoWarn>
   </PropertyGroup>
   <!-- Specify Docnet runtime for Linux when running in CI -->
   <PropertyGroup Condition="'$(CI)' == 'true'">
@@ -35,6 +37,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.11" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.0.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="Moq.Contrib.HttpClient" Version="1.4.0" />
     <PackageReference Include="Polly" Version="8.5.0" />
     <PackageReference Include="QuestPDF" Version="2025.12.1" />
     <PackageReference Include="ScottPlot" Version="5.1.57" />

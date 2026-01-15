@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
@@ -41,7 +42,7 @@ public class AdminStatsServiceUnitTests : IDisposable
         var mockMediator = new Mock<IMediator>();
         var mockEventCollector = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
         mockEventCollector.Setup(x => x.GetAndClearEvents()).Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
-        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
 
         _cache = new FakeHybridCache();
         _mockLogger = new Mock<ILogger<AdminStatsService>>();

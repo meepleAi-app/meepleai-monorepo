@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
@@ -156,14 +157,7 @@ public sealed class AdminStatsServiceIntegrationTests : IDisposable
         // Use in-memory database for fast integration tests (avoids Docker hijack issues #895)
         // AdminStatsService queries are read-only aggregations, in-memory DB sufficient for testing
         // Note: Parallel aggregation logic and cache behavior are architecture-independent
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: $"AdminStatsTestDb_{Guid.NewGuid()}")
-            .Options;
-
-        var mockMediator = new Mock<IMediator>();
-        var mockEventCollector = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
-        mockEventCollector.Setup(x => x.GetAndClearEvents()).Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
-        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
 
         _cache = new FakeHybridCache();
         _mockLogger = new Mock<ILogger<AdminStatsService>>();

@@ -1,7 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.Infrastructure;
-using Api.Tests.Helpers;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -30,7 +30,7 @@ public class GetPdfProgressQueryHandlerTests
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
         // Arrange
-        var dbContext = DbContextHelper.CreateInMemoryDbContext();
+        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
 
         // Act
         var handler = new GetPdfProgressQueryHandler(
@@ -57,7 +57,7 @@ public class GetPdfProgressQueryHandlerTests
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Arrange
-        var dbContext = DbContextHelper.CreateInMemoryDbContext();
+        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
 
         // Act & Assert
         Action act = () =>

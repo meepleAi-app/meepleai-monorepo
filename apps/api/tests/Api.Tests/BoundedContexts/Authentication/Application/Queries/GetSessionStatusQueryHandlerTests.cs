@@ -11,6 +11,7 @@ using Moq;
 using Xunit;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Queries;
 
@@ -26,14 +27,7 @@ public sealed class GetSessionStatusQueryHandlerTests : IDisposable
 
     public GetSessionStatusQueryHandlerTests()
     {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-
-        var mediatorMock = new Mock<IMediator>();
-        var domainEventCollectorMock = new Mock<IDomainEventCollector>();
-        domainEventCollectorMock.Setup(x => x.GetAndClearEvents()).Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
-        _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, domainEventCollectorMock.Object);
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _loggerMock = new Mock<ILogger<GetSessionStatusQueryHandler>>();
 
         _handler = new GetSessionStatusQueryHandler(_dbContext, _loggerMock.Object);

@@ -6,7 +6,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Services;
 using Api.Services.Pdf;
-using Api.Tests.Helpers;
+using Api.Tests.TestHelpers;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,7 +32,7 @@ public class UploadPdfCommandHandlerTests
     /// </summary>
     private static MeepleAiDbContext CreateFreshDbContext()
     {
-        return DbContextHelper.CreateInMemoryDbContext();
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
 
     /// <summary>

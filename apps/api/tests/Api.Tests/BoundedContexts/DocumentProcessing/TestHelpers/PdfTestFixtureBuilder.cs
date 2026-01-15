@@ -6,7 +6,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Services;
 using Api.Services.Pdf;
-using Api.Tests.Helpers;
+using Api.Tests.TestHelpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -74,7 +74,7 @@ internal class PdfTestFixtureBuilder
     /// </summary>
     public PdfTestFixtureBuilder WithFreshDbContext()
     {
-        _dbContext = DbContextHelper.CreateInMemoryDbContext();
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         return this;
     }
 

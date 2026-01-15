@@ -5,6 +5,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
+using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
@@ -70,23 +71,23 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.NotNull(result.UserId);
-        Assert.True(result.IsNewUser);
-        Assert.NotNull(result.SessionToken);
-        Assert.Equal(sessionResponse.SessionToken, result.SessionToken);
+        result.Success.Should().BeTrue();
+        result.UserId.Should().NotBeNull();
+        result.IsNewUser.Should().BeTrue();
+        result.SessionToken.Should().NotBeNull();
+        result.SessionToken.Should().Be(sessionResponse.SessionToken);
 
         // Verify user was created in database
         var user = await _helper.DbContext.Users.FirstOrDefaultAsync(u => u.Email == userInfo.Email);
-        Assert.NotNull(user);
-        Assert.Equal(userInfo.Email, user.Email);
-        Assert.Equal(userInfo.Name, user.DisplayName);
+        user.Should().NotBeNull();
+        user.Email.Should().Be(userInfo.Email);
+        user.DisplayName.Should().Be(userInfo.Name);
 
         // Verify OAuth account was linked
         var oauthAccount = await _helper.DbContext.OAuthAccounts
             .FirstOrDefaultAsync(o => o.UserId == user.Id && o.Provider == provider);
-        Assert.NotNull(oauthAccount);
-        Assert.Equal(userInfo.Id, oauthAccount.ProviderUserId);
+        oauthAccount.Should().NotBeNull();
+        oauthAccount.ProviderUserId.Should().Be(userInfo.Id);
 
         // Verify session creation was called
         _helper.MediatorMock.Verify(
@@ -131,20 +132,20 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(existingUser.Id, result.UserId);
-        Assert.False(result.IsNewUser); // User already existed
-        Assert.NotNull(result.SessionToken);
+        result.Success.Should().BeTrue();
+        result.UserId.Should().Be(existingUser.Id);
+        result.IsNewUser.Should().BeFalse(); // User already existed
+        result.SessionToken.Should().NotBeNull();
 
         // Verify OAuth account was linked to existing user
         var oauthAccount = await _helper.DbContext.OAuthAccounts
             .FirstOrDefaultAsync(o => o.UserId == existingUser.Id && o.Provider == "google");
-        Assert.NotNull(oauthAccount);
-        Assert.Equal(userInfo.Id, oauthAccount.ProviderUserId);
+        oauthAccount.Should().NotBeNull();
+        oauthAccount.ProviderUserId.Should().Be(userInfo.Id);
 
         // Verify no duplicate user was created
         var totalUsers = await _helper.DbContext.Users.CountAsync(u => u.Email == existingUser.Email);
-        Assert.Equal(1, totalUsers);
+        totalUsers.Should().Be(1);
     }
 
     [Fact]
@@ -198,14 +199,14 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(existingUser.Id, result.UserId);
-        Assert.False(result.IsNewUser);
+        result.Success.Should().BeTrue();
+        result.UserId.Should().Be(existingUser.Id);
+        result.IsNewUser.Should().BeFalse();
 
         // Verify tokens were updated
         var updatedAccount = await _helper.DbContext.OAuthAccounts.FindAsync(existingOAuthAccount.Id);
-        Assert.NotNull(updatedAccount);
-        Assert.Equal("encrypted_token", updatedAccount.AccessTokenEncrypted); // Mocked encryption result
+        updatedAccount.Should().NotBeNull();
+        updatedAccount.AccessTokenEncrypted.Should().Be("encrypted_token"); // Mocked encryption result
 
         // Verify encryption was called with new access token
         _helper.EncryptionServiceMock.Verify(
@@ -242,16 +243,16 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var oauthAccount = await _helper.DbContext.OAuthAccounts
             .FirstOrDefaultAsync(o => o.Provider == "google");
-        Assert.NotNull(oauthAccount);
-        Assert.NotNull(oauthAccount.TokenExpiresAt);
+        oauthAccount.Should().NotBeNull();
+        oauthAccount.TokenExpiresAt.Should().NotBeNull();
 
         // Verify expiry is approximately correct (within tolerance)
         var difference = Math.Abs((oauthAccount.TokenExpiresAt.Value - expectedExpiry).TotalSeconds);
-        Assert.True(difference < TIME_ASSERTION_TOLERANCE_SECONDS,
+        difference.Should().BeLessThan(TIME_ASSERTION_TOLERANCE_SECONDS,
             $"Token expiry time difference: {difference}s (tolerance: {TIME_ASSERTION_TOLERANCE_SECONDS}s)");
     }
 
@@ -284,7 +285,7 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // Verify refresh token was encrypted and stored
         _helper.EncryptionServiceMock.Verify(
@@ -293,8 +294,8 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
 
         var oauthAccount = await _helper.DbContext.OAuthAccounts
             .FirstOrDefaultAsync(o => o.Provider == "google");
-        Assert.NotNull(oauthAccount);
-        Assert.NotNull(oauthAccount.RefreshTokenEncrypted);
+        oauthAccount.Should().NotBeNull();
+        oauthAccount.RefreshTokenEncrypted.Should().NotBeNull();
     }
 
     [Fact]
@@ -326,12 +327,12 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var oauthAccount = await _helper.DbContext.OAuthAccounts
             .FirstOrDefaultAsync(o => o.Provider == "github");
-        Assert.NotNull(oauthAccount);
-        Assert.Null(oauthAccount.RefreshTokenEncrypted);
+        oauthAccount.Should().NotBeNull();
+        oauthAccount.RefreshTokenEncrypted.Should().BeNull();
 
         // Verify encryption was NOT called for refresh token
         _helper.EncryptionServiceMock.Verify(
@@ -388,17 +389,17 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // Verify no duplicate OAuth account was created
         var totalOAuthAccounts = await _helper.DbContext.OAuthAccounts.CountAsync(
             o => o.UserId == existingUser.Id && o.Provider == "google");
-        Assert.Equal(1, totalOAuthAccounts);
+        totalOAuthAccounts.Should().Be(1);
 
         // Verify tokens were updated on existing account
         var updatedAccount = await _helper.DbContext.OAuthAccounts.FindAsync(existingOAuthAccount.Id);
-        Assert.NotNull(updatedAccount);
-        Assert.Equal("encrypted_token", updatedAccount.AccessTokenEncrypted);
+        updatedAccount.Should().NotBeNull();
+        updatedAccount.AccessTokenEncrypted.Should().Be("encrypted_token");
     }
 
     [Fact]
@@ -421,15 +422,21 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.UserId);
-        Assert.Null(result.SessionToken);
-        Assert.NotNull(result.ErrorMessage);
-        Assert.Contains("session", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.UserId.Should().BeNull();
+        result.SessionToken.Should().BeNull();
+        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().ContainEquivalentOf("session");
 
         // Verify user and OAuth account were NOT persisted
         var user = await _helper.DbContext.Users.FirstOrDefaultAsync(u => u.Email == userInfo.Email);
-        Assert.Null(user); // Rollback should have occurred
+        user.Should().BeNull("rollback should clean up user");
+
+        // Verify no orphaned OAuthAccount records remain
+        var oauthAccounts = await _helper.DbContext.OAuthAccounts
+            .Where(o => o.ProviderUserId == userInfo.Id)
+            .ToListAsync();
+        oauthAccounts.Should().BeEmpty("rollback should clean up OAuth accounts");
     }
 
     public void Dispose() => _helper.Dispose();

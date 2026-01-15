@@ -160,3 +160,28 @@ export const DarkMode: Story = {
     ),
   ],
 };
+
+/**
+ * Mobile Viewport - Issue #2406 Mobile-friendly compact view
+ */
+export const Mobile: Story = {
+  args: {
+    player: {
+      playerName: 'Alice',
+      playerOrder: 1,
+      color: '#3B82F6',
+      score: 25,
+      resources: { wood: 5, brick: 3, wheat: 7 },
+    },
+    isCurrentPlayer: true,
+    editable: true,
+  },
+  parameters: {
+    viewport: {
+      defaultViewport: 'mobile1',
+    },
+    chromatic: {
+      viewports: [375],
+    },
+  },
+};

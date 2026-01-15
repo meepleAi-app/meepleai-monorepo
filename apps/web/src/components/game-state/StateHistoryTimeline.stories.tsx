@@ -147,3 +147,20 @@ export const DarkMode: Story = {
     ),
   ],
 };
+
+/**
+ * Mobile Viewport - Issue #2406 Mobile-friendly compact view
+ */
+export const Mobile: Story = {
+  args: {
+    sessionId: 'session-mobile',
+  },
+  parameters: {
+    viewport: {
+      defaultViewport: 'mobile1',
+    },
+    chromatic: {
+      viewports: [375],
+    },
+  },
+};

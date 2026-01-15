@@ -30,6 +30,7 @@ internal static class ObservabilityServiceExtensions
     private static readonly string[] QdrantCollectionTags = new[] { "vector", "qdrant", "collection" };
     private static readonly string[] N8nTags = new[] { "automation", "workflow" };
     private static readonly string[] SharedCatalogTags = new[] { "database", "fts", "shared-catalog" };
+    private static readonly string[] ConfigurationTags = new[] { "configuration", "startup" };
 
     private static IServiceCollection AddOpenTelemetryServices(
             this IServiceCollection services,
@@ -251,7 +252,11 @@ internal static class ObservabilityServiceExtensions
             .AddUrlGroup(
                 new Uri($"{n8nUrl}/healthz"),
                 name: "n8n",
-                tags: N8nTags);
+                tags: N8nTags)
+            .AddCheck<Api.Infrastructure.HealthChecks.ConfigurationHealthCheck>(
+                "configuration",
+                failureStatus: HealthStatus.Degraded,
+                tags: ConfigurationTags);
 #pragma warning disable S125 // Sections of code should not be commented out
         // HyperDX health check disabled - service not in default docker-compose profile
         // .AddUrlGroup(

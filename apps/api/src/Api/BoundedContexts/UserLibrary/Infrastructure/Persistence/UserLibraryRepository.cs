@@ -69,13 +69,13 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
 
         var query = DbContext.UserLibraryEntries
             .AsNoTracking()
-            .Include(e => e.Game)
+            .Include(e => e.SharedGame)
             .Where(e => e.UserId == userId);
 
         // Apply search filter (by game title)
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(e => e.Game != null && EF.Functions.ILike(e.Game.Name, $"%{search}%"));
+            query = query.Where(e => e.SharedGame != null && EF.Functions.ILike(e.SharedGame.Title, $"%{search}%"));
         }
 
         // Apply favorites filter
@@ -187,8 +187,8 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         return sortBy?.ToLowerInvariant() switch
         {
             "title" => descending
-                ? query.OrderByDescending(e => e.Game != null ? e.Game.Name : "")
-                : query.OrderBy(e => e.Game != null ? e.Game.Name : ""),
+                ? query.OrderByDescending(e => e.SharedGame != null ? e.SharedGame.Title : "")
+                : query.OrderBy(e => e.SharedGame != null ? e.SharedGame.Title : ""),
             "favorite" => descending
                 ? query.OrderByDescending(e => e.IsFavorite).ThenByDescending(e => e.AddedAt)
                 : query.OrderBy(e => e.IsFavorite).ThenByDescending(e => e.AddedAt),

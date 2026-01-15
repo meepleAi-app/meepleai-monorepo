@@ -128,6 +128,7 @@ docs/
 |-----------|-------------|
 | [PDF Extraction Alternatives](./01-architecture/components/pdf-extraction-alternatives.md) | Comparison of PDF extraction tools |
 | [Confidence Validation](./01-architecture/components/confidence-validation.md) | 5-layer confidence validation system |
+| [**Shared Game Catalog Specification**](./01-architecture/components/shared-game-catalog-spec.md) | Shared catalog architecture and design ⭐ |
 | [Agent Lightning](./01-architecture/components/agent-lightning/) | Agent Lightning architecture, examples, guides |
 | [Amplifier](./01-architecture/components/amplifier/) | Amplifier architecture, workflow, examples |
 
@@ -135,14 +136,29 @@ docs/
 | Document | Description |
 |----------|-------------|
 | [DDD Quick Reference](./01-architecture/ddd/quick-reference.md) | DDD patterns, bounded contexts, CQRS |
+| [**DDD Migration Pattern Guide**](./01-architecture/ddd/ddd-migration-pattern-guide.md) | Migration patterns and best practices ⭐ |
 
 ### 02 - Development
+
+#### Setup & Configuration
+| Document | Description |
+|----------|-------------|
+| [**BGG API Token Setup**](./02-development/BGG_API_TOKEN_SETUP.md) | BoardGameGeek API configuration ⭐ |
+| [**Azul Test Instructions**](./02-development/AZUL_TEST_INSTRUCTIONS.md) | Azul game testing guide ⭐ |
+| [**Docker Services Test URLs**](./02-development/docker-services-test-urls.md) | Local services endpoints ⭐ |
+| [**Git Workflow**](./02-development/git-workflow.md) | Git branching and PR process ⭐ |
 
 #### Guides
 | Guide | Description |
 |-------|-------------|
 | [LLM Integration](./02-development/guides/llm-integration.md) | Integrating LLMs (OpenRouter, OpenAI, Claude) |
 | [Unstructured Setup](./02-development/guides/unstructured-setup.md) | Setting up Unstructured PDF extraction |
+
+#### Troubleshooting
+| Document | Description |
+|----------|-------------|
+| [**PDF Processing Debug**](./02-development/troubleshooting/pdf-processing-debug-session.md) | PDF extraction troubleshooting ⭐ |
+| [**Logger Review**](./02-development/LOGGER-REVIEW-2385.md) | Logging implementation review ⭐ |
 
 #### Refactoring (DDD Migration)
 | Document | Description |
@@ -164,6 +180,7 @@ docs/
 | [Test Writing Guide](./02-development/testing/test-writing-guide.md) | How to write tests (unit, integration, E2E) |
 | [Testing Strategy](./02-development/testing/board-game-ai-testing-strategy.md) | Complete testing strategy (30 pages) |
 | [Test Patterns](./02-development/testing/test-patterns.md) | Common test patterns (AAA, mocking, etc.) |
+| [**Validation Audit**](./05-testing/issue-2424-validation-audit.md) | FluentValidation implementation audit ⭐ |
 | [Accessibility Testing](./02-development/testing/accessibility-testing-guide.md) | Accessibility testing with Playwright |
 | [E2E Contribution Guide](./02-development/testing/e2e-contribution-guide.md) | Contributing E2E tests |
 | [Page Object Model](./02-development/testing/pom-architecture-design.md) | POM architecture for E2E tests |
@@ -175,6 +192,7 @@ docs/
 |----------|-------------|
 | [API Specification](./03-api/board-game-ai-api-specification.md) | Complete REST API specification (40 pages) |
 | [LLM Cost Tracking API](./03-api/llm-cost-tracking-api.md) | Cost tracking API endpoints |
+| [**OpenAPI Audit Report**](./03-api/issue-2425-openapi-audit.md) | OpenAPI specification audit ⭐ |
 
 ### 04 - Frontend
 
@@ -198,6 +216,27 @@ docs/
 | [Deployment Guide](./05-operations/deployment/board-game-ai-deployment-guide.md) | Docker Compose → Kubernetes (35 pages) |
 | [Frontend Deployment](./05-operations/deployment/frontend-deployment.md) | Next.js deployment (Vercel, Docker) |
 | [Disaster Recovery](./05-operations/deployment/disaster-recovery.md) | DR plan and procedures |
+| [**Shared Catalog Pre-Deployment**](./04-deployment/shared-catalog-pre-deployment-checklist.md) | Shared catalog deployment checklist ⭐ |
+| [**Shared Catalog Environment**](./04-deployment/shared-catalog-environment-config.md) | Environment configuration guide ⭐ |
+
+#### Monitoring & Observability
+| Document | Description |
+|----------|-------------|
+| [**Observability Validation**](./04-deployment/monitoring/observability-validation-report.md) | Observability system validation ⭐ |
+| [**Grafana Dashboard Fix**](./04-deployment/monitoring/grafana-dashboard-fix-report.md) | Dashboard configuration fixes ⭐ |
+| [**Health Check OAuth**](./04-deployment/monitoring/health-check-oauth-report.md) | OAuth health check report ⭐ |
+| [**Health Check Final Report**](./04-deployment/monitoring/final-health-check-report-2026-01-15.md) | Comprehensive health check ⭐ |
+
+#### Secrets Management
+| Document | Description |
+|----------|-------------|
+| [**Infisical POC Setup**](./04-deployment/secrets/infisical-poc-setup-guide.md) | Infisical proof of concept setup ⭐ |
+| [**Infisical POC Results**](./04-deployment/secrets/infisical-poc-results.md) | POC evaluation results ⭐ |
+
+#### Validation
+| Document | Description |
+|----------|-------------|
+| [**Production Validation Guide**](./04-deployment/validation/issue-2374-production-validation-guide.md) | Production deployment validation ⭐ |
 
 #### Runbooks
 | Runbook | Scenario |
@@ -217,12 +256,13 @@ docs/
 
 | Document | Description |
 |----------|-------------|
-| [Security Audit 2025-11-04](./06-security/security-audit-2025-11-04.md) | Latest security audit report |
-| [**Code Warnings Remediation**](./06-security/code-warnings-remediation-plan.md) | Security analyzer remediation (CA3xxx, S2xxx) ⭐ |
+| [**Security Audit 2026-Q1**](./06-security/2026-Q1-security-review.md) | Q1 2026 security review ⭐ |
+| [**Secrets Audit 2026-01-15**](./06-security/secrets-audit-2026-01-15.md) | Secrets management audit ⭐ |
+| [**TOTP Vulnerability Analysis**](./06-security/totp_vulnerability_analysis.md) | 2FA implementation security ⭐ |
+| [Code Warnings Remediation](./06-security/code-warnings-remediation-plan.md) | Security analyzer remediation (CA3xxx, S2xxx) |
 | [Code Scanning Remediation](./06-security/code-scanning-remediation-summary.md) | CodeQL findings remediation |
 | [OAuth Security](./06-security/oauth-security.md) | OAuth 2.0 security best practices |
 | [Log Forging Prevention](./06-security/log-forging-prevention.md) | Preventing log injection attacks |
-| _...and more security docs_ | See [06-security/](./06-security/) |
 
 ### 07 - Project Management
 
@@ -384,9 +424,28 @@ Content...
 
 ---
 
-**Last Updated**: 2025-12-13T10:59:23.970Z
+## 📝 Consolidation History
+
+### 2026-01-15: Documentation Consolidation
+
+**Objectives**:
+- Remove historical implementation reports and session summaries
+- Reorganize essential operational documentation into standard structure
+- Reduce documentation debt and improve discoverability
+
+**Results**:
+- **Removed**: ~64 obsolete files (issue reports, session summaries, cleanup reports)
+- **Reorganized**: 16 essential files moved to standard structure
+- **Reduction**: 81% reduction in claudedocs (79 → 1 file)
+- **Backup**: `docs-backup-consolidation-2026-01-15/`
+
+**See**: [CONSOLIDATION-PLAN-2026-01-15.md](./claudedocs/CONSOLIDATION-PLAN-2026-01-15.md)
+
+---
+
+**Last Updated**: 2026-01-15T12:50:00Z
 **Maintainer**: Documentation Team
-**Total Documents**: 115 files
+**Total Documents**: ~50 files (after consolidation)
 
 
 

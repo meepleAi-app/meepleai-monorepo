@@ -33,6 +33,17 @@ public class DeleteAlertRuleCommandHandlerTests
         var ruleId = Guid.NewGuid();
         var command = new DeleteAlertRuleCommand(ruleId);
 
+        var existingRule = AlertRule.Create(
+            "Test Rule",
+            "SystemMetric",
+            AlertSeverity.Warning,
+            new AlertThreshold(70.0, "percentage"),
+            new AlertDuration(5),
+            "creator@test.com"
+        );
+
+        _mockRepository.Setup(r => r.GetByIdAsync(ruleId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingRule);
         _mockRepository.Setup(r => r.DeleteAsync(ruleId, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -41,6 +52,7 @@ public class DeleteAlertRuleCommandHandlerTests
 
         // Assert
         result.Should().Be(MediatR.Unit.Value);
+        _mockRepository.Verify(r => r.GetByIdAsync(ruleId, It.IsAny<CancellationToken>()), Times.Once);
         _mockRepository.Verify(r => r.DeleteAsync(ruleId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -51,6 +63,17 @@ public class DeleteAlertRuleCommandHandlerTests
         var ruleId = Guid.Parse("12345678-1234-1234-1234-123456789abc");
         var command = new DeleteAlertRuleCommand(ruleId);
 
+        var existingRule = AlertRule.Create(
+            "Another Rule",
+            "SystemMetric",
+            AlertSeverity.Error,
+            new AlertThreshold(80.0, "percentage"),
+            new AlertDuration(10),
+            "creator@test.com"
+        );
+
+        _mockRepository.Setup(r => r.GetByIdAsync(ruleId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingRule);
         _mockRepository.Setup(r => r.DeleteAsync(ruleId, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -58,6 +81,7 @@ public class DeleteAlertRuleCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
+        _mockRepository.Verify(r => r.GetByIdAsync(ruleId, It.IsAny<CancellationToken>()), Times.Once);
         _mockRepository.Verify(r => r.DeleteAsync(ruleId, It.IsAny<CancellationToken>()), Times.Once);
     }
 

@@ -1,4 +1,5 @@
 {
+  "$schema": "http://json.schemastore.org/launchsettings.json",
   "profiles": {
     "Api": {
       "commandName": "Project",
@@ -8,19 +9,17 @@
       "applicationUrl": "http://localhost:8080",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "ConnectionStrings__Postgres": "Host=localhost;Database=meepleai;Username=postgres;Password=your-postgres-password;Pooling=true;Minimum Pool Size=2;Maximum Pool Size=20",
-        "REDIS_URL": "localhost:6379,password=your-redis-password,abortConnect=false",
         "QDRANT_URL": "http://localhost:6333",
         "OLLAMA_URL": "http://localhost:11434",
-        "OPENROUTER_API_KEY": "sk-or-v1-your-openrouter-api-key",
-        "GOOGLE_OAUTH_CLIENT_ID": "your-google-client-id.apps.googleusercontent.com",
-        "GOOGLE_OAUTH_CLIENT_SECRET": "GOCSPX-your-google-client-secret",
-        "DISCORD_OAUTH_CLIENT_ID": "your-discord-application-id",
-        "DISCORD_OAUTH_CLIENT_SECRET": "your-discord-client-secret",
-        "GITHUB_OAUTH_CLIENT_ID": "your-github-oauth-app-client-id",
-        "GITHUB_OAUTH_CLIENT_SECRET": "your-github-oauth-app-client-secret",
+        "OPENROUTER_API_KEY": "PLACEHOLDER-get-from-infra-secrets-openrouter-api-key-txt",
+        "GOOGLE_OAUTH_CLIENT_ID": "PLACEHOLDER-get-from-infra-secrets-google-oauth-client-id-txt",
+        "GOOGLE_OAUTH_CLIENT_SECRET": "PLACEHOLDER-get-from-infra-secrets-google-oauth-client-secret-txt",
+        "DISCORD_OAUTH_CLIENT_ID": "PLACEHOLDER-get-from-infra-secrets-discord-oauth-client-id-txt",
+        "DISCORD_OAUTH_CLIENT_SECRET": "PLACEHOLDER-get-from-infra-secrets-discord-oauth-client-secret-txt",
+        "GITHUB_OAUTH_CLIENT_ID": "PLACEHOLDER-get-from-infra-secrets-github-oauth-client-id-txt",
+        "GITHUB_OAUTH_CLIENT_SECRET": "PLACEHOLDER-get-from-infra-secrets-github-oauth-client-secret-txt",
         "INITIAL_ADMIN_EMAIL": "admin@meepleai.dev",
-        "INITIAL_ADMIN_PASSWORD": "ChangeThisPassword123!",
+        "INITIAL_ADMIN_PASSWORD": "PLACEHOLDER-get-from-infra-secrets-initial-admin-password-txt",
         "INITIAL_ADMIN_DISPLAY_NAME": "System Admin"
       }
     }

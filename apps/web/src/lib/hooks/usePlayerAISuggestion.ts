@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import { createApiClient } from '@/lib/api';
+import { api } from '@/lib/api';
 import type { PlayerModeSuggestionResponse, SuggestedMove } from '@/lib/api/schemas';
 
 /**
@@ -87,11 +87,8 @@ export function usePlayerAISuggestion(callbacks?: {
       });
 
       try {
-        // Create API client
-        const apiClient = createApiClient();
-
-        // Call suggestPlayerMove endpoint
-        const response: PlayerModeSuggestionResponse = await apiClient.agents.suggestPlayerMove({
+        // Call suggestPlayerMove endpoint using singleton API client
+        const response: PlayerModeSuggestionResponse = await api.agents.suggestPlayerMove({
           gameId,
           gameState,
           query,

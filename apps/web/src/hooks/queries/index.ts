@@ -38,6 +38,7 @@ export {
 export {
   useLibrary,
   useLibraryStats,
+  useLibraryQuota,
   useGameInLibraryStatus,
   useAddGameToLibrary,
   useRemoveGameFromLibrary,

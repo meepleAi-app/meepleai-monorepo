@@ -121,7 +121,7 @@ internal sealed class SharedGameRepository : ISharedGameRepository
             ModifiedBy = game.ModifiedBy,
             CreatedAt = game.CreatedAt,
             ModifiedAt = game.ModifiedAt,
-            IsDeleted = false
+            IsDeleted = game.IsDeleted  // Fix: Use aggregate value, not hardcoded false (Issue #2514 code review)
         };
     }
 

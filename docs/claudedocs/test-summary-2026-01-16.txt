@@ -1,0 +1,154 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    TEST EXECUTION SUMMARY - 2026-01-16                        ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 OVERALL STATUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Status:  ⚠️ PARTIALLY PASSING - Requires fixes before merge
+
+Quality Gates:
+  ├─ Backend Pass Rate:     ~95.5% (7 failures / ~157 tests)  ⚠️ NEAR
+  ├─ Frontend Pass Rate:    ~92%   (2 failures / ~23+ tests)  ⚠️ BELOW
+  ├─ Frontend Performance:  100%   (all under thresholds)     ✅ PASS
+  └─ Test Execution Time:   >11min (target: <5min)            ❌ FAIL
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔴 BACKEND FAILURES (7 total)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[1] SharedGameDocumentRepositoryIntegrationTests (4 failures)
+    ├─ SearchByTagsAsync_WithMultipleTagsInSearch_ReturnsDocumentsMatchingAnyTag
+    ├─ SearchByTagsAsync_OnlyReturnsHomeruleDocuments
+    ├─ SearchByTagsAsync_WithNoMatchingTags_ReturnsEmptyList
+    └─ SearchByTagsAsync_WithMatchingTag_ReturnsDocuments
+
+    Error: ArgumentException - Version must be in format MAJOR.MINOR
+           DbUpdateException - FK constraint violation
+    Fix:   Update CreateTestHomeruleDocument helper to use "1.0" format
+    Priority: MEDIUM
+
+[2] CreateRuleCommentIntegrationTests (2 failures)
+    ├─ CreateComment_WithNonExistentMention_IgnoresMention
+    └─ CreateComment_WithValidMention_ExtractsMentionedUser
+
+    Error: InvalidOperationException - LINQ ToLowerInvariant() not translatable
+    Fix:   Replace with EF.Functions.ILike() in CreateRuleCommentCommandHandler.cs:98
+    Priority: HIGH
+
+[3] CreateGameWithBggIntegrationTests (1 failure)
+    └─ CreateGame_WithBggId_PersistsToDatabase
+
+    Error: InvalidOperationException - Unable to resolve IMediator service
+    Fix:   Add MediatR registration in test InitializeAsync()
+    Priority: HIGH
+
+[4] ShareLinkForeignKeyTests (1 failure)
+    └─ DeleteUser_WithActiveShareLinks_ThrowsDbUpdateException
+
+    Error: InvalidOperationException - Wrong exception type expected
+    Fix:   Change assertion to expect InvalidOperationException
+    Priority: LOW
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🟡 FRONTEND FAILURES (2 total)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[1] InfrastructureClient - Basic Tests (2 failures)
+    └─ should render without crashing
+
+    Error: Unable to find element with text "Monitoraggio Infrastruttura"
+    Cause: Language mismatch - test expects Italian, component renders English
+    Fix:   Update test to use "Infrastructure Monitoring" or data-testid
+    Priority: HIGH
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ HIGHLIGHTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Frontend Performance Tests: ALL PASSING
+  ├─ 10 games + 10 agents:   178ms (target: <400ms)  ✅ 55% under target
+  ├─ 50 games + 50 agents:   250ms (target: <700ms)  ✅ 64% under target
+  ├─ 100 games + 100 agents: 392ms (target: <900ms)  ✅ 56% under target
+  ├─ Game filter:            101ms (target: <300ms)  ✅ 66% under target
+  ├─ Agent filter:            74ms (target: <200ms)  ✅ 63% under target
+  └─ Type filter:           0.97ms (target: <100ms)  ✅ 99% under target
+
+TimelineFilters Component: 21/21 tests passing ✅
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 IMMEDIATE ACTIONS (Today)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[1] Fix LINQ Translation Error (Backend HIGH)
+    File: CreateRuleCommentCommandHandler.cs:98
+    Change: .ToLowerInvariant() → EF.Functions.ILike()
+
+[2] Fix DI Registration (Backend HIGH)
+    File: CreateGameWithBggIntegrationTests.cs:56
+    Change: Add services.AddMediatR() in test setup
+
+[3] Fix Language Mismatch (Frontend HIGH)
+    File: infrastructure-client-basic.test.tsx
+    Change: "Monitoraggio Infrastruttura" → "Infrastructure Monitoring"
+
+[4] Fix DocumentVersion Format (Backend MEDIUM)
+    File: SharedGameDocumentRepositoryIntegrationTests.cs:238
+    Change: Use "1.0" format for version parameter
+
+[5] Fix ShareLink FK Assertion (Backend LOW)
+    File: ShareLinkForeignKeyTests.cs:127
+    Change: DbUpdateException → InvalidOperationException
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ PERFORMANCE ISSUES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ Backend test execution: >11 minutes (CRITICAL - target: <5 minutes)
+
+Root Causes:
+  ├─ Testcontainers sequential initialization (~30-45s per test class)
+  ├─ EF Core migrations overhead on each container start
+  └─ No parallel test execution enabled
+
+Optimizations Needed:
+  ├─ Implement IClassFixture<PostgresFixture> for container sharing
+  ├─ Enable dotnet test --parallel
+  ├─ Cache migration results between test classes
+  └─ Profile with: dotnet-trace collect --providers Microsoft-EntityFrameworkCore
+
+Expected Impact: Reduce to <3 minutes (60% improvement)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 COVERAGE REPORTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Backend Coverage:
+  Status: ⏳ PENDING (test execution incomplete)
+  Tool:   XPlat Code Coverage (OpenCover format)
+  Files:  Not yet generated
+
+Frontend Coverage:
+  Status: ✅ GENERATED
+  Tool:   @vitest/coverage-v8
+  Files:  apps/web/coverage/index.html
+  View:   Open in browser for detailed metrics
+
+E2E Tests:
+  Status: ⏳ NOT EXECUTED
+  Files:  20+ Playwright spec files discovered
+  Next:   Execute after unit/integration fixes applied
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📁 REPORT LOCATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Detailed Report: docs/claudedocs/test-execution-report-2026-01-16.md
+Summary:         docs/claudedocs/test-summary-2026-01-16.txt (this file)
+Coverage:        apps/web/coverage/index.html (frontend only)
+
+Generated: 2026-01-16
+Duration:  >11 minutes (backend incomplete)
+
+╚═══════════════════════════════════════════════════════════════════════════════╝

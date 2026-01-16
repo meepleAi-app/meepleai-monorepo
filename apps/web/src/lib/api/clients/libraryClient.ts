@@ -14,10 +14,12 @@ import {
   UserLibraryStatsSchema,
   UserLibraryEntrySchema,
   GameInLibraryStatusSchema,
+  LibraryQuotaResponseSchema,
   type PaginatedLibraryResponse,
   type UserLibraryStats,
   type UserLibraryEntry,
   type GameInLibraryStatus,
+  type LibraryQuotaResponse,
   type GetUserLibraryParams,
   type AddGameToLibraryRequest,
   type UpdateLibraryEntryRequest,
@@ -32,6 +34,7 @@ export interface CreateLibraryClientParams {
 export interface LibraryClient {
   getLibrary(params?: GetUserLibraryParams): Promise<PaginatedLibraryResponse>;
   getStats(): Promise<UserLibraryStats>;
+  getQuota(): Promise<LibraryQuotaResponse>;
   addGame(gameId: string, request?: AddGameToLibraryRequest): Promise<UserLibraryEntry>;
   removeGame(gameId: string): Promise<void>;
   updateEntry(gameId: string, request: UpdateLibraryEntryRequest): Promise<UserLibraryEntry>;
@@ -100,6 +103,26 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
           favoriteGames: 0,
           oldestAddedAt: null,
           newestAddedAt: null,
+        }
+      );
+    },
+
+    /**
+     * Get library quota information for authenticated user (Issue #2445)
+     * Returns current usage, limits, and tier information
+     */
+    async getQuota(): Promise<LibraryQuotaResponse> {
+      const data = await httpClient.get<LibraryQuotaResponse>(
+        '/api/v1/library/quota',
+        LibraryQuotaResponseSchema
+      );
+      return (
+        data ?? {
+          currentCount: 0,
+          maxAllowed: 5,
+          userTier: 'free',
+          remainingSlots: 5,
+          percentageUsed: 0,
         }
       );
     },

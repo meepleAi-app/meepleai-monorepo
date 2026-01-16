@@ -6,3 +6,4 @@
 
 export { AddToLibraryButton, type AddToLibraryButtonProps } from './AddToLibraryButton';
 export { FavoriteToggle, type FavoriteToggleProps } from './FavoriteToggle';
+export { QuotaStatusBar, type QuotaStatusBarProps } from './QuotaStatusBar';

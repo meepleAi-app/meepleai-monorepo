@@ -78,3 +78,14 @@ export interface GetUserLibraryParams {
   sortBy?: 'addedAt' | 'title' | 'favorite';
   sortDescending?: boolean;
 }
+
+// Library quota response - tier-based limits
+export const LibraryQuotaResponseSchema = z.object({
+  currentCount: z.number().int().nonnegative(),
+  maxAllowed: z.number().int().positive(),
+  userTier: z.enum(['free', 'normal', 'premium']),
+  remainingSlots: z.number().int().nonnegative(),
+  percentageUsed: z.number().min(0).max(100),
+});
+
+export type LibraryQuotaResponse = z.infer<typeof LibraryQuotaResponseSchema>;

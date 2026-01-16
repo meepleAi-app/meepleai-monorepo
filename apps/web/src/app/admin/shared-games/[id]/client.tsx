@@ -1,5 +1,4 @@
 'use client';
-/* eslint-disable security/detect-object-injection */
 
 /**
  * Edit Game Client Component - Issue #2372

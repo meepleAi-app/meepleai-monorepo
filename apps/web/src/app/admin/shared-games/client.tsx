@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection */
 /**
  * Shared Games Catalog Admin Client - Issue #2372
  *

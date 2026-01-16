@@ -32,6 +32,7 @@ internal static class PdfEndpoints
         MapLifecycleEndpoints(group);
         MapProcessingStateEndpoints(group);
         MapProcessingActionsEndpoints(group);
+        MapBggExtractionEndpoint(group); // ISSUE-2513: BGG games extraction from PDF
 
         return group;
     }
@@ -762,9 +763,41 @@ internal static class PdfEndpoints
             processingStatus = result.ProcessingStatus
         });
     }
+
+    /// <summary>
+    /// ISSUE-2513: Extract BGG games from PDF for SharedGames seeding
+    /// </summary>
+    private static void MapBggExtractionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/extract-bgg-games", async (
+            [FromBody] ExtractBggGamesRequest request,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new ExtractBggGamesFromPdfQuery(request.PdfFilePath);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(new
+            {
+                success = true,
+                gameCount = result.Count,
+                games = result
+            });
+        })
+        .RequireAuthorization()
+        .WithName("ExtractBggGamesFromPdf")
+        .WithTags("DocumentProcessing", "BGG")
+        .WithSummary("Extract BGG games list from PDF")
+        .WithDescription("Parses PDF document to extract structured game data (Name, BGG ID) for SharedGames seeding")
+        .Produces<object>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404);
+    }
 }
 
 internal record InitChunkedUploadRequest(Guid GameId, string FileName, long TotalFileSize);
 internal record CompleteChunkedUploadRequest(Guid SessionId);
 internal record SetPdfVisibilityRequest(bool IsPublic);
+internal record ExtractBggGamesRequest(string PdfFilePath); // ISSUE-2513
 

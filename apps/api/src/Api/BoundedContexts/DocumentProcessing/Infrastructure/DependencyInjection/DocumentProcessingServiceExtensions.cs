@@ -54,6 +54,7 @@ internal static class DocumentProcessingServiceExtensions
         // Infrastructure Adapters (scoped - may use file I/O)
         services.AddScoped<IPdfTableExtractor, ITextPdfTableExtractor>();
         services.AddScoped<IPdfValidator, DocnetPdfValidator>(); // PDF-09: DDD validation adapter
+        services.AddScoped<IBggGameExtractor, BggGameExtractor>(); // ISSUE-2513: BGG games PDF extraction
 
         // BGAI-086/087: Configure PDF text extractor based on provider setting
         var extractorProvider = configuration["PdfProcessing:Extractor:Provider"] ?? "Orchestrator";

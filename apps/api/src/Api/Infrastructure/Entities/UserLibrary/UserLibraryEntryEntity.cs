@@ -35,6 +35,33 @@ public class UserLibraryEntryEntity
     /// </summary>
     public bool IsFavorite { get; set; }
 
+    /// <summary>
+    /// Custom AI agent configuration (stored as JSONB).
+    /// Null means use system default configuration.
+    /// </summary>
+    public string? CustomAgentConfigJson { get; set; }
+
+    /// <summary>
+    /// Custom PDF rulebook URL (overrides SharedGame's PDF).
+    /// Null means use SharedGame's default PDF.
+    /// </summary>
+    public string? CustomPdfUrl { get; set; }
+
+    /// <summary>
+    /// When the custom PDF was uploaded.
+    /// </summary>
+    public DateTime? CustomPdfUploadedAt { get; set; }
+
+    /// <summary>
+    /// File size of custom PDF in bytes.
+    /// </summary>
+    public long? CustomPdfFileSizeBytes { get; set; }
+
+    /// <summary>
+    /// Original filename of the custom PDF.
+    /// </summary>
+    public string? CustomPdfOriginalFileName { get; set; }
+
     // Navigation properties
     public UserEntity? User { get; set; }
 

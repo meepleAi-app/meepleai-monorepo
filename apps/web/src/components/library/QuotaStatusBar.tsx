@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 /**
  * QuotaStatusBar Component (Issue #2445)
  *

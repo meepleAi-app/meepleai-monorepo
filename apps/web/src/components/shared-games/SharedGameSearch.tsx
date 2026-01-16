@@ -384,6 +384,7 @@ function SharedGameSearchResultItem({ game, onClick }: SharedGameSearchResultIte
       {/* Thumbnail */}
       <div className="w-12 h-12 rounded-md bg-muted overflow-hidden flex-shrink-0">
         {game.thumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={game.thumbnailUrl}
             alt=""

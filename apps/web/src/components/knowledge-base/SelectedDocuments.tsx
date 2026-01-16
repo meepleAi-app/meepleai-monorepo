@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 /**
  * SelectedDocuments Component - Issue #2416
  *

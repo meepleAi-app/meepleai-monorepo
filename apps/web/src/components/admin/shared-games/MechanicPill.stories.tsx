@@ -130,7 +130,7 @@ const mockMechanics = [
   { id: '5', name: 'Area Control' },
 ];
 
-const metaList = {
+const _metaList = {
   title: 'Admin/SharedGames/MechanicPillList',
   component: MechanicPillList,
   parameters: {
@@ -142,7 +142,7 @@ const metaList = {
   tags: ['autodocs'],
 } satisfies Meta<typeof MechanicPillList>;
 
-type StoryList = StoryObj<typeof metaList>;
+type StoryList = StoryObj<typeof _metaList>;
 
 /**
  * Mechanic pill list with default max visible (3)

@@ -66,7 +66,8 @@ internal static class ApplicationServiceExtensions
         services.AddUserLibraryContext();
 
         // ISSUE-2370: SharedGameCatalog bounded context
-        services.AddSharedGameCatalogContext();
+        // ISSUE-2454: Background processing configuration
+        services.AddSharedGameCatalogContext(configuration);
 
         // ISSUE-2371: SharedGameCatalog authorization policies
         services.AddSharedGameCatalogPolicies();

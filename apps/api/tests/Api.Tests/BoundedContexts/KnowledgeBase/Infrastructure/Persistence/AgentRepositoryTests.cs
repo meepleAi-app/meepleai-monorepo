@@ -55,10 +55,12 @@ public class AgentRepositoryTests : IAsyncLifetime
         var mockMediator = new Mock<IMediator>();
         var mockEventCollector = new Mock<IDomainEventCollector>();
         mockEventCollector.Setup(x => x.GetAndClearEvents()).Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
-        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
+
+        // Fix: Use PostgreSQL DbContext, not in-memory (in-memory doesn't support MigrateAsync)
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
         await _dbContext.Database.MigrateAsync();
 
-        _repository = new AgentRepository(_dbContext, new Mock<IDomainEventCollector>().Object);
+        _repository = new AgentRepository(_dbContext, mockEventCollector.Object);
     }
 
     public async ValueTask DisposeAsync()

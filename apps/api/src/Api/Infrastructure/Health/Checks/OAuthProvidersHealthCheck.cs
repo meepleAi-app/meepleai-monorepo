@@ -43,8 +43,9 @@ public class OAuthProvidersHealthCheck : IHealthCheck
 
         if (missingProviders.Count > 0)
         {
-            var message = $"OAuth providers not configured: {string.Join(", ", missingProviders)}";
-            _logger.LogWarning(message);
+            var providersList = string.Join(", ", missingProviders);
+            var message = $"OAuth providers not configured: {providersList}";
+            _logger.LogWarning("OAuth providers not configured: {Providers}", providersList);
             return Task.FromResult(HealthCheckResult.Degraded(message));
         }
 

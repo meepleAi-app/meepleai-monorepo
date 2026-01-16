@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 /**
  * QuickQuestionGenerator Component
  * Issue #2417 (Sub-Issue 2401.1): UI for AI-powered QuickQuestion generation

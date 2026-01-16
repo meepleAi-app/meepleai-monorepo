@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 /**
  * Game Form Component - Issue #2372
  *

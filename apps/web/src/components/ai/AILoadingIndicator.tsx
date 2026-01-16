@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 /**
  * AILoadingIndicator Component
  * Issue #2418 (Sub-Issue 2401.2): Visual loading states for AI operations

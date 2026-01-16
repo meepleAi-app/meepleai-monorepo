@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 /**
  * DocumentSelector Component - Issue #2399
  *

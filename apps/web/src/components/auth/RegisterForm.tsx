@@ -116,7 +116,12 @@ export function RegisterForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4" noValidate>
+    <form
+      onSubmit={handleSubmit(onFormSubmit)}
+      className="space-y-4"
+      noValidate
+      data-testid="register-form"
+    >
       {/* Email Field */}
       <div className="space-y-2">
         <AccessibleFormInput
@@ -197,7 +202,7 @@ export function RegisterForm({
             onValueChange={value => setValue('role', value as 'User' | 'Editor' | 'Admin')}
             disabled={isLoading}
           >
-            <SelectTrigger id="register-role">
+            <SelectTrigger id="register-role" data-testid="register-role-select">
               <SelectValue placeholder={t('auth.register.selectRole')} />
             </SelectTrigger>
             <SelectContent>

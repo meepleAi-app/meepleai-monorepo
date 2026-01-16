@@ -89,17 +89,26 @@ export function ExportButton({
           disabled={isDisabled}
           className={className}
           aria-label="Export dashboard data"
+          data-testid="export-button-trigger"
         >
           <Download className="w-4 h-4 mr-2" aria-hidden="true" />
           {isPdfExporting ? 'Exporting...' : 'Export'}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={handleCSVExport} disabled={isDisabled}>
+        <DropdownMenuItem
+          onClick={handleCSVExport}
+          disabled={isDisabled}
+          data-testid="export-button-csv"
+        >
           <FileSpreadsheet className="w-4 h-4 mr-2" aria-hidden="true" />
           Export as CSV
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handlePDFExport} disabled={isDisabled}>
+        <DropdownMenuItem
+          onClick={handlePDFExport}
+          disabled={isDisabled}
+          data-testid="export-button-pdf"
+        >
           <FileText className="w-4 h-4 mr-2" aria-hidden="true" />
           Export as PDF
         </DropdownMenuItem>

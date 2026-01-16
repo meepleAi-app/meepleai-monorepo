@@ -811,15 +811,20 @@ internal static class SharedGameCatalogEndpoints
         Guid id,
         [FromBody] AddDocumentRequest request,
         IMediator mediator,
+        HttpContext context,
         CancellationToken ct)
     {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
         var command = new AddDocumentToSharedGameCommand(
             id,
             request.PdfDocumentId,
             request.DocumentType,
             request.Version,
             request.Tags,
-            request.SetAsActive);
+            request.SetAsActive,
+            session!.User!.Id);
 
         try
         {

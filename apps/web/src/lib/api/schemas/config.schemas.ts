@@ -81,3 +81,23 @@ export const ConfigurationExportDtoSchema = z.object({
 });
 
 export type ConfigurationExportDto = z.infer<typeof ConfigurationExportDtoSchema>;
+
+// ========== Game Library Limits (Issue #2444) ==========
+
+export const GameLibraryLimitsDtoSchema = z.object({
+  freeTierLimit: z.number().int().min(1).max(1000),
+  normalTierLimit: z.number().int().min(1).max(1000),
+  premiumTierLimit: z.number().int().min(1).max(1000),
+  lastUpdatedAt: z.string().datetime(),
+  lastUpdatedByUserId: z.string().uuid().nullable(),
+});
+
+export type GameLibraryLimitsDto = z.infer<typeof GameLibraryLimitsDtoSchema>;
+
+export const UpdateGameLibraryLimitsRequestSchema = z.object({
+  freeTierLimit: z.number().int().min(1).max(1000),
+  normalTierLimit: z.number().int().min(1).max(1000),
+  premiumTierLimit: z.number().int().min(1).max(1000),
+});
+
+export type UpdateGameLibraryLimitsRequest = z.infer<typeof UpdateGameLibraryLimitsRequestSchema>;

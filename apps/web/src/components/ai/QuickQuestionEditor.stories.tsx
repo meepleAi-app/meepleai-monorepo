@@ -16,12 +16,12 @@
 
 import { fn, userEvent, within, expect } from 'storybook/test';
 
+import { QuickQuestionEditor } from './QuickQuestionEditor';
+import type { GeneratedQuestion } from './QuickQuestionGenerator';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
-
-import { QuickQuestionEditor } from './QuickQuestionEditor';
-import type { GeneratedQuestion } from './QuickQuestionGenerator';
 
 // ==================== Mock Data ====================
 

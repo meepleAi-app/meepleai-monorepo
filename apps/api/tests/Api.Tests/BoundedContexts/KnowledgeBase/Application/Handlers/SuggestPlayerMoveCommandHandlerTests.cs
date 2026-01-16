@@ -1,7 +1,14 @@
+using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+using Api.BoundedContexts.KnowledgeBase.Application.Models;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.Models;
 using Api.Services;
 using Api.Tests.Constants;
+using FluentAssertions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -9,205 +16,378 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// Tests for SuggestPlayerMoveCommandHandler.
-/// Issue #2421: Player Mode UI Controls - Backend endpoint tests.
+/// Unit tests for SuggestPlayerMoveCommandHandler.
+/// Issue #2473: Production AI Implementation for Player Mode Move Suggestions.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class SuggestPlayerMoveCommandHandlerTests
 {
     private readonly Mock<IAiResponseCacheService> _mockCache;
     private readonly Mock<ILogger<SuggestPlayerMoveCommandHandler>> _mockLogger;
+    private readonly Mock<GameStateParser> _mockParser;
+    private readonly Mock<IMediator> _mockMediator;
+    private readonly Mock<ILlmService> _mockLlmService;
     private readonly SuggestPlayerMoveCommandHandler _handler;
 
     public SuggestPlayerMoveCommandHandlerTests()
     {
         _mockCache = new Mock<IAiResponseCacheService>();
         _mockLogger = new Mock<ILogger<SuggestPlayerMoveCommandHandler>>();
+        _mockParser = new Mock<GameStateParser>(Mock.Of<ILogger<GameStateParser>>());
+        _mockMediator = new Mock<IMediator>();
+        _mockLlmService = new Mock<ILlmService>();
 
         _handler = new SuggestPlayerMoveCommandHandler(
             _mockCache.Object,
-            _mockLogger.Object
+            _mockLogger.Object,
+            _mockParser.Object,
+            _mockMediator.Object,
+            _mockLlmService.Object
         );
     }
 
     [Fact]
-    public async Task Handle_WithValidCommand_ReturnsSuccessfulResponse()
+    public async Task Handle_WithCachedResponse_ShouldReturnCachedData()
     {
         // Arrange
-        var gameState = new Dictionary<string, object>(StringComparer.Ordinal)
-        {
-            { "players", new[] { new { id = "1", name = "Alice", score = 10 } } },
-            { "currentTurn", 1 },
-            { "phase", "resource-gathering" }
-        };
-
+        var gameId = Guid.NewGuid().ToString();
+        var gameState = new Dictionary<string, object> { ["test"] = "value" };
         var command = new SuggestPlayerMoveCommand
         {
-            GameId = "catan",
+            GameId = gameId,
             GameState = gameState,
-            Query = "Should I focus on wood or stone?"
+            Query = "What should I do?"
         };
 
+        var cachedResponse = new PlayerModeSuggestionResponse(
+            primarySuggestion: new SuggestedMove("Cached action", "Cached rationale", null, 0.9),
+            alternativeMoves: new List<SuggestedMove>(),
+            overallConfidence: 0.9,
+            strategicContext: "Cached context",
+            sources: new List<Snippet>(),
+            promptTokens: 100,
+            completionTokens: 50,
+            totalTokens: 150,
+            processingTimeMs: 500,
+            metadata: new Dictionary<string, object>()
+        );
+
+        _mockCache
+            .Setup(c => c.GetAsync<PlayerModeSuggestionResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedResponse);
+
         // Act
-        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.primarySuggestion);
-        Assert.NotEmpty(result.primarySuggestion.action);
-        Assert.NotEmpty(result.primarySuggestion.rationale);
-        Assert.True(result.overallConfidence >= 0.0 && result.overallConfidence <= 1.0);
-        Assert.True(result.primarySuggestion.confidence >= 0.0 && result.primarySuggestion.confidence <= 1.0);
+        result.Should().Be(cachedResponse);
+        _mockParser.Verify(p => p.Parse(It.IsAny<IReadOnlyDictionary<string, object>>()), Times.Never);
+        _mockMediator.Verify(m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_WithInvalidQuery_ReturnsErrorResponse()
+    public async Task Handle_WithInvalidGameState_ShouldReturnFallbackResponse()
     {
         // Arrange
-        var gameState = new Dictionary<string, object>(StringComparer.Ordinal)
+        var gameId = Guid.NewGuid().ToString();
+        var gameState = new Dictionary<string, object> { ["invalid"] = "data" };
+        var command = new SuggestPlayerMoveCommand
         {
-            { "players", new[] { new { id = "1", name = "Alice" } } }
+            GameId = gameId,
+            GameState = gameState,
+            Query = null
         };
 
-        // Query longer than 1000 characters (MaxQueryLength)
-        var longQuery = new string('a', 1001);
+        _mockCache
+            .Setup(c => c.GetAsync<PlayerModeSuggestionResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PlayerModeSuggestionResponse?)null);
+
+        _mockParser
+            .Setup(p => p.Parse(It.IsAny<IReadOnlyDictionary<string, object>>()))
+            .Returns((ParsedGameState?)null);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.PrimarySuggestion.Action.Should().Be("No suggestion available");
+        result.OverallConfidence.Should().Be(0.0);
+    }
+
+    [Fact]
+    public async Task Handle_WithValidStateAndNoRagResults_ShouldStillGenerateSuggestion()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid().ToString();
+        var gameState = CreateValidGameState();
+        var command = new SuggestPlayerMoveCommand
+        {
+            GameId = gameId,
+            GameState = gameState,
+            Query = "What should I build?"
+        };
+
+        var parsedState = CreateParsedGameState();
+        var llmOutput = CreateValidLlmOutput();
+
+        _mockCache
+            .Setup(c => c.GetAsync<PlayerModeSuggestionResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PlayerModeSuggestionResponse?)null);
+
+        _mockParser
+            .Setup(p => p.Parse(It.IsAny<IReadOnlyDictionary<string, object>>()))
+            .Returns(parsedState);
+
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SearchResultDto>()); // No RAG results
+
+        _mockLlmService
+            .Setup(l => l.GenerateJsonAsync<LlmMoveGenerationOutput>(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(llmOutput);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.PrimarySuggestion.Action.Should().Be("Build a settlement");
+        result.OverallConfidence.Should().BeGreaterThan(0.0);
+        result.Sources.Should().BeEmpty(); // No RAG results
+    }
+
+    [Fact]
+    public async Task Handle_WithRagAndLlmSuccess_ShouldCalculateCorrectConfidence()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid().ToString();
+        var gameState = CreateValidGameState();
+        var command = new SuggestPlayerMoveCommand
+        {
+            GameId = gameId,
+            GameState = gameState,
+            Query = null
+        };
+
+        var parsedState = CreateParsedGameState();
+        var ragResults = CreateRagResults();
+        var llmOutput = CreateValidLlmOutput();
+
+        _mockCache
+            .Setup(c => c.GetAsync<PlayerModeSuggestionResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PlayerModeSuggestionResponse?)null);
+
+        _mockParser
+            .Setup(p => p.Parse(It.IsAny<IReadOnlyDictionary<string, object>>()))
+            .Returns(parsedState);
+
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ragResults);
+
+        _mockLlmService
+            .Setup(l => l.GenerateJsonAsync<LlmMoveGenerationOutput>(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(llmOutput);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.OverallConfidence.Should().BeGreaterThan(0.6);
+        result.Sources.Should().HaveCount(3);
+        result.PromptTokens.Should().BeGreaterThan(0);
+        result.CompletionTokens.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldCacheSuccessfulResponse()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid().ToString();
+        var gameState = CreateValidGameState();
+        var command = new SuggestPlayerMoveCommand
+        {
+            GameId = gameId,
+            GameState = gameState,
+            Query = null
+        };
+
+        var parsedState = CreateParsedGameState();
+        var llmOutput = CreateValidLlmOutput();
+
+        _mockCache
+            .Setup(c => c.GetAsync<PlayerModeSuggestionResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PlayerModeSuggestionResponse?)null);
+
+        _mockParser
+            .Setup(p => p.Parse(It.IsAny<IReadOnlyDictionary<string, object>>()))
+            .Returns(parsedState);
+
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SearchResultDto>());
+
+        _mockLlmService
+            .Setup(l => l.GenerateJsonAsync<LlmMoveGenerationOutput>(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(llmOutput);
+
+        // Act
+        await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        _mockCache.Verify(
+            c => c.SetAsync(
+                It.IsAny<string>(),
+                It.IsAny<PlayerModeSuggestionResponse>(),
+                3600,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithLlmFailure_ShouldReturnFallback()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid().ToString();
+        var gameState = CreateValidGameState();
+        var command = new SuggestPlayerMoveCommand
+        {
+            GameId = gameId,
+            GameState = gameState,
+            Query = null
+        };
+
+        var parsedState = CreateParsedGameState();
+
+        _mockCache
+            .Setup(c => c.GetAsync<PlayerModeSuggestionResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PlayerModeSuggestionResponse?)null);
+
+        _mockParser
+            .Setup(p => p.Parse(It.IsAny<IReadOnlyDictionary<string, object>>()))
+            .Returns(parsedState);
+
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SearchResultDto>());
+
+        _mockLlmService
+            .Setup(l => l.GenerateJsonAsync<LlmMoveGenerationOutput>(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((LlmMoveGenerationOutput?)null); // LLM failure
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.PrimarySuggestion.Action.Should().Contain("Analyze current position");
+        result.OverallConfidence.Should().BeLessThan(0.6);
+    }
+
+    [Fact]
+    public async Task Handle_WithInvalidQuery_ShouldReturnErrorResponse()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid().ToString();
+        var gameState = CreateValidGameState();
+        var longQuery = new string('a', 1001); // Exceeds MaxQueryLength
 
         var command = new SuggestPlayerMoveCommand
         {
-            GameId = "catan",
+            GameId = gameId,
             GameState = gameState,
             Query = longQuery
         };
 
         // Act
-        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(0.0, result.overallConfidence);
-        Assert.Equal("No suggestion available", result.primarySuggestion.action);
+        result.Should().NotBeNull();
+        result.PrimarySuggestion.Action.Should().Be("No suggestion available");
+        result.OverallConfidence.Should().Be(0.0);
     }
 
-    [Fact]
-    public async Task Handle_WithCachedResponse_ReturnsCachedData()
+    // Helper methods
+    private static Dictionary<string, object> CreateValidGameState()
     {
-        // Arrange
-        var gameState = new Dictionary<string, object>(StringComparer.Ordinal)
+        return new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            { "players", new[] { new { id = "1", name = "Alice" } } }
+            ["players"] = JsonSerializer.SerializeToElement(new[]
+            {
+                new { name = "Player1", resources = new { wood = 2 }, score = 3 }
+            }),
+            ["resources"] = new Dictionary<string, object> { ["wood"] = 5 },
+            ["currentPhase"] = "main",
+            ["currentTurn"] = 5
+        };
+    }
+
+    private static ParsedGameState CreateParsedGameState()
+    {
+        var players = new List<PlayerState>
+        {
+            new("Player1", new Dictionary<string, object> { ["wood"] = 2 }, 3, null)
         };
 
-        var command = new SuggestPlayerMoveCommand
-        {
-            GameId = "catan",
-            GameState = gameState
-        };
+        var resources = new Dictionary<string, object> { ["wood"] = 5 };
 
-        var cachedResponse = new Api.Models.PlayerModeSuggestionResponse(
-            primarySuggestion: new Api.Models.SuggestedMove(
-                action: "Cached action",
-                rationale: "From cache",
-                expectedOutcome: null,
-                confidence: 0.9
-            ),
-            alternativeMoves: new List<Api.Models.SuggestedMove>(),
-            overallConfidence: 0.9,
-            strategicContext: null,
-            sources: new List<Api.Models.Snippet>(),
-            promptTokens: 50,
-            completionTokens: 25,
-            totalTokens: 75,
-            processingTimeMs: 100,
-            metadata: null
+        return new ParsedGameState(
+            players,
+            resources,
+            null,
+            "main",
+            5,
+            0.8
         );
-
-        _mockCache.Setup(c => c.GetAsync<Api.Models.PlayerModeSuggestionResponse>(
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync(cachedResponse);
-
-        // Act
-        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Cached action", result.primarySuggestion.action);
-        Assert.Equal(0.9, result.overallConfidence);
-
-        // Verify cache was checked
-        _mockCache.Verify(c => c.GetAsync<Api.Models.PlayerModeSuggestionResponse>(
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
-    public async Task Handle_WithNoCachedResponse_GeneratesNewSuggestion()
+    private static List<SearchResultDto> CreateRagResults()
     {
-        // Arrange
-        var gameState = new Dictionary<string, object>(StringComparer.Ordinal)
+        return new List<SearchResultDto>
         {
-            { "players", new[] { new { id = "1", name = "Alice" } } }
+            new("doc1", "Build settlements early for victory points", 1, 0.85, 1, "hybrid"),
+            new("doc2", "Wood is essential for construction", 2, 0.78, 2, "hybrid"),
+            new("doc3", "Consider trading with other players", 3, 0.72, 3, "hybrid")
         };
-
-        var command = new SuggestPlayerMoveCommand
-        {
-            GameId = "catan",
-            GameState = gameState,
-            Query = "What should I do?"
-        };
-
-        _mockCache.Setup(c => c.GetAsync<Api.Models.PlayerModeSuggestionResponse>(
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Api.Models.PlayerModeSuggestionResponse?)null);
-
-        // Act
-        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.primarySuggestion.action);
-
-        // Verify cache was checked and response was cached
-        _mockCache.Verify(c => c.GetAsync<Api.Models.PlayerModeSuggestionResponse>(
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()), Times.Once);
-        _mockCache.Verify(c => c.SetAsync(
-            It.IsAny<string>(),
-            It.IsAny<Api.Models.PlayerModeSuggestionResponse>(),
-            It.IsAny<int>(),
-            It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
-    public async Task Handle_WithAlternativeMoves_ReturnsMultipleSuggestions()
+    private static LlmMoveGenerationOutput CreateValidLlmOutput()
     {
-        // Arrange
-        var gameState = new Dictionary<string, object>(StringComparer.Ordinal)
+        return new LlmMoveGenerationOutput
         {
-            { "players", new[] { new { id = "1", name = "Alice" } } }
+            PrimarySuggestion = new PrimarySuggestion
+            {
+                Action = "Build a settlement",
+                Rationale = "You have enough resources",
+                ExpectedOutcome = "Gain 1 victory point",
+                Confidence = 0.85
+            },
+            Alternatives = new List<AlternativeMove>
+            {
+                new()
+                {
+                    Action = "Build a road",
+                    Rationale = "Expand territory",
+                    ExpectedOutcome = "Connect settlements",
+                    Confidence = 0.72
+                }
+            },
+            StrategicContext = "Focus on early settlements"
         };
-
-        var command = new SuggestPlayerMoveCommand
-        {
-            GameId = "catan",
-            GameState = gameState
-        };
-
-        // Act
-        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.alternativeMoves);
-        Assert.True(result.alternativeMoves.Count > 0 && result.alternativeMoves.Count <= 3);
-
-        // Verify all alternatives have valid confidence scores
-        foreach (var alt in result.alternativeMoves)
-        {
-            Assert.True(alt.confidence >= 0.0 && alt.confidence <= 1.0);
-            Assert.NotEmpty(alt.action);
-            Assert.NotEmpty(alt.rationale);
-        }
     }
 }

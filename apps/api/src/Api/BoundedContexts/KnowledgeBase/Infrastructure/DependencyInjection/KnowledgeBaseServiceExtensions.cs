@@ -147,6 +147,9 @@ internal static class KnowledgeBaseServiceExtensions
         // Application - Handlers (Scoped - uses Scoped dependencies)
         services.AddScoped<SearchQueryHandler>();
         services.AddScoped<AskQuestionQueryHandler>();
+
+        // ISSUE-2473: Game state parsing for Player Mode AI suggestions
+        services.AddScoped<GameStateParser>();
         services.AddScoped<GetLlmCostReportQueryHandler>(); // ISSUE-960: Cost reporting
         services.AddScoped<GetQueryEfficiencyReportQueryHandler>(); // ISSUE-1725: Efficiency reporting
         services.AddScoped<GetMonthlyOptimizationReportQueryHandler>(); // ISSUE-1725: Monthly optimization

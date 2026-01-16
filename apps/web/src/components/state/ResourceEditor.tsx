@@ -118,7 +118,7 @@ export function ResourceEditor({
   /**
    * Group resources by type
    */
-  const groupedResources = resources.reduce(
+  const _groupedResources = resources.reduce(
     (acc, resource) => {
       if (!acc[resource.type]) acc[resource.type] = [];
       acc[resource.type].push(resource);

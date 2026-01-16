@@ -21,6 +21,7 @@ export interface PlayerAISuggestionState {
  * Hook controls for Player Mode AI suggestions
  */
 export interface PlayerAISuggestionControls {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   suggestMove: (gameId: string, gameState: Record<string, any>, query?: string) => Promise<void>;
   applySuggestion: () => void;
   ignoreSuggestion: () => void;
@@ -79,6 +80,7 @@ export function usePlayerAISuggestion(callbacks?: {
   }, []);
 
   const suggestMove = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async (gameId: string, gameState: Record<string, any>, query?: string) => {
       // Reset state and start loading
       setState({

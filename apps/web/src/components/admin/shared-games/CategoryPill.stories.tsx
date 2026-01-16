@@ -130,7 +130,7 @@ const mockCategories = [
   { id: '5', name: 'Giochi di Carte' },
 ];
 
-const metaList = {
+const _metaList = {
   title: 'Admin/SharedGames/CategoryPillList',
   component: CategoryPillList,
   parameters: {
@@ -142,7 +142,7 @@ const metaList = {
   tags: ['autodocs'],
 } satisfies Meta<typeof CategoryPillList>;
 
-type StoryList = StoryObj<typeof metaList>;
+type StoryList = StoryObj<typeof _metaList>;
 
 /**
  * Category pill list with default max visible (3)

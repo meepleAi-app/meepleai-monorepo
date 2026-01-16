@@ -7,61 +7,24 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// ISSUE-960: BGAI-018 - Financial cost tracking implementation
 /// </summary>
 /// <remarks>
-/// Pricing data sourced from OpenRouter (https://openrouter.ai/models) as of 2025-11-12.
+/// Pricing data sourced from OpenRouter (https://openrouter.ai/models) as of 2026-01-16.
 /// Free tier models (meta-llama/*:free) and local Ollama models have $0 cost.
 ///
 /// Pricing Strategy:
 /// - Anonymous/User: meta-llama/llama-3.3-70b-instruct:free ($0)
 /// - Editor/Admin Ollama: llama3:8b ($0 - self-hosted)
-/// - Paid fallback: openai/gpt-4o-mini ($0.15/$0.60 per 1M tokens)
-/// - Admin premium: anthropic/claude-3.5-haiku ($0.80/$4.00 per 1M tokens)
+/// - Paid models: DeepSeek, Gemini, Llama (paid tier)
+///
+/// NOTE: Future enhancement - move pricing to database for runtime configuration
 /// </remarks>
 internal class LlmCostCalculator : ILlmCostCalculator
 {
     // Pricing database (per 1M tokens in USD)
-    // Source: OpenRouter pricing + Anthropic direct pricing (Q1 2025)
+    // Source: OpenRouter pricing (https://openrouter.ai/models) as of 2026-01-16
+    // NOTE: Future enhancement - move to database for runtime configuration
     private static readonly Dictionary<string, LlmModelPricing> ModelPricing = new(StringComparer.Ordinal)
     {
-        // OpenRouter Models - OpenAI
-        ["openai/gpt-4o-mini"] = new()
-        {
-            ModelId = "openai/gpt-4o-mini",
-            Provider = "OpenRouter",
-            InputCostPer1M = 0.15m,  // $0.15 per 1M input tokens
-            OutputCostPer1M = 0.60m  // $0.60 per 1M output tokens
-        },
-        ["openai/gpt-4o"] = new()
-        {
-            ModelId = "openai/gpt-4o",
-            Provider = "OpenRouter",
-            InputCostPer1M = 2.50m,
-            OutputCostPer1M = 10.00m
-        },
-
-        // OpenRouter Models - Anthropic
-        ["anthropic/claude-3.5-haiku"] = new()
-        {
-            ModelId = "anthropic/claude-3.5-haiku",
-            Provider = "OpenRouter",
-            InputCostPer1M = 0.80m,  // $0.80 per 1M input tokens
-            OutputCostPer1M = 4.00m  // $4.00 per 1M output tokens
-        },
-        ["anthropic/claude-3.5-sonnet"] = new()
-        {
-            ModelId = "anthropic/claude-3.5-sonnet",
-            Provider = "OpenRouter",
-            InputCostPer1M = 3.00m,
-            OutputCostPer1M = 15.00m
-        },
-        ["anthropic/claude-3-opus"] = new()
-        {
-            ModelId = "anthropic/claude-3-opus",
-            Provider = "OpenRouter",
-            InputCostPer1M = 15.00m,
-            OutputCostPer1M = 75.00m
-        },
-
-        // OpenRouter Models - Meta (Free Tier)
+        // OpenRouter Models - Meta Llama (Free Tier)
         ["meta-llama/llama-3.3-70b-instruct:free"] = new()
         {
             ModelId = "meta-llama/llama-3.3-70b-instruct:free",
@@ -75,6 +38,24 @@ internal class LlmCostCalculator : ILlmCostCalculator
             Provider = "OpenRouter",
             InputCostPer1M = 0m,
             OutputCostPer1M = 0m
+        },
+
+        // OpenRouter Models - Meta Llama (Paid Tier)
+        ["meta-llama/llama-3.3-70b-instruct"] = new()
+        {
+            ModelId = "meta-llama/llama-3.3-70b-instruct",
+            Provider = "OpenRouter",
+            InputCostPer1M = 0.59m,
+            OutputCostPer1M = 0.79m
+        },
+
+        // OpenRouter Models - Google Gemini
+        ["google/gemini-pro"] = new()
+        {
+            ModelId = "google/gemini-pro",
+            Provider = "OpenRouter",
+            InputCostPer1M = 0.125m,
+            OutputCostPer1M = 0.375m
         },
 
         // OpenRouter Models - DeepSeek

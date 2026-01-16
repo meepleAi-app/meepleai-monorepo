@@ -19,7 +19,7 @@
 | **unstructured-service.secret** | 🟡 IMPORTANT | `UNSTRUCTURED_API_KEY` | `change_me_unstructured...` | `infra/secrets/unstructured-service.secret` |
 | **email.secret** | 🟢 OPTIONAL | `SMTP_HOST`<br>`SMTP_PORT`<br>`SMTP_USER`<br>`SMTP_PASSWORD`<br>`SMTP_FROM_EMAIL` | `smtp.gmail.com`<br>`587`<br>`your_email@gmail.com`<br>`your_app_password...`<br>`noreply@meepleai.local` | `infra/secrets/email.secret` |
 | **monitoring.secret** | 🟢 OPTIONAL | `GRAFANA_ADMIN_PASSWORD`<br>`PROMETHEUS_PASSWORD` | `change_me_grafana...`<br>`change_me_prometheus...` | `infra/secrets/monitoring.secret` |
-| **oauth.secret** | 🟢 OPTIONAL | `GOOGLE_CLIENT_ID`<br>`GOOGLE_CLIENT_SECRET`<br>`GITHUB_CLIENT_ID`<br>`GITHUB_CLIENT_SECRET` | `your_google_client_id...`<br>`your_google_client_secret`<br>`your_github_client_id`<br>`your_github_client_secret` | `infra/secrets/oauth.secret` |
+| **oauth.secret** | 🟢 OPTIONAL | `GOOGLE_CLIENT_ID`<br>`GOOGLE_CLIENT_SECRET`<br>`GITHUB_CLIENT_ID`<br>`GITHUB_CLIENT_SECRET`<br>`DISCORD_CLIENT_ID`<br>`DISCORD_CLIENT_SECRET` | `your_google_client_id...`<br>`your_google_client_secret`<br>`your_github_client_id`<br>`your_github_client_secret`<br>`your_discord_client_id`<br>`your_discord_client_secret` | `infra/secrets/oauth.secret` |
 | **reranker-service.secret** | 🟢 OPTIONAL | `RERANKER_API_KEY` | `change_me_reranker...` | `infra/secrets/reranker-service.secret` |
 | **smoldocling-service.secret** | 🟢 OPTIONAL | `SMOLDOCLING_API_KEY` | `change_me_smoldocling...` | `infra/secrets/smoldocling-service.secret` |
 | **storage.secret** | 🟢 OPTIONAL | `S3_ACCESS_KEY`<br>`S3_SECRET_KEY`<br>`S3_BUCKET_NAME`<br>`S3_REGION` | `your_s3_access_key`<br>`your_s3_secret_key`<br>`meepleai-uploads`<br>`us-east-1` | `infra/secrets/storage.secret` |
@@ -909,7 +909,7 @@ PROMETHEUS_PASSWORD=your_prometheus_password     # Prometheus password
 - Passwords: ≥8 chars each
 
 #### oauth.secret
-**Purpose**: OAuth social login (Google, GitHub)
+**Purpose**: OAuth social login (Google, GitHub, Discord)
 
 **Variables**:
 ```bash
@@ -920,6 +920,10 @@ GOOGLE_CLIENT_SECRET=GOCSPX-your_google_secret
 # GitHub OAuth
 GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
+
+# Discord OAuth
+DISCORD_CLIENT_ID=your_discord_client_id
+DISCORD_CLIENT_SECRET=your_discord_client_secret
 ```
 
 **Validation**:
@@ -929,6 +933,7 @@ GITHUB_CLIENT_SECRET=your_github_client_secret
 **Get Credentials**:
 - Google: https://console.cloud.google.com/apis/credentials
 - GitHub: https://github.com/settings/developers
+- Discord: https://discord.com/developers/applications
 
 #### reranker-service.secret
 **Purpose**: AI reranking service (optional optimization)

@@ -38,11 +38,25 @@
 cd infra/secrets
 .\setup-secrets.ps1
 
-# Automatically generates secure values for:
-# ✅ JWT secrets, database passwords, API keys
-# ✅ All CRITICAL secrets auto-configured
-# ✅ 11+ values generated with cryptographic strength
-# ⏱️ Setup time: <1 minute (vs 15-30 minutes manually)
+# Output example:
+# =======================================
+#    MeepleAI Secrets Auto-Setup
+# =======================================
+#
+# [STEP 1] Generating secure values...
+#   [OK] JWT_SECRET_KEY:           OwBQ90/g***
+#   [OK] POSTGRES_PASSWORD:        zNo%vL27***
+#   [OK] REDIS_PASSWORD:           [d<9mynL***
+#   [OK] EMBEDDING_SERVICE_API_KEY: C5CirwRq***
+#   ... (8 more values)
+#
+# [STEP 2] Creating and populating secret files...
+#   [OK] Created: admin.secret (1 auto-generated)
+#   [OK] Created: embedding-service.secret (1 auto-generated)
+#   ... (14 more files)
+#
+# [SUCCESS] All CRITICAL secrets configured!
+#           Application can start successfully.
 ```
 
 **With Backup** (recommended for production):
@@ -51,8 +65,22 @@ cd infra/secrets
 .\setup-secrets.ps1 -SaveGenerated
 
 # Saves all generated values to .generated-values-TIMESTAMP.txt
+# Example: .generated-values-20260116-191704.txt
+#
+# Contents:
+# ADMIN_PASSWORD=rgy&U,*0!%Ymfbhx
+# EMBEDDING_SERVICE_API_KEY=C5CirwRqXcZJF3E8l+BqeLTqNRm2MwEMMpDsYRpUY5g=
+# JWT_SECRET_KEY=OwBQ90/gsq09hyKSJ6+2Hgl5GpTchLe3wz8E44D3wiz...
+# ... (all 12 generated values)
+#
 # ⚠️ Copy to password manager, then DELETE the file!
 ```
+
+**Benefits**:
+- ✅ 11 secrets auto-generated with cryptographic strength
+- ✅ Setup time: <1 minute (vs 15-30 minutes manually)
+- ✅ Zero weak passwords (256-512 bits entropy)
+- ✅ Ready to start immediately (all CRITICAL secrets configured)
 
 **Manual Command**:
 ```powershell

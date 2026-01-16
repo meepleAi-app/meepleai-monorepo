@@ -387,7 +387,10 @@ app.ConfigureMiddlewarePipeline(forwardedHeadersEnabled);
 // Unversioned endpoints (keep for backwards compatibility and infrastructure)
 app.MapGet("/", () => Results.Json(new { ok = true, name = "MeepleAgentAI" }));
 
-// OPS-01: Health check endpoints
+// ISSUE-2511: Comprehensive health check endpoint
+app.MapHealthCheckEndpoints();
+
+// OPS-01: Health check endpoints (backwards compatibility)
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>
@@ -500,6 +503,32 @@ v1Api.MapTestEndpoints();
 
 // Issue #2406: SignalR hub for real-time game state updates
 app.MapHub<Api.Hubs.GameStateHub>("/hubs/gamestate");
+
+// ISSUE-2511: Startup health check for critical services
+using (var scope = app.Services.CreateScope())
+{
+    var healthCheckService = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService>();
+    var healthLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    var startupCheck = await healthCheckService.CheckHealthAsync(
+        check => check.Tags.Contains(Api.Infrastructure.Health.Models.HealthCheckTags.Critical)).ConfigureAwait(false);
+
+    var criticalFailures = startupCheck.Entries
+        .Where(e => e.Value.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy)
+        .ToList();
+
+    if (criticalFailures.Count > 0)
+    {
+        var failedServices = string.Join(", ", criticalFailures.Select(f => f.Key));
+        healthLogger.LogCritical(
+            "Critical services failed startup health check: {Services}. Application starting in degraded mode.",
+            failedServices);
+    }
+    else
+    {
+        healthLogger.LogInformation("All critical services passed startup health check.");
+    }
+}
 
 await app.RunAsync().ConfigureAwait(false);
 

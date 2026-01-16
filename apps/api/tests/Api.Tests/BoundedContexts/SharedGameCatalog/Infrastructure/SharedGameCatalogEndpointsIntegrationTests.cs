@@ -199,4 +199,106 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    // ========================================
+    // APPROVAL WORKFLOW TESTS (Issue #2514)
+    // ========================================
+
+    [Fact]
+    public async Task SubmitForApproval_WithDraftGame_ReturnsNoContent()
+    {
+        // Arrange
+        var game = await CreateTestGameAsync(GameStatus.Draft);
+
+        // Act
+        var response = await _client.PostAsync($"/api/v1/admin/shared-games/{game.Id}/submit-for-approval", null);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        // Verify game status changed
+        var updatedGame = await _dbContext.SharedGames.FindAsync(game.Id);
+        Assert.NotNull(updatedGame);
+        Assert.Equal((int)GameStatus.PendingApproval, updatedGame.Status);
+    }
+
+    [Fact]
+    public async Task ApprovePublication_WithPendingApprovalGame_ReturnsNoContent()
+    {
+        // Arrange
+        var game = await CreateTestGameAsync(GameStatus.PendingApproval);
+
+        // Act
+        var response = await _client.PostAsync($"/api/v1/admin/shared-games/{game.Id}/approve-publication", null);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        // Verify game status changed
+        var updatedGame = await _dbContext.SharedGames.FindAsync(game.Id);
+        Assert.NotNull(updatedGame);
+        Assert.Equal((int)GameStatus.Published, updatedGame.Status);
+    }
+
+    [Fact]
+    public async Task RejectPublication_WithPendingApprovalGame_ReturnsNoContent()
+    {
+        // Arrange
+        var game = await CreateTestGameAsync(GameStatus.PendingApproval);
+        var request = new { Reason = "Needs better description" };
+
+        // Act
+        var response = await _client.PostAsJsonAsync($"/api/v1/admin/shared-games/{game.Id}/reject-publication", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        // Verify game status changed back to Draft
+        var updatedGame = await _dbContext.SharedGames.FindAsync(game.Id);
+        Assert.NotNull(updatedGame);
+        Assert.Equal((int)GameStatus.Draft, updatedGame.Status);
+    }
+
+    [Fact]
+    public async Task GetPendingApprovals_ReturnsPendingGames()
+    {
+        // Arrange
+        await CreateTestGameAsync(GameStatus.PendingApproval);
+        await CreateTestGameAsync(GameStatus.PendingApproval);
+        await CreateTestGameAsync(GameStatus.Draft); // Should not appear in results
+
+        // Act
+        var response = await _client.GetAsync("/api/v1/admin/shared-games/pending-approvals?pageNumber=1&pageSize=20");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<PagedResult<SharedGameDto>>();
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Total);
+        Assert.All(result.Items, g => Assert.Equal(GameStatus.PendingApproval, g.Status));
+    }
+
+    private async Task<SharedGameEntity> CreateTestGameAsync(GameStatus status)
+    {
+        var game = new SharedGameEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = $"Test Game {Guid.NewGuid():N}",
+            YearPublished = 2024,
+            Description = "Test description",
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            MinAge = 10,
+            ImageUrl = "https://example.com/image.jpg",
+            ThumbnailUrl = "https://example.com/thumb.jpg",
+            Status = (int)status,
+            CreatedBy = TestUserId,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _dbContext.SharedGames.Add(game);
+        await _dbContext.SaveChangesAsync();
+        return game;
+    }
 }

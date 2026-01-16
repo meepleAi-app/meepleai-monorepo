@@ -94,13 +94,49 @@ internal static class SharedGameCatalogEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
-        // Publish game (Draft → Published)
+        // Publish game (Draft → Published) [DEPRECATED - use approval workflow]
         group.MapPost("/admin/shared-games/{id:guid}/publish", HandlePublishGame)
             .RequireAuthorization("AdminOrEditorPolicy")
             .WithName("PublishSharedGame")
-            .WithSummary("Publish shared game (Admin/Editor)")
+            .WithSummary("[DEPRECATED] Publish shared game directly (Admin/Editor)")
+            .WithDescription("Legacy endpoint. Use submit-for-approval workflow instead. Issue #2514")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
+
+        // Submit game for approval (Draft → PendingApproval) - Issue #2514
+        group.MapPost("/admin/shared-games/{id:guid}/submit-for-approval", HandleSubmitForApproval)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("SubmitSharedGameForApproval")
+            .WithSummary("Submit shared game for approval (Admin/Editor)")
+            .WithDescription("Submits a draft game for admin approval. Transitions from Draft to PendingApproval status.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Approve publication (PendingApproval → Published) - Issue #2514
+        group.MapPost("/admin/shared-games/{id:guid}/approve-publication", HandleApprovePublication)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("ApproveSharedGamePublication")
+            .WithSummary("Approve game publication (Admin only)")
+            .WithDescription("Approves a pending game for publication. Transitions from PendingApproval to Published status.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Reject publication (PendingApproval → Draft) - Issue #2514
+        group.MapPost("/admin/shared-games/{id:guid}/reject-publication", HandleRejectPublication)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("RejectSharedGamePublication")
+            .WithSummary("Reject game publication (Admin only)")
+            .WithDescription("Rejects a pending game and sends it back to Draft status with a reason.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Get pending approval games - Issue #2514
+        group.MapGet("/admin/shared-games/pending-approvals", HandleGetPendingApprovals)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("GetPendingApprovalGames")
+            .WithSummary("Get games pending approval (Admin only)")
+            .WithDescription("Returns all games in PendingApproval status awaiting admin review.")
+            .Produces<PagedResult<SharedGameDto>>();
 
         // Archive game (Published → Archived)
         group.MapPost("/admin/shared-games/{id:guid}/archive", HandleArchiveGame)
@@ -467,6 +503,88 @@ internal static class SharedGameCatalogEndpoints
         {
             return Results.NotFound();
         }
+    }
+
+    // ========================================
+    // APPROVAL WORKFLOW HANDLERS (Issue #2514)
+    // ========================================
+
+    private static async Task<IResult> HandleSubmitForApproval(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var command = new SubmitSharedGameForApprovalCommand(id, session!.User!.Id);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleApprovePublication(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new ApproveSharedGamePublicationCommand(id, session!.User!.Id);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleRejectPublication(
+        Guid id,
+        [FromBody] RejectPublicationRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new RejectSharedGamePublicationCommand(id, session!.User!.Id, request.Reason);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleGetPendingApprovals(
+        IMediator mediator,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var query = new GetPendingApprovalGamesQuery(pageNumber, pageSize);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleArchiveGame(
@@ -1035,6 +1153,12 @@ internal record DeleteGameRequest(string? Reason);
 /// Request DTO for rejecting a delete request.
 /// </summary>
 internal record RejectDeleteRequest(string Reason);
+
+/// <summary>
+/// Request DTO for rejecting a publication approval.
+/// Issue #2514: Approval workflow implementation
+/// </summary>
+internal record RejectPublicationRequest(string Reason);
 
 /// <summary>
 /// Request DTO for adding a quick question manually.

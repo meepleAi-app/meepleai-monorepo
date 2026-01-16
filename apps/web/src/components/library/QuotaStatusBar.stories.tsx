@@ -5,9 +5,9 @@
  * Demonstrates different quota states: normal, near limit, at limit.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-
 import { QuotaStatusBar } from './QuotaStatusBar';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 /**
  * QuotaStatusBar displays library quota usage with visual progress bar and tier information.

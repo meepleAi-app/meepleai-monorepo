@@ -441,6 +441,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
               {/* Image Preview */}
               <div className="mt-2 border rounded-lg p-2 bg-muted/50">
                 {imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={imageUrl}
                     alt="Preview"
@@ -473,6 +474,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
               {/* Thumbnail Preview */}
               <div className="mt-2 border rounded-lg p-2 bg-muted/50">
                 {thumbnailUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={thumbnailUrl}
                     alt="Thumbnail Preview"

@@ -403,6 +403,7 @@ export function SharedGamesClient() {
                           {/* Thumbnail */}
                           <TableCell>
                             {game.thumbnailUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={game.thumbnailUrl}
                                 alt={game.title}

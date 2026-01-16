@@ -72,10 +72,12 @@ internal class SharedGameDocumentEntityConfiguration : IEntityTypeConfiguration<
             .HasDatabaseName("ix_shared_game_documents_active_version");
 
         // NOTE: Unique partial index for concurrency protection is created via raw SQL migration
-        // (20260116100000_AddSingleActiveDocumentConstraint.cs)
-        // CREATE UNIQUE INDEX ix_shared_game_documents_single_active
-        // ON shared_game_documents (shared_game_id, document_type) WHERE is_active = true;
-        // This guarantees at most ONE active document per (game, type) at database level
+        // Migration: 20260116100000_AddSingleActiveDocumentConstraint.cs
+        // SQL: CREATE UNIQUE INDEX ix_shared_game_documents_single_active
+        //      ON shared_game_documents (shared_game_id, document_type) WHERE is_active = true
+        // Guarantees at most ONE active document per (game, type) at database level
+#pragma warning disable S125 // This is documentation, not commented code
+#pragma warning restore S125
 
         // Unique constraint: one version per game + type + version string
         builder.HasIndex(e => new { e.SharedGameId, e.DocumentType, e.Version })

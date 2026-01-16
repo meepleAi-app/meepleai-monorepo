@@ -54,12 +54,17 @@ internal class GetLibraryQuotaQueryHandler : IQueryHandler<GetLibraryQuotaQuery,
             userRole,
             cancellationToken).ConfigureAwait(false);
 
+        // Calculate percentage used (Issue #2445)
+        var percentageUsed = quotaInfo.IsUnlimited || quotaInfo.MaxGames == 0
+            ? 0
+            : (int)Math.Round((double)quotaInfo.GamesInLibrary / quotaInfo.MaxGames * 100);
+
         return new LibraryQuotaDto(
-            GamesInLibrary: quotaInfo.GamesInLibrary,
-            MaxGames: quotaInfo.MaxGames,
+            CurrentCount: quotaInfo.GamesInLibrary,
+            MaxAllowed: quotaInfo.MaxGames,
+            UserTier: userTier.Value.ToLowerInvariant(),
             RemainingSlots: quotaInfo.RemainingSlots,
-            IsUnlimited: quotaInfo.IsUnlimited,
-            UserTier: userTier.Value
+            PercentageUsed: percentageUsed
         );
     }
 }

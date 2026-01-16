@@ -147,6 +147,7 @@ export default function AddGamePage() {
               <AlertDialogDescription className="space-y-3">
                 <div className="flex items-center gap-3 mt-2">
                   {selectedGame?.thumbnailUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={selectedGame.thumbnailUrl}
                       alt={selectedGame.title}

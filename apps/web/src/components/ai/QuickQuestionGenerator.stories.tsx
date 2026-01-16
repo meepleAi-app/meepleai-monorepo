@@ -17,7 +17,6 @@ import { fn, userEvent, within, expect } from 'storybook/test';
 import {
   QuickQuestionGenerator,
   type GeneratedQuestion,
-  type QuickQuestionGeneratorProps,
 } from './QuickQuestionGenerator';
 
 // ==================== Mock Data ====================

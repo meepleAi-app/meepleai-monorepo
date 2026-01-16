@@ -19,7 +19,7 @@ import { fn, userEvent, within, expect } from 'storybook/test';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 
-import { QuickQuestionEditor, type QuickQuestionEditorProps } from './QuickQuestionEditor';
+import { QuickQuestionEditor } from './QuickQuestionEditor';
 import type { GeneratedQuestion } from './QuickQuestionGenerator';
 
 // ==================== Mock Data ====================

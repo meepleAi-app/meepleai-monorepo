@@ -60,7 +60,8 @@ public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime
         eventCollectorMock.Setup(x => x.GetAndClearEvents())
             .Returns(new List<IDomainEvent>().AsReadOnly());
 
-        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
+        // Fix: Use PostgreSQL DbContext with Testcontainers, not in-memory
+        _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
         await _dbContext.Database.MigrateAsync();
 
         // Seed test user (FK requirement)

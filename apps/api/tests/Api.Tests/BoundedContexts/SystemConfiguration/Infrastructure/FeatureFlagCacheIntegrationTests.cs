@@ -53,7 +53,8 @@ public sealed class FeatureFlagCacheIntegrationTests : IAsyncLifetime
         mockEventCollector.Setup(x => x.GetAndClearEvents())
             .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
 
-        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
+        // Fix: Use PostgreSQL DbContext with Testcontainers, not in-memory
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
         await _dbContext.Database.MigrateAsync(TestCancellationToken);
 
         // Seed required User for FK constraints

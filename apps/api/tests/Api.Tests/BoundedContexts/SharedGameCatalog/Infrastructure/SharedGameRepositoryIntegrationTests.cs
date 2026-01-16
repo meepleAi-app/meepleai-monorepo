@@ -51,14 +51,15 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
             .Options;
 
         // Mock MediatR and DomainEventCollector (required by DbContext)
-        var mediatorMock = new Mock<IMediator>();
+        var mockMediator = new Mock<IMediator>();
         var eventCollectorMock = new Mock<IDomainEventCollector>();
         // CRITICAL FIX: Setup mock to return empty list (prevents NullReferenceException in SaveChangesAsync)
         // Pattern from DbContextHelper.cs - ensures GetAndClearEvents() returns empty collection, not null
         eventCollectorMock.Setup(x => x.GetAndClearEvents())
             .Returns(new List<IDomainEvent>().AsReadOnly());
 
-        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
+        // Fix: Use PostgreSQL DbContext with Testcontainers, not in-memory
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, eventCollectorMock.Object);
         await _dbContext.Database.MigrateAsync();
 
         // Initialize repository (only needs DbContext)

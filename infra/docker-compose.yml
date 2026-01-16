@@ -650,6 +650,8 @@ services:
     volumes:
       - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
       - pdf-uploads:/app/pdf_uploads  # Persistent PDF storage
+      # ISSUE-2510: Secret management system - mount secrets directory
+      - ./secrets:/app/infra/secrets:ro  # Read-only mount for .secret files
     entrypoint: ["/scripts/load-secrets-env.sh"]
     command: ["dotnet", "Api.dll"]
     # Direct port binding for development (Next.js proxy handles routing)
@@ -762,6 +764,12 @@ networks:
 # SEC-708: Docker Secrets for sensitive credentials
 # Secret files are stored in ./secrets/ directory (gitignored)
 # Initialize secrets with: tools/secrets/init-secrets.sh
+#
+# ISSUE-2510: New secret management system (alternative to Docker secrets)
+# - Copy templates: cp -r infra/secrets.example/* infra/secrets/
+# - Edit files: Remove .example extension and fill in actual values
+# - Format: KEY=VALUE (one per line, comments with #)
+# - Validation: Critical/Important/Optional levels enforced at startup
 secrets:
   postgres-password:
     file: ./secrets/postgres-password.txt

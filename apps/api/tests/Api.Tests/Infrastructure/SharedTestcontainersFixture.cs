@@ -105,7 +105,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                         await _postgresContainer.StartAsync();
 
                         var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-                        PostgresConnectionString = $"Host=localhost;Port={postgresPort};Database=test_shared;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;Connection Timeout=10;";
+                        PostgresConnectionString = $"Host=localhost;Port={postgresPort};Database=test_shared;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;Timeout=10;";
 
                         // Issue #2031: Wait for PostgreSQL to accept connections with retry
                         // Issue #2474: Increased timeout from 5s to 10s for better stability

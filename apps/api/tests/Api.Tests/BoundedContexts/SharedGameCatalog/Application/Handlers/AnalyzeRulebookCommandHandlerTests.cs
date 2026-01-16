@@ -1,9 +1,13 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services.BackgroundAnalysis;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.Infrastructure.BackgroundTasks;
+using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -36,11 +40,20 @@ public class AnalyzeRulebookCommandHandlerTests
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<AnalyzeRulebookCommandHandler>>();
 
+        var mockBackgroundOrchestrator = new Mock<IBackgroundRulebookAnalysisOrchestrator>();
+        var mockTaskOrchestrator = new Mock<IBackgroundTaskOrchestrator>();
+        var mockHybridCache = new Mock<IHybridCacheService>();
+        var mockOptions = Microsoft.Extensions.Options.Options.Create(new BackgroundAnalysisOptions());
+
         _handler = new AnalyzeRulebookCommandHandler(
             _gameRepositoryMock.Object,
             _analysisRepositoryMock.Object,
             _rulebookAnalyzerMock.Object,
+            mockBackgroundOrchestrator.Object,
+            mockTaskOrchestrator.Object,
             _unitOfWorkMock.Object,
+            mockHybridCache.Object,
+            mockOptions,
             _loggerMock.Object);
     }
 

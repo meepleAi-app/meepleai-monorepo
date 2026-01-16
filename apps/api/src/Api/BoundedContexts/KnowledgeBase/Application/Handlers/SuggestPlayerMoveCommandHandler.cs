@@ -23,7 +23,7 @@ internal sealed class SuggestPlayerMoveCommandHandler
 {
     private readonly IAiResponseCacheService _cache;
     private readonly ILogger<SuggestPlayerMoveCommandHandler> _logger;
-    private readonly GameStateParser _gameStateParser;
+    private readonly IGameStateParser _gameStateParser;
     private readonly IMediator _mediator;
     private readonly ILlmService _llmService;
 
@@ -64,7 +64,7 @@ internal sealed class SuggestPlayerMoveCommandHandler
     public SuggestPlayerMoveCommandHandler(
         IAiResponseCacheService cache,
         ILogger<SuggestPlayerMoveCommandHandler> logger,
-        GameStateParser gameStateParser,
+        IGameStateParser gameStateParser,
         IMediator mediator,
         ILlmService llmService)
     {
@@ -171,7 +171,8 @@ internal sealed class SuggestPlayerMoveCommandHandler
     }
 
     /// <summary>
-    /// Generates cache key for player move suggestion.
+    /// Generates collision-resistant cache key for player move suggestion.
+    /// Uses SHA256 to prevent hash collisions from different game states or queries.
     /// </summary>
     private static string GenerateCacheKey(
         string gameId,
@@ -180,10 +181,14 @@ internal sealed class SuggestPlayerMoveCommandHandler
     {
         // Serialize game state to JSON for consistent cache key
         var stateJson = JsonSerializer.Serialize(gameState);
-        var stateHash = stateJson.GetHashCode(StringComparison.Ordinal);
-        var queryPart = string.IsNullOrWhiteSpace(query) ? "no-query" : query;
+        var queryPart = query ?? "no-query";
+        var combined = $"{gameId}|{stateJson}|{queryPart}";
 
-        return $"player-move:{gameId}:{stateHash}:{queryPart.GetHashCode(StringComparison.Ordinal)}";
+        // Use SHA256 for collision-resistant hashing (CA1850: prefer static HashData)
+        var hashBytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(combined));
+        var hashString = Convert.ToHexString(hashBytes);
+
+        return $"player-move:{gameId}:{hashString}";
     }
 
     /// <summary>

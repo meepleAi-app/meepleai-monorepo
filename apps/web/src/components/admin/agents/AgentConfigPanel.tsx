@@ -258,11 +258,13 @@ export function AgentConfigPanel({
 
   // Initialize form with default or provided config
   const form = useForm<AgentConfig>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(getModeSchema()) as any, // Type assertion for discriminated union
     defaultValues: config || DEFAULT_CONFIGS[mode],
   });
 
   // Load config from localStorage on mount or mode change
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally only re-run when mode changes to avoid infinite loops
   useEffect(() => {
     const storedConfig = loadConfig();
     if (storedConfig && storedConfig.mode === mode) {
@@ -278,9 +280,10 @@ export function AgentConfigPanel({
       form.reset(defaultConfig);
       onConfigChange(defaultConfig);
     }
-  }, [mode]); // Only re-run when mode changes
+  }, [mode]);
 
   // Watch form changes and propagate
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Functions are stable, only re-run on form/mode change
   useEffect(() => {
     const subscription = form.watch(values => {
       const validated = getModeSchema().safeParse(values);

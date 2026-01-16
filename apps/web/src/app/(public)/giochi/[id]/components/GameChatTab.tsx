@@ -133,7 +133,7 @@ function GameChatTabInternal({ gameId, gameTitle: _gameTitle }: GameChatTabProps
   // Use fetched questions if available, otherwise use fallback
   const questionsToDisplay =
     quickQuestions && quickQuestions.length > 0 ? quickQuestions : FALLBACK_QUICK_QUESTIONS;
-  const showingFallback = !quickQuestions || quickQuestions.length === 0 || isError;
+  const _showingFallback = !quickQuestions || quickQuestions.length === 0 || isError;
 
   const handleQuickQuestionClick = (question: string) => {
     sendMessage(question);

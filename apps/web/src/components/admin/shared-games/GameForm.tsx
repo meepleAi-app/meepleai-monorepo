@@ -87,7 +87,7 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
     handleSubmit,
     control,
     watch,
-    setValue,
+    setValue: _setValue,
     formState: { errors },
   } = useForm<GameFormData>({
     // Type assertion needed because z.coerce.number() creates unknown input type

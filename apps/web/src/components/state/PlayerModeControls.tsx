@@ -29,6 +29,7 @@ export interface PlayerModeControlsProps {
   /** Game ID for AI context */
   gameId: string;
   /** Current game state object */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   gameState: Record<string, any>;
   /** Optional query/context for AI */
   query?: string;
@@ -81,14 +82,17 @@ export function PlayerModeControls({
   onSuggestionIgnored,
   readonly = false,
 }: PlayerModeControlsProps) {
-  const [userQuery, setUserQuery] = useState(query || '');
+  const [userQuery, _setUserQuery] = useState(query || '');
 
   // Memoize callbacks to prevent hook recreation
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSuggestionReceived = useCallback((suggestion: any, confidence: number) => {
+    // eslint-disable-next-line no-console
     console.log('Received suggestion:', suggestion, 'Confidence:', confidence);
   }, []);
 
   const handleSuggestionApplied = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (suggestion: any) => {
       if (onSuggestionApplied) {
         onSuggestionApplied({

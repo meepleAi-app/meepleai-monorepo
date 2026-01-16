@@ -13,6 +13,12 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 internal sealed class GetActiveRulebookAnalysisQueryHandler
     : IQueryHandler<GetActiveRulebookAnalysisQuery, RulebookAnalysisDto?>
 {
+    /// <summary>
+    /// Wrapper for caching analysis query results (including null/not-found cases).
+    /// Prevents cache stampede on "analysis doesn't exist" scenarios.
+    /// </summary>
+    private record CachedRulebookAnalysisResult(RulebookAnalysisDto? Analysis);
+
     private readonly IRulebookAnalysisRepository _analysisRepository;
     private readonly IHybridCacheService _cache;
     private readonly ILogger<GetActiveRulebookAnalysisQueryHandler> _logger;
@@ -41,12 +47,12 @@ internal sealed class GetActiveRulebookAnalysisQueryHandler
         var cacheKey = GenerateCacheKey(query.SharedGameId, query.PdfDocumentId);
         var cacheTags = GenerateCacheTags(query.SharedGameId, query.PdfDocumentId);
 
-        // Cache DTO (non-nullable) using GetOrCreateAsync
-        // Factory returns null-forgiving operator for cases where analysis doesn't exist
-        RulebookAnalysisDto? cachedDto;
+        // Use wrapper record to cache both "found" and "not found" results
+        // This prevents cache stampede on repeated queries for non-existent analyses
+        CachedRulebookAnalysisResult cachedResult;
         try
         {
-            cachedDto = await _cache.GetOrCreateAsync(
+            cachedResult = await _cache.GetOrCreateAsync(
                 cacheKey,
                 async (ct) =>
                 {
@@ -62,28 +68,10 @@ internal sealed class GetActiveRulebookAnalysisQueryHandler
                             query.SharedGameId,
                             query.PdfDocumentId);
 
-                        // Return a sentinel DTO to satisfy non-nullable constraint
-                        // We'll check for this and return null to caller
-                        return new RulebookAnalysisDto(
-                            Guid.Empty,
-                            Guid.Empty,
-                            Guid.Empty,
-                            string.Empty,
-                            string.Empty,
-                            new List<string>(),
-                            null,
-                            new List<ResourceDto>(),
-                            new List<GamePhaseDto>(),
-                            new List<string>(),
-                            0m,
-                            "0.0",
-                            false,
-                            Domain.ValueObjects.GenerationSource.AI,
-                            DateTime.MinValue,
-                            Guid.Empty);
+                        return new CachedRulebookAnalysisResult(null);
                     }
 
-                    return MapToDto(analysis);
+                    return new CachedRulebookAnalysisResult(MapToDto(analysis));
                 },
                 cacheTags,
                 TimeSpan.FromHours(24),
@@ -105,13 +93,7 @@ internal sealed class GetActiveRulebookAnalysisQueryHandler
             return analysis is not null ? MapToDto(analysis) : null;
         }
 
-        // Check for sentinel value (no analysis exists)
-        if (cachedDto.Id == Guid.Empty)
-        {
-            return null;
-        }
-
-        return cachedDto;
+        return cachedResult.Analysis;
     }
 
     private static string GenerateCacheKey(Guid sharedGameId, Guid pdfDocumentId)

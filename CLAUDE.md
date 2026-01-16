@@ -142,8 +142,18 @@ cd ../../../web
 pnpm install
 
 # 4. Environment configuration
+
+# 4a. Auto-generate secrets (RECOMMENDED - saves 15-30 minutes)
+cd ../../infra/secrets
+.\setup-secrets.ps1 -SaveGenerated
+# Generates: JWT keys, database passwords, API keys (11 values)
+# Creates backup: .generated-values-TIMESTAMP.txt
+# Manual config still needed: bgg.secret, openrouter.secret (optional)
+
+# 4b. Frontend environment
+cd ../../apps/web
 cp .env.development.example .env.local
-# Edit .env.local with your API keys and database credentials
+# Edit .env.local if custom API endpoints needed
 
 # 5. Start infrastructure
 cd ../../infra
@@ -855,7 +865,24 @@ meepleai-monorepo-dev/
 
 ### Common Issues
 
-**Backend fails to start**:
+**Backend fails to start - Missing secrets**:
+```bash
+# Error: "CRITICAL secret missing: infra/secrets/database.secret"
+
+# Solution: Auto-generate all secrets
+cd infra/secrets
+.\setup-secrets.ps1
+
+# Verify all CRITICAL secrets exist
+ls *.secret | findstr "admin database jwt qdrant redis embedding"
+# Should show 6 files
+
+# Then restart
+cd ../../infra
+docker compose restart api
+```
+
+**Backend fails to start - Database connection**:
 ```bash
 # Check PostgreSQL connection
 docker ps | grep postgres

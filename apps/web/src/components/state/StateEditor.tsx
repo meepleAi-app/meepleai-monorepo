@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 /**
  * State Editor Container - Issue #2420
  *

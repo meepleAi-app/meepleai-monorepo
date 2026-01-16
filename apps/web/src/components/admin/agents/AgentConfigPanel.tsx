@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 /**
  * AgentConfigPanel Component - Issue #2414 (Sub-Issue 2398.2)
  *

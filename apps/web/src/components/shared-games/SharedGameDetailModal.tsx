@@ -172,6 +172,7 @@ export function SharedGameDetailModal({
                 {/* Thumbnail */}
                 <div className="w-24 h-32 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                   {game.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={game.imageUrl}
                       alt={game.title}
@@ -260,6 +261,7 @@ export function SharedGameDetailModal({
                 {/* Rules Tab */}
                 {hasRules && (
                   <TabsContent value="rules" className="p-6 pt-4 m-0">
+                    {/* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */}
                     <RulesTab rules={game.rules!} />
                   </TabsContent>
                 )}

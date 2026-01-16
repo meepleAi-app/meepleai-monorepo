@@ -11,13 +11,14 @@
  * - Accessibility features
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { fn, userEvent, within, expect } from 'storybook/test';
 
 import {
   QuickQuestionGenerator,
   type GeneratedQuestion,
 } from './QuickQuestionGenerator';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // ==================== Mock Data ====================
 

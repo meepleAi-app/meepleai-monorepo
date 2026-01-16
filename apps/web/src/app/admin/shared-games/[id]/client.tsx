@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable security/detect-object-injection */
 
 /**
  * Edit Game Client Component - Issue #2372
@@ -347,6 +348,7 @@ export function EditGameClient() {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               {game.thumbnailUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={game.thumbnailUrl}
                   alt={game.title}

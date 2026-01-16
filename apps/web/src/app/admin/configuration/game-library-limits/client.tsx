@@ -13,8 +13,9 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
@@ -69,6 +70,7 @@ export function GameLibraryLimitsClient() {
   // Load initial data
   useEffect(() => {
     loadLimits();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadLimits = async () => {

@@ -5,4 +5,5 @@
  * strategy suggestions, and game assistance.
  */
 
+export * from './AILoadingIndicator';
 export * from './QuickQuestionGenerator';

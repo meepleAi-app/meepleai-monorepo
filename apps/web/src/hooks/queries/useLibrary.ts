@@ -18,6 +18,7 @@ import type {
   UserLibraryStats,
   UserLibraryEntry,
   GameInLibraryStatus,
+  LibraryQuotaResponse,
   GetUserLibraryParams,
   AddGameToLibraryRequest,
   UpdateLibraryEntryRequest,
@@ -31,6 +32,7 @@ export const libraryKeys = {
   lists: () => [...libraryKeys.all, 'list'] as const,
   list: (params?: GetUserLibraryParams) => [...libraryKeys.lists(), { params }] as const,
   stats: () => [...libraryKeys.all, 'stats'] as const,
+  quota: () => [...libraryKeys.all, 'quota'] as const,
   gameStatus: (gameId: string) => [...libraryKeys.all, 'status', gameId] as const,
 };
 
@@ -69,6 +71,28 @@ export function useLibraryStats(enabled: boolean = true): UseQueryResult<UserLib
     },
     enabled,
     staleTime: 2 * 60 * 1000,
+  });
+}
+
+/**
+ * Hook to fetch library quota information (Issue #2445)
+ *
+ * Returns current usage, tier limits, and remaining slots.
+ * Quota changes infrequently so uses longer stale time.
+ *
+ * @param enabled - Whether to run the query (default: true)
+ * @returns UseQueryResult with library quota data
+ */
+export function useLibraryQuota(
+  enabled: boolean = true
+): UseQueryResult<LibraryQuotaResponse, Error> {
+  return useQuery({
+    queryKey: libraryKeys.quota(),
+    queryFn: async (): Promise<LibraryQuotaResponse> => {
+      return api.library.getQuota();
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000, // Quota unlikely to change frequently (5min)
   });
 }
 
@@ -119,6 +143,8 @@ export function useAddGameToLibrary(): UseMutationResult<
       // Invalidate library list and stats
       queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
+      // Invalidate quota (Issue #2445)
+      queryClient.invalidateQueries({ queryKey: libraryKeys.quota() });
       // Invalidate game status
       queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(variables.gameId) });
     },
@@ -141,6 +167,8 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
       // Invalidate library list and stats
       queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
+      // Invalidate quota (Issue #2445)
+      queryClient.invalidateQueries({ queryKey: libraryKeys.quota() });
       // Invalidate game status
       queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(gameId) });
     },

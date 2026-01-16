@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable security/detect-object-injection */
 
 /**
  * Bulk Import Client Component - Issue #2372

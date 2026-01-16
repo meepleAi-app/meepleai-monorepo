@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 /**
  * AgentConfigPanel Component - Issue #2414 (Sub-Issue 2398.2)
  *
@@ -258,6 +259,7 @@ export function AgentConfigPanel({
 
   // Initialize form with default or provided config
   const form = useForm<AgentConfig>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(getModeSchema()) as any, // Type assertion for discriminated union
     defaultValues: config || DEFAULT_CONFIGS[mode],
   });
@@ -278,7 +280,8 @@ export function AgentConfigPanel({
       form.reset(defaultConfig);
       onConfigChange(defaultConfig);
     }
-  }, [mode]); // Only re-run when mode changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally only re-run when mode changes to avoid infinite loops
+  }, [mode]);
 
   // Watch form changes and propagate
   useEffect(() => {
@@ -291,6 +294,7 @@ export function AgentConfigPanel({
     });
 
     return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Functions are stable, only re-run on form/mode change
   }, [form, mode]);
 
   // Render mode-specific fields

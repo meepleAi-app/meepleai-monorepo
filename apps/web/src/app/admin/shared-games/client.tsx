@@ -101,8 +101,8 @@ export function SharedGamesClient() {
 
   // Data state
   const [games, setGames] = useState<SharedGame[]>([]);
-  const [categories, setCategories] = useState<GameCategory[]>([]);
-  const [mechanics, setMechanics] = useState<GameMechanic[]>([]);
+  const [_categories, setCategories] = useState<GameCategory[]>([]);
+  const [_mechanics, setMechanics] = useState<GameMechanic[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Pagination state
@@ -403,6 +403,7 @@ export function SharedGamesClient() {
                           {/* Thumbnail */}
                           <TableCell>
                             {game.thumbnailUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={game.thumbnailUrl}
                                 alt={game.title}

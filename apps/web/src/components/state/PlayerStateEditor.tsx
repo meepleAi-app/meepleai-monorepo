@@ -45,7 +45,7 @@ export function PlayerStateEditor({
   readonly = false,
   validationErrors = {},
 }: PlayerStateEditorProps) {
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [_editingId, _setEditingId] = useState<string | null>(null);
 
   /**
    * Add new player

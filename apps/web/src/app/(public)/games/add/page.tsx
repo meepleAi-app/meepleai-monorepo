@@ -19,6 +19,17 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { SharedGameSearch, type SharedGameSearchResult } from '@/components/shared-games';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { api } from '@/lib/api';
 
 // ISSUE #2374 Phase 5: Lazy load heavy modal component for bundle optimization
 // SharedGameDetailModal is only used when user selects catalog game (not BGG)
@@ -37,18 +48,6 @@ const SharedGameDetailModal = dynamic(
     ssr: false, // Modal doesn't need SSR (user interaction only)
   }
 );
-
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
 
 export default function AddGamePage() {
   const router = useRouter();
@@ -148,6 +147,7 @@ export default function AddGamePage() {
               <AlertDialogDescription className="space-y-3">
                 <div className="flex items-center gap-3 mt-2">
                   {selectedGame?.thumbnailUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={selectedGame.thumbnailUrl}
                       alt={selectedGame.title}

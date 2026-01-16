@@ -9,9 +9,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// </summary>
 /// <param name="SharedGameId">The ID of the shared game</param>
 /// <param name="Name">Name for the template</param>
+/// <param name="CreatedBy">The ID of the user creating the template</param>
 /// <param name="SetAsActive">Whether to set this template as the active version</param>
 internal record GenerateGameStateTemplateCommand(
     Guid SharedGameId,
     string Name,
+    Guid CreatedBy,
     bool SetAsActive = false
 ) : ICommand<GameStateTemplateDto>;

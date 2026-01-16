@@ -4,7 +4,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
-using Api.Tests.Helpers;
+using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using Xunit;
@@ -29,7 +29,7 @@ public sealed class CreateShareLinkCommandHandlerTests : IDisposable
 
     public CreateShareLinkCommandHandlerTests()
     {
-        _dbContext = DbContextHelper.CreateInMemoryDbContext();
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _shareLinkRepositoryMock = new Mock<IShareLinkRepository>();
         _configurationMock = new Mock<IConfiguration>();
 

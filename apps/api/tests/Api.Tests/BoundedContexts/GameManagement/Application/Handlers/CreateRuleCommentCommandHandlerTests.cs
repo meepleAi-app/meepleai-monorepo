@@ -3,7 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.Handlers;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Infrastructure;
 using Api.SharedKernel.Infrastructure.Persistence;
-using Api.Tests.Helpers;
+using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -26,7 +26,7 @@ public class CreateRuleCommentCommandHandlerTests
     /// </summary>
     private static MeepleAiDbContext CreateFreshDbContext()
     {
-        return DbContextHelper.CreateInMemoryDbContext();
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
 
     private static Mock<TimeProvider> CreateTimeProviderMock()

@@ -11,4 +11,5 @@ public record SharedGameDocumentAddedEvent(
     Guid DocumentId,
     Guid PdfDocumentId,
     SharedGameDocumentType DocumentType,
-    string Version) : INotification;
+    string Version,
+    Guid CreatedBy) : INotification;

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Queries;
 
@@ -25,16 +26,7 @@ public class GetRuleSpecsQueryHandlerTests
     /// </summary>
     private static MeepleAiDbContext CreateFreshDbContext()
     {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-
-        var mockMediator = new Mock<IMediator>();
-        var mockEventCollector = new Mock<IDomainEventCollector>();
-        mockEventCollector.Setup(x => x.GetAndClearEvents())
-            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
-
-        return new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
 
     /// <summary>
@@ -279,4 +271,3 @@ public class GetRuleSpecsQueryHandlerTests
         };
     }
 }
-

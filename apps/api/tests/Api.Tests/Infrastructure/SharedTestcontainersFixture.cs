@@ -82,25 +82,69 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
             }
             else
             {
-                // Start shared PostgreSQL container
-                _postgresContainer = new ContainerBuilder()
-                    .WithImage("postgres:16-alpine")
-                    .WithEnvironment("POSTGRES_USER", "postgres")
-                    .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-                    .WithEnvironment("POSTGRES_DB", "test_shared")
-                    .WithPortBinding(5432, true)
-                    // Issue #2031: Removed .UntilCommandIsCompleted("pg_isready") to prevent Docker hijack errors
-                    // Default TCP port check + retry mechanism is more reliable than hijacked command execution
-                    .WithCleanUp(true)
-                    .Build();
+                // Issue #2474: Retry logic for container startup (handles port conflicts and transient failures)
+                const int maxRetries = 3;
+                var retryDelays = new[] { TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(8) };
 
-                await _postgresContainer.StartAsync();
+                for (int attempt = 0; attempt < maxRetries; attempt++)
+                {
+                    try
+                    {
+                        // Start shared PostgreSQL container
+                        _postgresContainer = new ContainerBuilder()
+                            .WithImage("postgres:16-alpine")
+                            .WithEnvironment("POSTGRES_USER", "postgres")
+                            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
+                            .WithEnvironment("POSTGRES_DB", "test_shared")
+                            .WithPortBinding(5432, true)
+                            // Issue #2031: Removed .UntilCommandIsCompleted("pg_isready") to prevent Docker hijack errors
+                            // Default TCP port check + retry mechanism is more reliable than hijacked command execution
+                            .WithCleanUp(true)
+                            .Build();
 
-                var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-                PostgresConnectionString = $"Host=localhost;Port={postgresPort};Database=test_shared;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
+                        await _postgresContainer.StartAsync();
 
-                // Issue #2031: Wait for PostgreSQL to accept connections with retry
-                await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(PostgresConnectionString);
+                        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
+                        PostgresConnectionString = $"Host=localhost;Port={postgresPort};Database=test_shared;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;Connection Timeout=10;";
+
+                        // Issue #2031: Wait for PostgreSQL to accept connections with retry
+                        // Issue #2474: Increased timeout from 5s to 10s for better stability
+                        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(PostgresConnectionString);
+
+                        break; // Success, exit retry loop
+                    }
+                    catch (Exception ex) when (attempt < maxRetries - 1)
+                    {
+                        // Log diagnostic information for troubleshooting
+                        Console.WriteLine($"⚠️ PostgreSQL container startup attempt {attempt + 1}/{maxRetries} failed: {ex.Message}");
+
+                        // Cleanup failed container before retry
+                        if (_postgresContainer != null)
+                        {
+                            try
+                            {
+                                await _postgresContainer.DisposeAsync();
+                            }
+                            catch
+                            {
+                                // Ignore cleanup errors
+                            }
+                            _postgresContainer = null;
+                        }
+
+                        // Wait before retry with exponential backoff
+                        await Task.Delay(retryDelays[attempt]);
+                    }
+                    catch (Exception ex) when (attempt == maxRetries - 1)
+                    {
+                        // Final attempt failed, provide detailed diagnostics
+                        var diagnostics = $"PostgreSQL container failed to start after {maxRetries} attempts.\n" +
+                                        $"Last error: {ex.Message}\n" +
+                                        $"Container ID: {_postgresContainer?.Id ?? "null"}\n" +
+                                        $"Ensure Docker is running and ports are available.";
+                        throw new InvalidOperationException(diagnostics, ex);
+                    }
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(externalRedis))
@@ -109,22 +153,66 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
             }
             else
             {
-                // Start shared Redis container
-                _redisContainer = new ContainerBuilder()
-                    .WithImage("redis:7-alpine")
-                    .WithPortBinding(6379, true)
-                    // Issue #2031: Removed .UntilCommandIsCompleted("redis-cli", "ping") to prevent Docker hijack errors
-                    // Default TCP port check + retry mechanism is more reliable than hijacked command execution
-                    .WithCleanUp(true)
-                    .Build();
+                // Issue #2474: Retry logic for Redis container startup
+                const int maxRetries = 3;
+                var retryDelays = new[] { TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(8) };
 
-                await _redisContainer.StartAsync();
+                for (int attempt = 0; attempt < maxRetries; attempt++)
+                {
+                    try
+                    {
+                        // Start shared Redis container
+                        _redisContainer = new ContainerBuilder()
+                            .WithImage("redis:7-alpine")
+                            .WithPortBinding(6379, true)
+                            // Issue #2031: Removed .UntilCommandIsCompleted("redis-cli", "ping") to prevent Docker hijack errors
+                            // Default TCP port check + retry mechanism is more reliable than hijacked command execution
+                            .WithCleanUp(true)
+                            .Build();
 
-                var redisPort = _redisContainer.GetMappedPublicPort(6379);
-                RedisConnectionString = $"localhost:{redisPort},abortConnect=false,connectTimeout=5000,syncTimeout=5000,connectRetry=3";
+                        await _redisContainer.StartAsync();
 
-                // Issue #2031: Wait for Redis to accept connections with retry
-                await TestcontainersWaitHelpers.WaitForRedisReadyAsync(RedisConnectionString);
+                        var redisPort = _redisContainer.GetMappedPublicPort(6379);
+                        // Issue #2474: Increased connectTimeout from 5s to 10s for better stability
+                        RedisConnectionString = $"localhost:{redisPort},abortConnect=false,connectTimeout=10000,syncTimeout=10000,connectRetry=3";
+
+                        // Issue #2031: Wait for Redis to accept connections with retry
+                        await TestcontainersWaitHelpers.WaitForRedisReadyAsync(RedisConnectionString);
+
+                        break; // Success, exit retry loop
+                    }
+                    catch (Exception ex) when (attempt < maxRetries - 1)
+                    {
+                        // Log diagnostic information for troubleshooting
+                        Console.WriteLine($"⚠️ Redis container startup attempt {attempt + 1}/{maxRetries} failed: {ex.Message}");
+
+                        // Cleanup failed container before retry
+                        if (_redisContainer != null)
+                        {
+                            try
+                            {
+                                await _redisContainer.DisposeAsync();
+                            }
+                            catch
+                            {
+                                // Ignore cleanup errors
+                            }
+                            _redisContainer = null;
+                        }
+
+                        // Wait before retry with exponential backoff
+                        await Task.Delay(retryDelays[attempt]);
+                    }
+                    catch (Exception ex) when (attempt == maxRetries - 1)
+                    {
+                        // Final attempt failed, provide detailed diagnostics
+                        var diagnostics = $"Redis container failed to start after {maxRetries} attempts.\n" +
+                                        $"Last error: {ex.Message}\n" +
+                                        $"Container ID: {_redisContainer?.Id ?? "null"}\n" +
+                                        $"Ensure Docker is running and ports are available.";
+                        throw new InvalidOperationException(diagnostics, ex);
+                    }
+                }
             }
 
             _initialized = true;

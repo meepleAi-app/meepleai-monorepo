@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Models;
 using Api.Services;
@@ -24,7 +25,7 @@ public class SuggestPlayerMoveCommandHandlerTests
 {
     private readonly Mock<IAiResponseCacheService> _mockCache;
     private readonly Mock<ILogger<SuggestPlayerMoveCommandHandler>> _mockLogger;
-    private readonly Mock<GameStateParser> _mockParser;
+    private readonly Mock<IGameStateParser> _mockParser;
     private readonly Mock<IMediator> _mockMediator;
     private readonly Mock<ILlmService> _mockLlmService;
     private readonly SuggestPlayerMoveCommandHandler _handler;
@@ -33,7 +34,7 @@ public class SuggestPlayerMoveCommandHandlerTests
     {
         _mockCache = new Mock<IAiResponseCacheService>();
         _mockLogger = new Mock<ILogger<SuggestPlayerMoveCommandHandler>>();
-        _mockParser = new Mock<GameStateParser>(Mock.Of<ILogger<GameStateParser>>());
+        _mockParser = new Mock<IGameStateParser>();
         _mockMediator = new Mock<IMediator>();
         _mockLlmService = new Mock<ILlmService>();
 
@@ -111,8 +112,8 @@ public class SuggestPlayerMoveCommandHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.PrimarySuggestion.Action.Should().Be("No suggestion available");
-        result.OverallConfidence.Should().Be(0.0);
+        result.primarySuggestion.action.Should().Be("No suggestion available");
+        result.overallConfidence.Should().Be(0.0);
     }
 
     [Fact]
@@ -155,9 +156,9 @@ public class SuggestPlayerMoveCommandHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.PrimarySuggestion.Action.Should().Be("Build a settlement");
-        result.OverallConfidence.Should().BeGreaterThan(0.0);
-        result.Sources.Should().BeEmpty(); // No RAG results
+        result.primarySuggestion.action.Should().Be("Build a settlement");
+        result.overallConfidence.Should().BeGreaterThan(0.0);
+        result.sources.Should().BeEmpty(); // No RAG results
     }
 
     [Fact]
@@ -186,7 +187,7 @@ public class SuggestPlayerMoveCommandHandlerTests
             .Returns(parsedState);
 
         _mockMediator
-            .Setup(m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.Send(It.IsAny<SearchQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ragResults);
 
         _mockLlmService
@@ -201,10 +202,10 @@ public class SuggestPlayerMoveCommandHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.OverallConfidence.Should().BeGreaterThan(0.6);
-        result.Sources.Should().HaveCount(3);
-        result.PromptTokens.Should().BeGreaterThan(0);
-        result.CompletionTokens.Should().BeGreaterThan(0);
+        result.overallConfidence.Should().BeGreaterThan(0.6);
+        result.sources.Should().HaveCount(3);
+        result.promptTokens.Should().BeGreaterThan(0);
+        result.completionTokens.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -294,8 +295,8 @@ public class SuggestPlayerMoveCommandHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.PrimarySuggestion.Action.Should().Contain("Analyze current position");
-        result.OverallConfidence.Should().BeLessThan(0.6);
+        result.primarySuggestion.action.Should().Contain("Analyze current position");
+        result.overallConfidence.Should().BeLessThan(0.6);
     }
 
     [Fact]
@@ -318,8 +319,8 @@ public class SuggestPlayerMoveCommandHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.PrimarySuggestion.Action.Should().Be("No suggestion available");
-        result.OverallConfidence.Should().Be(0.0);
+        result.primarySuggestion.action.Should().Be("No suggestion available");
+        result.overallConfidence.Should().Be(0.0);
     }
 
     // Helper methods

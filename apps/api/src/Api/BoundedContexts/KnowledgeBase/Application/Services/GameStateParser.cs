@@ -4,10 +4,22 @@ using Api.BoundedContexts.KnowledgeBase.Application.Models;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
 /// <summary>
+/// Interface for game state parsing service.
+/// </summary>
+internal interface IGameStateParser
+{
+    /// <summary>
+    /// Parses raw game state dictionary into structured format.
+    /// Returns null if parsing fails critically (no players found).
+    /// </summary>
+    ParsedGameState? Parse(IReadOnlyDictionary<string, object> rawState);
+}
+
+/// <summary>
 /// Parses flexible game state dictionary into structured ParsedGameState.
 /// Handles various board game schemas gracefully.
 /// </summary>
-internal sealed class GameStateParser
+internal sealed class GameStateParser : IGameStateParser
 {
     private readonly ILogger<GameStateParser> _logger;
 

@@ -16,9 +16,15 @@ namespace Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
 /// </summary>
 internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
 {
-    public UserLibraryRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+    private readonly ILogger<UserLibraryRepository> _logger;
+
+    public UserLibraryRepository(
+        MeepleAiDbContext dbContext,
+        IDomainEventCollector eventCollector,
+        ILogger<UserLibraryRepository> logger)
         : base(dbContext, eventCollector)
     {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<UserLibraryEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -202,7 +208,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     /// <summary>
     /// Maps persistence entity to domain entity.
     /// </summary>
-    private static UserLibraryEntry MapToDomain(UserLibraryEntryEntity entity)
+    private UserLibraryEntry MapToDomain(UserLibraryEntryEntity entity)
     {
         var entry = new UserLibraryEntry(entity.Id, entity.UserId, entity.GameId);
 
@@ -237,9 +243,12 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
                     entry.ConfigureAgent(agentConfig);
                 }
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
-                // Log or ignore malformed JSON - entry will have null CustomAgentConfig
+                _logger.LogWarning(ex,
+                    "Failed to deserialize CustomAgentConfigJson for UserLibraryEntry {EntryId}. JSON: {Json}",
+                    entity.Id, entity.CustomAgentConfigJson);
+                // Entry will have null CustomAgentConfig (graceful degradation)
             }
         }
 

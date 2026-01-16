@@ -4,6 +4,7 @@ using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.Extensions;
+using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -195,9 +196,9 @@ internal static class UserLibraryEndpoints
                 await mediator.Send(command, ct).ConfigureAwait(false);
                 return Results.NoContent();
             }
-            catch (KeyNotFoundException)
+            catch (DomainException ex) when (ex.Message.Contains("not found"))
             {
-                return Results.NotFound(new { error = "Game not found in library" });
+                return Results.NotFound(new { error = ex.Message });
             }
         })
         .RequireAuthenticatedUser()
@@ -238,9 +239,9 @@ internal static class UserLibraryEndpoints
                 var result = await mediator.Send(command, ct).ConfigureAwait(false);
                 return Results.Ok(result);
             }
-            catch (KeyNotFoundException)
+            catch (DomainException ex) when (ex.Message.Contains("not found"))
             {
-                return Results.NotFound(new { error = "Game not found in library" });
+                return Results.NotFound(new { error = ex.Message });
             }
         })
         .RequireAuthenticatedUser()
@@ -305,9 +306,9 @@ internal static class UserLibraryEndpoints
                 var result = await mediator.Send(command, ct).ConfigureAwait(false);
                 return Results.Ok(result);
             }
-            catch (KeyNotFoundException)
+            catch (DomainException ex) when (ex.Message.Contains("not found"))
             {
-                return Results.NotFound(new { error = "Game not found in library" });
+                return Results.NotFound(new { error = ex.Message });
             }
         })
         .RequireAuthenticatedUser()
@@ -342,9 +343,9 @@ internal static class UserLibraryEndpoints
                 var result = await mediator.Send(command, ct).ConfigureAwait(false);
                 return Results.Ok(result);
             }
-            catch (KeyNotFoundException)
+            catch (DomainException ex) when (ex.Message.Contains("not found"))
             {
-                return Results.NotFound(new { error = "Game not found in library" });
+                return Results.NotFound(new { error = ex.Message });
             }
         })
         .RequireAuthenticatedUser()
@@ -386,9 +387,9 @@ internal static class UserLibraryEndpoints
                 var result = await mediator.Send(command, ct).ConfigureAwait(false);
                 return Results.Ok(result);
             }
-            catch (KeyNotFoundException)
+            catch (DomainException ex) when (ex.Message.Contains("not found"))
             {
-                return Results.NotFound(new { error = "Game not found in library" });
+                return Results.NotFound(new { error = ex.Message });
             }
         })
         .RequireAuthenticatedUser()
@@ -423,9 +424,9 @@ internal static class UserLibraryEndpoints
                 var result = await mediator.Send(command, ct).ConfigureAwait(false);
                 return Results.Ok(result);
             }
-            catch (KeyNotFoundException)
+            catch (DomainException ex) when (ex.Message.Contains("not found"))
             {
-                return Results.NotFound(new { error = "Game not found in library" });
+                return Results.NotFound(new { error = ex.Message });
             }
         })
         .RequireAuthenticatedUser()

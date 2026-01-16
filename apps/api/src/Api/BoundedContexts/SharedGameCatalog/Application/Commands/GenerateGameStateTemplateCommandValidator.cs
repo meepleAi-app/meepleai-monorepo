@@ -19,5 +19,9 @@ internal sealed class GenerateGameStateTemplateCommandValidator : AbstractValida
             .WithMessage("Name is required")
             .MaximumLength(200)
             .WithMessage("Name cannot exceed 200 characters");
+
+        RuleFor(x => x.CreatedBy)
+            .NotEqual(Guid.Empty)
+            .WithMessage("CreatedBy is required");
     }
 }

@@ -99,7 +99,8 @@ internal sealed class AddDocumentToSharedGameCommandHandler : ICommandHandler<Ad
                 document.Id,
                 command.PdfDocumentId,
                 command.DocumentType,
-                command.Version),
+                command.Version,
+                command.CreatedBy),
             cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(

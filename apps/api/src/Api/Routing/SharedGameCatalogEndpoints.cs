@@ -908,11 +908,16 @@ internal static class SharedGameCatalogEndpoints
         Guid id,
         [FromBody] GenerateStateTemplateRequest request,
         IMediator mediator,
+        HttpContext context,
         CancellationToken ct)
     {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
         var command = new GenerateGameStateTemplateCommand(
             id,
             request.Name,
+            session!.User!.Id,
             request.SetAsActive);
 
         try

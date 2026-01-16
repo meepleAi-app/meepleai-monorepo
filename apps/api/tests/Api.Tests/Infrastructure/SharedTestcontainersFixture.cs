@@ -99,6 +99,9 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                             .WithPortBinding(5432, true)
                             // Issue #2031: Removed .UntilCommandIsCompleted("pg_isready") to prevent Docker hijack errors
                             // Default TCP port check + retry mechanism is more reliable than hijacked command execution
+                            // Issue #2513: Use tmpfs for PostgreSQL data to prevent orphaned anonymous volumes
+                            // Faster test execution (in-memory) and zero volume cleanup needed
+                            .WithTmpfsMount("/var/lib/postgresql/data")
                             .WithCleanUp(true)
                             .Build();
 
@@ -167,6 +170,9 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                             .WithPortBinding(6379, true)
                             // Issue #2031: Removed .UntilCommandIsCompleted("redis-cli", "ping") to prevent Docker hijack errors
                             // Default TCP port check + retry mechanism is more reliable than hijacked command execution
+                            // Issue #2513: Use tmpfs for Redis data to prevent orphaned anonymous volumes
+                            // Faster test execution (in-memory) and zero volume cleanup needed
+                            .WithTmpfsMount("/data")
                             .WithCleanUp(true)
                             .Build();
 

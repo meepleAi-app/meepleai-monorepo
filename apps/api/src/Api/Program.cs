@@ -79,6 +79,36 @@ Log.Logger = LoggingConfiguration.ConfigureSerilog(builder).CreateLogger();
 
 builder.Host.UseSerilog();
 
+// ISSUE-2510: Validate secrets from infra/secrets/ directory
+// Load and validate all secrets with 3-level validation (Critical/Important/Optional)
+// Note: Using temporary logger factory since DI container not yet built
+using var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder.AddSerilog(Log.Logger));
+var tempLogger = loggerFactory.CreateLogger<Program>();
+var secretLoader = new Api.Infrastructure.Configuration.SecretLoader(builder.Configuration, tempLogger);
+var secretValidationResult = secretLoader.LoadAndValidate();
+
+if (!secretValidationResult.IsValid)
+{
+    Log.Fatal(
+        "Application startup failed: CRITICAL secrets missing. Please configure secret files in infra/secrets/. " +
+        "Missing: {MissingSecrets}",
+        string.Join(", ", secretValidationResult.MissingCritical)
+    );
+    throw new InvalidOperationException(
+        $"Critical secrets missing: {string.Join(", ", secretValidationResult.MissingCritical)}. " +
+        "See infra/secrets.example/ for templates."
+    );
+}
+
+// Log warnings for missing important secrets (startup continues but with reduced functionality)
+if (secretValidationResult.HasWarnings)
+{
+    Log.Warning(
+        "Some secrets are missing or have errors. Application will start but some features may be disabled. " +
+        "Check logs above for details or see infra/secrets.example/ for templates."
+    );
+}
+
 // BGAI-081: Cookie Policy for Development
 // Allow SameSite=None without Secure for localhost cross-port development
 // In production, this should be removed (SameSite=None REQUIRES Secure=true)

@@ -264,7 +264,6 @@ export function AgentConfigPanel({
   });
 
   // Load config from localStorage on mount or mode change
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally only re-run when mode changes to avoid infinite loops
   useEffect(() => {
     const storedConfig = loadConfig();
     if (storedConfig && storedConfig.mode === mode) {
@@ -280,10 +279,10 @@ export function AgentConfigPanel({
       form.reset(defaultConfig);
       onConfigChange(defaultConfig);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally only re-run when mode changes to avoid infinite loops
   }, [mode]);
 
   // Watch form changes and propagate
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- Functions are stable, only re-run on form/mode change
   useEffect(() => {
     const subscription = form.watch(values => {
       const validated = getModeSchema().safeParse(values);
@@ -294,6 +293,7 @@ export function AgentConfigPanel({
     });
 
     return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Functions are stable, only re-run on form/mode change
   }, [form, mode]);
 
   // Render mode-specific fields

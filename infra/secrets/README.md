@@ -33,10 +33,25 @@
 
 #### PowerShell (Windows) - RECOMMENDED ✅
 
-**Using Helper Script** (easiest):
+**Using Helper Script** (easiest - WITH AUTO-GENERATION 🎉):
 ```powershell
 cd infra/secrets
 .\setup-secrets.ps1
+
+# Automatically generates secure values for:
+# ✅ JWT secrets, database passwords, API keys
+# ✅ All CRITICAL secrets auto-configured
+# ✅ 11+ values generated with cryptographic strength
+# ⏱️ Setup time: <1 minute (vs 15-30 minutes manually)
+```
+
+**With Backup** (recommended for production):
+```powershell
+cd infra/secrets
+.\setup-secrets.ps1 -SaveGenerated
+
+# Saves all generated values to .generated-values-TIMESTAMP.txt
+# ⚠️ Copy to password manager, then DELETE the file!
 ```
 
 **Manual Command**:
@@ -603,6 +618,46 @@ docker compose logs api | tail -50
 # 5. Document incident
 echo "$(date): Rolled back JWT secret change due to validation errors" >> infra/secrets/INCIDENTS.md
 ```
+
+---
+
+## Auto-Generated Values
+
+The `setup-secrets.ps1` script **automatically generates** secure values for the following:
+
+### 🔐 Cryptographically Secure (RNG-based)
+
+| Variable | File | Type | Strength |
+|----------|------|------|----------|
+| `JWT_SECRET_KEY` | jwt.secret | Base64 (64 bytes) | 512 bits |
+| `QDRANT_API_KEY` | qdrant.secret | Base64 (32 bytes) | 256 bits |
+| `EMBEDDING_SERVICE_API_KEY` | embedding-service.secret | Base64 (32 bytes) | 256 bits |
+| `RERANKER_API_KEY` | reranker-service.secret | Base64 (32 bytes) | 256 bits |
+| `SMOLDOCLING_API_KEY` | smoldocling-service.secret | Base64 (32 bytes) | 256 bits |
+| `UNSTRUCTURED_API_KEY` | unstructured-service.secret | Base64 (32 bytes) | 256 bits |
+
+### 🔑 Secure Passwords (Alphanumeric + Symbols)
+
+| Variable | File | Length | Requirements |
+|----------|------|--------|--------------|
+| `POSTGRES_PASSWORD` | database.secret | 20 chars | Upper + digit + symbol |
+| `REDIS_PASSWORD` | redis.secret | 20 chars | Upper + digit + symbol |
+| `ADMIN_PASSWORD` | admin.secret | 16 chars | Upper + digit + symbol |
+| `GRAFANA_ADMIN_PASSWORD` | monitoring.secret | 16 chars | Upper + digit + symbol |
+| `PROMETHEUS_PASSWORD` | monitoring.secret | 16 chars | Upper + digit + symbol |
+| `TRAEFIK_DASHBOARD_PASSWORD` | traefik.secret | 16 chars | Upper + digit + symbol |
+
+### 📋 Manual Configuration Still Required
+
+These values **cannot be auto-generated** (require external accounts):
+
+- **bgg.secret**: BoardGameGeek username/password (from https://boardgamegeek.com)
+- **openrouter.secret**: OpenRouter API key (from https://openrouter.ai/keys)
+- **email.secret**: SMTP credentials (from your email provider)
+- **oauth.secret**: Google/GitHub OAuth client IDs (from provider consoles)
+- **storage.secret**: S3 credentials (from AWS/cloud provider)
+
+**After running the script**, edit these files manually with your actual credentials.
 
 ---
 

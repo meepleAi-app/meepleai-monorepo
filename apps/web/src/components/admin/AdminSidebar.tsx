@@ -111,6 +111,7 @@ function NavLink({
           : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
       )}
       aria-current={isActive ? 'page' : undefined}
+      data-testid={`admin-nav-link-${item.href.replace(/^\/admin\/?/, '') || 'dashboard'}`}
     >
       <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
       {!collapsed && (
@@ -240,6 +241,7 @@ export function AdminSidebar({
         collapsed ? 'lg:w-16' : 'lg:w-60',
         className
       )}
+      data-testid="admin-sidebar-desktop"
     >
       {/* Collapse toggle */}
       <div className={cn('p-2', collapsed ? 'flex justify-center' : 'flex justify-end')}>
@@ -249,6 +251,7 @@ export function AdminSidebar({
           onClick={toggleCollapsed}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           className="h-8 w-8"
+          data-testid="admin-sidebar-toggle"
         >
           {collapsed ? (
             <ChevronRightIcon className="h-4 w-4" />
@@ -269,11 +272,17 @@ export function AdminSidebar({
   const mobileSidebar = (
     <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open sidebar">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden"
+          aria-label="Open sidebar"
+          data-testid="admin-sidebar-mobile-trigger"
+        >
           <MenuIcon className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-60 p-0">
+      <SheetContent side="left" className="w-60 p-0" data-testid="admin-sidebar-mobile">
         <SheetTitle className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           Admin Menu
         </SheetTitle>

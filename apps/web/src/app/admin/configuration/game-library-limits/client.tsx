@@ -120,9 +120,9 @@ export function GameLibraryLimitsClient() {
 
       toast.success('Game library limits updated successfully');
     } catch (err) {
-      const { userMessage } = categorizeError(err);
-      setError(userMessage);
-      toast.error(userMessage);
+      const { message } = categorizeError(err);
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }

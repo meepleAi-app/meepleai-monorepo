@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 
@@ -98,23 +99,50 @@ internal sealed class SharedGameDocumentRepository : ISharedGameDocumentReposito
     {
         var normalizedTags = tags.Select(t => t.ToLowerInvariant()).ToList();
 
+        if (normalizedTags.Count == 0)
+        {
+            return [];
+        }
+
+        // Use PostgreSQL JSONB @> operator for efficient array containment check
+        // This leverages the GIN index on tags_json column for O(log n) performance
+        // The query finds documents where tags_json array contains ANY of the provided tags
+        var sql = """
+            SELECT
+                id,
+                shared_game_id,
+                pdf_document_id,
+                document_type,
+                version,
+                is_active,
+                tags_json,
+                created_at,
+                created_by
+            FROM shared_game_documents
+            WHERE document_type = @documentType
+              AND tags_json IS NOT NULL
+              AND tags_json ?| @searchTags
+            ORDER BY created_at DESC
+            """;
+
+        var documentTypeParam = new NpgsqlParameter("@documentType", (int)SharedGameDocumentType.Homerule);
+
+        // S3265: NpgsqlDbType uses bitwise combination for array types despite not having [Flags]
+        // This is the official Npgsql API pattern for array parameters
+#pragma warning disable S3265
+        var searchTagsParam = new NpgsqlParameter("@searchTags", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text)
+        {
+            Value = normalizedTags.ToArray()
+        };
+#pragma warning restore S3265
+
         var entities = await _context.SharedGameDocuments
+            .FromSqlRaw(sql, documentTypeParam, searchTagsParam)
             .AsNoTracking()
-            .Where(d => d.DocumentType == (int)SharedGameDocumentType.Homerule && d.TagsJson != null)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        // Filter in memory (JSONB query would be more efficient but requires raw SQL)
-        var filtered = entities.Where(e =>
-        {
-            if (string.IsNullOrEmpty(e.TagsJson))
-                return false;
-
-            var entityTags = JsonSerializer.Deserialize<List<string>>(e.TagsJson) ?? new List<string>();
-            return normalizedTags.Any(tag => entityTags.Contains(tag, StringComparer.Ordinal));
-        }).ToList();
-
-        return filtered.Select(MapToDomain).ToList();
+        return entities.Select(MapToDomain).ToList();
     }
 
     public async Task<bool> VersionExistsAsync(

@@ -24,6 +24,7 @@ import {
   GamepadIcon,
   MessageSquareIcon,
   LayoutDashboardIcon,
+  BookOpenIcon,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -73,6 +74,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Home', icon: HomeIcon },
   { href: '/games', label: 'Giochi', icon: GamepadIcon },
+  { href: '/library', label: 'Libreria', icon: BookOpenIcon },
   { href: '/chat', label: 'Chat', icon: MessageSquareIcon },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboardIcon },
 ];

@@ -213,6 +213,72 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       await httpClient.delete(`/api/v1/admin/shared-games/${id}`);
     },
 
+    // ========== Approval Workflow Endpoints (Issue #2514) ==========
+
+    /**
+     * Submit a game for approval (ADMIN/EDITOR)
+     *
+     * Transitions game from Draft (0) to PendingApproval (1).
+     * Game must be in Draft status to submit.
+     *
+     * @param id - Game UUID
+     */
+    async submitForApproval(id: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/shared-games/${id}/submit-for-approval`, {});
+    },
+
+    /**
+     * Approve game publication (ADMIN ONLY)
+     *
+     * Transitions game from PendingApproval (1) to Published (2).
+     * Makes the game publicly visible.
+     *
+     * @param id - Game UUID
+     */
+    async approvePublication(id: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/shared-games/${id}/approve-publication`, {});
+    },
+
+    /**
+     * Reject game publication (ADMIN ONLY)
+     *
+     * Transitions game from PendingApproval (1) back to Draft (0).
+     * Requires a reason for rejection.
+     *
+     * @param id - Game UUID
+     * @param reason - Reason for rejection (required)
+     */
+    async rejectPublication(id: string, reason: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/shared-games/${id}/reject-publication`, { reason });
+    },
+
+    /**
+     * Get games pending approval (ADMIN ONLY)
+     *
+     * Returns all games in PendingApproval status waiting for admin approval.
+     *
+     * @param params - Pagination parameters
+     * @returns Paginated list of games pending approval
+     */
+    async getPendingApprovals(
+      params: { pageNumber?: number; pageSize?: number } = {}
+    ): Promise<PagedSharedGames> {
+      const queryParams = new URLSearchParams();
+
+      if (params.pageNumber !== undefined)
+        queryParams.set('pageNumber', params.pageNumber.toString());
+      if (params.pageSize !== undefined)
+        queryParams.set('pageSize', params.pageSize.toString());
+
+      const queryString = queryParams.toString();
+      const path = `/api/v1/admin/shared-games/pending-approvals${queryString ? `?${queryString}` : ''}`;
+
+      const result = await httpClient.get(path, PagedSharedGamesSchema);
+      return result ?? { items: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    // ========== Delete Request Workflow (Issue #2372) ==========
+
     /**
      * Request deletion of a game (EDITOR)
      *

@@ -16,6 +16,9 @@ internal sealed class AddDocumentToSharedGameCommandValidator : AbstractValidato
         RuleFor(x => x.PdfDocumentId)
             .NotEqual(Guid.Empty).WithMessage("PdfDocumentId is required");
 
+        RuleFor(x => x.CreatedBy)
+            .NotEqual(Guid.Empty).WithMessage("CreatedBy is required for audit trail");
+
         RuleFor(x => x.DocumentType)
             .IsInEnum().WithMessage("DocumentType must be valid (Rulebook, Errata, or Homerule)");
 

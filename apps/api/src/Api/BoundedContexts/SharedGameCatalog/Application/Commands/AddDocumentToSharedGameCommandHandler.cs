@@ -73,15 +73,13 @@ internal sealed class AddDocumentToSharedGameCommandHandler : ICommandHandler<Ad
             command.Version,
             cancellationToken).ConfigureAwait(false);
 
-        // Create the document
-        // FUTURE: Get CreatedBy from current user context (ICurrentUserService)
-        var createdBy = Guid.Empty; // Placeholder until auth context is implemented
+        // Create the document with authenticated user context
         var document = SharedGameDocument.Create(
             command.SharedGameId,
             command.PdfDocumentId,
             command.DocumentType,
             command.Version,
-            createdBy,
+            command.CreatedBy,
             command.Tags);
 
         // Set as active if requested

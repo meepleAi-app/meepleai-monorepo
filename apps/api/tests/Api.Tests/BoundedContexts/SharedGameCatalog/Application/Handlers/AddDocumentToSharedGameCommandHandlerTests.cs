@@ -69,13 +69,15 @@ public class AddDocumentToSharedGameCommandHandlerTests
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
+        var createdBy = Guid.NewGuid();
         var command = new AddDocumentToSharedGameCommand(
             SharedGameId: gameId,
             PdfDocumentId: pdfId,
             DocumentType: SharedGameDocumentType.Rulebook,
             Version: "1.0",
             Tags: null,
-            SetAsActive: true);
+            SetAsActive: true,
+            CreatedBy: createdBy);
 
         // Mock game exists
         var game = CreateTestGame(gameId);
@@ -139,7 +141,8 @@ public class AddDocumentToSharedGameCommandHandlerTests
             DocumentType: SharedGameDocumentType.Rulebook,
             Version: "1.0",
             Tags: null,
-            SetAsActive: false);
+            SetAsActive: false,
+            CreatedBy: Guid.NewGuid());
 
         _gameRepositoryMock
             .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -157,6 +160,7 @@ public class AddDocumentToSharedGameCommandHandlerTests
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
         var tags = new List<string> { "speed-mode", "2-players" };
+        var createdBy = Guid.NewGuid();
 
         var command = new AddDocumentToSharedGameCommand(
             SharedGameId: gameId,
@@ -164,7 +168,8 @@ public class AddDocumentToSharedGameCommandHandlerTests
             DocumentType: SharedGameDocumentType.Homerule,
             Version: "1.0",
             Tags: tags,
-            SetAsActive: false);
+            SetAsActive: false,
+            CreatedBy: createdBy);
 
         var game = CreateTestGame(gameId);
         _gameRepositoryMock

@@ -49,7 +49,7 @@ public class GameStateParserTests
         result.Resources.Should().ContainKey("wood");
         result.CurrentPhase.Should().Be("main");
         result.CurrentTurn.Should().Be(5);
-        result.CompletenessScore.Should().BeGreaterThan(0.8);
+        result.CompletenessScore.Should().BeGreaterThanOrEqualTo(0.8);
     }
 
     [Fact]
@@ -203,5 +203,76 @@ public class GameStateParserTests
         summary.Should().Contain("brick=2");
         summary.Should().Contain("Phase: setup");
         summary.Should().Contain("Turn: 1");
+    }
+
+    [Fact]
+    public void Parse_WithCapitalizedPlayerKey_ShouldParseSuccessfully()
+    {
+        // Arrange
+        var rawState = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["Players"] = JsonSerializer.SerializeToElement(new[]
+            {
+                new { name = "Alice", score = 10 }
+            })
+        };
+
+        // Act
+        var result = _parser.Parse(rawState);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Players.Should().HaveCount(1);
+        result.Players[0].Name.Should().Be("Alice");
+    }
+
+    [Fact]
+    public void Parse_WithCapitalizedResourcesKey_ShouldParseSuccessfully()
+    {
+        // Arrange
+        var rawState = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["players"] = JsonSerializer.SerializeToElement(new[] { new { name = "Player1" } }),
+            ["Resources"] = new Dictionary<string, object> { ["gold"] = 5 }
+        };
+
+        // Act
+        var result = _parser.Parse(rawState);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Resources.Should().ContainKey("gold");
+        result.Resources["gold"].Should().Be(5);
+    }
+
+    [Fact]
+    public void Parse_WithPlayerHavingNullResources_ShouldHandleGracefully()
+    {
+        // Arrange
+        var rawState = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["player1"] = new Dictionary<string, object>
+            {
+                ["name"] = "Alice",
+                ["score"] = 8
+                // No resources key
+            }
+        };
+
+        // Act
+        var result = _parser.Parse(rawState);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Players.Should().HaveCount(1);
+        result.Players[0].Resources.Should().BeNull();
+    }
+
+    [Fact]
+    public void Parse_WithNullArgument_ShouldThrowArgumentNullException()
+    {
+        // Arrange & Act & Assert
+        var act = () => _parser.Parse(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 }

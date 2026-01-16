@@ -4,6 +4,7 @@ using Api.Infrastructure.Entities.Authentication;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Infrastructure.Entities.SystemConfiguration;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Infrastructure.Entities.UserNotifications;
 using Api.SharedKernel.Application.Services;
@@ -90,6 +91,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
     public DbSet<GameSessionStateEntity> GameSessionStates => Set<GameSessionStateEntity>(); // ISSUE-2403: Sprint 4 - Game session state tracking
     public DbSet<GameStateSnapshotEntity> GameStateSnapshots => Set<GameStateSnapshotEntity>(); // ISSUE-2403: Sprint 4 - State snapshots
+    public DbSet<AiModelConfigurationEntity> AiModelConfigurations => Set<AiModelConfigurationEntity>(); // ISSUE-2512: Auto-configuration pipeline - AI model seed
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -130,6 +132,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame>(); // ISSUE-2370
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.GameCategory>(); // ISSUE-2370
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.GameMechanic>(); // ISSUE-2370
+        modelBuilder.Ignore<BoundedContexts.SystemConfiguration.Domain.Entities.AiModelConfiguration>(); // ISSUE-2512
         modelBuilder.Ignore<BoundedContexts.UserLibrary.Domain.Entities.UserLibraryEntry>(); // User Library feature
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.RulebookAnalysis>(); // ISSUE-2402
     }

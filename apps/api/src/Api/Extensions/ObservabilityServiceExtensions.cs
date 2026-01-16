@@ -5,6 +5,8 @@ using OpenTelemetry.Trace;
 using Api.Observability;
 using Api.Infrastructure;
 using Api.Infrastructure.Telemetry;
+using Api.Infrastructure.Health.Extensions;
+using Api.Infrastructure.Health.Models;
 using Microsoft.OpenApi.Models;
 using System.Diagnostics;
 
@@ -24,10 +26,10 @@ internal static class ObservabilityServiceExtensions
         return services;
     }
 
-    private static readonly string[] PostgresTags = new[] { "db", "sql" };
-    private static readonly string[] RedisTags = new[] { "cache", "redis" };
-    private static readonly string[] QdrantTags = new[] { "vector", "qdrant" };
-    private static readonly string[] QdrantCollectionTags = new[] { "vector", "qdrant", "collection" };
+    private static readonly string[] PostgresTags = new[] { "db", "sql", HealthCheckTags.Core, HealthCheckTags.Critical };
+    private static readonly string[] RedisTags = new[] { "cache", "redis", HealthCheckTags.Core, HealthCheckTags.Critical };
+    private static readonly string[] QdrantTags = new[] { "vector", "qdrant", HealthCheckTags.Core, HealthCheckTags.Critical };
+    private static readonly string[] QdrantCollectionTags = new[] { "vector", "qdrant", "collection", HealthCheckTags.Core, HealthCheckTags.Critical };
     private static readonly string[] N8nTags = new[] { "automation", "workflow" };
     private static readonly string[] SharedCatalogTags = new[] { "database", "fts", "shared-catalog" };
     private static readonly string[] ConfigurationTags = new[] { "configuration", "startup" };
@@ -176,6 +178,9 @@ internal static class ObservabilityServiceExtensions
 
         AddPostgresHealthCheck(healthChecksBuilder, configuration, environment);
         AddExternalHealthChecks(healthChecksBuilder, configuration);
+
+        // Add comprehensive health checks for AI, External APIs, and Monitoring
+        healthChecksBuilder.AddComprehensiveHealthChecks();
 
         return services;
     }

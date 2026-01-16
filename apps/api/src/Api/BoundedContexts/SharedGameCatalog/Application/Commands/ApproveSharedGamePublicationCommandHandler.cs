@@ -6,46 +6,44 @@ using MediatR;
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 
 /// <summary>
-/// Handler for publishing a shared game.
+/// Handler for approving a shared game publication.
+/// Issue #2514: Approval workflow implementation
 /// </summary>
-internal sealed class PublishSharedGameCommandHandler : ICommandHandler<PublishSharedGameCommand, Unit>
+internal sealed class ApproveSharedGamePublicationCommandHandler : ICommandHandler<ApproveSharedGamePublicationCommand, Unit>
 {
     private readonly ISharedGameRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<PublishSharedGameCommandHandler> _logger;
+    private readonly ILogger<ApproveSharedGamePublicationCommandHandler> _logger;
 
-    public PublishSharedGameCommandHandler(
+    public ApproveSharedGamePublicationCommandHandler(
         ISharedGameRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<PublishSharedGameCommandHandler> logger)
+        ILogger<ApproveSharedGamePublicationCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<Unit> Handle(PublishSharedGameCommand command, CancellationToken cancellationToken)
+    public async Task<Unit> Handle(ApproveSharedGamePublicationCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
         _logger.LogInformation(
-            "Publishing shared game: {GameId}, PublishedBy: {UserId}",
-            command.GameId, command.PublishedBy);
+            "Approving shared game publication: {GameId}, ApprovedBy: {UserId}",
+            command.GameId, command.ApprovedBy);
 
         var game = await _repository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Shared game with ID {command.GameId} not found");
 
         // Call domain method (validates status and raises event)
-        // Using obsolete method for backward compatibility until all clients migrate to approval workflow
-#pragma warning disable CS0618 // Type or member is obsolete
-        game.Publish(command.PublishedBy);
-#pragma warning restore CS0618 // Type or member is obsolete
+        game.ApprovePublication(command.ApprovedBy);
 
         _repository.Update(game);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
-            "Shared game published successfully: {GameId}",
+            "Shared game publication approved successfully: {GameId}",
             command.GameId);
 
         return Unit.Value;

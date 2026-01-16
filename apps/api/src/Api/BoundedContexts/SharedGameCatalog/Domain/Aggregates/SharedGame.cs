@@ -395,11 +395,84 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Publishes the game, making it visible to all users.
+    /// Submits the game for approval, transitioning from Draft to PendingApproval.
+    /// Issue #2514: Approval workflow implementation
+    /// </summary>
+    /// <param name="submittedBy">The ID of the user submitting for approval</param>
+    /// <exception cref="InvalidOperationException">Thrown when game is not in Draft status</exception>
+    public void SubmitForApproval(Guid submittedBy)
+    {
+        if (_status != GameStatus.Draft)
+            throw new InvalidOperationException($"Cannot submit game for approval in {_status} status. Only Draft games can be submitted.");
+
+        if (submittedBy == Guid.Empty)
+            throw new ArgumentException("SubmittedBy cannot be empty", nameof(submittedBy));
+
+        _status = GameStatus.PendingApproval;
+        _modifiedBy = submittedBy;
+        _modifiedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new SharedGameSubmittedForApprovalEvent(_id, submittedBy));
+    }
+
+    /// <summary>
+    /// Approves the publication, transitioning from PendingApproval to Published.
+    /// Issue #2514: Approval workflow implementation
+    /// </summary>
+    /// <param name="approvedBy">The ID of the admin approving the publication</param>
+    /// <exception cref="InvalidOperationException">Thrown when game is not in PendingApproval status</exception>
+    public void ApprovePublication(Guid approvedBy)
+    {
+        if (_status != GameStatus.PendingApproval)
+            throw new InvalidOperationException($"Cannot approve publication in {_status} status. Only PendingApproval games can be approved.");
+
+        if (approvedBy == Guid.Empty)
+            throw new ArgumentException("ApprovedBy cannot be empty", nameof(approvedBy));
+
+        _status = GameStatus.Published;
+        _modifiedBy = approvedBy;
+        _modifiedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new SharedGamePublicationApprovedEvent(_id, approvedBy));
+    }
+
+    /// <summary>
+    /// Rejects the publication, transitioning from PendingApproval back to Draft.
+    /// Issue #2514: Approval workflow implementation
+    /// </summary>
+    /// <param name="rejectedBy">The ID of the admin rejecting the publication</param>
+    /// <param name="reason">The reason for rejection</param>
+    /// <exception cref="InvalidOperationException">Thrown when game is not in PendingApproval status</exception>
+    public void RejectPublication(Guid rejectedBy, string reason)
+    {
+        if (_status != GameStatus.PendingApproval)
+            throw new InvalidOperationException($"Cannot reject publication in {_status} status. Only PendingApproval games can be rejected.");
+
+        if (rejectedBy == Guid.Empty)
+            throw new ArgumentException("RejectedBy cannot be empty", nameof(rejectedBy));
+
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ArgumentException("Rejection reason is required", nameof(reason));
+
+        _status = GameStatus.Draft;
+        _modifiedBy = rejectedBy;
+        _modifiedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new SharedGamePublicationRejectedEvent(_id, rejectedBy, reason));
+    }
+
+    /// <summary>
+    /// [DEPRECATED] Legacy method for backward compatibility.
+    /// Use SubmitForApproval() followed by ApprovePublication() instead.
+    /// Direct publishing bypasses the approval workflow (Issue #2514).
+    /// Planned for removal in 2026-Q2 after client migration.
     /// </summary>
     /// <param name="publishedBy">The ID of the user publishing the game</param>
     /// <exception cref="InvalidOperationException">Thrown when game is not in Draft status</exception>
+#pragma warning disable S1133 // Deprecated code should be removed - Planned removal in 2026-Q2
+    [Obsolete("Use SubmitForApproval() and ApprovePublication() for proper approval workflow (Issue #2514)")]
     public void Publish(Guid publishedBy)
+#pragma warning restore S1133
     {
         if (_status != GameStatus.Draft)
             throw new InvalidOperationException($"Cannot publish game in {_status} status");
@@ -407,6 +480,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
         if (publishedBy == Guid.Empty)
             throw new ArgumentException("PublishedBy cannot be empty", nameof(publishedBy));
 
+        // Direct transition: Draft → Published (bypassing approval)
         _status = GameStatus.Published;
         _modifiedBy = publishedBy;
         _modifiedAt = DateTime.UtcNow;

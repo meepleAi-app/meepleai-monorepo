@@ -88,16 +88,16 @@ export function GameLibraryLimitsClient() {
         premiumTierLimit: data.premiumTierLimit,
       });
     } catch (err) {
-      const { userMessage } = categorizeError(err);
-      setError(userMessage);
+      const { message } = categorizeError(err);
+      setError(message);
 
-      if (userMessage.includes('Unauthorized') || userMessage.includes('403')) {
+      if (message.includes('Unauthorized') || message.includes('403')) {
         toast.error('Admin access required');
         setTimeout(() => {
           window.location.href = '/login';
         }, 2000);
       } else {
-        toast.error(userMessage);
+        toast.error(message);
       }
     } finally {
       setLoading(false);

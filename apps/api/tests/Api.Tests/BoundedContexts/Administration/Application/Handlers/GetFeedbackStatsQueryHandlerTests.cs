@@ -2,7 +2,7 @@ using System.Threading;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
-using Api.Tests.Helpers;
+using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -32,7 +32,7 @@ public class GetFeedbackStatsQueryHandlerTests
     /// </summary>
     private static MeepleAiDbContext CreateFreshDbContext()
     {
-        return DbContextHelper.CreateInMemoryDbContext();
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
     [Fact]
     public void Constructor_WithValidParameters_CreatesInstance()

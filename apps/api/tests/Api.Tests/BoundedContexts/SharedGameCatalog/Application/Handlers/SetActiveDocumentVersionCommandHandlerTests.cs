@@ -6,8 +6,10 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Npgsql;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
@@ -146,13 +148,65 @@ public class SetActiveDocumentVersionCommandHandlerTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task Handle_WhenRaceConditionOccurs_ThrowsInformativeException()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var documentId = Guid.NewGuid();
+        var document = CreateTestDocument(documentId, gameId, isActive: false);
+
+        var command = new SetActiveDocumentVersionCommand(gameId, documentId);
+
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(documentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(document);
+
+        _versioningServiceMock
+            .Setup(s => s.SetActiveVersionAsync(
+                It.IsAny<SharedGameDocument>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Simulate PostgreSQL unique constraint violation (race condition)
+        var pgException = new PostgresException(
+            messageText: "duplicate key value violates unique constraint \"ix_shared_game_documents_single_active\"",
+            severity: "ERROR",
+            invariantSeverity: "ERROR",
+            sqlState: "23505"); // unique_violation
+
+        var dbUpdateException = new DbUpdateException(
+            "An error occurred while saving the entity changes.",
+            pgException);
+
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(dbUpdateException);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+
+        Assert.Contains("activated concurrently", ex.Message);
+        Assert.Contains("Please refresh and try again", ex.Message);
+        Assert.Same(dbUpdateException, ex.InnerException);
+    }
+
     private static SharedGameDocument CreateTestDocument(Guid id, Guid gameId, bool isActive)
     {
-        return SharedGameDocument.Create(
+        var doc = SharedGameDocument.Create(
             gameId,
             Guid.NewGuid(),
             SharedGameDocumentType.Rulebook,
             "1.0",
             Guid.NewGuid());
+
+        // If document should be active, activate it
+        if (isActive)
+        {
+            doc.SetAsActive();
+        }
+
+        return doc;
     }
 }

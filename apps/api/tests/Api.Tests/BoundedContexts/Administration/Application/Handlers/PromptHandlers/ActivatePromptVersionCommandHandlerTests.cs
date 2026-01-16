@@ -5,6 +5,7 @@ using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -24,16 +25,7 @@ public class ActivatePromptVersionCommandHandlerTests : IDisposable
 
     public ActivatePromptVersionCommandHandlerTests()
     {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: $"ActivatePromptVersionTests_{Guid.NewGuid()}")
-            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
-            .Options;
-
-        var mockMediator = new Mock<IMediator>();
-        var mockEventCollector = new Mock<IDomainEventCollector>();
-        mockEventCollector.Setup(e => e.GetAndClearEvents()).Returns(new List<IDomainEvent>());
-
-        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext($"ActivatePromptVersionTests_{Guid.NewGuid()}");
         _mockTimeProvider = new Mock<TimeProvider>();
         _mockLogger = new Mock<ILogger<ActivatePromptVersionCommandHandler>>();
 

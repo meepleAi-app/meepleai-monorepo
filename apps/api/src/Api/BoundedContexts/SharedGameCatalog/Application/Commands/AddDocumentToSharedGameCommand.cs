@@ -12,11 +12,13 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// <param name="Version">The version string (e.g., "1.0", "2.1")</param>
 /// <param name="Tags">Optional tags for Homerule documents</param>
 /// <param name="SetAsActive">Whether to set this document as the active version</param>
+/// <param name="CreatedBy">The ID of the user creating the document</param>
 internal record AddDocumentToSharedGameCommand(
     Guid SharedGameId,
     Guid PdfDocumentId,
     SharedGameDocumentType DocumentType,
     string Version,
     List<string>? Tags,
-    bool SetAsActive
+    bool SetAsActive,
+    Guid CreatedBy
 ) : ICommand<Guid>; // Returns the document ID

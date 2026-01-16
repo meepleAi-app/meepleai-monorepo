@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
 using Api.Tests.Infrastructure;
+using Api.Tests.TestHelpers;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using MediatR;
@@ -83,10 +84,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 
-        var mockMediator = new Mock<IMediator>();
-        var mockEventCollector = new Mock<IDomainEventCollector>();
-        mockEventCollector.Setup(x => x.GetAndClearEvents())
-            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
+        var mockMediator = TestDbContextFactory.CreateMockMediator();
+        var mockEventCollector = TestDbContextFactory.CreateMockEventCollector();
         using (var context = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object))
         {
             // Make sure we start from a pristine schema for every test run
@@ -126,10 +125,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
             .EnableSensitiveDataLogging() // For better error messages
             .Options;
 
-        var mockMediator = new Mock<IMediator>();
-        MockEventCollector = new Mock<IDomainEventCollector>();
-        MockEventCollector.Setup(x => x.GetAndClearEvents())
-            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
+        var mockMediator = TestDbContextFactory.CreateMockMediator();
+        MockEventCollector = TestDbContextFactory.CreateMockEventCollector();
         DbContext = new MeepleAiDbContext(options, mockMediator.Object, MockEventCollector.Object);
         Repository = CreateRepository(DbContext);
     }
@@ -146,10 +143,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
             .EnableSensitiveDataLogging()
             .Options;
 
-        var mockMediator = new Mock<IMediator>();
-        var mockEventCollector = new Mock<IDomainEventCollector>();
-        mockEventCollector.Setup(x => x.GetAndClearEvents())
-            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
+        var mockMediator = TestDbContextFactory.CreateMockMediator();
+        var mockEventCollector = TestDbContextFactory.CreateMockEventCollector();
         return new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
     }
 
@@ -184,10 +179,8 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 
-        var mockMediator = new Mock<IMediator>();
-        var mockEventCollector = new Mock<IDomainEventCollector>();
-        mockEventCollector.Setup(x => x.GetAndClearEvents())
-            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
+        var mockMediator = TestDbContextFactory.CreateMockMediator();
+        var mockEventCollector = TestDbContextFactory.CreateMockEventCollector();
         await using (var tempContext = new MeepleAiDbContext(tempOptions, mockMediator.Object, mockEventCollector.Object))
         {
             // Get all table names dynamically from the database

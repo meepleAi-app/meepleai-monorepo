@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 
@@ -54,7 +55,7 @@ public class AgentRepositoryTests : IAsyncLifetime
         var mockMediator = new Mock<IMediator>();
         var mockEventCollector = new Mock<IDomainEventCollector>();
         mockEventCollector.Setup(x => x.GetAndClearEvents()).Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
-        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         await _dbContext.Database.MigrateAsync();
 
         _repository = new AgentRepository(_dbContext, new Mock<IDomainEventCollector>().Object);

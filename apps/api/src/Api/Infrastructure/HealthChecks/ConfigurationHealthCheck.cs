@@ -86,17 +86,21 @@ internal class ConfigurationHealthCheck : IHealthCheck
             ?? _configuration["ConnectionStrings__Postgres"]
             ?? _configuration.GetConnectionString("Postgres");
 
-        // Also check Docker Secrets pattern
-        var postgresHost = Environment.GetEnvironmentVariable("POSTGRES_HOST");
-        var postgresUser = Environment.GetEnvironmentVariable("POSTGRES_USER");
-        var postgresDb = Environment.GetEnvironmentVariable("POSTGRES_DB");
+        // Issue #2460: Check POSTGRES_* environment variables pattern (used by SecretsHelper)
+        var postgresHost = _configuration["POSTGRES_HOST"];
+        var postgresUser = _configuration["POSTGRES_USER"];
+        var postgresDb = _configuration["POSTGRES_DB"];
+        var postgresPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD")
+            ?? _configuration["POSTGRES_PASSWORD"];
 
         var hasConnectionString = !string.IsNullOrEmpty(connectionString);
-        var hasDockerSecrets = !string.IsNullOrEmpty(postgresHost) &&
-                               !string.IsNullOrEmpty(postgresUser) &&
-                               !string.IsNullOrEmpty(postgresDb);
 
-        if (!hasConnectionString && !hasDockerSecrets)
+        // Issue #2460: Recognize POSTGRES_* vars as valid when password is present
+        // SecretsHelper.BuildPostgresConnectionString() constructs connection string from these vars
+        var hasPostgresVars = !string.IsNullOrEmpty(postgresPassword) &&
+                              (!string.IsNullOrEmpty(postgresHost) || !string.IsNullOrEmpty(postgresUser) || !string.IsNullOrEmpty(postgresDb));
+
+        if (!hasConnectionString && !hasPostgresVars)
         {
             if (_environment.IsDevelopment())
             {
@@ -108,8 +112,8 @@ internal class ConfigurationHealthCheck : IHealthCheck
             }
         }
 
-        data["database_configured"] = hasConnectionString || hasDockerSecrets;
-        data["database_source"] = hasConnectionString ? "connection_string" : (hasDockerSecrets ? "docker_secrets" : "none");
+        data["database_configured"] = hasConnectionString || hasPostgresVars;
+        data["database_source"] = hasConnectionString ? "connection_string" : (hasPostgresVars ? "postgres_vars" : "none");
     }
 
     private void ValidateRedisConfiguration(List<string> errors, List<string> warnings, Dictionary<string, object> data)

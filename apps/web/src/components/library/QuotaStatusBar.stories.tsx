@@ -73,7 +73,7 @@ type Story = StoryObj<typeof meta>;
  * Free tier user with minimal usage (20%).
  * Comfortable state with plenty of room to grow.
  */
-export const FreeT tierLowUsage: Story = {
+export const FreeTierLowUsage: Story = {
   args: {
     currentCount: 1,
     maxAllowed: 5,

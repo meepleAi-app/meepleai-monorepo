@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 
@@ -66,9 +67,26 @@ internal sealed class SetActiveDocumentVersionCommandHandler : ICommandHandler<S
         // Set as active using versioning service (deactivates others)
         await _versioningService.SetActiveVersionAsync(document, cancellationToken).ConfigureAwait(false);
 
-        // Update repository
+        // Update repository with race condition protection
+        // The unique partial index ix_shared_game_documents_single_active ensures
+        // only ONE active document per (shared_game_id, document_type) at DB level
         _repository.Update(document);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            // Race condition: another concurrent request already activated a document
+            // This is expected behavior - the first request wins, subsequent ones fail safely
+            _logger.LogWarning(ex,
+                "Race condition detected: Document {DocumentId} activation failed - another document was activated concurrently for game {SharedGameId}",
+                command.DocumentId, command.SharedGameId);
+
+            throw new InvalidOperationException(
+                $"Another document version was activated concurrently. Please refresh and try again.", ex);
+        }
 
         // Publish domain event
         await _mediator.Publish(
@@ -82,5 +100,22 @@ internal sealed class SetActiveDocumentVersionCommandHandler : ICommandHandler<S
         _logger.LogInformation(
             "Document {DocumentId} set as active successfully for game {SharedGameId}",
             command.DocumentId, command.SharedGameId);
+    }
+
+    /// <summary>
+    /// Checks if a DbUpdateException is caused by a unique constraint violation (PostgreSQL 23505).
+    /// Used to detect race conditions when concurrent requests try to activate documents.
+    /// </summary>
+    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+    {
+        // PostgreSQL unique constraint violation: 23505
+        if (ex.InnerException is Npgsql.PostgresException pgEx)
+        {
+            return string.Equals(pgEx.SqlState, "23505", StringComparison.Ordinal);
+        }
+
+        // Fallback: check message for constraint violation keywords
+        return ex.InnerException?.Message?.Contains("unique constraint", StringComparison.OrdinalIgnoreCase) == true
+            || ex.InnerException?.Message?.Contains("duplicate key", StringComparison.OrdinalIgnoreCase) == true;
     }
 }

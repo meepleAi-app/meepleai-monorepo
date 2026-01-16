@@ -21,7 +21,7 @@ public class DocumentVersioningService
     /// </summary>
     /// <param name="document">The document to activate</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    public async Task SetActiveVersionAsync(
+    public virtual async Task SetActiveVersionAsync(
         SharedGameDocument document,
         CancellationToken cancellationToken = default)
     {
@@ -43,7 +43,7 @@ public class DocumentVersioningService
     /// <param name="documentType">The document type</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of documents ordered by active status and version</returns>
-    public async Task<IReadOnlyList<SharedGameDocument>> GetVersionHistoryAsync(
+    public virtual async Task<IReadOnlyList<SharedGameDocument>> GetVersionHistoryAsync(
         Guid sharedGameId,
         SharedGameDocumentType documentType,
         CancellationToken cancellationToken = default)
@@ -61,7 +61,7 @@ public class DocumentVersioningService
     /// <param name="documentType">The document type</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The active document or null if none is active</returns>
-    public async Task<SharedGameDocument?> GetActiveVersionAsync(
+    public virtual async Task<SharedGameDocument?> GetActiveVersionAsync(
         Guid sharedGameId,
         SharedGameDocumentType documentType,
         CancellationToken cancellationToken = default)
@@ -80,7 +80,7 @@ public class DocumentVersioningService
     /// <param name="version">The version string</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <exception cref="InvalidOperationException">Thrown when version already exists</exception>
-    public async Task ValidateVersionDoesNotExistAsync(
+    public virtual async Task ValidateVersionDoesNotExistAsync(
         Guid sharedGameId,
         SharedGameDocumentType documentType,
         string version,

@@ -23,8 +23,8 @@ internal sealed class UploadCustomGamePdfCommandValidator : AbstractValidator<Up
         RuleFor(x => x.PdfUrl)
             .NotEmpty()
             .WithMessage("PDF URL is required")
-            .Must(BeValidUrl)
-            .WithMessage("Invalid PDF URL format");
+            .Must(BeValidHttpsUrl)
+            .WithMessage("PDF URL must be a valid HTTPS URL (not HTTP, file://, or internal addresses)");
 
         RuleFor(x => x.FileSizeBytes)
             .GreaterThan(0)
@@ -41,9 +41,32 @@ internal sealed class UploadCustomGamePdfCommandValidator : AbstractValidator<Up
             .WithMessage("Invalid file name format");
     }
 
-    private static bool BeValidUrl(string url)
+    private static bool BeValidHttpsUrl(string url)
     {
-        return Uri.TryCreate(url, UriKind.Absolute, out _) || Uri.TryCreate(url, UriKind.Relative, out _);
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return false;
+
+        // SECURITY: Only HTTPS allowed (no HTTP, file://, javascript:, data:)
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal))
+            return false;
+
+        // SSRF Protection: Block loopback and private IPs
+        if (uri.IsLoopback)
+            return false;
+
+        if (uri.HostNameType == UriHostNameType.IPv4 || uri.HostNameType == UriHostNameType.IPv6)
+        {
+            var host = uri.Host;
+            if (host.StartsWith("127.", StringComparison.Ordinal) ||
+                host.StartsWith("10.", StringComparison.Ordinal) ||
+                host.StartsWith("172.16.", StringComparison.Ordinal) ||
+                host.StartsWith("192.168.", StringComparison.Ordinal) ||
+                string.Equals(host, "::1", StringComparison.Ordinal) ||
+                host.StartsWith("fe80:", StringComparison.Ordinal))
+                return false;
+        }
+
+        return true;
     }
 
     private static bool BeValidFileName(string fileName)

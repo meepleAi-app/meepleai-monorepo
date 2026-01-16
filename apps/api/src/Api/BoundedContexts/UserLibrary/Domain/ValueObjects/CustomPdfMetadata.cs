@@ -43,8 +43,8 @@ internal sealed class CustomPdfMetadata : ValueObject
     {
         if (string.IsNullOrWhiteSpace(url))
             throw new ArgumentException("URL cannot be empty", nameof(url));
-        if (!Uri.TryCreate(url, UriKind.Absolute, out _) && !Uri.TryCreate(url, UriKind.Relative, out _))
-            throw new ArgumentException("Invalid URL format", nameof(url));
+        if (!IsValidPdfUrl(url, out var errorMessage))
+            throw new ArgumentException(errorMessage, nameof(url));
         if (fileSizeBytes < MinFileSizeBytes || fileSizeBytes > MaxFileSizeBytes)
             throw new ArgumentOutOfRangeException(nameof(fileSizeBytes), $"File size must be between {MinFileSizeBytes} and {MaxFileSizeBytes} bytes");
         if (string.IsNullOrWhiteSpace(originalFileName))
@@ -115,4 +115,50 @@ internal sealed class CustomPdfMetadata : ValueObject
     /// </summary>
     public override string ToString() =>
         $"CustomPdf[File={OriginalFileName}, Size={GetFormattedFileSize()}, Uploaded={UploadedAt:yyyy-MM-dd}]";
+
+    /// <summary>
+    /// Validates PDF URL for security (HTTPS only, no SSRF protection).
+    /// </summary>
+    private static bool IsValidPdfUrl(string url, out string errorMessage)
+    {
+        errorMessage = string.Empty;
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            errorMessage = "URL must be a valid absolute URL";
+            return false;
+        }
+
+        // SECURITY: Only allow HTTPS scheme (not HTTP, file://, javascript:, data:, etc.)
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.Ordinal))
+        {
+            errorMessage = "URL must use HTTPS scheme for security";
+            return false;
+        }
+
+        // SSRF Protection: Block loopback addresses
+        if (uri.IsLoopback)
+        {
+            errorMessage = "URL cannot reference localhost or loopback addresses";
+            return false;
+        }
+
+        // SSRF Protection: Block link-local and private IP ranges (basic check)
+        if (uri.HostNameType == UriHostNameType.IPv4 || uri.HostNameType == UriHostNameType.IPv6)
+        {
+            var host = uri.Host;
+            if (host.StartsWith("127.", StringComparison.Ordinal) ||
+                host.StartsWith("10.", StringComparison.Ordinal) ||
+                host.StartsWith("172.16.", StringComparison.Ordinal) ||
+                host.StartsWith("192.168.", StringComparison.Ordinal) ||
+                string.Equals(host, "::1", StringComparison.Ordinal) ||
+                host.StartsWith("fe80:", StringComparison.Ordinal))
+            {
+                errorMessage = "URL cannot reference private or internal IP addresses";
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

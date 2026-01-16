@@ -46,6 +46,11 @@ infra/env/*.env
 tools/secrets/*.txt
 infra/traefik/certs/*.*
 
+# ISSUE-2510: Secret management system
+# Exclude actual secret files but keep templates
+infra/secrets/*.secret
+!infra/secrets.example/*.secret.example
+
 # Logs
 logs/
 *.log

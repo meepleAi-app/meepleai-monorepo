@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// <summary>
 /// Handler for analyzing rulebooks using AI to extract structured game information.
 /// Issue #2402: Rulebook Analysis Service
+/// Issue #2453: Redis Caching Layer
 /// </summary>
 internal sealed class AnalyzeRulebookCommandHandler
     : ICommandHandler<AnalyzeRulebookCommand, AnalyzeRulebookResultDto>
@@ -20,6 +22,7 @@ internal sealed class AnalyzeRulebookCommandHandler
     private readonly IRulebookAnalysisRepository _analysisRepository;
     private readonly IRulebookAnalyzer _rulebookAnalyzer;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IHybridCacheService _cache;
     private readonly ILogger<AnalyzeRulebookCommandHandler> _logger;
 
     public AnalyzeRulebookCommandHandler(
@@ -27,12 +30,14 @@ internal sealed class AnalyzeRulebookCommandHandler
         IRulebookAnalysisRepository analysisRepository,
         IRulebookAnalyzer rulebookAnalyzer,
         IUnitOfWork unitOfWork,
+        IHybridCacheService cache,
         ILogger<AnalyzeRulebookCommandHandler> logger)
     {
         _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
         _analysisRepository = analysisRepository ?? throw new ArgumentNullException(nameof(analysisRepository));
         _rulebookAnalyzer = rulebookAnalyzer ?? throw new ArgumentNullException(nameof(rulebookAnalyzer));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -116,10 +121,43 @@ internal sealed class AnalyzeRulebookCommandHandler
             newVersion,
             analysisResult.ConfidenceScore);
 
-        // 9. Map to DTO
+        // 9. Invalidate cache for this game+PDF combination
+        await InvalidateCacheAsync(command.SharedGameId, command.PdfDocumentId, cancellationToken)
+            .ConfigureAwait(false);
+
+        // 10. Map to DTO
         var analysisDto = MapToDto(analysis);
 
         return new AnalyzeRulebookResultDto(analysisDto, DateTime.UtcNow);
+    }
+
+    /// <summary>
+    /// Invalidates cached analysis for a specific game and PDF document.
+    /// Issue #2453: Redis Caching Layer
+    /// </summary>
+    private async Task InvalidateCacheAsync(
+        Guid sharedGameId,
+        Guid pdfDocumentId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var gameTag = $"game:{sharedGameId}";
+            await _cache.RemoveByTagAsync(gameTag, cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Cache invalidated for game {GameId}, PDF {PdfId}",
+                sharedGameId,
+                pdfDocumentId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Failed to invalidate cache for game {GameId}, PDF {PdfId}. Cache may serve stale data temporarily.",
+                sharedGameId,
+                pdfDocumentId);
+            // Non-fatal: Continue even if cache invalidation fails
+        }
     }
 
     /// <summary>

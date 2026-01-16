@@ -100,14 +100,11 @@ internal sealed class GenerateGameStateTemplateCommandHandler
         // Create the template
         var schema = JsonDocument.Parse(schemaResult.SchemaJson);
 
-        // FUTURE: Get CreatedBy from current user context (ICurrentUserService)
-        var createdBy = Guid.Empty; // Placeholder until auth context is implemented
-
         var stateTemplate = GameStateTemplate.CreateFromAI(
             command.SharedGameId,
             command.Name,
             schema,
-            createdBy,
+            command.CreatedBy,
             schemaResult.ConfidenceScore,
             newVersion);
 

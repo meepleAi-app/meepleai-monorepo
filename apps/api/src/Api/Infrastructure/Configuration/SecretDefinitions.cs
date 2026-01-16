@@ -114,7 +114,9 @@ internal static class SecretDefinitions
             "GOOGLE_CLIENT_ID",
             "GOOGLE_CLIENT_SECRET",
             "GITHUB_CLIENT_ID",
-            "GITHUB_CLIENT_SECRET"
+            "GITHUB_CLIENT_SECRET",
+            "DISCORD_CLIENT_ID",
+            "DISCORD_CLIENT_SECRET"
         ),
 
         ["email"] = new(

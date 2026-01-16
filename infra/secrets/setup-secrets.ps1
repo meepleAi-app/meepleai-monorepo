@@ -264,8 +264,8 @@ if ($copied -gt 0) {
     Write-Host ""
 
     Write-Host "  OPTIONAL (Advanced features):" -ForegroundColor Gray
-    Write-Host "     - email.secret         -> SMTP credentials" -ForegroundColor White
-    Write-Host "     - oauth.secret         -> Google/GitHub OAuth" -ForegroundColor White
+    Write-Host "     - email.secret         -> SMTP credentials (or use MailPit)" -ForegroundColor White
+    Write-Host "     - oauth.secret         -> Google/GitHub/Discord OAuth" -ForegroundColor White
     Write-Host "     - storage.secret       -> S3 credentials" -ForegroundColor White
     Write-Host ""
 

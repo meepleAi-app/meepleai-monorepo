@@ -38,6 +38,31 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
         builder.Property(e => e.IsFavorite)
             .HasDefaultValue(false);
 
+        // Custom agent configuration (JSONB column for PostgreSQL)
+        builder.Property(e => e.CustomAgentConfigJson)
+            .HasColumnType("jsonb")
+            .IsRequired(false);
+
+        // Custom PDF metadata
+        builder.Property(e => e.CustomPdfUrl)
+            .HasMaxLength(2048)
+            .IsRequired(false);
+
+        builder.Property(e => e.CustomPdfUploadedAt)
+            .IsRequired(false);
+
+        builder.Property(e => e.CustomPdfFileSizeBytes)
+            .IsRequired(false);
+
+        builder.Property(e => e.CustomPdfOriginalFileName)
+            .HasMaxLength(255)
+            .IsRequired(false);
+
+        // Indexes for custom features
+        builder.HasIndex(e => e.CustomAgentConfigJson)
+            .HasDatabaseName("IX_UserLibraryEntries_CustomAgentConfigJson")
+            .HasMethod("gin"); // GIN index for JSONB queries in PostgreSQL
+
         // Relationships
         builder.HasOne(e => e.User)
             .WithMany()

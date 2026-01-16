@@ -25,6 +25,14 @@ internal static class UserLibraryEndpoints
         MapUpdateLibraryEntryEndpoint(group);
         MapGetGameInLibraryStatusEndpoint(group);
 
+        // Agent configuration endpoints
+        MapConfigureGameAgentEndpoint(group);
+        MapResetGameAgentEndpoint(group);
+
+        // Custom PDF endpoints
+        MapUploadCustomGamePdfEndpoint(group);
+        MapResetGamePdfEndpoint(group);
+
         return group;
     }
 
@@ -273,6 +281,162 @@ internal static class UserLibraryEndpoints
         .WithDescription("Returns whether a game is in user's library and if it's marked as favorite.");
     }
 
+    private static void MapConfigureGameAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPut("/library/games/{gameId:guid}/agent", async (
+            Guid gameId,
+            [FromBody] AgentConfigDto agentConfig,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new ConfigureGameAgentCommand(userId, gameId, agentConfig);
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException)
+            {
+                return Results.NotFound(new { error = "Game not found in library" });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<UserLibraryEntryDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Library")
+        .WithSummary("Configure custom AI agent")
+        .WithDescription("Configures a custom AI agent for a game in user's library. Replaces any existing configuration.");
+    }
+
+    private static void MapResetGameAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/library/games/{gameId:guid}/agent", async (
+            Guid gameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new ResetGameAgentCommand(userId, gameId);
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException)
+            {
+                return Results.NotFound(new { error = "Game not found in library" });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<UserLibraryEntryDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Library")
+        .WithSummary("Reset AI agent to default")
+        .WithDescription("Resets AI agent to system default configuration for a game in user's library.");
+    }
+
+    private static void MapUploadCustomGamePdfEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/library/games/{gameId:guid}/pdf", async (
+            Guid gameId,
+            [FromBody] UploadCustomPdfRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new UploadCustomGamePdfCommand(
+                userId,
+                gameId,
+                request.PdfUrl,
+                request.FileSizeBytes,
+                request.OriginalFileName
+            );
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException)
+            {
+                return Results.NotFound(new { error = "Game not found in library" });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<UserLibraryEntryDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Library")
+        .WithSummary("Upload custom PDF rulebook")
+        .WithDescription("Uploads a custom PDF rulebook for a game in user's library. Overrides the SharedGame's default PDF.");
+    }
+
+    private static void MapResetGamePdfEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/library/games/{gameId:guid}/pdf", async (
+            Guid gameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new ResetGamePdfCommand(userId, gameId);
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (KeyNotFoundException)
+            {
+                return Results.NotFound(new { error = "Game not found in library" });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<UserLibraryEntryDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Library")
+        .WithSummary("Reset to default PDF")
+        .WithDescription("Resets to use SharedGame's default PDF rulebook for a game in user's library.");
+    }
+
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)
     {
         userId = Guid.Empty;
@@ -306,4 +470,13 @@ public record AddGameToLibraryRequest(
 public record UpdateLibraryEntryRequest(
     string? Notes = null,
     bool? IsFavorite = null
+);
+
+/// <summary>
+/// Request body for uploading custom PDF rulebook.
+/// </summary>
+public record UploadCustomPdfRequest(
+    string PdfUrl,
+    long FileSizeBytes,
+    string OriginalFileName
 );

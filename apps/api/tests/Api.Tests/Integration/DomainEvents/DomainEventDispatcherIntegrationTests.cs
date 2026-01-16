@@ -76,7 +76,9 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
         _serviceProvider = services.BuildServiceProvider();
         _eventCollector = _serviceProvider.GetRequiredService<IDomainEventCollector>();
-        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
+        // Fix: Use PostgreSQL DbContext with Testcontainers, not in-memory
+        var mediator = _serviceProvider.GetRequiredService<IMediator>();
+        _dbContext = new MeepleAiDbContext(options, mediator, _eventCollector);
 
         // Apply migrations
         await _dbContext.Database.MigrateAsync();

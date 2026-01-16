@@ -2992,6 +2992,63 @@ namespace Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfiguration.AiModelConfigurationEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsPrimary")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ModelId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_AiModelConfigurations_ModelId");
+
+                    b.HasIndex("Priority")
+                        .HasDatabaseName("IX_AiModelConfigurations_Priority");
+
+                    b.HasIndex("IsPrimary", "IsActive")
+                        .HasDatabaseName("IX_AiModelConfigurations_IsPrimary_IsActive");
+
+                    b.ToTable("AiModelConfigurations", "SystemConfiguration");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfigurationEntity", b =>
                 {
                     b.Property<Guid>("Id")

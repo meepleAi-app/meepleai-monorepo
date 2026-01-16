@@ -1,5 +1,7 @@
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.BoundedContexts.UserLibrary.Domain.Services;
 using Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
+using Api.BoundedContexts.UserLibrary.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.UserLibrary.Infrastructure.DependencyInjection;
@@ -16,6 +18,9 @@ internal static class UserLibraryServiceExtensions
     {
         // Register repositories
         services.AddScoped<IUserLibraryRepository, UserLibraryRepository>();
+
+        // Register domain services
+        services.AddScoped<IGameLibraryQuotaService, GameLibraryQuotaService>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

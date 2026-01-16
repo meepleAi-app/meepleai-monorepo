@@ -19,6 +19,7 @@ internal static class UserLibraryEndpoints
     {
         MapGetUserLibraryEndpoint(group);
         MapGetLibraryStatsEndpoint(group);
+        MapGetLibraryQuotaEndpoint(group);
         MapAddGameToLibraryEndpoint(group);
         MapRemoveGameFromLibraryEndpoint(group);
         MapUpdateLibraryEntryEndpoint(group);
@@ -91,6 +92,33 @@ internal static class UserLibraryEndpoints
         .WithTags("Library")
         .WithSummary("Get library statistics")
         .WithDescription("Returns statistics about user's library including total games, favorites count, and date range.");
+    }
+
+    private static void MapGetLibraryQuotaEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/quota", async (
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetLibraryQuotaQuery(userId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<LibraryQuotaDto>(200)
+        .WithTags("Library")
+        .WithSummary("Get library quota")
+        .WithDescription("Returns quota information for user's library including games in library, max allowed, remaining slots, and tier.");
     }
 
     private static void MapAddGameToLibraryEndpoint(RouteGroupBuilder group)

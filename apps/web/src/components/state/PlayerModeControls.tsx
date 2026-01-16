@@ -16,12 +16,14 @@
 
 import { useState, useCallback } from 'react';
 
-import { Brain, Check, Lightbulb, Sparkles, X } from 'lucide-react';
+import { Brain, Check, HelpCircle, Lightbulb, Sparkles, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePlayerAISuggestion } from '@/lib/hooks/usePlayerAISuggestion';
+import { PlayerModeHelpModal } from './PlayerModeHelpModal';
+import { PlayerModeTour } from './PlayerModeTour';
 
 // ========== Component Props ==========
 
@@ -57,7 +59,28 @@ function ConfidenceMeter({ confidence }: ConfidenceMeterProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-sm">
-        <span className="font-medium text-muted-foreground">Confidenza</span>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="flex items-center gap-1 font-medium text-muted-foreground cursor-help">
+                Confidenza
+                <HelpCircle className="h-3 w-3" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              <p className="font-semibold mb-1">Come viene calcolata:</p>
+              <ul className="text-xs space-y-1">
+                <li>• 40% - Qualità ricerca RAG (regole rilevanti)</li>
+                <li>• 40% - Coerenza risposta LLM</li>
+                <li>• 20% - Completezza stato gioco</li>
+              </ul>
+              <p className="text-xs mt-2 text-muted-foreground">
+                Alto (&gt;80%): Mossa molto consigliata • Medio (50-80%): Valida ma con rischi •
+                Basso (&lt;50%): Da valutare con cautela
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <span className="font-semibold">
           {label} ({percentage}%)
         </span>
@@ -135,21 +158,34 @@ export function PlayerModeControls({
 
   return (
     <div className="space-y-4">
+      {/* Interactive Tour */}
+      <PlayerModeTour autoStart={!readonly} />
+
+      {/* Header with Help Button */}
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium text-muted-foreground">Player Mode AI</h3>
+        <div data-tour="help-button">
+          <PlayerModeHelpModal size="sm" variant="ghost" />
+        </div>
+      </div>
+
       {/* Suggest Move Button */}
       <div className="flex items-center gap-4">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                onClick={handleSuggestMove}
-                disabled={readonly || suggestionState.isLoading}
-                variant="default"
-                size="lg"
-                className="gap-2"
-              >
-                <Sparkles className="h-5 w-5" />
-                {suggestionState.isLoading ? 'Analizzando...' : 'Suggerisci Mossa'}
-              </Button>
+              <div data-tour="suggest-button">
+                <Button
+                  onClick={handleSuggestMove}
+                  disabled={readonly || suggestionState.isLoading}
+                  variant="default"
+                  size="lg"
+                  className="gap-2"
+                >
+                  <Sparkles className="h-5 w-5" />
+                  {suggestionState.isLoading ? 'Analizzando...' : 'Suggerisci Mossa'}
+                </Button>
+              </div>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="max-w-xs">
               <p>
@@ -197,11 +233,13 @@ export function PlayerModeControls({
           <CardContent className="space-y-4">
             {/* Confidence Meter */}
             {suggestionState.confidence !== null && (
-              <ConfidenceMeter confidence={suggestionState.confidence} />
+              <div data-tour="confidence-meter">
+                <ConfidenceMeter confidence={suggestionState.confidence} />
+              </div>
             )}
 
             {/* Primary Suggestion */}
-            <div className="space-y-2">
+            <div className="space-y-2" data-tour="primary-suggestion">
               <h4 className="flex items-center gap-2 font-semibold">
                 <Lightbulb className="h-4 w-4" />
                 Azione Suggerita
@@ -228,7 +266,7 @@ export function PlayerModeControls({
 
             {/* Alternative Moves */}
             {suggestionState.alternatives.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-2" data-tour="alternative-moves">
                 <h4 className="text-sm font-semibold text-muted-foreground">Mosse Alternative</h4>
                 <div className="space-y-2">
                   {suggestionState.alternatives.map((alt, idx) => (
@@ -245,25 +283,49 @@ export function PlayerModeControls({
             )}
 
             {/* Actions */}
-            <div className="flex gap-2">
-              <Button
-                onClick={handleApply}
-                disabled={readonly}
-                variant="default"
-                className="flex-1 gap-2"
-              >
-                <Check className="h-4 w-4" />
-                Applica Mossa
-              </Button>
-              <Button
-                onClick={handleIgnore}
-                disabled={readonly}
-                variant="outline"
-                className="gap-2"
-              >
-                <X className="h-4 w-4" />
-                Ignora
-              </Button>
+            <div className="flex gap-2" data-tour="actions">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleApply}
+                      disabled={readonly}
+                      variant="default"
+                      className="flex-1 gap-2"
+                    >
+                      <Check className="h-4 w-4" />
+                      Applica Mossa
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p>
+                      Conferma l&apos;utilizzo di questo suggerimento. Il sistema registrerà la
+                      scelta per migliorare le future raccomandazioni.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleIgnore}
+                      disabled={readonly}
+                      variant="outline"
+                      className="gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      Ignora
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p>
+                      Ignora questo suggerimento. Puoi richiedere una nuova analisi in qualsiasi
+                      momento.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </CardContent>
         </Card>

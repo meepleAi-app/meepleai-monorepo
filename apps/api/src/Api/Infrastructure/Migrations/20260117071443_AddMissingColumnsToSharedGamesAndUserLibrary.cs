@@ -104,7 +104,7 @@ namespace Api.Infrastructure.Migrations
             migrationBuilder.Sql(
                 """
                 UPDATE user_library_entries
-                SET updated_at = added_at
+                SET updated_at = "AddedAt"
                 WHERE updated_at IS NULL;
                 """);
         }

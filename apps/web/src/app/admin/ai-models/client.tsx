@@ -20,6 +20,8 @@ import { useAiModels, useCostTracking, useSetPrimaryModel } from '@/hooks/querie
 import { AiModelsTable } from '@/components/admin/AiModelsTable';
 import { SetPrimaryModelDialog } from '@/components/admin/SetPrimaryModelDialog';
 import { ModelConfigModal } from '@/components/admin/ModelConfigModal';
+import { BudgetAlertBanner } from '@/components/admin/BudgetAlertBanner';
+import { ExportUsageButton } from '@/components/admin/ExportUsageButton';
 import { toast } from '@/components/layout/Toast';
 import type { AiModelDto } from '@/lib/api';
 
@@ -95,11 +97,17 @@ export function AiModelsClient() {
               Manage runtime AI models, configure parameters, and monitor costs
             </p>
           </div>
-          {/* OpenRouter API Status */}
-          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-100">
-            OpenRouter API ✅
-          </Badge>
+          <div className="flex items-center gap-2">
+            <ExportUsageButton />
+            {/* OpenRouter API Status */}
+            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-100">
+              OpenRouter API ✅
+            </Badge>
+          </div>
         </div>
+
+        {/* Budget Alert Banner */}
+        {costData && <BudgetAlertBanner costData={costData} />}
 
         {/* Error State */}
         {(modelsError || costError) && (

@@ -48,9 +48,9 @@ export function GamesTableRow({ game, onEdit, onReviewApproval, onRefresh }: Gam
       case 'Draft':
         return <Badge variant="secondary">Draft</Badge>;
       case 'PendingApproval':
-        return <Badge variant="warning">Pending Approval</Badge>;
+        return <Badge variant="outline">Pending Approval</Badge>;
       case 'Published':
-        return <Badge variant="success">Published</Badge>;
+        return <Badge variant="default">Published</Badge>;
       case 'Archived':
         return <Badge variant="destructive">Archived</Badge>;
       default:

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
@@ -15,9 +16,15 @@ namespace Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
 /// </summary>
 internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
 {
-    public UserLibraryRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+    private readonly ILogger<UserLibraryRepository> _logger;
+
+    public UserLibraryRepository(
+        MeepleAiDbContext dbContext,
+        IDomainEventCollector eventCollector,
+        ILogger<UserLibraryRepository> logger)
         : base(dbContext, eventCollector)
     {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<UserLibraryEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -201,7 +208,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     /// <summary>
     /// Maps persistence entity to domain entity.
     /// </summary>
-    private static UserLibraryEntry MapToDomain(UserLibraryEntryEntity entity)
+    private UserLibraryEntry MapToDomain(UserLibraryEntryEntity entity)
     {
         var entry = new UserLibraryEntry(entity.Id, entity.UserId, entity.GameId);
 
@@ -217,6 +224,49 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             entry.MarkAsFavorite();
         }
 
+        // Deserialize custom agent configuration from JSONB
+        if (!string.IsNullOrWhiteSpace(entity.CustomAgentConfigJson))
+        {
+            try
+            {
+                var configDto = JsonSerializer.Deserialize<AgentConfigJson>(entity.CustomAgentConfigJson);
+                if (configDto != null)
+                {
+                    var agentConfig = AgentConfiguration.Create(
+                        llmModel: configDto.LlmModel,
+                        temperature: configDto.Temperature,
+                        maxTokens: configDto.MaxTokens,
+                        personality: configDto.Personality,
+                        detailLevel: configDto.DetailLevel,
+                        personalNotes: configDto.PersonalNotes
+                    );
+                    entry.ConfigureAgent(agentConfig);
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to deserialize CustomAgentConfigJson for UserLibraryEntry {EntryId}. JSON: {Json}",
+                    entity.Id, entity.CustomAgentConfigJson);
+                // Entry will have null CustomAgentConfig (graceful degradation)
+            }
+        }
+
+        // Reconstruct custom PDF metadata
+        if (!string.IsNullOrWhiteSpace(entity.CustomPdfUrl) &&
+            entity.CustomPdfUploadedAt.HasValue &&
+            entity.CustomPdfFileSizeBytes.HasValue &&
+            !string.IsNullOrWhiteSpace(entity.CustomPdfOriginalFileName))
+        {
+            var pdfMetadata = CustomPdfMetadata.CreateWithTimestamp(
+                url: entity.CustomPdfUrl,
+                uploadedAt: entity.CustomPdfUploadedAt.Value,
+                fileSizeBytes: entity.CustomPdfFileSizeBytes.Value,
+                originalFileName: entity.CustomPdfOriginalFileName
+            );
+            entry.UploadCustomPdf(pdfMetadata);
+        }
+
         // Override AddedAt from DB using reflection (same pattern as GameRepository)
         var addedAtProp = typeof(UserLibraryEntry).GetProperty("AddedAt");
         addedAtProp?.SetValue(entry, entity.AddedAt);
@@ -229,11 +279,39 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     }
 
     /// <summary>
+    /// Internal DTO for JSON serialization of AgentConfiguration.
+    /// </summary>
+    private record AgentConfigJson(
+        string LlmModel,
+        double Temperature,
+        int MaxTokens,
+        string Personality,
+        string DetailLevel,
+        string? PersonalNotes
+    );
+
+    /// <summary>
     /// Maps domain entity to persistence entity.
     /// </summary>
     private static UserLibraryEntryEntity MapToPersistence(UserLibraryEntry domainEntity)
     {
         ArgumentNullException.ThrowIfNull(domainEntity);
+
+        // Serialize custom agent configuration to JSON
+        string? agentConfigJson = null;
+        if (domainEntity.CustomAgentConfig != null)
+        {
+            var configDto = new AgentConfigJson(
+                LlmModel: domainEntity.CustomAgentConfig.LlmModel,
+                Temperature: domainEntity.CustomAgentConfig.Temperature,
+                MaxTokens: domainEntity.CustomAgentConfig.MaxTokens,
+                Personality: domainEntity.CustomAgentConfig.Personality,
+                DetailLevel: domainEntity.CustomAgentConfig.DetailLevel,
+                PersonalNotes: domainEntity.CustomAgentConfig.PersonalNotes
+            );
+            agentConfigJson = JsonSerializer.Serialize(configDto);
+        }
+
         return new UserLibraryEntryEntity
         {
             Id = domainEntity.Id,
@@ -241,7 +319,12 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             GameId = domainEntity.GameId,
             AddedAt = domainEntity.AddedAt,
             Notes = domainEntity.Notes?.Value,
-            IsFavorite = domainEntity.IsFavorite
+            IsFavorite = domainEntity.IsFavorite,
+            CustomAgentConfigJson = agentConfigJson,
+            CustomPdfUrl = domainEntity.CustomPdfMetadata?.Url,
+            CustomPdfUploadedAt = domainEntity.CustomPdfMetadata?.UploadedAt,
+            CustomPdfFileSizeBytes = domainEntity.CustomPdfMetadata?.FileSizeBytes,
+            CustomPdfOriginalFileName = domainEntity.CustomPdfMetadata?.OriginalFileName
         };
     }
 }

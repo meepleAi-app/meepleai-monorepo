@@ -66,7 +66,8 @@ internal static class ApplicationServiceExtensions
         services.AddUserLibraryContext();
 
         // ISSUE-2370: SharedGameCatalog bounded context
-        services.AddSharedGameCatalogContext();
+        // ISSUE-2454: Background processing configuration
+        services.AddSharedGameCatalogContext(configuration);
 
         // ISSUE-2371: SharedGameCatalog authorization policies
         services.AddSharedGameCatalogPolicies();
@@ -246,12 +247,17 @@ internal static class ApplicationServiceExtensions
     /// <summary>
     /// Registers FluentValidation validators for CQRS pipeline validation.
     /// Issue #1449: FluentValidation for Authentication bounded context.
+    /// Issue #2473: FluentValidation for KnowledgeBase bounded context.
     /// </summary>
     public static IServiceCollection AddFluentValidation(this IServiceCollection services)
     {
         // Register all validators from the Authentication bounded context
         // NOTE: includeInternalTypes: true required because validators are internal sealed classes
         services.AddValidatorsFromAssemblyContaining<BoundedContexts.Authentication.Application.Validators.LoginCommandValidator>(
+            includeInternalTypes: true);
+
+        // Issue #2473: Register validators from KnowledgeBase bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.KnowledgeBase.Application.Validators.SuggestPlayerMoveCommandValidator>(
             includeInternalTypes: true);
 
         return services;

@@ -14,5 +14,7 @@ internal record UserLibraryEntryDto(
     string? GameImageUrl,
     DateTime AddedAt,
     string? Notes,
-    bool IsFavorite
+    bool IsFavorite,
+    AgentConfigDto? CustomAgentConfig = null,
+    CustomPdfDto? CustomPdf = null
 );

@@ -10,15 +10,16 @@ import { z } from 'zod';
 // ========== Enums ==========
 
 /**
- * Game publication status (matches C# GameStatus enum)
+ * Game publication status (matches C# GameStatus enum - Issue #2514)
  */
-export const GameStatusSchema = z.enum(['Draft', 'Published', 'Archived']);
+export const GameStatusSchema = z.enum(['Draft', 'PendingApproval', 'Published', 'Archived']);
 export type GameStatus = z.infer<typeof GameStatusSchema>;
 
 /**
  * Numeric game status (for API query params)
+ * 0 = Draft, 1 = PendingApproval, 2 = Published, 3 = Archived
  */
-export const GameStatusNumericSchema = z.number().int().min(0).max(2);
+export const GameStatusNumericSchema = z.number().int().min(0).max(3);
 export type GameStatusNumeric = z.infer<typeof GameStatusNumericSchema>;
 
 /**
@@ -332,6 +333,15 @@ export const RejectDeleteRequestBodySchema = z.object({
 });
 
 export type RejectDeleteRequestBody = z.infer<typeof RejectDeleteRequestBodySchema>;
+
+/**
+ * Reject publication request body (Issue #2514)
+ */
+export const RejectPublicationRequestSchema = z.object({
+  reason: z.string().min(10, 'Reason must be at least 10 characters').max(500),
+});
+
+export type RejectPublicationRequest = z.infer<typeof RejectPublicationRequestSchema>;
 
 // ========== FAQ ==========
 

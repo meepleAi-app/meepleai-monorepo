@@ -57,8 +57,39 @@ public record GamePhaseDto(
 
 /// <summary>
 /// Result DTO for analyze rulebook command.
+/// Issue #2454: Supports both synchronous and background analysis.
 /// </summary>
 public record AnalyzeRulebookResultDto(
-    RulebookAnalysisDto Analysis,
+    RulebookAnalysisDto? Analysis,
     DateTime AnalyzedAt
-);
+)
+{
+    /// <summary>
+    /// Indicates if analysis is running in background (async).
+    /// </summary>
+    public bool IsBackgroundTask { get; init; }
+
+    /// <summary>
+    /// Task ID for background processing (null for synchronous).
+    /// </summary>
+    public string? TaskId { get; init; }
+
+    /// <summary>
+    /// Creates result for synchronous analysis (less than 30k chars).
+    /// </summary>
+    public static AnalyzeRulebookResultDto CreateSynchronous(RulebookAnalysisDto analysis) =>
+        new(analysis, DateTime.UtcNow)
+        {
+            IsBackgroundTask = false
+        };
+
+    /// <summary>
+    /// Creates result for background analysis (greater than 30k chars).
+    /// </summary>
+    public static AnalyzeRulebookResultDto CreateBackgroundTask(string taskId) =>
+        new(null, DateTime.UtcNow)
+        {
+            IsBackgroundTask = true,
+            TaskId = taskId
+        };
+};

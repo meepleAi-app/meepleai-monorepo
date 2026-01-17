@@ -24,10 +24,10 @@ import { toast } from '@/components/layout/Toast';
 import { Library, Plus, Check } from 'lucide-react';
 
 import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
-import type { SharedGameDetail } from '@/lib/api';
+import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
 interface GameCatalogCardProps {
-  game: SharedGameDetail;
+  game: SharedGame | SharedGameDetail;
 }
 
 export function GameCatalogCard({ game }: GameCatalogCardProps) {
@@ -54,9 +54,14 @@ export function GameCatalogCard({ game }: GameCatalogCardProps) {
     }
   };
 
+  // Type guard to check if game has extended fields
+  const hasExtendedFields = (g: SharedGame | SharedGameDetail): g is SharedGameDetail => {
+    return 'categories' in g && 'mechanics' in g;
+  };
+
   // Complexity stars (1-5)
-  const complexityStars = game.complexity
-    ? '●'.repeat(Math.round(game.complexity)) + '○'.repeat(5 - Math.round(game.complexity))
+  const complexityStars = game.complexityRating
+    ? '●'.repeat(Math.round(game.complexityRating)) + '○'.repeat(5 - Math.round(game.complexityRating))
     : 'N/A';
 
   // Players range
@@ -68,7 +73,7 @@ export function GameCatalogCard({ game }: GameCatalogCardProps) {
       : 'N/A';
 
   // Playtime
-  const playtime = game.playingTime ? `${game.playingTime} min` : 'N/A';
+  const playtime = game.playingTimeMinutes ? `${game.playingTimeMinutes} min` : 'N/A';
 
   return (
     <Card className="flex flex-col h-full hover:shadow-lg transition-shadow">
@@ -124,7 +129,7 @@ export function GameCatalogCard({ game }: GameCatalogCardProps) {
         )}
 
         {/* Tags (Categories + Mechanics) */}
-        {(game.categories.length > 0 || game.mechanics.length > 0) && (
+        {hasExtendedFields(game) && (game.categories.length > 0 || game.mechanics.length > 0) && (
           <div className="flex flex-wrap gap-1 pt-2">
             {game.categories.slice(0, 2).map((cat) => (
               <Badge key={cat.id} variant="secondary" className="text-xs">

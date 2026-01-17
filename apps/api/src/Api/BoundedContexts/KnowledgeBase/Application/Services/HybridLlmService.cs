@@ -539,15 +539,16 @@ internal class HybridLlmService : ILlmService
             var modelConfig = await _modelConfigRepository.GetByModelIdAsync(result.Cost.ModelId, cancellationToken).ConfigureAwait(false);
             if (modelConfig != null)
             {
-                var totalTokens = result.Usage.PromptTokens + result.Usage.CompletionTokens;
+                var inputTokens = result.Usage.PromptTokens;
+                var outputTokens = result.Usage.CompletionTokens;
                 var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
 
-                modelConfig.UpdateUsageStats(totalTokens, totalCost);
+                modelConfig.TrackUsage(inputTokens, outputTokens, totalCost); // Issue #2580: Use TrackUsage API
                 await _modelConfigRepository.UpdateAsync(modelConfig, cancellationToken).ConfigureAwait(false);
 
                 _logger.LogDebug(
                     "Updated usage stats for model {ModelId}: +{Tokens} tokens, +${Cost:F6}",
-                    result.Cost.ModelId, totalTokens, totalCost);
+                    result.Cost.ModelId, inputTokens + outputTokens, totalCost);
             }
             else
             {

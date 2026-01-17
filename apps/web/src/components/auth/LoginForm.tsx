@@ -73,7 +73,12 @@ export function LoginForm({ onSubmit, loading = false, error, onErrorDismiss }: 
   };
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4" noValidate>
+    <form
+      onSubmit={handleSubmit(onFormSubmit)}
+      className="space-y-4"
+      noValidate
+      data-testid="login-form"
+    >
       {/* Email Field */}
       <div className="space-y-2">
         <AccessibleFormInput
@@ -85,6 +90,7 @@ export function LoginForm({ onSubmit, loading = false, error, onErrorDismiss }: 
           error={errors.email?.message}
           required
           disabled={isLoading}
+          data-testid="login-email"
           {...register('email')}
         />
       </div>
@@ -100,6 +106,7 @@ export function LoginForm({ onSubmit, loading = false, error, onErrorDismiss }: 
           error={errors.password?.message}
           required
           disabled={isLoading}
+          data-testid="login-password"
           {...register('password')}
         />
       </div>

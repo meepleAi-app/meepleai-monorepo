@@ -205,12 +205,12 @@ internal sealed class RulebookAnalysisRepository : IRulebookAnalysisRepository
     }
 
     // DTOs for JSON serialization
-    private record VictoryConditionsDto(
+    private sealed record VictoryConditionsDto(
         string Primary,
         List<string> Alternatives,
         bool IsPointBased,
         int? TargetPoints);
 
-    private record ResourceDto(string Name, string Type, string? Usage, bool IsLimited);
-    private record GamePhaseDto(string Name, string Description, int Order, bool IsOptional);
+    private sealed record ResourceDto(string Name, string Type, string? Usage, bool IsLimited);
+    private sealed record GamePhaseDto(string Name, string Description, int Order, bool IsOptional);
 }

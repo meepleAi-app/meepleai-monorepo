@@ -41,7 +41,7 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
             return;
         }
 
-        // Define default AI models
+        // Define default AI models (Issue #2520: Added pricing and settings)
         var models = new[]
         {
             AiModelConfiguration.Create(
@@ -49,6 +49,10 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                 displayName: "Llama 3.3 70B Instruct (Free)",
                 provider: "OpenRouter",
                 priority: 1,
+                maxTokens: 4096,
+                temperature: 0.7m,
+                costPerInputToken: 0m,      // Free tier
+                costPerOutputToken: 0m,     // Free tier
                 isActive: true,
                 isPrimary: true
             ),
@@ -57,6 +61,10 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                 displayName: "Llama 3.3 70B Instruct",
                 provider: "OpenRouter",
                 priority: 2,
+                maxTokens: 4096,
+                temperature: 0.7m,
+                costPerInputToken: 0.18m,   // $0.18 per 1M tokens
+                costPerOutputToken: 0.18m,
                 isActive: true,
                 isPrimary: false
             ),
@@ -65,6 +73,10 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                 displayName: "Gemini Pro",
                 provider: "OpenRouter",
                 priority: 3,
+                maxTokens: 8192,
+                temperature: 0.7m,
+                costPerInputToken: 0.125m,  // $0.125 per 1M tokens
+                costPerOutputToken: 0.375m, // $0.375 per 1M tokens
                 isActive: true,
                 isPrimary: false
             ),
@@ -73,6 +85,10 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                 displayName: "DeepSeek Chat",
                 provider: "OpenRouter",
                 priority: 4,
+                maxTokens: 4096,
+                temperature: 0.7m,
+                costPerInputToken: 0.27m,   // $0.27 per 1M tokens
+                costPerOutputToken: 1.10m,  // $1.10 per 1M tokens
                 isActive: true,
                 isPrimary: false
             ),
@@ -81,6 +97,10 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                 displayName: "Llama 3 8B (Local)",
                 provider: "Ollama",
                 priority: 5,
+                maxTokens: 2048,
+                temperature: 0.7m,
+                costPerInputToken: 0m,      // Local - no cost
+                costPerOutputToken: 0m,
                 isActive: false,
                 isPrimary: false
             ),
@@ -89,6 +109,10 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                 displayName: "Mistral (Local)",
                 provider: "Ollama",
                 priority: 6,
+                maxTokens: 2048,
+                temperature: 0.7m,
+                costPerInputToken: 0m,      // Local - no cost
+                costPerOutputToken: 0m,
                 isActive: false,
                 isPrimary: false
             )

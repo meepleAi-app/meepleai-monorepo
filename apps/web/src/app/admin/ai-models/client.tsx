@@ -16,15 +16,72 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Star, TrendingUp } from 'lucide-react';
 
-import { useAiModels, useCostTracking } from '@/hooks/queries';
+import { useAiModels, useCostTracking, useSetPrimaryModel } from '@/hooks/queries';
+import { AiModelsTable } from '@/components/admin/AiModelsTable';
+import { SetPrimaryModelDialog } from '@/components/admin/SetPrimaryModelDialog';
+import { toast } from '@/components/layout/Toast';
+import type { AiModelDto } from '@/lib/api';
 
 export function AiModelsClient() {
+  // Modal state
+  const [setPrimaryDialog, setSetPrimaryDialog] = useState<{
+    isOpen: boolean;
+    modelId: string;
+    modelName: string;
+  }>({
+    isOpen: false,
+    modelId: '',
+    modelName: '',
+  });
+
+  const [configureModal, setConfigureModal] = useState<{
+    isOpen: boolean;
+    modelId: string;
+    model: AiModelDto | null;
+  }>({
+    isOpen: false,
+    modelId: '',
+    model: null,
+  });
+
   // Fetch AI models and cost tracking data
   const { data: modelsData, isLoading: modelsLoading, error: modelsError } = useAiModels();
   const { data: costData, isLoading: costLoading, error: costError } = useCostTracking();
+  const setPrimaryMutation = useSetPrimaryModel();
 
   const models = modelsData?.items || [];
   const primaryModel = models.find((m) => m.isPrimary);
+
+  // Handlers
+  const handleSetPrimaryClick = (modelId: string, modelName: string) => {
+    setSetPrimaryDialog({
+      isOpen: true,
+      modelId,
+      modelName,
+    });
+  };
+
+  const handleSetPrimaryConfirm = async () => {
+    try {
+      await setPrimaryMutation.mutateAsync({ modelId: setPrimaryDialog.modelId });
+      toast.success(`${setPrimaryDialog.modelName} impostato come modello primario!`);
+      setSetPrimaryDialog((prev) => ({ ...prev, isOpen: false }));
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Errore durante l\'impostazione del modello primario'
+      );
+    }
+  };
+
+  const handleConfigureClick = (modelId: string, model: AiModelDto) => {
+    setConfigureModal({
+      isOpen: true,
+      modelId,
+      model,
+    });
+  };
 
   return (
     <AdminLayout>
@@ -183,7 +240,7 @@ export function AiModelsClient() {
           </Card>
         ) : null}
 
-        {/* Models Table Placeholder */}
+        {/* Models Table */}
         <Card>
           <CardHeader>
             <CardTitle>Available Models</CardTitle>
@@ -192,20 +249,27 @@ export function AiModelsClient() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {modelsLoading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-8">
-                Models table component coming in Phase 3
-              </p>
-            )}
+            <AiModelsTable
+              models={models}
+              onSetPrimary={handleSetPrimaryClick}
+              onConfigure={handleConfigureClick}
+              isLoading={modelsLoading}
+            />
           </CardContent>
         </Card>
       </div>
+
+      {/* Set Primary Dialog */}
+      <SetPrimaryModelDialog
+        isOpen={setPrimaryDialog.isOpen}
+        onClose={() => setSetPrimaryDialog((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={handleSetPrimaryConfirm}
+        modelName={setPrimaryDialog.modelName}
+        isLoading={setPrimaryMutation.isPending}
+      />
+
+      {/* Configure Modal Placeholder (Phase 4) */}
+      {/* <ModelConfigModal ... /> */}
     </AdminLayout>
   );
 }

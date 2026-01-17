@@ -81,6 +81,7 @@ namespace Api.Infrastructure.Migrations
             // ========== Foreign Keys ==========
 
             // FK: ApprovedBy → Users
+            // Restrict: Preserve audit integrity (admin who approved cannot be deleted)
             migrationBuilder.AddForeignKey(
                 name: "FK_shared_games_users_approved_by",
                 table: "shared_games",
@@ -103,7 +104,7 @@ namespace Api.Infrastructure.Migrations
             migrationBuilder.Sql(
                 """
                 UPDATE user_library_entries
-                SET updated_at = "AddedAt"
+                SET updated_at = added_at
                 WHERE updated_at IS NULL;
                 """);
         }

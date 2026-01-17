@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
+using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SystemConfiguration;
 using Microsoft.EntityFrameworkCore;
@@ -102,6 +104,12 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
 
     private static AiModelConfiguration MapToDomain(AiModelConfigurationEntity entity)
     {
+        // Deserialize JSON to value objects (Issue #2520)
+        var settings = JsonSerializer.Deserialize<ModelSettings>(entity.SettingsJson)
+            ?? ModelSettings.Default;
+        var usage = JsonSerializer.Deserialize<UsageStats>(entity.UsageJson)
+            ?? UsageStats.Empty;
+
         var domainEntity = (AiModelConfiguration)Activator.CreateInstance(
             typeof(AiModelConfiguration),
             nonPublic: true)!;
@@ -124,12 +132,20 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
             .SetValue(domainEntity, entity.CreatedAt);
         typeof(AiModelConfiguration).GetProperty(nameof(AiModelConfiguration.UpdatedAt))!
             .SetValue(domainEntity, entity.UpdatedAt);
+        typeof(AiModelConfiguration).GetProperty(nameof(AiModelConfiguration.Settings))!
+            .SetValue(domainEntity, settings);
+        typeof(AiModelConfiguration).GetProperty(nameof(AiModelConfiguration.Usage))!
+            .SetValue(domainEntity, usage);
 
         return domainEntity;
     }
 
     private static AiModelConfigurationEntity MapToDb(AiModelConfiguration domain)
     {
+        // Serialize value objects to JSON (Issue #2520)
+        var settingsJson = JsonSerializer.Serialize(domain.Settings);
+        var usageJson = JsonSerializer.Serialize(domain.Usage);
+
         return new AiModelConfigurationEntity
         {
             Id = domain.Id,
@@ -140,7 +156,9 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
             IsActive = domain.IsActive,
             IsPrimary = domain.IsPrimary,
             CreatedAt = domain.CreatedAt,
-            UpdatedAt = domain.UpdatedAt
+            UpdatedAt = domain.UpdatedAt,
+            SettingsJson = settingsJson,
+            UsageJson = usageJson
         };
     }
 }

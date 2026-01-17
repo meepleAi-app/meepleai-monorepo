@@ -83,8 +83,13 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
       setDetailLevel(currentConfig.detailLevel);
       setCustomInstructions(currentConfig.customInstructions || '');
     } else if (isOpen && !currentConfig) {
-      // Reset to defaults if no config exists
-      handleResetToDefault();
+      // Reset to defaults if no config exists (inline to avoid dependency)
+      setModelType(DEFAULT_AGENT_CONFIG.modelType);
+      setTemperature(DEFAULT_AGENT_CONFIG.temperature);
+      setMaxTokens(DEFAULT_AGENT_CONFIG.maxTokens);
+      setPersonality(DEFAULT_AGENT_CONFIG.personality);
+      setDetailLevel(DEFAULT_AGENT_CONFIG.detailLevel);
+      setCustomInstructions('');
     }
   }, [isOpen, currentConfig]);
 

@@ -4,11 +4,9 @@ services:
     container_name: meepleai-postgres
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
+    env_file:
+      - ./secrets/database.secret
     environment:
-      # Issue #2152: Changed default from 'meeple' to 'postgres' for standard PostgreSQL compatibility
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
-      POSTGRES_DB: ${POSTGRES_DB:-meepleai}
       # Performance tuning aligned with resource limits
       POSTGRES_SHARED_BUFFERS: 512MB
       POSTGRES_EFFECTIVE_CACHE_SIZE: 1536MB
@@ -19,8 +17,6 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    secrets:
-      - postgres-password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -563,9 +559,9 @@ services:
       # Node.js heap size tuning (75% of container limit minus overhead)
       NODE_OPTIONS: "--max-old-space-size=512"
     env_file:
+      - ./secrets/database.secret
       - ./env/n8n.env.dev
     secrets:
-      - postgres-password
       - n8n-encryption-key
       - n8n-basic-auth-password
     volumes:
@@ -596,6 +592,7 @@ services:
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     env_file:
+      - ./secrets/database.secret
       - ./env/api.env.dev
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -635,7 +632,6 @@ services:
       GITHUB_OAUTH_CLIENT_ID_FILE: /run/secrets/github-oauth-client-id
       GITHUB_OAUTH_CLIENT_SECRET_FILE: /run/secrets/github-oauth-client-secret
     secrets:
-      - postgres-password
       - redis-password
       - jwt-secret
       - openrouter-api-key

@@ -73,7 +73,7 @@ test.describe('Admin Games Management Dashboard', () => {
 
     // Verify form fields present
     await expect(page.locator('input#name')).toBeVisible();
-    await expect(page.locator('input#bggId')')).toBeVisible();
+    await expect(page.locator('input#bggId')).toBeVisible();
     await expect(page.locator('textarea#description')).toBeVisible();
 
     // Verify tabs present

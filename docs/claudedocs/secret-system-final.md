@@ -6,32 +6,41 @@
 
 ---
 
-## ✅ Sistema Corretto
+## ✅ Sistema Consolidato (Issue #2570 - COMPLETE)
 
-### Flusso 1: Docker Services (Consolidato)
+### Flusso Unificato: Tutti i Servizi Usano .secret via env_file
 
-**PostgreSQL, N8N** (usano .secret via env_file):
+**Tutti i servizi** (postgres, n8n, api, grafana, alertmanager):
 ```yaml
 # docker-compose.yml
 postgres:
   env_file:
-    - ./secrets/database.secret  # POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+    - ./secrets/database.secret
+
 n8n:
   env_file:
-    - ./secrets/database.secret  # Stesso file
+    - ./secrets/database.secret
+    - ./secrets/n8n.secret
+
+api:
+  env_file:
+    - ./secrets/database.secret
+    - ./secrets/redis.secret
+    - ./secrets/jwt.secret
+    - ./secrets/openrouter.secret
+    - ./secrets/admin.secret
+    - ./secrets/oauth.secret
+
+grafana:
+  env_file:
+    - ./secrets/monitoring.secret
+
+alertmanager:
+  env_file:
+    - ./secrets/email.secret
 ```
 
-**Altri Servizi** (usano Docker secrets via .txt):
-```yaml
-api:
-  secrets:
-    - redis-password        # → ./secrets/redis-password.txt
-    - jwt-secret            # → ./secrets/jwt-secret.txt
-    - openrouter-api-key    # → ./secrets/openrouter-api-key.txt
-    - initial-admin-password # → ./secrets/initial-admin-password.txt
-    - google-oauth-client-id # → ./secrets/google-oauth-client-id.txt
-    # ... altri oauth secrets
-```
+**Risultato**: ✅ ZERO .txt files, ZERO Docker secrets, ZERO duplicazione
 
 ### Flusso 2: Sviluppo Locale (.NET API)
 

@@ -45,6 +45,16 @@ internal static class RulebookAnalysisEndpoints
             .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound);
 
+        // GET /api/v1/documents/{documentId}/analysis/status/{taskId}
+        group.MapGet("/documents/{documentId:guid}/analysis/status/{taskId}", HandleGetAnalysisStatus)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetBackgroundAnalysisStatus")
+            .WithSummary("Get status of background rulebook analysis")
+            .WithDescription("Returns the current status and progress of a background analysis task. Includes result when completed.")
+            .Produces<BackgroundAnalysisStatusDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
+
         return group;
     }
 
@@ -63,6 +73,24 @@ internal static class RulebookAnalysisEndpoints
 
         var command = new AnalyzeRulebookCommand(documentId, sharedGameId, userId);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        // Issue #2454: Return 202 Accepted for background tasks, 200 OK for synchronous
+        return result.IsBackgroundTask
+            ? Results.AcceptedAtRoute("GetBackgroundAnalysisStatus",
+                new { documentId, taskId = result.TaskId, sharedGameId },
+                result)
+            : Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetAnalysisStatus(
+        IMediator mediator,
+        Guid documentId,
+        string taskId,
+        Guid sharedGameId, // from query string
+        CancellationToken ct)
+    {
+        var query = new GetBackgroundAnalysisStatusQuery(taskId, sharedGameId, documentId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Ok(result);
     }

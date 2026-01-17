@@ -3350,6 +3350,23 @@ namespace Api.Migrations
                     b.Property<DateTime>("AddedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("CustomAgentConfigJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<long?>("CustomPdfFileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CustomPdfOriginalFileName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime?>("CustomPdfUploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomPdfUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
                     b.Property<Guid>("GameId")
                         .HasColumnType("uuid");
 
@@ -3369,6 +3386,11 @@ namespace Api.Migrations
 
                     b.HasIndex("AddedAt")
                         .HasDatabaseName("IX_UserLibraryEntries_AddedAt");
+
+                    b.HasIndex("CustomAgentConfigJson")
+                        .HasDatabaseName("IX_UserLibraryEntries_CustomAgentConfigJson");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("CustomAgentConfigJson"), "gin");
 
                     b.HasIndex("GameId");
 

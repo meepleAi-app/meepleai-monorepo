@@ -1,17 +1,24 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services.BackgroundAnalysis;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.BackgroundTasks;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 
 /// <summary>
 /// Handler for analyzing rulebooks using AI to extract structured game information.
 /// Issue #2402: Rulebook Analysis Service
+/// Issue #2453: Redis Caching Layer
+/// Issue #2454: Background Processing for Large Rulebooks
 /// </summary>
 internal sealed class AnalyzeRulebookCommandHandler
     : ICommandHandler<AnalyzeRulebookCommand, AnalyzeRulebookResultDto>
@@ -19,20 +26,32 @@ internal sealed class AnalyzeRulebookCommandHandler
     private readonly ISharedGameRepository _gameRepository;
     private readonly IRulebookAnalysisRepository _analysisRepository;
     private readonly IRulebookAnalyzer _rulebookAnalyzer;
+    private readonly IBackgroundRulebookAnalysisOrchestrator _backgroundOrchestrator;
+    private readonly IBackgroundTaskOrchestrator _taskOrchestrator;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IHybridCacheService _cache;
+    private readonly BackgroundAnalysisOptions _options;
     private readonly ILogger<AnalyzeRulebookCommandHandler> _logger;
 
     public AnalyzeRulebookCommandHandler(
         ISharedGameRepository gameRepository,
         IRulebookAnalysisRepository analysisRepository,
         IRulebookAnalyzer rulebookAnalyzer,
+        IBackgroundRulebookAnalysisOrchestrator backgroundOrchestrator,
+        IBackgroundTaskOrchestrator taskOrchestrator,
         IUnitOfWork unitOfWork,
+        IHybridCacheService cache,
+        IOptions<BackgroundAnalysisOptions> options,
         ILogger<AnalyzeRulebookCommandHandler> logger)
     {
         _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
         _analysisRepository = analysisRepository ?? throw new ArgumentNullException(nameof(analysisRepository));
         _rulebookAnalyzer = rulebookAnalyzer ?? throw new ArgumentNullException(nameof(rulebookAnalyzer));
+        _backgroundOrchestrator = backgroundOrchestrator ?? throw new ArgumentNullException(nameof(backgroundOrchestrator));
+        _taskOrchestrator = taskOrchestrator ?? throw new ArgumentNullException(nameof(taskOrchestrator));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -68,7 +87,29 @@ internal sealed class AnalyzeRulebookCommandHandler
                 command.PdfDocumentId);
         }
 
-        // 3. Analyze rulebook using AI
+        // 3. Route to sync/async based on content size (Issue #2454)
+        var isLargeRulebook = rulebookContent.Length > _options.LargeRulebookThreshold;
+
+        if (isLargeRulebook)
+        {
+            _logger.LogInformation(
+                "Large rulebook detected ({Length} chars > {Threshold}), scheduling background analysis",
+                rulebookContent.Length, _options.LargeRulebookThreshold);
+
+            return await ScheduleBackgroundAnalysisAsync(
+                command.SharedGameId,
+                command.PdfDocumentId,
+                game.Title,
+                rulebookContent,
+                command.UserId,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        _logger.LogInformation(
+            "Small rulebook ({Length} chars <= {Threshold}), using synchronous analysis",
+            rulebookContent.Length, _options.LargeRulebookThreshold);
+
+        // 3b. Synchronous analysis for small rulebooks (existing MVP flow)
         var analysisResult = await _rulebookAnalyzer.AnalyzeAsync(
             game.Title,
             rulebookContent,
@@ -116,10 +157,113 @@ internal sealed class AnalyzeRulebookCommandHandler
             newVersion,
             analysisResult.ConfidenceScore);
 
-        // 9. Map to DTO
+        // 9. Invalidate cache for this game+PDF combination
+        await InvalidateCacheAsync(command.SharedGameId, command.PdfDocumentId, cancellationToken)
+            .ConfigureAwait(false);
+
+        // 10. Map to DTO
         var analysisDto = MapToDto(analysis);
 
-        return new AnalyzeRulebookResultDto(analysisDto, DateTime.UtcNow);
+        return AnalyzeRulebookResultDto.CreateSynchronous(analysisDto);
+    }
+
+    /// <summary>
+    /// Schedules background analysis for large rulebooks with distributed locking.
+    /// Issue #2454: Background Processing for Large Rulebooks
+    /// </summary>
+    private async Task<AnalyzeRulebookResultDto> ScheduleBackgroundAnalysisAsync(
+        Guid sharedGameId,
+        Guid pdfDocumentId,
+        string gameTitle,
+        string rulebookContent,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var taskId = Guid.NewGuid().ToString();
+        var taskName = $"rulebook-analysis-{gameTitle}";
+        var lockKey = RedisKeyConstants.GetAnalysisLockKey(sharedGameId, pdfDocumentId);
+        var lockTimeout = TimeSpan.FromMinutes(10);
+
+        _logger.LogInformation(
+            "Scheduling background analysis with lock: taskId={TaskId}, game={GameTitle}, lockKey={LockKey}",
+            taskId, gameTitle, lockKey);
+
+        // Execute scheduling inside distributed lock to prevent duplicate tasks
+        var lockAcquired = await _taskOrchestrator.ExecuteWithDistributedLockAsync(
+            lockKey,
+            async ct =>
+            {
+                await _taskOrchestrator.ScheduleAsync(
+                    taskId,
+                    taskName,
+                    async taskCt =>
+                    {
+                        var result = await _backgroundOrchestrator.ExecuteBackgroundAnalysisAsync(
+                            taskId,
+                            sharedGameId,
+                            pdfDocumentId,
+                            gameTitle,
+                            rulebookContent,
+                            userId,
+                            taskCt).ConfigureAwait(false);
+
+                        if (!result.Success)
+                        {
+                            _logger.LogError(
+                                "Background analysis failed: taskId={TaskId}, error={Error}",
+                                taskId, result.ErrorMessage);
+                            throw new InvalidOperationException($"Background analysis failed: {result.ErrorMessage}");
+                        }
+
+                        _logger.LogInformation(
+                            "Background analysis completed: taskId={TaskId}, duration={Duration}s",
+                            taskId, result.Metrics.TotalDuration.TotalSeconds);
+                    },
+                    ct).ConfigureAwait(false);
+            },
+            lockTimeout,
+            cancellationToken).ConfigureAwait(false);
+
+        if (!lockAcquired)
+        {
+            _logger.LogWarning(
+                "Analysis already in progress for game {GameId}, PDF {PdfId}",
+                sharedGameId, pdfDocumentId);
+
+            throw new InvalidOperationException(
+                $"Rulebook analysis already in progress. Please wait for completion.");
+        }
+
+        return AnalyzeRulebookResultDto.CreateBackgroundTask(taskId);
+    }
+
+    /// <summary>
+    /// Invalidates cached analysis for a specific game and PDF document.
+    /// Issue #2453: Redis Caching Layer
+    /// </summary>
+    private async Task InvalidateCacheAsync(
+        Guid sharedGameId,
+        Guid pdfDocumentId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var gameTag = RedisKeyConstants.GetGameTag(sharedGameId);
+            await _cache.RemoveByTagAsync(gameTag, cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Cache invalidated for game {GameId}, PDF {PdfId}",
+                sharedGameId,
+                pdfDocumentId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Failed to invalidate cache for game {GameId}, PDF {PdfId}. Cache may serve stale data temporarily.",
+                sharedGameId,
+                pdfDocumentId);
+            // Non-fatal: Continue even if cache invalidation fails
+        }
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
@@ -7,18 +8,28 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// <summary>
 /// Handler for GetActiveRulebookAnalysisQuery.
 /// Issue #2402: Rulebook Analysis Service
+/// Issue #2453: Redis Caching Layer
 /// </summary>
 internal sealed class GetActiveRulebookAnalysisQueryHandler
     : IQueryHandler<GetActiveRulebookAnalysisQuery, RulebookAnalysisDto?>
 {
+    /// <summary>
+    /// Wrapper for caching analysis query results (including null/not-found cases).
+    /// Prevents cache stampede on "analysis doesn't exist" scenarios.
+    /// </summary>
+    private record CachedRulebookAnalysisResult(RulebookAnalysisDto? Analysis);
+
     private readonly IRulebookAnalysisRepository _analysisRepository;
+    private readonly IHybridCacheService _cache;
     private readonly ILogger<GetActiveRulebookAnalysisQueryHandler> _logger;
 
     public GetActiveRulebookAnalysisQueryHandler(
         IRulebookAnalysisRepository analysisRepository,
+        IHybridCacheService cache,
         ILogger<GetActiveRulebookAnalysisQueryHandler> logger)
     {
         _analysisRepository = analysisRepository ?? throw new ArgumentNullException(nameof(analysisRepository));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -33,22 +44,68 @@ internal sealed class GetActiveRulebookAnalysisQueryHandler
             query.SharedGameId,
             query.PdfDocumentId);
 
-        var analysis = await _analysisRepository.GetActiveAnalysisAsync(
-            query.SharedGameId,
-            query.PdfDocumentId,
-            cancellationToken).ConfigureAwait(false);
+        var cacheKey = GenerateCacheKey(query.SharedGameId, query.PdfDocumentId);
+        var cacheTags = GenerateCacheTags(query.SharedGameId, query.PdfDocumentId);
 
-        if (analysis is null)
+        // Use wrapper record to cache both "found" and "not found" results
+        // This prevents cache stampede on repeated queries for non-existent analyses
+        CachedRulebookAnalysisResult cachedResult;
+        try
         {
-            _logger.LogInformation(
-                "No active rulebook analysis found for game {SharedGameId}, PDF {PdfDocumentId}",
+            cachedResult = await _cache.GetOrCreateAsync(
+                cacheKey,
+                async (ct) =>
+                {
+                    var analysis = await _analysisRepository.GetActiveAnalysisAsync(
+                        query.SharedGameId,
+                        query.PdfDocumentId,
+                        ct).ConfigureAwait(false);
+
+                    if (analysis is null)
+                    {
+                        _logger.LogInformation(
+                            "No active rulebook analysis found for game {SharedGameId}, PDF {PdfDocumentId}",
+                            query.SharedGameId,
+                            query.PdfDocumentId);
+
+                        return new CachedRulebookAnalysisResult(null);
+                    }
+
+                    return new CachedRulebookAnalysisResult(MapToDto(analysis));
+                },
+                cacheTags,
+                TimeSpan.FromHours(24),
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Cache operation failed for game {SharedGameId}, PDF {PdfDocumentId}. Falling back to direct DB query.",
                 query.SharedGameId,
                 query.PdfDocumentId);
-            return null;
+
+            // Fallback to direct DB query if cache fails
+            var analysis = await _analysisRepository.GetActiveAnalysisAsync(
+                query.SharedGameId,
+                query.PdfDocumentId,
+                cancellationToken).ConfigureAwait(false);
+
+            return analysis is not null ? MapToDto(analysis) : null;
         }
 
-        return MapToDto(analysis);
+        return cachedResult.Analysis;
     }
+
+    private static string GenerateCacheKey(Guid sharedGameId, Guid pdfDocumentId)
+        => $"meepleai:analysis:rulebook:{sharedGameId}:{pdfDocumentId}:active";
+
+    private static string[] GenerateCacheTags(Guid sharedGameId, Guid pdfDocumentId)
+        => new[]
+        {
+            $"game:{sharedGameId}",
+            $"pdf:{pdfDocumentId}",
+            "rulebook-analysis"
+        };
 
     private static RulebookAnalysisDto MapToDto(Domain.Entities.RulebookAnalysis analysis)
     {

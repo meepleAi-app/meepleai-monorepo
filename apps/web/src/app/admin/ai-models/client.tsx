@@ -19,6 +19,7 @@ import { AlertCircle, Star, TrendingUp } from 'lucide-react';
 import { useAiModels, useCostTracking, useSetPrimaryModel } from '@/hooks/queries';
 import { AiModelsTable } from '@/components/admin/AiModelsTable';
 import { SetPrimaryModelDialog } from '@/components/admin/SetPrimaryModelDialog';
+import { ModelConfigModal } from '@/components/admin/ModelConfigModal';
 import { toast } from '@/components/layout/Toast';
 import type { AiModelDto } from '@/lib/api';
 
@@ -268,8 +269,13 @@ export function AiModelsClient() {
         isLoading={setPrimaryMutation.isPending}
       />
 
-      {/* Configure Modal Placeholder (Phase 4) */}
-      {/* <ModelConfigModal ... /> */}
+      {/* Configure Modal */}
+      <ModelConfigModal
+        isOpen={configureModal.isOpen}
+        onClose={() => setConfigureModal((prev) => ({ ...prev, isOpen: false }))}
+        modelId={configureModal.modelId}
+        model={configureModal.model}
+      />
     </AdminLayout>
   );
 }

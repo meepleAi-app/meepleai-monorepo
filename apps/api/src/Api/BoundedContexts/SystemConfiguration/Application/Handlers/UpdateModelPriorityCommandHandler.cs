@@ -9,18 +9,18 @@ using Api.SharedKernel.Infrastructure.Persistence;
 namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 
 /// <summary>
-/// Handler for toggling AI model active status
+/// Handler for updating AI model priority (fallback chain ordering)
 /// </summary>
 /// <remarks>
-/// Issue #2567: PATCH /api/v1/admin/ai-models/{id}/toggle endpoint handler
-/// Toggles between active and inactive state
+/// Issue #2567: PATCH /api/v1/admin/ai-models/{id}/priority endpoint handler
+/// Lower priority = higher preference (1 = primary, 2 = first fallback, etc.)
 /// </remarks>
-internal sealed class ToggleAiModelActiveCommandHandler : ICommandHandler<ToggleAiModelActiveCommand, AiModelDto>
+internal sealed class UpdateModelPriorityCommandHandler : ICommandHandler<UpdateModelPriorityCommand, AiModelDto>
 {
     private readonly IAiModelConfigurationRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public ToggleAiModelActiveCommandHandler(
+    public UpdateModelPriorityCommandHandler(
         IAiModelConfigurationRepository repository,
         IUnitOfWork unitOfWork)
     {
@@ -28,7 +28,7 @@ internal sealed class ToggleAiModelActiveCommandHandler : ICommandHandler<Toggle
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
-    public async Task<AiModelDto> Handle(ToggleAiModelActiveCommand command, CancellationToken cancellationToken)
+    public async Task<AiModelDto> Handle(UpdateModelPriorityCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -39,14 +39,7 @@ internal sealed class ToggleAiModelActiveCommandHandler : ICommandHandler<Toggle
             throw new NotFoundException("AiModel", command.Id.ToString());
         }
 
-        // Business rule: Primary model cannot be deactivated
-        if (model.IsPrimary && model.IsActive)
-        {
-            throw new ConflictException("Cannot deactivate primary AI model. Set another model as primary first.");
-        }
-
-        // Toggle active status
-        model.SetActive(!model.IsActive);
+        model.UpdatePriority(command.NewPriority);
 
         await _repository.UpdateAsync(model, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

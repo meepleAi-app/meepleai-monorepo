@@ -231,4 +231,93 @@ public class AnalyzeRulebookCommandHandlerTests
             r => r.DeactivateAllAsync(game.Id, pdfDocumentId, It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    #region Sync/Async Routing (Issue #2525)
+
+    [Fact]
+    public async Task Handle_WithSmallRulebook_UsesSynchronousPath()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var game = CreateTestGame(userId);
+        var pdfDocumentId = Guid.NewGuid();
+        var smallRulebookContent = new string('A', 25000); // < 30k threshold
+
+        var command = new AnalyzeRulebookCommand(pdfDocumentId, game.Id, userId);
+        var analysisResult = CreateTestAnalysisResult();
+
+        _gameRepositoryMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        _analysisRepositoryMock
+            .Setup(r => r.GetPdfTextAsync(pdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(smallRulebookContent);
+
+        _analysisRepositoryMock
+            .Setup(r => r.GetByPdfDocumentIdAsync(pdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<RulebookAnalysis>());
+
+        _rulebookAnalyzerMock
+            .Setup(a => a.AnalyzeAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(analysisResult);
+
+        // Act
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert - Synchronous response
+        result.Should().NotBeNull();
+        result.IsBackgroundTask.Should().BeFalse();
+        result.Analysis.Should().NotBeNull();
+        result.TaskId.Should().BeNull();
+
+        // Verify synchronous analyzer was called
+        _rulebookAnalyzerMock.Verify(
+            a => a.AnalyzeAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    private static SharedGame CreateTestGame(Guid userId)
+    {
+        return SharedGame.Create(
+            title: "Test Game",
+            yearPublished: 2020,
+            description: "Test description",
+            minPlayers: 2,
+            maxPlayers: 4,
+            playingTimeMinutes: 60,
+            minAge: 10,
+            complexityRating: 2.0m,
+            averageRating: 7.0m,
+            imageUrl: "https://example.com/game.jpg",
+            thumbnailUrl: "https://example.com/thumb.jpg",
+            rules: null,
+            createdBy: userId,
+            bggId: 1);
+    }
+
+    private static RulebookAnalysisResult CreateTestAnalysisResult()
+    {
+        return new RulebookAnalysisResult(
+            GameTitle: "Test Game",
+            Summary: "Test summary",
+            KeyMechanics: ["Strategy"],
+            VictoryConditions: VictoryConditions.Create("First to win", alternatives: null, isPointBased: true, targetPoints: 10),
+            Resources: [Resource.Create("Gold", "Currency")],
+            GamePhases: [GamePhase.Create("Action", "Take action", 1)],
+            CommonQuestions: ["How to play?"],
+            ConfidenceScore: 0.85m);
+    }
+
+    #endregion
 }

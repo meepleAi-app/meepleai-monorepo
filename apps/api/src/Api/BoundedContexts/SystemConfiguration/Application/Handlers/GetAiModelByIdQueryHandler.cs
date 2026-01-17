@@ -1,56 +1,56 @@
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
+using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 
-public sealed class GetAiModelByIdQueryHandler : IQueryHandler<GetAiModelByIdQuery, AiModelConfigDto>
+/// <summary>
+/// Handler for retrieving a single AI model configuration by ID
+/// </summary>
+/// <remarks>
+/// Issue #2567: GET /api/v1/admin/ai-models/{id} endpoint handler
+/// </remarks>
+internal sealed class GetAiModelByIdQueryHandler : IQueryHandler<GetAiModelByIdQuery, AiModelDto>
 {
     private readonly IAiModelConfigurationRepository _repository;
 
-    public GetAiModelByIdQueryHandler(IAiModelConfigurationRepository repository) => _repository = repository;
-
-    public async Task<AiModelConfigDto> Handle(GetAiModelByIdQuery request, CancellationToken cancellationToken)
+    public GetAiModelByIdQueryHandler(IAiModelConfigurationRepository repository)
     {
-        var model = await _repository.GetByIdAsync(request.Id, cancellationToken).ConfigureAwait(false)
-            ?? throw new NotFoundException($"AI model {request.Id} not found");
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+    }
+
+    public async Task<AiModelDto> Handle(GetAiModelByIdQuery query, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var model = await _repository.GetByIdAsync(query.Id, cancellationToken).ConfigureAwait(false);
+
+        if (model is null)
+        {
+            throw new NotFoundException("AiModel", query.Id.ToString());
+        }
 
         return MapToDto(model);
     }
 
-    private static AiModelConfigDto MapToDto(Domain.Entities.AiModelConfiguration model) => new()
+    private static AiModelDto MapToDto(AiModelConfiguration model)
     {
-        Id = model.Id,
-        ModelId = model.ModelId,
-        DisplayName = model.DisplayName,
-        Provider = model.Provider,
-        Priority = model.Priority,
-        IsActive = model.IsActive,
-        IsPrimary = model.IsPrimary,
-        CreatedAt = model.CreatedAt,
-        UpdatedAt = model.UpdatedAt,
-        Settings = new ModelSettingsDto
+        return new AiModelDto
         {
-            MaxTokens = model.Settings.MaxTokens,
-            Temperature = model.Settings.Temperature,
-            TopP = model.Settings.TopP,
-            FrequencyPenalty = model.Settings.FrequencyPenalty,
-            PresencePenalty = model.Settings.PresencePenalty
-        },
-        Pricing = new ModelPricingDto
-        {
-            InputPricePerMillion = model.Pricing.InputPricePerMillion,
-            OutputPricePerMillion = model.Pricing.OutputPricePerMillion,
-            Currency = model.Pricing.Currency
-        },
-        Usage = new UsageStatsDto
-        {
-            TotalRequests = model.Usage.TotalRequests,
-            TotalTokensUsed = model.Usage.TotalTokensUsed,
-            TotalCostUsd = model.Usage.TotalCostUsd,
-            LastUsedAt = model.Usage.LastUsedAt
-        }
-    };
+            Id = model.Id,
+            ModelId = model.ModelId,
+            DisplayName = model.DisplayName,
+            Provider = model.Provider,
+            Priority = model.Priority,
+            IsActive = model.IsActive,
+            IsPrimary = model.IsPrimary,
+            CreatedAt = model.CreatedAt,
+            UpdatedAt = model.UpdatedAt,
+            Settings = model.Settings,
+            Usage = model.Usage
+        };
+    }
 }

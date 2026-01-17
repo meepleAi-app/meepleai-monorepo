@@ -49,8 +49,8 @@ internal sealed class UpdateAiModelCommandHandler : ICommandHandler<UpdateAiMode
         if (command.Settings.Pricing != model.Settings.Pricing)
         {
             model.UpdatePricing(
-                command.Settings.Pricing.InputCostPer1M,
-                command.Settings.Pricing.OutputCostPer1M
+                command.Settings.Pricing.InputPricePerMillion,
+                command.Settings.Pricing.OutputPricePerMillion
             );
         }
 

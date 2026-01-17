@@ -67,8 +67,8 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                     maxTokens: 4096,
                     temperature: 0.7m,
                     pricing: new ModelPricing(
-                        inputCostPer1M: 0.10m,  // OpenRouter 2026 rates
-                        outputCostPer1M: 0.32m
+                        inputPricePerMillion: 0.10m,  // OpenRouter 2026 rates
+                        outputPricePerMillion: 0.32m
                     )
                 ),
                 isActive: true,
@@ -96,8 +96,8 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                     maxTokens: 4096,
                     temperature: 0.7m,
                     pricing: new ModelPricing(
-                        inputCostPer1M: 0.19m,  // OpenRouter 2026 rates
-                        outputCostPer1M: 0.87m
+                        inputPricePerMillion: 0.19m,  // OpenRouter 2026 rates
+                        outputPricePerMillion: 0.87m
                     )
                 ),
                 isActive: true,

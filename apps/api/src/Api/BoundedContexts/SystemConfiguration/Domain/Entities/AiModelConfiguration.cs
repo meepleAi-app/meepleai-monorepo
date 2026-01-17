@@ -119,12 +119,12 @@ public sealed class AiModelConfiguration
     }
 
     /// <summary>
-    /// Update pricing information (Issue #2520)
+    /// Update pricing information (Issue #2520, Issue #2580: Updated to use InputPricePerMillion API)
     /// Creates new immutable Settings value object with updated pricing
     /// </summary>
-    public void UpdatePricing(decimal inputCostPer1M, decimal outputCostPer1M)
+    public void UpdatePricing(decimal inputPricePerMillion, decimal outputPricePerMillion)
     {
-        var newPricing = new ModelPricing(inputCostPer1M, outputCostPer1M);
+        var newPricing = new ModelPricing(inputPricePerMillion, outputPricePerMillion);
         Settings = new ModelSettings(Settings.MaxTokens, Settings.Temperature, newPricing);
         UpdatedAt = DateTime.UtcNow;
     }
@@ -144,7 +144,7 @@ public sealed class AiModelConfiguration
         if (costUsd < 0)
             throw new ArgumentException("CostUsd cannot be negative", nameof(costUsd));
 
-        Usage = Usage.TrackRequest(inputTokens, outputTokens, costUsd);
+        Usage = Usage.RecordUsage(inputTokens + outputTokens, costUsd); // Issue #2580: Use RecordUsage API
         UpdatedAt = DateTime.UtcNow;
     }
 }

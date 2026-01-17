@@ -63,5 +63,21 @@ public sealed class AiModelConfigurationEntityConfiguration : IEntityTypeConfigu
 
         builder.HasIndex(e => new { e.IsPrimary, e.IsActive })
             .HasDatabaseName("IX_AiModelConfigurations_IsPrimary_IsActive");
+
+        // Issue #2520: JSONB columns for flexible configuration
+        builder.Property(e => e.SettingsJson)
+            .HasColumnType("jsonb")
+            .IsRequired()
+            .HasDefaultValue("{}");
+
+        builder.Property(e => e.PricingJson)
+            .HasColumnType("jsonb")
+            .IsRequired()
+            .HasDefaultValue("{}");
+
+        builder.Property(e => e.UsageJson)
+            .HasColumnType("jsonb")
+            .IsRequired()
+            .HasDefaultValue("{}");
     }
 }

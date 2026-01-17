@@ -276,8 +276,8 @@ internal sealed class LlmRulebookMerger : IRulebookMerger
         public int DuplicatesRemoved { get; init; }
     }
 
-    // DTO for LLM response
-    private sealed record LlmMergedResponse
+    // DTO for LLM response (internal for testability - Issue #2525)
+    internal sealed record LlmMergedResponse
     {
         [JsonPropertyName("gameTitle")]
         public string GameTitle { get; init; } = string.Empty;
@@ -304,7 +304,7 @@ internal sealed class LlmRulebookMerger : IRulebookMerger
         public decimal ConfidenceScore { get; init; }
     }
 
-    private sealed record LlmVictoryConditionsDto
+    internal sealed record LlmVictoryConditionsDto
     {
         [JsonPropertyName("primary")]
         public string Primary { get; init; } = string.Empty;
@@ -319,7 +319,7 @@ internal sealed class LlmRulebookMerger : IRulebookMerger
         public int? TargetPoints { get; init; }
     }
 
-    private sealed record LlmResourceDto
+    internal sealed record LlmResourceDto
     {
         [JsonPropertyName("name")]
         public string Name { get; init; } = string.Empty;
@@ -334,7 +334,7 @@ internal sealed class LlmRulebookMerger : IRulebookMerger
         public bool IsLimited { get; init; }
     }
 
-    private sealed record LlmGamePhaseDto
+    internal sealed record LlmGamePhaseDto
     {
         [JsonPropertyName("name")]
         public string Name { get; init; } = string.Empty;

@@ -88,35 +88,65 @@ export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading }: 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
-              <div className="flex items-center">
+            <TableHead>
+              <button
+                type="button"
+                className="flex items-center cursor-pointer hover:underline focus:outline-none focus:ring-2 focus:ring-primary rounded px-1"
+                onClick={() => handleSort('name')}
+                aria-label={`Sort by model ${sortField === 'name' ? (sortOrder === 'asc' ? 'descending' : 'ascending') : ''}`}
+                aria-sort={sortField === 'name' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
                 Model
                 <SortIndicator field="name" />
-              </div>
+              </button>
             </TableHead>
-            <TableHead className="cursor-pointer" onClick={() => handleSort('provider')}>
-              <div className="flex items-center">
+            <TableHead>
+              <button
+                type="button"
+                className="flex items-center cursor-pointer hover:underline focus:outline-none focus:ring-2 focus:ring-primary rounded px-1"
+                onClick={() => handleSort('provider')}
+                aria-label={`Sort by provider ${sortField === 'provider' ? (sortOrder === 'asc' ? 'descending' : 'ascending') : ''}`}
+                aria-sort={sortField === 'provider' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
                 Provider
                 <SortIndicator field="provider" />
-              </div>
+              </button>
             </TableHead>
-            <TableHead className="cursor-pointer" onClick={() => handleSort('cost')}>
-              <div className="flex items-center">
+            <TableHead>
+              <button
+                type="button"
+                className="flex items-center cursor-pointer hover:underline focus:outline-none focus:ring-2 focus:ring-primary rounded px-1"
+                onClick={() => handleSort('cost')}
+                aria-label={`Sort by cost ${sortField === 'cost' ? (sortOrder === 'asc' ? 'descending' : 'ascending') : ''}`}
+                aria-sort={sortField === 'cost' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
                 Cost/1K Tokens
                 <SortIndicator field="cost" />
-              </div>
+              </button>
             </TableHead>
-            <TableHead className="cursor-pointer" onClick={() => handleSort('usage')}>
-              <div className="flex items-center">
+            <TableHead>
+              <button
+                type="button"
+                className="flex items-center cursor-pointer hover:underline focus:outline-none focus:ring-2 focus:ring-primary rounded px-1"
+                onClick={() => handleSort('usage')}
+                aria-label={`Sort by usage ${sortField === 'usage' ? (sortOrder === 'asc' ? 'descending' : 'ascending') : ''}`}
+                aria-sort={sortField === 'usage' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
                 Usage
                 <SortIndicator field="usage" />
-              </div>
+              </button>
             </TableHead>
-            <TableHead className="cursor-pointer" onClick={() => handleSort('status')}>
-              <div className="flex items-center">
+            <TableHead>
+              <button
+                type="button"
+                className="flex items-center cursor-pointer hover:underline focus:outline-none focus:ring-2 focus:ring-primary rounded px-1"
+                onClick={() => handleSort('status')}
+                aria-label={`Sort by status ${sortField === 'status' ? (sortOrder === 'asc' ? 'descending' : 'ascending') : ''}`}
+                aria-sort={sortField === 'status' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
                 Status
                 <SortIndicator field="status" />
-              </div>
+              </button>
             </TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>

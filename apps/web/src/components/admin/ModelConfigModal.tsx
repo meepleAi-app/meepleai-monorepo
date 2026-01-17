@@ -45,6 +45,7 @@ export function ModelConfigModal({ isOpen, onClose, modelId, model }: ModelConfi
   // Form state
   const [temperature, setTemperature] = useState(DEFAULT_MODEL_CONFIG.temperature);
   const [maxTokens, setMaxTokens] = useState(DEFAULT_MODEL_CONFIG.maxTokens);
+  const [maxTokensError, setMaxTokensError] = useState<string | null>(null);
   const [testPrompt, setTestPrompt] = useState('Explain quantum computing in one sentence.');
   const [testResult, setTestResult] = useState<{
     response: string;
@@ -61,9 +62,22 @@ export function ModelConfigModal({ isOpen, onClose, modelId, model }: ModelConfi
     if (isOpen && model) {
       setTemperature(model.temperature);
       setMaxTokens(model.maxTokens);
+      setMaxTokensError(null);
       setTestResult(null);
     }
   }, [isOpen, model]);
+
+  // Max tokens validation handler
+  const handleMaxTokensChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setMaxTokens(value);
+
+    if (value < 512 || value > 8192) {
+      setMaxTokensError('Max tokens must be between 512 and 8192');
+    } else {
+      setMaxTokensError(null);
+    }
+  };
 
   const handleSave = async () => {
     if (!model) return;
@@ -162,11 +176,20 @@ export function ModelConfigModal({ isOpen, onClose, modelId, model }: ModelConfi
               max={8192}
               step={256}
               value={maxTokens}
-              onChange={(e) => setMaxTokens(Number(e.target.value))}
+              onChange={handleMaxTokensChange}
+              aria-invalid={!!maxTokensError}
+              aria-describedby={maxTokensError ? 'maxTokens-error' : undefined}
+              className={maxTokensError ? 'border-destructive' : ''}
             />
-            <p className="text-sm text-muted-foreground">
-              Maximum response length (512-8192 tokens)
-            </p>
+            {maxTokensError ? (
+              <p id="maxTokens-error" className="text-sm text-destructive">
+                {maxTokensError}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Maximum response length (512-8192 tokens)
+              </p>
+            )}
           </div>
 
           {/* Test Model Section */}
@@ -225,7 +248,7 @@ export function ModelConfigModal({ isOpen, onClose, modelId, model }: ModelConfi
           <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button onClick={handleSave} disabled={isSaving || !!maxTokensError}>
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -59,11 +59,11 @@ export function useAiModels(
       return api.admin.getAiModels(params);
     },
     enabled,
-    // Refresh every 30 seconds for real-time usage stats
-    refetchInterval: 30_000,
+    // Refresh every 2 minutes (model config changes infrequently)
+    refetchInterval: 2 * 60 * 1000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
-    staleTime: 30_000,
+    staleTime: 2 * 60 * 1000,
     retry: (failureCount, error) => {
       // Don't retry on auth errors
       if (error instanceof Error && (error.message.includes('401') || error.message.includes('403'))) {
@@ -204,25 +204,35 @@ export function useSetPrimaryModel(): UseMutationResult<
     onMutate: async (request) => {
       await queryClient.cancelQueries({ queryKey: aiModelsKeys.lists() });
 
-      const previousModels = queryClient.getQueryData<PagedAiModels>(aiModelsKeys.lists()[0]);
-
-      queryClient.setQueryData<PagedAiModels>(aiModelsKeys.lists()[0], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          items: old.items.map((model) => ({
-            ...model,
-            isPrimary: model.id === request.modelId,
-          })),
-        };
+      // Store ALL list queries for rollback
+      const allListQueries = queryClient.getQueriesData<PagedAiModels>({
+        queryKey: aiModelsKeys.lists(),
       });
 
-      return { previousModels };
+      // Update ALL cached list queries
+      queryClient.setQueriesData<PagedAiModels>(
+        { queryKey: aiModelsKeys.lists() },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: old.items.map((model) => ({
+              ...model,
+              isPrimary: model.id === request.modelId,
+            })),
+          };
+        }
+      );
+
+      return { allListQueries };
     },
 
     onError: (_error, _request, context) => {
-      if (context?.previousModels) {
-        queryClient.setQueryData(aiModelsKeys.lists()[0], context.previousModels);
+      if (context?.allListQueries) {
+        // Restore ALL previous queries
+        context.allListQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
     },
 

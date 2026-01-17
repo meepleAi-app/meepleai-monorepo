@@ -27,22 +27,32 @@ export function BudgetAlertBanner({ costData }: BudgetAlertBannerProps) {
 
   // Check localStorage for dismissed state
   useEffect(() => {
-    const dismissed = localStorage.getItem('budget-alert-dismissed');
-    if (dismissed) {
-      const dismissedDate = new Date(dismissed);
-      const now = new Date();
-      // Reset dismissal after 24 hours
-      if (now.getTime() - dismissedDate.getTime() < 24 * 60 * 60 * 1000) {
-        setIsDismissed(true);
-      } else {
-        localStorage.removeItem('budget-alert-dismissed');
+    try {
+      const dismissed = localStorage.getItem('budget-alert-dismissed');
+      if (dismissed) {
+        const dismissedDate = new Date(dismissed);
+        const now = new Date();
+        // Reset dismissal after 24 hours
+        if (now.getTime() - dismissedDate.getTime() < 24 * 60 * 60 * 1000) {
+          setIsDismissed(true);
+        } else {
+          localStorage.removeItem('budget-alert-dismissed');
+        }
       }
+    } catch (error) {
+      console.warn('localStorage unavailable for budget alert:', error);
+      // Degrade gracefully - alert remains dismissible for session only
     }
   }, []);
 
   const handleDismiss = () => {
     setIsDismissed(true);
-    localStorage.setItem('budget-alert-dismissed', new Date().toISOString());
+    try {
+      localStorage.setItem('budget-alert-dismissed', new Date().toISOString());
+    } catch (error) {
+      console.warn('Failed to persist budget alert dismissal:', error);
+      // Still dismiss for current session
+    }
   };
 
   // Don't show if dismissed or on track

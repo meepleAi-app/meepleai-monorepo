@@ -19,6 +19,9 @@ public sealed class AiModelConfigurationEntity
     // JSON Settings (JSONB) - Issue #2520: More flexible than individual columns
     public string SettingsJson { get; set; } = "{}";
 
+    // JSON Pricing (JSONB) - Issue #2520, Migration 20260117090414
+    public string PricingJson { get; set; } = "{}";
+
     // JSON Usage Stats (JSONB) - Issue #2520
     public string UsageJson { get; set; } = "{}";
 }

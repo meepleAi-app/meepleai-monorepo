@@ -62,21 +62,42 @@ Table "SystemConfiguration.AiModelConfigurations"
  usage_json    | jsonb                    ← VERIFIED
 ```
 
-### ❌ Task 3: API Server Startup (BLOCKED)
-- **Status**: BLOCKED
-- **Error**: Missing Dependency Injection registrations
-- **Root Cause**: `SystemConfiguration` Bounded Context missing DI configuration file
+### ✅ Task 3: API Server Startup (COMPLETED)
+- **Status**: COMPLETED WITH FINDINGS
+- **Result**: API starts successfully after DI fixes
+- **Critical Discovery**: HTTP endpoints NOT implemented in PR #2562
 
-**Error Details**:
-```
-System.AggregateException: Some services are not able to be constructed
-- Unable to resolve service for type 'IConfigurationRepository'
-- Unable to resolve service for type 'IGameStateParser'
+**DI Fixes Applied**:
+```csharp
+// SystemConfigurationServiceExtensions.cs
+services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
+services.AddScoped<ConfigurationValidator>();
 
-Missing registrations for:
-  - SystemConfiguration/Infrastructure/DependencyInjection.cs
-  - KnowledgeBase/Application/Services/IGameStateParser
+// KnowledgeBaseServiceExtensions.cs
+services.AddScoped<IGameStateParser, GameStateParser>();  // Was: AddScoped<GameStateParser>()
 ```
+
+**API Startup Status**:
+- ✅ Secrets loaded (16 files, 0 critical missing)
+- ✅ PostgreSQL connected
+- ✅ Qdrant initialized, collection created
+- ✅ 6 AI models seeded with JSONB columns
+- ✅ Admin/test users seeded
+- ✅ Health endpoint responds: http://localhost:8080/health
+- ⚠️ Redis authentication failed (wrong password in .env.development)
+
+**Missing Implementation**:
+```
+GET    /api/v1/admin/ai-models → 404 Not Found
+GET    /api/v1/admin/ai-models/:id → NOT TESTED (endpoint missing)
+POST   /api/v1/admin/ai-models → NOT TESTED (endpoint missing)
+PUT    /api/v1/admin/ai-models/:id → NOT TESTED (endpoint missing)
+DELETE /api/v1/admin/ai-models/:id → NOT TESTED (endpoint missing)
+PATCH  /api/v1/admin/ai-models/:id/priority → NOT TESTED (endpoint missing)
+PATCH  /api/v1/admin/ai-models/:id/toggle → NOT TESTED (endpoint missing)
+```
+
+**Root Cause**: PR #2562 implemented domain layer (entities, repositories, handlers) but did NOT create HTTP routing endpoints
 
 ---
 
@@ -89,14 +110,22 @@ Missing registrations for:
 - **Documentation**: `docs/claudedocs/issue-2565-secret-consolidation-analysis.md`
 - **Follow-up**: Issue #2566 should consolidate all secrets
 
-### 2. Missing DI Registrations ⚠️ BLOCKER
+### 2. Missing DI Registrations ✅ FIXED
 - **Affected**: `SystemConfiguration`, `KnowledgeBase` bounded contexts
 - **Missing**:
-  - `IConfigurationRepository` → `ConfigurationRepository`
-  - `ConfigurationValidator` service
-  - `IGameStateParser` service
-- **Impact**: API cannot start, all 7 admin endpoints untestable
-- **Required Fix**: Create `DependencyInjection.cs` files and register services
+  - `IConfigurationRepository` → `ConfigurationRepository` registration
+  - `ConfigurationValidator` service registration
+  - `IGameStateParser` interface mapping (was registering concrete class only)
+- **Fix Applied**:
+  - Added missing registrations to `SystemConfigurationServiceExtensions.cs`
+  - Fixed `IGameStateParser` registration in `KnowledgeBaseServiceExtensions.cs`
+- **Impact**: API now starts successfully
+
+### 3. Missing HTTP Endpoints ⚠️ BLOCKER
+- **Affected**: All 7 admin endpoints for AI model management
+- **Missing**: `apps/api/src/Api/Routing/AiModelAdminEndpoints.cs` (or similar)
+- **Impact**: Cannot test Issue #2520 functionality via HTTP API
+- **Root Cause**: PR #2562 implemented domain layer but not HTTP layer
 
 ### 3. Database Password Special Characters ✅ FIXED
 - **Issue**: Password `T,M]A]B:2dVz5;m!.J]1` contained `;` causing connection string parsing errors
@@ -158,29 +187,32 @@ docs/claudedocs/issue-2565-verification-report.md (this file)
 
 ## Recommendations
 
-### Immediate Actions (Unblock Issue #2565)
+### Immediate Actions (Complete Issue #2520)
 
-1. **Create DependencyInjection.cs for SystemConfiguration**
+1. **Create HTTP Routing File** (CRITICAL):
+   - File: `apps/api/src/Api/Routing/AiModelAdminEndpoints.cs`
+   - Implement 7 endpoint mappings using MediatR pattern
+   - All endpoints require authorization (admin role)
+
+2. **Create Missing Commands/Queries**:
+   - `GetAllAiModelsQuery` → Returns list of all AI models
+   - `GetAiModelByIdQuery` → Returns single model by ID
+   - `CreateAiModelCommand` → Creates new AI model configuration
+   - `UpdateAiModelCommand` → Updates existing model
+   - `DeleteAiModelCommand` → Soft-deletes model
+   - `UpdateModelPriorityCommand` → Changes model priority for fallback chain
+   - `ToggleModelActiveCommand` → Enables/disables model
+
+3. **Create Command/Query Handlers**:
+   - Each handler uses `IAiModelConfigurationRepository`
+   - Validate input with FluentValidation
+   - Return DTOs (not entities)
+
+4. **Register Endpoints**:
    ```csharp
-   // apps/api/src/Api/BoundedContexts/SystemConfiguration/Infrastructure/DependencyInjection.cs
-   public static class DependencyInjection
-   {
-       public static IServiceCollection AddSystemConfiguration(this IServiceCollection services)
-       {
-           services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
-           services.AddScoped<ConfigurationValidator>();
-           return services;
-       }
-   }
+   // Program.cs (after other endpoint mappings)
+   app.MapAiModelAdminEndpoints();
    ```
-
-2. **Register SystemConfiguration services in Program.cs**
-   ```csharp
-   // Add after other bounded context registrations
-   builder.Services.AddSystemConfiguration();
-   ```
-
-3. **Create IGameStateParser implementation** (or stub if not needed yet)
 
 ### Follow-up Issues
 
@@ -202,23 +234,40 @@ docs/claudedocs/issue-2565-verification-report.md (this file)
 |------|--------|----------|
 | Docker Environment | ✅ PASS | All services healthy |
 | Database Migration | ✅ PASS | 7 migrations applied, JSONB columns verified |
-| API Startup | ❌ BLOCKED | DI registration errors |
-| Admin Endpoints | ⏸️ PENDING | Blocked by API startup |
-| Cost Tracking | ⏸️ PENDING | Blocked by API startup |
-| Fallback Chain | ⏸️ PENDING | Blocked by API startup |
+| DI Registrations | ✅ FIXED | IConfigurationRepository, IGameStateParser registered |
+| API Startup | ✅ PASS | API responds on http://localhost:8080 |
+| Admin Endpoints | ❌ NOT IMPLEMENTED | All 7 endpoints return 404 (not created in PR #2562) |
+| Cost Tracking | ⏸️ BLOCKED | Blocked by missing endpoints |
+| Fallback Chain | ⏸️ BLOCKED | Blocked by missing endpoints |
 
 ---
 
 ## Conclusion
 
-**Issue #2520 implementation is incomplete**. While database schema and migrations are correct, the application cannot start due to missing service registrations. This is a **critical implementation gap** that must be resolved before verification can proceed.
+**Issue #2520 (PR #2562) is INCOMPLETE**. The implementation includes:
+
+✅ **Completed**:
+- Domain layer (entities, value objects, repositories)
+- Database schema (migrations, JSONB columns)
+- CQRS handlers (partially - seed handler exists)
+- Dependency injection (after fixes)
+
+❌ **Missing**:
+- HTTP endpoints (all 7 admin endpoints for AI model management)
+- Commands/Queries for CRUD operations
+- Endpoint routing registration
+
+**Verification Status**: **PARTIALLY COMPLETE**
+- Tasks 1-3: ✅ Database and API startup verified
+- Tasks 4-5: ❌ Cannot test without HTTP endpoints
 
 **Next Steps**:
-1. Fix DI registrations (new issue or reopen #2520)
-2. Resume verification testing once API starts successfully
-3. Complete remaining tasks (admin endpoints, cost tracking, fallback chain)
+1. Reopen Issue #2520 or create Issue #2568 "Add HTTP endpoints for AI model admin"
+2. Implement missing HTTP layer (endpoints, commands, handlers)
+3. Resume verification testing once endpoints exist
 
 ---
 
-**Estimated Time to Unblock**: 30-60 minutes (create DI files + test API startup)
+**Time Invested**: ~2 hours
+**Remaining Work**: 1-2 hours (implement HTTP layer)
 

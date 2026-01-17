@@ -117,6 +117,144 @@ app.MapPost("/api/v1/auth/register", async (
 
 ---
 
+## Secret Management
+
+**System**: Single source of truth using `.secret` files (Issue #2570 - Consolidated 2026-01-17)
+
+### Architecture
+
+**All services use .secret files via env_file** (no Docker secrets, no .txt files):
+
+```yaml
+# docker-compose.yml pattern
+service:
+  env_file:
+    - ./secrets/service-name.secret  # Multi-variable KEY=VALUE format
+```
+
+**File Structure**:
+```
+infra/secrets/
+├── *.secret           # Real values (gitignored, NEVER commit)
+├── *.secret.example   # Templates (committed, safe)
+└── setup-secrets.ps1  # ONLY script (generates .secret from examples)
+```
+
+### Secret Files (10 total)
+
+**CRITICAL** (startup blocked if missing):
+- `database.secret` - POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+- `redis.secret` - REDIS_PASSWORD
+- `qdrant.secret` - QDRANT_API_KEY
+- `jwt.secret` - JWT_SECRET_KEY, JWT_ISSUER, JWT_AUDIENCE
+- `admin.secret` - ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_DISPLAY_NAME
+- `embedding-service.secret` - EMBEDDING_SERVICE_API_KEY
+
+**IMPORTANT** (warnings if missing):
+- `openrouter.secret` - OPENROUTER_API_KEY, OPENROUTER_DEFAULT_MODEL
+- `unstructured-service.secret` - UNSTRUCTURED_API_KEY
+- `bgg.secret` - BGG_USERNAME, BGG_PASSWORD (optional for dev)
+
+**OPTIONAL**:
+- `oauth.secret` - GOOGLE_*, GITHUB_*, DISCORD_* (6 OAuth credentials)
+- `email.secret` - SMTP_*, GMAIL_APP_PASSWORD
+- `monitoring.secret` - GRAFANA_ADMIN_PASSWORD, PROMETHEUS_PASSWORD, SLACK_WEBHOOK_URL
+- `n8n.secret` - N8N_ENCRYPTION_KEY, N8N_BASIC_AUTH_PASSWORD
+- `storage.secret` - S3_* (if using cloud storage)
+- `traefik.secret` - TRAEFIK_DASHBOARD_*
+- `smoldocling-service.secret` - SMOLDOCLING_API_KEY
+- `reranker-service.secret` - RERANKER_API_KEY
+
+### Workflow
+
+**Initial Setup**:
+```bash
+cd infra/secrets
+pwsh setup-secrets.ps1 -SaveGenerated
+# Creates all .secret files with auto-generated secure values
+```
+
+**Update Secret**:
+```bash
+# 1. Edit .secret file
+nano infra/secrets/redis.secret
+
+# 2. Restart service
+cd infra
+docker compose restart redis
+
+# Done! No manual sync needed
+```
+
+**Development** (.env.development):
+- Located in repo root
+- Loaded by Program.cs via DotNetEnv
+- ⚠️ Manually synchronized with .secret files
+- ✅ Gitignored (safe)
+
+### Security Rules
+
+**✅ DO**:
+- Use `.secret` files as single source of truth
+- Run `setup-secrets.ps1` for initial generation
+- Keep all `.secret` files gitignored
+- Rotate passwords every 90 days
+- Sync `.env.development` manually after `.secret` changes
+
+**❌ DON'T**:
+- NEVER commit `.secret` files
+- NEVER commit `.env` files
+- NEVER include real secret values in documentation
+- NEVER use development secrets in production
+- NEVER create `.txt` files manually (deprecated system)
+
+### Backend Validation
+
+**SecretLoader.cs** automatically validates all secrets at startup:
+- Location: `apps/api/src/Api/Infrastructure/Configuration/SecretLoader.cs`
+- Definitions: `SecretDefinitions.cs` (3-level validation)
+- Levels: Critical (blocks startup), Important (warns), Optional (info)
+
+**Example Output**:
+```
+[INF] Secret validation complete: 17 loaded, 0 critical missing, 2 optional missing
+```
+
+### Troubleshooting
+
+**Missing secrets**:
+```bash
+# Check which secrets are missing
+cd apps/api/src/Api
+dotnet run
+# Logs will show: "CRITICAL secrets missing: database.secret:POSTGRES_PASSWORD"
+
+# Fix: Run setup script
+cd ../../../infra/secrets
+pwsh setup-secrets.ps1
+```
+
+**Service fails after secret update**:
+```bash
+# Recreate service to reload env_file
+cd infra
+docker compose up -d --force-recreate service-name
+```
+
+**Password contains special characters causing issues**:
+- Avoid `;`, `'`, `"` in passwords (breaks connection strings)
+- Use alphanumeric + basic symbols: `!@#$%^&*()-_=+`
+- Generate with: `openssl rand -base64 16 | tr -d '/+='`
+
+### References
+
+- **System Documentation**: `docs/claudedocs/secret-system-final.md`
+- **Audit Report**: `docs/claudedocs/secret-audit-2026-01-17.md`
+- **Consolidation Analysis**: `docs/claudedocs/issue-2565-secret-consolidation-analysis.md`
+- **Implementation**: Issue #2570, PR #2572 (merged 2026-01-17)
+
+---
+
 ## Development Workflow
 
 ### Local Setup
@@ -979,6 +1117,102 @@ public void UpdateAuditInfo(string userId)
 public byte[] RowVersion { get; private set; }
 
 // In SaveChanges, catch DbUpdateConcurrencyException
+```
+
+### Recent Learnings & Best Practices
+
+**Implementing HTTP Endpoints (Issue #2567 pattern)**:
+
+When adding new CRUD endpoints for a domain entity:
+
+1. **Create in this order** (Issue #2567 implementation):
+   - DTOs (`Application/DTOs/EntityDto.cs`) - API contracts
+   - Queries (`Application/Queries/GetAll*.cs`, `GetById*.cs`)
+   - Commands (`Application/Commands/Create*.cs`, `Update*.cs`, `Delete*.cs`)
+   - Validators (`Application/Validators/*Validator.cs`) - FluentValidation rules
+   - Handlers (`Application/Handlers/*Handler.cs`) - Business logic
+   - Routing (`Routing/EntityEndpoints.cs`) - HTTP mappings
+   - Register in `Program.cs`: `v1Api.MapEntityEndpoints();`
+
+2. **Exception Handling** (Code Review PR #2568):
+   - Use `ConflictException` for business rule violations (maps to 409 Conflict)
+   - Use `NotFoundException` for missing resources (maps to 404 Not Found)
+   - NEVER use `InvalidOperationException` (maps to 500 Internal Server Error)
+   - Align with ADR-009 centralized error handling
+
+3. **Immutable Fields**:
+   - If entity fields are immutable (e.g., ModelId, DisplayName), do NOT include them in Update command
+   - Avoids misleading API contracts where fields appear updatable but are silently ignored
+
+**Security Incident Response** (Issue #2565 lesson):
+
+If secret values are accidentally committed in documentation:
+
+1. **Immediate Actions**:
+   ```bash
+   # Redact documentation
+   # Replace real values with [REDACTED]
+
+   # Rotate ALL exposed credentials
+   cd infra/secrets
+   # Generate new passwords for exposed secrets
+
+   # Update .secret files with new values
+   # Restart Docker services
+   docker compose down
+   docker volume rm infra_pgdata  # If database password rotated
+   docker compose up -d
+
+   # Re-apply migrations if needed
+   cd apps/api/src/Api
+   pwsh apply-migrations.ps1
+   ```
+
+2. **Prevent Future Incidents**:
+   - Add files with passwords to `.gitignore`
+   - Use `[REDACTED]` in all documentation examples
+   - Never copy actual password values into commit messages or docs
+
+3. **Git History**:
+   - For dev environment: Rotation is sufficient (acceptable to have old passwords in history)
+   - For production: Consider `git-filter-repo` to remove from history
+
+**Code Review Automation** (PR #2568, #2572 workflow):
+
+After creating PR, use automated code review:
+```bash
+# From Claude Code skill
+/code-review:code-review <pr-number>
+```
+
+Process:
+1. Checks PR eligibility (open, not draft, not reviewed)
+2. Identifies relevant CLAUDE.md files
+3. Launches 5 parallel review agents (CLAUDE.md, bugs, history, PRs, comments)
+4. Scores issues with confidence (0-100 scale)
+5. Filters high-confidence issues (≥80)
+6. Posts review comment with file/line links
+
+**DI Registration Pattern** (Issue #2565 fix):
+
+Always register both interface and implementation:
+```csharp
+// ✅ CORRECT
+services.AddScoped<IGameStateParser, GameStateParser>();
+
+// ❌ WRONG - Only concrete class, missing interface mapping
+services.AddScoped<GameStateParser>();
+```
+
+**Docker Compose Variable Escaping**:
+
+When using environment variables in shell commands:
+```yaml
+# ✅ CORRECT - Double $$ for docker-compose variable expansion
+command: ["sh","-c","redis-server --requirepass $$REDIS_PASSWORD"]
+
+# ❌ WRONG - Single $ gets expanded by docker-compose, not in container
+command: ["sh","-c","redis-server --requirepass $REDIS_PASSWORD"]
 ```
 
 ---

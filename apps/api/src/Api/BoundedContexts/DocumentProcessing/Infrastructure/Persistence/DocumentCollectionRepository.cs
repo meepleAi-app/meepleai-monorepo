@@ -77,16 +77,50 @@ internal class DocumentCollectionRepository : RepositoryBase, IDocumentCollectio
     public Task UpdateAsync(DocumentCollection collection, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(collection);
-        var entity = MapToPersistence(collection);
 
         // Check if already tracked
         var tracked = DbContext.ChangeTracker.Entries<Api.Infrastructure.Entities.DocumentCollectionEntity>()
             .FirstOrDefault(e => e.Entity.Id == collection.Id);
 
-        if (tracked == null)
-            DbContext.DocumentCollections.Update(entity);
+        if (tracked != null)
+        {
+            // Update tracked entity's properties
+            UpdateEntityProperties(tracked.Entity, collection);
+        }
+        else
+        {
+            // Attach stub entity and mark specific properties as modified
+            var entity = new Api.Infrastructure.Entities.DocumentCollectionEntity { Id = collection.Id };
+            DbContext.DocumentCollections.Attach(entity);
+
+            var entry = DbContext.Entry(entity);
+            UpdateEntityProperties(entity, collection);
+
+            // Mark only the properties we actually update as modified
+            entry.Property(e => e.Name).IsModified = true;
+            entry.Property(e => e.Description).IsModified = true;
+            entry.Property(e => e.UpdatedAt).IsModified = true;
+            entry.Property(e => e.DocumentsJson).IsModified = true;
+        }
 
         return Task.CompletedTask;
+    }
+
+    private static void UpdateEntityProperties(Api.Infrastructure.Entities.DocumentCollectionEntity entity, DocumentCollection domain)
+    {
+        entity.Name = domain.Name.Value;
+        entity.Description = domain.Description;
+        entity.UpdatedAt = domain.UpdatedAt;
+
+        // Serialize documents to JSON
+        var documentsDto = domain.Documents.Select(d => new CollectionDocumentDto
+        {
+            PdfDocumentId = d.PdfDocumentId,
+            Type = d.Type.Value,
+            SortOrder = d.SortOrder,
+            AddedAt = d.AddedAt
+        }).ToList();
+        entity.DocumentsJson = JsonSerializer.Serialize(documentsDto);
     }
 
     public Task DeleteAsync(DocumentCollection collection, CancellationToken cancellationToken = default)

@@ -45,3 +45,6 @@ export * from './shared-games.schemas';
 
 // User Library schemas
 export * from './library.schemas';
+
+// Agent Configuration schemas (Issue #2518)
+export * from './agent-config.schemas';

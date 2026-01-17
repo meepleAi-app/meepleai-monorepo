@@ -53,8 +53,12 @@ export function ExportUsageButton({ modelId, startDate, endDate }: ExportUsageBu
       a.download = `ai-usage-report-${new Date().toISOString().split('T')[0]}.${format}`;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+
+      // Revoke after delay to ensure download starts
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 100);
 
       toast.success(`Usage report exported successfully as ${format.toUpperCase()}`);
     } catch (error) {

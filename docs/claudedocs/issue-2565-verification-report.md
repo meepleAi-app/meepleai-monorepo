@@ -129,7 +129,7 @@ PATCH  /api/v1/admin/ai-models/:id/toggle → NOT TESTED (endpoint missing)
 
 ### 3. Database Password Special Characters ✅ FIXED
 - **Issue**: Password `T,M]A]B:2dVz5;m!.J]1` contained `;` causing connection string parsing errors
-- **Fix**: Simplified to `DevPassword123` for development
+- **Fix**: Simplified to secure password for development
 - **Note**: Production should use complex passwords via env vars, not connection strings
 
 ### 4. Secrets Path Configuration ✅ FIXED
@@ -153,7 +153,7 @@ apps/api/src/Api/apply-migrations.ps1
 infra/secrets/database.secret
   + USER: postgres (was: meepleai)
   + DB: meepleai (was: meepleai_db)
-  + PASSWORD: DevPassword123 (was: complex password with special chars)
+  + PASSWORD: [REDACTED] (simplified for development)
 ```
 
 ### Docker Configuration

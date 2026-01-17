@@ -54,6 +54,22 @@ export {
   agentDocumentsKeys,
 } from './useAgentDocuments';
 
+// Shared Games Catalog queries (Issue #2518)
+export {
+  useSharedGames,
+  useSharedGame,
+  useGameCategories,
+  useGameMechanics,
+  sharedGamesKeys,
+} from './useSharedGames';
+
+// Agent Configuration queries and mutations (Issue #2518)
+export {
+  useAgentConfig,
+  useUpdateAgentConfig,
+  agentConfigKeys,
+} from './useAgentConfig';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

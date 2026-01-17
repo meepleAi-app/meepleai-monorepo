@@ -25,6 +25,12 @@ import {
   type UpdateLibraryEntryRequest,
 } from '../schemas/library.schemas';
 
+import {
+  AgentConfigDtoSchema,
+  type AgentConfigDto,
+  type UpdateAgentConfigRequest,
+} from '../schemas/agent-config.schemas';
+
 import type { HttpClient } from '../core/httpClient';
 
 export interface CreateLibraryClientParams {
@@ -39,6 +45,9 @@ export interface LibraryClient {
   removeGame(gameId: string): Promise<void>;
   updateEntry(gameId: string, request: UpdateLibraryEntryRequest): Promise<UserLibraryEntry>;
   getGameStatus(gameId: string): Promise<GameInLibraryStatus>;
+  // Agent Configuration (Issue #2518)
+  getAgentConfig(gameId: string): Promise<AgentConfigDto | null>;
+  updateAgentConfig(gameId: string, request: UpdateAgentConfigRequest): Promise<AgentConfigDto>;
 }
 
 /**
@@ -182,6 +191,39 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
         GameInLibraryStatusSchema
       );
       return data ?? { inLibrary: false, isFavorite: false };
+    },
+
+    /**
+     * Get agent configuration for a game in user's library (Issue #2518)
+     * @param gameId - Game UUID
+     * @returns Agent configuration or null if not configured
+     */
+    async getAgentConfig(gameId: string): Promise<AgentConfigDto | null> {
+      return httpClient.get<AgentConfigDto>(
+        `/api/v1/library/games/${gameId}/agent-config`,
+        AgentConfigDtoSchema
+      );
+    },
+
+    /**
+     * Update agent configuration for a game in user's library (Issue #2518)
+     * @param gameId - Game UUID
+     * @param request - Agent configuration update data
+     * @returns Updated agent configuration
+     */
+    async updateAgentConfig(
+      gameId: string,
+      request: UpdateAgentConfigRequest
+    ): Promise<AgentConfigDto> {
+      const data = await httpClient.put<AgentConfigDto>(
+        `/api/v1/library/games/${gameId}/agent-config`,
+        request,
+        AgentConfigDtoSchema
+      );
+      if (!data) {
+        throw new Error('Failed to update agent configuration');
+      }
+      return data;
     },
   };
 }

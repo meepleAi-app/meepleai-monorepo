@@ -61,7 +61,8 @@ describe('InfrastructureClient - Basic Tests', () => {
     render(<InfrastructureClient />);
 
     await waitFor(() => {
-      expect(screen.getByText('Monitoraggio Infrastruttura')).toBeInTheDocument();
+      // Use data-testid for language-independent test (Issue #2540)
+      expect(screen.getByTestId('infrastructure-title')).toBeInTheDocument();
     });
   });
 

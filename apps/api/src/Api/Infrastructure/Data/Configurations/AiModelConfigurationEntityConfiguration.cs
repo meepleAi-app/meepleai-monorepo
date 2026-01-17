@@ -42,6 +42,18 @@ public sealed class AiModelConfigurationEntityConfiguration : IEntityTypeConfigu
         builder.Property(e => e.UpdatedAt)
             .IsRequired(false);
 
+        // JSON Settings (JSONB) - Issue #2520
+        builder.Property(e => e.SettingsJson)
+            .HasColumnName("settings_json")
+            .HasColumnType("jsonb")
+            .IsRequired();
+
+        // JSON Usage Stats (JSONB) - Issue #2520
+        builder.Property(e => e.UsageJson)
+            .HasColumnName("usage_json")
+            .HasColumnType("jsonb")
+            .IsRequired();
+
         builder.HasIndex(e => e.ModelId)
             .IsUnique()
             .HasDatabaseName("IX_AiModelConfigurations_ModelId");

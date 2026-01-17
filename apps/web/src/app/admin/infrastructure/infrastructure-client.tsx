@@ -287,7 +287,9 @@ export function InfrastructureClient() {
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{i18n.page.title}</h1>
+            <h1 className="text-3xl font-bold text-gray-900" data-testid="infrastructure-title">
+              {i18n.page.title}
+            </h1>
             <p className="text-gray-600 mt-1">{i18n.page.description}</p>
           </div>
           <div className="flex items-center gap-2">

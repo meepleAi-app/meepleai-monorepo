@@ -131,3 +131,7 @@ tmpclaude-*-cwd
 nul
 docs/02-development/MeepleAI_Configuration_Variables.xlsx
 apps/api/test-results.txt
+
+# Development-only files with sensitive data (rotate passwords periodically)
+apps/api/src/Api/apply-migrations.ps1
+apps/api/src/Api/appsettings.Development.json

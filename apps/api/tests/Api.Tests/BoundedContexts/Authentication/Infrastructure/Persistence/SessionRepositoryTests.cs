@@ -12,15 +12,19 @@ using Api.Tests.Constants;
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 
 /// <summary>
-/// Integration tests for SessionRepository using Testcontainers with real PostgreSQL.
+/// Integration tests for SessionRepository using shared Testcontainers with real PostgreSQL.
 /// Tests session lifecycle, expiration queries, and token-based lookups.
+/// Issue #2541: Migrated to SharedDatabaseTestBase for improved performance.
 /// </summary>
+[Collection("SharedTestcontainers")]
 [Trait("Category", TestCategories.Unit)]
-public class SessionRepositoryTests : IntegrationTestBase<SessionRepository>
+public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
-    protected override string DatabaseName => "meepleai_session_test";
+    public SessionRepositoryTests(SharedTestcontainersFixture fixture) : base(fixture)
+    {
+    }
 
     protected override SessionRepository CreateRepository(MeepleAiDbContext dbContext)
         => new SessionRepository(dbContext, MockEventCollector.Object, TimeProvider);

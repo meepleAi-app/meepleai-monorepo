@@ -18,21 +18,23 @@
 
 import React, { useState } from 'react';
 
-import { BookOpen, Plus, Edit2, Trash2 } from 'lucide-react';
+import { BookOpen, Plus } from 'lucide-react';
 import Link from 'next/link';
 
 import { BottomNav } from '@/components/layout/BottomNav';
 import { TopNav } from '@/components/layout/TopNav';
 import {
-  FavoriteToggle,
   QuotaStatusBar,
   LibraryFilters,
   EditNotesModal,
   RemoveGameDialog,
+  UserGameCard,
+  AgentConfigModal,
+  PdfUploadModal,
 } from '@/components/library';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLibrary, useLibraryQuota } from '@/hooks/queries/useLibrary';
 import type { GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
@@ -62,6 +64,26 @@ export default function LibraryPage() {
   });
 
   const [removeDialog, setRemoveDialog] = useState<{
+    isOpen: boolean;
+    gameId: string;
+    gameTitle: string;
+  }>({
+    isOpen: false,
+    gameId: '',
+    gameTitle: '',
+  });
+
+  const [agentConfigModal, setAgentConfigModal] = useState<{
+    isOpen: boolean;
+    gameId: string;
+    gameTitle: string;
+  }>({
+    isOpen: false,
+    gameId: '',
+    gameTitle: '',
+  });
+
+  const [pdfUploadModal, setPdfUploadModal] = useState<{
     isOpen: boolean;
     gameId: string;
     gameTitle: string;
@@ -133,6 +155,22 @@ export default function LibraryPage() {
     });
   };
 
+  const handleConfigureAgent = (gameId: string, gameTitle: string) => {
+    setAgentConfigModal({
+      isOpen: true,
+      gameId,
+      gameTitle,
+    });
+  };
+
+  const handleUploadPdf = (gameId: string, gameTitle: string) => {
+    setPdfUploadModal({
+      isOpen: true,
+      gameId,
+      gameTitle,
+    });
+  };
+
   // Loading state
   if (libraryLoading || quotaLoading) {
     return (
@@ -187,7 +225,7 @@ export default function LibraryPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <h1 className="text-3xl font-bold font-quicksand">La Mia Libreria</h1>
           <Button asChild>
-            <Link href="/games">
+            <Link href="/games/catalog">
               <Plus className="mr-2 h-4 w-4" />
               Aggiungi Gioco
             </Link>
@@ -225,65 +263,14 @@ export default function LibraryPage() {
             {filteredGames.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredGames.map(game => (
-                  <Card
+                  <UserGameCard
                     key={game.id}
-                    className="hover:shadow-lg transition-shadow"
-                    data-testid="game-card"
-                  >
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg line-clamp-2">{game.gameTitle}</CardTitle>
-                          {game.gamePublisher && (
-                            <CardDescription className="mt-1">{game.gamePublisher}</CardDescription>
-                          )}
-                        </div>
-                        <FavoriteToggle
-                          gameId={game.gameId}
-                          isFavorite={game.isFavorite}
-                          gameTitle={game.gameTitle}
-                          size="sm"
-                        />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {game.notes && (
-                        <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
-                          {game.notes}
-                        </p>
-                      )}
-                      <div className="flex gap-2 mb-3">
-                        <Button asChild variant="outline" size="sm" className="flex-1">
-                          <Link href={`/games/${game.gameId}`}>
-                            <BookOpen className="mr-1 h-3 w-3" />
-                            Dettagli
-                          </Link>
-                        </Button>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditNotes(game.gameId, game.gameTitle, game.notes)}
-                          className="flex-1"
-                        >
-                          <Edit2 className="mr-1 h-3 w-3" />
-                          Modifica Note
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveGame(game.gameId, game.gameTitle)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Aggiunto il {new Date(game.addedAt).toLocaleDateString('it-IT')}
-                      </p>
-                    </CardContent>
-                  </Card>
+                    game={game}
+                    onConfigureAgent={handleConfigureAgent}
+                    onUploadPdf={handleUploadPdf}
+                    onEditNotes={handleEditNotes}
+                    onRemove={handleRemoveGame}
+                  />
                 ))}
               </div>
             ) : (
@@ -312,7 +299,7 @@ export default function LibraryPage() {
                 Inizia ad aggiungere giochi dal catalogo per costruire la tua collezione personale.
               </p>
               <Button asChild>
-                <Link href="/games">Esplora Catalogo Giochi</Link>
+                <Link href="/games/catalog">Esplora Catalogo Giochi</Link>
               </Button>
             </CardContent>
           </Card>
@@ -336,6 +323,22 @@ export default function LibraryPage() {
         onClose={() => setRemoveDialog(prev => ({ ...prev, isOpen: false }))}
         gameId={removeDialog.gameId}
         gameTitle={removeDialog.gameTitle}
+      />
+
+      {/* Agent Configuration Modal */}
+      <AgentConfigModal
+        isOpen={agentConfigModal.isOpen}
+        onClose={() => setAgentConfigModal(prev => ({ ...prev, isOpen: false }))}
+        gameId={agentConfigModal.gameId}
+        gameTitle={agentConfigModal.gameTitle}
+      />
+
+      {/* PDF Upload Modal */}
+      <PdfUploadModal
+        isOpen={pdfUploadModal.isOpen}
+        onClose={() => setPdfUploadModal(prev => ({ ...prev, isOpen: false }))}
+        gameId={pdfUploadModal.gameId}
+        gameTitle={pdfUploadModal.gameTitle}
       />
     </main>
   );

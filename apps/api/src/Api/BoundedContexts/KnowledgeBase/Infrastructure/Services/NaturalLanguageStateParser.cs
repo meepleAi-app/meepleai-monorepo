@@ -460,7 +460,7 @@ internal sealed partial class NaturalLanguageStateParser : IStateParser
         }
 
         // Large numeric differences are high severity
-        if (IsNumeric(existingValue) && IsNumeric(newValue))
+        if (existingValue != null && newValue != null && IsNumeric(existingValue) && IsNumeric(newValue))
         {
             var diff = Math.Abs(Convert.ToDouble(newValue) - Convert.ToDouble(existingValue));
             return diff switch

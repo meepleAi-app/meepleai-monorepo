@@ -66,6 +66,18 @@ import {
   type AccessibilityMetrics,
   type PerformanceMetrics,
   type E2EMetrics,
+  AiModelDtoSchema,
+  PagedAiModelsSchema,
+  CostTrackingDtoSchema,
+  TestModelResponseSchema,
+  type AiModelDto,
+  type PagedAiModels,
+  type ConfigureModelRequest,
+  type SetPrimaryModelRequest,
+  type CostTrackingDto,
+  type TestModelRequest,
+  type TestModelResponse,
+  type ExportUsageReportParams,
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -766,6 +778,145 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         throw new Error('Failed to fetch E2E metrics');
       }
       return result;
+    },
+
+    // ========== AI Models Management (Issue #2521) ==========
+
+    /**
+     * Get all AI models with usage statistics (admin only)
+     * GET /api/v1/admin/ai-models
+     */
+    async getAiModels(params?: {
+      status?: 'active' | 'inactive' | 'all';
+      page?: number;
+      pageSize?: number;
+    }): Promise<PagedAiModels> {
+      const queryParams = new URLSearchParams();
+      if (params?.status && params.status !== 'all') {
+        queryParams.append('status', params.status);
+      }
+      if (params?.page !== undefined) {
+        queryParams.append('page', params.page.toString());
+      }
+      if (params?.pageSize !== undefined) {
+        queryParams.append('pageSize', params.pageSize.toString());
+      }
+
+      const queryString = queryParams.toString();
+      const url = queryString ? `/api/v1/admin/ai-models?${queryString}` : '/api/v1/admin/ai-models';
+
+      const result = await httpClient.get(url, PagedAiModelsSchema);
+      return result ?? { items: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Get AI model by ID (admin only)
+     * GET /api/v1/admin/ai-models/{modelId}
+     */
+    async getAiModelById(modelId: string): Promise<AiModelDto> {
+      const result = await httpClient.get(
+        `/api/v1/admin/ai-models/${encodeURIComponent(modelId)}`,
+        AiModelDtoSchema
+      );
+      if (!result) {
+        throw new Error(`AI model ${modelId} not found`);
+      }
+      return result;
+    },
+
+    /**
+     * Update AI model configuration (admin only)
+     * PUT /api/v1/admin/ai-models/{modelId}/configure
+     */
+    async updateModelConfig(
+      modelId: string,
+      request: ConfigureModelRequest
+    ): Promise<AiModelDto> {
+      const result = await httpClient.put(
+        `/api/v1/admin/ai-models/${encodeURIComponent(modelId)}/configure`,
+        request,
+        AiModelDtoSchema
+      );
+      if (!result) {
+        throw new Error('Failed to update model configuration');
+      }
+      return result;
+    },
+
+    /**
+     * Set primary AI model (admin only)
+     * POST /api/v1/admin/ai-models/set-primary
+     */
+    async setPrimaryModel(request: SetPrimaryModelRequest): Promise<AiModelDto> {
+      const result = await httpClient.post(
+        '/api/v1/admin/ai-models/set-primary',
+        request,
+        AiModelDtoSchema
+      );
+      if (!result) {
+        throw new Error('Failed to set primary model');
+      }
+      return result;
+    },
+
+    /**
+     * Get cost tracking information (admin only)
+     * GET /api/v1/admin/ai-models/cost-tracking
+     */
+    async getCostTracking(): Promise<CostTrackingDto> {
+      const result = await httpClient.get(
+        '/api/v1/admin/ai-models/cost-tracking',
+        CostTrackingDtoSchema
+      );
+      if (!result) {
+        throw new Error('Failed to fetch cost tracking data');
+      }
+      return result;
+    },
+
+    /**
+     * Test AI model with sample prompt (admin only)
+     * POST /api/v1/admin/ai-models/{modelId}/test
+     */
+    async testModel(modelId: string, request: TestModelRequest): Promise<TestModelResponse> {
+      const result = await httpClient.post(
+        `/api/v1/admin/ai-models/${encodeURIComponent(modelId)}/test`,
+        request,
+        TestModelResponseSchema
+      );
+      if (!result) {
+        throw new Error('Failed to test model');
+      }
+      return result;
+    },
+
+    /**
+     * Export usage report (admin only)
+     * GET /api/v1/admin/ai-models/export
+     */
+    async exportUsageReport(params: ExportUsageReportParams): Promise<Blob> {
+      const queryParams = new URLSearchParams();
+      if (params.modelId) queryParams.append('modelId', params.modelId);
+      if (params.startDate) queryParams.append('startDate', params.startDate);
+      if (params.endDate) queryParams.append('endDate', params.endDate);
+      queryParams.append('format', params.format);
+
+      const queryString = queryParams.toString();
+      const url = `/api/v1/admin/ai-models/export?${queryString}`;
+
+      const response = await fetch(`${httpClient.baseUrl}${url}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          Accept: params.format === 'csv' ? 'text/csv' : 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to export usage report: ${response.status}`);
+      }
+
+      return response.blob();
     },
   };
 }

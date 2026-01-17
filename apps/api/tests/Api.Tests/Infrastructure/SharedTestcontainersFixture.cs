@@ -1,5 +1,6 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +9,7 @@ using Npgsql;
 using StackExchange.Redis;
 using Xunit;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 
 namespace Api.Tests.Infrastructure;
 
@@ -99,6 +101,9 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                             .WithPortBinding(5432, true)
                             // Issue #2031: Removed .UntilCommandIsCompleted("pg_isready") to prevent Docker hijack errors
                             // Default TCP port check + retry mechanism is more reliable than hijacked command execution
+                            // Issue #2513: Use tmpfs for PostgreSQL data to prevent orphaned anonymous volumes
+                            // Faster test execution (in-memory) and zero volume cleanup needed
+                            .WithTmpfsMount("/var/lib/postgresql/data")
                             .WithCleanUp(true)
                             .Build();
 
@@ -167,6 +172,9 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                             .WithPortBinding(6379, true)
                             // Issue #2031: Removed .UntilCommandIsCompleted("redis-cli", "ping") to prevent Docker hijack errors
                             // Default TCP port check + retry mechanism is more reliable than hijacked command execution
+                            // Issue #2513: Use tmpfs for Redis data to prevent orphaned anonymous volumes
+                            // Faster test execution (in-memory) and zero volume cleanup needed
+                            .WithTmpfsMount("/data")
                             .WithCleanUp(true)
                             .Build();
 
@@ -343,6 +351,42 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
 
         await redis.CloseAsync();
         redis.Dispose();
+    }
+
+    /// <summary>
+    /// Creates a mock MediatR instance for integration tests.
+    /// Issue #2541: Centralized mock Mediator for shared fixture tests.
+    /// Uses Mock to avoid MediatR licensing and configuration complexity.
+    /// </summary>
+    /// <returns>Mock IMediator instance</returns>
+    public IMediator CreateMediator()
+    {
+        var mockMediator = new Moq.Mock<IMediator>();
+        return mockMediator.Object;
+    }
+
+    /// <summary>
+    /// Creates a configured DbContext for integration tests.
+    /// Issue #2541: Centralized DbContext creation for shared fixture tests.
+    /// </summary>
+    /// <param name="connectionString">Database connection string</param>
+    /// <param name="mediator">Optional mediator instance for domain events</param>
+    /// <returns>Configured MeepleAiDbContext</returns>
+    public MeepleAiDbContext CreateDbContext(string connectionString, IMediator? mediator = null)
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<MeepleAiDbContext>();
+        optionsBuilder.UseNpgsql(connectionString);
+
+        // Use provided mediator or create a new one
+        var contextMediator = mediator ?? CreateMediator();
+
+        // Create mock event collector that returns empty list
+        var mockEventCollector = new Moq.Mock<IDomainEventCollector>();
+        mockEventCollector
+            .Setup(e => e.GetAndClearEvents())
+            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
+
+        return new MeepleAiDbContext(optionsBuilder.Options, contextMediator, mockEventCollector.Object);
     }
 }
 

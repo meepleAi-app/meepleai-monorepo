@@ -235,11 +235,16 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
 
     private static SharedGameDocument CreateTestHomeruleDocument(Guid gameId, List<string> tags)
     {
+        // Issue #2541: Fix DocumentVersion format (must be MAJOR.MINOR like "1.0", "2.1")
+        // Use Guid hash for deterministic but varied version numbers in tests
+        var hash = Math.Abs(Guid.NewGuid().GetHashCode());
+        var version = $"{hash % 10}.{hash % 100}";
+
         return SharedGameDocument.Create(
             gameId,
             Guid.NewGuid(),
             SharedGameDocumentType.Homerule,
-            $"1.{Guid.NewGuid():N}"[..6],
+            version,
             TestUserId,
             tags);
     }

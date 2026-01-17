@@ -27,7 +27,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { api, type GameLibraryLimitsDto } from '@/lib/api';
-import { categorizeError } from '@/lib/errorUtils';
+import { categorizeError, type CategorizedError } from '@/lib/errorUtils';
 
 // Form validation schema with business rules
 const gameLibraryLimitsSchema = z.object({
@@ -56,7 +56,7 @@ export function GameLibraryLimitsClient() {
   const [limits, setLimits] = useState<GameLibraryLimitsDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<CategorizedError | null>(null);
 
   const {
     register,
@@ -88,16 +88,16 @@ export function GameLibraryLimitsClient() {
         premiumTierLimit: data.premiumTierLimit,
       });
     } catch (err) {
-      const { message } = categorizeError(err);
-      setError(message);
+      const categorized = categorizeError(err);
+      setError(categorized);
 
-      if (message.includes('Unauthorized') || message.includes('403')) {
+      if (categorized.message.includes('Unauthorized') || categorized.message.includes('403')) {
         toast.error('Admin access required');
         setTimeout(() => {
           window.location.href = '/login';
         }, 2000);
       } else {
-        toast.error(message);
+        toast.error(categorized.message);
       }
     } finally {
       setLoading(false);
@@ -120,9 +120,9 @@ export function GameLibraryLimitsClient() {
 
       toast.success('Game library limits updated successfully');
     } catch (err) {
-      const { userMessage } = categorizeError(err);
-      setError(userMessage);
-      toast.error(userMessage);
+      const categorized = categorizeError(err);
+      setError(categorized);
+      toast.error(categorized.message);
     } finally {
       setSubmitting(false);
     }
@@ -158,7 +158,7 @@ export function GameLibraryLimitsClient() {
   }
 
   // Error state (if not auth error)
-  if (error && !error.includes('Unauthorized') && !error.includes('403')) {
+  if (error && !error.message.includes('Unauthorized') && !error.message.includes('403')) {
     return (
       <AdminAuthGuard
         loading={authLoading}
@@ -169,7 +169,6 @@ export function GameLibraryLimitsClient() {
           <ErrorDisplay
             error={error}
             onRetry={loadLimits}
-            actionLabel="Retry Loading"
           />
         </div>
       </AdminAuthGuard>

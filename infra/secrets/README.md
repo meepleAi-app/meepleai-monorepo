@@ -19,7 +19,7 @@
 | **unstructured-service.secret** | 🟡 IMPORTANT | `UNSTRUCTURED_API_KEY` | `change_me_unstructured...` | `infra/secrets/unstructured-service.secret` |
 | **email.secret** | 🟢 OPTIONAL | `SMTP_HOST`<br>`SMTP_PORT`<br>`SMTP_USER`<br>`SMTP_PASSWORD`<br>`SMTP_FROM_EMAIL` | `smtp.gmail.com`<br>`587`<br>`your_email@gmail.com`<br>`your_app_password...`<br>`noreply@meepleai.local` | `infra/secrets/email.secret` |
 | **monitoring.secret** | 🟢 OPTIONAL | `GRAFANA_ADMIN_PASSWORD`<br>`PROMETHEUS_PASSWORD` | `change_me_grafana...`<br>`change_me_prometheus...` | `infra/secrets/monitoring.secret` |
-| **oauth.secret** | 🟢 OPTIONAL | `GOOGLE_CLIENT_ID`<br>`GOOGLE_CLIENT_SECRET`<br>`GITHUB_CLIENT_ID`<br>`GITHUB_CLIENT_SECRET` | `your_google_client_id...`<br>`your_google_client_secret`<br>`your_github_client_id`<br>`your_github_client_secret` | `infra/secrets/oauth.secret` |
+| **oauth.secret** | 🟢 OPTIONAL | `GOOGLE_CLIENT_ID`<br>`GOOGLE_CLIENT_SECRET`<br>`GITHUB_CLIENT_ID`<br>`GITHUB_CLIENT_SECRET`<br>`DISCORD_CLIENT_ID`<br>`DISCORD_CLIENT_SECRET` | `your_google_client_id...`<br>`your_google_client_secret`<br>`your_github_client_id`<br>`your_github_client_secret`<br>`your_discord_client_id`<br>`your_discord_client_secret` | `infra/secrets/oauth.secret` |
 | **reranker-service.secret** | 🟢 OPTIONAL | `RERANKER_API_KEY` | `change_me_reranker...` | `infra/secrets/reranker-service.secret` |
 | **smoldocling-service.secret** | 🟢 OPTIONAL | `SMOLDOCLING_API_KEY` | `change_me_smoldocling...` | `infra/secrets/smoldocling-service.secret` |
 | **storage.secret** | 🟢 OPTIONAL | `S3_ACCESS_KEY`<br>`S3_SECRET_KEY`<br>`S3_BUCKET_NAME`<br>`S3_REGION` | `your_s3_access_key`<br>`your_s3_secret_key`<br>`meepleai-uploads`<br>`us-east-1` | `infra/secrets/storage.secret` |
@@ -33,11 +33,54 @@
 
 #### PowerShell (Windows) - RECOMMENDED ✅
 
-**Using Helper Script** (easiest):
+**Using Helper Script** (easiest - WITH AUTO-GENERATION 🎉):
 ```powershell
 cd infra/secrets
 .\setup-secrets.ps1
+
+# Output example:
+# =======================================
+#    MeepleAI Secrets Auto-Setup
+# =======================================
+#
+# [STEP 1] Generating secure values...
+#   [OK] JWT_SECRET_KEY:           OwBQ90/g***
+#   [OK] POSTGRES_PASSWORD:        zNo%vL27***
+#   [OK] REDIS_PASSWORD:           [d<9mynL***
+#   [OK] EMBEDDING_SERVICE_API_KEY: C5CirwRq***
+#   ... (8 more values)
+#
+# [STEP 2] Creating and populating secret files...
+#   [OK] Created: admin.secret (1 auto-generated)
+#   [OK] Created: embedding-service.secret (1 auto-generated)
+#   ... (14 more files)
+#
+# [SUCCESS] All CRITICAL secrets configured!
+#           Application can start successfully.
 ```
+
+**With Backup** (recommended for production):
+```powershell
+cd infra/secrets
+.\setup-secrets.ps1 -SaveGenerated
+
+# Saves all generated values to .generated-values-TIMESTAMP.txt
+# Example: .generated-values-20260116-191704.txt
+#
+# Contents:
+# ADMIN_PASSWORD=rgy&U,*0!%Ymfbhx
+# EMBEDDING_SERVICE_API_KEY=C5CirwRqXcZJF3E8l+BqeLTqNRm2MwEMMpDsYRpUY5g=
+# JWT_SECRET_KEY=OwBQ90/gsq09hyKSJ6+2Hgl5GpTchLe3wz8E44D3wiz...
+# ... (all 12 generated values)
+#
+# ⚠️ Copy to password manager, then DELETE the file!
+```
+
+**Benefits**:
+- ✅ 11 secrets auto-generated with cryptographic strength
+- ✅ Setup time: <1 minute (vs 15-30 minutes manually)
+- ✅ Zero weak passwords (256-512 bits entropy)
+- ✅ Ready to start immediately (all CRITICAL secrets configured)
 
 **Manual Command**:
 ```powershell
@@ -606,6 +649,46 @@ echo "$(date): Rolled back JWT secret change due to validation errors" >> infra/
 
 ---
 
+## Auto-Generated Values
+
+The `setup-secrets.ps1` script **automatically generates** secure values for the following:
+
+### 🔐 Cryptographically Secure (RNG-based)
+
+| Variable | File | Type | Strength |
+|----------|------|------|----------|
+| `JWT_SECRET_KEY` | jwt.secret | Base64 (64 bytes) | 512 bits |
+| `QDRANT_API_KEY` | qdrant.secret | Base64 (32 bytes) | 256 bits |
+| `EMBEDDING_SERVICE_API_KEY` | embedding-service.secret | Base64 (32 bytes) | 256 bits |
+| `RERANKER_API_KEY` | reranker-service.secret | Base64 (32 bytes) | 256 bits |
+| `SMOLDOCLING_API_KEY` | smoldocling-service.secret | Base64 (32 bytes) | 256 bits |
+| `UNSTRUCTURED_API_KEY` | unstructured-service.secret | Base64 (32 bytes) | 256 bits |
+
+### 🔑 Secure Passwords (Alphanumeric + Symbols)
+
+| Variable | File | Length | Requirements |
+|----------|------|--------|--------------|
+| `POSTGRES_PASSWORD` | database.secret | 20 chars | Upper + digit + symbol |
+| `REDIS_PASSWORD` | redis.secret | 20 chars | Upper + digit + symbol |
+| `ADMIN_PASSWORD` | admin.secret | 16 chars | Upper + digit + symbol |
+| `GRAFANA_ADMIN_PASSWORD` | monitoring.secret | 16 chars | Upper + digit + symbol |
+| `PROMETHEUS_PASSWORD` | monitoring.secret | 16 chars | Upper + digit + symbol |
+| `TRAEFIK_DASHBOARD_PASSWORD` | traefik.secret | 16 chars | Upper + digit + symbol |
+
+### 📋 Manual Configuration Still Required
+
+These values **cannot be auto-generated** (require external accounts):
+
+- **bgg.secret**: BoardGameGeek username/password (from https://boardgamegeek.com)
+- **openrouter.secret**: OpenRouter API key (from https://openrouter.ai/keys)
+- **email.secret**: SMTP credentials (from your email provider)
+- **oauth.secret**: Google/GitHub OAuth client IDs (from provider consoles)
+- **storage.secret**: S3 credentials (from AWS/cloud provider)
+
+**After running the script**, edit these files manually with your actual credentials.
+
+---
+
 ## Validation Levels
 
 ### 🔴 CRITICAL - Startup Blocked
@@ -826,7 +909,7 @@ PROMETHEUS_PASSWORD=your_prometheus_password     # Prometheus password
 - Passwords: ≥8 chars each
 
 #### oauth.secret
-**Purpose**: OAuth social login (Google, GitHub)
+**Purpose**: OAuth social login (Google, GitHub, Discord)
 
 **Variables**:
 ```bash
@@ -837,6 +920,10 @@ GOOGLE_CLIENT_SECRET=GOCSPX-your_google_secret
 # GitHub OAuth
 GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
+
+# Discord OAuth
+DISCORD_CLIENT_ID=your_discord_client_id
+DISCORD_CLIENT_SECRET=your_discord_client_secret
 ```
 
 **Validation**:
@@ -846,6 +933,7 @@ GITHUB_CLIENT_SECRET=your_github_client_secret
 **Get Credentials**:
 - Google: https://console.cloud.google.com/apis/credentials
 - GitHub: https://github.com/settings/developers
+- Discord: https://discord.com/developers/applications
 
 #### reranker-service.secret
 **Purpose**: AI reranking service (optional optimization)

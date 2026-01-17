@@ -27,8 +27,21 @@ load_secret() {
 echo "[secrets] loading Docker secrets into environment..."
 
 # Database / cache
-load_secret "postgres-password" "POSTGRES_PASSWORD"
-load_secret "postgres-password" "DB_POSTGRESDB_PASSWORD"  # n8n variable name
+# POSTGRES_* variables now loaded from database.secret via env_file
+# Map POSTGRES_* to n8n's DB_POSTGRESDB_* format
+if [ -n "$POSTGRES_USER" ]; then
+    export DB_POSTGRESDB_USER="$POSTGRES_USER"
+    echo "[secrets] mapped POSTGRES_USER to DB_POSTGRESDB_USER"
+fi
+if [ -n "$POSTGRES_PASSWORD" ]; then
+    export DB_POSTGRESDB_PASSWORD="$POSTGRES_PASSWORD"
+    echo "[secrets] mapped POSTGRES_PASSWORD to DB_POSTGRESDB_PASSWORD"
+fi
+if [ -n "$POSTGRES_DB" ]; then
+    export DB_POSTGRESDB_DATABASE="$POSTGRES_DB"
+    echo "[secrets] mapped POSTGRES_DB to DB_POSTGRESDB_DATABASE"
+fi
+
 load_secret "n8n-basic-auth-password" "N8N_BASIC_AUTH_PASSWORD"
 load_secret "n8n-encryption-key" "N8N_ENCRYPTION_KEY"
 load_secret "redis-password" "REDIS_PASSWORD"

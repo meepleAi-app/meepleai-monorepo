@@ -1,8 +1,8 @@
 $env:POSTGRES_HOST = "localhost"
 $env:POSTGRES_PORT = "5432"
-$env:POSTGRES_DB = "meepleai_db"
-$env:POSTGRES_USER = "meepleai"
-$env:POSTGRES_PASSWORD = "SecureTestPass123"
+$env:POSTGRES_DB = "meepleai"
+$env:POSTGRES_USER = "postgres"
+$env:POSTGRES_PASSWORD = "DevPassword123"
 
 Write-Host "Applying EF Core migrations..." -ForegroundColor Cyan
 dotnet ef database update

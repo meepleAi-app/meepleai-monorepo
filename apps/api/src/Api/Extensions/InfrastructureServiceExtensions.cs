@@ -229,6 +229,15 @@ internal static class InfrastructureServiceExtensions
             var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         })
+        // Issue #2520: Polly retry policy for transient failures (3 attempts with exponential backoff: 2s, 4s, 8s)
+        .AddTransientHttpErrorPolicy(policy =>
+            policy.WaitAndRetryAsync(3, retryAttempt =>
+                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))))
+        // Issue #2520: Circuit breaker policy (5 failures → open for 30s)
+        .AddTransientHttpErrorPolicy(policy =>
+            policy.CircuitBreakerAsync(
+                handledEventsAllowedBeforeBreaking: 5,
+                durationOfBreak: TimeSpan.FromSeconds(30)))
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),

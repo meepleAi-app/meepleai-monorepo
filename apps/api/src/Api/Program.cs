@@ -459,6 +459,7 @@ v1Api.MapRuleSpecEndpoints();
 
 // Issue #1439: Split AdminEndpoints into focused endpoint files
 v1Api.MapConfigurationEndpoints();     // System configuration CRUD & operations
+v1Api.MapAiModelEndpoints();           // Issue #2520: AI model configuration admin endpoints
 v1Api.MapGameLibraryConfigEndpoints(); // Issue #2444: Game library tier limits config
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics

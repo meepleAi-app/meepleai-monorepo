@@ -1,3 +1,5 @@
+using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
+
 namespace Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 
 /// <summary>
@@ -15,6 +17,11 @@ public sealed class AiModelConfiguration
     public bool IsPrimary { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
+
+    // Issue #2520: JSONB columns for flexible configuration
+    public ModelSettings Settings { get; private set; } = ModelSettings.Default;
+    public ModelPricing Pricing { get; private set; } = ModelPricing.Free;
+    public UsageStats Usage { get; private set; } = UsageStats.Empty;
 
     private AiModelConfiguration() { } // EF Core constructor
 
@@ -91,4 +98,32 @@ public sealed class AiModelConfiguration
         IsPrimary = primary;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Issue #2520: Update usage statistics after successful request
+    /// </summary>
+    public void UpdateUsageStats(int tokens, decimal costUsd)
+    {
+        Usage = Usage.RecordUsage(tokens, costUsd);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Issue #2520: Update model settings
+    /// </summary>
+    public void UpdateSettings(ModelSettings settings)
+    {
+        Settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Issue #2520: Update pricing information
+    /// </summary>
+    public void UpdatePricing(ModelPricing pricing)
+    {
+        Pricing = pricing ?? throw new ArgumentNullException(nameof(pricing));
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
+

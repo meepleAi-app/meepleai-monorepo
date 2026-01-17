@@ -15,4 +15,9 @@ public sealed class AiModelConfigurationEntity
     public bool IsPrimary { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+
+    // Issue #2520: JSONB columns for flexible configuration
+    public string SettingsJson { get; set; } = "{}";
+    public string PricingJson { get; set; } = "{}";
+    public string UsageJson { get; set; } = "{}";
 }

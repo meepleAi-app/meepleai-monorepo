@@ -47,6 +47,12 @@ An Architecture Decision Record (ADR) documents an important architectural decis
 | [012](adr-012-fluentvalidation-cqrs.md) | FluentValidation Integration with CQRS | Proposed | 2025-01-19 | High |
 | [013](adr-013-nswag-typescript-generation.md) | NSwag TypeScript Client Generation | Proposed | 2025-01-19 | High |
 
+### Infrastructure & Deployment
+
+| ADR | Title | Status | Date | Priority |
+|-----|-------|--------|------|----------|
+| [021](adr-021-auto-configuration-system.md) | Auto-Configuration System for Secret Management | Implemented | 2026-01-17 | High |
+
 ### Code Quality & Patterns
 
 | ADR | Title | Status | Date | Priority |
@@ -162,6 +168,6 @@ When creating a new ADR:
 
 ---
 
-**Last Updated**: 2026-01-14
-**Total ADRs**: 14 (9 Accepted, 4 Proposed, 1 Rejected)
+**Last Updated**: 2026-01-17
+**Total ADRs**: 15 (10 Accepted/Implemented, 4 Proposed, 1 Rejected)
 

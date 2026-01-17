@@ -13,15 +13,19 @@ using Api.Tests.Constants;
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 
 /// <summary>
-/// Integration tests for OAuthAccountRepository using Testcontainers with real PostgreSQL.
+/// Integration tests for OAuthAccountRepository using shared Testcontainers with real PostgreSQL.
 /// Tests OAuth provider linking, token management, and multi-provider scenarios.
+/// Issue #2541: Migrated to SharedDatabaseTestBase for improved performance.
 /// </summary>
+[Collection("SharedTestcontainers")]
 [Trait("Category", TestCategories.Unit)]
-public class OAuthAccountRepositoryTests : IntegrationTestBase<OAuthAccountRepository>
+public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
-    protected override string DatabaseName => "meepleai_oauth_test";
+    public OAuthAccountRepositoryTests(SharedTestcontainersFixture fixture) : base(fixture)
+    {
+    }
 
     protected override OAuthAccountRepository CreateRepository(MeepleAiDbContext dbContext)
         => new OAuthAccountRepository(dbContext, MockEventCollector.Object, NullLogger<OAuthAccountRepository>.Instance);

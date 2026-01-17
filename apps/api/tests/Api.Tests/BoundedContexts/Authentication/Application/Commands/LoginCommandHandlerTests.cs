@@ -256,7 +256,8 @@ public class LoginCommandHandlerTests
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+        // Issue #2541: LoginCommandHandler throws DomainException for invalid credentials (security best practice)
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
@@ -275,7 +276,8 @@ public class LoginCommandHandlerTests
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+        // Issue #2541: LoginCommandHandler throws DomainException for invalid credentials (security best practice)
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
     }
@@ -559,7 +561,8 @@ public class LoginCommandHandlerTests
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+        // Issue #2541: LoginCommandHandler throws DomainException for invalid credentials (security best practice)
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
@@ -582,7 +585,8 @@ public class LoginCommandHandlerTests
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+        // Issue #2541: LoginCommandHandler throws DomainException for invalid credentials (security best practice)
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
@@ -602,7 +606,8 @@ public class LoginCommandHandlerTests
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+        // Issue #2541: LoginCommandHandler throws DomainException for invalid credentials (security best practice)
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
     }
@@ -621,7 +626,8 @@ public class LoginCommandHandlerTests
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
+        // Issue #2541: LoginCommandHandler throws DomainException for invalid credentials (security best practice)
+        await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 

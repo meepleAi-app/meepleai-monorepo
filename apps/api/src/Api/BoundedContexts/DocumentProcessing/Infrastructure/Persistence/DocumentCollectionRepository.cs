@@ -92,8 +92,20 @@ internal class DocumentCollectionRepository : RepositoryBase, IDocumentCollectio
     public Task DeleteAsync(DocumentCollection collection, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(collection);
-        var entity = MapToPersistence(collection);
-        DbContext.DocumentCollections.Remove(entity);
+
+        // Issue #2541: Check if entity is already tracked to prevent identity conflicts
+        var tracked = DbContext.DocumentCollections.Local.FirstOrDefault(e => e.Id == collection.Id);
+
+        if (tracked != null)
+        {
+            DbContext.DocumentCollections.Remove(tracked);
+        }
+        else
+        {
+            var entity = MapToPersistence(collection);
+            DbContext.DocumentCollections.Remove(entity);
+        }
+
         return Task.CompletedTask;
     }
 

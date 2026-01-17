@@ -70,6 +70,17 @@ export {
   agentConfigKeys,
 } from './useAgentConfig';
 
+// AI Models Management queries and mutations (Issue #2521)
+export {
+  useAiModels,
+  useAiModel,
+  useCostTracking,
+  useUpdateModelConfig,
+  useSetPrimaryModel,
+  useTestModel,
+  aiModelsKeys,
+} from './useAiModels';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

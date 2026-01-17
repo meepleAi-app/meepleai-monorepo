@@ -125,7 +125,8 @@ internal static class SecretDefinitions
             "SMTP_PORT",
             "SMTP_USER",
             "SMTP_PASSWORD",
-            "SMTP_FROM_EMAIL"
+            "SMTP_FROM_EMAIL",
+            "GMAIL_APP_PASSWORD"
         ),
 
         ["storage"] = new(
@@ -139,7 +140,8 @@ internal static class SecretDefinitions
         ["monitoring"] = new(
             SecretLevel.Optional,
             "GRAFANA_ADMIN_PASSWORD",
-            "PROMETHEUS_PASSWORD"
+            "PROMETHEUS_PASSWORD",
+            "SLACK_WEBHOOK_URL"
         ),
 
         ["traefik"] = new(
@@ -156,6 +158,12 @@ internal static class SecretDefinitions
         ["reranker-service"] = new(
             SecretLevel.Optional,
             "RERANKER_API_KEY"
+        ),
+
+        ["n8n"] = new(
+            SecretLevel.Optional,
+            "N8N_ENCRYPTION_KEY",
+            "N8N_BASIC_AUTH_PASSWORD"
         )
     };
 

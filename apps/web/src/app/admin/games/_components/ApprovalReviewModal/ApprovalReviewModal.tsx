@@ -142,7 +142,7 @@ export function ApprovalReviewModal({
                 </TabsContent>
 
                 <TabsContent value="diff" className="space-y-4">
-                  <GameDiffView gameId={gameId} currentData={game} />
+                  <GameDiffView gameId={gameId!} currentData={game} />
                 </TabsContent>
               </Tabs>
 

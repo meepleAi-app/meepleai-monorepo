@@ -356,7 +356,7 @@ export function InfrastructureClient() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">{i18n.grid.overallHealth}</p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-2xl font-bold" data-testid="overall-health-status">
                       {locale === 'it' && data.overall.state === 'Healthy'
                         ? 'Sano'
                         : locale === 'it' && data.overall.state === 'Degraded'

@@ -14,14 +14,14 @@
 
 import { useState } from 'react';
 
-import { AdminAuthGuard } from '@/components/auth/AdminAuthGuard';
-import { useAuthContext } from '@/lib/auth/context';
+import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { GamesTable } from './_components/GamesTable/GamesTable';
 import { GameEditModal } from './_components/GameEditModal/GameEditModal';
 import { ApprovalReviewModal } from './_components/ApprovalReviewModal/ApprovalReviewModal';
 
 export function GamesClient() {
-  const { user, loading: authLoading } = useAuthContext();
+  const { user, loading: authLoading } = useAuth();
 
   // Modal state
   const [editModalOpen, setEditModalOpen] = useState(false);

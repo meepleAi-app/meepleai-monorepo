@@ -35,9 +35,18 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
     public async Task<LoginResponse> Handle(LoginCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        // Find user by email
+
+        // Issue #2564: Validate null/empty password BEFORE repository call (efficiency)
+        if (string.IsNullOrWhiteSpace(command.Password))
+            throw new ValidationException("Password is required");
+
+        // Find user by email (even for short passwords - prevents timing attacks)
         var email = new Email(command.Email);
         var user = await _userRepository.GetByEmailAsync(email, cancellationToken).ConfigureAwait(false);
+
+        // Issue #2564: Validate password length AFTER repository call (security: prevent timing attack)
+        if (command.Password.Length < 8)
+            throw new ValidationException("Password must be at least 8 characters");
 
         if (user == null)
             throw new DomainException("Invalid email or password");

@@ -3,4 +3,10 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Queries;
 
-public sealed record GetAiModelByIdQuery(Guid Id) : IQuery<AiModelConfigDto>;
+/// <summary>
+/// Query to get a single AI model configuration by ID
+/// </summary>
+/// <remarks>
+/// Issue #2567: Admin endpoint for retrieving specific AI model
+/// </remarks>
+internal sealed record GetAiModelByIdQuery(Guid Id) : IQuery<AiModelDto>;

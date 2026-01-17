@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
+using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
@@ -41,7 +42,7 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
             return;
         }
 
-        // Define default AI models
+        // Define default AI models (Issue #2520: JSON settings approach)
         var models = new[]
         {
             AiModelConfiguration.Create(
@@ -49,6 +50,11 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                 displayName: "Llama 3.3 70B Instruct (Free)",
                 provider: "OpenRouter",
                 priority: 1,
+                settings: new ModelSettings(
+                    maxTokens: 4096,
+                    temperature: 0.7m,
+                    pricing: ModelPricing.Free
+                ),
                 isActive: true,
                 isPrimary: true
             ),
@@ -57,14 +63,27 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                 displayName: "Llama 3.3 70B Instruct",
                 provider: "OpenRouter",
                 priority: 2,
+                settings: new ModelSettings(
+                    maxTokens: 4096,
+                    temperature: 0.7m,
+                    pricing: new ModelPricing(
+                        inputCostPer1M: 0.10m,  // OpenRouter 2026 rates
+                        outputCostPer1M: 0.32m
+                    )
+                ),
                 isActive: true,
                 isPrimary: false
             ),
             AiModelConfiguration.Create(
-                modelId: "google/gemini-pro",
-                displayName: "Gemini Pro",
+                modelId: "google/gemini-2.0-flash-exp:free",
+                displayName: "Gemini 2.0 Flash Experimental (Free)",
                 provider: "OpenRouter",
                 priority: 3,
+                settings: new ModelSettings(
+                    maxTokens: 8192,
+                    temperature: 0.7m,
+                    pricing: ModelPricing.Free
+                ),
                 isActive: true,
                 isPrimary: false
             ),
@@ -73,6 +92,14 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                 displayName: "DeepSeek Chat",
                 provider: "OpenRouter",
                 priority: 4,
+                settings: new ModelSettings(
+                    maxTokens: 4096,
+                    temperature: 0.7m,
+                    pricing: new ModelPricing(
+                        inputCostPer1M: 0.19m,  // OpenRouter 2026 rates
+                        outputCostPer1M: 0.87m
+                    )
+                ),
                 isActive: true,
                 isPrimary: false
             ),
@@ -81,6 +108,11 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                 displayName: "Llama 3 8B (Local)",
                 provider: "Ollama",
                 priority: 5,
+                settings: new ModelSettings(
+                    maxTokens: 2048,
+                    temperature: 0.7m,
+                    pricing: ModelPricing.Free
+                ),
                 isActive: false,
                 isPrimary: false
             ),
@@ -89,6 +121,11 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                 displayName: "Mistral (Local)",
                 provider: "Ollama",
                 priority: 6,
+                settings: new ModelSettings(
+                    maxTokens: 2048,
+                    temperature: 0.7m,
+                    pricing: ModelPricing.Free
+                ),
                 isActive: false,
                 isPrimary: false
             )

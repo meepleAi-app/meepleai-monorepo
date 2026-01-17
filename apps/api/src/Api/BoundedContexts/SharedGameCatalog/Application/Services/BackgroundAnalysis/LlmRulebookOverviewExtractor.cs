@@ -163,8 +163,8 @@ internal sealed partial class LlmRulebookOverviewExtractor : IRulebookOverviewEx
     [GeneratedRegex(@"^#{1,3}\s+(.+)$|^([A-Z][A-Z\s]{2,})$", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex ExtractHeadersRegex();
 
-    // DTO for LLM response
-    private sealed record LlmOverviewResponse
+    // DTO for LLM response (internal for testability - Issue #2525)
+    internal sealed record LlmOverviewResponse
     {
         [JsonPropertyName("gameTitle")]
         public string GameTitle { get; init; } = string.Empty;

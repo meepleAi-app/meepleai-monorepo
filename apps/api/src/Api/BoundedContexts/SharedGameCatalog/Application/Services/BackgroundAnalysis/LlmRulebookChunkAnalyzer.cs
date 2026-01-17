@@ -203,8 +203,8 @@ internal sealed class LlmRulebookChunkAnalyzer : IRulebookChunkAnalyzer
         return parallelResult;
     }
 
-    // DTO for LLM response
-    private sealed record LlmChunkResponse
+    // DTO for LLM response (internal for testability - Issue #2525)
+    internal sealed record LlmChunkResponse
     {
         [JsonPropertyName("extractedMechanics")]
         public List<string> ExtractedMechanics { get; init; } = [];
@@ -222,7 +222,7 @@ internal sealed class LlmRulebookChunkAnalyzer : IRulebookChunkAnalyzer
         public string ChunkSummary { get; init; } = string.Empty;
     }
 
-    private sealed record LlmResourceDto
+    internal sealed record LlmResourceDto
     {
         [JsonPropertyName("name")]
         public string Name { get; init; } = string.Empty;
@@ -237,7 +237,7 @@ internal sealed class LlmRulebookChunkAnalyzer : IRulebookChunkAnalyzer
         public bool IsLimited { get; init; }
     }
 
-    private sealed record LlmGamePhaseDto
+    internal sealed record LlmGamePhaseDto
     {
         [JsonPropertyName("name")]
         public string Name { get; init; } = string.Empty;

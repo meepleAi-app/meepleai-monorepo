@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
+using Api.BoundedContexts.SystemConfiguration.Domain.Services;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,6 +17,10 @@ internal static class SystemConfigurationServiceExtensions
     {
         // Register repositories
         services.AddScoped<IAiModelConfigurationRepository, EfAiModelConfigurationRepository>();
+        services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
+
+        // Register domain services
+        services.AddScoped<ConfigurationValidator>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

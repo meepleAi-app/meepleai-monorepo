@@ -16,8 +16,9 @@ public sealed class AiModelConfigurationEntity
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
-    // Issue #2520: JSONB columns for flexible configuration
+    // JSON Settings (JSONB) - Issue #2520: More flexible than individual columns
     public string SettingsJson { get; set; } = "{}";
-    public string PricingJson { get; set; } = "{}";
+
+    // JSON Usage Stats (JSONB) - Issue #2520
     public string UsageJson { get; set; } = "{}";
 }

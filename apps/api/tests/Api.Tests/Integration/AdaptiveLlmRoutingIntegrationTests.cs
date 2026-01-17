@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
+using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
@@ -520,12 +521,15 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             aiSettings,
             _strategyLogger);
 
+        var mockModelConfigRepository = new Mock<IAiModelConfigurationRepository>();
+
         return new HybridLlmService(
             clients,
             routingStrategy,
             _mockCostLogRepository.Object,
             _serviceLogger,
             aiSettings,
+            mockModelConfigRepository.Object,
             healthCheckService: null);
     }
 

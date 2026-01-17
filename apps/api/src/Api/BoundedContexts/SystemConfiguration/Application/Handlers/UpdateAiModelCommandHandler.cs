@@ -9,18 +9,17 @@ using Api.SharedKernel.Infrastructure.Persistence;
 namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 
 /// <summary>
-/// Handler for toggling AI model active status
+/// Handler for updating an existing AI model configuration
 /// </summary>
 /// <remarks>
-/// Issue #2567: PATCH /api/v1/admin/ai-models/{id}/toggle endpoint handler
-/// Toggles between active and inactive state
+/// Issue #2567: PUT /api/v1/admin/ai-models/{id} endpoint handler
 /// </remarks>
-internal sealed class ToggleAiModelActiveCommandHandler : ICommandHandler<ToggleAiModelActiveCommand, AiModelDto>
+internal sealed class UpdateAiModelCommandHandler : ICommandHandler<UpdateAiModelCommand, AiModelDto>
 {
     private readonly IAiModelConfigurationRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public ToggleAiModelActiveCommandHandler(
+    public UpdateAiModelCommandHandler(
         IAiModelConfigurationRepository repository,
         IUnitOfWork unitOfWork)
     {
@@ -28,7 +27,7 @@ internal sealed class ToggleAiModelActiveCommandHandler : ICommandHandler<Toggle
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
-    public async Task<AiModelDto> Handle(ToggleAiModelActiveCommand command, CancellationToken cancellationToken)
+    public async Task<AiModelDto> Handle(UpdateAiModelCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -39,14 +38,21 @@ internal sealed class ToggleAiModelActiveCommandHandler : ICommandHandler<Toggle
             throw new NotFoundException("AiModel", command.Id.ToString());
         }
 
-        // Business rule: Primary model cannot be deactivated
-        if (model.IsPrimary && model.IsActive)
-        {
-            throw new ConflictException("Cannot deactivate primary AI model. Set another model as primary first.");
-        }
+        // Update model properties
+        // Note: Entity doesn't expose setters, so we need to use domain methods
+        model.UpdatePriority(command.Priority);
+        model.SetActive(command.IsActive);
+        model.SetPrimary(command.IsPrimary);
+        model.UpdateSettings(command.Settings.MaxTokens, command.Settings.Temperature);
 
-        // Toggle active status
-        model.SetActive(!model.IsActive);
+        // Update pricing if changed
+        if (command.Settings.Pricing != model.Settings.Pricing)
+        {
+            model.UpdatePricing(
+                command.Settings.Pricing.InputCostPer1M,
+                command.Settings.Pricing.OutputCostPer1M
+            );
+        }
 
         await _repository.UpdateAsync(model, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

@@ -1,53 +1,78 @@
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
+using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 
-public sealed class GetAllAiModelsQueryHandler : IQueryHandler<GetAllAiModelsQuery, IReadOnlyList<AiModelConfigDto>>
+/// <summary>
+/// Handler for retrieving all AI model configurations with filtering and pagination
+/// </summary>
+/// <remarks>
+/// Issue #2567: GET /api/v1/admin/ai-models endpoint handler
+/// </remarks>
+internal sealed class GetAllAiModelsQueryHandler : IQueryHandler<GetAllAiModelsQuery, AiModelListDto>
 {
     private readonly IAiModelConfigurationRepository _repository;
 
-    public GetAllAiModelsQueryHandler(IAiModelConfigurationRepository repository) => _repository = repository;
-
-    public async Task<IReadOnlyList<AiModelConfigDto>> Handle(GetAllAiModelsQuery request, CancellationToken cancellationToken)
+    public GetAllAiModelsQueryHandler(IAiModelConfigurationRepository repository)
     {
-        var models = await _repository.GetAllAsync(cancellationToken).ConfigureAwait(false);
-        return models.Select(MapToDto).ToList();
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
-    private static AiModelConfigDto MapToDto(Domain.Entities.AiModelConfiguration model) => new()
+    public async Task<AiModelListDto> Handle(GetAllAiModelsQuery query, CancellationToken cancellationToken)
     {
-        Id = model.Id,
-        ModelId = model.ModelId,
-        DisplayName = model.DisplayName,
-        Provider = model.Provider,
-        Priority = model.Priority,
-        IsActive = model.IsActive,
-        IsPrimary = model.IsPrimary,
-        CreatedAt = model.CreatedAt,
-        UpdatedAt = model.UpdatedAt,
-        Settings = new ModelSettingsDto
+        ArgumentNullException.ThrowIfNull(query);
+
+        var models = await _repository.GetAllAsync(cancellationToken).ConfigureAwait(false);
+
+        // Apply filters
+        if (!string.IsNullOrWhiteSpace(query.Provider))
         {
-            MaxTokens = model.Settings.MaxTokens,
-            Temperature = model.Settings.Temperature,
-            TopP = model.Settings.TopP,
-            FrequencyPenalty = model.Settings.FrequencyPenalty,
-            PresencePenalty = model.Settings.PresencePenalty
-        },
-        Pricing = new ModelPricingDto
-        {
-            InputPricePerMillion = model.Pricing.InputPricePerMillion,
-            OutputPricePerMillion = model.Pricing.OutputPricePerMillion,
-            Currency = model.Pricing.Currency
-        },
-        Usage = new UsageStatsDto
-        {
-            TotalRequests = model.Usage.TotalRequests,
-            TotalTokensUsed = model.Usage.TotalTokensUsed,
-            TotalCostUsd = model.Usage.TotalCostUsd,
-            LastUsedAt = model.Usage.LastUsedAt
+            models = models.Where(m => m.Provider.Equals(query.Provider, StringComparison.OrdinalIgnoreCase)).ToList();
         }
-    };
+
+        if (query.IsActive.HasValue)
+        {
+            models = models.Where(m => m.IsActive == query.IsActive.Value).ToList();
+        }
+
+        // Order by priority (lower = higher preference)
+        models = models.OrderBy(m => m.Priority).ToList();
+
+        var totalCount = models.Count;
+
+        // Apply pagination
+        var skip = (query.Page - 1) * query.PageSize;
+        var pagedModels = models.Skip(skip).Take(query.PageSize).ToList();
+
+        var modelDtos = pagedModels.Select(MapToDto).ToList();
+
+        return new AiModelListDto
+        {
+            Models = modelDtos,
+            TotalCount = totalCount,
+            Page = query.Page,
+            PageSize = query.PageSize
+        };
+    }
+
+    private static AiModelDto MapToDto(AiModelConfiguration model)
+    {
+        return new AiModelDto
+        {
+            Id = model.Id,
+            ModelId = model.ModelId,
+            DisplayName = model.DisplayName,
+            Provider = model.Provider,
+            Priority = model.Priority,
+            IsActive = model.IsActive,
+            IsPrimary = model.IsPrimary,
+            CreatedAt = model.CreatedAt,
+            UpdatedAt = model.UpdatedAt,
+            Settings = model.Settings,
+            Usage = model.Usage
+        };
+    }
 }

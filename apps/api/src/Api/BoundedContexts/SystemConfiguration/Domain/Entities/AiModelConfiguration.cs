@@ -5,6 +5,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 /// <summary>
 /// Represents an AI model configuration for runtime selection.
 /// Supports OpenRouter and Ollama providers with priority-based fallback.
+/// Issue #2520: Refactored to use JSON settings for flexibility
 /// </summary>
 public sealed class AiModelConfiguration
 {
@@ -18,9 +19,10 @@ public sealed class AiModelConfiguration
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
-    // Issue #2520: JSONB columns for flexible configuration
+    // JSON Settings (JSONB) - Issue #2520
     public ModelSettings Settings { get; private set; } = ModelSettings.Default;
-    public ModelPricing Pricing { get; private set; } = ModelPricing.Free;
+
+    // JSON Usage Stats (JSONB) - Issue #2520
     public UsageStats Usage { get; private set; } = UsageStats.Empty;
 
     private AiModelConfiguration() { } // EF Core constructor
@@ -31,6 +33,7 @@ public sealed class AiModelConfiguration
         string displayName,
         string provider,
         int priority,
+        ModelSettings settings,
         bool isActive = true,
         bool isPrimary = false)
     {
@@ -39,6 +42,8 @@ public sealed class AiModelConfiguration
         DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
         Provider = provider ?? throw new ArgumentNullException(nameof(provider));
         Priority = priority;
+        Settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        Usage = UsageStats.Empty;
         IsActive = isActive;
         IsPrimary = isPrimary;
         CreatedAt = DateTime.UtcNow;
@@ -46,12 +51,14 @@ public sealed class AiModelConfiguration
 
     /// <summary>
     /// Factory method to create a new AI model configuration.
+    /// Issue #2520: Refactored to use ModelSettings value object
     /// </summary>
     public static AiModelConfiguration Create(
         string modelId,
         string displayName,
         string provider,
         int priority,
+        ModelSettings settings,
         bool isActive = true,
         bool isPrimary = false)
     {
@@ -73,6 +80,7 @@ public sealed class AiModelConfiguration
             displayName,
             provider,
             priority,
+            settings,
             isActive,
             isPrimary
         );
@@ -100,30 +108,43 @@ public sealed class AiModelConfiguration
     }
 
     /// <summary>
-    /// Issue #2520: Update usage statistics after successful request
+    /// Update model generation settings (Issue #2520)
+    /// Creates new immutable Settings value object
     /// </summary>
-    public void UpdateUsageStats(int tokens, decimal costUsd)
+    public void UpdateSettings(int maxTokens, decimal temperature)
     {
-        Usage = Usage.RecordUsage(tokens, costUsd);
+        var newPricing = Settings.Pricing;
+        Settings = new ModelSettings(maxTokens, temperature, newPricing);
         UpdatedAt = DateTime.UtcNow;
     }
 
     /// <summary>
-    /// Issue #2520: Update model settings
+    /// Update pricing information (Issue #2520)
+    /// Creates new immutable Settings value object with updated pricing
     /// </summary>
-    public void UpdateSettings(ModelSettings settings)
+    public void UpdatePricing(decimal inputCostPer1M, decimal outputCostPer1M)
     {
-        Settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        var newPricing = new ModelPricing(inputCostPer1M, outputCostPer1M);
+        Settings = new ModelSettings(Settings.MaxTokens, Settings.Temperature, newPricing);
         UpdatedAt = DateTime.UtcNow;
     }
 
     /// <summary>
-    /// Issue #2520: Update pricing information
+    /// Track usage statistics after AI request (Issue #2520)
+    /// Creates new immutable UsageStats value object
     /// </summary>
-    public void UpdatePricing(ModelPricing pricing)
+    public void TrackUsage(int inputTokens, int outputTokens, decimal costUsd)
     {
-        Pricing = pricing ?? throw new ArgumentNullException(nameof(pricing));
+        if (inputTokens < 0)
+            throw new ArgumentException("InputTokens cannot be negative", nameof(inputTokens));
+
+        if (outputTokens < 0)
+            throw new ArgumentException("OutputTokens cannot be negative", nameof(outputTokens));
+
+        if (costUsd < 0)
+            throw new ArgumentException("CostUsd cannot be negative", nameof(costUsd));
+
+        Usage = Usage.TrackRequest(inputTokens, outputTokens, costUsd);
         UpdatedAt = DateTime.UtcNow;
     }
 }
-

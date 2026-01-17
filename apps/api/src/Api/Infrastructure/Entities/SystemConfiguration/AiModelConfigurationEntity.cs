@@ -16,17 +16,9 @@ public sealed class AiModelConfigurationEntity
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
-    // Model Settings (Issue #2520)
-    public int MaxTokens { get; set; }
-    public decimal Temperature { get; set; }
+    // JSON Settings (JSONB) - Issue #2520: More flexible than individual columns
+    public string SettingsJson { get; set; } = "{}";
 
-    // Pricing (per 1M tokens in USD) (Issue #2520)
-    public decimal CostPerInputToken { get; set; }
-    public decimal CostPerOutputToken { get; set; }
-
-    // Usage Tracking (Issue #2520)
-    public long TotalRequests { get; set; }
-    public long TotalTokensUsed { get; set; }
-    public decimal TotalCostUsd { get; set; }
-    public DateTime? LastUsedAt { get; set; }
+    // JSON Usage Stats (JSONB) - Issue #2520
+    public string UsageJson { get; set; } = "{}";
 }

@@ -3031,8 +3031,18 @@ namespace Api.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("SettingsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("settings_json");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UsageJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("usage_json");
 
                     b.HasKey("Id");
 

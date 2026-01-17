@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260117080519_AddSettingsAndUsageTrackingToAiModels")]
-    partial class AddSettingsAndUsageTrackingToAiModels
+    [Migration("20260117081858_AddJsonSettingsToAiModels")]
+    partial class AddJsonSettingsToAiModels
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -3001,12 +3001,6 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("CostPerInputToken")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal>("CostPerOutputToken")
-                        .HasColumnType("numeric");
-
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -3027,12 +3021,6 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
-                    b.Property<DateTime?>("LastUsedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("MaxTokens")
-                        .HasColumnType("integer");
-
                     b.Property<string>("ModelId")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -3046,20 +3034,18 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<decimal>("Temperature")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal>("TotalCostUsd")
-                        .HasColumnType("numeric");
-
-                    b.Property<long>("TotalRequests")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("TotalTokensUsed")
-                        .HasColumnType("bigint");
+                    b.Property<string>("SettingsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("settings_json");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UsageJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("usage_json");
 
                     b.HasKey("Id");
 

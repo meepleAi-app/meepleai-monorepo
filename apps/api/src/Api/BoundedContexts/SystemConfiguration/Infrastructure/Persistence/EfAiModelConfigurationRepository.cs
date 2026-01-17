@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
+using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SystemConfiguration;
 using Microsoft.EntityFrameworkCore;
@@ -125,11 +127,36 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
         typeof(AiModelConfiguration).GetProperty(nameof(AiModelConfiguration.UpdatedAt))!
             .SetValue(domainEntity, entity.UpdatedAt);
 
+        // Issue #2520: Deserialize JSONB columns to ValueObjects
+        var settings = string.IsNullOrWhiteSpace(entity.SettingsJson) || string.Equals(entity.SettingsJson, "{}", StringComparison.Ordinal)
+            ? ModelSettings.Default
+            : JsonSerializer.Deserialize<ModelSettings>(entity.SettingsJson) ?? ModelSettings.Default;
+
+        var pricing = string.IsNullOrWhiteSpace(entity.PricingJson) || string.Equals(entity.PricingJson, "{}", StringComparison.Ordinal)
+            ? ModelPricing.Free
+            : JsonSerializer.Deserialize<ModelPricing>(entity.PricingJson) ?? ModelPricing.Free;
+
+        var usage = string.IsNullOrWhiteSpace(entity.UsageJson) || string.Equals(entity.UsageJson, "{}", StringComparison.Ordinal)
+            ? UsageStats.Empty
+            : JsonSerializer.Deserialize<UsageStats>(entity.UsageJson) ?? UsageStats.Empty;
+
+        typeof(AiModelConfiguration).GetProperty(nameof(AiModelConfiguration.Settings))!
+            .SetValue(domainEntity, settings);
+        typeof(AiModelConfiguration).GetProperty(nameof(AiModelConfiguration.Pricing))!
+            .SetValue(domainEntity, pricing);
+        typeof(AiModelConfiguration).GetProperty(nameof(AiModelConfiguration.Usage))!
+            .SetValue(domainEntity, usage);
+
         return domainEntity;
     }
 
     private static AiModelConfigurationEntity MapToDb(AiModelConfiguration domain)
     {
+        // Issue #2520: Serialize ValueObjects to JSONB
+        var settingsJson = JsonSerializer.Serialize(domain.Settings);
+        var pricingJson = JsonSerializer.Serialize(domain.Pricing);
+        var usageJson = JsonSerializer.Serialize(domain.Usage);
+
         return new AiModelConfigurationEntity
         {
             Id = domain.Id,
@@ -140,7 +167,11 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
             IsActive = domain.IsActive,
             IsPrimary = domain.IsPrimary,
             CreatedAt = domain.CreatedAt,
-            UpdatedAt = domain.UpdatedAt
+            UpdatedAt = domain.UpdatedAt,
+            SettingsJson = settingsJson,
+            PricingJson = pricingJson,
+            UsageJson = usageJson
         };
     }
 }
+

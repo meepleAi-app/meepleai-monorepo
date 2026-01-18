@@ -390,14 +390,14 @@ public class ApiKeyEntityTests
     }
 
     [Fact]
-    public void MarkAsUsed_CalledMultipleTimes_UpdatesTimestamp()
+    public async Task MarkAsUsed_CalledMultipleTimes_UpdatesTimestamp()
     {
         // Arrange
         var (apiKey, _) = ApiKeyBuilder.CreateDefault();
         apiKey.MarkAsUsed();
         var firstUpdate = apiKey.LastUsedAt;
 
-        Thread.Sleep(10); // Small delay
+        await Task.Delay(TestConstants.Timing.TinyDelay); // Ensure different timestamp
 
         // Act
         apiKey.MarkAsUsed();

@@ -6,6 +6,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundTasks;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -198,26 +199,48 @@ internal sealed class AnalyzeRulebookCommandHandler
                     taskName,
                     async taskCt =>
                     {
-                        var result = await _backgroundOrchestrator.ExecuteBackgroundAnalysisAsync(
-                            taskId,
-                            sharedGameId,
-                            pdfDocumentId,
-                            gameTitle,
-                            rulebookContent,
-                            userId,
-                            taskCt).ConfigureAwait(false);
+                        // Issue #2527: Enforce 5-minute timeout for background analysis tasks
+                        // Create linked CancellationTokenSource with timeout to prevent resource leaks
+                        using var cts = CancellationTokenSource.CreateLinkedTokenSource(taskCt);
+                        cts.CancelAfter(_options.MaxTaskTimeout);
 
-                        if (!result.Success)
+                        try
                         {
-                            _logger.LogError(
-                                "Background analysis failed: taskId={TaskId}, error={Error}",
-                                taskId, result.ErrorMessage);
-                            throw new InvalidOperationException($"Background analysis failed: {result.ErrorMessage}");
-                        }
+                            var result = await _backgroundOrchestrator.ExecuteBackgroundAnalysisAsync(
+                                taskId,
+                                sharedGameId,
+                                pdfDocumentId,
+                                gameTitle,
+                                rulebookContent,
+                                userId,
+                                cts.Token).ConfigureAwait(false);
 
-                        _logger.LogInformation(
-                            "Background analysis completed: taskId={TaskId}, duration={Duration}s",
-                            taskId, result.Metrics.TotalDuration.TotalSeconds);
+                            if (!result.Success)
+                            {
+                                _logger.LogError(
+                                    "Background analysis failed: taskId={TaskId}, error={Error}",
+                                    taskId, result.ErrorMessage);
+                                throw new ConflictException($"Background analysis failed: {result.ErrorMessage}");
+                            }
+
+                            _logger.LogInformation(
+                                "Background analysis completed: taskId={TaskId}, duration={Duration}s",
+                                taskId, result.Metrics.TotalDuration.TotalSeconds);
+                        }
+                        catch (OperationCanceledException ex) when (cts.IsCancellationRequested)
+                        {
+                            // Issue #2527: Log timeout event with structured metadata
+                            _logger.LogError(ex,
+                                "Background analysis timed out after {Timeout}: taskId={TaskId}, game={GameTitle}, " +
+                                "sharedGameId={SharedGameId}, pdfId={PdfId}",
+                                _options.MaxTaskTimeout, taskId, gameTitle, sharedGameId, pdfDocumentId);
+
+                            // Re-throw as ConflictException to mark task as Failed (not Cancelled) in Redis
+                            // The BackgroundRulebookAnalysisOrchestrator already updates progress with timeout message
+                            throw new ConflictException(
+                                $"Background analysis timed out after {_options.MaxTaskTimeout}. " +
+                                $"Task terminated to prevent resource leaks.", ex);
+                        }
                     },
                     ct).ConfigureAwait(false);
             },

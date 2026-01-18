@@ -23,10 +23,10 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
-    public void CalculateCost_GptMini_ReturnsCorrectCost()
+    public void CalculateCost_DeepSeek_ReturnsCorrectCost()
     {
-        // Arrange - GPT-4o-mini: $0.15/$0.60 per 1M tokens
-        var modelId = "openai/gpt-4o-mini";
+        // Arrange - DeepSeek: $0.27/$1.10 per 1M tokens
+        var modelId = "deepseek/deepseek-chat";
         var promptTokens = 1000;      // 1K tokens
         var completionTokens = 500;   // 0.5K tokens
 
@@ -39,19 +39,19 @@ public class LlmCostCalculatorTests
         Assert.Equal(promptTokens, result.PromptTokens);
         Assert.Equal(completionTokens, result.CompletionTokens);
 
-        // Cost calculation: (1000/1M * $0.15) + (500/1M * $0.60)
-        //                 = $0.00015 + $0.0003 = $0.00045
-        Assert.Equal(0.00015m, result.InputCost);
-        Assert.Equal(0.0003m, result.OutputCost);
-        Assert.Equal(0.00045m, result.TotalCost);
+        // Cost calculation: (1000/1M * $0.27) + (500/1M * $1.10)
+        //                 = $0.00027 + $0.00055 = $0.00082
+        Assert.Equal(0.00027m, result.InputCost);
+        Assert.Equal(0.00055m, result.OutputCost);
+        Assert.Equal(0.00082m, result.TotalCost);
         Assert.False(result.IsFree);
     }
 
     [Fact]
-    public void CalculateCost_ClaudeHaiku_ReturnsCorrectCost()
+    public void CalculateCost_GeminiPro_ReturnsCorrectCost()
     {
-        // Arrange - Claude 3.5 Haiku: $0.80/$4.00 per 1M tokens
-        var modelId = "anthropic/claude-3.5-haiku";
+        // Arrange - Gemini Pro: $0.125/$0.375 per 1M tokens
+        var modelId = "google/gemini-pro";
         var promptTokens = 10000;      // 10K tokens
         var completionTokens = 2000;   // 2K tokens
 
@@ -59,11 +59,11 @@ public class LlmCostCalculatorTests
         var result = _calculator.CalculateCost(modelId, "OpenRouter", promptTokens, completionTokens);
 
         // Assert
-        // Cost calculation: (10000/1M * $0.80) + (2000/1M * $4.00)
-        //                 = $0.008 + $0.008 = $0.016
-        Assert.Equal(0.008m, result.InputCost);
-        Assert.Equal(0.008m, result.OutputCost);
-        Assert.Equal(0.016m, result.TotalCost);
+        // Cost calculation: (10000/1M * $0.125) + (2000/1M * $0.375)
+        //                 = $0.00125 + $0.00075 = $0.002
+        Assert.Equal(0.00125m, result.InputCost);
+        Assert.Equal(0.00075m, result.OutputCost);
+        Assert.Equal(0.002m, result.TotalCost);
         Assert.False(result.IsFree);
     }
 
@@ -124,7 +124,7 @@ public class LlmCostCalculatorTests
     public void CalculateCost_NegativeTokens_ReturnsEmpty()
     {
         // Arrange
-        var modelId = "openai/gpt-4o-mini";
+        var modelId = "deepseek/deepseek-chat";
 
         // Act
         var result = _calculator.CalculateCost(modelId, "OpenRouter", -100, 500);
@@ -140,7 +140,7 @@ public class LlmCostCalculatorTests
     public void CalculateCost_ZeroTokens_ReturnsZeroCost()
     {
         // Arrange
-        var modelId = "openai/gpt-4o-mini";
+        var modelId = "deepseek/deepseek-chat";
 
         // Act
         var result = _calculator.CalculateCost(modelId, "OpenRouter", 0, 0);
@@ -154,7 +154,7 @@ public class LlmCostCalculatorTests
     public void CalculateCost_LargeTokenCount_HandlesCorrectly()
     {
         // Arrange - 1M tokens (exact 1M boundary)
-        var modelId = "openai/gpt-4o-mini";
+        var modelId = "deepseek/deepseek-chat";
         var promptTokens = 1_000_000;
         var completionTokens = 500_000;
 
@@ -162,24 +162,24 @@ public class LlmCostCalculatorTests
         var result = _calculator.CalculateCost(modelId, "OpenRouter", promptTokens, completionTokens);
 
         // Assert
-        // Cost: (1M/1M * $0.15) + (0.5M/1M * $0.60) = $0.15 + $0.30 = $0.45
-        Assert.Equal(0.15m, result.InputCost);
-        Assert.Equal(0.30m, result.OutputCost);
-        Assert.Equal(0.45m, result.TotalCost);
+        // Cost: (1M/1M * $0.27) + (0.5M/1M * $1.10) = $0.27 + $0.55 = $0.82
+        Assert.Equal(0.27m, result.InputCost);
+        Assert.Equal(0.55m, result.OutputCost);
+        Assert.Equal(0.82m, result.TotalCost);
     }
 
     [Fact]
     public void GetModelPricing_ExistingModel_ReturnsCorrectPricing()
     {
         // Act
-        var pricing = _calculator.GetModelPricing("openai/gpt-4o-mini");
+        var pricing = _calculator.GetModelPricing("deepseek/deepseek-chat");
 
         // Assert
         Assert.NotNull(pricing);
-        Assert.Equal("openai/gpt-4o-mini", pricing.ModelId);
+        Assert.Equal("deepseek/deepseek-chat", pricing.ModelId);
         Assert.Equal("OpenRouter", pricing.Provider);
-        Assert.Equal(0.15m, pricing.InputCostPer1M);
-        Assert.Equal(0.60m, pricing.OutputCostPer1M);
+        Assert.Equal(0.27m, pricing.InputCostPer1M);
+        Assert.Equal(1.10m, pricing.OutputCostPer1M);
         Assert.False(pricing.IsFree);
     }
 
@@ -197,7 +197,7 @@ public class LlmCostCalculatorTests
     public void CalculateCost_RoundingPrecision_SixDecimalPlaces()
     {
         // Arrange - Test micro-dollar precision
-        var modelId = "openai/gpt-4o-mini";
+        var modelId = "deepseek/deepseek-chat";
         var promptTokens = 123;      // Small number to test rounding
         var completionTokens = 456;
 
@@ -205,26 +205,23 @@ public class LlmCostCalculatorTests
         var result = _calculator.CalculateCost(modelId, "OpenRouter", promptTokens, completionTokens);
 
         // Assert - Should round to 6 decimal places (micro-dollars)
-        // Input: 123/1M * $0.15 = $0.00001845 → $0.000018
-        // Output: 456/1M * $0.60 = $0.0002736 → $0.000274
-        Assert.Equal(0.000018m, result.InputCost);
-        Assert.Equal(0.000274m, result.OutputCost);
-        Assert.Equal(0.000292m, result.TotalCost);
+        // Input: 123/1M * $0.27 = $0.00003321 → $0.000033
+        // Output: 456/1M * $1.10 = $0.0005016 → $0.000502
+        Assert.Equal(0.000033m, result.InputCost);
+        Assert.Equal(0.000502m, result.OutputCost);
+        Assert.Equal(0.000535m, result.TotalCost);
     }
 
     [Fact]
     public void CalculateCost_AllSupportedModels_HavePricing()
     {
-        // Arrange - Test all configured models
+        // Arrange - Test all configured models (cost-optimized set, Issue #2593 revert)
         var models = new[]
         {
-            ("openai/gpt-4o-mini", "OpenRouter"),
-            ("openai/gpt-4o", "OpenRouter"),
-            ("anthropic/claude-3.5-haiku", "OpenRouter"),
-            ("anthropic/claude-3.5-sonnet", "OpenRouter"),
-            ("anthropic/claude-3-opus", "OpenRouter"),
             ("meta-llama/llama-3.3-70b-instruct:free", "OpenRouter"),
             ("meta-llama/llama-3.1-70b-instruct:free", "OpenRouter"),
+            ("meta-llama/llama-3.3-70b-instruct", "OpenRouter"),
+            ("google/gemini-pro", "OpenRouter"),
             ("deepseek/deepseek-chat", "OpenRouter"),
             ("llama3:8b", "Ollama"),
             ("llama3:70b", "Ollama"),

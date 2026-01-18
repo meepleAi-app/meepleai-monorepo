@@ -1060,6 +1060,34 @@ taskkill /PID <PID> /F
 netstat -ano | findstr :3000
 ```
 
+**Tests fail to run - Testhost processes blocking files** (Issue #2593):
+```bash
+# Symptom: "The process cannot access the file 'Api.dll' because it is being used by another process"
+# Root Cause: Previous test runs left testhost.exe processes active
+
+# Solution: Kill testhost processes before running tests
+tasklist | grep -i "testhost"
+taskkill //PID <PID> //F
+
+# Verify cleanup
+tasklist | grep -i "testhost" || echo "✅ Clean"
+
+# Then rebuild and test
+cd apps/api && dotnet build && dotnet test
+```
+
+**Culture-dependent test failures** (Issue #2593):
+```bash
+# Symptom: ToString() tests fail with "87 %" instead of "87%"
+# Root Cause: InvariantCulture with P0 format adds space in percentages
+
+# ❌ Wrong: Still adds space
+RelevanceScore.ToString("P0", CultureInfo.InvariantCulture) // "87 %"
+
+# ✅ Correct: Custom format without spaces
+$"{(RelevanceScore * 100):0}%" // "87%"
+```
+
 ---
 
 ## AI-Specific Context for Claude
@@ -1214,6 +1242,39 @@ command: ["sh","-c","redis-server --requirepass $$REDIS_PASSWORD"]
 # ❌ WRONG - Single $ gets expanded by docker-compose, not in container
 command: ["sh","-c","redis-server --requirepass $REDIS_PASSWORD"]
 ```
+
+**Test Environment Cleanup** (Issue #2593):
+
+Before running tests, verify no testhost processes are blocking files:
+```bash
+# Check for blocking processes
+tasklist | grep -i "testhost"
+
+# Kill if found
+taskkill //PID <PID> //F
+
+# Verify clean state before build/test
+tasklist | grep -i "testhost" || echo "✅ Clean"
+```
+
+**Culture-Independent Formatting** (Issue #2593):
+
+Percentage formatting in value objects must avoid culture-dependent spaces:
+```csharp
+// ❌ WRONG - InvariantCulture P0 adds space ("87 %")
+ToString("P0", CultureInfo.InvariantCulture)
+
+// ✅ CORRECT - Custom format guarantees no space ("87%")
+$"{(value * 100):0}%"
+```
+
+**Local Test Validation Priority** (Issue #2593):
+
+- Always test locally before relying on CI for validation
+- Kill testhost processes: `tasklist | grep testhost` → `taskkill`
+- Verify build clean: `dotnet build` (0 warnings, 0 errors)
+- Run specific tests: `dotnet test --filter "TestName"`
+- Confirm all pass locally before PR push
 
 ---
 

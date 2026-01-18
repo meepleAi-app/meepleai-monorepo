@@ -16,6 +16,7 @@ internal sealed class LlmRulebookChunkAnalyzer : IRulebookChunkAnalyzer
 {
     private readonly ILlmService _llmService;
     private readonly ILogger<LlmRulebookChunkAnalyzer> _logger;
+    private readonly Lock _lock = new();
 
     private const string SystemPrompt = """
         You are an expert board game analyst specializing in rulebook chunk analysis.
@@ -141,9 +142,6 @@ internal sealed class LlmRulebookChunkAnalyzer : IRulebookChunkAnalyzer
 
         var results = new ChunkAnalysisResult[chunks.Count];
         var processedCount = 0;
-#pragma warning disable MA0158 // Lock is appropriate for .NET < 9 compatibility
-        var lockObj = new object();
-#pragma warning restore MA0158
 
         // Use SemaphoreSlim for concurrency control
         using var semaphore = new SemaphoreSlim(maxParallelism, maxParallelism);
@@ -157,9 +155,7 @@ internal sealed class LlmRulebookChunkAnalyzer : IRulebookChunkAnalyzer
                 var result = await AnalyzeChunkAsync(chunk, gameContext, cancellationToken).ConfigureAwait(false);
                 results[chunk.ChunkIndex] = result;
 
-#pragma warning disable MA0158 // Lock is appropriate here for atomic callback+logging
-                lock (lockObj)
-#pragma warning restore MA0158
+                lock (_lock)
                 {
                     processedCount++;
                     var currentCount = processedCount;

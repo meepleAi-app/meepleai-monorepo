@@ -144,7 +144,7 @@ public sealed class AiModelConfiguration
         if (costUsd < 0)
             throw new ArgumentException("CostUsd cannot be negative", nameof(costUsd));
 
-        Usage = Usage.RecordUsage(inputTokens + outputTokens, costUsd); // Issue #2580: Use RecordUsage API
+        Usage = Usage.RecordUsage(inputTokens, outputTokens, costUsd); // Issue #2589: Preserve input/output granularity
         UpdatedAt = DateTime.UtcNow;
     }
 }

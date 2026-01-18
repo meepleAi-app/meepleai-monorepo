@@ -41,6 +41,11 @@ public abstract class SharedDatabaseTestBase : IAsyncLifetime
     private string _connectionString = string.Empty;
     private IDbContextTransaction? _transaction;
 
+    // Issue #2577: Global lock for EF Core migrations to prevent race conditions
+    // When 34+ test classes run in parallel, concurrent MigrateAsync() calls can cause
+    // "column already exists" errors even with isolated databases
+    private static readonly SemaphoreSlim MigrationLock = new(1, 1);
+
     /// <summary>
     /// Database context for test operations.
     /// Automatically configured and migrated.
@@ -85,8 +90,24 @@ public abstract class SharedDatabaseTestBase : IAsyncLifetime
         // Create and configure DbContext
         DbContext = _fixture.CreateDbContext(_connectionString);
 
-        // Apply migrations to isolated database
-        await DbContext.Database.MigrateAsync();
+        // Issue #2577: Use idempotent migration check instead of lock
+        // EF Core's MigrateAsync() can cause "column already exists" errors when:
+        // - Multiple test classes migrate concurrently (even to isolated databases)
+        // - Connection pooling shares metadata between contexts
+        // Solution: Check for pending migrations before applying
+        await MigrationLock.WaitAsync();
+        try
+        {
+            var pendingMigrations = await DbContext.Database.GetPendingMigrationsAsync();
+            if (pendingMigrations.Any())
+            {
+                await DbContext.Database.MigrateAsync();
+            }
+        }
+        finally
+        {
+            MigrationLock.Release();
+        }
 
         // Create MediatR instance
         Mediator = _fixture.CreateMediator();

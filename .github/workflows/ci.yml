@@ -177,8 +177,14 @@ jobs:
           done
 
           echo "⏳ Waiting for Redis..."
-          until redis-cli -h localhost -p 6379 ping | grep -q PONG; do sleep 1; done
-          echo "✅ Redis ready"
+          # Redis service has health-check configured - just wait for port availability
+          for i in {1..30}; do
+            if nc -z localhost 6379 2>/dev/null; then
+              echo "✅ Redis ready"
+              break
+            fi
+            sleep 1
+          done
 
           echo "⏳ Waiting for Qdrant..."
           until curl -sf http://localhost:6333/healthz > /dev/null; do sleep 1; done

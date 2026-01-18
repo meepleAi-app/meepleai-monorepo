@@ -11,19 +11,22 @@ namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 internal sealed class E2EMetrics : ValueObject
 {
     /// <summary>
-    /// Test coverage percentage (0-100)
+    /// Test coverage percentage (0-100).
+    /// Type-safe Percentage ensures valid range.
     /// </summary>
-    public decimal Coverage { get; }
+    public Percentage Coverage { get; }
 
     /// <summary>
-    /// Test pass rate percentage (0-100)
+    /// Test pass rate percentage (0-100).
+    /// Type-safe Percentage ensures valid range.
     /// </summary>
-    public decimal PassRate { get; }
+    public Percentage PassRate { get; }
 
     /// <summary>
-    /// Flaky test rate percentage (0-100)
+    /// Flaky test rate percentage (0-100).
+    /// Type-safe Percentage ensures valid range.
     /// </summary>
-    public decimal FlakyRate { get; }
+    public Percentage FlakyRate { get; }
 
     /// <summary>
     /// Average test execution time (ms)
@@ -61,14 +64,19 @@ internal sealed class E2EMetrics : ValueObject
     public DateTime LastRunAt { get; }
 
     /// <summary>
-    /// Overall test suite status ("pass", "warning", "fail")
+    /// Overall test suite status (Pass, Warning, Fail, NoData).
+    /// Indicates whether tests meet quality standards.
     /// </summary>
-    public string Status { get; }
+    public TestExecutionStatus Status { get; }
 
-    public E2EMetrics(
-        decimal coverage,
-        decimal passRate,
-        decimal flakyRate,
+    /// <summary>
+    /// Private constructor for factory methods.
+    /// Use FromTestRun() or CreateDefault() to create instances.
+    /// </summary>
+    private E2EMetrics(
+        Percentage coverage,
+        Percentage passRate,
+        Percentage flakyRate,
         decimal executionTime,
         int totalTests,
         int passedTests,
@@ -76,18 +84,15 @@ internal sealed class E2EMetrics : ValueObject
         int skippedTests,
         int flakyTests,
         DateTime lastRunAt,
-        string status)
+        TestExecutionStatus status)
     {
-        Guard.AgainstOutOfRange(coverage, nameof(coverage), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
-        Guard.AgainstOutOfRange(passRate, nameof(passRate), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
-        Guard.AgainstOutOfRange(flakyRate, nameof(flakyRate), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
+        // Percentage validation is handled by Percentage.Create() - type-safe by design
         Guard.AgainstNegative(executionTime, nameof(executionTime));
         Guard.AgainstNegative(totalTests, nameof(totalTests));
         Guard.AgainstNegative(passedTests, nameof(passedTests));
         Guard.AgainstNegative(failedTests, nameof(failedTests));
         Guard.AgainstNegative(skippedTests, nameof(skippedTests));
         Guard.AgainstNegative(flakyTests, nameof(flakyTests));
-        Guard.AgainstNullOrWhiteSpace(status, nameof(status));
 
         Coverage = coverage;
         PassRate = passRate;
@@ -103,69 +108,122 @@ internal sealed class E2EMetrics : ValueObject
     }
 
     /// <summary>
-    /// Determines if E2E metrics meet quality standards.
-    /// Coverage &gt;= 90%, Pass rate &gt;= 95%, Flaky rate &lt;= 5%.
+    /// Creates E2EMetrics from Playwright test run results.
+    /// Automatically calculates coverage, pass rate, flaky rate, and status.
     /// </summary>
-    public bool MeetsQualityStandards =>
-        Coverage >= QualityThresholds.MinimumCoverage &&
-        PassRate >= QualityThresholds.MinimumPassRate &&
-        FlakyRate <= QualityThresholds.MaximumFlakyRate;
+    /// <param name="totalTests">Total number of tests executed</param>
+    /// <param name="passedTests">Number of tests that passed</param>
+    /// <param name="failedTests">Number of tests that failed</param>
+    /// <param name="skippedTests">Number of tests that were skipped</param>
+    /// <param name="flakyTests">Number of tests that exhibited flaky behavior</param>
+    /// <param name="durationMs">Total execution duration in milliseconds</param>
+    /// <param name="lastRunAt">Timestamp when the test run occurred</param>
+    /// <returns>New E2EMetrics instance with calculated metrics</returns>
+    public static E2EMetrics FromTestRun(
+        int totalTests,
+        int passedTests,
+        int failedTests,
+        int skippedTests,
+        int flakyTests,
+        long durationMs,
+        DateTime lastRunAt)
+    {
+        Guard.AgainstNegative(totalTests, nameof(totalTests));
+        Guard.AgainstNegative(passedTests, nameof(passedTests));
+        Guard.AgainstNegative(failedTests, nameof(failedTests));
+        Guard.AgainstNegative(skippedTests, nameof(skippedTests));
+        Guard.AgainstNegative(flakyTests, nameof(flakyTests));
+        Guard.AgainstNegative(durationMs, nameof(durationMs));
+
+        // Calculate percentages using Percentage.FromFraction for type safety
+        var coverage = Percentage.FromFraction(passedTests, totalTests);
+        var passRate = Percentage.FromFraction(passedTests, totalTests);
+        var flakyRate = Percentage.FromFraction(flakyTests, totalTests);
+
+        // Calculate average execution time
+        var executionTime = totalTests > 0 ? (decimal)durationMs / totalTests : 0m;
+
+        // Determine status based on quality thresholds
+        var status = CalculateStatus(passRate.Value, flakyRate.Value);
+
+        return new E2EMetrics(
+            coverage: coverage,
+            passRate: passRate,
+            flakyRate: flakyRate,
+            executionTime: executionTime,
+            totalTests: totalTests,
+            passedTests: passedTests,
+            failedTests: failedTests,
+            skippedTests: skippedTests,
+            flakyTests: flakyTests,
+            lastRunAt: lastRunAt,
+            status: status);
+    }
 
     /// <summary>
-    /// Creates an empty E2EMetrics instance for initial state.
+    /// Creates default E2EMetrics instance for testing or initialization.
+    /// All metrics are set to zero and status is NoData.
     /// </summary>
-    public static E2EMetrics Empty() => new(
-        coverage: 0m,
-        passRate: 0m,
-        flakyRate: 0m,
+    public static E2EMetrics CreateDefault() => new(
+        coverage: Percentage.Zero,
+        passRate: Percentage.Zero,
+        flakyRate: Percentage.Zero,
         executionTime: 0m,
         totalTests: 0,
         passedTests: 0,
         failedTests: 0,
         skippedTests: 0,
         flakyTests: 0,
-        lastRunAt: DateTime.MinValue,
-        status: "pending");
+        lastRunAt: DateTime.UtcNow,
+        status: TestExecutionStatus.NoData);
 
     /// <summary>
-    /// Creates E2EMetrics from raw test results.
+    /// Empty E2EMetrics instance with zero values.
     /// </summary>
-    /// <param name="passedTests">Number of tests that passed</param>
-    /// <param name="failedTests">Number of tests that failed</param>
-    /// <param name="skippedTests">Number of tests that were skipped</param>
-    /// <param name="flakyTests">Number of tests identified as flaky</param>
-    /// <param name="executionTimeMs">Total execution time in milliseconds</param>
-    /// <param name="coveragePercent">Code coverage percentage (0-100)</param>
-    /// <returns>Calculated E2EMetrics instance</returns>
-    public static E2EMetrics FromTestResults(
-        int passedTests,
-        int failedTests,
-        int skippedTests,
-        int flakyTests,
-        decimal executionTimeMs,
-        decimal coveragePercent)
+    public static readonly E2EMetrics Empty = CreateDefault();
+
+    /// <summary>
+    /// Calculates test suite status based on pass rate and flaky rate.
+    /// Pass: PassRate greater than or equal to 95% AND FlakyRate less than or equal to 5%
+    /// Warning: PassRate greater than or equal to 80% AND FlakyRate less than or equal to 10%
+    /// Fail: Otherwise
+    /// </summary>
+    private static TestExecutionStatus CalculateStatus(decimal passRate, decimal flakyRate)
     {
-        var totalTests = passedTests + failedTests + skippedTests;
-        var passRate = totalTests > 0 ? (decimal)passedTests / totalTests * 100 : 0m;
-        var flakyRate = totalTests > 0 ? (decimal)flakyTests / totalTests * 100 : 0m;
-
-        var status = failedTests > 0 ? "fail"
-            : flakyTests > 0 ? "warning"
-            : "pass";
-
-        return new E2EMetrics(
-            coverage: coveragePercent,
-            passRate: passRate,
-            flakyRate: flakyRate,
-            executionTime: executionTimeMs,
-            totalTests: totalTests,
-            passedTests: passedTests,
-            failedTests: failedTests,
-            skippedTests: skippedTests,
-            flakyTests: flakyTests,
-            lastRunAt: DateTime.UtcNow,
-            status: status);
+        if (passRate >= QualityThresholds.MinimumPassRate && flakyRate <= QualityThresholds.MaximumFlakyRate)
+            return TestExecutionStatus.Pass;
+        if (passRate >= QualityThresholds.WarningPassRate && flakyRate <= QualityThresholds.WarningFlakyRate)
+            return TestExecutionStatus.Warning;
+        return TestExecutionStatus.Fail;
     }
+
+    /// <summary>
+    /// Determines if E2E test metrics meet MeepleAI quality standards.
+    /// </summary>
+    /// <remarks>
+    /// Quality standards defined in ADR-006 (Multi-Layer Validation Architecture):
+    /// <list type="bullet">
+    /// <item><description>Coverage: &gt;= 90% (industry best practice for critical systems, ensures comprehensive test coverage)</description></item>
+    /// <item><description>Pass Rate: &gt;= 95% (allows 5% tolerance for known flaky tests under investigation)</description></item>
+    /// <item><description>Flaky Rate: &lt;= 5% (acceptable threshold before CI becomes unreliable, prevents false positives)</description></item>
+    /// </list>
+    /// These thresholds balance rigorous quality enforcement with practical CI/CD workflow requirements.
+    /// </remarks>
+    /// <returns>
+    /// <c>true</c> if all quality thresholds are met; otherwise <c>false</c>.
+    /// </returns>
+    /// <example>
+    /// <code>
+    /// var metrics = E2EMetrics.FromTestRun(100, 98, 2, 0, 3, 1500);
+    /// if (!metrics.MeetsQualityStandards)
+    ///     logger.LogWarning("E2E quality not met: Coverage={Coverage}%, Pass={PassRate}%, Flaky={FlakyRate}%",
+    ///         metrics.Coverage, metrics.PassRate, metrics.FlakyRate);
+    /// </code>
+    /// </example>
+    public bool MeetsQualityStandards =>
+        Coverage >= QualityThresholds.MinimumCoverage &&
+        PassRate >= QualityThresholds.MinimumPassRate &&
+        FlakyRate <= QualityThresholds.MaximumFlakyRate;
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {
@@ -183,5 +241,5 @@ internal sealed class E2EMetrics : ValueObject
     }
 
     public override string ToString() =>
-        $"E2E: Coverage={Coverage:F1}%, Pass={PassRate:F1}%, Flaky={FlakyRate:F1}%, Execution={ExecutionTime}ms, Status={Status}";
+        $"E2E: Coverage={Coverage}, Pass={PassRate}, Flaky={FlakyRate}, Execution={ExecutionTime}ms, Status={Status}";
 }

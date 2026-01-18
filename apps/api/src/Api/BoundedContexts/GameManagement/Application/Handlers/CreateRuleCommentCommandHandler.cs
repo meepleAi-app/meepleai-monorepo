@@ -91,28 +91,36 @@ internal partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateR
                 return new List<string>();
             }
 
-            // MA0011/MA0074/CA1304/CA1310/CA1311/CA1862: ToLower()/Contains()/StartsWith() required for EF Core SQL translation
-            // EF Core translates these to SQL functions which are deterministic and culture-safe in database context
-            // mentionedUsernames are already normalized to lowercase (line 85), so we compare with ToLowerInvariant()
-#pragma warning disable MA0011, MA0074, CA1304, CA1310, CA1311, CA1862 // EF Core SQL translation limitation
-            var users = await _dbContext.Users
+            // Load users to memory for case-insensitive comparison (client evaluation)
+            // ToLowerInvariant() cannot be translated to SQL by EF Core
+            // mentionedUsernames are already normalized to lowercase (line 85)
+            var allUsers = await _dbContext.Users
                 .AsNoTracking()
-                .Where(u =>
-                    (u.DisplayName != null && mentionedUsernames.Any(m => u.DisplayName.ToLowerInvariant() == m))
-                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLowerInvariant().StartsWith(m))))
-#pragma warning restore MA0011, MA0074, CA1304, CA1310, CA1311, CA1862
-                .Select(u => u.Id.ToString())
-                .Distinct()
+                .Select(u => new { u.Id, u.DisplayName, u.Email })
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-            if (users.Count < mentionedUsernames.Count)
+            var users = allUsers
+                .Where(u =>
+                    (u.DisplayName != null && mentionedUsernames.Any(m => u.DisplayName.Equals(m, StringComparison.OrdinalIgnoreCase)))
+                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.StartsWith(m, StringComparison.OrdinalIgnoreCase))))
+                .Select(u => new { u.Id, u.DisplayName, u.Email })
+                .ToList();
+
+            var userIds = users
+                .Select(u => u.Id.ToString())
+#pragma warning disable MA0002 // GUIDs converted to string are already distinct
+                .Distinct()
+#pragma warning restore MA0002
+                .ToList();
+
+            if (userIds.Count < mentionedUsernames.Count)
             {
                 _logger.LogDebug(
                     "Resolved {ResolvedCount}/{TotalCount} mentions from text",
-                    users.Count, mentionedUsernames.Count);
+                    userIds.Count, mentionedUsernames.Count);
             }
 
-            return users;
+            return userIds;
         }
         catch (RegexMatchTimeoutException ex)
         {

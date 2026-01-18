@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.Tests.Constants;
 using FluentAssertions;
 using Xunit;
 
@@ -256,7 +257,7 @@ public class DocumentCollectionTests
     }
 
     [Fact]
-    public void UpdateMetadata_ValidInput_UpdatesSuccessfully()
+    public async Task UpdateMetadata_ValidInput_UpdatesSuccessfully()
     {
         // Arrange
         var collection = CreateTestCollection();
@@ -264,7 +265,7 @@ public class DocumentCollectionTests
         var newName = new CollectionName("New Collection Name");
 
         // Simulate time passing
-        Thread.Sleep(10);
+        await Task.Delay(TestConstants.Timing.TinyDelay);
 
         // Act
         collection.UpdateMetadata(newName, "New description");

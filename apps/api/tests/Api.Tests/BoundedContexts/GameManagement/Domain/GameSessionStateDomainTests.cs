@@ -193,12 +193,12 @@ public class GameSessionStateDomainTests
     }
 
     [Fact]
-    public void GetLatestSnapshot_WithSnapshots_ReturnsNewest()
+    public async Task GetLatestSnapshot_WithSnapshots_ReturnsNewest()
     {
         // Arrange
         var state = CreateTestState();
         state.CreateSnapshot(1, "First", "user");
-        Thread.Sleep(10); // Ensure different CreatedAt
+        await Task.Delay(TestConstants.Timing.TinyDelay); // Ensure different CreatedAt
         state.CreateSnapshot(2, "Second", "user");
 
         // Act

@@ -88,14 +88,14 @@ public class ExportedChatDataTests
     }
 
     [Fact]
-    public void Equals_TwoExportsWithSameValues_AreEqual()
+    public async Task Equals_TwoExportsWithSameValues_AreEqual()
     {
         // Arrange
         var content = "Test content";
         var export1 = new ExportedChatData(ExportFormat.Json, content);
 
         // Need to ensure same timestamp for equality
-        System.Threading.Thread.Sleep(10);
+        await Task.Delay(TestConstants.Timing.TinyDelay);
         var export2 = new ExportedChatData(ExportFormat.Json, content);
 
         // Act & Assert

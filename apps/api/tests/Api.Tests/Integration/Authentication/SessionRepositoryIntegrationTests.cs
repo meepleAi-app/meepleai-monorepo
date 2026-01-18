@@ -275,9 +275,9 @@ public sealed class SessionRepositoryIntegrationTests : IAsyncLifetime
         await CleanDatabaseAsync();
         await EnsureUserExistsAsync(TestUserId1);
         var session1 = CreateTestSession(TestSessionId1, TestUserId1);
-        await Task.Delay(10); // Ensure different CreatedAt
+        await Task.Delay(TimeSpan.FromMilliseconds(10), TestCancellationToken); // Ensure different CreatedAt
         var session2 = CreateTestSession(TestSessionId2, TestUserId1);
-        await Task.Delay(10);
+        await Task.Delay(TimeSpan.FromMilliseconds(10), TestCancellationToken);
         var session3 = CreateTestSession(TestSessionId3, TestUserId1);
 
         await _repository!.AddAsync(session1, TestCancellationToken);

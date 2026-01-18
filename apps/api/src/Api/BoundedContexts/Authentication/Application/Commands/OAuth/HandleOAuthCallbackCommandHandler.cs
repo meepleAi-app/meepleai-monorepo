@@ -11,6 +11,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands.OAuth;
@@ -50,6 +51,68 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
     public async Task<HandleOAuthCallbackResult> Handle(HandleOAuthCallbackCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // NOTE: Defensive validation for direct handler invocation (tests bypass MediatR pipeline)
+        // Production: HandleOAuthCallbackCommandValidator executes via MediatR ValidationBehavior
+        // Tests: Direct handler.Handle() calls require inline validation
+        if (string.IsNullOrWhiteSpace(command.Provider))
+        {
+            return new HandleOAuthCallbackResult
+            {
+                Success = false,
+                ErrorMessage = "OAuth provider is required"
+            };
+        }
+
+        var supportedProviders = new[] { "google", "github", "discord" };
+        if (!supportedProviders.Contains(command.Provider, StringComparer.OrdinalIgnoreCase))
+        {
+            return new HandleOAuthCallbackResult
+            {
+                Success = false,
+                ErrorMessage = $"Unsupported OAuth provider: {command.Provider}. Supported providers: google, github, discord"
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(command.Code))
+        {
+            return new HandleOAuthCallbackResult
+            {
+                Success = false,
+                ErrorMessage = "Authorization code is required"
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(command.State))
+        {
+            return new HandleOAuthCallbackResult
+            {
+                Success = false,
+                ErrorMessage = "State parameter is required"
+            };
+        }
+
+        // Use transaction for atomic user creation + OAuth linking + session creation
+        // Note: InMemory database doesn't support transactions (test scenario)
+        IDbContextTransaction? transaction = null;
+        try
+        {
+            var isInMemory = string.Equals(_db.Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal);
+            transaction = isInMemory
+                ? null
+                : await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException ex)
+        {
+            // Database connection failure scenario (test case)
+            _logger.LogError(ex, "Database connection not available during OAuth callback");
+            return new HandleOAuthCallbackResult
+            {
+                Success = false,
+                ErrorMessage = "Database connection error during authentication. Please try again."
+            };
+        }
+
         try
         {
             // Step 1: Validate state and exchange code for user info
@@ -64,13 +127,73 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                 };
             }
 
-            // Step 2: Find or create user and link OAuth account
-            var (user, isNewUser) = await FindOrCreateUserAsync(
-                command.Provider, userInfo as OAuthUserInfo, tokenResponse!, cancellationToken).ConfigureAwait(false);
+            // Step 2: Validate user info is not null
+            var oauthUserInfo = userInfo as OAuthUserInfo;
+            if (oauthUserInfo == null)
+            {
+                _logger.LogError("Failed to retrieve user information from OAuth provider {Provider}", command.Provider);
+                return new HandleOAuthCallbackResult
+                {
+                    Success = false,
+                    ErrorMessage = "Failed to retrieve user information from OAuth provider"
+                };
+            }
 
-            // Step 3: Create session for authenticated user
-            var sessionToken = await CreateSessionForUserAsync(
-                user.Id, command.IpAddress, command.UserAgent, cancellationToken).ConfigureAwait(false);
+            // Step 3: Find or create user and link OAuth account
+            var (user, isNewUser) = await FindOrCreateUserAsync(
+                command.Provider, oauthUserInfo, tokenResponse!, cancellationToken).ConfigureAwait(false);
+
+            // Step 4: Create session for authenticated user
+            string sessionToken;
+            try
+            {
+                sessionToken = await CreateSessionForUserAsync(
+                    user.Id, command.IpAddress, command.UserAgent, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create session for user {UserId} during OAuth callback", user.Id);
+
+                // Rollback changes (transaction for real DB, manual cleanup for InMemory)
+                if (transaction != null)
+                {
+                    await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    // Manual rollback for InMemory database (Issue #2600)
+                    // Remove OAuth account that was just created (works for both new and existing users)
+                    var providerLower = command.Provider.ToLowerInvariant();
+                    var oauthAccountToRemove = await _db.OAuthAccounts
+                        .FirstOrDefaultAsync(o => o.UserId == user.Id && o.Provider == providerLower, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    if (oauthAccountToRemove != null)
+                    {
+                        _db.OAuthAccounts.Remove(oauthAccountToRemove);
+                    }
+
+                    // Only remove user if it was newly created in this request
+                    if (isNewUser)
+                    {
+                        _db.Users.Remove(user);
+                    }
+
+                    await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                }
+
+                return new HandleOAuthCallbackResult
+                {
+                    Success = false,
+                    ErrorMessage = "Failed to create session. Please try again."
+                };
+            }
+
+            // Commit transaction if all steps succeeded
+            if (transaction != null)
+            {
+                await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            }
 
             _logger.LogInformation(
                 "OAuth callback successful for provider {Provider}, UserId: {UserId}, IsNewUser: {IsNewUser}",
@@ -89,6 +212,10 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         catch (SharedKernel.Domain.Exceptions.ValidationException ex)
         {
             _logger.LogError(ex, "Validation failed during OAuth callback for provider {Provider}", command.Provider);
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            }
             return new HandleOAuthCallbackResult
             {
                 Success = false,
@@ -98,6 +225,10 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         catch (DomainException ex)
         {
             _logger.LogError(ex, "Domain validation failed during OAuth callback for provider {Provider}", command.Provider);
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            }
             return new HandleOAuthCallbackResult
             {
                 Success = false,
@@ -114,6 +245,10 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during OAuth callback for provider {Provider}", command.Provider);
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            }
             return new HandleOAuthCallbackResult
             {
                 Success = false,
@@ -121,6 +256,13 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
             };
         }
 #pragma warning restore CA1031
+        finally
+        {
+            if (transaction != null)
+            {
+                await transaction.DisposeAsync().ConfigureAwait(false);
+            }
+        }
     }
 
     /// <summary>
@@ -147,22 +289,59 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         {
             tokenResponse = await _oauthService.ExchangeCodeForTokenAsync(provider, code).ConfigureAwait(false);
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error during OAuth token exchange. Provider: {Provider}", provider);
+            return (false, "OAuth token exchange failed due to provider error. Please try again.", null);
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Timeout during OAuth token exchange. Provider: {Provider}", provider);
+            return (false, "OAuth token exchange timed out. Please try again.", null);
+        }
+        // NOTE: InvalidOperationException catch for backward compatibility with IOAuthService
+        // CLAUDE.md prohibits InvalidOperationException, but IOAuthService currently throws it
+        // Future: Update IOAuthService to throw domain-specific exceptions
+#pragma warning disable S1135 // Complete the task associated to this 'TODO' comment
         catch (InvalidOperationException ex)
+#pragma warning restore S1135
         {
             _logger.LogError(ex, "Failed to exchange OAuth code for token. Provider: {Provider}", provider);
             return (false, "OAuth token exchange failed. Please try again.", null);
         }
 
         // Get user info from provider
-        OAuthUserInfo userInfo;
+        OAuthUserInfo? userInfo;
         try
         {
             userInfo = await _oauthService.GetUserInfoAsync(provider, tokenResponse.AccessToken).ConfigureAwait(false);
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error retrieving user info from OAuth provider. Provider: {Provider}", provider);
+            return (false, "Failed to get user information from OAuth provider. Please try again.", null);
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Timeout retrieving user info from OAuth provider. Provider: {Provider}", provider);
+            return (false, "OAuth provider timed out. Please try again.", null);
+        }
+        // NOTE: InvalidOperationException catch for backward compatibility with IOAuthService
+        // CLAUDE.md prohibits InvalidOperationException, but IOAuthService currently throws it
+        // Future: Update IOAuthService to throw domain-specific exceptions
+#pragma warning disable S1135 // Complete the task associated to this 'TODO' comment
         catch (InvalidOperationException ex)
+#pragma warning restore S1135
         {
             _logger.LogError(ex, "Failed to get user info from OAuth provider. Provider: {Provider}", provider);
             return (false, "Failed to get user information from OAuth provider. Please try again.", null);
+        }
+
+        // Validate user info is not null
+        if (userInfo == null)
+        {
+            _logger.LogError("OAuth provider {Provider} returned null user information", provider);
+            return (false, "Failed to retrieve user information from OAuth provider. Please try again.", null);
         }
 
         // Validate user info contains required email

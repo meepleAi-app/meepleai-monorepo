@@ -236,9 +236,9 @@ public sealed class ApiKeyRepositoryIntegrationTests : IAsyncLifetime
         await CleanDatabaseAsync();
         await EnsureUserExistsAsync(TestUserId1);
         var (key1, _) = CreateTestApiKey(TestApiKeyId1, TestUserId1, "Key 1");
-        await Task.Delay(10); // Ensure different CreatedAt
+        await Task.Delay(TimeSpan.FromMilliseconds(10), TestCancellationToken); // Ensure different CreatedAt
         var (key2, _) = CreateTestApiKey(TestApiKeyId2, TestUserId1, "Key 2");
-        await Task.Delay(10);
+        await Task.Delay(TimeSpan.FromMilliseconds(10), TestCancellationToken);
         var (key3, _) = CreateTestApiKey(TestApiKeyId3, TestUserId1, "Key 3");
 
         await _repository!.AddAsync(key1, TestCancellationToken);

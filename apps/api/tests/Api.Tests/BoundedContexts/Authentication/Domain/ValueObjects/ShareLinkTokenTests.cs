@@ -239,8 +239,8 @@ public class ShareLinkTokenTests
             secretKey: TestSecretKey
         );
 
-        // Wait for expiration using async-friendly Task.Delay
-        await Task.Delay(200);
+        // Wait for expiration
+        await Task.Delay(TestConstants.Timing.MediumDelay);
 
         // Act
         var validatedToken = ShareLinkToken.Validate(originalToken.Value, TestSecretKey);

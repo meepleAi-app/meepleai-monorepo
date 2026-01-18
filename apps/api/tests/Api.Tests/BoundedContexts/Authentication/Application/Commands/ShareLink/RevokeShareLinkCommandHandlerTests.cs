@@ -201,7 +201,7 @@ public class RevokeShareLinkCommandHandlerTests
             .Build();
 
         // Wait for it to expire
-        await Task.Delay(10);
+        await Task.Delay(TestConstants.Timing.TinyDelay);
 
         var command = new RevokeShareLinkCommand(
             ShareLinkId: shareLink.Id,

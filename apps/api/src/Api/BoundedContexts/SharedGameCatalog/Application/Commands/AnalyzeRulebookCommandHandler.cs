@@ -6,6 +6,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundTasks;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -219,7 +220,7 @@ internal sealed class AnalyzeRulebookCommandHandler
                                 _logger.LogError(
                                     "Background analysis failed: taskId={TaskId}, error={Error}",
                                     taskId, result.ErrorMessage);
-                                throw new InvalidOperationException($"Background analysis failed: {result.ErrorMessage}");
+                                throw new ConflictException($"Background analysis failed: {result.ErrorMessage}");
                             }
 
                             _logger.LogInformation(
@@ -234,9 +235,9 @@ internal sealed class AnalyzeRulebookCommandHandler
                                 "sharedGameId={SharedGameId}, pdfId={PdfId}",
                                 _options.MaxTaskTimeout, taskId, gameTitle, sharedGameId, pdfDocumentId);
 
-                            // Re-throw as generic exception to mark task as Failed (not Cancelled) in Redis
+                            // Re-throw as ConflictException to mark task as Failed (not Cancelled) in Redis
                             // The BackgroundRulebookAnalysisOrchestrator already updates progress with timeout message
-                            throw new InvalidOperationException(
+                            throw new ConflictException(
                                 $"Background analysis timed out after {_options.MaxTaskTimeout}. " +
                                 $"Task terminated to prevent resource leaks.", ex);
                         }

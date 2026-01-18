@@ -1,6 +1,6 @@
 # Bounded Contexts Documentation
 
-**Quick Navigation** - Guida ai 9 Bounded Contexts DDD di MeepleAI
+**Quick Navigation** - Guida ai 10 Bounded Contexts DDD di MeepleAI
 
 ---
 
@@ -17,7 +17,7 @@ Un **Bounded Context** è un confine esplicito all'interno del quale un particol
 
 ## 📂 Bounded Contexts Overview
 
-MeepleAI ha **9 Bounded Contexts** organizzati per area funzionale:
+MeepleAI ha **10 Bounded Contexts** organizzati per area funzionale:
 
 | # | Context | Responsabilità | File | Status |
 |---|---------|----------------|------|--------|
@@ -27,9 +27,10 @@ MeepleAI ha **9 Bounded Contexts** organizzati per area funzionale:
 | 4 | **DocumentProcessing** | PDF upload, extraction, chunking, validation | `document-processing.md` | ✅ Production |
 | 5 | **SharedGameCatalog** | Database community giochi con soft-delete | `shared-game-catalog.md` | ✅ Production |
 | 6 | **UserLibrary** | Collezioni giochi utente, wishlist, played history | `user-library.md` | ✅ Production |
-| 7 | **Administration** | Gestione utenti, ruoli, audit logs, analytics | `administration.md` | ✅ Production |
-| 8 | **SystemConfiguration** | Config runtime, feature flags, environment settings | `system-configuration.md` | ✅ Production |
-| 9 | **WorkflowIntegration** | n8n workflows, webhooks, error logging | `workflow-integration.md` | 🚧 Beta |
+| 7 | **UserNotifications** | Notifiche in-app, email, push notifications | `user-notifications.md` | ✅ Production |
+| 8 | **Administration** | Gestione utenti, ruoli, audit logs, analytics | `administration.md` | ✅ Production |
+| 9 | **SystemConfiguration** | Config runtime, feature flags, environment settings | `system-configuration.md` | ✅ Production |
+| 10 | **WorkflowIntegration** | n8n workflows, webhooks, error logging | `workflow-integration.md` | 🚧 Beta |
 
 ---
 
@@ -43,6 +44,7 @@ Implementare chat RAG | KnowledgeBase | `knowledge-base.md`
 Processare PDF regolamento | DocumentProcessing | `document-processing.md`
 Gestire catalogo community | SharedGameCatalog | `shared-game-catalog.md`
 Tracciare collezione utente | UserLibrary | `user-library.md`
+Gestire notifiche utente | UserNotifications | `user-notifications.md`
 Gestire utenti admin | Administration | `administration.md`
 Configurare feature flags | SystemConfiguration | `system-configuration.md`
 Integrare webhook esterno | WorkflowIntegration | `workflow-integration.md`
@@ -270,6 +272,7 @@ apps/api/src/Api/BoundedContexts/
 ├── DocumentProcessing/
 ├── SharedGameCatalog/
 ├── UserLibrary/
+├── UserNotifications/
 ├── Administration/
 ├── SystemConfiguration/
 └── WorkflowIntegration/
@@ -284,6 +287,7 @@ docs/07-bounded-contexts/
 ├── document-processing.md      # PDF context details
 ├── shared-game-catalog.md      # Shared catalog details
 ├── user-library.md             # User library details
+├── user-notifications.md       # User notifications details
 ├── administration.md           # Admin context details
 ├── system-configuration.md     # Config context details
 ├── workflow-integration.md     # Workflow context details
@@ -300,5 +304,5 @@ docs/07-bounded-contexts/
 
 **Last Updated**: 2026-01-18
 **Maintainers**: Architecture Team
-**Total Contexts**: 9
+**Total Contexts**: 10
 **Pattern**: DDD + CQRS + Event-Driven

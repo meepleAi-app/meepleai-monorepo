@@ -136,7 +136,7 @@ public class FirstAccuracyBaselineTest
     /// Use this when not all games are indexed (e.g., Terraforming Mars PDF too large)
     /// Target: Accuracy ≥80%
     /// </summary>
-    [Fact(Timeout = 600000)] // 10 min timeout
+    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797) and running API", Timeout = 600000)] // 10 min timeout
     public async Task RunPartialAccuracyBaseline_IndexedGamesOnly_MeetsThreshold()
     {
         // Arrange - Verify API is available
@@ -262,7 +262,7 @@ public class FirstAccuracyBaselineTest
     /// Cost estimate: ~$0.50-0.75 (OpenRouter API calls)
     /// Execution time: ~15-20 minutes
     /// </remarks>
-    [Fact(Timeout = 1200000)] // 20 min timeout for 110 questions
+    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797) and running API", Timeout = 1200000)] // 20 min timeout for 110 questions
     [Trait("Issue", "1019")]
     [Trait("Category", "Manual")]
     [Trait("BoundedContext", "KnowledgeBase")]

@@ -13,12 +13,13 @@ namespace Api.Tests.Unit.Administration;
 /// <summary>
 /// Comprehensive unit tests for ReportGeneratorService
 /// ISSUE-919: 90%+ coverage for all report templates, formats, and validation
+/// ISSUE-2601: Uses in-memory formatters to avoid external dependencies
 /// </summary>
 public sealed class ReportGeneratorServiceTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
-    private readonly ReportGeneratorService _sut;
-    private readonly Mock<ILogger<ReportGeneratorService>> _loggerMock;
+    private readonly TestableReportGeneratorService _sut;
+    private readonly Mock<ILogger<TestableReportGeneratorService>> _loggerMock;
 
     public ReportGeneratorServiceTests()
     {
@@ -30,8 +31,8 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var eventCollectorMock = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
 
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-        _loggerMock = new Mock<ILogger<ReportGeneratorService>>();
-        _sut = new ReportGeneratorService(_dbContext, _loggerMock.Object);
+        _loggerMock = new Mock<ILogger<TestableReportGeneratorService>>();
+        _sut = TestReportGeneratorServiceFactory.CreateWithInMemoryFormatters(_dbContext, _loggerMock.Object);
 
         // Note: DB is empty - tests will generate reports with zero counts, which is valid for testing report generation logic
     }

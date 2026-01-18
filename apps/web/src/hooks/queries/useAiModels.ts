@@ -191,7 +191,7 @@ export function useSetPrimaryModel(): UseMutationResult<
   AiModelDto,
   Error,
   SetPrimaryModelRequest,
-  { previousModels: PagedAiModels | undefined }
+  { allListQueries: [readonly unknown[], PagedAiModels | undefined][] }
 > {
   const queryClient = useQueryClient();
 

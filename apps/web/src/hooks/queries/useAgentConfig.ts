@@ -62,7 +62,7 @@ export function useUpdateAgentConfig(): UseMutationResult<
   AgentConfigDto,
   Error,
   { gameId: string; request: UpdateAgentConfigRequest },
-  { previousConfig: AgentConfigDto | null }
+  { previousConfig: AgentConfigDto | null | undefined }
 > {
   const queryClient = useQueryClient();
 

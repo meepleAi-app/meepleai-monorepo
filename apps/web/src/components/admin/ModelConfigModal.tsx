@@ -43,8 +43,8 @@ interface ModelConfigModalProps {
 
 export function ModelConfigModal({ isOpen, onClose, modelId, model }: ModelConfigModalProps) {
   // Form state
-  const [temperature, setTemperature] = useState(DEFAULT_MODEL_CONFIG.temperature);
-  const [maxTokens, setMaxTokens] = useState(DEFAULT_MODEL_CONFIG.maxTokens);
+  const [temperature, setTemperature] = useState<number>(DEFAULT_MODEL_CONFIG.temperature);
+  const [maxTokens, setMaxTokens] = useState<number>(DEFAULT_MODEL_CONFIG.maxTokens);
   const [maxTokensError, setMaxTokensError] = useState<string | null>(null);
   const [testPrompt, setTestPrompt] = useState('Explain quantum computing in one sentence.');
   const [testResult, setTestResult] = useState<{

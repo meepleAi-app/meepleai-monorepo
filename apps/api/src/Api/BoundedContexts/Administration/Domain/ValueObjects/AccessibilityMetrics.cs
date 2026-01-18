@@ -9,9 +9,10 @@ namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 internal sealed class AccessibilityMetrics : ValueObject
 {
     /// <summary>
-    /// Lighthouse accessibility score (0-100)
+    /// Lighthouse accessibility score (0-100).
+    /// Type-safe Percentage ensures valid range.
     /// </summary>
-    public decimal LighthouseScore { get; }
+    public Percentage LighthouseScore { get; }
 
     /// <summary>
     /// Number of axe-core violations detected
@@ -29,38 +30,70 @@ internal sealed class AccessibilityMetrics : ValueObject
     public DateTime LastRunAt { get; }
 
     /// <summary>
-    /// Status of accessibility tests ("pass", "warning", "fail")
+    /// Status of accessibility tests (Pass, Warning, Fail, NoData).
+    /// Indicates whether accessibility tests meet quality standards.
     /// </summary>
-    public string Status { get; }
+    public TestExecutionStatus Status { get; }
 
     public AccessibilityMetrics(
-        decimal lighthouseScore,
+        Percentage lighthouseScore,
         int axeViolations,
         IReadOnlyList<string> wcagLevels,
         DateTime lastRunAt,
-        string status)
+        TestExecutionStatus status)
     {
-        if (lighthouseScore < 0 || lighthouseScore > 100)
-        {
-            throw new ArgumentOutOfRangeException(nameof(lighthouseScore), "Lighthouse score must be between 0 and 100");
-        }
-
+        // Percentage validation is handled by Percentage.Create() - type-safe by design
         if (axeViolations < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(axeViolations), "Axe violations cannot be negative");
+            throw new ValidationException("Axe violations cannot be negative");
         }
 
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            throw new ArgumentException("Status cannot be empty", nameof(status));
-        }
-
-        LighthouseScore = lighthouseScore;
+        LighthouseScore = lighthouseScore ?? throw new ArgumentNullException(nameof(lighthouseScore));
         AxeViolations = axeViolations;
         WcagLevels = wcagLevels ?? throw new ArgumentNullException(nameof(wcagLevels));
         LastRunAt = lastRunAt;
         Status = status;
     }
+
+    /// <summary>
+    /// Creates AccessibilityMetrics from raw values.
+    /// Convenience factory method for creating instances from decimal scores.
+    /// </summary>
+    /// <param name="lighthouseScore">Lighthouse accessibility score (0-100)</param>
+    /// <param name="axeViolations">Number of axe-core violations</param>
+    /// <param name="wcagLevels">WCAG compliance levels passed</param>
+    /// <param name="lastRunAt">Timestamp of the test run</param>
+    /// <param name="status">Test execution status</param>
+    /// <returns>New AccessibilityMetrics instance</returns>
+    public static AccessibilityMetrics Create(
+        decimal lighthouseScore,
+        int axeViolations,
+        IReadOnlyList<string> wcagLevels,
+        DateTime lastRunAt,
+        TestExecutionStatus status)
+    {
+        return new AccessibilityMetrics(
+            Percentage.Create(lighthouseScore),
+            axeViolations,
+            wcagLevels,
+            lastRunAt,
+            status);
+    }
+
+    /// <summary>
+    /// Creates default AccessibilityMetrics instance for testing or initialization.
+    /// </summary>
+    public static AccessibilityMetrics CreateDefault() => new(
+        Percentage.Zero,
+        0,
+        Array.Empty<string>(),
+        DateTime.UtcNow,
+        TestExecutionStatus.NoData);
+
+    /// <summary>
+    /// Empty AccessibilityMetrics instance with zero values.
+    /// </summary>
+    public static readonly AccessibilityMetrics Empty = CreateDefault();
 
     /// <summary>
     /// Determines if accessibility metrics meet quality standards
@@ -81,5 +114,5 @@ internal sealed class AccessibilityMetrics : ValueObject
     }
 
     public override string ToString() =>
-        $"Accessibility: Lighthouse={LighthouseScore:F1}, Violations={AxeViolations}, WCAG={string.Join(",", WcagLevels)}, Status={Status}";
+        $"Accessibility: Lighthouse={LighthouseScore}, Violations={AxeViolations}, WCAG={string.Join(",", WcagLevels)}, Status={Status}";
 }

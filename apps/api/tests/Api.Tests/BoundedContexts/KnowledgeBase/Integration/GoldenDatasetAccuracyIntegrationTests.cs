@@ -101,7 +101,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 1: Perfect accuracy scenario - all answers correct
     /// Simulates RAG responses that match all expected criteria
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
     public async Task PerfectScenario_AllAnswersCorrect_MeetsThreshold()
     {
         // Arrange
@@ -131,7 +131,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 2: 80% accuracy scenario - exactly at threshold
     /// Simulates 80% correct responses (minimum acceptable)
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
     public async Task ThresholdScenario_80PercentCorrect_MeetsThreshold()
     {
         // Arrange
@@ -164,7 +164,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 3: Below threshold scenario - 60% accuracy
     /// Simulates insufficient accuracy (should fail threshold)
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
     public async Task BelowThresholdScenario_60PercentCorrect_FailsThreshold()
     {
         // Arrange
@@ -197,7 +197,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 4: Stratified sampling - 50 cases with proportional difficulty distribution
     /// Tests sampling logic maintains difficulty distribution
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
     public async Task StratifiedSample_50Cases_MaintainsDifficultyDistribution()
     {
         // Arrange
@@ -229,7 +229,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 5: Accuracy by difficulty - verify metrics grouping
     /// Tests that accuracy can be broken down by difficulty level
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
     public async Task AccuracyByDifficulty_GroupsCorrectly()
     {
         // Arrange
@@ -282,7 +282,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 6: Forbidden keywords detection
     /// Verifies hallucination detection through forbidden keywords
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
     public async Task ForbiddenKeywords_DetectedCorrectly()
     {
         // Arrange
@@ -314,7 +314,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 7: Citation validation
     /// Verifies citation page number matching
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
     public async Task CitationValidation_CorrectPageNumbers_PassesValidation()
     {
         // Arrange

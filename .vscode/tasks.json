@@ -221,8 +221,11 @@
     {
       "label": "docker-restart-service",
       "type": "shell",
-      "command": "docker",
-      "args": ["compose", "restart", "${input:serviceName}"],
+      "command": "pwsh",
+      "args": [
+        "-Command",
+        "docker compose stop ${input:serviceName}; docker compose rm -f ${input:serviceName}; docker compose up -d ${input:serviceName}"
+      ],
       "options": {
         "cwd": "${workspaceFolder}/infra"
       },

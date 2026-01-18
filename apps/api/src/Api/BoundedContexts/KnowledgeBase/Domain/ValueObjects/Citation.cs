@@ -39,5 +39,5 @@ internal sealed class Citation : ValueObject
         yield return RelevanceScore;
     }
 
-    public override string ToString() => $"Page {PageNumber} (Score: {RelevanceScore:P0})";
+    public override string ToString() => $"Page {PageNumber} (Score: {(RelevanceScore * 100):0}%)";
 }

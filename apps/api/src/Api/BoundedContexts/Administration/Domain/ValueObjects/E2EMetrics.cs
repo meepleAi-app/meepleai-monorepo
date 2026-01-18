@@ -1,5 +1,6 @@
 using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Enums;
 using Api.SharedKernel.Guards;
 
 namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
@@ -74,9 +75,9 @@ internal sealed class E2EMetrics : ValueObject
     /// Use FromTestRun() or CreateDefault() to create instances.
     /// </summary>
     private E2EMetrics(
-        Percentage coverage,
-        Percentage passRate,
-        Percentage flakyRate,
+        decimal coverage,
+        decimal passRate,
+        decimal flakyRate,
         decimal executionTime,
         int totalTests,
         int passedTests,
@@ -86,13 +87,16 @@ internal sealed class E2EMetrics : ValueObject
         DateTime lastRunAt,
         TestExecutionStatus status)
     {
-        // Percentage validation is handled by Percentage.Create() - type-safe by design
+        Guard.AgainstOutOfRange(coverage, nameof(coverage), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
+        Guard.AgainstOutOfRange(passRate, nameof(passRate), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
+        Guard.AgainstOutOfRange(flakyRate, nameof(flakyRate), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
         Guard.AgainstNegative(executionTime, nameof(executionTime));
         Guard.AgainstNegative(totalTests, nameof(totalTests));
         Guard.AgainstNegative(passedTests, nameof(passedTests));
         Guard.AgainstNegative(failedTests, nameof(failedTests));
         Guard.AgainstNegative(skippedTests, nameof(skippedTests));
         Guard.AgainstNegative(flakyTests, nameof(flakyTests));
+        // Note: No validation needed for enum - type-safe by design
 
         Coverage = coverage;
         PassRate = passRate;
@@ -135,16 +139,20 @@ internal sealed class E2EMetrics : ValueObject
         Guard.AgainstNegative(flakyTests, nameof(flakyTests));
         Guard.AgainstNegative(durationMs, nameof(durationMs));
 
-        // Calculate percentages using Percentage.FromFraction for type safety
-        var coverage = Percentage.FromFraction(passedTests, totalTests);
-        var passRate = Percentage.FromFraction(passedTests, totalTests);
-        var flakyRate = Percentage.FromFraction(flakyTests, totalTests);
+        // Calculate coverage (placeholder logic - will be replaced with actual coverage data from test framework)
+        var coverage = totalTests > 0 ? (decimal)passedTests / totalTests * 100 : 0m;
+
+        // Calculate pass rate
+        var passRate = totalTests > 0 ? (decimal)passedTests / totalTests * 100 : 0m;
+
+        // Calculate flaky rate
+        var flakyRate = totalTests > 0 ? (decimal)flakyTests / totalTests * 100 : 0m;
 
         // Calculate average execution time
         var executionTime = totalTests > 0 ? (decimal)durationMs / totalTests : 0m;
 
         // Determine status based on quality thresholds
-        var status = CalculateStatus(passRate.Value, flakyRate.Value);
+        var status = CalculateStatus(passRate, flakyRate);
 
         return new E2EMetrics(
             coverage: coverage,
@@ -165,9 +173,9 @@ internal sealed class E2EMetrics : ValueObject
     /// All metrics are set to zero and status is NoData.
     /// </summary>
     public static E2EMetrics CreateDefault() => new(
-        coverage: Percentage.Zero,
-        passRate: Percentage.Zero,
-        flakyRate: Percentage.Zero,
+        coverage: 0m,
+        passRate: 0m,
+        flakyRate: 0m,
         executionTime: 0m,
         totalTests: 0,
         passedTests: 0,

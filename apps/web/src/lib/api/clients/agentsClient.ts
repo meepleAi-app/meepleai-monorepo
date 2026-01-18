@@ -12,6 +12,9 @@ import {
   ConfigureAgentResponseSchema,
   ChessAgentResponseSchema,
   SetupGuideResponseSchema,
+  AgentDocumentsDtoSchema,
+  UpdateAgentDocumentsResponseSchema,
+  PlayerModeSuggestionResponseSchema,
   type AgentDto,
   type AgentResponseDto,
   type InvokeAgentRequest,
@@ -20,6 +23,10 @@ import {
   type ConfigureAgentResponse,
   type ChessAgentResponse,
   type SetupGuideResponse,
+  type AgentDocumentsDto,
+  type UpdateAgentDocumentsResponse,
+  type PlayerModeSuggestionRequest,
+  type PlayerModeSuggestionResponse,
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -172,6 +179,65 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       if (!response) {
         throw new Error('Failed to generate setup guide: no response from server');
       }
+      return response;
+    },
+
+    /**
+     * Suggest player move (convenience wrapper)
+     * POST /api/v1/agents/player-mode/suggest
+     *
+     * Issue #2421: Player Mode UI Controls
+     */
+    async suggestPlayerMove(
+      request: PlayerModeSuggestionRequest
+    ): Promise<PlayerModeSuggestionResponse> {
+      const response = await httpClient.post(
+        '/api/v1/agents/player-mode/suggest',
+        request,
+        PlayerModeSuggestionResponseSchema
+      );
+      if (!response) {
+        throw new Error('Failed to suggest player move: no response from server');
+      }
+      return response;
+    },
+
+    // ========== Agent Documents (Issue #2399) ==========
+
+    /**
+     * Get selected documents for an agent's knowledge base
+     * Implements GetAgentDocumentsQuery from backend
+     * Issue #2399: Knowledge Base Document Selection
+     * @param id Agent ID (GUID format)
+     */
+    async getDocuments(id: string): Promise<AgentDocumentsDto | null> {
+      return httpClient.get(
+        `/api/v1/agents/${encodeURIComponent(id)}/documents`,
+        AgentDocumentsDtoSchema
+      );
+    },
+
+    /**
+     * Update selected documents for an agent's knowledge base (Admin only)
+     * Implements UpdateAgentDocumentsCommand from backend
+     * Issue #2399: Knowledge Base Document Selection
+     * @param id Agent ID (GUID format)
+     * @param documentIds Array of document IDs to select (max 50)
+     */
+    async updateDocuments(
+      id: string,
+      documentIds: string[]
+    ): Promise<UpdateAgentDocumentsResponse> {
+      const response = await httpClient.put<UpdateAgentDocumentsResponse>(
+        `/api/v1/agents/${encodeURIComponent(id)}/documents`,
+        { documentIds },
+        UpdateAgentDocumentsResponseSchema
+      );
+
+      if (!response) {
+        throw new Error('Failed to update agent documents: no response from server');
+      }
+
       return response;
     },
   };

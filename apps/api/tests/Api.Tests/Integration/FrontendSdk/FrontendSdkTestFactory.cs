@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Tests.TestHelpers;
 using Api.Services;
 using Api.Tests.Infrastructure;
 using Api.SharedKernel.Application.Services;
@@ -66,7 +67,9 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
             await _postgresContainer.StartAsync();
 
             var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-            _connectionString = $"Host=localhost;Port={postgresPort};Database=frontend_sdk_test;Username=testuser;Password=testpass;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
+            // Issue #2577: Enable connection pooling to prevent timeout failures
+            // Same optimization as SharedTestcontainersFixture for consistency
+            _connectionString = $"Host=localhost;Port={postgresPort};Database=frontend_sdk_test;Username=testuser;Password=testpass;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=10;Pooling=true;MinPoolSize=2;MaxPoolSize=50;Timeout=30;CommandTimeout=60;ConnectionIdleLifetime=60;ConnectionPruningInterval=10;";
 
             // Issue #2031: Wait for PostgreSQL to accept connections with retry
             await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(_connectionString);

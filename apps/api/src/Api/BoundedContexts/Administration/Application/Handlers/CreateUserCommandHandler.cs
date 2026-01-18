@@ -5,6 +5,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Guards;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers;
@@ -15,6 +16,8 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 /// </summary>
 internal class CreateUserCommandHandler : ICommandHandler<CreateUserCommand, UserDto>
 {
+    private static readonly string[] AllowedRoles = { "Admin", "Editor", "User" };
+
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -29,6 +32,13 @@ internal class CreateUserCommandHandler : ICommandHandler<CreateUserCommand, Use
     public async Task<UserDto> Handle(CreateUserCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // Validate input before domain operations
+        Guard.AgainstNullOrWhiteSpace(command.DisplayName, nameof(command.DisplayName));
+        Guard.AgainstNullOrWhiteSpace(command.Password, nameof(command.Password));
+        Guard.AgainstTooShort(command.Password, nameof(command.Password), 8);
+        Guard.AgainstNullOrWhiteSpace(command.Role, nameof(command.Role));
+        Guard.AgainstInvalidValue(command.Role, AllowedRoles, nameof(command.Role));
 
         // Validate and create email
         var email = new Email(command.Email);

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
+using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -28,7 +29,7 @@ public sealed class ReportGeneratorServiceTests : IDisposable
         var mediatorMock = new Mock<MediatR.IMediator>();
         var eventCollectorMock = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
 
-        _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _loggerMock = new Mock<ILogger<ReportGeneratorService>>();
         _sut = new ReportGeneratorService(_dbContext, _loggerMock.Object);
 

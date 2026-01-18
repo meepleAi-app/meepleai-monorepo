@@ -79,7 +79,7 @@ export const PlayersSmall: PlayersStory = {
 
 // ==================== PlayTimeBadge ====================
 
-const playTimeMeta = {
+const _playTimeMeta = {
   title: 'Admin/SharedGames/GameInfoBadges/PlayTimeBadge',
   component: PlayTimeBadge,
   parameters: {
@@ -91,7 +91,7 @@ const playTimeMeta = {
   tags: ['autodocs'],
 } satisfies Meta<typeof PlayTimeBadge>;
 
-type PlayTimeStory = StoryObj<typeof playTimeMeta>;
+type PlayTimeStory = StoryObj<typeof _playTimeMeta>;
 
 /**
  * Short game (30 minutes)
@@ -130,7 +130,7 @@ export const PlayTimeSmall: PlayTimeStory = {
 
 // ==================== ComplexityBadge ====================
 
-const complexityMeta = {
+const _complexityMeta = {
   title: 'Admin/SharedGames/GameInfoBadges/ComplexityBadge',
   component: ComplexityBadge,
   parameters: {
@@ -142,7 +142,7 @@ const complexityMeta = {
   tags: ['autodocs'],
 } satisfies Meta<typeof ComplexityBadge>;
 
-type ComplexityStory = StoryObj<typeof complexityMeta>;
+type ComplexityStory = StoryObj<typeof _complexityMeta>;
 
 /**
  * Light complexity (1.5)
@@ -203,7 +203,7 @@ export const ComplexityAllLevels: ComplexityStory = {
 
 // ==================== RatingBadge ====================
 
-const ratingMeta = {
+const _ratingMeta = {
   title: 'Admin/SharedGames/GameInfoBadges/RatingBadge',
   component: RatingBadge,
   parameters: {
@@ -215,7 +215,7 @@ const ratingMeta = {
   tags: ['autodocs'],
 } satisfies Meta<typeof RatingBadge>;
 
-type RatingStory = StoryObj<typeof ratingMeta>;
+type RatingStory = StoryObj<typeof _ratingMeta>;
 
 /**
  * High rating (8.5)
@@ -276,7 +276,7 @@ export const RatingAllLevels: RatingStory = {
 
 // ==================== AgeBadge ====================
 
-const ageMeta = {
+const _ageMeta = {
   title: 'Admin/SharedGames/GameInfoBadges/AgeBadge',
   component: AgeBadge,
   parameters: {
@@ -288,7 +288,7 @@ const ageMeta = {
   tags: ['autodocs'],
 } satisfies Meta<typeof AgeBadge>;
 
-type AgeStory = StoryObj<typeof ageMeta>;
+type AgeStory = StoryObj<typeof _ageMeta>;
 
 /**
  * Age 8+

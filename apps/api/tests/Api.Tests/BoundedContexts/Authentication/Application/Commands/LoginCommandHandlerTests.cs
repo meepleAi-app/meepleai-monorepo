@@ -256,10 +256,12 @@ public class LoginCommandHandlerTests
         );
 
         // Act & Assert
+        // Issue #2541: LoginCommandHandler throws ValidationException for validation failures
         await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
+        // Email validation fails before repository call (Issue #2554)
         _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), default), Times.Never);
     }
 
@@ -275,6 +277,7 @@ public class LoginCommandHandlerTests
         );
 
         // Act & Assert
+        // Issue #2541: LoginCommandHandler throws ValidationException for validation failures
         await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
@@ -559,6 +562,7 @@ public class LoginCommandHandlerTests
         );
 
         // Act & Assert
+        // Issue #2541: LoginCommandHandler throws ValidationException for validation failures
         await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
@@ -582,10 +586,12 @@ public class LoginCommandHandlerTests
         );
 
         // Act & Assert
+        // Issue #2541: LoginCommandHandler throws ValidationException for validation failures
         await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
+        // Email validation fails before repository call (Issue #2554)
         _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -602,6 +608,7 @@ public class LoginCommandHandlerTests
         );
 
         // Act & Assert
+        // Issue #2541: LoginCommandHandler throws ValidationException for validation failures
         await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
@@ -621,11 +628,13 @@ public class LoginCommandHandlerTests
         );
 
         // Act & Assert
+        // Issue #2541: LoginCommandHandler throws ValidationException for validation failures
         await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 
-        _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Never);
+        // Handler calls GetByEmailAsync during validation (Issue #2554)
+        _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private User CreateTestUser(string email, string password, bool is2FAEnabled)

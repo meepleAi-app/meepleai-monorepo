@@ -79,6 +79,44 @@ Log.Logger = LoggingConfiguration.ConfigureSerilog(builder).CreateLogger();
 
 builder.Host.UseSerilog();
 
+// ISSUE-2510: Validate secrets from infra/secrets/ directory
+// Load and validate all secrets with 3-level validation (Critical/Important/Optional)
+// Note: Using temporary logger factory since DI container not yet built
+// Issue #2556: Skip secret validation in Testing environment (used by integration tests)
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    using var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder.AddSerilog(Log.Logger));
+    var tempLogger = loggerFactory.CreateLogger<Program>();
+    var secretLoader = new Api.Infrastructure.Configuration.SecretLoader(builder.Configuration, tempLogger);
+    var secretValidationResult = secretLoader.LoadAndValidate();
+
+    if (!secretValidationResult.IsValid)
+    {
+        Log.Fatal(
+            "Application startup failed: CRITICAL secrets missing. Please configure secret files in infra/secrets/. " +
+            "Missing: {MissingSecrets}",
+            string.Join(", ", secretValidationResult.MissingCritical)
+        );
+        throw new InvalidOperationException(
+            $"Critical secrets missing: {string.Join(", ", secretValidationResult.MissingCritical)}. " +
+            "See infra/secrets.example/ for templates."
+        );
+    }
+
+    // Log warnings for missing important secrets (startup continues but with reduced functionality)
+    if (secretValidationResult.HasWarnings)
+    {
+        Log.Warning(
+            "Some secrets are missing or have errors. Application will start but some features may be disabled. " +
+            "Check logs above for details or see infra/secrets.example/ for templates."
+        );
+    }
+}
+else
+{
+    Log.Information("Testing environment detected - skipping secret validation");
+}
+
 // BGAI-081: Cookie Policy for Development
 // Allow SameSite=None without Secure for localhost cross-port development
 // In production, this should be removed (SameSite=None REQUIRES Secure=true)
@@ -226,6 +264,9 @@ builder.Services.AddAuthenticationServices(builder.Configuration);
 // Observability services (OpenTelemetry, Health checks, Swagger)
 builder.Services.AddObservabilityServices(builder.Configuration, builder.Environment);
 
+// ISSUE #2424: Rate limiting for API protection
+builder.Services.AddRateLimitingServices();
+
 // Configure JSON serialization for ASP.NET Core Minimal APIs
 // Accept camelCase from frontend (JavaScript convention) while backend uses PascalCase (C# convention)
 // NOTE: ASP.NET Core 9.0 Minimal APIs require unified JsonOptions configuration
@@ -288,6 +329,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Issue #2406: SignalR for real-time game state updates
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -320,15 +364,20 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
 
-        // Bootstrap: Create initial admin user if database is empty
-        await EnsureInitialAdminUserAsync(app, db, scope.ServiceProvider).ConfigureAwait(false);
+        // ISSUE-2512: Auto-configuration pipeline - Seed admin user, test user, and AI models
+        var autoConfigService = scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.Administration.Application.Services.IAutoConfigurationService>();
+        await autoConfigService.InitializeAsync().ConfigureAwait(false);
 
-        // K6 Performance Testing: Ensure test user exists in Development/Test/CI environments (Issue #1663, #2152)
-        if (app.Environment.IsDevelopment()
-            || string.Equals(app.Environment.EnvironmentName, "Test", StringComparison.Ordinal)
-            || string.Equals(app.Environment.EnvironmentName, "CI", StringComparison.Ordinal))
+        // Seed SharedGameCatalog from PDF rulebooks (Issue: SharedGame seed from rulebooks ≤ 10MB)
+        if (app.Environment.IsDevelopment())
         {
-            await EnsureTestUserExistsAsync(app, db, scope.ServiceProvider).ConfigureAwait(false);
+            var adminUser = await db.Users.FirstOrDefaultAsync(u => u.Role == "admin").ConfigureAwait(false);
+            if (adminUser != null)
+            {
+                var bggService = scope.ServiceProvider.GetRequiredService<IBggApiService>();
+                await Api.Infrastructure.Seeders.SharedGameSeeder.SeedSharedGamesAsync(
+                    db, bggService, adminUser.Id, app.Logger).ConfigureAwait(false);
+            }
         }
     }
 }
@@ -339,7 +388,10 @@ app.ConfigureMiddlewarePipeline(forwardedHeadersEnabled);
 // Unversioned endpoints (keep for backwards compatibility and infrastructure)
 app.MapGet("/", () => Results.Json(new { ok = true, name = "MeepleAgentAI" }));
 
-// OPS-01: Health check endpoints
+// ISSUE-2511: Comprehensive health check endpoint
+app.MapHealthCheckEndpoints();
+
+// OPS-01: Health check endpoints (backwards compatibility)
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>
@@ -372,6 +424,32 @@ app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthC
     Predicate = _ => false // Just check if the app is running
 });
 
+// CA1869: Cache JsonSerializerOptions for health check endpoints
+var healthCheckJsonOptions = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+
+app.MapHealthChecks("/health/config", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("configuration"),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                duration = e.Value.Duration.TotalMilliseconds,
+                data = e.Value.Data
+            }),
+            totalDuration = report.TotalDuration.TotalMilliseconds
+        }, healthCheckJsonOptions);
+        await context.Response.WriteAsync(result).ConfigureAwait(false);
+    }
+});
+
 // API-01: Create v1 API route group and map routing files
 var v1Api = app.MapGroup("/api/v1");
 
@@ -380,6 +458,8 @@ v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
+v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
+v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
 v1Api.MapAiEndpoints();
 v1Api.MapPdfEndpoints();
 v1Api.MapDocumentCollectionEndpoints();
@@ -387,6 +467,8 @@ v1Api.MapRuleSpecEndpoints();
 
 // Issue #1439: Split AdminEndpoints into focused endpoint files
 v1Api.MapConfigurationEndpoints();     // System configuration CRUD & operations
+// v1Api.MapAiModelEndpoints();        // Issue #2580: REMOVED - Replaced by MapAiModelAdminEndpoints (Issue #2567)
+v1Api.MapGameLibraryConfigEndpoints(); // Issue #2444: Game library tier limits config
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics
@@ -394,6 +476,7 @@ v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
+v1Api.MapUserLibraryEndpoints();       // User game library
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
@@ -402,12 +485,14 @@ v1Api.MapSessionEndpoints();           // Session management
 v1Api.MapApiKeyEndpoints();            // API key management
 v1Api.MapCacheEndpoints();             // Cache management
 v1Api.MapAdminUserEndpoints();         // User management
+v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
 v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations
 v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling
 v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
 
 // DDD-PHASE3: KnowledgeBase bounded context endpoints
 v1Api.MapKnowledgeBaseEndpoints();
+v1Api.MapLedgerModeEndpoints();     // Issue #2405: Ledger Mode endpoints
 
 // Issue #866: Agent management endpoints
 v1Api.MapAgentEndpoints();
@@ -419,304 +504,42 @@ v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint
 // Issue #2004: Runbook validation test endpoints
 v1Api.MapTestEndpoints();
 
+// Issue #2406: SignalR hub for real-time game state updates
+app.MapHub<Api.Hubs.GameStateHub>("/hubs/gamestate");
+
+// ISSUE-2511: Startup health check for critical services
+using (var scope = app.Services.CreateScope())
+{
+    var healthCheckService = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService>();
+    var healthLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    var startupCheck = await healthCheckService.CheckHealthAsync(
+        check => check.Tags.Contains(Api.Infrastructure.Health.Models.HealthCheckTags.Critical)).ConfigureAwait(false);
+
+    var criticalFailures = startupCheck.Entries
+        .Where(e => e.Value.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy)
+        .ToList();
+
+    if (criticalFailures.Count > 0)
+    {
+        var failedServices = string.Join(", ", criticalFailures.Select(f => f.Key));
+        healthLogger.LogCritical(
+            "Critical services failed startup health check: {Services}. Application starting in degraded mode.",
+            failedServices);
+    }
+    else
+    {
+        healthLogger.LogInformation("All critical services passed startup health check.");
+    }
+}
+
 await app.RunAsync().ConfigureAwait(false);
 
-// Bootstrap: Create initial admin user if database is empty
-static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbContext db, IServiceProvider services)
-{
-    // Skip in test environments
-    if (app.Environment.IsEnvironment("Testing"))
-    {
-        return;
-    }
-
-    // Check if any admin users exist
-    var hasAdminUser = await db.Users
-        .AnyAsync(u => u.Role == "admin").ConfigureAwait(false);
-
-    if (hasAdminUser)
-    {
-        app.Logger.LogInformation("Admin user already exists, skipping bootstrap");
-        return;
-    }
-
-    // Get and validate admin credentials
-    if (!TryGetAdminCredentials(app, out var adminEmail, out var adminPassword, out var adminDisplayName))
-    {
-        return;
-    }
-
-    try
-    {
-        // Create and save admin user
-        var adminUser = await CreateAdminUser(app, db, services, adminEmail!, adminPassword!, adminDisplayName!).ConfigureAwait(false);
-
-        // Create audit log
-        await CreateAdminAuditLog(db, adminUser, adminEmail!).ConfigureAwait(false);
-    }
-#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
-    // RACE CONDITION PATTERN: Log unexpected unique constraint violations before propagating.
-    catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
-#pragma warning restore S2139
-    {
-        await HandleAdminCreationRaceCondition(app, db, ex).ConfigureAwait(false);
-    }
-#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
-    // BOOTSTRAP PATTERN: Log critical initialization failures before propagating.
-    catch (Exception ex)
-    {
-        app.Logger.LogError(ex, "Failed to create initial admin user");
-        throw;
-    }
-#pragma warning restore S2139
-}
-
-// Helper: Get and validate admin credentials from configuration
-static bool TryGetAdminCredentials(
-    WebApplication app,
-    out string? adminEmail,
-    out string? adminPassword,
-    out string? adminDisplayName)
-{
-    adminEmail = app.Configuration["INITIAL_ADMIN_EMAIL"];
-    adminPassword = SecretsHelper.GetSecretOrValue(
-        app.Configuration,
-        "INITIAL_ADMIN_PASSWORD",
-        app.Logger,
-        required: false
-    );
-    adminDisplayName = app.Configuration["INITIAL_ADMIN_DISPLAY_NAME"] ?? "System Admin";
-
-    if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
-    {
-        app.Logger.LogWarning(
-            "⚠️  No admin user found and INITIAL_ADMIN_EMAIL/INITIAL_ADMIN_PASSWORD not set. " +
-            "Please create an admin user manually or set environment variables."
-        );
-        return false;
-    }
-
-    // Validate email format
-    if (!adminEmail.Contains('@'))
-    {
-        app.Logger.LogError("Invalid INITIAL_ADMIN_EMAIL format: {Email}", DataMasking.MaskEmail(adminEmail));
-        return false;
-    }
-
-    // Validate password strength (minimum 8 chars, at least one uppercase, one digit)
-    if (adminPassword.Length < 8 ||
-        !adminPassword.Any(char.IsUpper) ||
-        !adminPassword.Any(char.IsDigit))
-    {
-        app.Logger.LogError(
-            "INITIAL_ADMIN_PASSWORD must be at least 8 characters with uppercase and digit"
-        );
-        return false;
-    }
-
-    return true;
-}
-
-// Helper: Create admin user entity and save to database
-static async Task<UserEntity> CreateAdminUser(
-    WebApplication app,
-    MeepleAiDbContext db,
-    IServiceProvider services,
-    string adminEmail,
-    string adminPassword,
-    string adminDisplayName)
-{
-    // Hash the password using PBKDF2
-    var passwordHashingService = services.GetRequiredService<IPasswordHashingService>();
-    var passwordHash = passwordHashingService.HashSecret(adminPassword);
-
-    // Create admin user
-    var adminUser = new UserEntity
-    {
-        Id = Guid.NewGuid(),
-        Email = adminEmail,
-        DisplayName = adminDisplayName,
-        PasswordHash = passwordHash,
-        Role = "admin",
-        CreatedAt = DateTime.UtcNow
-    };
-
-    db.Users.Add(adminUser);
-    await db.SaveChangesAsync().ConfigureAwait(false);
-
-    app.Logger.LogInformation(
-        "✅ Initial admin user created successfully: {Email} (ID: {UserId})",
-        adminEmail,
-        adminUser.Id
-    );
-
-    return adminUser;
-}
-
-// Helper: Create audit log for admin user creation
-static async Task CreateAdminAuditLog(MeepleAiDbContext db, UserEntity adminUser, string adminEmail)
-{
-    var auditLog = new AuditLogEntity
-    {
-        Id = Guid.NewGuid(),
-        UserId = null, // System-generated
-        Action = "BOOTSTRAP_ADMIN_CREATED",
-        Resource = "User",
-        ResourceId = adminUser.Id.ToString(),
-        Result = "Success",
-        Details = $"Initial admin user created: {adminEmail}",
-        IpAddress = "system",
-        UserAgent = "bootstrap",
-        CreatedAt = DateTime.UtcNow
-    };
-
-    db.AuditLogs.Add(auditLog);
-    await db.SaveChangesAsync().ConfigureAwait(false);
-}
-
-// Helper: Handle race condition when another instance creates admin user concurrently
-static async Task HandleAdminCreationRaceCondition(WebApplication app, MeepleAiDbContext db, DbUpdateException ex)
-{
-    // Race condition: Another instance created the admin user simultaneously
-    // Recheck if an admin user now exists
-    var adminNowExists = await db.Users
-        .AnyAsync(u => u.Role == "admin").ConfigureAwait(false);
-
-    if (adminNowExists)
-    {
-        app.Logger.LogInformation(
-            "ℹ️  Admin user creation skipped: Another instance created the admin user concurrently"
-        );
-        return;
-    }
-
-    // If no admin exists, this is an unexpected error - rethrow
-    app.Logger.LogError(ex, "Unique constraint violation but no admin user found");
-    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(ex);
-}
-
-// K6 Performance Testing: Ensure demo test users exist for testing (Issue #1663)
-static async Task EnsureTestUserExistsAsync(WebApplication app, MeepleAiDbContext db, IServiceProvider services)
-{
-    var passwordHashingService = services.GetRequiredService<IPasswordHashingService>();
-    const string demoPassword = "Demo123!";
-    var passwordHash = passwordHashingService.HashSecret(demoPassword);
-
-    // Demo users expected by Postman/Newman and K6 tests
-    var demoUsers = new[]
-    {
-        new { Email = "user@meepleai.dev", DisplayName = "Demo User", Role = "User" },
-        new { Email = "editor@meepleai.dev", DisplayName = "Demo Editor", Role = "Editor" },
-        // Note: admin@meepleai.dev is created by EnsureInitialAdminUserAsync
-    };
-
-    foreach (var userData in demoUsers)
-    {
-        await CreateDemoUserIfNotExists(app, db, userData.Email, userData.DisplayName, userData.Role, passwordHash).ConfigureAwait(false);
-    }
-
-    app.Logger.LogInformation("✓ Demo user seeding complete");
-}
-
-// Helper: Create demo user if it doesn't already exist
-static async Task CreateDemoUserIfNotExists(
-    WebApplication app,
-    MeepleAiDbContext db,
-    string email,
-    string displayName,
-    string role,
-    string passwordHash)
-{
-    // Check if user already exists
-    var userExists = await db.Users.AnyAsync(u => u.Email == email).ConfigureAwait(false);
-
-    if (userExists)
-    {
-        app.Logger.LogDebug("ℹ️  Demo user already exists: {Email}", email);
-        return;
-    }
-
-    try
-    {
-        var demoUser = new UserEntity
-        {
-            Id = Guid.NewGuid(),
-            Email = email,
-            DisplayName = displayName,
-            PasswordHash = passwordHash,
-            Role = role,
-            CreatedAt = DateTime.UtcNow,
-            IsDemoAccount = true
-        };
-
-        db.Users.Add(demoUser);
-        await db.SaveChangesAsync().ConfigureAwait(false);
-
-        app.Logger.LogInformation(
-            "✅ Demo user created: {Email} ({Role}) - for Postman/Newman and K6 testing",
-            email,
-            role
-        );
-
-        // Audit log
-        var auditLog = new AuditLogEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = null,
-            Action = "DEMO_USER_CREATED",
-            Resource = "User",
-            ResourceId = demoUser.Id.ToString(),
-            Result = "Success",
-            Details = $"Demo user created: {email} ({role})",
-            IpAddress = "system",
-            UserAgent = "bootstrap",
-            CreatedAt = DateTime.UtcNow
-        };
-
-        db.AuditLogs.Add(auditLog);
-        await db.SaveChangesAsync().ConfigureAwait(false);
-    }
-    catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
-    {
-        app.Logger.LogDebug(ex, "ℹ️  Demo user creation skipped: {Email} already exists concurrently", email);
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogWarning(ex, "Failed to create demo user {Email} - non-critical for production", DataMasking.MaskEmail(email));
-    }
-}
-
-// Helper method to detect unique constraint violations across database providers
-static bool IsUniqueConstraintViolation(DbUpdateException ex)
-{
-    var innerException = ex.InnerException;
-    if (innerException == null)
-    {
-        return false;
-    }
-
-    var message = innerException.Message.ToLowerInvariant();
-
-    // PostgreSQL: "23505: duplicate key value violates unique constraint"
-    if (message.Contains("23505") || message.Contains("duplicate key"))
-    {
-        return true;
-    }
-
-    // SQLite: "UNIQUE constraint failed"
-    if (message.Contains("unique constraint"))
-    {
-        return true;
-    }
-
-    // SQL Server: "Cannot insert duplicate key"
-    if (message.Contains("cannot insert duplicate key") || message.Contains("violation of unique key"))
-    {
-        return true;
-    }
-
-    return false;
-}
+// ISSUE-2512: Removed 300+ lines of obsolete bootstrap functions:
+// - EnsureInitialAdminUserAsync → Replaced by AutoConfigurationService + SeedAdminUserCommand
+// - EnsureTestUserExistsAsync → Replaced by AutoConfigurationService + SeedTestUserCommand
+// - Helper functions (TryGetAdminCredentials, CreateAdminUser, IsUniqueConstraintViolation, etc.) → Now in CQRS handlers
+// New pattern: CQRS commands (testable, maintainable, idempotent) instead of Program.cs helpers
 
 // OPS-01: Helper method for database migration logic
 static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)

@@ -21,18 +21,15 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
 {
     private readonly MeepleAiDbContext _context;
     private readonly HybridCache _cache;
-    private readonly ICacheMetricsRecorder _cacheMetrics;
     private readonly ILogger<SearchSharedGamesQueryHandler> _logger;
 
     public SearchSharedGamesQueryHandler(
         MeepleAiDbContext context,
         HybridCache cache,
-        ICacheMetricsRecorder cacheMetrics,
         ILogger<SearchSharedGamesQueryHandler> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _cacheMetrics = cacheMetrics ?? throw new ArgumentNullException(nameof(cacheMetrics));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -50,34 +47,16 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             query.MechanicIds?.Count ?? 0,
             query.PageNumber);
 
-        // Track cache hit/miss (factory execution = miss)
-        bool cacheHit = true;
-
         // Try cache first (L1: 15min, L2: 1h)
-        var result = await _cache.GetOrCreateAsync<PagedResult<SharedGameDto>>(
+        return await _cache.GetOrCreateAsync<PagedResult<SharedGameDto>>(
             cacheKey,
-            async cancel =>
-            {
-                cacheHit = false;  // Factory called = cache miss
-                await _cacheMetrics.RecordCacheMissAsync("search", "shared_games").ConfigureAwait(false);
-                _logger.LogInformation("Cache miss for search: {CacheKey}", cacheKey);
-                return await ExecuteSearchAsync(query, cancel).ConfigureAwait(false);
-            },
+            async cancel => await ExecuteSearchAsync(query, cancel).ConfigureAwait(false),
             new HybridCacheEntryOptions
             {
                 LocalCacheExpiration = TimeSpan.FromMinutes(15),  // L1
                 Expiration = TimeSpan.FromHours(1)  // L2
             },
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        // Record cache hit if factory was not executed
-        if (cacheHit)
-        {
-            await _cacheMetrics.RecordCacheHitAsync("search", "shared_games").ConfigureAwait(false);
-            _logger.LogDebug("Cache hit for search: {CacheKey}", cacheKey);
-        }
-
-        return result;
     }
 
     private async Task<PagedResult<SharedGameDto>> ExecuteSearchAsync(SearchSharedGamesQuery query, CancellationToken cancellationToken)

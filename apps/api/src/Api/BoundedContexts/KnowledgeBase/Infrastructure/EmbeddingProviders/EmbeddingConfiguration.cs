@@ -80,6 +80,12 @@ internal sealed class EmbeddingConfiguration
     public string? Model { get; set; }
 
     /// <summary>
+    /// External embedding service URL (for External provider)
+    /// Default: http://embedding-service:8000
+    /// </summary>
+    public string? LocalServiceUrl { get; set; }
+
+    /// <summary>
     /// Get effective dimensions for the configured provider
     /// </summary>
     public int GetEffectiveDimensions() =>

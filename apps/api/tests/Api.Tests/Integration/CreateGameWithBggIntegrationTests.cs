@@ -6,13 +6,17 @@ using Api.BoundedContexts.GameManagement.Application.Handlers;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Tests.Infrastructure;
+using Api.Tests.TestHelpers;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Api.Tests.Constants;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.Integration;
@@ -43,6 +47,10 @@ public sealed class CreateGameWithBggIntegrationTests : IAsyncLifetime
 
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
+
+        // Issue #2541: Register IMediator and IDomainEventCollector required by MeepleAiDbContext
+        services.AddSingleton<IMediator>(TestDbContextFactory.CreateMockMediator().Object);
+        services.AddSingleton<IDomainEventCollector>(TestDbContextFactory.CreateMockEventCollector().Object);
 
         services.AddDbContext<MeepleAiDbContext>(options =>
             options.UseNpgsql(_isolatedDbConnectionString));

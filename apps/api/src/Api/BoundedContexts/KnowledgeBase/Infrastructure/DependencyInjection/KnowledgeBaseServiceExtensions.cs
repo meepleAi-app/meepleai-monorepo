@@ -8,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
@@ -15,6 +16,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 using Api.Services;
 using Api.Services.LlmClients;
 
@@ -47,6 +49,14 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ChatContextDomainService>(); // Issue #857: Chat history context
         services.AddSingleton<AgentOrchestrationService>(); // Issue #867: Agent invocation orchestration
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
+
+        // Issue #2404: Agent Mode Handlers (Scoped - use repositories and LLM services)
+        services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.PlayerModeHandler>();
+        services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.ChatModeHandler>();
+
+        // Issue #2405: Ledger Mode Handler + State Parser
+        services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.LedgerModeHandler>();
+        services.AddScoped<IStateParser, NaturalLanguageStateParser>();
     }
 
     private static void AddValidationServices(IServiceCollection services)
@@ -99,6 +109,9 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ILlmClient, OllamaLlmClient>();
         services.AddSingleton<ILlmClient, OpenRouterLlmClient>();
 
+        // ISSUE-2391 Sprint 2: LLM Provider Factory
+        services.AddSingleton<LlmProviderFactory>();
+
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
         services.AddScoped<ILlmService, HybridLlmService>();
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
@@ -134,6 +147,9 @@ internal static class KnowledgeBaseServiceExtensions
         // Application - Handlers (Scoped - uses Scoped dependencies)
         services.AddScoped<SearchQueryHandler>();
         services.AddScoped<AskQuestionQueryHandler>();
+
+        // ISSUE-2473: Game state parsing for Player Mode AI suggestions
+        services.AddScoped<IGameStateParser, GameStateParser>();
         services.AddScoped<GetLlmCostReportQueryHandler>(); // ISSUE-960: Cost reporting
         services.AddScoped<GetQueryEfficiencyReportQueryHandler>(); // ISSUE-1725: Efficiency reporting
         services.AddScoped<GetMonthlyOptimizationReportQueryHandler>(); // ISSUE-1725: Monthly optimization

@@ -3,7 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
-using Api.Tests.Helpers;
+using Api.Tests.TestHelpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -33,7 +33,7 @@ public class ProvideAgentFeedbackCommandHandlerTests
     /// </summary>
     private static MeepleAiDbContext CreateFreshDbContext()
     {
-        return DbContextHelper.CreateInMemoryDbContext();
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
     [Fact]
     public async Task Handle_WithValidHelpfulOutcome_Succeeds()

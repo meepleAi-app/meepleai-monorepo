@@ -19,7 +19,6 @@ public class GetSharedGameByIdQueryHandlerTests
 {
     private readonly Mock<ISharedGameRepository> _repositoryMock;
     private readonly HybridCache _cache;
-    private readonly Mock<ICacheMetricsRecorder> _cacheMetricsMock;
     private readonly Mock<ILogger<GetSharedGameByIdQueryHandler>> _loggerMock;
     private readonly GetSharedGameByIdQueryHandler _handler;
 
@@ -39,7 +38,6 @@ public class GetSharedGameByIdQueryHandlerTests
         _handler = new GetSharedGameByIdQueryHandler(
             _repositoryMock.Object,
             _cache,
-            _cacheMetricsMock.Object,
             _loggerMock.Object);
     }
 

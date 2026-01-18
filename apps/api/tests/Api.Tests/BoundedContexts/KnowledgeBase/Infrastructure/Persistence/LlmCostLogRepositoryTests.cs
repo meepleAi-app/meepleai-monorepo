@@ -12,15 +12,19 @@ using Api.Tests.Constants;
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 
 /// <summary>
-/// Integration tests for LlmCostLogRepository using Testcontainers with PostgreSQL.
+/// Integration tests for LlmCostLogRepository using shared Testcontainers with PostgreSQL.
 /// ISSUE-960: BGAI-018 - Cost tracking persistence tests
+/// Issue #2541: Migrated to SharedDatabaseTestBase for improved performance.
 /// </summary>
+[Collection("SharedTestcontainers")]
 [Trait("Category", TestCategories.Unit)]
-public class LlmCostLogRepositoryTests : IntegrationTestBase<LlmCostLogRepository>
+public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogRepository>
 {
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
-    protected override string DatabaseName => "meepleai_llmcost_test";
+    public LlmCostLogRepositoryTests(SharedTestcontainersFixture fixture) : base(fixture)
+    {
+    }
 
     protected override LlmCostLogRepository CreateRepository(MeepleAiDbContext dbContext)
         => new LlmCostLogRepository(dbContext, Mock.Of<ILogger<LlmCostLogRepository>>());

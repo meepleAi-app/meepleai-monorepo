@@ -305,6 +305,163 @@ public class SharedGameDomainTests
 
     #endregion
 
+    // ========================================
+    // APPROVAL WORKFLOW TESTS (Issue #2514)
+    // ========================================
+
+    [Fact]
+    public void SubmitForApproval_WithDraftStatus_TransitionsToPendingApproval()
+    {
+        // Arrange
+        var game = CreateValidGame();
+        var submitterId = Guid.NewGuid();
+        Assert.Equal(GameStatus.Draft, game.Status);
+
+        // Act
+        game.SubmitForApproval(submitterId);
+
+        // Assert
+        Assert.Equal(GameStatus.PendingApproval, game.Status);
+        Assert.Equal(submitterId, game.ModifiedBy);
+        Assert.NotNull(game.ModifiedAt);
+
+        // Assert domain event raised
+        var submitEvent = game.DomainEvents.OfType<SharedGameSubmittedForApprovalEvent>().LastOrDefault();
+        Assert.NotNull(submitEvent);
+        Assert.Equal(game.Id, submitEvent.GameId);
+        Assert.Equal(submitterId, submitEvent.SubmittedBy);
+    }
+
+    [Fact]
+    public void SubmitForApproval_WithNonDraftStatus_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var game = CreateValidGame();
+#pragma warning disable CS0618 // Using obsolete method for test setup
+        game.Publish(TestUserId); // Move to Published
+#pragma warning restore CS0618
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            game.SubmitForApproval(Guid.NewGuid()));
+        Assert.Contains("Only Draft games can be submitted", exception.Message);
+    }
+
+    [Fact]
+    public void ApprovePublication_WithPendingApprovalStatus_TransitionsToPublished()
+    {
+        // Arrange
+        var game = CreateValidGame();
+        game.SubmitForApproval(TestUserId);
+        Assert.Equal(GameStatus.PendingApproval, game.Status);
+
+        var approverId = Guid.NewGuid();
+
+        // Act
+        game.ApprovePublication(approverId);
+
+        // Assert
+        Assert.Equal(GameStatus.Published, game.Status);
+        Assert.Equal(approverId, game.ModifiedBy);
+        Assert.NotNull(game.ModifiedAt);
+
+        // Assert domain event raised
+        var approveEvent = game.DomainEvents.OfType<SharedGamePublicationApprovedEvent>().LastOrDefault();
+        Assert.NotNull(approveEvent);
+        Assert.Equal(game.Id, approveEvent.GameId);
+        Assert.Equal(approverId, approveEvent.ApprovedBy);
+    }
+
+    [Fact]
+    public void ApprovePublication_WithNonPendingApprovalStatus_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var game = CreateValidGame();
+        Assert.Equal(GameStatus.Draft, game.Status);
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            game.ApprovePublication(Guid.NewGuid()));
+        Assert.Contains("Only PendingApproval games can be approved", exception.Message);
+    }
+
+    [Fact]
+    public void RejectPublication_WithPendingApprovalStatus_TransitionsToDraft()
+    {
+        // Arrange
+        var game = CreateValidGame();
+        game.SubmitForApproval(TestUserId);
+        Assert.Equal(GameStatus.PendingApproval, game.Status);
+
+        var rejecterId = Guid.NewGuid();
+        var reason = "Needs more information about player count";
+
+        // Act
+        game.RejectPublication(rejecterId, reason);
+
+        // Assert
+        Assert.Equal(GameStatus.Draft, game.Status);
+        Assert.Equal(rejecterId, game.ModifiedBy);
+        Assert.NotNull(game.ModifiedAt);
+
+        // Assert domain event raised
+        var rejectEvent = game.DomainEvents.OfType<SharedGamePublicationRejectedEvent>().LastOrDefault();
+        Assert.NotNull(rejectEvent);
+        Assert.Equal(game.Id, rejectEvent.GameId);
+        Assert.Equal(rejecterId, rejectEvent.RejectedBy);
+        Assert.Equal(reason, rejectEvent.Reason);
+    }
+
+    [Fact]
+    public void RejectPublication_WithNonPendingApprovalStatus_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var game = CreateValidGame();
+        Assert.Equal(GameStatus.Draft, game.Status);
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            game.RejectPublication(Guid.NewGuid(), "Invalid reason"));
+        Assert.Contains("Only PendingApproval games can be rejected", exception.Message);
+    }
+
+    [Fact]
+    public void RejectPublication_WithEmptyReason_ThrowsArgumentException()
+    {
+        // Arrange
+        var game = CreateValidGame();
+        game.SubmitForApproval(TestUserId);
+
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() =>
+            game.RejectPublication(Guid.NewGuid(), ""));
+        Assert.Contains("Rejection reason is required", exception.Message);
+    }
+
+    [Fact]
+    public void WorkflowStateTransitions_FollowCorrectSequence()
+    {
+        // Arrange
+        var game = CreateValidGame();
+        var submitterId = Guid.NewGuid();
+        var approverId = Guid.NewGuid();
+
+        // Act & Assert - Complete workflow
+        Assert.Equal(GameStatus.Draft, game.Status);
+
+        game.SubmitForApproval(submitterId);
+        Assert.Equal(GameStatus.PendingApproval, game.Status);
+
+        game.ApprovePublication(approverId);
+        Assert.Equal(GameStatus.Published, game.Status);
+
+        // Verify all events were raised in correct order
+        var events = game.DomainEvents.ToList();
+        Assert.Contains(events, e => e is SharedGameCreatedEvent);
+        Assert.Contains(events, e => e is SharedGameSubmittedForApprovalEvent);
+        Assert.Contains(events, e => e is SharedGamePublicationApprovedEvent);
+    }
+
     private static SharedGame CreateValidGame()
     {
         return SharedGame.Create(

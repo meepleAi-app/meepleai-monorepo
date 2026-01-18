@@ -10,13 +10,17 @@ using Api.Tests.Constants;
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Persistence;
 
 /// <summary>
-/// Integration tests for UserRepository using Testcontainers with real PostgreSQL.
+/// Integration tests for UserRepository using shared Testcontainers with real PostgreSQL.
 /// Tests actual EF Core queries and domain-persistence mapping.
+/// Issue #2541: Migrated to SharedDatabaseTestBase for improved performance.
 /// </summary>
+[Collection("SharedTestcontainers")]
 [Trait("Category", TestCategories.Unit)]
-public class UserRepositoryTests : IntegrationTestBase<UserRepository>
+public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
 {
-    protected override string DatabaseName => "meepleai_user_test";
+    public UserRepositoryTests(SharedTestcontainersFixture fixture) : base(fixture)
+    {
+    }
 
     protected override UserRepository CreateRepository(MeepleAiDbContext dbContext)
         => new UserRepository(dbContext, MockEventCollector.Object);

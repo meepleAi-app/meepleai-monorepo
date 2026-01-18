@@ -56,7 +56,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "Current Recall@10 vs Phase 5 target (70%)",
       "fieldConfig": {
         "defaults": {
@@ -96,7 +96,7 @@
       "type": "gauge"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "Current P95 Latency vs Phase 5 target (1500ms)",
       "fieldConfig": {
         "defaults": {
@@ -136,7 +136,7 @@
       "type": "gauge"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "Configurations meeting Phase 5 targets",
       "fieldConfig": {
         "defaults": {
@@ -175,7 +175,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "Total evaluation runs completed",
       "fieldConfig": {
         "defaults": {
@@ -221,7 +221,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "Recall@5 and Recall@10 trends over time",
       "fieldConfig": {
         "defaults": {
@@ -281,7 +281,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "nDCG@10 and MRR trends over time",
       "fieldConfig": {
         "defaults": {
@@ -342,7 +342,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "P95 latency distribution across configurations",
       "fieldConfig": {
         "defaults": {
@@ -396,7 +396,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "Grid search duration over time",
       "fieldConfig": {
         "defaults": {
@@ -450,7 +450,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "Hit vs Miss ratio for evaluation samples",
       "fieldConfig": {
         "defaults": {
@@ -489,7 +489,7 @@
       "type": "piechart"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "description": "Configuration comparison table",
       "fieldConfig": {
         "defaults": { "color": { "mode": "thresholds" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "text", "value": null }] } },
@@ -549,7 +549,7 @@
     "list": [
       {
         "current": { "selected": false, "text": "All", "value": "$__all" },
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
         "definition": "label_values(meepleai_evaluation_runs_total, configuration)",
         "hide": 0,
         "includeAll": true,
@@ -566,7 +566,7 @@
       },
       {
         "current": { "selected": false, "text": "All", "value": "$__all" },
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
         "definition": "label_values(meepleai_evaluation_runs_total, dataset)",
         "hide": 0,
         "includeAll": true,

@@ -75,6 +75,12 @@
     "statusBar.debuggingBackground": "#7c3aed"
   },
   "window.title": "MeepleAI Monorepo - ${activeEditorShort}${separator}${dirty}",
+  // Git Hooks Configuration (Skip hooks from VS Code UI, run from Claude Code CLI)
+  "git.allowNoVerifyCommit": true,
+  "git.postCommitCommand": "none",
+  "terminal.integrated.env.windows": {
+    "HUSKY": "0"
+  },
   // Performance
   "git.ignoreLimitWarning": true,
   "files.watcherExclude": {

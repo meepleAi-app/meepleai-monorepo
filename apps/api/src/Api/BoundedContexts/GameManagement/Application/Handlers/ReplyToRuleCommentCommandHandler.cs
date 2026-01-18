@@ -141,13 +141,21 @@ internal partial class ReplyToRuleCommentCommandHandler : IRequestHandler<ReplyT
                 return new List<string>();
             }
 
-            var users = await _dbContext.Users
+            // Fetch all users and filter in-memory to avoid EF Core translation issues
+            var allUsers = await _dbContext.Users
                 .AsNoTracking()
-                .Where(u => (u.DisplayName != null && mentionedUsernames.Any(m => string.Equals(u.DisplayName, m, StringComparison.InvariantCultureIgnoreCase)))
-                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.StartsWith(m, StringComparison.OrdinalIgnoreCase))))
+                .Where(u => u.DisplayName != null || u.Email != null)
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+#pragma warning disable MA0002 // IEqualityComparer required by analyzer but not needed here
+            var users = allUsers
+                .Where(u => mentionedUsernames.Any(m =>
+                    (u.DisplayName != null && u.DisplayName.Contains(m, StringComparison.InvariantCultureIgnoreCase))
+                    || (u.Email != null && u.Email.StartsWith(m, StringComparison.OrdinalIgnoreCase))))
                 .Select(u => u.Id.ToString())
                 .Distinct()
-                .ToListAsync(cancellationToken).ConfigureAwait(false);
+                .ToList();
+#pragma warning restore MA0002
 
             if (users.Count < mentionedUsernames.Count)
             {

@@ -923,8 +923,9 @@ describe('SettingsPage', () => {
 
   describe('Loading States', () => {
     it('should disable buttons during submission', async () => {
+      // Issue #2284: Increased delay from 100ms to 500ms to reliably catch disabled state
       (api.auth.updateProfile as any).mockImplementation(
-        () => new Promise(resolve => setTimeout(resolve, 100))
+        () => new Promise(resolve => setTimeout(resolve, 500))
       );
 
       render(<SettingsPage />);

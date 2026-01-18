@@ -63,6 +63,7 @@ apps/api/src/Api/BoundedContexts/
 ├── KnowledgeBase/           # RAG system, AI agents, chat threads, vector search
 ├── SharedGameCatalog/       # Community game database with soft-delete
 ├── SystemConfiguration/     # Runtime config, feature flags, environment settings
+├── UserLibrary/             # User game collections, wishlist, played history
 ├── UserNotifications/       # In-app alerts, email notifications, push notifications
 └── WorkflowIntegration/     # n8n workflows, webhooks, error logging
 ```
@@ -117,6 +118,144 @@ app.MapPost("/api/v1/auth/register", async (
 
 ---
 
+## Secret Management
+
+**System**: Single source of truth using `.secret` files (Issue #2570 - Consolidated 2026-01-17)
+
+### Architecture
+
+**All services use .secret files via env_file** (no Docker secrets, no .txt files):
+
+```yaml
+# docker-compose.yml pattern
+service:
+  env_file:
+    - ./secrets/service-name.secret  # Multi-variable KEY=VALUE format
+```
+
+**File Structure**:
+```
+infra/secrets/
+├── *.secret           # Real values (gitignored, NEVER commit)
+├── *.secret.example   # Templates (committed, safe)
+└── setup-secrets.ps1  # ONLY script (generates .secret from examples)
+```
+
+### Secret Files (10 total)
+
+**CRITICAL** (startup blocked if missing):
+- `database.secret` - POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+- `redis.secret` - REDIS_PASSWORD
+- `qdrant.secret` - QDRANT_API_KEY
+- `jwt.secret` - JWT_SECRET_KEY, JWT_ISSUER, JWT_AUDIENCE
+- `admin.secret` - ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_DISPLAY_NAME
+- `embedding-service.secret` - EMBEDDING_SERVICE_API_KEY
+
+**IMPORTANT** (warnings if missing):
+- `openrouter.secret` - OPENROUTER_API_KEY, OPENROUTER_DEFAULT_MODEL
+- `unstructured-service.secret` - UNSTRUCTURED_API_KEY
+- `bgg.secret` - BGG_USERNAME, BGG_PASSWORD (optional for dev)
+
+**OPTIONAL**:
+- `oauth.secret` - GOOGLE_*, GITHUB_*, DISCORD_* (6 OAuth credentials)
+- `email.secret` - SMTP_*, GMAIL_APP_PASSWORD
+- `monitoring.secret` - GRAFANA_ADMIN_PASSWORD, PROMETHEUS_PASSWORD, SLACK_WEBHOOK_URL
+- `n8n.secret` - N8N_ENCRYPTION_KEY, N8N_BASIC_AUTH_PASSWORD
+- `storage.secret` - S3_* (if using cloud storage)
+- `traefik.secret` - TRAEFIK_DASHBOARD_*
+- `smoldocling-service.secret` - SMOLDOCLING_API_KEY
+- `reranker-service.secret` - RERANKER_API_KEY
+
+### Workflow
+
+**Initial Setup**:
+```bash
+cd infra/secrets
+pwsh setup-secrets.ps1 -SaveGenerated
+# Creates all .secret files with auto-generated secure values
+```
+
+**Update Secret**:
+```bash
+# 1. Edit .secret file
+nano infra/secrets/redis.secret
+
+# 2. Restart service
+cd infra
+docker compose restart redis
+
+# Done! No manual sync needed
+```
+
+**Development** (.env.development):
+- Located in repo root
+- Loaded by Program.cs via DotNetEnv
+- ⚠️ Manually synchronized with .secret files
+- ✅ Gitignored (safe)
+
+### Security Rules
+
+**✅ DO**:
+- Use `.secret` files as single source of truth
+- Run `setup-secrets.ps1` for initial generation
+- Keep all `.secret` files gitignored
+- Rotate passwords every 90 days
+- Sync `.env.development` manually after `.secret` changes
+
+**❌ DON'T**:
+- NEVER commit `.secret` files
+- NEVER commit `.env` files
+- NEVER include real secret values in documentation
+- NEVER use development secrets in production
+- NEVER create `.txt` files manually (deprecated system)
+
+### Backend Validation
+
+**SecretLoader.cs** automatically validates all secrets at startup:
+- Location: `apps/api/src/Api/Infrastructure/Configuration/SecretLoader.cs`
+- Definitions: `SecretDefinitions.cs` (3-level validation)
+- Levels: Critical (blocks startup), Important (warns), Optional (info)
+
+**Example Output**:
+```
+[INF] Secret validation complete: 17 loaded, 0 critical missing, 2 optional missing
+```
+
+### Troubleshooting
+
+**Missing secrets**:
+```bash
+# Check which secrets are missing
+cd apps/api/src/Api
+dotnet run
+# Logs will show: "CRITICAL secrets missing: database.secret:POSTGRES_PASSWORD"
+
+# Fix: Run setup script
+cd ../../../infra/secrets
+pwsh setup-secrets.ps1
+```
+
+**Service fails after secret update**:
+```bash
+# Recreate service to reload env_file
+cd infra
+docker compose up -d --force-recreate service-name
+```
+
+**Password contains special characters causing issues**:
+- Avoid `;`, `'`, `"` in passwords (breaks connection strings)
+- Use alphanumeric + basic symbols: `!@#$%^&*()-_=+`
+- Generate with: `openssl rand -base64 16 | tr -d '/+='`
+
+### References
+
+- **System Documentation**: `docs/claudedocs/secret-system-final.md`
+- **Audit Report**: `docs/claudedocs/secret-audit-2026-01-17.md`
+- **Consolidation Analysis**: `docs/claudedocs/issue-2565-secret-consolidation-analysis.md`
+- **Implementation**: Issue #2570, PR #2572 (merged 2026-01-17)
+
+---
+
 ## Development Workflow
 
 ### Local Setup
@@ -142,8 +281,18 @@ cd ../../../web
 pnpm install
 
 # 4. Environment configuration
+
+# 4a. Auto-generate secrets (RECOMMENDED - saves 15-30 minutes)
+cd ../../infra/secrets
+.\setup-secrets.ps1 -SaveGenerated
+# Generates: JWT keys, database passwords, API keys (11 values)
+# Creates backup: .generated-values-TIMESTAMP.txt
+# Manual config still needed: bgg.secret, openrouter.secret (optional)
+
+# 4b. Frontend environment
+cd ../../apps/web
 cp .env.development.example .env.local
-# Edit .env.local with your API keys and database credentials
+# Edit .env.local if custom API endpoints needed
 
 # 5. Start infrastructure
 cd ../../infra
@@ -855,7 +1004,24 @@ meepleai-monorepo-dev/
 
 ### Common Issues
 
-**Backend fails to start**:
+**Backend fails to start - Missing secrets**:
+```bash
+# Error: "CRITICAL secret missing: infra/secrets/database.secret"
+
+# Solution: Auto-generate all secrets
+cd infra/secrets
+.\setup-secrets.ps1
+
+# Verify all CRITICAL secrets exist
+ls *.secret | findstr "admin database jwt qdrant redis embedding"
+# Should show 6 files
+
+# Then restart
+cd ../../infra
+docker compose restart api
+```
+
+**Backend fails to start - Database connection**:
 ```bash
 # Check PostgreSQL connection
 docker ps | grep postgres
@@ -893,6 +1059,34 @@ taskkill /PID <PID> /F
 
 # Find process using port 3000 (Web)
 netstat -ano | findstr :3000
+```
+
+**Tests fail to run - Testhost processes blocking files** (Issue #2593):
+```bash
+# Symptom: "The process cannot access the file 'Api.dll' because it is being used by another process"
+# Root Cause: Previous test runs left testhost.exe processes active
+
+# Solution: Kill testhost processes before running tests
+tasklist | grep -i "testhost"
+taskkill //PID <PID> //F
+
+# Verify cleanup
+tasklist | grep -i "testhost" || echo "✅ Clean"
+
+# Then rebuild and test
+cd apps/api && dotnet build && dotnet test
+```
+
+**Culture-dependent test failures** (Issue #2593):
+```bash
+# Symptom: ToString() tests fail with "87 %" instead of "87%"
+# Root Cause: InvariantCulture with P0 format adds space in percentages
+
+# ❌ Wrong: Still adds space
+RelevanceScore.ToString("P0", CultureInfo.InvariantCulture) // "87 %"
+
+# ✅ Correct: Custom format without spaces
+$"{(RelevanceScore * 100):0}%" // "87%"
 ```
 
 ---
@@ -953,6 +1147,198 @@ public byte[] RowVersion { get; private set; }
 
 // In SaveChanges, catch DbUpdateConcurrencyException
 ```
+
+### Recent Learnings & Best Practices
+
+**Implementing HTTP Endpoints (Issue #2567 pattern)**:
+
+When adding new CRUD endpoints for a domain entity:
+
+1. **Create in this order** (Issue #2567 implementation):
+   - DTOs (`Application/DTOs/EntityDto.cs`) - API contracts
+   - Queries (`Application/Queries/GetAll*.cs`, `GetById*.cs`)
+   - Commands (`Application/Commands/Create*.cs`, `Update*.cs`, `Delete*.cs`)
+   - Validators (`Application/Validators/*Validator.cs`) - FluentValidation rules
+   - Handlers (`Application/Handlers/*Handler.cs`) - Business logic
+   - Routing (`Routing/EntityEndpoints.cs`) - HTTP mappings
+   - Register in `Program.cs`: `v1Api.MapEntityEndpoints();`
+
+2. **Exception Handling** (Code Review PR #2568):
+   - Use `ConflictException` for business rule violations (maps to 409 Conflict)
+   - Use `NotFoundException` for missing resources (maps to 404 Not Found)
+   - NEVER use `InvalidOperationException` (maps to 500 Internal Server Error)
+   - Align with ADR-009 centralized error handling
+
+3. **Immutable Fields**:
+   - If entity fields are immutable (e.g., ModelId, DisplayName), do NOT include them in Update command
+   - Avoids misleading API contracts where fields appear updatable but are silently ignored
+
+**Security Incident Response** (Issue #2565 lesson):
+
+If secret values are accidentally committed in documentation:
+
+1. **Immediate Actions**:
+   ```bash
+   # Redact documentation
+   # Replace real values with [REDACTED]
+
+   # Rotate ALL exposed credentials
+   cd infra/secrets
+   # Generate new passwords for exposed secrets
+
+   # Update .secret files with new values
+   # Restart Docker services
+   docker compose down
+   docker volume rm infra_pgdata  # If database password rotated
+   docker compose up -d
+
+   # Re-apply migrations if needed
+   cd apps/api/src/Api
+   pwsh apply-migrations.ps1
+   ```
+
+2. **Prevent Future Incidents**:
+   - Add files with passwords to `.gitignore`
+   - Use `[REDACTED]` in all documentation examples
+   - Never copy actual password values into commit messages or docs
+
+3. **Git History**:
+   - For dev environment: Rotation is sufficient (acceptable to have old passwords in history)
+   - For production: Consider `git-filter-repo` to remove from history
+
+**Code Review Automation** (PR #2568, #2572 workflow):
+
+After creating PR, use automated code review:
+```bash
+# From Claude Code skill
+/code-review:code-review <pr-number>
+```
+
+Process:
+1. Checks PR eligibility (open, not draft, not reviewed)
+2. Identifies relevant CLAUDE.md files
+3. Launches 5 parallel review agents (CLAUDE.md, bugs, history, PRs, comments)
+4. Scores issues with confidence (0-100 scale)
+5. Filters high-confidence issues (≥80)
+6. Posts review comment with file/line links
+
+**DI Registration Pattern** (Issue #2565 fix):
+
+Always register both interface and implementation:
+```csharp
+// ✅ CORRECT
+services.AddScoped<IGameStateParser, GameStateParser>();
+
+// ❌ WRONG - Only concrete class, missing interface mapping
+services.AddScoped<GameStateParser>();
+```
+
+**Docker Compose Variable Escaping**:
+
+When using environment variables in shell commands:
+```yaml
+# ✅ CORRECT - Double $$ for docker-compose variable expansion
+command: ["sh","-c","redis-server --requirepass $$REDIS_PASSWORD"]
+
+# ❌ WRONG - Single $ gets expanded by docker-compose, not in container
+command: ["sh","-c","redis-server --requirepass $REDIS_PASSWORD"]
+```
+
+**Test Environment Cleanup** (Issue #2593):
+
+Before running tests, verify no testhost processes are blocking files:
+```bash
+# Check for blocking processes
+tasklist | grep -i "testhost"
+
+# Kill if found
+taskkill //PID <PID> //F
+
+# Verify clean state before build/test
+tasklist | grep -i "testhost" || echo "✅ Clean"
+```
+
+**Culture-Independent Formatting** (Issue #2593):
+
+Percentage formatting in value objects must avoid culture-dependent spaces:
+```csharp
+// ❌ WRONG - InvariantCulture P0 adds space ("87 %")
+ToString("P0", CultureInfo.InvariantCulture)
+
+// ✅ CORRECT - Custom format guarantees no space ("87%")
+$"{(value * 100):0}%"
+```
+
+**Local Test Validation Priority** (Issue #2593):
+
+- Always test locally before relying on CI for validation
+- Kill testhost processes: `tasklist | grep testhost` → `taskkill`
+- Verify build clean: `dotnet build` (0 warnings, 0 errors)
+- Run specific tests: `dotnet test --filter "TestName"`
+- Confirm all pass locally before PR push
+
+**OAuth Error Handling and Transactional Patterns** (Issue #2600, PR #2607):
+
+When implementing OAuth callback handlers or similar multi-step operations:
+
+1. **Defensive Validation Pattern**:
+   - FluentValidation handles production validation via MediatR pipeline
+   - BUT: Unit tests often call handlers directly, bypassing MediatR
+   - Solution: Add defensive inline validation with NOTE explaining the trade-off
+   ```csharp
+   // NOTE: Defensive validation for direct handler invocation (tests bypass MediatR pipeline)
+   // Production: Validator executes via MediatR ValidationBehavior
+   // Tests: Direct handler.Handle() calls require inline validation
+   if (string.IsNullOrWhiteSpace(command.Required)) { ... }
+   ```
+
+2. **InMemory Database Transaction Handling**:
+   - InMemory database does NOT support transactions (throws on BeginTransactionAsync)
+   - Pattern: Check provider name and conditionally create transaction
+   ```csharp
+   var isInMemory = string.Equals(_db.Database.ProviderName,
+       "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal);
+   var transaction = isInMemory ? null : await _db.Database.BeginTransactionAsync(ct);
+   ```
+   - Always null-check transaction before Commit/Rollback/Dispose
+
+3. **Manual Rollback for InMemory Tests**:
+   - When transaction is null (InMemory), implement manual cleanup logic
+   - Consider BOTH scenarios: new user creation AND existing user OAuth linking
+   ```csharp
+   if (transaction != null) {
+       await transaction.RollbackAsync(ct);
+   } else {
+       // Remove OAuth account (both scenarios)
+       var oauthAccount = await _db.OAuthAccounts
+           .FirstOrDefaultAsync(o => o.UserId == userId && o.Provider == provider, ct);
+       if (oauthAccount != null) _db.OAuthAccounts.Remove(oauthAccount);
+
+       // Only remove user if newly created in this request
+       if (isNewUser) _db.Users.Remove(user);
+
+       await _db.SaveChangesAsync(ct);
+   }
+   ```
+
+4. **Exception Handling with InvalidOperationException Legacy**:
+   - CLAUDE.md prohibits InvalidOperationException (maps to 500 error)
+   - BUT: Existing infrastructure services (IOAuthService) may throw it
+   - Temporary solution: Catch with pragma and NOTE documenting future refactor
+   ```csharp
+   catch (HttpRequestException ex) { ... }  // Preferred
+   catch (TaskCanceledException ex) { ... }  // Preferred
+   // NOTE: InvalidOperationException for backward compatibility
+   #pragma warning disable S1135
+   catch (InvalidOperationException ex) { ... }  // Document future removal
+   #pragma warning restore S1135
+   ```
+   - Long-term: Refactor infrastructure services to throw domain-specific exceptions
+
+5. **Error Message Specificity**:
+   - Preserve context in error messages for better debugging
+   - Separate log messages by exception type for observability
+   - Test assertions verify specific error message content
 
 ---
 

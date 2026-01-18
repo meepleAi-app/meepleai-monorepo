@@ -435,7 +435,7 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
 
       const result = await gamesClient.create('Simple Game');
 
-      expect(mockHttpClient.post).toHaveBeenCalledWith('/api/v1/games', { name: 'Simple Game' });
+      expect(mockHttpClient.post).toHaveBeenCalledWith('/api/v1/games', { title: 'Simple Game' });
       expect(result).toEqual(mockResponse);
     });
 

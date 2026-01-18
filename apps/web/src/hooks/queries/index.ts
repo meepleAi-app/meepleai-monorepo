@@ -34,6 +34,53 @@ export {
   adminKeys,
 } from './useDashboardData';
 
+// User Library queries and mutations
+export {
+  useLibrary,
+  useLibraryStats,
+  useLibraryQuota,
+  useGameInLibraryStatus,
+  useAddGameToLibrary,
+  useRemoveGameFromLibrary,
+  useUpdateLibraryEntry,
+  useToggleLibraryFavorite,
+  libraryKeys,
+} from './useLibrary';
+
+// Agent Documents queries and mutations (Issue #2399)
+export {
+  useAgentDocuments,
+  useUpdateAgentDocuments,
+  agentDocumentsKeys,
+} from './useAgentDocuments';
+
+// Shared Games Catalog queries (Issue #2518)
+export {
+  useSharedGames,
+  useSharedGame,
+  useGameCategories,
+  useGameMechanics,
+  sharedGamesKeys,
+} from './useSharedGames';
+
+// Agent Configuration queries and mutations (Issue #2518)
+export {
+  useAgentConfig,
+  useUpdateAgentConfig,
+  agentConfigKeys,
+} from './useAgentConfig';
+
+// AI Models Management queries and mutations (Issue #2521)
+export {
+  useAiModels,
+  useAiModel,
+  useCostTracking,
+  useUpdateModelConfig,
+  useSetPrimaryModel,
+  useTestModel,
+  aiModelsKeys,
+} from './useAiModels';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

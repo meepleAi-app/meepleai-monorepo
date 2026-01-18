@@ -16,6 +16,7 @@ import {
   GameSessionDtoSchema,
   GetGameFAQsResultSchema,
   PaginatedGamesResponseSchema,
+  QuickQuestionSchema,
   RuleSpecDiffSchema,
   RuleSpecHistorySchema,
   RuleSpecSchema,
@@ -29,6 +30,7 @@ import {
   type GetGameFAQsResult,
   type PaginatedGamesResponse,
   type PdfDocumentDto,
+  type QuickQuestion,
   type RuleSpec,
   type RuleSpecDiff,
   type RuleSpecHistory,
@@ -71,7 +73,7 @@ export interface GameSortOptions {
  * Issue #2373: Added sharedGameId for catalog integration
  */
 export interface CreateGameRequest {
-  name: string;
+  title: string;
   publisher?: string | null;
   yearPublished?: number | null;
   minPlayers?: number | null;
@@ -286,7 +288,7 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       request: CreateGameRequest | string
     ): Promise<{ id: string; title: string; createdAt: string }> {
       // Support both legacy (string) and new (object) signatures
-      const payload = typeof request === 'string' ? { name: request } : request;
+      const payload = typeof request === 'string' ? { title: request } : request;
       return httpClient.post<{ id: string; title: string; createdAt: string }>(
         '/api/v1/games',
         payload
@@ -567,7 +569,26 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       }
       return result;
     },
+
+    /**
+     * Get quick questions for game
+     * GET /api/v1/games/{gameId}/quick-questions
+     * Issue #2401: QuickQuestion AI Generation
+     *
+     * Fetches AI-generated quick question suggestions for a game.
+     * Falls back to empty array if questions not available.
+     */
+    async getQuickQuestions(gameId: string): Promise<QuickQuestion[]> {
+      const response = await httpClient.get(
+        `/api/v1/games/${encodeURIComponent(gameId)}/quick-questions`,
+        z.array(QuickQuestionSchema)
+      );
+      return response ?? [];
+    },
   };
 }
 
 export type GamesClient = ReturnType<typeof createGamesClient>;
+
+// Re-export QuickQuestion type for convenience
+export type { QuickQuestion } from '../schemas';

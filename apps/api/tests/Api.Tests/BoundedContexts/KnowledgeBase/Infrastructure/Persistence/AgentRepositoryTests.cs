@@ -2,13 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
-using Api.SharedKernel.Application.Services;
 using Api.Tests.Infrastructure;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
-using MediatR;
-using Microsoft.EntityFrameworkCore;
-using Moq;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -17,61 +11,18 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 /// <summary>
 /// Integration tests for AgentRepository using Testcontainers.
 /// Issue #866: AI Agents Entity & Configuration
+/// Issue #2577: Migrated to SharedDatabaseTestBase for connection pool stability.
 /// </summary>
+[Collection("SharedTestcontainers")]
 [Trait("Category", TestCategories.Unit)]
-public class AgentRepositoryTests : IAsyncLifetime
+internal class AgentRepositoryTests : SharedDatabaseTestBase<AgentRepository>
 {
-    private IContainer? _postgresContainer;
-    private MeepleAiDbContext? _dbContext;
-    private AgentRepository? _repository;
-    private string? _connectionString;
-
-    public async ValueTask InitializeAsync()
+    public AgentRepositoryTests(SharedTestcontainersFixture fixture) : base(fixture)
     {
-        // Issue #2031 fix: Use ContainerBuilder instead of PostgreSqlBuilder
-        // to avoid exec-based wait strategy that causes "cannot hijack" errors
-        _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
-            .WithEnvironment("POSTGRES_USER", "test")
-            .WithEnvironment("POSTGRES_PASSWORD", "test")
-            .WithEnvironment("POSTGRES_DB", "meepleai_test")
-            .WithPortBinding(5432, assignRandomHostPort: true)
-            .WithCleanUp(true)
-            .Build();
-
-        await _postgresContainer.StartAsync();
-
-        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-        _connectionString = $"Host=localhost;Port={postgresPort};Database=meepleai_test;Username=test;Password=test;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;";
-
-        // Issue #2031: Wait for PostgreSQL to accept connections with retry
-        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(_connectionString);
-
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(_connectionString)
-            .Options;
-
-        var mockMediator = new Mock<IMediator>();
-        var mockEventCollector = new Mock<IDomainEventCollector>();
-        mockEventCollector.Setup(x => x.GetAndClearEvents()).Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
-        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
-        await _dbContext.Database.MigrateAsync();
-
-        _repository = new AgentRepository(_dbContext, new Mock<IDomainEventCollector>().Object);
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_dbContext != null)
-        {
-            await _dbContext.DisposeAsync();
-        }
-
-        if (_postgresContainer != null)
-        {
-            await _postgresContainer.DisposeAsync();
-        }
-    }
+    protected override AgentRepository CreateRepository(MeepleAiDbContext dbContext)
+        => new AgentRepository(dbContext, MockEventCollector.Object);
 
     [Fact]
     public async Task AddAsync_ValidAgent_AddsToDatabase()
@@ -80,10 +31,10 @@ public class AgentRepositoryTests : IAsyncLifetime
         var agent = CreateTestAgent("Test Agent");
 
         // Act
-        await _repository!.AddAsync(agent, CancellationToken.None);
+        await Repository.AddAsync(agent, CancellationToken.None);
 
         // Assert
-        var retrieved = await _repository.GetByIdAsync(agent.Id, CancellationToken.None);
+        var retrieved = await Repository.GetByIdAsync(agent.Id, CancellationToken.None);
         Assert.NotNull(retrieved);
         Assert.Equal(agent.Name, retrieved.Name);
         Assert.Equal(agent.Type.Value, retrieved.Type.Value);
@@ -94,10 +45,10 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("Test Agent");
-        await _repository!.AddAsync(agent, CancellationToken.None);
+        await Repository.AddAsync(agent, CancellationToken.None);
 
         // Act
-        var retrieved = await _repository.GetByIdAsync(agent.Id, CancellationToken.None);
+        var retrieved = await Repository.GetByIdAsync(agent.Id, CancellationToken.None);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -109,7 +60,7 @@ public class AgentRepositoryTests : IAsyncLifetime
     public async Task GetByIdAsync_NonExistingAgent_ReturnsNull()
     {
         // Act
-        var retrieved = await _repository!.GetByIdAsync(Guid.NewGuid(), CancellationToken.None);
+        var retrieved = await Repository.GetByIdAsync(Guid.NewGuid(), CancellationToken.None);
 
         // Assert
         Assert.Null(retrieved);
@@ -120,10 +71,10 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("Unique Agent");
-        await _repository!.AddAsync(agent, CancellationToken.None);
+        await Repository.AddAsync(agent, CancellationToken.None);
 
         // Act
-        var retrieved = await _repository.GetByNameAsync("Unique Agent", CancellationToken.None);
+        var retrieved = await Repository.GetByNameAsync("Unique Agent", CancellationToken.None);
 
         // Assert
         Assert.NotNull(retrieved);
@@ -138,12 +89,12 @@ public class AgentRepositoryTests : IAsyncLifetime
         var activeAgent2 = CreateTestAgent("Active 2", isActive: true);
         var inactiveAgent = CreateTestAgent("Inactive", isActive: false);
 
-        await _repository!.AddAsync(activeAgent1, CancellationToken.None);
-        await _repository.AddAsync(activeAgent2, CancellationToken.None);
-        await _repository.AddAsync(inactiveAgent, CancellationToken.None);
+        await Repository.AddAsync(activeAgent1, CancellationToken.None);
+        await Repository.AddAsync(activeAgent2, CancellationToken.None);
+        await Repository.AddAsync(inactiveAgent, CancellationToken.None);
 
         // Act
-        var activeAgents = await _repository.GetAllActiveAsync(CancellationToken.None);
+        var activeAgents = await Repository.GetAllActiveAsync(CancellationToken.None);
 
         // Assert
         Assert.Equal(2, activeAgents.Count);
@@ -158,12 +109,12 @@ public class AgentRepositoryTests : IAsyncLifetime
         var ragAgent2 = CreateTestAgent("RAG 2", AgentType.RagAgent);
         var citationAgent = CreateTestAgent("Citation", AgentType.CitationAgent);
 
-        await _repository!.AddAsync(ragAgent1, CancellationToken.None);
-        await _repository.AddAsync(ragAgent2, CancellationToken.None);
-        await _repository.AddAsync(citationAgent, CancellationToken.None);
+        await Repository.AddAsync(ragAgent1, CancellationToken.None);
+        await Repository.AddAsync(ragAgent2, CancellationToken.None);
+        await Repository.AddAsync(citationAgent, CancellationToken.None);
 
         // Act
-        var ragAgents = await _repository.GetByTypeAsync(AgentType.RagAgent, CancellationToken.None);
+        var ragAgents = await Repository.GetByTypeAsync(AgentType.RagAgent, CancellationToken.None);
 
         // Assert
         Assert.Equal(2, ragAgents.Count);
@@ -175,16 +126,16 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("Original Name");
-        await _repository!.AddAsync(agent, CancellationToken.None);
+        await Repository.AddAsync(agent, CancellationToken.None);
 
         agent.Rename("Updated Name");
         agent.Configure(AgentStrategy.VectorOnly());
 
         // Act
-        await _repository.UpdateAsync(agent, CancellationToken.None);
+        await Repository.UpdateAsync(agent, CancellationToken.None);
 
         // Assert
-        var retrieved = await _repository.GetByIdAsync(agent.Id, CancellationToken.None);
+        var retrieved = await Repository.GetByIdAsync(agent.Id, CancellationToken.None);
         Assert.Equal("Updated Name", retrieved!.Name);
         Assert.Equal("VectorOnly", retrieved.Strategy.Name);
     }
@@ -194,13 +145,13 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("To Delete");
-        await _repository!.AddAsync(agent, CancellationToken.None);
+        await Repository.AddAsync(agent, CancellationToken.None);
 
         // Act
-        await _repository.DeleteAsync(agent.Id, CancellationToken.None);
+        await Repository.DeleteAsync(agent.Id, CancellationToken.None);
 
         // Assert
-        var retrieved = await _repository.GetByIdAsync(agent.Id, CancellationToken.None);
+        var retrieved = await Repository.GetByIdAsync(agent.Id, CancellationToken.None);
         Assert.Null(retrieved);
     }
 
@@ -209,10 +160,10 @@ public class AgentRepositoryTests : IAsyncLifetime
     {
         // Arrange
         var agent = CreateTestAgent("Exists");
-        await _repository!.AddAsync(agent, CancellationToken.None);
+        await Repository.AddAsync(agent, CancellationToken.None);
 
         // Act
-        var exists = await _repository.ExistsAsync("Exists", CancellationToken.None);
+        var exists = await Repository.ExistsAsync("Exists", CancellationToken.None);
 
         // Assert
         Assert.True(exists);
@@ -222,7 +173,7 @@ public class AgentRepositoryTests : IAsyncLifetime
     public async Task ExistsAsync_NonExistingAgent_ReturnsFalse()
     {
         // Act
-        var exists = await _repository!.ExistsAsync("Does Not Exist", CancellationToken.None);
+        var exists = await Repository.ExistsAsync("Does Not Exist", CancellationToken.None);
 
         // Assert
         Assert.False(exists);

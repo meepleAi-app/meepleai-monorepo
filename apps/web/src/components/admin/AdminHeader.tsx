@@ -90,6 +90,7 @@ export function AdminHeader({
         'sticky top-0 z-40 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900',
         className
       )}
+      data-testid="admin-header"
     >
       <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
         {/* Mobile menu trigger */}
@@ -97,7 +98,12 @@ export function AdminHeader({
 
         {/* Title */}
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h1>
+          <h1
+            className="text-lg font-semibold text-gray-900 dark:text-white"
+            data-testid="admin-header-title"
+          >
+            {title}
+          </h1>
         </div>
 
         {/* Spacer */}
@@ -107,7 +113,13 @@ export function AdminHeader({
         {actions && <div className="flex items-center gap-2">{actions}</div>}
 
         {/* Back to Home */}
-        <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
+        <Button
+          variant="ghost"
+          size="sm"
+          asChild
+          className="hidden sm:flex"
+          data-testid="admin-header-home-btn"
+        >
           <Link href="/" className="flex items-center gap-2">
             <HomeIcon className="h-4 w-4" />
             <span>Home</span>
@@ -117,7 +129,12 @@ export function AdminHeader({
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative h-8 w-8 rounded-full"
+              data-testid="admin-header-user-menu"
+            >
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 text-xs">
                   {getInitials(user?.displayName, user?.email)}
@@ -155,6 +172,7 @@ export function AdminHeader({
             <DropdownMenuItem
               onClick={handleLogout}
               className="text-red-600 dark:text-red-400 cursor-pointer"
+              data-testid="admin-header-logout-btn"
             >
               <LogOutIcon className="mr-2 h-4 w-4" />
               Log out

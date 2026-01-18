@@ -287,7 +287,9 @@ export function InfrastructureClient() {
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{i18n.page.title}</h1>
+            <h1 className="text-3xl font-bold text-gray-900" data-testid="infrastructure-title">
+              {i18n.page.title}
+            </h1>
             <p className="text-gray-600 mt-1">{i18n.page.description}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -354,7 +356,7 @@ export function InfrastructureClient() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">{i18n.grid.overallHealth}</p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-2xl font-bold" data-testid="overall-health-status">
                       {locale === 'it' && data.overall.state === 'Healthy'
                         ? 'Sano'
                         : locale === 'it' && data.overall.state === 'Degraded'

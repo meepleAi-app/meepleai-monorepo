@@ -42,8 +42,9 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
         var pdfId = command.PdfId;
         _logger.LogInformation("Starting text extraction for PDF {PdfId}", pdfId);
 
-        // 1. Retrieve PDF document from database
+        // 1. Retrieve PDF document from database (with tracking for updates)
         var pdf = await _db.PdfDocuments
+            .AsTracking()  // BUGFIX: Override global NoTracking to enable change tracking
             .FirstOrDefaultAsync(p => p.Id == pdfId, cancellationToken).ConfigureAwait(false);
 
         if (pdf == null)
@@ -94,6 +95,9 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
                 .Select(pc => pc.Text));
 
             // 6. Update PDF document with extracted text
+            _logger.LogInformation("🔄 [EXTRACT-DEBUG] Updating PDF {PdfId} with extracted data: {Chars} chars, {Pages} pages",
+                pdfId, extractResult.TotalCharacters, extractResult.TotalPages);
+
             pdf.ExtractedText = fullText;
             pdf.PageCount = extractResult.TotalPages;
             pdf.CharacterCount = extractResult.TotalCharacters;
@@ -101,7 +105,14 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
             pdf.ProcessingError = null;
             pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("💾 [EXTRACT-DEBUG] Calling SaveChangesAsync for PDF {PdfId}", pdfId);
+            var changeCount = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("✅ [EXTRACT-DEBUG] SaveChangesAsync returned {ChangeCount} changes for PDF {PdfId}", changeCount, pdfId);
+
+            // Verify data was actually saved
+            var verifyPdf = await _db.PdfDocuments.AsNoTracking().FirstOrDefaultAsync(p => p.Id == pdfId, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("🔍 [EXTRACT-DEBUG] Verification query: Status={Status}, PageCount={Pages}, HasText={HasText}",
+                verifyPdf?.ProcessingStatus, verifyPdf?.PageCount, verifyPdf?.ExtractedText != null);
 
             _logger.LogInformation("Text extraction completed for PDF {PdfId}: {PageCount} pages, {CharCount} characters",
                 pdfId, extractResult.TotalPages, extractResult.TotalCharacters);

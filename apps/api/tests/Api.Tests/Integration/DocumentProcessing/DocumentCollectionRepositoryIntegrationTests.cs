@@ -312,9 +312,20 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         // Arrange
         var user2Id = new Guid("10000000-0000-0000-0000-000000000002");
 
+        // Create user2 for this test
+        var user2 = new UserEntity
+        {
+            Id = user2Id,
+            Email = "user2@test.com",
+            DisplayName = "User 2",
+            Role = "User"
+        };
+        _dbContext!.Users.Add(user2);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
         var game1Id = Guid.NewGuid();
         var game1 = new GameEntity { Id = game1Id, Name = "Test Game 1 for Ordering" };
-        _dbContext!.Games.Add(game1);
+        _dbContext.Games.Add(game1);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var collection1 = new DocumentCollection(

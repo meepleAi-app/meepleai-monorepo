@@ -2,8 +2,12 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
@@ -11,33 +15,19 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers.PromptHandlers;
 
 [Trait("Category", TestCategories.Unit)]
-public class CreatePromptVersionCommandHandlerTests
+public class CreatePromptVersionCommandHandlerTests : IDisposable
 {
-    private readonly Mock<MeepleAiDbContext> _mockDbContext;
+    private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<TimeProvider> _mockTimeProvider;
     private readonly CreatePromptVersionCommandHandler _handler;
-    private readonly Mock<DbSet<PromptTemplateEntity>> _mockTemplateSet;
-    private readonly Mock<DbSet<PromptVersionEntity>> _mockVersionSet;
-    private readonly Mock<DbSet<UserEntity>> _mockUserSet;
 
     public CreatePromptVersionCommandHandlerTests()
     {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-
-        _mockDbContext = new Mock<MeepleAiDbContext>(options);
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext($"CreatePromptVersionTests_{Guid.NewGuid()}");
         _mockTimeProvider = new Mock<TimeProvider>();
-        _mockTemplateSet = new Mock<DbSet<PromptTemplateEntity>>();
-        _mockVersionSet = new Mock<DbSet<PromptVersionEntity>>();
-        _mockUserSet = new Mock<DbSet<UserEntity>>();
-
-        _mockDbContext.Setup(db => db.Set<PromptTemplateEntity>()).Returns(_mockTemplateSet.Object);
-        _mockDbContext.Setup(db => db.Set<PromptVersionEntity>()).Returns(_mockVersionSet.Object);
-        _mockDbContext.Setup(db => db.Set<UserEntity>()).Returns(_mockUserSet.Object);
 
         _handler = new CreatePromptVersionCommandHandler(
-            _mockDbContext.Object,
+            _dbContext,
             _mockTimeProvider.Object
         );
     }
@@ -64,23 +54,42 @@ public class CreatePromptVersionCommandHandlerTests
             CreatedByUserId = userId,
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
-            Versions = new List<PromptVersionEntity>
-            {
-                new() { Id = Guid.NewGuid(), TemplateId = templateId, VersionNumber = 1, Content = "V1", CreatedByUserId = userId, CreatedAt = now.UtcDateTime, Template = null!, CreatedBy = user },
-                new() { Id = Guid.NewGuid(), TemplateId = templateId, VersionNumber = 2, Content = "V2", CreatedByUserId = userId, CreatedAt = now.UtcDateTime, Template = null!, CreatedBy = user }
-            }
+            Versions = new List<PromptVersionEntity>()
         };
 
+        var existingVersion1 = new PromptVersionEntity
+        {
+            Id = Guid.NewGuid(),
+            TemplateId = templateId,
+            VersionNumber = 1,
+            Content = "V1",
+            CreatedByUserId = userId,
+            CreatedAt = now.UtcDateTime,
+            Template = template,
+            CreatedBy = user
+        };
+
+        var existingVersion2 = new PromptVersionEntity
+        {
+            Id = Guid.NewGuid(),
+            TemplateId = templateId,
+            VersionNumber = 2,
+            Content = "V2",
+            CreatedByUserId = userId,
+            CreatedAt = now.UtcDateTime,
+            Template = template,
+            CreatedBy = user
+        };
+
+        template.Versions.Add(existingVersion1);
+        template.Versions.Add(existingVersion2);
+
+        // Seed the database
+        await _dbContext.Set<UserEntity>().AddAsync(user);
+        await _dbContext.Set<PromptTemplateEntity>().AddAsync(template);
+        await _dbContext.SaveChangesAsync();
+
         _mockTimeProvider.Setup(t => t.GetUtcNow()).Returns(now);
-
-        var templateList = new List<PromptTemplateEntity> { template }.AsQueryable();
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Provider).Returns(templateList.Provider);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Expression).Returns(templateList.Expression);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.ElementType).Returns(templateList.ElementType);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.GetEnumerator()).Returns(templateList.GetEnumerator());
-
-        _mockUserSet.Setup(s => s.FindAsync(new object[] { userId }, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(user);
 
         var command = new CreatePromptVersionCommand(
             TemplateId: templateId,
@@ -102,12 +111,10 @@ public class CreatePromptVersionCommandHandlerTests
         result.CreatedByEmail.Should().Be("admin@test.com");
         result.Metadata.Should().Be("{\"changes\":\"Improved context handling\"}");
 
-        _mockVersionSet.Verify(s => s.Add(It.Is<PromptVersionEntity>(v =>
-            v.VersionNumber == 3 &&
-            !v.IsActive &&
-            v.TemplateId == templateId
-        )), Times.Once);
-        _mockDbContext.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        // Verify in database
+        var versions = await _dbContext.Set<PromptVersionEntity>().ToListAsync();
+        versions.Should().HaveCount(3);
+        versions.Should().ContainSingle(v => v.VersionNumber == 3 && !v.IsActive);
     }
 
     [Fact]
@@ -135,16 +142,12 @@ public class CreatePromptVersionCommandHandlerTests
             Versions = new List<PromptVersionEntity>()
         };
 
+        // Seed the database
+        await _dbContext.Set<UserEntity>().AddAsync(user);
+        await _dbContext.Set<PromptTemplateEntity>().AddAsync(template);
+        await _dbContext.SaveChangesAsync();
+
         _mockTimeProvider.Setup(t => t.GetUtcNow()).Returns(now);
-
-        var templateList = new List<PromptTemplateEntity> { template }.AsQueryable();
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Provider).Returns(templateList.Provider);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Expression).Returns(templateList.Expression);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.ElementType).Returns(templateList.ElementType);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.GetEnumerator()).Returns(templateList.GetEnumerator());
-
-        _mockUserSet.Setup(s => s.FindAsync(new object[] { userId }, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(user);
 
         var command = new CreatePromptVersionCommand(
             TemplateId: templateId,
@@ -168,12 +171,6 @@ public class CreatePromptVersionCommandHandlerTests
         var templateId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
-        var templateList = new List<PromptTemplateEntity>().AsQueryable();
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Provider).Returns(templateList.Provider);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Expression).Returns(templateList.Expression);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.ElementType).Returns(templateList.ElementType);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.GetEnumerator()).Returns(templateList.GetEnumerator());
-
         var command = new CreatePromptVersionCommand(
             TemplateId: templateId,
             Content: "Content",
@@ -186,7 +183,10 @@ public class CreatePromptVersionCommandHandlerTests
             _handler.Handle(command, CancellationToken.None));
 
         exception.Message.Should().Contain("not found");
-        _mockDbContext.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+        // Verify no versions were created
+        var versions = await _dbContext.Set<PromptVersionEntity>().ToListAsync();
+        versions.Should().BeEmpty();
     }
 
     [Fact]
@@ -195,30 +195,37 @@ public class CreatePromptVersionCommandHandlerTests
         // Arrange
         var templateId = Guid.NewGuid();
         var userId = Guid.NewGuid();
+        var anotherUserId = Guid.NewGuid();
+        var now = new DateTimeOffset(2025, 1, 6, 12, 0, 0, TimeSpan.Zero);
+
+        var user = new UserEntity
+        {
+            Id = anotherUserId,
+            Email = "admin@test.com",
+            DisplayName = "Admin",
+            CreatedAt = now.UtcDateTime
+        };
+
         var template = new PromptTemplateEntity
         {
             Id = templateId,
             Name = "qa-system-prompt",
-            CreatedByUserId = userId,
-            CreatedAt = DateTime.UtcNow,
-            CreatedBy = null!,
+            CreatedByUserId = anotherUserId,
+            CreatedAt = now.UtcDateTime,
+            CreatedBy = user,
             Versions = new List<PromptVersionEntity>()
         };
 
-        var templateList = new List<PromptTemplateEntity> { template }.AsQueryable();
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Provider).Returns(templateList.Provider);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.Expression).Returns(templateList.Expression);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.ElementType).Returns(templateList.ElementType);
-        _mockTemplateSet.As<IQueryable<PromptTemplateEntity>>().Setup(m => m.GetEnumerator()).Returns(templateList.GetEnumerator());
-
-        _mockUserSet.Setup(s => s.FindAsync(new object[] { userId }, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((UserEntity?)null);
+        // Seed the database
+        await _dbContext.Set<UserEntity>().AddAsync(user);
+        await _dbContext.Set<PromptTemplateEntity>().AddAsync(template);
+        await _dbContext.SaveChangesAsync();
 
         var command = new CreatePromptVersionCommand(
             TemplateId: templateId,
             Content: "Content",
             Metadata: null,
-            CreatedByUserId: userId
+            CreatedByUserId: userId  // This user doesn't exist
         );
 
         // Act & Assert
@@ -226,6 +233,23 @@ public class CreatePromptVersionCommandHandlerTests
             _handler.Handle(command, CancellationToken.None));
 
         exception.Message.Should().Contain("not found");
-        _mockDbContext.Verify(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+        // Verify no versions were created
+        var versions = await _dbContext.Set<PromptVersionEntity>().ToListAsync();
+        versions.Should().BeEmpty();
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _dbContext?.Dispose();
+        }
     }
 }

@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
@@ -55,6 +56,7 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
         mockEventCollector.Setup(x => x.GetAndClearEvents())
             .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
 
+        // Fix: Use PostgreSQL DbContext with Testcontainers, not in-memory
         _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
         await _dbContext.Database.MigrateAsync(TestCancellationToken);
 

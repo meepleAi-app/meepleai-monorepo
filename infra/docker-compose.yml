@@ -4,11 +4,9 @@ services:
     container_name: meepleai-postgres
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
+    env_file:
+      - ./secrets/database.secret
     environment:
-      # Issue #2152: Changed default from 'meeple' to 'postgres' for standard PostgreSQL compatibility
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
-      POSTGRES_DB: ${POSTGRES_DB:-meepleai}
       # Performance tuning aligned with resource limits
       POSTGRES_SHARED_BUFFERS: 512MB
       POSTGRES_EFFECTIVE_CACHE_SIZE: 1536MB
@@ -19,8 +17,6 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    secrets:
-      - postgres-password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -70,18 +66,18 @@ services:
     container_name: meepleai-redis
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
-    command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password) --maxmemory 768mb --maxmemory-policy allkeys-lru"]
+    env_file:
+      - ./secrets/redis.secret
+    command: ["sh","-c","redis-server --appendonly yes --requirepass $$REDIS_PASSWORD --maxmemory 768mb --maxmemory-policy allkeys-lru"]
     ports:
       - "127.0.0.1:6379:6379"
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $(cat /run/secrets/redis-password) ping | grep PONG"]
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG"]
       interval: 10s
       timeout: 3s
       retries: 5
     networks:
       - meepleai
-    secrets:
-      - redis-password
     deploy:
       resources:
         limits:
@@ -405,9 +401,9 @@ services:
     restart: unless-stopped
     profiles: [observability, full]
     env_file:
+      - ./secrets/email.secret
+      - ./secrets/monitoring.secret
       - ./env/alertmanager.env
-    secrets:
-      - gmail-app-password
     volumes:
       - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
@@ -516,9 +512,12 @@ services:
     container_name: meepleai-grafana
     restart: unless-stopped
     profiles: [dev, observability, full]
+    env_file:
+      - ./secrets/monitoring.secret
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-admin-password
+      # Issue #2570: Use GRAFANA_ADMIN_PASSWORD from monitoring.secret via env_file
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SERVER_ROOT_URL: "http://localhost:3001"
       # Issue #901: Enable iframe embedding for Infrastructure page
@@ -530,8 +529,6 @@ services:
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
       - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
       - ./dashboards:/var/lib/grafana/dashboards:ro
-    secrets:
-      - grafana-admin-password
     ports:
       - "127.0.0.1:3001:3000"
     depends_on:
@@ -563,11 +560,9 @@ services:
       # Node.js heap size tuning (75% of container limit minus overhead)
       NODE_OPTIONS: "--max-old-space-size=512"
     env_file:
+      - ./secrets/database.secret
+      - ./secrets/n8n.secret
       - ./env/n8n.env.dev
-    secrets:
-      - postgres-password
-      - n8n-encryption-key
-      - n8n-basic-auth-password
     volumes:
       - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
     entrypoint: ["/scripts/load-secrets-env.sh"]
@@ -596,6 +591,12 @@ services:
     restart: unless-stopped
     profiles: [minimal, dev, observability, ai, automation, full]
     env_file:
+      - ./secrets/database.secret
+      - ./secrets/redis.secret
+      - ./secrets/jwt.secret
+      - ./secrets/openrouter.secret
+      - ./secrets/admin.secret
+      - ./secrets/oauth.secret
       - ./env/api.env.dev
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -603,45 +604,28 @@ services:
       # Postgres/Redis connection details come from api.env.dev and secrets
       QDRANT_URL: http://qdrant:6333
       OLLAMA_URL: http://ollama:11434
-      EMBEDDING_PROVIDER: ollama
-      EMBEDDING_MODEL: mxbai-embed-large
+      # AI-09: Use external embedding service to avoid OOM in API container
+      EMBEDDING_PROVIDER: external
+      Embedding__Provider: External
+      EMBEDDING_MODEL: intfloat/multilingual-e5-large
       EMBEDDING_DIMENSIONS: 1024
       # Override nested config from appsettings.json (ASP.NET Core uses __ for nesting)
       Embedding__Dimensions: 1024
-      # AI-09: Local embedding service configuration
+      # AI-09: External embedding service configuration (Python service)
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
+      Embedding__LocalServiceUrl: http://embedding-service:8000
       EMBEDDING_FALLBACK_ENABLED: "false"
+      Embedding__FallbackEnabled: "false"
       # ADR-016 Phase 4: Reranker service configuration
       RERANKER_SERVICE_URL: http://reranker-service:8003
-      # AI-13: BoardGameGeek API token (optional - register at https://boardgamegeek.com/applications)
-      # Format: Bgg__ApiToken uses ASP.NET Core __ notation for nested config
-      Bgg__ApiToken: ${BGG_API_TOKEN:-}
-      # SEC-708: OpenRouter API key from secret file
-      OPENROUTER_API_KEY_FILE: /run/secrets/openrouter-api-key
-      # Bootstrap: Initial admin user configuration (password from secret)
-      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
-      INITIAL_ADMIN_PASSWORD_FILE: /run/secrets/initial-admin-password
-      INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-System Admin}
-      # OAuth provider credentials from secret files
-      GOOGLE_OAUTH_CLIENT_ID_FILE: /run/secrets/google-oauth-client-id
-      GOOGLE_OAUTH_CLIENT_SECRET_FILE: /run/secrets/google-oauth-client-secret
-      DISCORD_OAUTH_CLIENT_ID_FILE: /run/secrets/discord-oauth-client-id
-      DISCORD_OAUTH_CLIENT_SECRET_FILE: /run/secrets/discord-oauth-client-secret
-      GITHUB_OAUTH_CLIENT_ID_FILE: /run/secrets/github-oauth-client-id
-      GITHUB_OAUTH_CLIENT_SECRET_FILE: /run/secrets/github-oauth-client-secret
-    secrets:
-      - postgres-password
-      - redis-password
-      - openrouter-api-key
-      - initial-admin-password
-      - google-oauth-client-id
-      - google-oauth-client-secret
-      - discord-oauth-client-id
-      - discord-oauth-client-secret
-      - github-oauth-client-id
-      - github-oauth-client-secret
+      # Issue #2570: Secrets now loaded from .secret files via env_file
+      # All variables (POSTGRES_*, REDIS_*, JWT_*, OPENROUTER_*, ADMIN_*, OAuth) come from env_file
+      # No need for *_FILE environment variables or Docker secrets section
     volumes:
       - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
+      - pdf-uploads:/app/pdf_uploads  # Persistent PDF storage
+      # ISSUE-2510: Secret management system - mount secrets directory
+      - ./secrets:/app/infra/secrets:ro  # Read-only mount for .secret files
     entrypoint: ["/scripts/load-secrets-env.sh"]
     command: ["dotnet", "Api.dll"]
     # Direct port binding for development (Next.js proxy handles routing)
@@ -677,10 +661,10 @@ services:
       resources:
         limits:
           cpus: '2.0'
-          memory: 2G
+          memory: 4G  # Sufficient with batch processing (20 chunks/batch = ~500MB peak)
         reservations:
           cpus: '1.0'
-          memory: 1G
+          memory: 2G
 
   web:
     build:
@@ -744,6 +728,8 @@ volumes:
   smoldocling-models:  # Hugging Face model cache
   # ADR-016 Phase 4: Reranker service model cache
   reranker-models:
+  # PDF Uploads: Persistent storage for uploaded PDFs
+  pdf-uploads:
 
 networks:
   meepleai:
@@ -752,33 +738,14 @@ networks:
 # SEC-708: Docker Secrets for sensitive credentials
 # Secret files are stored in ./secrets/ directory (gitignored)
 # Initialize secrets with: tools/secrets/init-secrets.sh
-secrets:
-  postgres-password:
-    file: ./secrets/postgres-password.txt
-  redis-password:
-    file: ./secrets/redis-password.txt
-  openrouter-api-key:
-    file: ./secrets/openrouter-api-key.txt
-  n8n-encryption-key:
-    file: ./secrets/n8n-encryption-key.txt
-  n8n-basic-auth-password:
-    file: ./secrets/n8n-basic-auth-password.txt
-  gmail-app-password:
-    file: ./secrets/gmail-app-password.txt
-  grafana-admin-password:
-    file: ./secrets/grafana-admin-password.txt
-  initial-admin-password:
-    file: ./secrets/initial-admin-password.txt
-  # OAuth provider secrets for external authentication
-  google-oauth-client-id:
-    file: ./secrets/google-oauth-client-id.txt
-  google-oauth-client-secret:
-    file: ./secrets/google-oauth-client-secret.txt
-  discord-oauth-client-id:
-    file: ./secrets/discord-oauth-client-id.txt
-  discord-oauth-client-secret:
-    file: ./secrets/discord-oauth-client-secret.txt
-  github-oauth-client-id:
-    file: ./secrets/github-oauth-client-id.txt
-  github-oauth-client-secret:
-    file: ./secrets/github-oauth-client-secret.txt
+#
+# ISSUE-2510: New secret management system (alternative to Docker secrets)
+# - Copy templates: cp -r infra/secrets.example/* infra/secrets/
+# - Edit files: Remove .example extension and fill in actual values
+# - Format: KEY=VALUE (one per line, comments with #)
+# - Validation: Critical/Important/Optional levels enforced at startup
+# Issue #2570: Docker Secrets Consolidation - COMPLETE
+# All services now use .secret files via env_file (no Docker secrets needed)
+# Secret files location: ./secrets/*.secret
+# Format: KEY=VALUE (one per line, comments with #)
+# Validated by backend SecretLoader.cs with 3-level validation (Critical/Important/Optional)

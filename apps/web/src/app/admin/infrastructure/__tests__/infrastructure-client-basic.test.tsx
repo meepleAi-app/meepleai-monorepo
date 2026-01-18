@@ -61,7 +61,8 @@ describe('InfrastructureClient - Basic Tests', () => {
     render(<InfrastructureClient />);
 
     await waitFor(() => {
-      expect(screen.getByText('Monitoraggio Infrastruttura')).toBeInTheDocument();
+      // Use data-testid for language-independent test (Issue #2540)
+      expect(screen.getByTestId('infrastructure-title')).toBeInTheDocument();
     });
   });
 
@@ -82,10 +83,11 @@ describe('InfrastructureClient - Basic Tests', () => {
     render(<InfrastructureClient />);
 
     await waitFor(() => {
-      // "Sano" appears multiple times (overall health + service badges)
-      // Use getAllByText to verify at least one exists
-      const healthElements = screen.getAllByText('Sano');
-      expect(healthElements.length).toBeGreaterThan(0);
+      // Use data-testid for language-independent test (Issue #2540)
+      const healthStatus = screen.getByTestId('overall-health-status');
+      expect(healthStatus).toBeInTheDocument();
+      // Verify it contains text (any language)
+      expect(healthStatus).toHaveTextContent(/.+/);
     });
   });
 

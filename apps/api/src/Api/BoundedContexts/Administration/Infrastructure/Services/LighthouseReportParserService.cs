@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Globalization;
 using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
+using Api.SharedKernel.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -54,25 +55,16 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
             if (accessibilityScore >= 75) wcagLevels.Add("AA");
             if (accessibilityScore >= 90) wcagLevels.Add("AAA");
 
-            // Determine status
-            // Determine status
-            string status;
-            if (accessibilityScore >= 90)
-            {
-                status = "pass";
-            }
-            else if (accessibilityScore >= 75)
-            {
-                status = "warning";
-            }
-            else
-            {
-                status = "fail";
-            }
+            // Determine status based on accessibility score thresholds
+            var status = accessibilityScore >= 90
+                ? TestExecutionStatus.Pass
+                : accessibilityScore >= 75
+                    ? TestExecutionStatus.Warning
+                    : TestExecutionStatus.Fail;
 
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 
-            var metrics = new AccessibilityMetrics(
+            var metrics = AccessibilityMetrics.Create(
                 lighthouseScore: (decimal)accessibilityScore,
                 axeViolations: violationCount,
                 wcagLevels: wcagLevels,
@@ -124,25 +116,10 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
             var tbt = GetNumericValue(latestReport, "audits", "total-blocking-time", "numericValue");
             var speedIndex = GetNumericValue(latestReport, "audits", "speed-index", "numericValue");
 
-            // Determine budget status based on Core Web Vitals
-            // Determine budget status based on Core Web Vitals
-            string budgetStatus;
-            if (lcp <= 2500 && fid <= 100 && cls <= 0.1)
-            {
-                budgetStatus = "pass";
-            }
-            else if (lcp <= 4000 && fid <= 300 && cls <= 0.25)
-            {
-                budgetStatus = "warning";
-            }
-            else
-            {
-                budgetStatus = "fail";
-            }
-
             var lastRunAt = File.GetLastWriteTimeUtc(latestReport);
 
-            var metrics = new PerformanceMetrics(
+            // Use factory method to create metrics (calculates budgetStatus automatically)
+            var metrics = PerformanceMetrics.FromLighthouseReport(
                 lcp: (decimal)lcp,
                 fid: (decimal)fid,
                 cls: (decimal)cls,
@@ -151,15 +128,14 @@ internal class LighthouseReportParserService : ILighthouseReportParserService
                 tbt: (decimal)tbt,
                 speedIndex: (decimal)speedIndex,
                 performanceScore: (decimal)performanceScore,
-                budgetStatus: budgetStatus,
                 lastRunAt: lastRunAt);
 
             _logger.LogInformation(
                 "Parsed performance metrics: Score={Score}, LCP={Lcp}ms, FID={Fid}ms, CLS={Cls}",
-                performanceScore,
-                lcp,
-                fid,
-                cls);
+                metrics.PerformanceScore,
+                metrics.Lcp,
+                metrics.Fid,
+                metrics.Cls);
 
             return metrics;
         }

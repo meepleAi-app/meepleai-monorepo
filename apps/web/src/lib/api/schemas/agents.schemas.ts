@@ -187,3 +187,107 @@ export const SetupGuideResponseSchema = z.object({
 });
 
 export type SetupGuideResponse = z.infer<typeof SetupGuideResponseSchema>;
+
+// ========== Agent Documents (Issue #2399) ==========
+
+/**
+ * Selected Document DTO Schema
+ * Matches SelectedDocumentDto from backend
+ * Issue #2399: Knowledge Base Document Selection
+ */
+export const SelectedDocumentDtoSchema = z.object({
+  id: z.string().uuid(),
+  sharedGameId: z.string().uuid(),
+  pdfDocumentId: z.string().uuid(),
+  documentType: z.number().int().min(0).max(2), // Rulebook=0, Errata=1, Homerule=2
+  version: z.string(),
+  isActive: z.boolean(),
+  tags: z.array(z.string()),
+  gameName: z.string().nullable(),
+});
+
+export type SelectedDocumentDto = z.infer<typeof SelectedDocumentDtoSchema>;
+
+/**
+ * Agent Documents DTO Schema
+ * Matches AgentDocumentsDto from backend
+ * Issue #2399: Knowledge Base Document Selection
+ */
+export const AgentDocumentsDtoSchema = z.object({
+  agentId: z.string().uuid(),
+  documents: z.array(SelectedDocumentDtoSchema),
+});
+
+export type AgentDocumentsDto = z.infer<typeof AgentDocumentsDtoSchema>;
+
+/**
+ * Update Agent Documents Request Schema
+ * Issue #2399: Knowledge Base Document Selection
+ */
+export const UpdateAgentDocumentsRequestSchema = z.object({
+  documentIds: z.array(z.string().uuid()).max(50),
+});
+
+export type UpdateAgentDocumentsRequest = z.infer<typeof UpdateAgentDocumentsRequestSchema>;
+
+/**
+ * Update Agent Documents Response Schema
+ * Matches UpdateAgentDocumentsResult from backend
+ * Issue #2399: Knowledge Base Document Selection
+ */
+export const UpdateAgentDocumentsResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  agentId: z.string().uuid(),
+  documentCount: z.number().int().nonnegative(),
+  errorCode: z.string().nullable().optional(),
+});
+
+export type UpdateAgentDocumentsResponse = z.infer<typeof UpdateAgentDocumentsResponseSchema>;
+
+// ========== Player Mode AI Suggestion (Issue #2421) ==========
+
+/**
+ * Player Mode Suggestion Request Schema
+ * Issue #2421: Player Mode UI Controls
+ */
+export const PlayerModeSuggestionRequestSchema = z.object({
+  gameId: z.string().uuid(),
+  gameState: z.record(z.string(), z.any()), // Flexible game state object
+  query: z.string().optional(), // Optional context/question from player
+  chatThreadId: z.string().uuid().optional(),
+});
+
+export type PlayerModeSuggestionRequest = z.infer<typeof PlayerModeSuggestionRequestSchema>;
+
+/**
+ * Suggested Move Schema
+ * Represents a single move suggestion from AI
+ */
+export const SuggestedMoveSchema = z.object({
+  action: z.string(), // e.g., "Place resource token on space 5"
+  rationale: z.string(), // Why this move is suggested
+  expectedOutcome: z.string().optional(), // What happens after this move
+  confidence: z.number().min(0).max(1), // Move-specific confidence (0.0-1.0)
+});
+
+export type SuggestedMove = z.infer<typeof SuggestedMoveSchema>;
+
+/**
+ * Player Mode Suggestion Response Schema
+ * Issue #2421: Player Mode UI Controls
+ */
+export const PlayerModeSuggestionResponseSchema = z.object({
+  primarySuggestion: SuggestedMoveSchema,
+  alternativeMoves: z.array(SuggestedMoveSchema).max(3).optional(),
+  overallConfidence: z.number().min(0).max(1), // Overall AI confidence
+  strategicContext: z.string().optional(), // High-level strategic advice
+  sources: z.array(SnippetSchema).optional(), // Rule references if applicable
+  promptTokens: z.number().int().nonnegative(),
+  completionTokens: z.number().int().nonnegative(),
+  totalTokens: z.number().int().nonnegative(),
+  processingTimeMs: z.number().int().nonnegative(),
+  metadata: z.record(z.string(), z.any()).nullable(),
+});
+
+export type PlayerModeSuggestionResponse = z.infer<typeof PlayerModeSuggestionResponseSchema>;

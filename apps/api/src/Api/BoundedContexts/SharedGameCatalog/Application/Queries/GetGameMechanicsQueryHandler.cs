@@ -15,28 +15,21 @@ internal sealed class GetGameMechanicsQueryHandler : IRequestHandler<GetGameMech
 {
     private readonly MeepleAiDbContext _context;
     private readonly HybridCache _cache;
-    private readonly ICacheMetricsRecorder _cacheMetrics;
 
-    public GetGameMechanicsQueryHandler(MeepleAiDbContext context, HybridCache cache, ICacheMetricsRecorder cacheMetrics)
+    public GetGameMechanicsQueryHandler(MeepleAiDbContext context, HybridCache cache)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _cacheMetrics = cacheMetrics ?? throw new ArgumentNullException(nameof(cacheMetrics));
     }
 
     public async Task<List<GameMechanicDto>> Handle(GetGameMechanicsQuery query, CancellationToken cancellationToken)
     {
         const string cacheKey = "game-mechanics";
-        bool cacheHit = true;
 
-        // Try cache first (24h TTL - mechanics rarely change)
-        var result = await _cache.GetOrCreateAsync<List<GameMechanicDto>>(
+        return await _cache.GetOrCreateAsync<List<GameMechanicDto>>(
             cacheKey,
             async cancel =>
             {
-                cacheHit = false;
-                await _cacheMetrics.RecordCacheMissAsync("get_mechanics", "shared_games").ConfigureAwait(false);
-
                 var mechanics = await _context.GameMechanics
                     .AsNoTracking()
                     .OrderBy(m => m.Name)
@@ -51,12 +44,5 @@ internal sealed class GetGameMechanicsQueryHandler : IRequestHandler<GetGameMech
                 Expiration = TimeSpan.FromHours(24)  // Mechanics rarely change
             },
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        if (cacheHit)
-        {
-            await _cacheMetrics.RecordCacheHitAsync("get_mechanics", "shared_games").ConfigureAwait(false);
-        }
-
-        return result;
     }
 }

@@ -13,6 +13,8 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Api.Tests.TestHelpers;
+using Api.Tests.Constants;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries;
@@ -55,6 +57,7 @@ public sealed class GetAllSharedGamesQueryHandlerTests : IAsyncLifetime
         eventCollectorMock.Setup(x => x.GetAndClearEvents())
             .Returns(new List<IDomainEvent>().AsReadOnly());
 
+        // Fix: Use PostgreSQL DbContext with Testcontainers, not in-memory
         _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
         await _dbContext.Database.MigrateAsync();
 

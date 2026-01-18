@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Guards;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers;
@@ -26,12 +27,20 @@ internal class DeleteUserCommandHandler : ICommandHandler<DeleteUserCommand>
     public async Task Handle(DeleteUserCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // Validate input before domain operations
+        Guard.AgainstNullOrWhiteSpace(command.UserId, nameof(command.UserId));
+        Guard.AgainstNullOrWhiteSpace(command.RequestingUserId, nameof(command.RequestingUserId));
+        if (!Guid.TryParse(command.UserId, out var userId))
+            throw new ValidationException($"Invalid UserId format: {command.UserId}");
+        if (!Guid.TryParse(command.RequestingUserId, out _))
+            throw new ValidationException($"Invalid RequestingUserId format: {command.RequestingUserId}");
+
         // Prevent self-deletion
         if (string.Equals(command.UserId, command.RequestingUserId, StringComparison.Ordinal))
             throw new DomainException("Cannot delete your own account");
 
         // Find user
-        var userId = Guid.Parse(command.UserId);
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)
             throw new DomainException($"User {command.UserId} not found");

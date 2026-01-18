@@ -4,6 +4,7 @@ using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Events;
+using Api.Tests.TestHelpers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -24,14 +25,7 @@ public sealed class ReportGeneratorServiceTests : IDisposable
 
     public ReportGeneratorServiceTests()
     {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase($"ReportGeneratorTests_{Guid.NewGuid()}")
-            .Options;
-
-        var mediatorMock = new Mock<IMediator>();
-        var eventCollectorMock = new Mock<IDomainEventCollector>();
-        _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
-
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _loggerMock = new Mock<ILogger<ReportGeneratorService>>();
         _sut = new ReportGeneratorService(_dbContext, _loggerMock.Object);
     }

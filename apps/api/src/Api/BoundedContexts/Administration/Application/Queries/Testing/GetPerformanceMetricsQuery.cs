@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Enums;
 
 namespace Api.BoundedContexts.Administration.Application.Queries.Testing;
 
@@ -21,7 +22,7 @@ internal record PerformanceMetricsDto(
     decimal Tbt,
     decimal SpeedIndex,
     decimal PerformanceScore,
-    string BudgetStatus,
+    PerformanceBudgetStatus BudgetStatus,
     DateTime LastRunAt,
     bool MeetsCoreWebVitals)
 {

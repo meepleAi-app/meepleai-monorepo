@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Administration.Application.Queries.Testing;
@@ -38,7 +39,7 @@ internal class GetAccessibilityMetricsQueryHandler : IQueryHandler<GetAccessibil
                 AxeViolations: 0,
                 WcagLevels: Array.Empty<string>(),
                 LastRunAt: DateTime.UtcNow,
-                Status: "no-data",
+                Status: TestExecutionStatus.NoData,
                 MeetsQualityStandards: false);
         }
 

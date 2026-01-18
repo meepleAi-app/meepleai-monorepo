@@ -311,6 +311,34 @@ export const RuleSpecDiffSchema = z.object({
 
 export type RuleSpecDiff = z.infer<typeof RuleSpecDiffSchema>;
 
+// ========== Quick Questions (Issue #2401) ==========
+
+/**
+ * Quick Question Schema (Issue #2401)
+ * AI-generated quick question suggestions for games
+ * Matches QuickQuestionDto from backend SharedGameCatalog context
+ */
+export const QuickQuestionSchema = z.object({
+  id: z.string().uuid(),
+  sharedGameId: z.string().uuid(),
+  text: z.string().min(1).max(500),
+  emoji: z.string(),
+  category: z.number().int().min(0).max(5),
+  displayOrder: z.number().int().nonnegative(),
+  isGenerated: z.boolean(),
+  createdAt: z.string().datetime(),
+  isActive: z.boolean(),
+});
+
+export type QuickQuestion = z.infer<typeof QuickQuestionSchema>;
+
+export const GetQuickQuestionsResultSchema = z.object({
+  questions: z.array(QuickQuestionSchema),
+  totalCount: z.number().int().nonnegative(),
+});
+
+export type GetQuickQuestionsResult = z.infer<typeof GetQuickQuestionsResultSchema>;
+
 // ========== Editor Locks (Issue #2055) ==========
 
 /**

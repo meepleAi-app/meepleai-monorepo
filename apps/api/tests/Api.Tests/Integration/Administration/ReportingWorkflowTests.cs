@@ -8,6 +8,7 @@ using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
+using Api.Tests.TestHelpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -37,8 +38,9 @@ public sealed class ReportingWorkflowTests : IDisposable
 
         var mediatorMock = new Mock<MediatR.IMediator>();
         var eventCollectorMock = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
+        eventCollectorMock.Setup(e => e.GetAndClearEvents()).Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
 
-        _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
+        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
         _reportRepository = new AdminReportRepository(_dbContext);
         _executionRepository = new ReportExecutionRepository(_dbContext);
 

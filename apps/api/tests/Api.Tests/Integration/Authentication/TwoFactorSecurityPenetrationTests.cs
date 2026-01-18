@@ -382,10 +382,9 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
 
         // Assert
         // EXPECTED: Even valid code should fail if account is locked
-        // CURRENT: No lockout mechanism
-        Assert.True(isValidAfterLockout,
-            "❌ VULNERABILITY: No account lockout mechanism. " +
-            "Valid code accepted after 10 failed attempts");
+        // SECURITY FIX: Account lockout implemented via IsAccountLockedOutAsync
+        Assert.False(isValidAfterLockout,
+            "Valid code should fail after account lockout (lockout mechanism working)");
 
         _output("📋 RECOMMENDATION: Lock account for 5-15 minutes after 5 failed attempts");
     }
@@ -482,12 +481,11 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         Assert.True(firstAttempt, "First attempt with valid code should succeed");
 
         // EXPECTED (OWASP): Second attempt should fail (code already used)
-        // CURRENT REALITY: Same code works multiple times
-        Assert.True(secondAttempt,
-            "❌ VULNERABILITY: TOTP code reuse allowed. " +
-            "Same code accepted twice within time window");
+        // SECURITY FIX: Replay prevention implemented via UsedTotpCodes table
+        Assert.False(secondAttempt,
+            "Second attempt should fail - TOTP code already used (replay prevention)");
 
-        _output("📋 RECOMMENDATION: Track used TOTP codes and prevent reuse (nonce validation)");
+        _output("✅ PASS: TOTP code correctly prevented from reuse (nonce validation working)");
     }
 
     /// <summary>
@@ -556,13 +554,40 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         var (user, backupCodes) = await SeedUserWith2FAAndBackupCodesAsync();
         var targetBackupCode = backupCodes[0];
 
-        // Act - Simulate concurrent usage from 2 different sessions
-        var task1 = _totpService!.VerifyBackupCodeAsync(user.Id, targetBackupCode, TestCancellationToken);
-        var task2 = _totpService!.VerifyBackupCodeAsync(user.Id, targetBackupCode, TestCancellationToken);
+        // Act - Simulate concurrent usage from 2 different sessions (each with own service scope)
+        // FIX: Create separate service scopes to simulate real concurrent HTTP requests
+        using var scope1 = _serviceProvider!.CreateScope();
+        using var scope2 = _serviceProvider!.CreateScope();
+        var totpService1 = scope1.ServiceProvider.GetRequiredService<ITotpService>();
+        var totpService2 = scope2.ServiceProvider.GetRequiredService<ITotpService>();
 
-        var results = await Task.WhenAll(task1, task2);
+        var task1 = totpService1.VerifyBackupCodeAsync(user.Id, targetBackupCode, TestCancellationToken);
+        var task2 = totpService2.VerifyBackupCodeAsync(user.Id, targetBackupCode, TestCancellationToken);
 
-        // Assert - Only ONE should succeed (Serializable transaction)
+        // Serializable isolation may throw "could not serialize access" exception (expected)
+        // This is the security mechanism working - one succeeds, one gets serialization error
+        var results = new List<bool>();
+        try
+        {
+            var result1 = await task1;
+            results.Add(result1);
+        }
+        catch (InvalidOperationException ex) when (ex.InnerException?.InnerException?.Message?.Contains("could not serialize") == true)
+        {
+            results.Add(false); // Serialization error = security mechanism working
+        }
+
+        try
+        {
+            var result2 = await task2;
+            results.Add(result2);
+        }
+        catch (InvalidOperationException ex) when (ex.InnerException?.InnerException?.Message?.Contains("could not serialize") == true)
+        {
+            results.Add(false); // Serialization error = security mechanism working
+        }
+
+        // Assert - Only ONE should succeed (Serializable transaction prevents race)
         var successCount = results.Count(r => r);
         Assert.Equal(1, successCount);
 

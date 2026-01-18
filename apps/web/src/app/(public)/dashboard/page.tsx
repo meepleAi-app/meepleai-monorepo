@@ -44,6 +44,7 @@ import { useGames } from '@/hooks/queries/useGames';
 
 import { ChatHistorySection } from './components/ChatHistorySection';
 import { GreetingSection } from './components/GreetingSection';
+import { LibraryQuotaSection } from './components/LibraryQuotaSection';
 import { RecentGamesSection } from './components/RecentGamesSection';
 
 export default function DashboardPage() {
@@ -148,6 +149,9 @@ export default function DashboardPage() {
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Greeting Section */}
         <GreetingSection user={user} />
+
+        {/* Library Quota Widget (Issue #2445) */}
+        <LibraryQuotaSection />
 
         {/* Recent Games Section */}
         <RecentGamesSection games={gamesData?.games} isLoading={gamesLoading} error={gamesError} />

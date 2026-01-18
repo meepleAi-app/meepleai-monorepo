@@ -79,6 +79,24 @@ public abstract class TestBase : IDisposable
     }
 
     /// <summary>
+    /// Asserts that the async function throws a domain exception with the expected message.
+    /// </summary>
+    protected static async Task AssertDomainExceptionAsync(Func<Task> func, string expectedMessagePart)
+    {
+        var ex = await Xunit.Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.DomainException>(func);
+        Xunit.Assert.Contains(expectedMessagePart, ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Asserts that the async function throws a validation exception with the expected message.
+    /// </summary>
+    protected static async Task AssertValidationExceptionAsync(Func<Task> func, string expectedMessagePart)
+    {
+        var ex = await Xunit.Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(func);
+        Xunit.Assert.Contains(expectedMessagePart, ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// Asserts that two DateTimes are approximately equal (within tolerance).
     /// </summary>
     protected static void AssertDateTimeApproximate(DateTime expected, DateTime actual, TimeSpan? tolerance = null)
@@ -146,4 +164,3 @@ public abstract class TestBase : IDisposable
         }
     }
 }
-

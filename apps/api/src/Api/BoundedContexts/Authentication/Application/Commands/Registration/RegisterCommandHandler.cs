@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Guards;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
@@ -30,6 +31,12 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
     public async Task<RegisterResponse> Handle(RegisterCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // Validate input before domain operations
+        Guard.AgainstNullOrWhiteSpace(command.DisplayName, nameof(command.DisplayName));
+        Guard.AgainstNullOrWhiteSpace(command.Password, nameof(command.Password));
+        Guard.AgainstTooShort(command.Password, nameof(command.Password), 8);
+
         // Validate and create email
         var email = new Email(command.Email);
 

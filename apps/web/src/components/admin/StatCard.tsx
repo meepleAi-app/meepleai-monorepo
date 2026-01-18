@@ -88,25 +88,35 @@ export const StatCard = React.memo(function StatCard({
         'transition-all duration-200 hover:shadow-md hover:border-gray-300',
         className
       )}
+      data-testid="stat-card"
     >
       <CardContent className="p-6">
         <div className="flex items-start gap-4">
           {Icon && (
-            <div className={cn('p-2 rounded-lg shrink-0', iconVariantStyles[variant])}>
+            <div
+              className={cn('p-2 rounded-lg shrink-0', iconVariantStyles[variant])}
+              data-testid="stat-card-icon"
+            >
               <Icon className="h-6 w-6" aria-hidden="true" />
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+            <div
+              className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2"
+              data-testid="stat-card-label"
+            >
               {label}
             </div>
-            <div className="text-3xl font-bold text-gray-900">{value}</div>
+            <div className="text-3xl font-bold text-gray-900" data-testid="stat-card-value">
+              {value}
+            </div>
             {trend && trendValue && (
               <div
                 className={cn(
                   'flex items-center gap-1 mt-2 text-sm font-medium',
                   trendStyles[trend]
                 )}
+                data-testid="stat-card-trend"
               >
                 <TrendIcon className="h-4 w-4" aria-hidden="true" />
                 <span>{trendValue}</span>

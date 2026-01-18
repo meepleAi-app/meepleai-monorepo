@@ -46,6 +46,11 @@ infra/env/*.env
 tools/secrets/*.txt
 infra/traefik/certs/*.*
 
+# ISSUE-2510: Secret management system
+# Exclude actual secret files but keep templates
+infra/secrets/*.secret
+!infra/secrets.example/*.secret.example
+
 # Logs
 logs/
 *.log
@@ -120,9 +125,13 @@ test-results/
 # Code Assistant Claude
 .claude/settings.local.json
 .claude/.mcp.local.json
-nul
-docs/02-development/MeepleAI_Configuration_Variables.xlsx
-
 
 # Playwright MCP temp files
 tmpclaude-*-cwd
+nul
+docs/02-development/MeepleAI_Configuration_Variables.xlsx
+apps/api/test-results.txt
+
+# Development-only files with sensitive data (rotate passwords periodically)
+apps/api/src/Api/apply-migrations.ps1
+apps/api/src/Api/appsettings.Development.json

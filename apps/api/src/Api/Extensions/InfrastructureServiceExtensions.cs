@@ -229,6 +229,15 @@ internal static class InfrastructureServiceExtensions
             var timeoutSeconds = configuration.GetValue<int>("AIAgents:DefaultTimeoutSeconds", 30);
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         })
+        // Issue #2520: Polly retry policy for transient failures (3 attempts with exponential backoff: 2s, 4s, 8s)
+        .AddTransientHttpErrorPolicy(policy =>
+            policy.WaitAndRetryAsync(3, retryAttempt =>
+                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))))
+        // Issue #2520: Circuit breaker policy (5 failures → open for 30s)
+        .AddTransientHttpErrorPolicy(policy =>
+            policy.CircuitBreakerAsync(
+                handledEventsAllowedBeforeBreaking: 5,
+                durationOfBreak: TimeSpan.FromSeconds(30)))
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
@@ -270,8 +279,37 @@ internal static class InfrastructureServiceExtensions
             EnableMultipleHttp2Connections = true
         });
 
+        // External embedding service client (Python microservice)
+        services.AddHttpClient("EmbeddingService", client =>
+        {
+#pragma warning disable S1075 // URIs should not be hardcoded - Default fallback for external service
+            var serviceUrl = configuration["LOCAL_EMBEDDING_URL"]
+                ?? configuration["Embedding:LocalServiceUrl"]
+                ?? "http://embedding-service:8000";
+#pragma warning restore S1075
+            client.BaseAddress = new Uri(serviceUrl);
+            client.Timeout = TimeSpan.FromSeconds(60);
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+            MaxConnectionsPerServer = 20,
+            EnableMultipleHttp2Connections = true
+        });
+
         // AI-13: BoardGameGeek API client with retry logic and connection pooling
         services.Configure<BggConfiguration>(configuration.GetSection("Bgg"));
+
+        // Load BGG API token from secret file (required as of Jan 2026)
+        // Register at: https://boardgamegeek.com/using_the_xml_api
+        var bggToken = SecretsHelper.GetSecretOrValue(
+            configuration,
+            "BGG_API_TOKEN",
+            logger: null,
+            required: false
+        );
+
         services.AddHttpClient("BggApi", (serviceProvider, client) =>
         {
             var config = serviceProvider.GetRequiredService<IOptions<BggConfiguration>>().Value;
@@ -280,10 +318,11 @@ internal static class InfrastructureServiceExtensions
             client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI/1.0 (https://meepleai.dev)");
 
             // Add Authorization header if BGG API token is configured
-            // Token obtained from: https://boardgamegeek.com/applications
-            if (!string.IsNullOrWhiteSpace(config.ApiToken))
+            // REQUIRED as of Jan 2026 - BGG now enforces authentication for XML API
+            var token = bggToken ?? config.ApiToken;
+            if (!string.IsNullOrWhiteSpace(token))
             {
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {config.ApiToken}");
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
             }
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler

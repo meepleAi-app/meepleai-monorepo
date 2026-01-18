@@ -1,4 +1,6 @@
+using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Enums;
 
 namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 
@@ -42,13 +44,19 @@ internal sealed class AccessibilityMetrics : ValueObject
         DateTime lastRunAt,
         TestExecutionStatus status)
     {
-        // Percentage validation is handled by Percentage.Create() - type-safe by design
+        if (lighthouseScore < 0 || lighthouseScore > 100)
+        {
+            throw new ValidationException("Lighthouse score must be between 0 and 100");
+        }
+
         if (axeViolations < 0)
         {
             throw new ValidationException("Axe violations cannot be negative");
         }
 
-        LighthouseScore = lighthouseScore ?? throw new ArgumentNullException(nameof(lighthouseScore));
+        // Note: No validation needed for status enum - type-safe by design
+
+        LighthouseScore = lighthouseScore;
         AxeViolations = axeViolations;
         WcagLevels = wcagLevels ?? throw new ArgumentNullException(nameof(wcagLevels));
         LastRunAt = lastRunAt;
@@ -56,8 +64,8 @@ internal sealed class AccessibilityMetrics : ValueObject
     }
 
     /// <summary>
-    /// Creates AccessibilityMetrics from raw values.
-    /// Convenience factory method for creating instances from decimal scores.
+    /// Creates AccessibilityMetrics from test results.
+    /// Uses Percentage ValueObject for type-safe score handling.
     /// </summary>
     /// <param name="lighthouseScore">Lighthouse accessibility score (0-100)</param>
     /// <param name="axeViolations">Number of axe-core violations</param>
@@ -73,27 +81,12 @@ internal sealed class AccessibilityMetrics : ValueObject
         TestExecutionStatus status)
     {
         return new AccessibilityMetrics(
-            Percentage.Create(lighthouseScore),
+            lighthouseScore,
             axeViolations,
             wcagLevels,
             lastRunAt,
             status);
     }
-
-    /// <summary>
-    /// Creates default AccessibilityMetrics instance for testing or initialization.
-    /// </summary>
-    public static AccessibilityMetrics CreateDefault() => new(
-        Percentage.Zero,
-        0,
-        Array.Empty<string>(),
-        DateTime.UtcNow,
-        TestExecutionStatus.NoData);
-
-    /// <summary>
-    /// Empty AccessibilityMetrics instance with zero values.
-    /// </summary>
-    public static readonly AccessibilityMetrics Empty = CreateDefault();
 
     /// <summary>
     /// Determines if accessibility metrics meet quality standards

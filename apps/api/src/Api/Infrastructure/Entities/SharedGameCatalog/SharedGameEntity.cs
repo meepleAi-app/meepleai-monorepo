@@ -39,4 +39,5 @@ public class SharedGameEntity
     public ICollection<GameFaqEntity> Faqs { get; set; } = new List<GameFaqEntity>();
     public ICollection<GameErrataEntity> Erratas { get; set; } = new List<GameErrataEntity>();
     public ICollection<SharedGameDocumentEntity> Documents { get; set; } = new List<SharedGameDocumentEntity>();
+    public ICollection<QuickQuestionEntity> QuickQuestions { get; set; } = new List<QuickQuestionEntity>();
 }

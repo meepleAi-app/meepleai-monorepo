@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Domain;
 
@@ -27,17 +28,7 @@ public class MoveValidationDomainServiceTests
     /// </summary>
     private static MeepleAiDbContext CreateFreshDbContext()
     {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-
-        var mediatorMock = new Mock<IMediator>();
-        var eventCollectorMock = new Mock<IDomainEventCollector>();
-        eventCollectorMock
-            .Setup(collector => collector.GetAndClearEvents())
-            .Returns(Array.Empty<IDomainEvent>());
-
-        return new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
+        return TestDbContextFactory.CreateInMemoryDbContext();
     }
 
     /// <summary>
@@ -425,4 +416,3 @@ public class MoveValidationDomainServiceTests
         return int.TryParse(value, out var parsed) ? parsed : null;
     }
 }
-

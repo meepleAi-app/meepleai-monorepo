@@ -35,7 +35,7 @@ internal sealed class PageCount : ValueObject
     public bool IsWithinLimit(int maxPages)
     {
         if (maxPages < 1)
-            throw new ArgumentException("Maximum page limit must be at least 1", nameof(maxPages));
+            throw new ValidationException("Maximum page limit must be at least 1");
 
         return Value <= maxPages;
     }
@@ -43,21 +43,69 @@ internal sealed class PageCount : ValueObject
     /// <summary>
     /// Checks if this is a single-page document.
     /// </summary>
+    /// <remarks>
+    /// Single-page documents typically include quick reference cards, summary sheets, or cheat sheets.
+    /// These documents have minimal processing overhead and can be handled with optimized workflows.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// var pageCount = new PageCount(1);
+    /// if (pageCount.IsSinglePage)
+    ///     await ProcessQuickReferenceCardAsync(document);
+    /// </code>
+    /// </example>
     public bool IsSinglePage => Value == 1;
 
     /// <summary>
-    /// Checks if this is a large PDF (business definition: > 100 pages).
+    /// Checks if this is a large PDF (business definition: &gt; 100 pages).
     /// </summary>
+    /// <remarks>
+    /// Large PDFs (&gt; 100 pages) represent comprehensive rulebooks or compendiums requiring
+    /// extended processing time and chunked extraction strategies.
+    /// Threshold set at 100 pages based on typical board game manual complexity and processing capacity.
+    /// These documents may require multiple OCR passes and enhanced quality validation.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// var pageCount = new PageCount(150);
+    /// if (pageCount.IsLargePdf)
+    ///     await ProcessWithChunkedExtractionAsync(document, chunkSize: 50);
+    /// </code>
+    /// </example>
     public bool IsLargePdf => Value > PageCountCategories.MediumPdfThreshold;
 
     /// <summary>
     /// Checks if this is a small PDF (business definition: &lt;= 10 pages).
     /// </summary>
+    /// <remarks>
+    /// Small PDFs (&lt;= 10 pages) represent concise rulebooks or game summaries.
+    /// These documents can be processed quickly (&lt; 30 seconds) and benefit from synchronous workflows.
+    /// Threshold based on user expectations for responsive upload feedback and processing time analysis.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// var pageCount = new PageCount(8);
+    /// if (pageCount.IsSmallPdf)
+    ///     await ProcessSynchronouslyAsync(document);
+    /// </code>
+    /// </example>
     public bool IsSmallPdf => Value <= PageCountCategories.SmallPdfThreshold;
 
     /// <summary>
     /// Checks if this is a medium PDF (business definition: 11-100 pages).
     /// </summary>
+    /// <remarks>
+    /// Medium PDFs (11-100 pages) represent typical board game rulebooks with moderate complexity.
+    /// These documents require asynchronous processing (30-180 seconds) to maintain responsive UX.
+    /// This is the most common category for uploaded board game manuals based on BGG data analysis.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// var pageCount = new PageCount(45);
+    /// if (pageCount.IsMediumPdf)
+    ///     await QueueAsyncProcessingAsync(document);
+    /// </code>
+    /// </example>
     public bool IsMediumPdf => Value > PageCountCategories.SmallPdfThreshold && Value <= PageCountCategories.MediumPdfThreshold;
 
     /// <summary>

@@ -36,7 +36,10 @@ internal sealed class PublishSharedGameCommandHandler : ICommandHandler<PublishS
             ?? throw new InvalidOperationException($"Shared game with ID {command.GameId} not found");
 
         // Call domain method (validates status and raises event)
+        // Using obsolete method for backward compatibility until all clients migrate to approval workflow
+#pragma warning disable CS0618 // Type or member is obsolete
         game.Publish(command.PublishedBy);
+#pragma warning restore CS0618 // Type or member is obsolete
 
         _repository.Update(game);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

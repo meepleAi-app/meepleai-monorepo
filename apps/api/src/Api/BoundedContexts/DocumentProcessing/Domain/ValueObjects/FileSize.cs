@@ -79,7 +79,7 @@ internal sealed class FileSize : ValueObject
     public bool IsWithinLimit(long maxBytes)
     {
         if (maxBytes < 1)
-            throw new ArgumentException("Maximum size limit must be at least 1 byte", nameof(maxBytes));
+            throw new ValidationException("Maximum size limit must be at least 1 byte");
 
         return Bytes <= maxBytes;
     }
@@ -87,21 +87,70 @@ internal sealed class FileSize : ValueObject
     /// <summary>
     /// Checks if the file is very small (business definition: &lt; 1 KB).
     /// </summary>
+    /// <remarks>
+    /// Very small files (&lt; 1 KB) typically include configuration files, small text documents, or icons.
+    /// These files have negligible impact on processing performance and storage costs.
+    /// Used for optimizing upload workflows and resource allocation strategies.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// var fileSize = new FileSize(512); // 512 bytes
+    /// if (fileSize.IsVerySmall)
+    ///     logger.LogDebug("Skipping virus scan for very small file: {Size}", fileSize);
+    /// </code>
+    /// </example>
     public bool IsVerySmall => Bytes < FileSizeCategories.BytesPerKilobyte;
 
     /// <summary>
     /// Checks if the file is small (business definition: &lt; 1 MB).
     /// </summary>
+    /// <remarks>
+    /// Small files (&lt; 1 MB) represent typical document uploads (PDFs, images, text files).
+    /// These files can be processed synchronously without performance degradation.
+    /// Threshold based on average board game rulebook size and user upload patterns.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// var fileSize = FileSize.FromKilobytes(500); // 500 KB
+    /// if (fileSize.IsSmall)
+    ///     await ProcessSynchronouslyAsync(file);
+    /// </code>
+    /// </example>
     public bool IsSmall => Bytes < FileSizeCategories.BytesPerMegabyte;
 
     /// <summary>
     /// Checks if the file is medium (business definition: 1-10 MB).
     /// </summary>
+    /// <remarks>
+    /// Medium files (1-10 MB) represent larger documents requiring asynchronous processing.
+    /// Common for comprehensive rulebooks with many images or multi-language PDFs.
+    /// This category triggers background processing to maintain responsive user experience.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// var fileSize = FileSize.FromMegabytes(5);
+    /// if (fileSize.IsMedium)
+    ///     await QueueBackgroundProcessingAsync(file);
+    /// </code>
+    /// </example>
     public bool IsMedium => Bytes >= FileSizeCategories.BytesPerMegabyte && Bytes <= FileSizeCategories.MediumFileThreshold;
 
     /// <summary>
-    /// Checks if the file is large (business definition: > 10 MB).
+    /// Checks if the file is large (business definition: &gt; 10 MB).
     /// </summary>
+    /// <remarks>
+    /// Large files (&gt; 10 MB) require special handling: chunked uploads, dedicated processing queues,
+    /// and potentially rate limiting to prevent resource exhaustion.
+    /// Threshold set at 10 MB based on infrastructure capacity and typical board game PDF sizes.
+    /// Files exceeding MaxFileSizeBytes (50 MB) are rejected at validation layer.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// var fileSize = FileSize.FromMegabytes(15);
+    /// if (fileSize.IsLarge)
+    ///     await ProcessWithChunkingAsync(file, chunkSize: FileSize.FromMegabytes(5));
+    /// </code>
+    /// </example>
     public bool IsLarge => Bytes > FileSizeCategories.MediumFileThreshold;
 
     /// <summary>

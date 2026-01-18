@@ -134,7 +134,7 @@ describe('GameOverviewTab', () => {
         expect(screen.getByText('BoardGameGeek Details')).toBeInTheDocument();
       });
 
-      expect(screen.getByText(/7.50/)).toBeInTheDocument(); // Average rating
+      expect(screen.getByText(/7\.5/)).toBeInTheDocument(); // Average rating
     });
 
     it('shows loading state while fetching BGG details', async () => {

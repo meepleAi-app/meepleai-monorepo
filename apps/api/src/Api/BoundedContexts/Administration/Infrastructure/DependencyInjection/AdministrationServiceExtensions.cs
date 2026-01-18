@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Interfaces;
+using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.Administration.Infrastructure.External;
@@ -49,6 +50,9 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<IPrometheusClientService, PrometheusClientService>();
         services.AddScoped<ILighthouseReportParserService, LighthouseReportParserService>();
         services.AddScoped<IPlaywrightReportParserService, PlaywrightReportParserService>();
+
+        // ISSUE-2512: Auto-configuration service for first run setup
+        services.AddScoped<IAutoConfigurationService, AutoConfigurationService>();
 
         // Issue #2139: HttpClient for Prometheus queries
         services.AddHttpClient<PrometheusClientService>()

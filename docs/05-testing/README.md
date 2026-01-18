@@ -4,6 +4,29 @@
 
 ---
 
+## 📂 Documentation Structure
+
+```
+05-testing/
+├── backend/                    # Backend testing guides
+│   ├── testcontainers-best-practices.md
+│   ├── INTEGRATION_TEST_OPTIMIZATION.md
+│   ├── oauth-testing.md
+│   ├── shared-catalog-fts-performance-validation.sql
+│   └── log-generation-test-plan.md
+├── frontend/                   # Frontend testing guides
+│   └── week4-frontend-component-test-plan.md
+├── e2e/                        # End-to-End testing guides
+│   ├── E2E_TEST_GUIDE.md
+│   ├── e2e-selector-best-practices.md
+│   ├── playwright-report-guide.md
+│   ├── BackgroundRulebookAnalysis-ManualTesting.md
+│   └── RulebookAnalysis-ManualTesting.md
+└── README.md                   # This file
+```
+
+---
+
 ## Quick Reference
 
 | Test Type | Stack | Coverage Target | Run Command |

@@ -64,6 +64,10 @@ export {
   type UserActivityFilters as UserActivityFiltersType,
 } from './UserActivityFilters';
 
+// Issue #2391 Sprint 2: Agent Configuration components
+export { AgentModeSelector, LlmProviderSelector } from './agents';
+export type { AgentModeSelectorProps, LlmProviderSelectorProps } from './agents';
+
 // Issue #2372: Shared Game Catalog components
 export {
   GameStatusBadge,

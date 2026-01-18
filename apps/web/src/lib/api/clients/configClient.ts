@@ -10,11 +10,14 @@ import {
   PagedResultSchema,
   ConfigurationValidationResultSchema,
   ConfigurationExportDtoSchema,
+  GameLibraryLimitsDtoSchema,
   type SystemConfigurationDto,
   type PagedResult,
   type ConfigurationHistoryDto,
   type ConfigurationValidationResult,
   type ConfigurationExportDto,
+  type GameLibraryLimitsDto,
+  type UpdateGameLibraryLimitsRequest,
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -300,6 +303,46 @@ export function createConfigClient({ httpClient }: CreateConfigClientParams) {
 
       if (!response) {
         return [];
+      }
+
+      return response;
+    },
+
+    // ========== Game Library Limits (Issue #2444) ==========
+
+    /**
+     * Get current game library tier limits
+     * @returns Current limits for Free, Normal, and Premium tiers
+     */
+    async getGameLibraryLimits(): Promise<GameLibraryLimitsDto> {
+      const response = await httpClient.get(
+        '/api/v1/admin/config/game-library-limits',
+        GameLibraryLimitsDtoSchema
+      );
+
+      if (!response) {
+        throw new Error('Failed to fetch game library limits');
+      }
+
+      return response;
+    },
+
+    /**
+     * Update game library tier limits
+     * @param request Updated limits for all tiers
+     * @returns Updated limits configuration
+     */
+    async updateGameLibraryLimits(
+      request: UpdateGameLibraryLimitsRequest
+    ): Promise<GameLibraryLimitsDto> {
+      const response = await httpClient.put(
+        '/api/v1/admin/config/game-library-limits',
+        request,
+        GameLibraryLimitsDtoSchema
+      );
+
+      if (!response) {
+        throw new Error('Failed to update game library limits');
       }
 
       return response;

@@ -217,6 +217,153 @@ docker compose logs -f api web
 curl https://api.meepleai.com/health
 ```
 
+### Database Configuration (PostgreSQL)
+
+**Issue #2460: Production-Grade Connection String**
+
+MeepleAI supports two database connection patterns for production deployments:
+
+#### Option 1: POSTGRES_* Environment Variables (Default)
+
+The simplest approach using environment variables. SecretsHelper automatically constructs the connection string:
+
+```bash
+# .env.production or compose.prod.yml
+POSTGRES_HOST=your-production-host.com
+POSTGRES_PORT=5432
+POSTGRES_DB=meepleai_prod
+POSTGRES_USER=your-production-user
+POSTGRES_PASSWORD_FILE=/run/secrets/postgres-password
+
+# Or direct password (not recommended for production)
+POSTGRES_PASSWORD=your-secure-password
+```
+
+**Advantages**:
+- Simple configuration
+- Works with Docker Secrets
+- Automatic connection string construction
+- Health check recognizes configuration
+
+**Health Check Output**:
+```json
+{
+  "database_configured": true,
+  "database_source": "postgres_vars"
+}
+```
+
+#### Option 2: Full Connection String (Advanced)
+
+For managed PostgreSQL services (AWS RDS, Azure Database, Google Cloud SQL) requiring SSL/TLS and connection pooling optimization:
+
+```bash
+# .env.production
+ConnectionStrings__Postgres="Host=your-db.rds.amazonaws.com;Database=meepleai_prod;Username=admin;Password=SecurePass123!;Pooling=true;Minimum Pool Size=5;Maximum Pool Size=50;SSL Mode=Require;Trust Server Certificate=false;Command Timeout=30;Timeout=15"
+```
+
+**Connection String Parameters**:
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `Pooling` | `true` | Enable connection pooling |
+| `Minimum Pool Size` | `5` | Pre-allocate 5 connections |
+| `Maximum Pool Size` | `50` | Limit to 50 concurrent connections |
+| `SSL Mode` | `Require` | Force SSL/TLS encryption |
+| `Trust Server Certificate` | `false` | Validate SSL certificate (recommended) |
+| `Command Timeout` | `30` | SQL command execution timeout (seconds) |
+| `Timeout` | `15` | Connection establishment timeout (seconds) |
+
+**Template File**: See `infra/secrets/postgres-connection-string-production.example.txt` for full template
+
+**Health Check Output**:
+```json
+{
+  "database_configured": true,
+  "database_source": "connection_string"
+}
+```
+
+#### SSL/TLS Configuration
+
+**Managed PostgreSQL Services**:
+- AWS RDS: SSL Mode=Require + Download RDS CA certificate
+- Azure Database: SSL Mode=Require + Trust Server Certificate=false
+- Google Cloud SQL: SSL Mode=Require + Cloud SQL Proxy recommended
+
+**Self-Hosted PostgreSQL**:
+```bash
+# Enable SSL in postgresql.conf
+ssl = on
+ssl_cert_file = '/path/to/server.crt'
+ssl_key_file = '/path/to/server.key'
+
+# Require SSL for all connections in pg_hba.conf
+hostssl all all 0.0.0.0/0 scram-sha-256
+```
+
+#### Connection Pooling Tuning
+
+**Production Recommendations**:
+- **Minimum Pool Size**: 5-10 (pre-allocate connections, reduce latency spikes)
+- **Maximum Pool Size**: 50-100 (based on PostgreSQL `max_connections` setting)
+- **Command Timeout**: 30 seconds (prevents long-running queries from blocking)
+- **Timeout**: 15 seconds (connection establishment timeout)
+
+**Monitoring**:
+- Check Grafana dashboard: "PostgreSQL Connection Pool Usage"
+- Monitor active connections: `SELECT count(*) FROM pg_stat_activity;`
+- Adjust pool sizes based on actual traffic patterns
+
+#### High Availability Setup
+
+**Recommended Production Architecture**:
+1. **Primary-Replica Setup**: PostgreSQL streaming replication
+2. **Connection Pooling**: PgBouncer for connection multiplexing
+3. **Load Balancing**: HAProxy or cloud load balancer
+4. **Automatic Failover**: Patroni or cloud-native HA solutions
+
+**Example with PgBouncer**:
+```bash
+# ConnectionString points to PgBouncer instead of PostgreSQL directly
+ConnectionStrings__Postgres="Host=pgbouncer;Port=6432;Database=meepleai_prod;..."
+
+# PgBouncer handles connection pooling and failover
+```
+
+#### Troubleshooting
+
+**Health Check Shows `database_configured: false`**:
+```bash
+# Verify POSTGRES_PASSWORD is set
+echo $POSTGRES_PASSWORD
+
+# Or verify connection string
+docker compose exec api printenv | grep -i postgres
+
+# Check health check endpoint
+curl http://localhost:8080/health/config
+```
+
+**SSL Connection Failures**:
+```bash
+# Test SSL connection manually
+psql "sslmode=require host=your-db.com dbname=meepleai user=admin"
+
+# Check server SSL certificate validity
+openssl s_client -connect your-db.com:5432 -starttls postgres
+```
+
+**Connection Pool Exhausted**:
+```bash
+# Monitor active connections in Grafana or manually
+docker compose exec postgres psql -U admin -d meepleai_prod -c \
+  "SELECT count(*) as active_connections FROM pg_stat_activity WHERE state = 'active';"
+
+# Increase Maximum Pool Size if consistently hitting limit
+# Verify PostgreSQL max_connections supports higher pool size
+```
+
 ---
 
 ## Traefik Configuration
@@ -749,11 +896,27 @@ curl https://api.meepleai.com/health
 
 ## Resources
 
+### Official Documentation
 - [Traefik Documentation](https://doc.traefik.io/traefik/)
 - [Docker Compose Reference](https://docs.docker.com/compose/)
 - [PostgreSQL Backup Guide](https://www.postgresql.org/docs/current/backup.html)
 - [Grafana Dashboards](https://grafana.com/grafana/dashboards/)
+
+### MeepleAI Deployment Guides (New 2026-01-18)
+- [NEW-GUIDES-INDEX.md](./NEW-GUIDES-INDEX.md) - Complete deployment guide index
+- [Infrastructure Cost Summary](./infrastructure-cost-summary.md) - Budget planning (Alpha → Release 10K)
+- [Domain Setup Guide](./domain-setup-guide.md) - Domain acquisition and DNS configuration
+- [Email & TOTP Services](./email-totp-services.md) - Communication services setup
+- [Monitoring Setup Guide](./monitoring-setup-guide.md) - Grafana + Prometheus configuration
+- [Infrastructure Deployment Checklist](./infrastructure-deployment-checklist.md) - Complete deployment workflow
+- [BoardGameGeek API Setup](./boardgamegeek-api-setup.md) - BGG integration configuration
+- [Secrets Management](./secrets-management.md) - Secret system (.secret files)
+- [Auto-Configuration Guide](./auto-configuration-guide.md) - Auto-config system (ADR-021)
+
+### Related Documentation
 - [Monitoring Guide](../02-development/README.md#monitoring)
+- [Testing Guide](../05-testing/README.md)
+- [Security Guide](../06-security/README.md)
 
 ---
 

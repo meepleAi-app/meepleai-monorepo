@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Guards;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers;
@@ -24,12 +25,12 @@ internal class ResetUserPasswordCommandHandler : ICommandHandler<ResetUserPasswo
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // Validate UserId format before parsing
-        if (string.IsNullOrWhiteSpace(command.UserId))
-            throw new ValidationException("UserId cannot be empty");
-
+        // Validate input before domain operations
+        Guard.AgainstNullOrWhiteSpace(command.UserId, nameof(command.UserId));
         if (!Guid.TryParse(command.UserId, out var userId))
             throw new ValidationException($"Invalid UserId format: {command.UserId}");
+        Guard.AgainstNullOrWhiteSpace(command.NewPassword, nameof(command.NewPassword));
+        Guard.AgainstTooShort(command.NewPassword, nameof(command.NewPassword), 8);
 
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user == null)

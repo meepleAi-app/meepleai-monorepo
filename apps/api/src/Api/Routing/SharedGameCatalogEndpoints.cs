@@ -33,6 +33,7 @@ internal static class SharedGameCatalogEndpoints
         // Search shared games with filtering and full-text search
         group.MapGet("/shared-games", HandleSearchGames)
             .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
             .WithName("SearchSharedGames")
             .WithSummary("Search shared games catalog")
             .WithDescription("Search games with full-text search, category/mechanic filters, player count, and playing time filters. Returns published games only for public access.")
@@ -41,6 +42,7 @@ internal static class SharedGameCatalogEndpoints
         // Get game details by ID
         group.MapGet("/shared-games/{id:guid}", HandleGetGameById)
             .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
             .WithName("GetSharedGameById")
             .WithSummary("Get shared game details")
             .WithDescription("Get detailed information about a shared game including designers, publishers, categories, mechanics, FAQs, and errata. Returns only published games for public access.")
@@ -50,6 +52,7 @@ internal static class SharedGameCatalogEndpoints
         // Get all game categories
         group.MapGet("/shared-games/categories", HandleGetCategories)
             .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
             .WithName("GetGameCategories")
             .WithSummary("Get all game categories")
             .WithDescription("Returns all available game categories for filtering.")
@@ -58,6 +61,7 @@ internal static class SharedGameCatalogEndpoints
         // Get all game mechanics
         group.MapGet("/shared-games/mechanics", HandleGetMechanics)
             .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
             .WithName("GetGameMechanics")
             .WithSummary("Get all game mechanics")
             .WithDescription("Returns all available game mechanics for filtering.")
@@ -74,6 +78,7 @@ internal static class SharedGameCatalogEndpoints
         // Create new shared game
         group.MapPost("/admin/shared-games", HandleCreateGame)
             .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
             .WithName("CreateSharedGame")
             .WithSummary("Create new shared game (Admin/Editor)")
             .Produces<Guid>(StatusCodes.Status201Created)
@@ -83,18 +88,55 @@ internal static class SharedGameCatalogEndpoints
         // Update existing shared game
         group.MapPut("/admin/shared-games/{id:guid}", HandleUpdateGame)
             .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
             .WithName("UpdateSharedGame")
             .WithSummary("Update shared game (Admin/Editor)")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
-        // Publish game (Draft → Published)
+        // Publish game (Draft → Published) [DEPRECATED - use approval workflow]
         group.MapPost("/admin/shared-games/{id:guid}/publish", HandlePublishGame)
             .RequireAuthorization("AdminOrEditorPolicy")
             .WithName("PublishSharedGame")
-            .WithSummary("Publish shared game (Admin/Editor)")
+            .WithSummary("[DEPRECATED] Publish shared game directly (Admin/Editor)")
+            .WithDescription("Legacy endpoint. Use submit-for-approval workflow instead. Issue #2514")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
+
+        // Submit game for approval (Draft → PendingApproval) - Issue #2514
+        group.MapPost("/admin/shared-games/{id:guid}/submit-for-approval", HandleSubmitForApproval)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("SubmitSharedGameForApproval")
+            .WithSummary("Submit shared game for approval (Admin/Editor)")
+            .WithDescription("Submits a draft game for admin approval. Transitions from Draft to PendingApproval status.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Approve publication (PendingApproval → Published) - Issue #2514
+        group.MapPost("/admin/shared-games/{id:guid}/approve-publication", HandleApprovePublication)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("ApproveSharedGamePublication")
+            .WithSummary("Approve game publication (Admin only)")
+            .WithDescription("Approves a pending game for publication. Transitions from PendingApproval to Published status.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Reject publication (PendingApproval → Draft) - Issue #2514
+        group.MapPost("/admin/shared-games/{id:guid}/reject-publication", HandleRejectPublication)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("RejectSharedGamePublication")
+            .WithSummary("Reject game publication (Admin only)")
+            .WithDescription("Rejects a pending game and sends it back to Draft status with a reason.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Get pending approval games - Issue #2514
+        group.MapGet("/admin/shared-games/pending-approvals", HandleGetPendingApprovals)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("GetPendingApprovalGames")
+            .WithSummary("Get games pending approval (Admin only)")
+            .WithDescription("Returns all games in PendingApproval status awaiting admin review.")
+            .Produces<PagedResult<SharedGameDto>>();
 
         // Archive game (Published → Archived)
         group.MapPost("/admin/shared-games/{id:guid}/archive", HandleArchiveGame)
@@ -145,6 +187,36 @@ internal static class SharedGameCatalogEndpoints
             .RequireAuthorization("AdminOnlyPolicy")
             .WithName("RejectDeleteRequest")
             .WithSummary("Reject delete request (Admin only)")
+            .Produces(StatusCodes.Status204NoContent);
+
+        // Quick Questions Management
+        group.MapGet("/games/{id:guid}/quick-questions", HandleGetQuickQuestions)
+            .WithName("GetQuickQuestions")
+            .WithSummary("Get quick questions for game")
+            .Produces<IReadOnlyCollection<QuickQuestionDto>>(StatusCodes.Status200OK);
+
+        group.MapPost("/admin/shared-games/{id:guid}/quick-questions/generate", HandleGenerateQuickQuestions)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GenerateQuickQuestions")
+            .WithSummary("Generate quick questions using AI (Admin/Editor)")
+            .Produces<GenerateQuickQuestionsResultDto>(StatusCodes.Status201Created);
+
+        group.MapPost("/admin/shared-games/{id:guid}/quick-questions", HandleAddManualQuickQuestion)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("AddManualQuickQuestion")
+            .WithSummary("Manually add quick question (Admin/Editor)")
+            .Produces<Guid>(StatusCodes.Status201Created);
+
+        group.MapPut("/admin/quick-questions/{questionId:guid}", HandleUpdateQuickQuestion)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("UpdateQuickQuestion")
+            .WithSummary("Update quick question (Admin/Editor)")
+            .Produces<QuickQuestionDto>(StatusCodes.Status200OK);
+
+        group.MapDelete("/admin/quick-questions/{questionId:guid}", HandleDeleteQuickQuestion)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("DeleteQuickQuestion")
+            .WithSummary("Delete quick question (Admin/Editor)")
             .Produces(StatusCodes.Status204NoContent);
 
         // FAQ Management
@@ -215,6 +287,46 @@ internal static class SharedGameCatalogEndpoints
             .WithName("RemoveGameDocument")
             .WithSummary("Remove document from game (Admin/Editor)")
             .Produces(StatusCodes.Status204NoContent);
+
+        // Game State Template Management (Issue #2400)
+        group.MapGet("/admin/shared-games/{id:guid}/state-template", HandleGetActiveStateTemplate)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetActiveGameStateTemplate")
+            .WithSummary("Get active game state template (Admin/Editor)")
+            .WithDescription("Returns the currently active game state template for tracking game state. Returns null if no active template exists.")
+            .Produces<GameStateTemplateDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
+        group.MapGet("/admin/shared-games/{id:guid}/state-template/versions", HandleGetStateTemplateVersions)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetGameStateTemplateVersions")
+            .WithSummary("Get all game state template versions (Admin/Editor)")
+            .WithDescription("Returns all versions of game state templates for a game, ordered by version descending.")
+            .Produces<IReadOnlyList<GameStateTemplateDto>>();
+
+        group.MapPost("/admin/shared-games/{id:guid}/state-template/generate", HandleGenerateStateTemplate)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GenerateGameStateTemplate")
+            .WithSummary("Generate game state template using AI (Admin/Editor)")
+            .WithDescription("Uses AI to analyze the game's rulebook and generate a JSON Schema for tracking game state. Requires an active rulebook document.")
+            .Produces<GameStateTemplateDto>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest);
+
+        group.MapPut("/admin/shared-games/{id:guid}/state-template/{templateId:guid}", HandleUpdateStateTemplate)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("UpdateGameStateTemplate")
+            .WithSummary("Update game state template (Admin/Editor)")
+            .WithDescription("Updates the JSON Schema of an existing template. Creates a new version.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
+        group.MapPost("/admin/shared-games/{id:guid}/state-template/{templateId:guid}/activate", HandleActivateStateTemplate)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("ActivateGameStateTemplate")
+            .WithSummary("Activate game state template version (Admin/Editor)")
+            .WithDescription("Sets the specified template version as active. Deactivates all other versions for this game.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
     }
 
     // ========================================
@@ -393,6 +505,88 @@ internal static class SharedGameCatalogEndpoints
         }
     }
 
+    // ========================================
+    // APPROVAL WORKFLOW HANDLERS (Issue #2514)
+    // ========================================
+
+    private static async Task<IResult> HandleSubmitForApproval(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var command = new SubmitSharedGameForApprovalCommand(id, session!.User!.Id);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleApprovePublication(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new ApproveSharedGamePublicationCommand(id, session!.User!.Id);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleRejectPublication(
+        Guid id,
+        [FromBody] RejectPublicationRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new RejectSharedGamePublicationCommand(id, session!.User!.Id, request.Reason);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleGetPendingApprovals(
+        IMediator mediator,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var query = new GetPendingApprovalGamesQuery(pageNumber, pageSize);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     private static async Task<IResult> HandleArchiveGame(
         Guid id,
         IMediator mediator,
@@ -547,6 +741,59 @@ internal static class SharedGameCatalogEndpoints
         }
     }
 
+    // Quick Question Handlers
+    private static async Task<IResult> HandleGetQuickQuestions(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var query = new GetQuickQuestionsQuery(id, ActiveOnly: true);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGenerateQuickQuestions(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var command = new GenerateQuickQuestionsCommand(id);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Created($"/games/{id}/quick-questions", result);
+    }
+
+    private static async Task<IResult> HandleAddManualQuickQuestion(
+        Guid id,
+        [FromBody] AddQuickQuestionRequest request,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var command = new AddManualQuickQuestionCommand(id, request.Text, request.Emoji, request.Category, request.DisplayOrder);
+        var questionId = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Created($"/admin/quick-questions/{questionId}", questionId);
+    }
+
+    private static async Task<IResult> HandleUpdateQuickQuestion(
+        Guid questionId,
+        [FromBody] UpdateQuickQuestionRequest request,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var command = new UpdateQuickQuestionCommand(questionId, request.Text, request.Emoji, request.Category, request.DisplayOrder);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleDeleteQuickQuestion(
+        Guid questionId,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var command = new DeleteQuickQuestionCommand(questionId);
+        await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
     // FAQ Handlers
     private static async Task<IResult> HandleAddFaq(
         Guid id,
@@ -682,15 +929,20 @@ internal static class SharedGameCatalogEndpoints
         Guid id,
         [FromBody] AddDocumentRequest request,
         IMediator mediator,
+        HttpContext context,
         CancellationToken ct)
     {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
         var command = new AddDocumentToSharedGameCommand(
             id,
             request.PdfDocumentId,
             request.DocumentType,
             request.Version,
             request.Tags,
-            request.SetAsActive);
+            request.SetAsActive,
+            session!.User!.Id);
 
         try
         {
@@ -739,6 +991,105 @@ internal static class SharedGameCatalogEndpoints
         catch (InvalidOperationException ex)
         {
             return Results.BadRequest(new { error = ex.Message });
+        }
+    }
+#pragma warning restore S1172
+
+    // ========================================
+    // GAME STATE TEMPLATE HANDLERS (Issue #2400)
+    // ========================================
+
+    private static async Task<IResult> HandleGetActiveStateTemplate(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetActiveGameStateTemplateQuery(id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        return result is not null
+            ? Results.Ok(result)
+            : Results.NotFound();
+    }
+
+    private static async Task<IResult> HandleGetStateTemplateVersions(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetGameStateTemplateVersionsQuery(id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGenerateStateTemplate(
+        Guid id,
+        [FromBody] GenerateStateTemplateRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var command = new GenerateGameStateTemplateCommand(
+            id,
+            request.Name,
+            session!.User!.Id,
+            request.SetAsActive);
+
+        try
+        {
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Created($"/api/v1/admin/shared-games/{id}/state-template/{result.Id}", result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+    }
+
+#pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding
+    private static async Task<IResult> HandleUpdateStateTemplate(
+        Guid _,
+        Guid templateId,
+        [FromBody] UpdateStateTemplateRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new UpdateGameStateTemplateCommand(
+            templateId,
+            request.Name,
+            request.SchemaJson,
+            request.Version);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleActivateStateTemplate(
+        Guid _,
+        Guid templateId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new ActivateGameStateTemplateCommand(templateId);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
         }
     }
 #pragma warning restore S1172
@@ -804,6 +1155,22 @@ internal record DeleteGameRequest(string? Reason);
 internal record RejectDeleteRequest(string Reason);
 
 /// <summary>
+/// Request DTO for rejecting a publication approval.
+/// Issue #2514: Approval workflow implementation
+/// </summary>
+internal record RejectPublicationRequest(string Reason);
+
+/// <summary>
+/// Request DTO for adding a quick question manually.
+/// </summary>
+internal record AddQuickQuestionRequest(string Text, string Emoji, QuestionCategory Category, int DisplayOrder);
+
+/// <summary>
+/// Request DTO for updating a quick question.
+/// </summary>
+internal record UpdateQuickQuestionRequest(string Text, string Emoji, QuestionCategory Category, int DisplayOrder);
+
+/// <summary>
 /// Request DTO for adding a FAQ.
 /// </summary>
 internal record AddFaqRequest(string Question, string Answer, int Order);
@@ -832,3 +1199,20 @@ internal record AddDocumentRequest(
     string Version,
     List<string>? Tags,
     bool SetAsActive);
+
+/// <summary>
+/// Request DTO for generating a game state template using AI.
+/// Issue #2400
+/// </summary>
+internal record GenerateStateTemplateRequest(
+    string Name,
+    bool SetAsActive = false);
+
+/// <summary>
+/// Request DTO for updating a game state template.
+/// Issue #2400
+/// </summary>
+internal record UpdateStateTemplateRequest(
+    string? Name,
+    string SchemaJson,
+    string Version);

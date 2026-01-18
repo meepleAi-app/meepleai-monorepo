@@ -1,5 +1,6 @@
 using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Enums;
 using Api.SharedKernel.Guards;
 
 namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
@@ -74,11 +75,11 @@ internal sealed class PerformanceMetrics : ValueObject
         decimal tti,
         decimal tbt,
         decimal speedIndex,
-        Percentage performanceScore,
+        decimal performanceScore,
         PerformanceBudgetStatus budgetStatus,
         DateTime lastRunAt)
     {
-        // Percentage validation is handled by Percentage.Create() - type-safe by design
+        Guard.AgainstOutOfRange(performanceScore, nameof(performanceScore), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
         Guard.AgainstNegative(lcp, nameof(lcp));
         Guard.AgainstNegative(fid, nameof(fid));
         Guard.AgainstNegative(cls, nameof(cls));
@@ -86,6 +87,7 @@ internal sealed class PerformanceMetrics : ValueObject
         Guard.AgainstNegative(tti, nameof(tti));
         Guard.AgainstNegative(tbt, nameof(tbt));
         Guard.AgainstNegative(speedIndex, nameof(speedIndex));
+        // Note: No validation needed for enum - type-safe by design
 
         Lcp = lcp;
         Fid = fid;
@@ -131,12 +133,10 @@ internal sealed class PerformanceMetrics : ValueObject
         Guard.AgainstNegative(tti, nameof(tti));
         Guard.AgainstNegative(tbt, nameof(tbt));
         Guard.AgainstNegative(speedIndex, nameof(speedIndex));
-
-        // Create type-safe Percentage (validates 0-100 range automatically)
-        var score = Percentage.Create(performanceScore);
+        Guard.AgainstOutOfRange(performanceScore, nameof(performanceScore), QualityThresholds.MinimumPercentage, QualityThresholds.MaximumPercentage);
 
         // Calculate budget status based on Core Web Vitals
-        var budgetStatus = CalculateBudgetStatus(lcp, fid, cls, score.Value);
+        var budgetStatus = CalculateBudgetStatus(lcp, fid, cls, performanceScore);
 
         return new PerformanceMetrics(
             lcp: lcp,
@@ -146,7 +146,7 @@ internal sealed class PerformanceMetrics : ValueObject
             tti: tti,
             tbt: tbt,
             speedIndex: speedIndex,
-            performanceScore: score,
+            performanceScore: performanceScore,
             budgetStatus: budgetStatus,
             lastRunAt: lastRunAt);
     }
@@ -163,7 +163,7 @@ internal sealed class PerformanceMetrics : ValueObject
         tti: 0m,
         tbt: 0m,
         speedIndex: 0m,
-        performanceScore: Percentage.Zero,
+        performanceScore: 0m,
         budgetStatus: PerformanceBudgetStatus.NoData,
         lastRunAt: DateTime.UtcNow);
 

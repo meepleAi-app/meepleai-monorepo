@@ -78,8 +78,23 @@ internal sealed class ReportExecutionRepository : IReportExecutionRepository
 
     public async Task UpdateAsync(ReportExecution execution, CancellationToken cancellationToken = default)
     {
-        var entity = MapToEntity(execution);
-        _dbContext.ReportExecutions.Update(entity);
+        // Issue #2541: Check if entity is already tracked to prevent identity conflicts
+        var tracked = _dbContext.ReportExecutions.Local.FirstOrDefault(e => e.Id == execution.Id);
+
+        if (tracked != null)
+        {
+            // Update tracked entity properties
+            tracked.CompletedAt = execution.CompletedAt;
+            tracked.Status = (int)execution.Status;
+            tracked.ErrorMessage = execution.ErrorMessage;
+            tracked.FileSizeBytes = execution.FileSizeBytes;
+        }
+        else
+        {
+            var entity = MapToEntity(execution);
+            _dbContext.ReportExecutions.Update(entity);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 

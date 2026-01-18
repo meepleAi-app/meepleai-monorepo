@@ -5,6 +5,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
@@ -51,6 +52,7 @@ internal class HybridLlmService : ILlmService
     private readonly ILogger<HybridLlmService> _logger;
     private readonly IProviderHealthCheckService? _healthCheckService;
     private readonly IOptions<AiProviderSettings> _aiSettings;
+    private readonly IAiModelConfigurationRepository _modelConfigRepository;
 
     // ISSUE-962 (BGAI-020): Circuit breaker and monitoring
     private readonly Dictionary<string, CircuitBreakerState> _circuitBreakers = new(StringComparer.Ordinal);
@@ -75,6 +77,7 @@ internal class HybridLlmService : ILlmService
         ILlmCostLogRepository costLogRepository,
         ILogger<HybridLlmService> logger,
         IOptions<AiProviderSettings> aiSettings,
+        IAiModelConfigurationRepository modelConfigRepository,
         IProviderHealthCheckService? healthCheckService = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
@@ -82,6 +85,7 @@ internal class HybridLlmService : ILlmService
         _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _aiSettings = aiSettings ?? throw new ArgumentNullException(nameof(aiSettings));
+        _modelConfigRepository = modelConfigRepository ?? throw new ArgumentNullException(nameof(modelConfigRepository));
         _healthCheckService = healthCheckService; // Optional - may not be registered in tests
 
         if (_clients.Count == 0)
@@ -144,9 +148,10 @@ internal class HybridLlmService : ILlmService
             client = _clients[0]; // Safe: constructor ensures _clients.Count > 0
 
             var originalProvider = decision.ProviderName;
+            var emergencyModelId = await GetDefaultModelForProviderAsync(client.ProviderName, cancellationToken).ConfigureAwait(false);
             decision = new LlmRoutingDecision(
                 ProviderName: client.ProviderName,
-                ModelId: GetDefaultModelForProvider(client.ProviderName),
+                ModelId: emergencyModelId,
                 Reason: $"Emergency fallback from {originalProvider} (all providers unavailable)");
 
             _logger.LogWarning(
@@ -159,9 +164,10 @@ internal class HybridLlmService : ILlmService
                 "Primary provider {Primary} unavailable, using fallback {Fallback}",
                 decision.ProviderName, client.ProviderName);
 
+            var fallbackModelId = await GetDefaultModelForProviderAsync(client.ProviderName, cancellationToken).ConfigureAwait(false);
             decision = new LlmRoutingDecision(
                 ProviderName: client.ProviderName,
-                ModelId: GetDefaultModelForProvider(client.ProviderName),
+                ModelId: fallbackModelId,
                 Reason: $"Fallback from {decision.ProviderName} (circuit open or unhealthy)");
         }
 
@@ -212,7 +218,12 @@ internal class HybridLlmService : ILlmService
                 lastFailure = LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
             }
 
-            client = GetNextFallbackClient(client.ProviderName, attemptedProviders, out decision);
+            var (nextClient, nextDecision) = await GetNextFallbackClientAsync(client.ProviderName, attemptedProviders, cancellationToken).ConfigureAwait(false);
+            client = nextClient;
+            if (client != null)
+            {
+                decision = nextDecision;
+            }
 
             if (client == null)
             {
@@ -508,10 +519,45 @@ internal class HybridLlmService : ILlmService
                 ipAddress: null,
                 userAgent: null,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            // Issue #2520: Update model usage statistics
+            await UpdateModelUsageStatsAsync(result, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception logEx)
         {
             _logger.LogWarning(logEx, "Failed to log LLM cost");
+        }
+    }
+
+    /// <summary>
+    /// Issue #2520: Update AiModelConfiguration usage statistics after successful request
+    /// </summary>
+    private async Task UpdateModelUsageStatsAsync(LlmCompletionResult result, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var modelConfig = await _modelConfigRepository.GetByModelIdAsync(result.Cost.ModelId, cancellationToken).ConfigureAwait(false);
+            if (modelConfig != null)
+            {
+                var inputTokens = result.Usage.PromptTokens;
+                var outputTokens = result.Usage.CompletionTokens;
+                var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
+
+                modelConfig.TrackUsage(inputTokens, outputTokens, totalCost); // Issue #2580: Use TrackUsage API
+                await _modelConfigRepository.UpdateAsync(modelConfig, cancellationToken).ConfigureAwait(false);
+
+                _logger.LogDebug(
+                    "Updated usage stats for model {ModelId}: +{Tokens} tokens, +${Cost:F6}",
+                    result.Cost.ModelId, inputTokens + outputTokens, totalCost);
+            }
+            else
+            {
+                _logger.LogWarning("Model {ModelId} not found in DB for usage stats update", result.Cost.ModelId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update usage stats for model {ModelId}", result.Cost.ModelId);
         }
     }
 
@@ -541,12 +587,15 @@ internal class HybridLlmService : ILlmService
         }
     }
 
-    private ILlmClient? GetNextFallbackClient(
+    /// <summary>
+    /// Issue #2520: Get next fallback client with DB-driven fallback chain
+    /// </summary>
+    private async Task<(ILlmClient? client, LlmRoutingDecision decision)> GetNextFallbackClientAsync(
         string failedProvider,
         HashSet<string> attemptedProviders,
-        out LlmRoutingDecision decision)
+        CancellationToken cancellationToken = default)
     {
-        var fallbackOrder = BuildFallbackOrder();
+        var fallbackOrder = await BuildFallbackOrderAsync(cancellationToken).ConfigureAwait(false);
 
         foreach (var providerName in fallbackOrder)
         {
@@ -556,30 +605,70 @@ internal class HybridLlmService : ILlmService
             var fallbackClient = GetClientWithCircuitBreaker(providerName);
             if (fallbackClient != null)
             {
-                decision = new LlmRoutingDecision(
+                var modelId = await GetDefaultModelForProviderAsync(fallbackClient.ProviderName, cancellationToken)
+                    .ConfigureAwait(false);
+
+                var decision = new LlmRoutingDecision(
                     ProviderName: fallbackClient.ProviderName,
-                    ModelId: GetDefaultModelForProvider(fallbackClient.ProviderName),
+                    ModelId: modelId,
                     Reason: $"Fallback from {failedProvider}");
-                return fallbackClient;
+                return (fallbackClient, decision);
             }
         }
 
-        decision = default!;
-        return null;
+        return (null, default!);
     }
 
-    private List<string> BuildFallbackOrder()
+    /// <summary>
+    /// Issue #2520: Build fallback order from DB (AiModelConfiguration) with config fallback
+    /// </summary>
+    private async Task<List<string>> BuildFallbackOrderAsync(CancellationToken cancellationToken = default)
     {
         var order = new List<string>();
-        var configuredFallback = _aiSettings.Value.FallbackChain?
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
 
-        if ((configuredFallback?.Count ?? 0) > 0)
+        try
         {
-            order.AddRange(configuredFallback!);
+            // Issue #2520: Query active models from DB ordered by Priority (ASC = higher priority first)
+            var activeModels = await _modelConfigRepository.GetActiveAsync(cancellationToken).ConfigureAwait(false);
+
+            if (activeModels.Count > 0)
+            {
+                // Group by Provider, take highest priority model per provider
+                var providerOrder = activeModels
+                    .GroupBy(m => m.Provider, StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(g => g.Min(m => m.Priority)) // Lowest Priority value = highest priority
+                    .Select(g => g.Key)
+                    .ToList();
+
+                order.AddRange(providerOrder);
+                _logger.LogDebug(
+                    "Built fallback order from DB: {Order} ({Count} active models)",
+                    string.Join(" → ", providerOrder), activeModels.Count);
+            }
+            else
+            {
+                _logger.LogWarning("No active models found in DB, using config fallback");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to query active models from DB, falling back to config");
         }
 
+        // Fallback to config if DB query failed or empty
+        if (order.Count == 0)
+        {
+            var configuredFallback = _aiSettings.Value.FallbackChain?
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .ToList();
+
+            if ((configuredFallback?.Count ?? 0) > 0)
+            {
+                order.AddRange(configuredFallback!);
+            }
+        }
+
+        // Add any remaining providers not in DB or config
         order.AddRange(_clients
             .Select(c => c.ProviderName)
             .Where(name => !order.Contains(name, StringComparer.OrdinalIgnoreCase)));
@@ -700,9 +789,48 @@ internal class HybridLlmService : ILlmService
     }
 
     /// <summary>
-    /// P1: Get default model for a provider (fallback scenario)
+    /// Issue #2520: Get default model for a provider from DB (primary or highest priority)
     /// </summary>
-    private static string GetDefaultModelForProvider(string providerName)
+    private async Task<string> GetDefaultModelForProviderAsync(
+        string providerName,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Query primary model for this provider
+            var activeModels = await _modelConfigRepository.GetActiveAsync(cancellationToken).ConfigureAwait(false);
+            var providerModels = activeModels
+                .Where(m => string.Equals(m.Provider, providerName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (providerModels.Count > 0)
+            {
+                // Prefer IsPrimary, otherwise take highest priority (lowest Priority value)
+                var selectedModel = providerModels.FirstOrDefault(m => m.IsPrimary)
+                    ?? providerModels.OrderBy(m => m.Priority).First();
+
+                _logger.LogDebug(
+                    "Selected model {ModelId} for provider {Provider} from DB (IsPrimary: {IsPrimary}, Priority: {Priority})",
+                    selectedModel.ModelId, providerName, selectedModel.IsPrimary, selectedModel.Priority);
+
+                return selectedModel.ModelId;
+            }
+
+            _logger.LogWarning("No active models found for provider {Provider} in DB, using hardcoded fallback", providerName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to query default model for provider {Provider} from DB, using hardcoded fallback", providerName);
+        }
+
+        // Hardcoded fallback (backward compatibility)
+        return GetHardcodedDefaultModel(providerName);
+    }
+
+    /// <summary>
+    /// Hardcoded fallback for backward compatibility
+    /// </summary>
+    private static string GetHardcodedDefaultModel(string providerName)
     {
         return providerName.ToLowerInvariant() switch
         {

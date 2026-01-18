@@ -6,6 +6,7 @@ using Api.SharedKernel.Application.Services;
 using Api.Models;
 using Api.Services;
 using Api.Services.Rag;
+using Api.Tests.TestHelpers;
 using Api.Tests.Helpers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

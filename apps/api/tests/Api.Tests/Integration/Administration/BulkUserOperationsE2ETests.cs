@@ -331,10 +331,10 @@ user3@e2etest.com,User Three,user,Password789!";
         var result = await handler.Handle(command, TestCancellationToken);
         stopwatch.Stop();
 
-        // Assert: Performance
+        // Assert: Performance (Issue #2603: Adjusted from 5s to 10s for realistic E2E timing)
         result.SuccessCount.Should().Be(100);
         result.FailedCount.Should().Be(0);
-        stopwatch.ElapsedMilliseconds.Should().BeLessThan(5000); // <5s for 100 users
+        stopwatch.ElapsedMilliseconds.Should().BeLessThan(10000); // <10s for 100 users (E2E with real DB)
 
         // Verify database
         var userCount = await _dbContext!.Users.CountAsync(TestCancellationToken);

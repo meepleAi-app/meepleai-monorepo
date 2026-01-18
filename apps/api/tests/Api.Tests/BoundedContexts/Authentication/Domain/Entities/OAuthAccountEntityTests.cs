@@ -223,7 +223,7 @@ public class OAuthAccountEntityTests
         );
     }
     [Fact]
-    public void UpdateTokens_WithValidTokens_UpdatesSuccessfully()
+    public async Task UpdateTokens_WithValidTokens_UpdatesSuccessfully()
     {
         // Arrange
         var account = new OAuthAccountBuilder().Build();
@@ -232,7 +232,7 @@ public class OAuthAccountEntityTests
         var newExpiry = DateTime.UtcNow.AddHours(2);
         var originalUpdatedAt = account.UpdatedAt;
 
-        Thread.Sleep(10); // Ensure timestamp difference
+        await Task.Delay(TestConstants.Timing.TinyDelay); // Ensure timestamp difference
 
         // Act
         account.UpdateTokens(newAccessToken, newRefreshToken, newExpiry);

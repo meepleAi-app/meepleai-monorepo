@@ -3,6 +3,8 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Infrastructure;
@@ -28,7 +30,8 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
     private MeepleAiDbContext _dbContext = null!;
     private ISharedGameDocumentRepository _repository = null!;
     private ISharedGameRepository _gameRepository = null!;
-    private static readonly Guid TestUserId = Guid.NewGuid();
+    private Guid _testUserId;
+    private int _versionCounter = 0; // For unique document versions
 
     public SharedGameDocumentRepositoryIntegrationTests(SharedTestcontainersFixture fixture)
     {
@@ -55,6 +58,19 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         _dbContext = new MeepleAiDbContext(options, mediatorMock.Object, eventCollectorMock.Object);
         await _dbContext.Database.MigrateAsync();
 
+        // Create test user to satisfy FK constraints
+        _testUserId = Guid.NewGuid();
+        var testUser = new UserEntity
+        {
+            Id = _testUserId,
+            Email = "test@meepleai.com",
+            Role = "User",
+            Tier = "Free",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Users.Add(testUser);
+        await _dbContext.SaveChangesAsync();
+
         // Initialize repositories
         _repository = new SharedGameDocumentRepository(_dbContext);
         _gameRepository = new SharedGameRepository(_dbContext);
@@ -72,7 +88,7 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
     {
         // Arrange
         var game = await CreateTestGameAsync();
-        var document = CreateTestHomeruleDocument(game.Id, ["speed-mode", "2-players"]);
+        var document = await CreateTestHomeruleDocumentAsync(game.Id, ["speed-mode", "2-players"]);
         await _repository.AddAsync(document);
         await _dbContext.SaveChangesAsync();
 
@@ -90,9 +106,9 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
     {
         // Arrange
         var game = await CreateTestGameAsync();
-        var doc1 = CreateTestHomeruleDocument(game.Id, ["speed-mode", "2-players"]);
-        var doc2 = CreateTestHomeruleDocument(game.Id, ["solo-variant", "easy-mode"]);
-        var doc3 = CreateTestHomeruleDocument(game.Id, ["speed-mode", "solo-variant"]);
+        var doc1 = await CreateTestHomeruleDocumentAsync(game.Id, ["speed-mode", "2-players"]);
+        var doc2 = await CreateTestHomeruleDocumentAsync(game.Id, ["solo-variant", "easy-mode"]);
+        var doc3 = await CreateTestHomeruleDocumentAsync(game.Id, ["speed-mode", "solo-variant"]);
 
         await _repository.AddAsync(doc1);
         await _repository.AddAsync(doc2);
@@ -112,7 +128,7 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
     {
         // Arrange
         var game = await CreateTestGameAsync();
-        var document = CreateTestHomeruleDocument(game.Id, ["speed-mode"]);
+        var document = await CreateTestHomeruleDocumentAsync(game.Id, ["speed-mode"]);
         await _repository.AddAsync(document);
         await _dbContext.SaveChangesAsync();
 
@@ -128,7 +144,7 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
     {
         // Arrange
         var game = await CreateTestGameAsync();
-        var document = CreateTestHomeruleDocument(game.Id, ["speed-mode"]);
+        var document = await CreateTestHomeruleDocumentAsync(game.Id, ["speed-mode"]);
         await _repository.AddAsync(document);
         await _dbContext.SaveChangesAsync();
 
@@ -144,7 +160,7 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
     {
         // Arrange
         var game = await CreateTestGameAsync();
-        var document = CreateTestHomeruleDocument(game.Id, ["speed-mode"]);
+        var document = await CreateTestHomeruleDocumentAsync(game.Id, ["speed-mode"]);
         await _repository.AddAsync(document);
         await _dbContext.SaveChangesAsync();
 
@@ -162,16 +178,17 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         var game = await CreateTestGameAsync();
 
         // Create a Homerule with tags
-        var homerule = CreateTestHomeruleDocument(game.Id, ["variant"]);
+        var homerule = await CreateTestHomeruleDocumentAsync(game.Id, ["variant"]);
         await _repository.AddAsync(homerule);
 
         // Create a Rulebook (no tags, wrong document type)
+        var pdfDoc = await CreateTestPdfDocumentAsync(game.Id);
         var rulebook = SharedGameDocument.Create(
             game.Id,
-            Guid.NewGuid(),
+            pdfDoc.Id,
             SharedGameDocumentType.Rulebook,
             "1.0",
-            TestUserId);
+            _testUserId);
         await _repository.AddAsync(rulebook);
         await _dbContext.SaveChangesAsync();
 
@@ -188,9 +205,9 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
     {
         // Arrange
         var game = await CreateTestGameAsync();
-        var doc1 = CreateTestHomeruleDocument(game.Id, ["solo-variant"]);
-        var doc2 = CreateTestHomeruleDocument(game.Id, ["2-players"]);
-        var doc3 = CreateTestHomeruleDocument(game.Id, ["competitive-mode"]);
+        var doc1 = await CreateTestHomeruleDocumentAsync(game.Id, ["solo-variant"]);
+        var doc2 = await CreateTestHomeruleDocumentAsync(game.Id, ["2-players"]);
+        var doc3 = await CreateTestHomeruleDocumentAsync(game.Id, ["competitive-mode"]);
 
         await _repository.AddAsync(doc1);
         await _repository.AddAsync(doc2);
@@ -212,40 +229,91 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
 
     private async Task<SharedGame> CreateTestGameAsync()
     {
-        var game = SharedGame.Create(
-            title: $"Test Game {Guid.NewGuid():N}",
-            yearPublished: 2020,
-            description: "Test game for document repository tests",
-            minPlayers: 2,
-            maxPlayers: 4,
-            playingTimeMinutes: 60,
-            minAge: 10,
-            complexityRating: 2.0m,
-            averageRating: 7.0m,
-            imageUrl: "https://example.com/image.jpg",
-            thumbnailUrl: "https://example.com/thumb.jpg",
-            rules: null,
-            createdBy: TestUserId);
+        var gameId = Guid.NewGuid();
+        var gameName = $"Test Game {Guid.NewGuid():N}";
 
-        await _gameRepository.AddAsync(game);
+        // Create GameEntity first to satisfy PdfDocument FK constraint
+        var gameEntity = new GameEntity
+        {
+            Id = gameId,
+            Name = gameName,
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Games.Add(gameEntity);
+
+        // Create SharedGameEntity directly (avoids reflection issues)
+        var sharedGameEntity = new SharedGameEntity
+        {
+            Id = gameId, // Same ID as GameEntity
+            Title = gameName,
+            YearPublished = 2020,
+            Description = "Test game for document repository tests",
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            MinAge = 10,
+            ComplexityRating = 2.0m,
+            AverageRating = 7.0m,
+            ImageUrl = "https://example.com/image.jpg",
+            ThumbnailUrl = "https://example.com/thumb.jpg",
+            Status = 0, // Draft
+            CreatedBy = _testUserId,
+            CreatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+        _dbContext.Set<SharedGameEntity>().Add(sharedGameEntity);
         await _dbContext.SaveChangesAsync();
 
-        return game;
+        // Return domain model (repository will map from entity)
+        var game = await _gameRepository.GetByIdAsync(gameId);
+        return game!;
     }
 
-    private static SharedGameDocument CreateTestHomeruleDocument(Guid gameId, List<string> tags)
+    /// <summary>
+    /// Creates a test PdfDocument entity and persists to database.
+    /// Fix for Issue #2538 - Use SharedGame's ID for PdfDocument to satisfy FK.
+    /// </summary>
+    private async Task<PdfDocumentEntity> CreateTestPdfDocumentAsync(Guid sharedGameId)
     {
-        // Issue #2541: Fix DocumentVersion format (must be MAJOR.MINOR like "1.0", "2.1")
-        // Use Guid hash for deterministic but varied version numbers in tests
-        var hash = Math.Abs(Guid.NewGuid().GetHashCode());
-        var version = $"{hash % 10}.{hash % 100}";
+        // Use SharedGame's ID directly (SharedGame ID matches GameEntity ID)
+        var pdfDoc = new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            GameId = sharedGameId, // FK to games table (same as shared_games ID)
+            FileName = $"test_{Guid.NewGuid():N}.pdf",
+            FilePath = "/test/path.pdf",
+            FileSizeBytes = 1024,
+            ContentType = "application/pdf",
+            UploadedByUserId = _testUserId,
+            UploadedAt = DateTime.UtcNow,
+            ProcessingStatus = "completed"
+        };
+
+        _dbContext.PdfDocuments.Add(pdfDoc);
+        await _dbContext.SaveChangesAsync();
+
+        return pdfDoc;
+    }
+
+    /// <summary>
+    /// Creates a test Homerule document with valid PdfDocument FK and version format.
+    /// Fix for Issue #2538 - Use valid MAJOR.MINOR version format and ensure FK exists.
+    /// Uses incrementing version counter to avoid unique constraint violations.
+    /// </summary>
+    private async Task<SharedGameDocument> CreateTestHomeruleDocumentAsync(Guid gameId, List<string> tags)
+    {
+        // Create PdfDocument first to satisfy FK constraint (uses same gameId)
+        var pdfDoc = await CreateTestPdfDocumentAsync(gameId);
+
+        // Use valid MAJOR.MINOR format with incrementing counter for uniqueness
+        var version = $"1.{_versionCounter++}";
 
         return SharedGameDocument.Create(
             gameId,
-            Guid.NewGuid(),
+            pdfDoc.Id,
             SharedGameDocumentType.Homerule,
             version,
-            TestUserId,
+            _testUserId,
             tags);
     }
 

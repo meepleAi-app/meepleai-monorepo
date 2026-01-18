@@ -191,10 +191,19 @@ internal sealed partial class EmbeddingBasedSemanticChunker : ISemanticChunker
     {
         if (sectionHeaders == null || sectionHeaders.Count == 0)
         {
-            // Extract headers via regex
+            // Extract headers via regex (support both markdown and uppercase headers)
             sectionHeaders = HeaderRegex()
                 .Matches(content)
-                .Select(m => m.Groups[1].Value.Trim())
+                .Select(m =>
+                {
+                    // Group 1: Markdown headers (# Header)
+                    // Group 2: Uppercase headers (HEADER)
+                    var header = !string.IsNullOrWhiteSpace(m.Groups[1].Value)
+                        ? m.Groups[1].Value
+                        : m.Groups[2].Value;
+                    return header.Trim();
+                })
+                .Where(h => !string.IsNullOrWhiteSpace(h))
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
         }
@@ -325,7 +334,7 @@ internal sealed partial class EmbeddingBasedSemanticChunker : ISemanticChunker
             headers);
     }
 
-    [GeneratedRegex(@"^#{1,3}\s+(.+)$|^([A-Z][A-Z\s]{2,})$", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex(@"^#{1,3}\s+(.+)$|^([A-Z][A-Z\s]{2,100})$", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex HeaderRegex();
 
     private sealed record CandidateSection(string? Header, int StartIndex)

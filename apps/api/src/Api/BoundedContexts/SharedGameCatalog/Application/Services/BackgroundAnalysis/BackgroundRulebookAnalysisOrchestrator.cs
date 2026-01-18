@@ -214,9 +214,7 @@ internal sealed class BackgroundRulebookAnalysisOrchestrator : IBackgroundRulebo
         catch (OperationCanceledException ex)
         {
             // User cancellation
-#pragma warning disable S6667 // OperationCanceledException is expected, logging for tracking only
             _logger.LogWarning(ex, "Background analysis cancelled by user: taskId={TaskId}", taskId);
-#pragma warning restore S6667
             await UpdateProgressAsync(taskId, AnalysisPhase.ChunkAnalysis, 0, "Cancelled", CancellationToken.None).ConfigureAwait(false);
             return OrchestrationResult.CreateFailure("Analysis cancelled");
         }

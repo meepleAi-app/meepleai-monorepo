@@ -7,8 +7,9 @@ namespace Api.Tests.BoundedContexts.Administration.Infrastructure.Services;
 /// <summary>
 /// Tests for ChartGenerationService
 /// ISSUE-917: Chart generation validation
+/// ISSUE-2601: Marked as Integration (require ScottPlot)
 /// </summary>
-[Trait("Category", TestCategories.Unit)]
+[Trait("Category", TestCategories.Integration)]
 public sealed class ChartGenerationServiceTests
 {
     private readonly ChartGenerationService _sut;

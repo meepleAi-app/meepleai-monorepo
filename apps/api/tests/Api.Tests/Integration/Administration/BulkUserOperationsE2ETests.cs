@@ -94,6 +94,8 @@ public sealed class BulkUserOperationsE2ETests : IAsyncLifetime
         // Repositories and Unit of Work
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
+        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector,
+            Api.SharedKernel.Application.Services.DomainEventCollector>();
 
         // Logging
         services.AddLogging(builder => builder.AddConsole());

@@ -148,7 +148,7 @@ public class NotificationTests
     }
 
     [Fact]
-    public void MarkAsRead_WhenAlreadyRead_IsIdempotent()
+    public async Task MarkAsRead_WhenAlreadyRead_IsIdempotent()
     {
         // Arrange
         var notification = new NotificationBuilder().Build();
@@ -156,7 +156,7 @@ public class NotificationTests
         var firstReadAt = notification.ReadAt;
 
         // Act - Mark as read again
-        Thread.Sleep(10); // Small delay to ensure different timestamp
+        await Task.Delay(TestConstants.Timing.TinyDelay); // Ensure different timestamp
         notification.MarkAsRead();
 
         // Assert - ReadAt should not change

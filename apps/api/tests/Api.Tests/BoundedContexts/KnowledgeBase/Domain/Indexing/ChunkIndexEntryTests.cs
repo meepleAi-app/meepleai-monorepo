@@ -146,7 +146,7 @@ public class ChunkIndexEntryTests
     }
 
     [Fact]
-    public void UpdateVector_ChangesVectorAndTimestamp()
+    public async Task UpdateVector_ChangesVectorAndTimestamp()
     {
         // Arrange
         var initialVector = new float[] { 0.1f, 0.2f };
@@ -163,7 +163,7 @@ public class ChunkIndexEntryTests
         var newVector = new float[] { 0.5f, 0.6f };
 
         // Wait a bit to ensure timestamp difference
-        Thread.Sleep(10);
+        await Task.Delay(TestConstants.Timing.TinyDelay);
 
         // Act
         entry.UpdateVector(newVector, "text-embedding-3-small");

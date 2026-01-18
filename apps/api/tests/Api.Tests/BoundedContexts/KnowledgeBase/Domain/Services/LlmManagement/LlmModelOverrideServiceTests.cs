@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
+using Api.Tests.Constants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -156,14 +157,14 @@ public class LlmModelOverrideServiceTests
     }
 
     [Fact]
-    public void EnableBudgetMode_CalledTwice_UpdatesReasonAndTimestamp()
+    public async Task EnableBudgetMode_CalledTwice_UpdatesReasonAndTimestamp()
     {
         // Arrange
         _sut.EnableBudgetMode("First reason");
         var firstStatus = _sut.GetBudgetModeStatus();
 
         // Act
-        Thread.Sleep(100); // Small delay to ensure different timestamp
+        await Task.Delay(TestConstants.Timing.SmallDelay); // Ensure different timestamp
         _sut.EnableBudgetMode("Second reason");
         var secondStatus = _sut.GetBudgetModeStatus();
 

@@ -93,6 +93,9 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
             // MediatR for handlers
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateShareLinkCommandHandler).Assembly));
 
+            services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector,
+                Api.SharedKernel.Application.Services.DomainEventCollector>();
+
             _serviceProvider = services.BuildServiceProvider();
 
             // Initialize database with migrations

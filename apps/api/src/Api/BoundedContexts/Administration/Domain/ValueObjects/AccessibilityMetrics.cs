@@ -11,10 +11,9 @@ namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 internal sealed class AccessibilityMetrics : ValueObject
 {
     /// <summary>
-    /// Lighthouse accessibility score (0-100).
-    /// Type-safe Percentage ensures valid range.
+    /// Lighthouse accessibility score (0-100)
     /// </summary>
-    public Percentage LighthouseScore { get; }
+    public decimal LighthouseScore { get; }
 
     /// <summary>
     /// Number of axe-core violations detected
@@ -38,7 +37,7 @@ internal sealed class AccessibilityMetrics : ValueObject
     public TestExecutionStatus Status { get; }
 
     public AccessibilityMetrics(
-        Percentage lighthouseScore,
+        decimal lighthouseScore,
         int axeViolations,
         IReadOnlyList<string> wcagLevels,
         DateTime lastRunAt,
@@ -107,5 +106,5 @@ internal sealed class AccessibilityMetrics : ValueObject
     }
 
     public override string ToString() =>
-        $"Accessibility: Lighthouse={LighthouseScore}, Violations={AxeViolations}, WCAG={string.Join(",", WcagLevels)}, Status={Status}";
+        $"Accessibility: Lighthouse={LighthouseScore:F1}, Violations={AxeViolations}, WCAG={string.Join(",", WcagLevels)}, Status={Status}";
 }

@@ -12,22 +12,19 @@ namespace Api.BoundedContexts.Administration.Domain.ValueObjects;
 internal sealed class E2EMetrics : ValueObject
 {
     /// <summary>
-    /// Test coverage percentage (0-100).
-    /// Type-safe Percentage ensures valid range.
+    /// Test coverage percentage (0-100)
     /// </summary>
-    public Percentage Coverage { get; }
+    public decimal Coverage { get; }
 
     /// <summary>
-    /// Test pass rate percentage (0-100).
-    /// Type-safe Percentage ensures valid range.
+    /// Test pass rate percentage (0-100)
     /// </summary>
-    public Percentage PassRate { get; }
+    public decimal PassRate { get; }
 
     /// <summary>
-    /// Flaky test rate percentage (0-100).
-    /// Type-safe Percentage ensures valid range.
+    /// Flaky test rate percentage (0-100)
     /// </summary>
-    public Percentage FlakyRate { get; }
+    public decimal FlakyRate { get; }
 
     /// <summary>
     /// Average test execution time (ms)
@@ -249,5 +246,5 @@ internal sealed class E2EMetrics : ValueObject
     }
 
     public override string ToString() =>
-        $"E2E: Coverage={Coverage}, Pass={PassRate}, Flaky={FlakyRate}, Execution={ExecutionTime}ms, Status={Status}";
+        $"E2E: Coverage={Coverage:F1}%, Pass={PassRate:F1}%, Flaky={FlakyRate:F1}%, Execution={ExecutionTime}ms, Status={Status}";
 }

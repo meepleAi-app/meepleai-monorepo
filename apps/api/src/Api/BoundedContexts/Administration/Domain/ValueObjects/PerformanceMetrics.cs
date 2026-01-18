@@ -47,10 +47,9 @@ internal sealed class PerformanceMetrics : ValueObject
     public decimal SpeedIndex { get; }
 
     /// <summary>
-    /// Lighthouse performance score (0-100).
-    /// Type-safe Percentage ensures valid range.
+    /// Lighthouse performance score (0-100)
     /// </summary>
-    public Percentage PerformanceScore { get; }
+    public decimal PerformanceScore { get; }
 
     /// <summary>
     /// Performance budget compliance status (Pass, Warning, Fail).
@@ -247,5 +246,5 @@ internal sealed class PerformanceMetrics : ValueObject
     }
 
     public override string ToString() =>
-        $"Performance: Score={PerformanceScore}, LCP={Lcp}ms, FID={Fid}ms, CLS={Cls:F3}, Budget={BudgetStatus}";
+        $"Performance: Score={PerformanceScore:F1}, LCP={Lcp}ms, FID={Fid}ms, CLS={Cls:F3}, Budget={BudgetStatus}";
 }

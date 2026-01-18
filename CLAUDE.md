@@ -1276,6 +1276,69 @@ $"{(value * 100):0}%"
 - Run specific tests: `dotnet test --filter "TestName"`
 - Confirm all pass locally before PR push
 
+**OAuth Error Handling and Transactional Patterns** (Issue #2600, PR #2607):
+
+When implementing OAuth callback handlers or similar multi-step operations:
+
+1. **Defensive Validation Pattern**:
+   - FluentValidation handles production validation via MediatR pipeline
+   - BUT: Unit tests often call handlers directly, bypassing MediatR
+   - Solution: Add defensive inline validation with NOTE explaining the trade-off
+   ```csharp
+   // NOTE: Defensive validation for direct handler invocation (tests bypass MediatR pipeline)
+   // Production: Validator executes via MediatR ValidationBehavior
+   // Tests: Direct handler.Handle() calls require inline validation
+   if (string.IsNullOrWhiteSpace(command.Required)) { ... }
+   ```
+
+2. **InMemory Database Transaction Handling**:
+   - InMemory database does NOT support transactions (throws on BeginTransactionAsync)
+   - Pattern: Check provider name and conditionally create transaction
+   ```csharp
+   var isInMemory = string.Equals(_db.Database.ProviderName,
+       "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal);
+   var transaction = isInMemory ? null : await _db.Database.BeginTransactionAsync(ct);
+   ```
+   - Always null-check transaction before Commit/Rollback/Dispose
+
+3. **Manual Rollback for InMemory Tests**:
+   - When transaction is null (InMemory), implement manual cleanup logic
+   - Consider BOTH scenarios: new user creation AND existing user OAuth linking
+   ```csharp
+   if (transaction != null) {
+       await transaction.RollbackAsync(ct);
+   } else {
+       // Remove OAuth account (both scenarios)
+       var oauthAccount = await _db.OAuthAccounts
+           .FirstOrDefaultAsync(o => o.UserId == userId && o.Provider == provider, ct);
+       if (oauthAccount != null) _db.OAuthAccounts.Remove(oauthAccount);
+
+       // Only remove user if newly created in this request
+       if (isNewUser) _db.Users.Remove(user);
+
+       await _db.SaveChangesAsync(ct);
+   }
+   ```
+
+4. **Exception Handling with InvalidOperationException Legacy**:
+   - CLAUDE.md prohibits InvalidOperationException (maps to 500 error)
+   - BUT: Existing infrastructure services (IOAuthService) may throw it
+   - Temporary solution: Catch with pragma and NOTE documenting future refactor
+   ```csharp
+   catch (HttpRequestException ex) { ... }  // Preferred
+   catch (TaskCanceledException ex) { ... }  // Preferred
+   // NOTE: InvalidOperationException for backward compatibility
+   #pragma warning disable S1135
+   catch (InvalidOperationException ex) { ... }  // Document future removal
+   #pragma warning restore S1135
+   ```
+   - Long-term: Refactor infrastructure services to throw domain-specific exceptions
+
+5. **Error Message Specificity**:
+   - Preserve context in error messages for better debugging
+   - Separate log messages by exception type for observability
+   - Test assertions verify specific error message content
+
 ---
 
 ## Success Metrics

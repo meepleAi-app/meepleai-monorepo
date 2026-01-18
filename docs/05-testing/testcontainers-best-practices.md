@@ -140,10 +140,12 @@ Test Suite Start
 
 ### Connection Strings
 
-**PostgreSQL** (with optimizations):
+**PostgreSQL** (with optimizations for long-running test suites):
 ```
 Host=localhost;Port={port};Database={name};Username=postgres;Password=postgres;
-Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;Connection Timeout=10;
+Ssl Mode=Disable;Trust Server Certificate=true;
+KeepAlive=10;Pooling=true;MinPoolSize=2;MaxPoolSize=50;
+Timeout=30;CommandTimeout=60;ConnectionIdleLifetime=60;ConnectionPruningInterval=10;
 ```
 
 **Redis** (with optimizations):
@@ -151,10 +153,16 @@ Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;Connec
 localhost:{port},abortConnect=false,connectTimeout=10000,syncTimeout=10000,connectRetry=3
 ```
 
-**Key Parameters**:
-- `Pooling=false`: Prevents connection pool exhaustion in tests
-- `Connection Timeout=10`: Increased from 5s for stability (Issue #2474)
-- `connectRetry=3`: Automatic retry for transient Redis failures
+**Key Parameters** (updated per Issue #2577):
+- `Pooling=true`: **CRITICAL** - Prevents TCP connection accumulation during long test runs (>20 minutes). Previous guidance (`Pooling=false`) caused connection timeouts after 22 minutes in test suites with 34+ test classes.
+- `MinPoolSize=2`: Maintains warm connections to avoid cold start penalties
+- `MaxPoolSize=50`: Handles burst of parallel test execution (34 test classes concurrently)
+- `Timeout=30`: Connection establishment timeout (increased from 10s for stability under load)
+- `CommandTimeout=60`: Query execution timeout for long-running operations (migrations, bulk inserts)
+- `KeepAlive=10`: TCP keep-alive interval (reduced from 30s for faster dead connection detection)
+- `ConnectionIdleLifetime=60`: Recycles idle connections after 60 seconds to prevent stale state
+- `ConnectionPruningInterval=10`: Proactively removes dead connections every 10 seconds
+- `connectRetry=3` (Redis): Automatic retry for transient Redis failures
 
 ---
 
@@ -479,6 +487,7 @@ backend:
 
 ## References
 
+- **Issue #2577**: PostgreSQL connection pooling optimization and migration deduplication (162 test failures resolved)
 - **Issue #2474**: Testcontainers infrastructure stability fixes
 - **Issue #2449**: Testcontainers cleanup automation
 - **Issue #2031**: Docker exec hijacking workaround
@@ -486,5 +495,5 @@ backend:
 
 ---
 
-**Last Updated**: 2026-01-15
+**Last Updated**: 2026-01-17 (Issue #2577 - Connection pooling optimization)
 **Maintainer**: MeepleAI Testing Team

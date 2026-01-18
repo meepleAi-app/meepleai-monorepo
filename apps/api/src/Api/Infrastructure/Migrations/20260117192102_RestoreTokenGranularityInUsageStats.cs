@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -10,6 +10,10 @@ namespace Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Issue #2577: Removed duplicate AddColumn for PricingJson
+            // PricingJson is already created by migration 090414_AddJsonbColumnsToAiModelConfiguration
+            // This migration only needs to ALTER existing settings_json/usage_json columns
+
             migrationBuilder.AlterColumn<string>(
                 name: "usage_json",
                 schema: "SystemConfiguration",
@@ -29,24 +33,11 @@ namespace Api.Infrastructure.Migrations
                 defaultValue: "{}",
                 oldClrType: typeof(string),
                 oldType: "jsonb");
-
-            migrationBuilder.AddColumn<string>(
-                name: "PricingJson",
-                schema: "SystemConfiguration",
-                table: "AiModelConfigurations",
-                type: "jsonb",
-                nullable: false,
-                defaultValue: "{}");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "PricingJson",
-                schema: "SystemConfiguration",
-                table: "AiModelConfigurations");
-
             migrationBuilder.AlterColumn<string>(
                 name: "usage_json",
                 schema: "SystemConfiguration",

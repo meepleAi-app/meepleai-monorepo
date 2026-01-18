@@ -110,7 +110,16 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                         await _postgresContainer.StartAsync();
 
                         var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-                        PostgresConnectionString = $"Host=localhost;Port={postgresPort};Database=test_shared;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=30;Pooling=false;Timeout=10;";
+                        // Issue #2577: Optimized connection string for long-running test suites  
+                        // - Pooling=true: Prevents TCP connection accumulation (was causing timeouts after 22 minutes)
+                        // - MinPoolSize=2: Keep connections alive to avoid cold start penalties
+                        // - MaxPoolSize=50: Handle burst of parallel tests
+                        // - Timeout=30: Increased from 10s to handle connection establishment under load
+                        // - CommandTimeout=60: Prevent query timeout for long-running test operations
+                        // - KeepAlive=10: More frequent keep-alive to prevent idle connection closure (was 30s)
+                        // - ConnectionIdleLifetime=60: Recycle idle connections to prevent stale state
+                        // - ConnectionPruningInterval=10: Clean up dead connections proactively
+                        PostgresConnectionString = $"Host=localhost;Port={postgresPort};Database=test_shared;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=10;Pooling=true;MinPoolSize=2;MaxPoolSize=50;Timeout=30;CommandTimeout=60;ConnectionIdleLifetime=60;ConnectionPruningInterval=10;";
 
                         // Issue #2031: Wait for PostgreSQL to accept connections with retry
                         // Issue #2474: Increased timeout from 5s to 10s for better stability
@@ -266,30 +275,49 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     /// <returns>Connection string for the isolated database</returns>
     public async Task<string> CreateIsolatedDatabaseAsync(string databaseName)
     {
+        // Issue #2577: Add diagnostics for connection troubleshooting
+        var startTime = DateTime.UtcNow;
+
         // Validate database name to prevent SQL injection (CA2100 suppression)
         if (!System.Text.RegularExpressions.Regex.IsMatch(databaseName, @"^[a-zA-Z0-9_]+$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
         {
             throw new ArgumentException("Database name must contain only alphanumeric characters and underscores", nameof(databaseName));
         }
 
-        // Create database
-        var builder = new NpgsqlConnectionStringBuilder(PostgresConnectionString)
+        try
         {
-            Database = "postgres" // Connect to default db to create new one
-        };
+            // Create database
+            var builder = new NpgsqlConnectionStringBuilder(PostgresConnectionString)
+            {
+                Database = "postgres" // Connect to default db to create new one
+            };
 
-        await using var connection = new NpgsqlConnection(builder.ConnectionString);
-        await connection.OpenAsync();
+            await using var connection = new NpgsqlConnection(builder.ConnectionString);
+            await connection.OpenAsync();
 
-        await using var cmd = connection.CreateCommand();
+            await using var cmd = connection.CreateCommand();
 #pragma warning disable CA2100 // SQL injection safe: databaseName validated with regex ^[a-zA-Z0-9_]+$
-        cmd.CommandText = $"DROP DATABASE IF EXISTS \"{databaseName}\"; CREATE DATABASE \"{databaseName}\";";
+            cmd.CommandText = $"DROP DATABASE IF EXISTS \"{databaseName}\"; CREATE DATABASE \"{databaseName}\";";
 #pragma warning restore CA2100
-        await cmd.ExecuteNonQueryAsync();
+            await cmd.ExecuteNonQueryAsync();
 
-        // Return connection string for new database
-        builder.Database = databaseName;
-        return builder.ConnectionString;
+            // Return connection string for new database
+            builder.Database = databaseName;
+
+            // Issue #2577: Log successful database creation with timing
+            var duration = (DateTime.UtcNow - startTime).TotalSeconds;
+            Console.WriteLine($"✅ Database '{databaseName}' created in {duration:F2}s");
+
+            return builder.ConnectionString;
+        }
+        catch (Exception ex)
+        {
+            // Issue #2577: Log connection failures with detailed context
+            var duration = (DateTime.UtcNow - startTime).TotalSeconds;
+            Console.WriteLine($"❌ Database creation failed after {duration:F2}s: {ex.Message}");
+            Console.WriteLine($"   Connection string (sanitized): {new NpgsqlConnectionStringBuilder(PostgresConnectionString) { Password = "[REDACTED]" }}");
+            throw;
+        }
     }
 
     /// <summary>
@@ -299,36 +327,53 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     /// <param name="databaseName">Database name to drop</param>
     public async Task DropIsolatedDatabaseAsync(string databaseName)
     {
+        // Issue #2577: Add diagnostics for cleanup troubleshooting
+        var startTime = DateTime.UtcNow;
+
         // Validate database name to prevent SQL injection (CA2100 suppression)
         if (!System.Text.RegularExpressions.Regex.IsMatch(databaseName, @"^[a-zA-Z0-9_]+$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
         {
             throw new ArgumentException("Database name must contain only alphanumeric characters and underscores", nameof(databaseName));
         }
 
-        var builder = new NpgsqlConnectionStringBuilder(PostgresConnectionString)
+        try
         {
-            Database = "postgres"
-        };
+            var builder = new NpgsqlConnectionStringBuilder(PostgresConnectionString)
+            {
+                Database = "postgres"
+            };
 
-        await using var connection = new NpgsqlConnection(builder.ConnectionString);
-        await connection.OpenAsync();
+            await using var connection = new NpgsqlConnection(builder.ConnectionString);
+            await connection.OpenAsync();
 
-        // Terminate active connections first
-        await using var terminateCmd = connection.CreateCommand();
+            // Terminate active connections first
+            await using var terminateCmd = connection.CreateCommand();
 #pragma warning disable CA2100 // SQL injection safe: databaseName validated with regex ^[a-zA-Z0-9_]+$
-        terminateCmd.CommandText = $@"
-            SELECT pg_terminate_backend(pid)
-            FROM pg_stat_activity
-            WHERE datname = '{databaseName}' AND pid <> pg_backend_pid();";
+            terminateCmd.CommandText = $@"
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = '{databaseName}' AND pid <> pg_backend_pid();";
 #pragma warning restore CA2100
-        await terminateCmd.ExecuteNonQueryAsync();
+            var terminatedCount = await terminateCmd.ExecuteNonQueryAsync();
 
-        // Drop database
-        await using var dropCmd = connection.CreateCommand();
+            // Drop database
+            await using var dropCmd = connection.CreateCommand();
 #pragma warning disable CA2100 // SQL injection safe: databaseName validated with regex ^[a-zA-Z0-9_]+$
-        dropCmd.CommandText = $"DROP DATABASE IF EXISTS \"{databaseName}\";";
+            dropCmd.CommandText = $"DROP DATABASE IF EXISTS \"{databaseName}\";";
 #pragma warning restore CA2100
-        await dropCmd.ExecuteNonQueryAsync();
+            await dropCmd.ExecuteNonQueryAsync();
+
+            // Issue #2577: Log successful cleanup with timing
+            var duration = (DateTime.UtcNow - startTime).TotalSeconds;
+            Console.WriteLine($"🧹 Database '{databaseName}' dropped in {duration:F2}s ({terminatedCount} connections terminated)");
+        }
+        catch (Exception ex)
+        {
+            // Issue #2577: Log cleanup failures (non-fatal, suppress)
+            var duration = (DateTime.UtcNow - startTime).TotalSeconds;
+            Console.WriteLine($"⚠️ Database cleanup warning after {duration:F2}s: {ex.Message}");
+            // Don't throw - cleanup failures are non-fatal
+        }
     }
 
     /// <summary>

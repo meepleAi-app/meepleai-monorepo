@@ -81,6 +81,7 @@ import {
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
+import { getApiBase } from '../core/httpClient';
 
 export interface CreateAdminClientParams {
   httpClient: HttpClient;
@@ -904,7 +905,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const queryString = queryParams.toString();
       const url = `/api/v1/admin/ai-models/export?${queryString}`;
 
-      const response = await fetch(`${httpClient.baseUrl}${url}`, {
+      const response = await fetch(`${getApiBase()}${url}`, {
         method: 'GET',
         credentials: 'include',
         headers: {

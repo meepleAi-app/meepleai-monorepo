@@ -49,6 +49,12 @@
 - Debugging & Performance Optimization
 - Common Tasks & Troubleshooting
 
+**Essential Guides**:
+- **[Visual Studio Code Setup](02-development/guida-visualcode.md)** ⭐ Task automation, Docker workflow, troubleshooting
+- [Git Workflow](02-development/git-workflow.md)
+- [Local Secrets Setup](02-development/local-secrets-setup.md)
+- [Operational Guide](02-development/operational-guide.md)
+
 ### 03. API Documentation ⭐ NEW
 
 **[API Reference](03-api/README.md)** - Complete REST API documentation

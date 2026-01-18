@@ -49,7 +49,7 @@ import {
 } from '@/components/ui/select';
 import { useUserLocale } from '@/hooks/useUserLocale';
 import { api } from '@/lib/api';
-import type { InfrastructureDetails, ServiceHealth, HealthState } from '@/lib/api';
+import type { InfrastructureDetails, ServiceHealthStatus, HealthState } from '@/lib/api';
 
 type FilterMode = 'all' | 'critical' | 'unhealthy';
 
@@ -287,14 +287,19 @@ export function ServicesClient() {
   };
 
   return (
-    <AdminLayout
-      title={locale === 'it' ? 'Stato Servizi' : 'Service Status'}
-      description={
-        locale === 'it'
-          ? 'Monitoraggio in tempo reale dello stato di salute dei servizi'
-          : 'Real-time service health monitoring'
-      }
-    >
+    <AdminLayout>
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight">
+          {locale === 'it' ? 'Stato Servizi' : 'Service Status'}
+        </h1>
+        <p className="text-muted-foreground">
+          {locale === 'it'
+            ? 'Monitoraggio in tempo reale dello stato di salute dei servizi'
+            : 'Real-time service health monitoring'}
+        </p>
+      </div>
+
       {/* Header with overall status and controls */}
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">

@@ -92,7 +92,8 @@ internal sealed partial class ReportGeneratorService : IReportGeneratorService
             ReportTemplate.UserActivity => ValidateUserActivityParameters(parameters),
             ReportTemplate.AIUsage => ValidateAIUsageParameters(parameters),
             ReportTemplate.ContentMetrics => ValidateContentMetricsParameters(parameters),
-            _ => (false, $"Unknown template: {template}")
+            // Unknown templates will be caught by GenerateAsync switch expression
+            _ => (true, null)
         };
     }
 }

@@ -353,36 +353,93 @@ pwsh setup-secrets.ps1 -SaveGenerated
 
 ### Aggiornare Secrets
 
-**Workflow**:
+**Workflow Corretto** (restart NON ricarica env_file!):
 ```bash
-# 1. Modifica file secret
+# 1. Modifica file .secret
 notepad infra/secrets/redis.secret
 
-# 2. Restart servizio interessato
-docker compose restart redis
+# 2. Ricrea container (stop + rm + up)
+docker compose stop redis
+docker compose rm -f redis
+docker compose up -d redis
 
 # 3. Verifica logs
 docker compose logs redis | tail -20
 ```
 
-### Sincronizzazione .env.development
+**Task VS Code rapido**:
+```
+Ctrl+Shift+P → docker-restart-service → redis
+# Task esegue automaticamente: stop → rm → up
+```
 
-**IMPORTANTE**: `.env.development` (repo root) deve essere sincronizzato manualmente con `.secret` files.
+### Fix Comuni
 
-**Pattern**:
+**Problema: API container unhealthy - password authentication failed**
+
+```
+Errore: password authentication failed for user "meeple"
+```
+
+**Causa**: Database creato con password diversa da quella in `database.secret`
+
+**Soluzione**:
 ```bash
-# .secret files (source of truth)
-infra/secrets/*.secret
+cd infra
+docker compose stop postgres
+docker compose rm -f postgres
+docker volume rm infra_pgdata
+docker compose up -d postgres
+# Script init/postgres-init.sql crea automaticamente user meeple
+```
 
-# Frontend .env (sync manuale)
-apps/web/.env.local
+**Problema: INITIAL_ADMIN_PASSWORD not configured**
 
-# Backend appsettings (auto-load da .secret)
-apps/api/src/Api/appsettings.json
+```
+Errore: INITIAL_ADMIN_PASSWORD is not configured
+```
+
+**Causa**: Manca `INITIAL_ADMIN_PASSWORD` in `admin.secret`
+
+**Soluzione**: I due campi devono coincidere:
+```bash
+# infra/secrets/admin.secret
+ADMIN_PASSWORD=<same-password>
+INITIAL_ADMIN_PASSWORD=<same-password>  # ← Deve essere uguale!
+```
+
+Poi restart API:
+```bash
+docker compose restart api
+```
+
+### Workflow Secrets (NO Modifica Manuale .env)
+
+**REGOLA IMPORTANTE**: Non modificare mai `.env` files manualmente!
+
+**Workflow Corretto**:
+```bash
+# 1. Modifica SOLO il file .secret
+notepad infra/secrets/redis.secret
+
+# 2. Ricrea container (restart NON ricarica env_file)
+docker compose stop redis
+docker compose rm -f redis
+docker compose up -d redis
+
+# 3. Verifica
+docker compose logs redis
+```
+
+**Gerarchia Secrets** (source of truth):
+```
+infra/secrets/*.secret  →  env_file caricato al create container
+                       →  NO sync manuale richiesta
+                       →  NO modifica .env files
 ```
 
 **Riferimenti**:
-- [Secrets Management Guide](secrets-management.md)
+- [Secrets Management Guide](../04-deployment/secrets-management.md)
 - [Local Secrets Setup](local-secrets-setup.md)
 
 ---

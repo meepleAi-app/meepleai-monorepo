@@ -2,13 +2,13 @@ name: E2E Tests
 
 on:
   push:
-    branches: [main, main-dev]
+    branches: [main, main-dev, frontend-dev]
     paths:
       - 'apps/web/**'
       - 'apps/api/**'
       - '.github/workflows/e2e-tests.yml'
   pull_request:
-    branches: [main, main-dev]
+    branches: [main, main-dev, frontend-dev]
     paths:
       - 'apps/web/**'
       - 'apps/api/**'
@@ -92,14 +92,29 @@ jobs:
         image: qdrant/qdrant:latest
         ports:
           - 6333:6333
-        options: >-
-          --health-cmd "curl -sf http://localhost:6333/healthz || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Wait for Services
+        timeout-minutes: 2
+        run: |
+          echo "⏳ Waiting for PostgreSQL..."
+          until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
+          echo "✅ PostgreSQL ready"
+
+          echo "⏳ Waiting for Qdrant..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
+              echo "✅ Qdrant ready"
+              break
+            fi
+            sleep 2
+          done
+
+          echo "⏳ Waiting for Redis..."
+          until redis-cli -h localhost -p 6379 ping | grep -q PONG; do sleep 1; done
+          echo "✅ Redis ready"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4

@@ -67,45 +67,6 @@ internal class LlmCostCalculator : ILlmCostCalculator
             OutputCostPer1M = 1.10m
         },
 
-        // OpenRouter Models - OpenAI GPT-4o
-        ["openai/gpt-4o"] = new()
-        {
-            ModelId = "openai/gpt-4o",
-            Provider = "OpenRouter",
-            InputCostPer1M = 2.50m,
-            OutputCostPer1M = 10.00m
-        },
-        ["openai/gpt-4o-mini"] = new()
-        {
-            ModelId = "openai/gpt-4o-mini",
-            Provider = "OpenRouter",
-            InputCostPer1M = 0.15m,
-            OutputCostPer1M = 0.60m
-        },
-
-        // OpenRouter Models - Anthropic Claude
-        ["anthropic/claude-3-opus"] = new()
-        {
-            ModelId = "anthropic/claude-3-opus",
-            Provider = "OpenRouter",
-            InputCostPer1M = 15.00m,
-            OutputCostPer1M = 75.00m
-        },
-        ["anthropic/claude-3.5-sonnet"] = new()
-        {
-            ModelId = "anthropic/claude-3.5-sonnet",
-            Provider = "OpenRouter",
-            InputCostPer1M = 3.00m,
-            OutputCostPer1M = 15.00m
-        },
-        ["anthropic/claude-3.5-haiku"] = new()
-        {
-            ModelId = "anthropic/claude-3.5-haiku",
-            Provider = "OpenRouter",
-            InputCostPer1M = 0.80m,
-            OutputCostPer1M = 4.00m
-        },
-
         // Local Ollama Models (self-hosted, zero cost)
         ["llama3:8b"] = new()
         {

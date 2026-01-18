@@ -63,6 +63,7 @@ apps/api/src/Api/BoundedContexts/
 ├── KnowledgeBase/           # RAG system, AI agents, chat threads, vector search
 ├── SharedGameCatalog/       # Community game database with soft-delete
 ├── SystemConfiguration/     # Runtime config, feature flags, environment settings
+├── UserLibrary/             # User game collections, wishlist, played history
 ├── UserNotifications/       # In-app alerts, email notifications, push notifications
 └── WorkflowIntegration/     # n8n workflows, webhooks, error logging
 ```

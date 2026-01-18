@@ -278,9 +278,9 @@ public sealed class ChatThreadRepositoryIntegrationTests : IAsyncLifetime
         await EnsureUserExistsAsync(TestUserId1);
 
         var thread1 = CreateTestChatThread(TestThreadId1, TestUserId1, null);
-        await Task.Delay(10);
+        await Task.Delay(TimeSpan.FromMilliseconds(10), TestCancellationToken);
         var thread2 = CreateTestChatThread(TestThreadId2, TestUserId1, null);
-        await Task.Delay(10);
+        await Task.Delay(TimeSpan.FromMilliseconds(10), TestCancellationToken);
         var thread3 = CreateTestChatThread(TestThreadId3, TestUserId1, null);
 
         await _repository!.AddAsync(thread1, TestCancellationToken);
@@ -309,7 +309,7 @@ public sealed class ChatThreadRepositoryIntegrationTests : IAsyncLifetime
             var threadId = new Guid($"40000000-0000-0000-0000-00000000000{i}");
             var thread = CreateTestChatThread(threadId, TestUserId1);
             await _repository!.AddAsync(thread, TestCancellationToken);
-            await Task.Delay(10);
+            await Task.Delay(TimeSpan.FromMilliseconds(10), TestCancellationToken);
         }
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 

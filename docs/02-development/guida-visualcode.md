@@ -331,8 +331,8 @@ pwsh setup-secrets.ps1 -SaveGenerated
 ### File Secrets Generati
 
 **CRITICAL** (startup blockers):
-- `admin.secret`
-- `database.secret`
+- `admin.secret` (ADMIN_PASSWORD + INITIAL_ADMIN_PASSWORD devono coincidere)
+- `database.secret` (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB)
 - `jwt.secret`
 - `qdrant.secret`
 - `redis.secret`

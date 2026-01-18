@@ -896,11 +896,27 @@ curl https://api.meepleai.com/health
 
 ## Resources
 
+### Official Documentation
 - [Traefik Documentation](https://doc.traefik.io/traefik/)
 - [Docker Compose Reference](https://docs.docker.com/compose/)
 - [PostgreSQL Backup Guide](https://www.postgresql.org/docs/current/backup.html)
 - [Grafana Dashboards](https://grafana.com/grafana/dashboards/)
+
+### MeepleAI Deployment Guides (New 2026-01-18)
+- [NEW-GUIDES-INDEX.md](./NEW-GUIDES-INDEX.md) - Complete deployment guide index
+- [Infrastructure Cost Summary](./infrastructure-cost-summary.md) - Budget planning (Alpha → Release 10K)
+- [Domain Setup Guide](./domain-setup-guide.md) - Domain acquisition and DNS configuration
+- [Email & TOTP Services](./email-totp-services.md) - Communication services setup
+- [Monitoring Setup Guide](./monitoring-setup-guide.md) - Grafana + Prometheus configuration
+- [Infrastructure Deployment Checklist](./infrastructure-deployment-checklist.md) - Complete deployment workflow
+- [BoardGameGeek API Setup](./boardgamegeek-api-setup.md) - BGG integration configuration
+- [Secrets Management](./secrets-management.md) - Secret system (.secret files)
+- [Auto-Configuration Guide](./auto-configuration-guide.md) - Auto-config system (ADR-021)
+
+### Related Documentation
 - [Monitoring Guide](../02-development/README.md#monitoring)
+- [Testing Guide](../05-testing/README.md)
+- [Security Guide](../06-security/README.md)
 
 ---
 

@@ -17,6 +17,7 @@ using Moq;
 using System.Diagnostics;
 using System.Text;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Performance;
 
@@ -41,8 +42,8 @@ namespace Api.Tests.BoundedContexts.Authentication.Performance;
 /// Pattern: Integration testing with real database, performance-focused assertions
 /// Issue #2603: Marked as Skip=CI to run separately in performance suite
 /// </remarks>
-[Trait("Category", "Performance")]
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Performance)]
+[Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "Testcontainers")]
 [Trait("BoundedContext", "Authentication")]
 [Trait("Issue", "914")]

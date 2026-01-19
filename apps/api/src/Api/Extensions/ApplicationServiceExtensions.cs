@@ -53,7 +53,8 @@ internal static class ApplicationServiceExtensions
         services.AddSystemConfigurationContext();
 
         // DDD-PHASE3: Administration bounded context
-        services.AddAdministrationContext();
+        // ISSUE-2528: Pass configuration for orphaned task cleanup options
+        services.AddAdministrationContext(configuration);
 
         // DDD-PHASE4: DocumentProcessing bounded context
         // BGAI-001-v2: Pass configuration for PDF extractor provider selection

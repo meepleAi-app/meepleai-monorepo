@@ -17,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration;
 
@@ -26,7 +27,7 @@ namespace Api.Tests.Integration;
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
 [Collection("SharedTestcontainers")]
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Integration)]
 [Trait("Category", "CrossContext")]
 [Trait("Issue", "2031")]
 public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime

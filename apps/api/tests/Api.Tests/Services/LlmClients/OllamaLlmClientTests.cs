@@ -9,6 +9,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Services.LlmClients;
 
@@ -124,7 +125,7 @@ public class OllamaLlmClientTests
     }
 
     [Fact]
-    [Trait("Category", "Integration")]
+    [Trait("Category", TestCategories.Integration)]
     public async Task GenerateCompletion_ModelNotFound_ReturnsError()
     {
         // Arrange
@@ -157,7 +158,7 @@ public class OllamaLlmClientTests
     }
 
     [Fact]
-    [Trait("Category", "Integration")]
+    [Trait("Category", TestCategories.Integration)]
     public async Task GenerateCompletionStream_Success_YieldsChunks()
     {
         // Arrange
@@ -241,7 +242,7 @@ public class OllamaLlmClientTests
     }
 
     [Fact]
-    [Trait("Category", "Integration")]
+    [Trait("Category", TestCategories.Integration)]
     public async Task ConcurrentRequests_HandledCorrectly()
     {
         // Arrange

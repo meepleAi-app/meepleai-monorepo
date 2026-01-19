@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 /// Tests for UsageStats value object
 /// Issue #2589: Verify input/output token granularity tracking
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UsageStatsTests
 {
     [Fact]

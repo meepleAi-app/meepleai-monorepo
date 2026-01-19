@@ -19,10 +19,10 @@ import { CheckCircleIcon, AlertTriangleIcon, XCircleIcon, PlayIcon } from 'lucid
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { ServiceHealth } from '@/lib/api';
+import type { ServiceHealthStatus } from '@/lib/api';
 
 interface ServiceStatusCardProps {
-  service: ServiceHealth;
+  service: ServiceHealthStatus;
   isCritical: boolean;
   onTestNow: () => void;
   locale: string;

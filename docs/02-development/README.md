@@ -474,14 +474,28 @@ pnpm update <package-name>
 
 ## Resources
 
+### Development Guides
+- **[Visual Studio Code Setup](guida-visualcode.md)** ⭐ Task automation, troubleshooting, Docker workflow
+- [Git Workflow](git-workflow.md)
+- [Operational Guide](operational-guide.md)
+- [Documentation Tools](documentation-tools-guide.md)
+
+### Configuration
+- [Local Secrets Setup](local-secrets-setup.md)
+- [Configuration Values Guide](configuration-values-guide.md)
+- [Docker Services Test URLs](docker-services-test-urls.md)
+
+### Architecture
 - [Architecture Overview](../01-architecture/overview/system-architecture.md)
-- [API Documentation](http://localhost:8080/scalar/v1)
-- [Living Documentation Guide](../living-documentation.md)
 - [ADRs](../01-architecture/adr/)
 - [Bounded Context READMEs](../../apps/api/src/Api/BoundedContexts/)
 
+### API & Testing
+- [API Documentation](http://localhost:8080/scalar/v1)
+- [Living Documentation Guide](../living-documentation.md)
+
 ---
 
-**Version**: 1.0
-**Last Updated**: 2026-01-01
+**Version**: 1.1
+**Last Updated**: 2026-01-18
 **Maintainers**: Engineering Team

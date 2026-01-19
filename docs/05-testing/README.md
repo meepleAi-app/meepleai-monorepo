@@ -9,6 +9,7 @@
 ```
 05-testing/
 ├── backend/                    # Backend testing guides
+│   ├── BACKEND_E2E_TESTING.md
 │   ├── testcontainers-best-practices.md
 │   ├── INTEGRATION_TEST_OPTIMIZATION.md
 │   ├── oauth-testing.md

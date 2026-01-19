@@ -1,6 +1,7 @@
 using Api.BoundedContexts.WorkflowIntegration.Domain.Entities;
 using Api.BoundedContexts.WorkflowIntegration.Domain.ValueObjects;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Domain.Entities;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.WorkflowIntegration.Domain.Entities;
 /// Domain tests for N8NConfiguration aggregate.
 /// Tests n8n configuration creation and lifecycle.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class N8NConfigurationTests
 {
     [Fact]

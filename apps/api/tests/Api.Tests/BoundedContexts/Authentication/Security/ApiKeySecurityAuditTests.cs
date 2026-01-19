@@ -38,8 +38,8 @@ namespace Api.Tests.BoundedContexts.Authentication.Security;
 ///
 /// Pattern: Unit testing with mocked logger, in-memory DB, security-first validation
 /// </remarks>
-[Trait("Category", "Security")]
-[Trait("Category", "Unit")]
+[Trait("Category", TestCategories.Security)]
+[Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "Authentication")]
 [Trait("Issue", "914")]
 public sealed class ApiKeySecurityAuditTests : IDisposable

@@ -10,6 +10,7 @@ using Xunit;
 using ReportFormat = Api.BoundedContexts.Administration.Domain.ValueObjects.ReportFormat;
 using ReportTemplate = Api.BoundedContexts.Administration.Domain.ValueObjects.ReportTemplate;
 using ReportExecutionStatus = Api.BoundedContexts.Administration.Domain.ValueObjects.ReportExecutionStatus;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.Administration;
 
@@ -17,6 +18,7 @@ namespace Api.Tests.Integration.Administration;
 /// Integration tests for report generation with email delivery
 /// ISSUE-918: Email delivery integration tests
 /// </summary>
+[Trait("Category", TestCategories.Integration)]
 public sealed class ReportEmailIntegrationTests
 {
     private readonly Mock<IReportGeneratorService> _mockReportGenerator;

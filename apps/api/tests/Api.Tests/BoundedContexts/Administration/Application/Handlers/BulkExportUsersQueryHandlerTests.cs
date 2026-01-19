@@ -7,8 +7,11 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
+
+[Trait("Category", TestCategories.Unit)]
 
 public class BulkExportUsersQueryHandlerTests
 {

@@ -17,6 +17,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ExportButton } from '../ExportButton';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import { getMenuItem } from '@/test-utils/locale-queries';
 
 // ============================================================================
 // Mock Setup
@@ -139,10 +140,10 @@ describe('ExportButton - Advanced Mode', () => {
     await user.click(button);
 
     await waitFor(() => {
-      expect(screen.getByText('CSV - Base')).toBeInTheDocument();
-      expect(screen.getByText('CSV - Completo')).toBeInTheDocument();
-      expect(screen.getByText('JSON - Base')).toBeInTheDocument();
-      expect(screen.getByText('JSON - Completo')).toBeInTheDocument();
+      expect(getMenuItem(/csv - base/i)).toBeInTheDocument();
+      expect(getMenuItem(/csv - completo/i)).toBeInTheDocument();
+      expect(getMenuItem(/json - base/i)).toBeInTheDocument();
+      expect(getMenuItem(/json - completo/i)).toBeInTheDocument();
     });
   });
 
@@ -167,7 +168,7 @@ describe('ExportButton - Export Functionality', () => {
     render(<ExportButton data={mockData} />);
 
     await user.click(screen.getByRole('button', { name: /Esporta/i }));
-    await user.click(screen.getByText('CSV - Base'));
+    await user.click(getMenuItem(/csv - base/i));
 
     await waitFor(() => {
       expect(mockExportLibrary).toHaveBeenCalledWith(mockData, {
@@ -182,7 +183,7 @@ describe('ExportButton - Export Functionality', () => {
     render(<ExportButton data={mockData} />);
 
     await user.click(screen.getByRole('button', { name: /Esporta/i }));
-    await user.click(screen.getByText('CSV - Completo'));
+    await user.click(getMenuItem(/csv - completo/i));
 
     await waitFor(() => {
       expect(mockExportLibrary).toHaveBeenCalledWith(mockData, {
@@ -197,7 +198,7 @@ describe('ExportButton - Export Functionality', () => {
     render(<ExportButton data={mockData} />);
 
     await user.click(screen.getByRole('button', { name: /Esporta/i }));
-    await user.click(screen.getByText('JSON - Base'));
+    await user.click(getMenuItem(/json - base/i));
 
     await waitFor(() => {
       expect(mockExportLibrary).toHaveBeenCalledWith(mockData, {
@@ -212,7 +213,7 @@ describe('ExportButton - Export Functionality', () => {
     render(<ExportButton data={mockData} />);
 
     await user.click(screen.getByRole('button', { name: /Esporta/i }));
-    await user.click(screen.getByText('JSON - Completo'));
+    await user.click(getMenuItem(/json - completo/i));
 
     await waitFor(() => {
       expect(mockExportLibrary).toHaveBeenCalledWith(mockData, {
@@ -235,7 +236,7 @@ describe('ExportButton - Toast Notifications', () => {
     render(<ExportButton data={mockData} />);
 
     await user.click(screen.getByRole('button', { name: /Esporta/i }));
-    await user.click(screen.getByText('CSV - Base'));
+    await user.click(getMenuItem(/csv - base/i));
 
     await waitFor(() => {
       expect(mockToastSuccess).toHaveBeenCalledWith(
@@ -249,7 +250,7 @@ describe('ExportButton - Toast Notifications', () => {
     render(<ExportButton data={mockData} />);
 
     await user.click(screen.getByRole('button', { name: /Esporta/i }));
-    await user.click(screen.getByText('JSON - Completo'));
+    await user.click(getMenuItem(/json - completo/i));
 
     await waitFor(() => {
       expect(mockToastSuccess).toHaveBeenCalledWith(
@@ -267,7 +268,7 @@ describe('ExportButton - Toast Notifications', () => {
     render(<ExportButton data={mockData} />);
 
     await user.click(screen.getByRole('button', { name: /Esporta/i }));
-    await user.click(screen.getByText('CSV - Base'));
+    await user.click(getMenuItem(/csv - base/i));
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith('Export failed');
@@ -283,7 +284,7 @@ describe('ExportButton - Toast Notifications', () => {
     render(<ExportButton data={mockData} />);
 
     await user.click(screen.getByRole('button', { name: /Esporta/i }));
-    await user.click(screen.getByText('CSV - Base'));
+    await user.click(getMenuItem(/csv - base/i));
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith('Impossibile esportare la libreria.');

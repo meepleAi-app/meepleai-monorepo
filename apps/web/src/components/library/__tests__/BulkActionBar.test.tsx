@@ -19,6 +19,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BulkActionBar } from '../BulkActionBar';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import { getMenuItem, getAlertDialogHeading } from '@/test-utils/locale-queries';
 
 // ============================================================================
 // Mock Setup
@@ -158,9 +159,10 @@ describe('BulkActionBar - Rendering', () => {
   it('renders action buttons', () => {
     render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
 
-    // Desktop buttons (visible on sm+)
-    expect(screen.getByRole('button', { name: /Preferiti/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Rimuovi/i })).toBeInTheDocument();
+    // Component has both desktop and mobile versions of buttons (responsive design)
+    // Using getAllByRole since there are multiple buttons with same name
+    expect(screen.getAllByRole('button', { name: /Preferiti/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /Rimuovi/i }).length).toBeGreaterThan(0);
   });
 
   it('renders clear selection button', () => {
@@ -319,7 +321,7 @@ describe('BulkActionBar - Bulk Export', () => {
     await user.click(exportButtons[0]);
 
     // Click CSV - Base
-    await user.click(screen.getByText('CSV - Base'));
+    await user.click(getMenuItem(/csv - base/i));
 
     await waitFor(() => {
       expect(mockExportLibrary).toHaveBeenCalledWith(
@@ -345,7 +347,7 @@ describe('BulkActionBar - Bulk Export', () => {
     const exportButtons = screen.getAllByRole('button', { name: /Esporta/i });
     await user.click(exportButtons[0]);
 
-    await user.click(screen.getByText('JSON - Completo'));
+    await user.click(getMenuItem(/json - completo/i));
 
     await waitFor(() => {
       expect(mockExportLibrary).toHaveBeenCalledWith(
@@ -371,7 +373,7 @@ describe('BulkActionBar - Bulk Export', () => {
 
     const exportButtons = screen.getAllByRole('button', { name: /Esporta/i });
     await user.click(exportButtons[0]);
-    await user.click(screen.getByText('CSV - Base'));
+    await user.click(getMenuItem(/csv - base/i));
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith('Errore durante l\'esportazione');
@@ -395,9 +397,9 @@ describe('BulkActionBar - Remove Button', () => {
     const removeButtons = screen.getAllByRole('button', { name: /Rimuovi/i });
     await user.click(removeButtons[0]);
 
-    // Dialog should appear
+    // Dialog should appear - use getAlertDialogHeading since it's a destructive action dialog
     await waitFor(() => {
-      expect(screen.getByText(/Rimuovi 2 giochi/i)).toBeInTheDocument();
+      expect(getAlertDialogHeading(/rimuovi 2 giochi/i)).toBeInTheDocument();
     });
   });
 });

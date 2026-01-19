@@ -14,6 +14,7 @@ import type { Mock } from 'vitest';
 import { ExportChatModal } from '../ExportChatModal';
 import { exportChatAction } from '@/actions/chat';
 import type { ExportChatActionState } from '@/actions/chat';
+import { getDialogHeading, queryDialogHeading } from '@/test-utils/locale-queries';
 
 // Mock Server Action
 vi.mock('@/actions/chat', () => ({
@@ -48,14 +49,14 @@ describe('ExportChatModal', () => {
     it('renders modal when isOpen is true', () => {
       render(<ExportChatModal {...defaultProps} />);
 
-      expect(screen.getByText('Esporta Chat')).toBeInTheDocument();
+      expect(getDialogHeading(/esporta chat/i)).toBeInTheDocument();
       expect(screen.getByText(/Esporta la conversazione per Catan/)).toBeInTheDocument();
     });
 
     it('does not render modal when isOpen is false', () => {
       render(<ExportChatModal {...defaultProps} isOpen={false} />);
 
-      expect(screen.queryByText('Esporta Chat')).not.toBeInTheDocument();
+      expect(queryDialogHeading(/esporta chat/i)).not.toBeInTheDocument();
     });
 
     it('displays game name in description', () => {

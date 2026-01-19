@@ -50,7 +50,8 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
     healthcheck:
-      test: ["CMD-SHELL", "kill -0 1 || exit 1"]
+      # Note: wget/curl not available in Qdrant image, use bash TCP health check
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /readyz HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && grep -q \"HTTP/1.1 200\" <&3'"]
       interval: 10s
       timeout: 5s
       retries: 10

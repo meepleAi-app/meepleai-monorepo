@@ -14,3 +14,7 @@ export { UserGameCard } from './UserGameCard';
 export { AgentConfigModal } from './AgentConfigModal';
 export { PdfUploadModal } from './PdfUploadModal';
 export { RecentLibraryCard, type RecentLibraryCardProps } from './RecentLibraryCard';
+
+// Bulk Operations (Issue #2613)
+export { BulkActionBar, type BulkActionBarProps } from './BulkActionBar';
+export { BulkRemoveDialog, type BulkRemoveDialogProps } from './BulkRemoveDialog';

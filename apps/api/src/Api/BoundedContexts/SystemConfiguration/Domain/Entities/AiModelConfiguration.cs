@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.SystemConfiguration.Domain.Entities;
@@ -6,6 +7,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 /// Represents an AI model configuration for runtime selection.
 /// Supports OpenRouter and Ollama providers with priority-based fallback.
 /// Issue #2520: Refactored to use JSON settings for flexibility
+/// Issue #2596: Extended with tier routing and environment separation
 /// </summary>
 public sealed class AiModelConfiguration
 {
@@ -18,6 +20,23 @@ public sealed class AiModelConfiguration
     public bool IsPrimary { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
+
+    // Issue #2596: Tier routing configuration
+    /// <summary>
+    /// User tier this configuration applies to. Null means global (all tiers).
+    /// </summary>
+    public LlmUserTier? ApplicableTier { get; private set; }
+
+    /// <summary>
+    /// Environment type (Production/Test) for separate model configurations.
+    /// </summary>
+    public LlmEnvironmentType EnvironmentType { get; private set; }
+
+    /// <summary>
+    /// Whether this is the default model for the tier/environment combination.
+    /// Only one model per tier/environment should be marked as default.
+    /// </summary>
+    public bool IsDefaultForTier { get; private set; }
 
     // JSON Settings (JSONB) - Issue #2520
     public ModelSettings Settings { get; private set; } = ModelSettings.Default;
@@ -35,7 +54,10 @@ public sealed class AiModelConfiguration
         int priority,
         ModelSettings settings,
         bool isActive = true,
-        bool isPrimary = false)
+        bool isPrimary = false,
+        LlmUserTier? applicableTier = null,
+        LlmEnvironmentType environmentType = LlmEnvironmentType.Production,
+        bool isDefaultForTier = false)
     {
         Id = id;
         ModelId = modelId ?? throw new ArgumentNullException(nameof(modelId));
@@ -46,12 +68,16 @@ public sealed class AiModelConfiguration
         Usage = UsageStats.Empty;
         IsActive = isActive;
         IsPrimary = isPrimary;
+        ApplicableTier = applicableTier;
+        EnvironmentType = environmentType;
+        IsDefaultForTier = isDefaultForTier;
         CreatedAt = DateTime.UtcNow;
     }
 
     /// <summary>
     /// Factory method to create a new AI model configuration.
     /// Issue #2520: Refactored to use ModelSettings value object
+    /// Issue #2596: Extended with tier routing parameters
     /// </summary>
     public static AiModelConfiguration Create(
         string modelId,
@@ -60,7 +86,10 @@ public sealed class AiModelConfiguration
         int priority,
         ModelSettings settings,
         bool isActive = true,
-        bool isPrimary = false)
+        bool isPrimary = false,
+        LlmUserTier? applicableTier = null,
+        LlmEnvironmentType environmentType = LlmEnvironmentType.Production,
+        bool isDefaultForTier = false)
     {
         if (string.IsNullOrWhiteSpace(modelId))
             throw new ArgumentException("ModelId cannot be empty", nameof(modelId));
@@ -82,8 +111,31 @@ public sealed class AiModelConfiguration
             priority,
             settings,
             isActive,
-            isPrimary
+            isPrimary,
+            applicableTier,
+            environmentType,
+            isDefaultForTier
         );
+    }
+
+    /// <summary>
+    /// Set the tier routing configuration. Issue #2596.
+    /// </summary>
+    public void SetTierRouting(LlmUserTier? tier, LlmEnvironmentType environment, bool isDefault)
+    {
+        ApplicableTier = tier;
+        EnvironmentType = environment;
+        IsDefaultForTier = isDefault;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Mark this configuration as the default for its tier/environment.
+    /// </summary>
+    public void SetAsDefaultForTier(bool isDefault)
+    {
+        IsDefaultForTier = isDefault;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     public void UpdatePriority(int newPriority)

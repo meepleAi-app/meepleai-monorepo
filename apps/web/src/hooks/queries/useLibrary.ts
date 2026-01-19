@@ -232,3 +232,28 @@ export function useToggleLibraryFavorite(): UseMutationResult<
     },
   });
 }
+
+/**
+ * Hook to fetch recently added games for dashboard widget (Issue #2612)
+ *
+ * Returns the most recently added games sorted by addedAt descending.
+ * Reuses library query cache for efficiency.
+ *
+ * @param limit - Number of recent games to fetch (default: 5)
+ * @param enabled - Whether to run the query (default: true)
+ * @returns UseQueryResult with paginated library data
+ */
+export function useRecentlyAddedGames(
+  limit: number = 5,
+  enabled: boolean = true
+): UseQueryResult<PaginatedLibraryResponse, Error> {
+  return useLibrary(
+    {
+      page: 1,
+      pageSize: limit,
+      sortBy: 'addedAt',
+      sortDescending: true,
+    },
+    enabled
+  );
+}

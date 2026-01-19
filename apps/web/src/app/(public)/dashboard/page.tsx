@@ -46,6 +46,7 @@ import { ChatHistorySection } from './components/ChatHistorySection';
 import { GreetingSection } from './components/GreetingSection';
 import { LibraryQuotaSection } from './components/LibraryQuotaSection';
 import { RecentGamesSection } from './components/RecentGamesSection';
+import { RecentlyAddedSection } from './components/RecentlyAddedSection';
 
 export default function DashboardPage() {
   // TanStack Query hooks (automatic caching, refetching, error handling)
@@ -152,6 +153,9 @@ export default function DashboardPage() {
 
         {/* Library Quota Widget (Issue #2445) */}
         <LibraryQuotaSection />
+
+        {/* Recently Added Games from Library (Issue #2612) */}
+        <RecentlyAddedSection />
 
         {/* Recent Games Section */}
         <RecentGamesSection games={gamesData?.games} isLoading={gamesLoading} error={gamesError} />

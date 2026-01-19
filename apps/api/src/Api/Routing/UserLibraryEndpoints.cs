@@ -28,6 +28,7 @@ internal static class UserLibraryEndpoints
         MapGetGameInLibraryStatusEndpoint(group);
 
         // Agent configuration endpoints
+        MapGetGameAgentConfigEndpoint(group);
         MapConfigureGameAgentEndpoint(group);
         MapResetGameAgentEndpoint(group);
 
@@ -288,6 +289,35 @@ internal static class UserLibraryEndpoints
         .WithTags("Library")
         .WithSummary("Check if game is in library")
         .WithDescription("Returns whether a game is in user's library and if it's marked as favorite.");
+    }
+
+    private static void MapGetGameAgentConfigEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/games/{gameId:guid}/agent-config", async (
+            Guid gameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetGameAgentConfigQuery(userId, gameId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<AgentConfigDto?>(200)
+        .Produces(401)
+        .WithTags("Library")
+        .WithSummary("Get AI agent configuration")
+        .WithDescription("Returns the custom AI agent configuration for a game in user's library. Returns null if no custom configuration exists (defaults should be used).");
     }
 
     private static void MapConfigureGameAgentEndpoint(RouteGroupBuilder group)

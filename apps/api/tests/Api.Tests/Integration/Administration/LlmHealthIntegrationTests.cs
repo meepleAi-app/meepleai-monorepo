@@ -3,6 +3,7 @@ using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Configuration;
 using Api.Models;
 using Api.Services.LlmClients;
@@ -53,6 +54,7 @@ public sealed class LlmHealthIntegrationTests
         var loggerMock = new Mock<ILogger<HybridLlmService>>();
         var aiSettingsMock = new Mock<IOptions<AiProviderSettings>>();
         aiSettingsMock.Setup(x => x.Value).Returns(new AiProviderSettings());
+        var modelConfigRepositoryMock = new Mock<IAiModelConfigurationRepository>();
         var healthCheckServiceMock = new Mock<IProviderHealthCheckService>();
 
         var hybridServiceMock = new Mock<HybridLlmService>(
@@ -61,6 +63,7 @@ public sealed class LlmHealthIntegrationTests
             costLogRepositoryMock.Object,
             loggerMock.Object,
             aiSettingsMock.Object,
+            modelConfigRepositoryMock.Object,
             healthCheckServiceMock.Object);
 
         hybridServiceMock.Setup(s => s.GetMonitoringStatus()).Returns(monitoringStatus);

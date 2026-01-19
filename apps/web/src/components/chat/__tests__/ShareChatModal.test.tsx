@@ -18,6 +18,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ShareChatModal } from '../ShareChatModal';
 import * as apiModule from '@/lib/api';
+import { getDialogHeading, queryDialogHeading } from '@/test-utils/locale-queries';
 
 // Mock the API module
 vi.mock('@/lib/api', async importOriginal => {
@@ -81,13 +82,13 @@ describe('ShareChatModal', () => {
     it('renders modal when isOpen is true', () => {
       render(<ShareChatModal {...defaultProps} />);
 
-      expect(screen.getByText('Share Chat Thread')).toBeInTheDocument();
+      expect(getDialogHeading(/share chat thread/i)).toBeInTheDocument();
     });
 
     it('does not render modal when isOpen is false', () => {
       render(<ShareChatModal {...defaultProps} isOpen={false} />);
 
-      expect(screen.queryByText('Share Chat Thread')).not.toBeInTheDocument();
+      expect(queryDialogHeading(/share chat thread/i)).not.toBeInTheDocument();
     });
 
     it('renders dialog description', () => {
@@ -297,7 +298,7 @@ describe('ShareChatModal', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Share Link Created')).toBeInTheDocument();
+        expect(getDialogHeading(/share link created/i)).toBeInTheDocument();
       });
     });
 
@@ -489,7 +490,7 @@ describe('ShareChatModal', () => {
       await waitFor(
         () => {
           expect(screen.getByDisplayValue(mockShareLinkResponse.shareableUrl)).toBeInTheDocument();
-          expect(screen.getByText('Share Link Created')).toBeInTheDocument();
+          expect(getDialogHeading(/share link created/i)).toBeInTheDocument();
         },
         { timeout: 3000 }
       );
@@ -586,7 +587,7 @@ describe('ShareChatModal', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Share Link Created')).toBeInTheDocument();
+        expect(getDialogHeading(/share link created/i)).toBeInTheDocument();
       });
 
       // Close modal
@@ -596,8 +597,8 @@ describe('ShareChatModal', () => {
       rerender(<ShareChatModal {...defaultProps} isOpen={true} />);
 
       // Should show form again
-      expect(screen.getByText('Share Chat Thread')).toBeInTheDocument();
-      expect(screen.queryByText('Share Link Created')).not.toBeInTheDocument();
+      expect(getDialogHeading(/share chat thread/i)).toBeInTheDocument();
+      expect(queryDialogHeading(/share link created/i)).not.toBeInTheDocument();
     });
   });
 
@@ -694,7 +695,7 @@ describe('ShareChatModal', () => {
 
       // Should complete without error
       await waitFor(() => {
-        expect(screen.getByText('Share Link Created')).toBeInTheDocument();
+        expect(getDialogHeading(/share link created/i)).toBeInTheDocument();
       });
     });
   });

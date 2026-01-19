@@ -13,9 +13,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RemoveGameDialog } from '../RemoveGameDialog';
+import { getAlertDialogHeading, queryAlertDialogHeading } from '@/test-utils/locale-queries';
 
 // ============================================================================
 // Mock Setup
@@ -68,26 +69,29 @@ describe('RemoveGameDialog - Rendering', () => {
   it('renders dialog when isOpen is true', () => {
     render(<RemoveGameDialog {...defaultProps} />);
 
-    expect(screen.getByText('Rimuovi dalla Libreria?')).toBeInTheDocument();
-    expect(screen.getByText(/Catan/)).toBeInTheDocument();
+    expect(getAlertDialogHeading(/rimuovi dalla libreria/i)).toBeInTheDocument();
+    const alertDialog = screen.getByRole('alertdialog');
+    expect(within(alertDialog).getByText(/Catan/)).toBeInTheDocument();
   });
 
   it('does not render dialog when isOpen is false', () => {
     render(<RemoveGameDialog {...defaultProps} isOpen={false} />);
 
-    expect(screen.queryByText('Rimuovi dalla Libreria?')).not.toBeInTheDocument();
+    expect(queryAlertDialogHeading(/rimuovi dalla libreria/i)).not.toBeInTheDocument();
   });
 
   it('displays warning about irreversible action', () => {
     render(<RemoveGameDialog {...defaultProps} />);
 
-    expect(screen.getByText(/Questa azione non può essere annullata/)).toBeInTheDocument();
+    const alertDialog = screen.getByRole('alertdialog');
+    expect(within(alertDialog).getByText(/questa azione non può essere annullata/i)).toBeInTheDocument();
   });
 
   it('displays game title in description', () => {
     render(<RemoveGameDialog {...defaultProps} gameTitle="Ticket to Ride" />);
 
-    expect(screen.getByText(/Ticket to Ride/)).toBeInTheDocument();
+    const alertDialog = screen.getByRole('alertdialog');
+    expect(within(alertDialog).getByText(/Ticket to Ride/)).toBeInTheDocument();
   });
 
   it('renders remove and cancel buttons', () => {
@@ -208,7 +212,8 @@ describe('RemoveGameDialog - Loading State', () => {
 
     render(<RemoveGameDialog {...defaultProps} />);
 
-    expect(screen.getByText('Rimozione...')).toBeInTheDocument();
+    const alertDialog = screen.getByRole('alertdialog');
+    expect(within(alertDialog).getByText(/rimozione/i)).toBeInTheDocument();
   });
 
   it('disables remove button when loading', () => {

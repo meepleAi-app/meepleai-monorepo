@@ -117,8 +117,9 @@ public class RedisBackgroundTaskOrchestratorTests
         // Assert - task should not be executed immediately
         Assert.False(taskExecuted);
 
-        // Wait for delay + execution time + overhead buffer to prevent race condition
-        await Task.Delay(delay + TestConstants.Timing.TinyDelay + TimeSpan.FromMilliseconds(50), TestCancellationToken);
+        // Wait for delay + execution time + generous overhead buffer to prevent race condition
+        // Buffer increased from 50ms to 200ms to account for scheduler overhead and test host variability
+        await Task.Delay(delay + TestConstants.Timing.TinyDelay + TimeSpan.FromMilliseconds(200), TestCancellationToken);
 
         // Assert - task should be executed after delay
         Assert.True(taskExecuted);

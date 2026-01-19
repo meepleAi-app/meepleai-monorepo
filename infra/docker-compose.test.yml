@@ -1,5 +1,8 @@
 # docker-compose.test.yml - Test Environment Memory Overrides
 #
+# Inherits project name from docker-compose.yml (name: meepleai)
+# Volumes will be named: meepleai_pgdata, meepleai_qdrantdata, etc.
+#
 # Purpose: Optimize memory allocation for test suite execution
 # Issue: #2576 - Test crashes with exit -1073741819 (ACCESS_VIOLATION)
 # Root Cause: PostgreSQL 2GB limit insufficient for concurrent test load (needs 3GB)

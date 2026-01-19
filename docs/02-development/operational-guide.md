@@ -1289,7 +1289,7 @@ Get-Content backup_20260118_103045.sql | docker compose exec -T postgres psql -U
 
 # Reset database completo
 docker compose down postgres
-docker volume rm infra_pgdata
+docker volume rm meepleai_postgres_data
 docker compose up -d postgres
 Start-Sleep -Seconds 10  # Attendi avvio
 cd apps\api\src\Api
@@ -1631,7 +1631,7 @@ pnpm store prune; Remove-Item -Recurse -Force node_modules, .next; pnpm install
 cd infra\secrets; .\setup-secrets.ps1 -SaveGenerated
 
 # Database corrotto? Reset completo (⚠️ DATI PERSI)
-docker compose down postgres; docker volume rm infra_pgdata; docker compose up -d postgres
+docker compose down postgres; docker volume rm meepleai_postgres_data; docker compose up -d postgres
 ```
 
 ### Keyboard Shortcuts

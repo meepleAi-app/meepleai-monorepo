@@ -32,10 +32,10 @@ import {
   AgentConfigModal,
   PdfUploadModal,
 } from '@/components/library';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent } from '@/components/ui/data-display/card';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useLibrary, useLibraryQuota } from '@/hooks/queries/useLibrary';
 import type { GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
 

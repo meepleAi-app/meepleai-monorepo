@@ -32,7 +32,7 @@ import { ReactNode } from 'react';
 
 import { Loader2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 export interface LoadingButtonProps extends React.ComponentPropsWithoutRef<typeof Button> {

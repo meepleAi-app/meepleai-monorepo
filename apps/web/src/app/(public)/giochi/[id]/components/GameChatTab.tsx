@@ -20,8 +20,8 @@ import { useQuery } from '@tanstack/react-query';
 
 import { ChatContent } from '@/components/chat/ChatContent';
 import { Spinner } from '@/components/loading';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Separator } from '@/components/ui/navigation/separator';
 import { api, type QuickQuestion } from '@/lib/api';
 import { ChatStoreProvider } from '@/store/chat/ChatStoreProvider';
 import { useChatStore } from '@/store/chat/store';

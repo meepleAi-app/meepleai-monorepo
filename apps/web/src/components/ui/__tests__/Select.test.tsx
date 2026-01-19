@@ -7,7 +7,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
 
 describe('Select', () => {
   it('renders trigger with placeholder and opens content', async () => {

@@ -38,7 +38,7 @@
 
 import { ReactNode, useRef } from 'react';
 
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/overlays/dialog';
 import { cn } from '@/lib/utils';
 
 export interface AccessibleModalProps {

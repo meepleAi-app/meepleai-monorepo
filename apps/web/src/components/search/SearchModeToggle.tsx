@@ -1,4 +1,4 @@
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/primitives/toggle-group';
 import { cn } from '@/lib/utils';
 
 /**

@@ -21,8 +21,8 @@ import React, { FormEvent, useCallback, useRef, KeyboardEvent } from 'react';
 import { Send, Paperclip, Loader2, Zap, Target } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { cn } from '@/lib/utils';
 
 export type ResponseMode = 'fast' | 'complete';

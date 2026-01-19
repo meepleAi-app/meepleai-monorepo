@@ -11,7 +11,7 @@ import {
   CitationLink,
   TypingIndicator,
   type Citation,
-} from '../chat-message';
+} from '../meeple/chat-message';
 
 // ============================================================================
 // Helper Functions

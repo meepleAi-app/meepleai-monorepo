@@ -13,10 +13,10 @@
 
 import { BookOpenCheck, Target, Settings } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Label } from '@/components/ui/primitives/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/overlays/tooltip';
 import { cn } from '@/lib/utils';
 
 export type AgentMode = 'RulesClarifier' | 'StrategyAdvisor' | 'SetupAssistant';

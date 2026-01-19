@@ -7,7 +7,7 @@
 
 import { Archive, Eye, FileText } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/data-display/badge';
 
 export interface GameStatusBadgeProps {
   /** Numeric status: 0=Draft, 1=Published, 2=Archived */

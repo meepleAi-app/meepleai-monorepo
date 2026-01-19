@@ -9,7 +9,7 @@ import React from 'react';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { GameProvider } from '@/components/game/GameProvider';
 import { ChatStoreProvider } from '@/store/chat/ChatStoreProvider';
-import { UIProvider } from '@/components/ui/UIProvider';
+import { UIProvider } from '@/components/ui/meeple/UIProvider';
 import { api } from '@/lib/api';
 
 // Mock API reference for setup

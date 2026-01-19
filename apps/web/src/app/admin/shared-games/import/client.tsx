@@ -29,15 +29,15 @@ import { toast } from 'sonner';
 
 import { AdminAuthGuard } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { Progress } from '@/components/ui/feedback/progress';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
+import { Separator } from '@/components/ui/navigation/separator';
 import {
   Table,
   TableBody,
@@ -45,9 +45,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
+} from '@/components/ui/data-display/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { useApiClient } from '@/lib/api/context';
 import type { CreateSharedGameRequest } from '@/lib/api/schemas/shared-games.schemas';
 

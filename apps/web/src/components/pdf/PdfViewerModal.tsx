@@ -23,7 +23,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/overlays/dialog';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';

@@ -14,7 +14,7 @@ import {
   SheetDescription,
   SheetFooter,
   SheetClose,
-} from '../sheet';
+} from '../navigation/sheet';
 
 describe('Sheet', () => {
   describe('Rendering', () => {

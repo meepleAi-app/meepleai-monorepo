@@ -20,14 +20,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Slider } from '@/components/ui/slider';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+} from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
+import { Label } from '@/components/ui/primitives/label';
+import { Input } from '@/components/ui/primitives/input';
+import { Textarea } from '@/components/ui/primitives/textarea';
+import { Slider } from '@/components/ui/primitives/slider';
+import { Card, CardContent } from '@/components/ui/data-display/card';
+import { Badge } from '@/components/ui/data-display/badge';
 import { toast } from '@/components/layout/Toast';
 import { Loader2, Check, TestTube2, Zap } from 'lucide-react';
 

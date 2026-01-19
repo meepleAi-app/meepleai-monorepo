@@ -11,7 +11,7 @@
 
 import { Clock, Star, Users, Brain, UserCheck } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/data-display/badge';
 
 // ========== Players Badge ==========
 

@@ -3,9 +3,9 @@
  * Displays the list of files being uploaded with aggregate progress
  */
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Progress } from '@/components/ui/feedback/progress';
 import type {
   UploadQueueItem as UploadQueueItemType,
   UploadQueueStats,

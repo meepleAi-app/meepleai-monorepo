@@ -15,10 +15,10 @@ import { useState, KeyboardEvent } from 'react';
 
 import { X } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 
 export interface TagInputProps {
   tags: string[];

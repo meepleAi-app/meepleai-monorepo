@@ -14,7 +14,7 @@
 
 import { BookOpen, Brain, HelpCircle, Lightbulb, Target } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import {
   Dialog,
   DialogContent,
@@ -22,8 +22,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from '@/components/ui/overlays/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 
 // ========== Component Props ==========
 

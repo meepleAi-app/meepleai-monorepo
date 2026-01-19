@@ -13,7 +13,7 @@
 
 import React from 'react';
 
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/data-display/card';
 import { cn } from '@/lib/utils';
 import { Citation } from '@/types';
 

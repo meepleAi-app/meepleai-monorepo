@@ -25,7 +25,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from '@/components/ui/overlays/alert-dialog-primitives';
 import { useRemoveGameFromLibrary } from '@/hooks/queries';
 
 export interface RemoveGameDialogProps {

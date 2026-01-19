@@ -24,14 +24,14 @@ import {
   PencilIcon,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/components/ui/navigation/dropdown-menu';
 import { Input } from '@/components/ui/primitives/input';
 import {
   Select,
@@ -39,7 +39,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
 import { cn } from '@/lib/utils';
 import { Game } from '@/types';
 

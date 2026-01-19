@@ -13,9 +13,9 @@ import Link from 'next/link';
 
 import { toast } from '@/components/layout';
 import { Spinner } from '@/components/loading';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/primitives/button';
+import { Card } from '@/components/ui/data-display/card';
+import { Input } from '@/components/ui/primitives/input';
 
 interface QAStepProps {
   gameId: string;

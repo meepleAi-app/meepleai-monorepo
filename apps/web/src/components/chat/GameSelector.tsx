@@ -13,7 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
 import { useChatStore } from '@/store/chat/store';
 import { Game } from '@/types';
 

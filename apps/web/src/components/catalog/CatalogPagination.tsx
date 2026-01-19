@@ -10,7 +10,7 @@
 
 'use client';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 interface CatalogPaginationProps {

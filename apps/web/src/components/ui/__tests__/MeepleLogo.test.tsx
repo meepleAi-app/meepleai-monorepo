@@ -4,7 +4,7 @@
  */
 
 import { render } from '@testing-library/react';
-import { MeepleLogo } from '../meeple-logo';
+import { MeepleLogo } from '../meeple/meeple-logo';
 
 describe('MeepleLogo', () => {
   it('renders SVG logo', () => {

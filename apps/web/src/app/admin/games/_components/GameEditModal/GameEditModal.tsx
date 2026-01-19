@@ -28,9 +28,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 
 import { useApiClient } from '@/lib/api/context';
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';

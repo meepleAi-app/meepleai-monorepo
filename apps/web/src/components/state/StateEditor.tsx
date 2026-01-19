@@ -19,9 +19,9 @@ import { useState } from 'react';
 
 import { z } from 'zod';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Separator } from '@/components/ui/navigation/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 
 import { BoardStateEditor } from './BoardStateEditor';
 import { PlayerStateEditor } from './PlayerStateEditor';

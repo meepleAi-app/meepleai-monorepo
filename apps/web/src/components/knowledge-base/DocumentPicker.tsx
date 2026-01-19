@@ -12,13 +12,13 @@ import { useMemo, useState } from 'react';
 
 import { FileText, Loader2, Search } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/overlays/hover-card';
+import { Input } from '@/components/ui/primitives/input';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { cn } from '@/lib/utils';
 
 // ========== Types ==========

@@ -363,6 +363,16 @@ internal static class MeepleAiMetrics
         name: "meepleai.cache.dashboard.invalidations.total",
         unit: "invalidations",
         description: "Dashboard cache invalidations triggered by configuration changes");
+
+    /// <summary>
+    /// Counter for orphaned analysis tasks cleaned up by background job.
+    /// ISSUE-2528: Tracks automatic cleanup of stale failed/cancelled tasks.
+    /// </summary>
+    public static readonly Counter<long> OrphanedTasksCleanedTotal = Meter.CreateCounter<long>(
+        name: "meepleai.background.orphaned_tasks_cleaned.total",
+        unit: "tasks",
+        description: "Total number of orphaned analysis tasks cleaned up by background job");
+
     /// <summary>
     /// Counter for failed TOTP verification attempts.
     /// Tracks brute force attack patterns and authentication failures.

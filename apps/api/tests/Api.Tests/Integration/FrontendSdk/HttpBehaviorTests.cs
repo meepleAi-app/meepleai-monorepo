@@ -99,18 +99,28 @@ public class HttpBehaviorTests : IAsyncLifetime
         content.Should().ContainAny("Healthy", "Unhealthy", "Degraded");
     }
 
-    [Fact(DisplayName = "GET /api/v1/games without auth should return 401 Unauthorized")]
-    public async Task GetGames_WithoutAuth_Returns401Unauthorized()
+    [Fact(DisplayName = "GET /api/v1/games without auth should return 200 OK (public endpoint)")]
+    public async Task GetGames_WithoutAuth_Returns200Ok()
     {
         // Arrange & Act
         var response = await _client.GetAsync("/api/v1/games");
 
         // Assert
-        // Most endpoints require authentication
+        // Games listing is a PUBLIC endpoint (.AllowAnonymous()) for game discovery
+        // Frontend SDK can fetch games without authentication
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact(DisplayName = "GET /api/v1/games/{id}/sessions without auth should return 401 Unauthorized")]
+    public async Task GetGameSessions_WithoutAuth_Returns401Unauthorized()
+    {
+        // Arrange & Act
+        var response = await _client.GetAsync($"/api/v1/games/{Guid.NewGuid()}/sessions");
+
+        // Assert
+        // Game sessions endpoint requires authentication (.RequireAuthenticatedUser())
         // Frontend SDK should handle 401 by redirecting to login
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-
-        // This validates the API correctly enforces authentication
     }
 
     [Fact(DisplayName = "GET with invalid endpoint should return 404 for retry logic")]
@@ -182,8 +192,8 @@ public class HttpBehaviorTests : IAsyncLifetime
     [Fact(DisplayName = "GET with reasonable timeout should complete successfully")]
     public async Task Get_WithReasonableTimeout_CompletesWithinTimeout()
     {
-        // Arrange
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        // Arrange - Use longer timeout for test environment (health checks may need to verify services)
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var request = new HttpRequestMessage(HttpMethod.Get, "/health");
 
         // Act

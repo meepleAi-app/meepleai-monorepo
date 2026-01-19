@@ -42,7 +42,25 @@ internal class BulkExportApiKeysQueryHandler : IQueryHandler<BulkExportApiKeysQu
 
         if (query.IsActive.HasValue)
         {
-            apiKeys = apiKeys.Where(k => k.IsActive == query.IsActive.Value).ToList();
+            var now = DateTime.UtcNow;
+            if (query.IsActive.Value)
+            {
+                // Active = not revoked AND not expired
+                apiKeys = apiKeys.Where(k =>
+                    k.IsActive &&
+                    k.RevokedAt == null &&
+                    (!k.ExpiresAt.HasValue || k.ExpiresAt.Value > now)
+                ).ToList();
+            }
+            else
+            {
+                // Inactive = revoked OR expired OR explicitly inactive
+                apiKeys = apiKeys.Where(k =>
+                    !k.IsActive ||
+                    k.RevokedAt != null ||
+                    (k.ExpiresAt.HasValue && k.ExpiresAt.Value <= now)
+                ).ToList();
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(query.SearchTerm))

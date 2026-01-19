@@ -241,5 +241,91 @@ public class RedisOAuthStateStoreTests
         // Assert
         Assert.False(result);
     }
+
+    #region Issue #2648: Base64 State Character Tests
+
+    /// <summary>
+    /// Issue #2648: OAuth states are Base64 encoded and may contain characters
+    /// that require URL encoding (+, /, =). These tests verify that the state
+    /// store handles such states correctly.
+    /// </summary>
+    [Theory]
+    [InlineData("abc123+def456/ghi789==")]  // Base64 with + / =
+    [InlineData("hi1p/YQVMcM4cXy9ZD/YNUitf3cOHZwmb/+KJHuiK28=")] // Real Base64 state
+    [InlineData("state/with/slashes")]       // Slashes
+    [InlineData("state+with+plus")]          // Plus signs
+    [InlineData("state===")]                 // Trailing equals
+    public async Task ValidateAndRemoveStateAsync_Base64StateWithSpecialChars_ConstructsCorrectKey(string state)
+    {
+        // Arrange - The state should be used as-is in the Redis key
+        var expectedKey = $"meepleai:oauth:state:{state}";
+
+        _mockDatabase.Setup(db => db.KeyDeleteAsync(expectedKey, It.IsAny<CommandFlags>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _stateStore.ValidateAndRemoveStateAsync(state);
+
+        // Assert
+        Assert.True(result);
+        _mockDatabase.Verify(db => db.KeyDeleteAsync(expectedKey, It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("abc123+def456/ghi789==")]
+    [InlineData("hi1p/YQVMcM4cXy9ZD/YNUitf3cOHZwmb/+KJHuiK28=")]
+    public async Task ExistsAsync_Base64StateWithSpecialChars_ConstructsCorrectKey(string state)
+    {
+        // Arrange
+        var expectedKey = $"meepleai:oauth:state:{state}";
+
+        _mockDatabase.Setup(db => db.KeyExistsAsync(expectedKey, It.IsAny<CommandFlags>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _stateStore.ExistsAsync(state);
+
+        // Assert
+        Assert.True(result);
+        _mockDatabase.Verify(db => db.KeyExistsAsync(expectedKey, It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    /// <summary>
+    /// Issue #2648: Verify that authentication errors (NOAUTH) are handled gracefully.
+    /// This was the root cause - Redis auth failure caused states to not be stored.
+    /// </summary>
+    [Fact]
+    public async Task StoreStateAsync_RedisAuthenticationError_ThrowsRedisException()
+    {
+        // Arrange
+        var state = "test-state";
+        var expiration = TimeSpan.FromMinutes(10);
+
+        _mockDatabase.SetReturnsDefault<Task<bool>>(Task.FromException<bool>(
+            new RedisException("NOAUTH Authentication required")));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<RedisException>(() =>
+            _stateStore.StoreStateAsync(state, expiration));
+    }
+
+    [Fact]
+    public async Task ValidateAndRemoveStateAsync_RedisAuthenticationError_ReturnsFalse()
+    {
+        // Arrange
+        var state = "test-state";
+        var expectedKey = $"meepleai:oauth:state:{state}";
+
+        _mockDatabase.Setup(db => db.KeyDeleteAsync(expectedKey, It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisException("NOAUTH Authentication required"));
+
+        // Act
+        var result = await _stateStore.ValidateAndRemoveStateAsync(state);
+
+        // Assert - Should return false (not throw) for auth errors during validation
+        Assert.False(result);
+    }
+
+    #endregion
 }
 

@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Unit.Administration;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.Unit.Administration;
 /// ISSUE-919: 90%+ coverage for all report templates, formats, and validation
 /// ISSUE-2601: Uses in-memory formatters to avoid external dependencies
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class ReportGeneratorServiceTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;

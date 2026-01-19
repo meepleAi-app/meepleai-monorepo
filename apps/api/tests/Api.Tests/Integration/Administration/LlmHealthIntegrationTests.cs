@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.Administration;
 
@@ -29,6 +30,7 @@ namespace Api.Tests.Integration.Administration;
 /// Coverage Target: ≥90% for GetLlmHealthQueryHandler
 /// Execution Time Target: <10s
 /// </summary>
+[Trait("Category", TestCategories.Integration)]
 public sealed class LlmHealthIntegrationTests
 {
     private static GetLlmHealthQueryHandler CreateHandler(

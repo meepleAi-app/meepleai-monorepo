@@ -7,6 +7,7 @@ using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 /// Tests for UpdateN8NConfigCommandHandler.
 /// Tests updates to n8n workflow configurations.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class UpdateN8NConfigCommandHandlerTests
 {
     private readonly Mock<IN8NConfigurationRepository> _mockRepository;

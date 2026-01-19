@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Tests for GetRecentActivityQueryHandler - Issue #874, #878
 /// Validates ActivityFeedService functionality (13 comprehensive test scenarios)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class GetRecentActivityQueryHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;

@@ -339,7 +339,9 @@ tests/Api.Tests/          # Backend test suite
 
 **OAuth** (#2600): Defensive validation + InMemory transaction handling + manual rollback
 
+**Tests/FK** (#2620): Seed dependent entities before referencing (FK constraints), HybridCache + IHybridCacheService required for event handlers, `ChangeTracker.Clear()` > `Entry().State = Detached`
+
 ---
 
-**Last Updated**: 2026-01-18
+**Last Updated**: 2026-01-19
 **License**: Proprietary

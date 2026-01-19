@@ -7,6 +7,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers;
 /// Tests for BulkImportApiKeysCommandHandler (ISSUE-906).
 /// Verifies CSV import functionality with validation and key generation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class BulkImportApiKeysCommandHandlerTests
 {
     private readonly Mock<IApiKeyRepository> _mockApiKeyRepository;

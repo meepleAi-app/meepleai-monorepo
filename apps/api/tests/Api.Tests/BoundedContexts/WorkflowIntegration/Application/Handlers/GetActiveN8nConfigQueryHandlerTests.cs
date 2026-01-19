@@ -5,6 +5,7 @@ using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.BoundedContexts.WorkflowIntegration.Domain.ValueObjects;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 /// Tests for GetActiveN8NConfigQueryHandler.
 /// Tests retrieval of the currently active n8n configuration.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetActiveN8NConfigQueryHandlerTests
 {
     private readonly Mock<IN8NConfigurationRepository> _mockRepository;

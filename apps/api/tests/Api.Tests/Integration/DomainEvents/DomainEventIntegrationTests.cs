@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.DomainEvents;
 
@@ -21,6 +22,7 @@ namespace Api.Tests.Integration.DomainEvents;
 /// Integration tests for domain event dispatching and handling.
 /// Tests the complete flow: Aggregate → Event → Handler → Audit Log.
 /// </summary>
+[Trait("Category", TestCategories.Integration)]
 public class DomainEventIntegrationTests : IAsyncLifetime
 {
     private MeepleAiDbContext _dbContext = null!;

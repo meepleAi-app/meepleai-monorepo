@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 #pragma warning disable S2930 // Dispose CancellationTokenSource when it is no longer needed
 
@@ -14,6 +15,7 @@ namespace Api.Tests.Services;
 /// Unit tests for EmbeddingService
 /// Issue #2599: AI/Embedding Service Tests
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class EmbeddingServiceTests
 {
     private readonly Mock<IEmbeddingProviderFactory> _providerFactoryMock;

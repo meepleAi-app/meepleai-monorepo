@@ -15,12 +15,14 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Services.LlmClients;
 
 /// <summary>
 /// ISSUE-1725: Tests for streaming token tracking in OpenRouterLlmClient
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class OpenRouterLlmClientStreamingTests
 {
     private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;

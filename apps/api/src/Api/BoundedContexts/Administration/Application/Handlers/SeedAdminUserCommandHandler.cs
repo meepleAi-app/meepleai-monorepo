@@ -52,7 +52,7 @@ internal sealed class SeedAdminUserCommandHandler : ICommandHandler<SeedAdminUse
         var adminEmail = _configuration["INITIAL_ADMIN_EMAIL"];
         var adminPassword = SecretsHelper.GetSecretOrValue(
             _configuration,
-            "INITIAL_ADMIN_PASSWORD",
+            "ADMIN_PASSWORD",
             _logger,
             required: false
         );
@@ -63,16 +63,16 @@ internal sealed class SeedAdminUserCommandHandler : ICommandHandler<SeedAdminUse
             throw new InvalidOperationException("INITIAL_ADMIN_EMAIL is not configured");
 
         if (string.IsNullOrWhiteSpace(adminPassword))
-            throw new InvalidOperationException("INITIAL_ADMIN_PASSWORD is not configured");
+            throw new InvalidOperationException("ADMIN_PASSWORD is not configured");
 
         if (adminPassword.Length < 8)
-            throw new InvalidOperationException("INITIAL_ADMIN_PASSWORD must be at least 8 characters");
+            throw new InvalidOperationException("ADMIN_PASSWORD must be at least 8 characters");
 
         if (!adminPassword.Any(char.IsUpper))
-            throw new InvalidOperationException("INITIAL_ADMIN_PASSWORD must contain at least one uppercase letter");
+            throw new InvalidOperationException("ADMIN_PASSWORD must contain at least one uppercase letter");
 
         if (!adminPassword.Any(char.IsDigit))
-            throw new InvalidOperationException("INITIAL_ADMIN_PASSWORD must contain at least one digit");
+            throw new InvalidOperationException("ADMIN_PASSWORD must contain at least one digit");
 
         // Create domain objects
         var email = new Email(adminEmail);

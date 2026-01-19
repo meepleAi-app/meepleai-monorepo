@@ -6,6 +6,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.Administration;
 
@@ -22,6 +23,7 @@ namespace Api.Tests.Integration.Administration;
 /// Coverage Target: ≥90% for GetInfrastructureDetails endpoint
 /// Execution Time Target: <3s
 /// </summary>
+[Trait("Category", TestCategories.Integration)]
 public sealed class InfrastructureDetailsEndpointTests
 {
     private readonly Mock<IInfrastructureDetailsService> _detailsServiceMock;

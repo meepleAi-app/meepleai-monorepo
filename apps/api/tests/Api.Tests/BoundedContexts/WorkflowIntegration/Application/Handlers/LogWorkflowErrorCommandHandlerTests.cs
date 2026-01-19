@@ -5,6 +5,7 @@ using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 /// Tests for LogWorkflowErrorCommandHandler.
 /// Tests logging of workflow execution errors.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class LogWorkflowErrorCommandHandlerTests
 {
     private readonly Mock<IWorkflowErrorLogRepository> _mockErrorLogRepository;

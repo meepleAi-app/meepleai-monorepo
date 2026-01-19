@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.Authentication;
 
@@ -37,7 +38,7 @@ namespace Api.Tests.Integration.Authentication;
 /// Execution Time Target: <20s for full suite
 /// </remarks>
 [Collection("SharedTestcontainers")]
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Integration)]
 [Trait("Type", "E2E")]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]

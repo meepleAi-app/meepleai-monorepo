@@ -30,6 +30,12 @@ if [ -n "$REDIS_PASSWORD" ]; then
     echo "[secrets] built REDIS_URL with password from redis.secret"
 fi
 
+# Map generic GRAFANA_ADMIN_PASSWORD to Grafana-specific env var
+if [ -n "$GRAFANA_ADMIN_PASSWORD" ]; then
+    export GF_SECURITY_ADMIN_PASSWORD="$GRAFANA_ADMIN_PASSWORD"
+    echo "[secrets] mapped GRAFANA_ADMIN_PASSWORD to GF_SECURITY_ADMIN_PASSWORD"
+fi
+
 # Issue #2570: Secret consolidation complete
 # All secrets now loaded from .secret files via env_file
 # No Docker secrets (/run/secrets) needed anymore

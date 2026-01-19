@@ -6,6 +6,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.Administration;
 
@@ -22,6 +23,7 @@ namespace Api.Tests.Integration.Administration;
 /// Coverage Target: ≥90% for MonitoringEndpoints.cs health methods
 /// Execution Time Target: <5s
 /// </summary>
+[Trait("Category", TestCategories.Integration)]
 public sealed class HealthEndpointsIntegrationTests
 {
     private readonly Mock<IInfrastructureHealthService> _healthServiceMock;

@@ -25,6 +25,19 @@ internal sealed partial class ReportGeneratorService
             return (false, "Parameter 'endDate' (DateTime) is required");
         }
 
+        var startDate = (DateTime)startObj;
+        var endDate = (DateTime)endObj;
+
+        if (endDate < startDate)
+        {
+            return (false, "Parameter 'endDate' must be after 'startDate'");
+        }
+
+        if ((endDate - startDate).TotalDays > 365)
+        {
+            return (false, "Date range cannot exceed 365 days");
+        }
+
         return (true, null);
     }
 
@@ -46,6 +59,9 @@ internal sealed partial class ReportGeneratorService
 
         var sections = CreateContentMetricsSections(pdfMetrics, vectorMetrics, gameMetrics);
 
+        var totalPdfs = pdfMetrics.Sum(m => m.Count);
+        var totalVectorDocs = vectorMetrics.Sum(v => v.Count);
+
         return new ReportContent(
             Title: "Content Metrics Report",
             Description: $"Content statistics from {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}",
@@ -54,16 +70,26 @@ internal sealed partial class ReportGeneratorService
             {
                 ["startDate"] = startDate,
                 ["endDate"] = endDate,
-                ["totalPdfs"] = pdfMetrics.Sum(m => m.Count),
-                ["totalVectorDocs"] = vectorMetrics.Sum(v => v.Count)
+                ["totalPdfs"] = totalPdfs,
+                ["totalVectorDocs"] = totalVectorDocs,
+                ["totalDocuments"] = totalPdfs, // Total documents (PDFs)
+                ["vectorEmbeddings"] = totalVectorDocs // Vector embeddings count
             },
             Sections: sections);
     }
 
     private async Task<List<PdfMetric>> GetPdfMetricsAsync(DateTime startDate, DateTime endDate, CancellationToken ct)
     {
-        return await _dbContext.PdfDocuments
+        // EF Core + PostgreSQL limitation: GroupBy with .Date property doesn't translate
+        // Solution: Load data first, then group in memory
+        // See: https://github.com/dotnet/efcore/issues/19371
+        var pdfs = await _dbContext.PdfDocuments
             .Where(p => p.UploadedAt >= startDate && p.UploadedAt <= endDate)
+            .Select(p => new { p.UploadedAt, p.FileSizeBytes })
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        return pdfs
             .GroupBy(p => p.UploadedAt.Date)
             .Select(g => new PdfMetric(
                 g.Key,
@@ -71,22 +97,27 @@ internal sealed partial class ReportGeneratorService
                 g.Sum(p => p.FileSizeBytes)
             ))
             .OrderBy(x => x.Date)
-            .ToListAsync(ct)
-            .ConfigureAwait(false);
+            .ToList();
     }
 
     private async Task<List<VectorMetric>> GetVectorMetricsAsync(DateTime startDate, DateTime endDate, CancellationToken ct)
     {
-        return await _dbContext.VectorDocuments
+        // EF Core + PostgreSQL limitation: GroupBy with .Date property doesn't translate
+        // Solution: Load data first, then group in memory
+        var vectors = await _dbContext.VectorDocuments
             .Where(v => v.IndexedAt != null && v.IndexedAt >= startDate && v.IndexedAt <= endDate)
-            .GroupBy(v => v.IndexedAt!.Value.Date)
+            .Select(v => v.IndexedAt!.Value)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        return vectors
+            .GroupBy(date => date.Date)
             .Select(g => new VectorMetric(
                 g.Key,
                 g.Count()
             ))
             .OrderBy(x => x.Date)
-            .ToListAsync(ct)
-            .ConfigureAwait(false);
+            .ToList();
     }
 
     private async Task<GameMetric?> GetGameMetricsAsync(CancellationToken ct)

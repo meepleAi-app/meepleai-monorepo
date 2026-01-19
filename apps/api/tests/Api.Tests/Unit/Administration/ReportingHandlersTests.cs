@@ -9,6 +9,7 @@ using Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Unit.Administration;
 
@@ -16,6 +17,7 @@ namespace Api.Tests.Unit.Administration;
 /// Unit tests for reporting handlers (Commands/Queries)
 /// ISSUE-919: Handler logic testing (90%+ coverage)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class ReportingHandlersTests
 {
     private readonly Mock<IReportGeneratorService> _mockGeneratorService;

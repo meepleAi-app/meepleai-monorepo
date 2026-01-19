@@ -15,6 +15,7 @@ using Moq;
 using Quartz;
 using Quartz.Impl;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.Administration;
 
@@ -22,6 +23,7 @@ namespace Api.Tests.Integration.Administration;
 /// Integration tests for reporting workflow
 /// ISSUE-916: End-to-end reporting tests
 /// </summary>
+[Trait("Category", TestCategories.Integration)]
 public sealed class ReportingWorkflowTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;

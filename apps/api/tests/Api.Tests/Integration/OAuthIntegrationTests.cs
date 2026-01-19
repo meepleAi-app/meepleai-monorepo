@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration;
 
@@ -36,7 +37,7 @@ namespace Api.Tests.Integration;
 /// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL, transaction rollback between tests
 /// </remarks>
 [Collection("SharedTestcontainers")]
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("Issue", "2031")]
 public class OAuthIntegrationTests : IAsyncLifetime

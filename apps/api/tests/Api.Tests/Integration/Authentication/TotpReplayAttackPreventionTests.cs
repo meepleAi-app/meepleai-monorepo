@@ -14,6 +14,7 @@ using Npgsql;
 using OtpNet;
 using Polly;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.Authentication;
 
@@ -37,8 +38,8 @@ namespace Api.Tests.Integration.Authentication;
 /// Pattern: AAA (Arrange-Act-Assert), SharedTestcontainersFixture (Issue #2031)
 /// </remarks>
 [Collection("SharedTestcontainers")]
-[Trait("Category", "Integration")]
-[Trait("Category", "Security")]
+[Trait("Category", TestCategories.Integration)]
+[Trait("Category", TestCategories.Security)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]
 [Trait("Issue", "1787")]

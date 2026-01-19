@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
 
@@ -10,6 +11,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Services;
 /// Unit tests for CitationPriorityService domain service.
 /// Issue #2051: Citation ordering and deduplication logic
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CitationPriorityServiceTests
 {
     private readonly CitationPriorityService _service = new();

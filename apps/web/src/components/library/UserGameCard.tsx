@@ -93,9 +93,6 @@ export function UserGameCard({
           {game.gamePublisher && (
             <p className="text-sm text-muted-foreground">{game.gamePublisher}</p>
           )}
-          {game.gameBggId && (
-            <p className="text-xs text-muted-foreground">BGG ID: {game.gameBggId}</p>
-          )}
         </div>
 
         {/* Agent Configuration Status */}

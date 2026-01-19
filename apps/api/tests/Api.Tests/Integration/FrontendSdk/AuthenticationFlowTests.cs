@@ -308,9 +308,11 @@ public class AuthenticationFlowTests : IAsyncLifetime
     [Fact(DisplayName = "GET with invalid API key should return 401 Unauthorized")]
     public async Task Get_WithInvalidApiKey_Returns401Unauthorized()
     {
-        // Arrange - Use authenticated endpoint instead of public /games endpoint
+        // Arrange - Use authenticated endpoint (/auth/me requires authentication)
+        // No need to create real data - just test that invalid API key is rejected
         var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "mpl_test_invalidkey123");
+        // Use correct "ApiKey" scheme instead of "Bearer"
+        request.Headers.Authorization = new AuthenticationHeaderValue("ApiKey", "mpl_test_invalidkey123");
 
         // Act
         var response = await _client.SendAsync(request);
@@ -328,19 +330,38 @@ public class AuthenticationFlowTests : IAsyncLifetime
         var password = "SecureP@ssw0rd123!";
 
         await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Concurrent Test" });
-        await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
+        var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
 
-        // Act - Make multiple concurrent authenticated requests
-        var tasks = Enumerable.Range(0, 10).Select(_ =>
-            _client.GetAsync("/api/v1/auth/me")
-        );
+        // Extract session cookie for concurrent requests
+        string? sessionCookie = null;
+        if (loginResponse.Headers.TryGetValues("Set-Cookie", out var cookies))
+        {
+            sessionCookie = cookies.FirstOrDefault(c => c.Contains("meepleai_session"));
+        }
+
+        // Act - Make multiple concurrent authenticated requests with independent clients
+        // Issue #2593 pattern: Use independent HttpClient instances to avoid TestServer concurrency issues
+        var tasks = Enumerable.Range(0, 5).Select(async _ => // Reduced from 10 to 5 for TestServer stability
+        {
+            var independentClient = _factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = false,
+                HandleCookies = false // Manually handle cookies
+            });
+
+            var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+            if (sessionCookie != null)
+            {
+                request.Headers.Add("Cookie", sessionCookie);
+            }
+
+            return await independentClient.SendAsync(request);
+        }).ToArray();
 
         var responses = await Task.WhenAll(tasks);
 
-        // Assert
-        // All should return same status code (either all OK or all Unauthorized)
-        responses.Should().AllSatisfy(r =>
-            r.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Unauthorized, HttpStatusCode.InternalServerError));
+        // Assert - All should return OK with valid session
+        responses.Should().AllSatisfy(r => r.StatusCode.Should().Be(HttpStatusCode.OK));
 
         // Frontend SDK can safely make concurrent requests with same session
     }

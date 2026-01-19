@@ -17,7 +17,7 @@ internal sealed class GetActiveRulebookAnalysisQueryHandler
     /// Wrapper for caching analysis query results (including null/not-found cases).
     /// Prevents cache stampede on "analysis doesn't exist" scenarios.
     /// </summary>
-    private record CachedRulebookAnalysisResult(RulebookAnalysisDto? Analysis);
+    private sealed record CachedRulebookAnalysisResult(RulebookAnalysisDto? Analysis);
 
     private readonly IRulebookAnalysisRepository _analysisRepository;
     private readonly IHybridCacheService _cache;

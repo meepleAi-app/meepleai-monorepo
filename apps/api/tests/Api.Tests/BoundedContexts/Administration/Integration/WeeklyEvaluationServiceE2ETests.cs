@@ -9,6 +9,7 @@ using Xunit;
 using Api.Services;
 using Api.BoundedContexts.Administration.Application.Queries.PromptEvaluation;
 using MediatR;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Integration;
 
@@ -29,7 +30,7 @@ namespace Api.Tests.BoundedContexts.Administration.Integration;
 /// Note: Full execution flow (CQRS queries, alerts) tested separately
 /// This focuses on BackgroundService lifecycle and configuration
 /// </remarks>
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
 public sealed class WeeklyEvaluationServiceE2ETests
 {

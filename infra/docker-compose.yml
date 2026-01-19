@@ -1,3 +1,8 @@
+# Docker Compose project name - ensures consistent volume naming
+# Volumes will be named: meepleai_pgdata, meepleai_qdrantdata, etc.
+# Instead of: infra_pgdata (directory-dependent)
+name: meepleai
+
 services:
   postgres:
     image: postgres:16.4-alpine3.20
@@ -15,7 +20,7 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
@@ -43,7 +48,7 @@ services:
       - "127.0.0.1:6333:6333"  # HTTP REST API
       - "127.0.0.1:6334:6334"  # gRPC API
     volumes:
-      - qdrantdata:/qdrant/storage
+      - qdrant_data:/qdrant/storage
     healthcheck:
       test: ["CMD-SHELL", "kill -0 1 || exit 1"]
       interval: 10s
@@ -103,7 +108,7 @@ services:
       MP_DATABASE: /data/mailpit.db
       MP_DATA_DIR: /data
     volumes:
-      - mailpit-data:/data
+      - mailpit_data:/data
     healthcheck:
       # Comprehensive health check: HTTP API + SMTP port
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8025/api/v1/messages && nc -z localhost 1025"]
@@ -136,7 +141,7 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - ollamadata:/root/.ollama
+      - ollama_data:/root/.ollama
     healthcheck:
       test: ["CMD-SHELL", "ollama list || exit 1"]
       interval: 10s
@@ -243,7 +248,7 @@ services:
       - ENABLE_METRICS=true
       - ENABLE_STRUCTURED_LOGGING=true
     volumes:
-      - unstructured-temp:/tmp/pdf-extraction
+      - unstructured_temp:/tmp/pdf-extraction
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
@@ -288,8 +293,8 @@ services:
       - ENABLE_STRUCTURED_LOGGING=true
       - ENABLE_MODEL_WARMUP=true  # Enable warmup so health checks pass
     volumes:
-      - smoldocling-temp:/tmp/pdf-processing
-      - smoldocling-models:/root/.cache/huggingface
+      - smoldocling_temp:/tmp/pdf-processing
+      - smoldocling_models:/root/.cache/huggingface
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 60s
@@ -330,7 +335,7 @@ services:
       - LOG_LEVEL=INFO
       - ENABLE_MODEL_WARMUP=true
     volumes:
-      - reranker-models:/home/reranker/.cache/huggingface
+      - reranker_models:/home/reranker/.cache/huggingface
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 30s
@@ -375,7 +380,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
-      - prometheusdata:/prometheus
+      - prometheus_data:/prometheus
     ports:
       - "127.0.0.1:9090:9090"
     healthcheck:
@@ -407,7 +412,7 @@ services:
     volumes:
       - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - alertmanagerdata:/alertmanager
+      - alertmanager_data:/alertmanager
     entrypoint: ["/scripts/load-secrets-env.sh"]
     command:
       - '/bin/alertmanager'
@@ -527,7 +532,7 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
     volumes:
       - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
-      - grafanadata:/var/lib/grafana
+      - grafana_data:/var/lib/grafana
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
       - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
       - ./dashboards:/var/lib/grafana/dashboards:ro
@@ -625,7 +630,7 @@ services:
       # No need for *_FILE environment variables or Docker secrets section
     volumes:
       - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
-      - pdf-uploads:/app/pdf_uploads  # Persistent PDF storage
+      - pdf_uploads:/app/pdf_uploads  # Persistent PDF storage
       # ISSUE-2510: Secret management system - mount secrets directory
       - ./secrets:/app/infra/secrets:ro  # Read-only mount for .secret files
     entrypoint: ["/scripts/load-secrets-env.sh"]
@@ -710,28 +715,27 @@ services:
           memory: 512M
 
 volumes:
-  pgdata:
-  qdrantdata:
-  # seqdata removed - replaced by HyperDX (Issue #1564)
-  ollamadata:
-  # ISSUE-922: Mailpit email testing storage
-  mailpit-data:
-  # OPS-02: OpenTelemetry volumes
-  # jaegerdata removed - using ephemeral storage for development
-  # Seq and Jaeger replaced by HyperDX unified observability
-  prometheusdata:
-  grafanadata:
-  # OPS-05: Error Monitoring & Alerting volumes
-  alertmanagerdata:
-  # BGAI-001-v2: Unstructured PDF extraction temporary storage
-  unstructured-temp:
-  # BGAI-005: SmolDocling VLM service storage
-  smoldocling-temp:
-  smoldocling-models:  # Hugging Face model cache
-  # ADR-016 Phase 4: Reranker service model cache
-  reranker-models:
-  # PDF Uploads: Persistent storage for uploaded PDFs
-  pdf-uploads:
+  # Database & Cache - Core data persistence
+  postgres_data:
+  qdrant_data:
+
+  # ML Service Model Caches
+  ollama_data:
+  smoldocling_models:  # Hugging Face model cache
+  reranker_models:     # Reranker model cache
+
+  # Temporary Processing Directories
+  unstructured_temp:   # PDF extraction temporary storage
+  smoldocling_temp:    # PDF processing temporary storage
+
+  # Application Data
+  pdf_uploads:         # Persistent storage for uploaded PDFs
+
+  # Observability & Monitoring
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+  mailpit_data:        # Email testing storage
 
 networks:
   meepleai:

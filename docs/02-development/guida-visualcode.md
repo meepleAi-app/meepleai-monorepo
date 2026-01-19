@@ -388,7 +388,7 @@ Errore: password authentication failed for user "meeple"
 cd infra
 docker compose stop postgres
 docker compose rm -f postgres
-docker volume rm infra_pgdata
+docker volume rm meepleai_postgres_data
 docker compose up -d postgres
 # Script init/postgres-init.sql crea automaticamente user meeple
 ```

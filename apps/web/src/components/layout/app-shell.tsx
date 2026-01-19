@@ -28,7 +28,7 @@ interface NavItem {
 const navigationItems: NavItem[] = [
   {
     label: 'Dashboard',
-    href: '/dashboard-redesign',
+    href: '/dashboard',
     icon: '🎲',
     color: 'var(--color-primary-500)',
   },
@@ -57,7 +57,7 @@ export function AppShell({ children }: AppShellProps) {
       <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         {/* Logo Header */}
         <div className="sidebar-header">
-          <Link href="/dashboard-redesign">
+          <Link href="/dashboard">
             <MeepleLogo variant={sidebarCollapsed ? 'icon' : 'full'} size="md" animated />
           </Link>
 

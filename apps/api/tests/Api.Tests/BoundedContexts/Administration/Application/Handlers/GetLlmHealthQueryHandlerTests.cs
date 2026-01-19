@@ -3,6 +3,7 @@ using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Configuration;
 using Api.Services.LlmClients;
 using Microsoft.Extensions.Logging;
@@ -38,6 +39,7 @@ public class GetLlmHealthQueryHandlerTests
         var costLogRepositoryMock = new Mock<ILlmCostLogRepository>();
         var loggerMock = new Mock<ILogger<HybridLlmService>>();
         var aiSettingsMock = new Mock<IOptions<AiProviderSettings>>();
+        var modelConfigRepositoryMock = new Mock<IAiModelConfigurationRepository>();
         var healthCheckServiceMock = new Mock<IProviderHealthCheckService>();
 
         // Configure aiSettingsMock to return a valid AiProviderSettings
@@ -49,6 +51,7 @@ public class GetLlmHealthQueryHandlerTests
             costLogRepositoryMock.Object,
             loggerMock.Object,
             aiSettingsMock.Object,
+            modelConfigRepositoryMock.Object,
             healthCheckServiceMock.Object);
     }
     [Fact]

@@ -41,14 +41,14 @@ import {
   PdfDocumentList,
 } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { api, type SharedGameDetail, type SharedGameDocument } from '@/lib/api';
 
 // Game status numeric values (matches C# GameStatus enum)

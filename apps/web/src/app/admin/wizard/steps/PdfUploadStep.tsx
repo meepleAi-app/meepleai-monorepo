@@ -10,9 +10,9 @@ import { useState, useCallback } from 'react';
 
 import { toast } from '@/components/layout';
 import { Spinner } from '@/components/loading';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
+import { Label } from '@/components/ui/primitives/label';
 
 interface PdfUploadStepProps {
   onComplete: (pdfId: string, fileName: string, isPublic: boolean) => void;

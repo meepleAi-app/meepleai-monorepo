@@ -17,7 +17,7 @@ export { CitationCard } from './citations/CitationCard';
 export { CitationList } from './citations/CitationList';
 
 // Issue #1833: UI-006 - CitationLink component
-export { CitationLink } from './ui/citation-link';
+export { CitationLink } from './ui/meeple/citation-link';
 
 // Issue #898: MetricsChart component (Chart.js/Recharts)
 export { MetricsChart } from './metrics/MetricsChart';

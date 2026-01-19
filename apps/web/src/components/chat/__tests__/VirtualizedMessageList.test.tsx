@@ -27,7 +27,7 @@ vi.mock('react-virtualized-auto-sizer', () => ({
 }));
 
 // Mock ChatMessage component
-vi.mock('@/components/ui/chat-message', () => ({
+vi.mock('@/components/ui/meeple/chat-message', () => ({
   ChatMessage: vi.fn(({ role, content }) => (
     <div data-testid={`chat-message-${role}`}>{content}</div>
   )),

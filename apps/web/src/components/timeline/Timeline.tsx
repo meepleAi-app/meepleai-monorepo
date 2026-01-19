@@ -1,8 +1,8 @@
 // UI-04: Main Timeline component (multi-pane layout)
 import { useState } from 'react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
 import { TimelineEvent, TimelineFilters, DEFAULT_FILTERS } from '@/lib/timeline-types';
 
 import { TimelineDetails } from './TimelineDetails';

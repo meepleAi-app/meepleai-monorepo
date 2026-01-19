@@ -20,11 +20,11 @@ import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 import { AlertRuleForm } from '@/components/admin/alert-rules/AlertRuleForm';
 import { AlertRuleList } from '@/components/admin/alert-rules/AlertRuleList';
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { ConfirmDialog } from '@/components/ui/feedback/confirm-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { alertRulesApi } from '@/lib/api/alert-rules.api';
 import type {
   AlertRule,

@@ -45,7 +45,7 @@
 
 import { forwardRef, InputHTMLAttributes, useId } from 'react';
 
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/primitives/input';
 import { cn } from '@/lib/utils';
 
 export interface AccessibleFormInputProps extends InputHTMLAttributes<HTMLInputElement> {

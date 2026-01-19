@@ -15,7 +15,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { RatingStars } from '../rating-stars';
+import { RatingStars } from '../data-display/rating-stars';
 
 // ============================================================================
 // BGG Rating Conversion Tests (0-10 → 0-5)

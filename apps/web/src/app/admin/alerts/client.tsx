@@ -18,10 +18,10 @@ import { CheckCircle2, XCircle, AlertTriangle, Info, Eye } from 'lucide-react';
 
 import { AdminAuthGuard } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from '@/components/ui/overlays/dialog';
 import {
   Table,
   TableBody,
@@ -37,7 +37,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/components/ui/data-display/table';
 import { api, type AlertDto } from '@/lib/api';
 import { cn } from '@/lib/utils';
 

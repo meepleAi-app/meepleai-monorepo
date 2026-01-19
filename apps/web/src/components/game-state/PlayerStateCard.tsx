@@ -7,9 +7,9 @@
 
 'use client';
 
-import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar } from '@/components/ui/data-display/avatar';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import type { PlayerState } from '@/types/game-state';
 
 import { ResourceTracker } from './ResourceTracker';

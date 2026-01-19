@@ -13,11 +13,11 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { GRAFANA_DASHBOARDS, buildGrafanaEmbedUrl } from '@/config/grafana-dashboards';
 
 interface GrafanaEmbedProps {

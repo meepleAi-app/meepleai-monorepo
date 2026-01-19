@@ -16,7 +16,7 @@
 
 import * as React from 'react';
 
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/primitives/label';
 import { cn } from '@/lib/utils';
 
 import { useFormField } from './FormField';

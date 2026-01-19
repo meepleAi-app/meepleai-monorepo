@@ -7,9 +7,9 @@
 
 'use client';
 
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Separator } from '@/components/ui/navigation/separator';
 import type { GameState } from '@/types/game-state';
 
 import { PlayerStateCard } from './PlayerStateCard';

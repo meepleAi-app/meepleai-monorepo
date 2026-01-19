@@ -7,8 +7,8 @@
 
 import { BarChart3 } from 'lucide-react';
 
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent } from '@/components/ui/data-display/card';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { cn } from '@/lib/utils';
 
 import { StatCard, type StatCardProps } from './StatCard';

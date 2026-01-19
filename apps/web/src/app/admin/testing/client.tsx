@@ -5,9 +5,9 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { ExportButton } from '@/components/admin/ExportButton';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Progress } from '@/components/ui/feedback/progress';
 import {
   Table,
   TableBody,
@@ -15,8 +15,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from '@/components/ui/data-display/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { api } from '@/lib/api';
 import type {
   AccessibilityMetrics,

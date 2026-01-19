@@ -13,8 +13,8 @@ import Form from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
 import { Save } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { useGameStateStore } from '@/lib/stores/game-state-store';
 import type { GameState } from '@/types/game-state';
 

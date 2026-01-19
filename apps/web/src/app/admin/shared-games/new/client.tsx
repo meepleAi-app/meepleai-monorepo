@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 
 import { AdminAuthGuard, GameForm } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 
 export function NewGameClient() {
   const router = useRouter();

@@ -15,7 +15,7 @@ import React from 'react';
 
 import { AlertTriangle, AlertCircle, Info } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import {
   Dialog,
   DialogContent,

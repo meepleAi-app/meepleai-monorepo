@@ -20,12 +20,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { ErrorDisplay } from '@/components/errors';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   Table,
   TableBody,
@@ -33,7 +33,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/components/ui/data-display/table';
 import { api, GameSessionDto, Game, SessionHistoryFilters } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { categorizeError } from '@/lib/errorUtils';

@@ -18,7 +18,7 @@ import { useCallback } from 'react';
 import { Rows, Square } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/primitives/toggle-group';
 
 export interface ViewToggleProps {
   /** Current view mode from URL searchParams */

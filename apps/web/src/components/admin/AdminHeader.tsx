@@ -17,8 +17,8 @@ import { HomeIcon, UserIcon, SettingsIcon, LogOutIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/data-display/avatar';
+import { Button } from '@/components/ui/primitives/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +26,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/components/ui/navigation/dropdown-menu';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 

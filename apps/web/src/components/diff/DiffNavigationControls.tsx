@@ -2,7 +2,7 @@ import React from 'react';
 
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 
 export interface DiffNavigationControlsProps {
   currentIndex: number;

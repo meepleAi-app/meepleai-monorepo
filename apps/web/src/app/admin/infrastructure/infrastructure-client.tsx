@@ -39,22 +39,22 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { GrafanaEmbed } from '@/components/admin/GrafanaEmbed';
 import { ServiceHealthMatrix } from '@/components/admin/ServiceHealthMatrix';
 import { MetricsChart, type DataPoint, type DataSeries } from '@/components/metrics/MetricsChart';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from '@/components/ui/overlays/select';
+import { Separator } from '@/components/ui/navigation/separator';
+import { Switch } from '@/components/ui/forms/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { useUserLocale } from '@/hooks/useUserLocale';
 import { api } from '@/lib/api';
 import type { InfrastructureDetails, HealthState } from '@/lib/api';

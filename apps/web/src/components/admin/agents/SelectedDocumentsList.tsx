@@ -12,10 +12,10 @@ import * as React from 'react';
 
 import { FileText, X, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import type { SelectedDocumentDto } from '@/lib/api/schemas';
 import { cn } from '@/lib/utils';
 

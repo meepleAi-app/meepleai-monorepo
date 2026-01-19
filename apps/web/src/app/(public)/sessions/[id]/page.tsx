@@ -21,12 +21,12 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 
 import { ErrorDisplay } from '@/components/errors';
-import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar } from '@/components/ui/data-display/avatar';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Separator } from '@/components/ui/navigation/separator';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { api, GameSessionDto, Game } from '@/lib/api';
 import { categorizeError } from '@/lib/errorUtils';
 

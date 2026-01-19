@@ -18,7 +18,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from '@/components/ui/overlays/alert-dialog-primitives';
 import { Loader2, Star } from 'lucide-react';
 
 interface SetPrimaryModelDialogProps {

@@ -22,12 +22,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+} from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
+import { Label } from '@/components/ui/primitives/label';
+import { Textarea } from '@/components/ui/primitives/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 
 import { useApiClient } from '@/lib/api/context';
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';

@@ -14,6 +14,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatLayout, type ChatLayoutProps } from '../ChatLayout';
 import { Game } from '@/types';
+import { getMenuItem } from '@/test-utils/locale-queries';
 
 // Mock localStorage
 const localStorageMock = {
@@ -245,7 +246,7 @@ describe('ChatLayout', () => {
       render(<ChatLayout {...defaultProps} onShare={onShare} />);
 
       await user.click(screen.getByLabelText('Thread actions menu'));
-      await user.click(screen.getByText('Share Thread'));
+      await user.click(getMenuItem(/share thread/i));
 
       expect(onShare).toHaveBeenCalledTimes(1);
     });
@@ -256,7 +257,7 @@ describe('ChatLayout', () => {
       render(<ChatLayout {...defaultProps} onExport={onExport} />);
 
       await user.click(screen.getByLabelText('Thread actions menu'));
-      await user.click(screen.getByText('Export Chat'));
+      await user.click(getMenuItem(/export chat/i));
 
       expect(onExport).toHaveBeenCalledTimes(1);
     });
@@ -267,7 +268,7 @@ describe('ChatLayout', () => {
       render(<ChatLayout {...defaultProps} onDelete={onDelete} />);
 
       await user.click(screen.getByLabelText('Thread actions menu'));
-      await user.click(screen.getByText('Delete Thread'));
+      await user.click(getMenuItem(/delete thread/i));
 
       expect(onDelete).toHaveBeenCalledTimes(1);
     });

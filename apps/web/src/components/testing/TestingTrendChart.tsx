@@ -15,14 +15,14 @@ import { useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
 
 // Dynamic import to avoid SSR issues
 const MetricsChart = dynamic(

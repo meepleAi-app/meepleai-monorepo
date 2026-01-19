@@ -18,8 +18,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 
 export interface SearchBarProps {
   /** Current search query from URL searchParams */

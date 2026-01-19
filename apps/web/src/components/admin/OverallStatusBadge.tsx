@@ -12,8 +12,8 @@
 
 import { CheckCircleIcon, AlertTriangleIcon, XCircleIcon } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent } from '@/components/ui/data-display/card';
 import type { HealthState } from '@/lib/api';
 
 interface OverallStatusBadgeProps {

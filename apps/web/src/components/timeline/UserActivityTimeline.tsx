@@ -16,18 +16,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { Loader2, RefreshCw, Filter, X } from 'lucide-react';
 
 import { ActivityFeed, type ActivityEvent } from '@/components/admin/ActivityFeed';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
 import { api } from '@/lib/api';
 import type { UserActivityDto, UserActivityFilters } from '@/lib/api/schemas';
 

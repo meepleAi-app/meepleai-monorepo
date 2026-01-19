@@ -25,8 +25,8 @@ import React from 'react';
 import { MessageSquare, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 
 export interface ChatHistorySectionProps {
   /** User ID for fetching chat history */

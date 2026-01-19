@@ -14,9 +14,9 @@
 import React from 'react';
 
 import { CitationList } from '@/components/citations/CitationList';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
 import { cn } from '@/lib/utils';
 import type { Citation } from '@/types';
 

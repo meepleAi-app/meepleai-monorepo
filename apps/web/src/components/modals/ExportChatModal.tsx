@@ -25,7 +25,7 @@ import { useForm } from 'react-hook-form';
 import { exportChatAction, type ExportChatActionState } from '@/actions/chat';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormError } from '@/components/forms';
 import { LoadingButton } from '@/components/loading/LoadingButton';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/primitives/input';
 import { exportChatFormSchema, type ExportChatFormData } from '@/lib/schemas/forms';
 
 import { AccessibleModal } from '../accessible/AccessibleModal';

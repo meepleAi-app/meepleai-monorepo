@@ -19,17 +19,17 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/data-display/card';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
 import {
   Table,
   TableBody,
@@ -37,9 +37,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Spinner } from '@/components/ui/spinner';
+} from '@/components/ui/data-display/table';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Spinner } from '@/components/loading/Spinner';
 
 import { useApiClient } from '@/lib/api/context';
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';

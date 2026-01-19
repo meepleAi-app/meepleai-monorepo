@@ -9,6 +9,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 import { useThreadDeletion } from '../useThreadDeletion';
+import { getDialogHeading, queryDialogHeading, getByRoleInDialog } from '@/test-utils/locale-queries';
 import { useChatStore } from '@/store/chat/store';
 import * as toastUtils from '@/lib/toastUtils';
 
@@ -61,7 +62,7 @@ describe('useThreadDeletion', () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(screen.getByText('Elimina thread?')).toBeInTheDocument();
+      expect(getDialogHeading(/elimina thread/i)).toBeInTheDocument();
       expect(
         screen.getByText(
           /Questa azione non può essere annullata. Tutti i messaggi in questo thread verranno eliminati permanentemente./i
@@ -93,11 +94,11 @@ describe('useThreadDeletion', () => {
 
     // Wait for dialog to appear
     await waitFor(() => {
-      expect(screen.getByText('Elimina thread?')).toBeInTheDocument();
+      expect(getDialogHeading(/elimina thread/i)).toBeInTheDocument();
     });
 
     // Click confirm button
-    const confirmButton = screen.getByRole('button', { name: /elimina/i });
+    const confirmButton = getByRoleInDialog('button', { name: /elimina/i });
     fireEvent.click(confirmButton);
 
     // Verify deleteChat was called
@@ -130,11 +131,11 @@ describe('useThreadDeletion', () => {
 
     // Wait for dialog to appear
     await waitFor(() => {
-      expect(screen.getByText('Elimina thread?')).toBeInTheDocument();
+      expect(getDialogHeading(/elimina thread/i)).toBeInTheDocument();
     });
 
     // Click cancel button
-    const cancelButton = screen.getByRole('button', { name: /annulla/i });
+    const cancelButton = getByRoleInDialog('button', { name: /annulla/i });
     fireEvent.click(cancelButton);
 
     // Verify deleteChat was NOT called
@@ -168,7 +169,7 @@ describe('useThreadDeletion', () => {
     // Dialog should NOT appear
     await waitFor(
       () => {
-        expect(screen.queryByText('Elimina thread?')).not.toBeInTheDocument();
+        expect(queryDialogHeading(/elimina thread/i)).not.toBeInTheDocument();
       },
       { timeout: 1000 }
     );
@@ -201,11 +202,11 @@ describe('useThreadDeletion', () => {
 
     // Wait for dialog to appear
     await waitFor(() => {
-      expect(screen.getByText('Elimina thread?')).toBeInTheDocument();
+      expect(getDialogHeading(/elimina thread/i)).toBeInTheDocument();
     });
 
     // Check that confirm button has destructive styling (red)
-    const confirmButton = screen.getByRole('button', { name: /elimina/i });
+    const confirmButton = getByRoleInDialog('button', { name: /elimina/i });
     expect(confirmButton).toBeInTheDocument();
     // The destructive variant should apply specific styling classes
     // This is a basic check - actual styling verification would need visual regression tests
@@ -234,11 +235,11 @@ describe('useThreadDeletion', () => {
 
     // Wait for dialog to appear
     await waitFor(() => {
-      expect(screen.getByText('Elimina thread?')).toBeInTheDocument();
+      expect(getDialogHeading(/elimina thread/i)).toBeInTheDocument();
     });
 
     // Check button labels
-    expect(screen.getByRole('button', { name: /elimina/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /annulla/i })).toBeInTheDocument();
+    expect(getByRoleInDialog('button', { name: /elimina/i })).toBeInTheDocument();
+    expect(getByRoleInDialog('button', { name: /annulla/i })).toBeInTheDocument();
   });
 });

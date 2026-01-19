@@ -37,8 +37,8 @@ import { AlertCircle } from 'lucide-react';
 import { QuickActions } from '@/components/dashboard/QuickActions';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { TopNav } from '@/components/layout/TopNav';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useGames } from '@/hooks/queries/useGames';
 
@@ -46,6 +46,7 @@ import { ChatHistorySection } from './components/ChatHistorySection';
 import { GreetingSection } from './components/GreetingSection';
 import { LibraryQuotaSection } from './components/LibraryQuotaSection';
 import { RecentGamesSection } from './components/RecentGamesSection';
+import { RecentlyAddedSection } from './components/RecentlyAddedSection';
 
 export default function DashboardPage() {
   // TanStack Query hooks (automatic caching, refetching, error handling)
@@ -152,6 +153,9 @@ export default function DashboardPage() {
 
         {/* Library Quota Widget (Issue #2445) */}
         <LibraryQuotaSection />
+
+        {/* Recently Added Games from Library (Issue #2612) */}
+        <RecentlyAddedSection />
 
         {/* Recent Games Section */}
         <RecentGamesSection games={gamesData?.games} isLoading={gamesLoading} error={gamesError} />

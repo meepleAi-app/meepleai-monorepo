@@ -19,9 +19,9 @@ import React from 'react';
 import { AlertCircle, BookOpen, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useLibraryQuota } from '@/hooks/queries/useLibrary';
 import { cn } from '@/lib/utils';
 

@@ -27,29 +27,11 @@ internal sealed class InitiateOAuthLoginCommandHandler : ICommandHandler<Initiat
     public async Task<InitiateOAuthLoginResult> Handle(InitiateOAuthLoginCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // Validation handled by InitiateOAuthLoginCommandValidator via MediatR pipeline
         try
         {
-            // Validate provider (business logic)
-            if (string.IsNullOrWhiteSpace(command.Provider))
-            {
-                _logger.LogWarning("OAuth login initiation failed: Provider not specified");
-                return new InitiateOAuthLoginResult
-                {
-                    Success = false,
-                    ErrorMessage = "OAuth provider must be specified"
-                };
-            }
-
             var provider = command.Provider.ToLowerInvariant();
-            if (provider is not ("google" or "discord" or "github"))
-            {
-                _logger.LogWarning("OAuth login initiation failed: Unsupported provider {Provider}", command.Provider);
-                return new InitiateOAuthLoginResult
-                {
-                    Success = false,
-                    ErrorMessage = $"Unsupported OAuth provider: {command.Provider}"
-                };
-            }
 
             // Step 1: Generate secure CSRF state (business logic)
             var state = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));

@@ -13,27 +13,28 @@ services:
   # ============================================================================
 
   postgres:
+    env_file:
+      - ../.env.development
     environment:
       # Issue #2152: Changed default from 'meeple' to 'postgres' for standard PostgreSQL compatibility
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meeplepass}  # Plain password for dev
+      # Passwords loaded from .env.development to ensure consistency with API
       POSTGRES_PASSWORD_FILE: ""
-      POSTGRES_DB: ${POSTGRES_DB:-meepleai}
     secrets: []  # Disable secrets in dev
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
   api:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      # Use plain connection string for dev (no secrets)
-      # Issue #2152: Changed default username from 'meeple' to 'postgres'
-      ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-meepleai};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-meeplepass}"
+      # Connection string built by SecretsHelper from POSTGRES_* env vars
+      # Override POSTGRES_HOST for Docker networking (service name, not localhost)
+      POSTGRES_HOST: postgres
       POSTGRES_PASSWORD_FILE: ""
       QDRANT_URL: http://qdrant:6333
-      REDIS_URL: "redis:6379,password=changeme-redis-dev-please-set,abortConnect=false"
+      # REDIS_URL built by load-secrets-env.sh from REDIS_PASSWORD (redis.secret)
+      # Removed hardcoded password to avoid mismatch with redis.secret
       OLLAMA_URL: http://ollama:11434
       EMBEDDING_PROVIDER: ollama
       EMBEDDING_MODEL: nomic-embed-text
@@ -54,6 +55,7 @@ services:
       GITHUB_OAUTH_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
     env_file:
       - ../.env.development
+      - ./secrets/redis.secret  # Required for REDIS_PASSWORD (used by load-secrets-env.sh)
     secrets: []  # Disable secrets in dev
 
   n8n:
@@ -81,7 +83,7 @@ services:
       - '--web.external-url=http://localhost:9093'
     volumes:
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - alertmanagerdata:/alertmanager
+      - alertmanager_data:/alertmanager
 
   grafana:
     environment:

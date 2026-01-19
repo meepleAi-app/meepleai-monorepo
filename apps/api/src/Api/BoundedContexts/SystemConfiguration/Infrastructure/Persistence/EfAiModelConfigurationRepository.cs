@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
+using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -102,6 +103,68 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
         return Task.CompletedTask;
     }
 
+    // Issue #2596: Tier routing queries
+    public async Task<AiModelConfiguration?> GetDefaultForTierAsync(
+        LlmUserTier tier,
+        LlmEnvironmentType environment,
+        CancellationToken cancellationToken = default)
+    {
+        var tierValue = (int)tier;
+        var envValue = (int)environment;
+
+        var entity = await _db.AiModelConfigurations
+            .AsNoTracking()
+            .Where(e => e.ApplicableTier == tierValue
+                     && e.EnvironmentType == envValue
+                     && e.IsDefaultForTier
+                     && e.IsActive)
+            .OrderBy(e => e.Priority)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
+    public async Task<IReadOnlyList<AiModelConfiguration>> GetByTierAsync(
+        LlmUserTier tier,
+        LlmEnvironmentType? environment = null,
+        CancellationToken cancellationToken = default)
+    {
+        var tierValue = (int)tier;
+
+        var query = _db.AiModelConfigurations
+            .AsNoTracking()
+            .Where(e => e.ApplicableTier == tierValue && e.IsActive);
+
+        if (environment.HasValue)
+        {
+            var envValue = (int)environment.Value;
+            query = query.Where(e => e.EnvironmentType == envValue);
+        }
+
+        var entities = await query
+            .OrderBy(e => e.Priority)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<IReadOnlyList<AiModelConfiguration>> GetAllTierRoutingsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var entities = await _db.AiModelConfigurations
+            .AsNoTracking()
+            .Where(e => e.ApplicableTier != null) // Only tier-specific configurations
+            .OrderBy(e => e.ApplicableTier)
+            .ThenBy(e => e.EnvironmentType)
+            .ThenBy(e => e.Priority)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     private static AiModelConfiguration MapToDomain(AiModelConfigurationEntity entity)
     {
         // Deserialize JSON to value objects (Issue #2520)
@@ -137,6 +200,14 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
         typeof(AiModelConfiguration).GetProperty(nameof(AiModelConfiguration.Usage))!
             .SetValue(domainEntity, usage);
 
+        // Issue #2596: Tier routing fields
+        typeof(AiModelConfiguration).GetProperty(nameof(AiModelConfiguration.ApplicableTier))!
+            .SetValue(domainEntity, entity.ApplicableTier.HasValue ? (LlmUserTier)entity.ApplicableTier.Value : null);
+        typeof(AiModelConfiguration).GetProperty(nameof(AiModelConfiguration.EnvironmentType))!
+            .SetValue(domainEntity, (LlmEnvironmentType)entity.EnvironmentType);
+        typeof(AiModelConfiguration).GetProperty(nameof(AiModelConfiguration.IsDefaultForTier))!
+            .SetValue(domainEntity, entity.IsDefaultForTier);
+
         return domainEntity;
     }
 
@@ -158,7 +229,11 @@ public sealed class EfAiModelConfigurationRepository : IAiModelConfigurationRepo
             CreatedAt = domain.CreatedAt,
             UpdatedAt = domain.UpdatedAt,
             SettingsJson = settingsJson,
-            UsageJson = usageJson
+            UsageJson = usageJson,
+            // Issue #2596: Tier routing fields
+            ApplicableTier = domain.ApplicableTier.HasValue ? (int)domain.ApplicableTier.Value : null,
+            EnvironmentType = (int)domain.EnvironmentType,
+            IsDefaultForTier = domain.IsDefaultForTier
         };
     }
 }

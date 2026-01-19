@@ -5,7 +5,7 @@ import * as React from 'react';
 
 import { AlertCircle, CheckCircle, Info, AlertTriangle, Loader2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/overlays/dialog';
 
 export type AlertVariant = 'info' | 'success' | 'warning' | 'error' | 'loading';
 

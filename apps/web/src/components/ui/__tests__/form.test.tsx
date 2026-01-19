@@ -24,9 +24,9 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '../form';
-import { Input } from '../input';
-import { Button } from '../button';
+} from '../forms/form';
+import { Input } from '../primitives/input';
+import { Button } from '../primitives/button';
 
 expect.extend(toHaveNoViolations);
 

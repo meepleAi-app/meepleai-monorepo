@@ -20,9 +20,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+} from '@/components/ui/data-display/table';
+import { Button } from '@/components/ui/primitives/button';
+import { Badge } from '@/components/ui/data-display/badge';
 import { Star, Settings, TrendingUp, ArrowUpDown } from 'lucide-react';
 
 import type { AiModelDto } from '@/lib/api';

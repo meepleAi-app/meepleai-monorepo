@@ -20,8 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
+} from '@/components/ui/overlays/dialog';
+import { Separator } from '@/components/ui/navigation/separator';
 import { formatShortcut, isMac, type KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 
 interface KeyboardShortcutsHelpProps {

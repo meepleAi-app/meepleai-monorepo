@@ -19,7 +19,7 @@
 
 import React from 'react';
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { cn } from '@/lib/utils';
 
 export interface RateLimitBannerProps {

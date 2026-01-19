@@ -16,9 +16,9 @@
 
 import { AlertCircle } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Badge } from '@/components/ui/data-display/badge';
 
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
 

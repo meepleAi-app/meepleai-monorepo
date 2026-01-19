@@ -1,5 +1,5 @@
 /**
- * User Library Page (Issue #2464)
+ * User Library Page (Issue #2464, #2613)
  *
  * Enhanced user library management with search, filtering, and actions.
  *
@@ -12,13 +12,14 @@
  * - Remove confirmation dialog
  * - Quota status bar
  * - Empty state with CTA
+ * - Bulk selection mode with floating action bar (Issue #2613)
  */
 
 'use client';
 
 import React, { useState } from 'react';
 
-import { BookOpen, Plus } from 'lucide-react';
+import { BookOpen, CheckSquare, Plus, Share2 } from 'lucide-react';
 import Link from 'next/link';
 
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -31,12 +32,15 @@ import {
   UserGameCard,
   AgentConfigModal,
   PdfUploadModal,
+  BulkActionBar,
+  ShareLibraryModal,
 } from '@/components/library';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent } from '@/components/ui/data-display/card';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useLibrary, useLibraryQuota } from '@/hooks/queries/useLibrary';
+import { useBulkSelectionStore } from '@/lib/stores/bulk-selection-store';
 import type { GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
 
 export default function LibraryPage() {
@@ -92,6 +96,24 @@ export default function LibraryPage() {
     gameId: '',
     gameTitle: '',
   });
+
+  // Share library modal state (Issue #2614)
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+
+  // Bulk selection state (Issue #2613)
+  const {
+    selectedIds,
+    selectionMode,
+    toggleSelectionMode,
+    toggleSelection,
+    selectAll,
+    deselectAll,
+    clearSelection,
+    selectRange,
+    isSelected,
+    getSelectedCount,
+    getSelectedIds,
+  } = useBulkSelectionStore();
 
   // Fetch user's library and quota
   const {
@@ -216,6 +238,20 @@ export default function LibraryPage() {
     ? games.filter(game => game.gameTitle.toLowerCase().includes(searchQuery.toLowerCase()))
     : games;
 
+  // All game IDs for selection operations (Issue #2613)
+  const allGameIds = filteredGames.map(g => g.gameId);
+
+  // Handle game selection (Issue #2613)
+  const handleGameSelect = (gameId: string, shiftKey: boolean) => {
+    if (shiftKey && allGameIds.length > 0) {
+      // Shift+Click: select range
+      selectRange(allGameIds, gameId);
+    } else {
+      // Normal click: toggle single selection
+      toggleSelection(gameId);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
       <TopNav />
@@ -224,12 +260,31 @@ export default function LibraryPage() {
         {/* Page Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <h1 className="text-3xl font-bold font-quicksand">La Mia Libreria</h1>
-          <Button asChild>
-            <Link href="/games/catalog">
-              <Plus className="mr-2 h-4 w-4" />
-              Aggiungi Gioco
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            {/* Share Library Button (Issue #2614) */}
+            {hasGames && (
+              <Button variant="outline" onClick={() => setShareModalOpen(true)}>
+                <Share2 className="mr-2 h-4 w-4" />
+                Condividi
+              </Button>
+            )}
+            {/* Selection Mode Toggle (Issue #2613) */}
+            {hasGames && (
+              <Button
+                variant={selectionMode ? 'secondary' : 'outline'}
+                onClick={toggleSelectionMode}
+              >
+                <CheckSquare className="mr-2 h-4 w-4" />
+                {selectionMode ? 'Annulla Selezione' : 'Seleziona'}
+              </Button>
+            )}
+            <Button asChild>
+              <Link href="/games/catalog">
+                <Plus className="mr-2 h-4 w-4" />
+                Aggiungi Gioco
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* Quota Status Bar */}
@@ -270,6 +325,9 @@ export default function LibraryPage() {
                     onUploadPdf={handleUploadPdf}
                     onEditNotes={handleEditNotes}
                     onRemove={handleRemoveGame}
+                    selectionMode={selectionMode}
+                    isSelected={isSelected(game.gameId)}
+                    onSelect={handleGameSelect}
                   />
                 ))}
               </div>
@@ -306,6 +364,19 @@ export default function LibraryPage() {
         )}
       </div>
 
+      {/* Bulk Action Bar (Issue #2613) */}
+      {selectionMode && (
+        <BulkActionBar
+          selectedCount={getSelectedCount()}
+          selectedIds={getSelectedIds()}
+          allGameIds={allGameIds}
+          games={filteredGames}
+          onClearSelection={clearSelection}
+          onSelectAll={selectAll}
+          onDeselectAll={deselectAll}
+        />
+      )}
+
       <BottomNav />
 
       {/* Edit Notes Modal */}
@@ -339,6 +410,12 @@ export default function LibraryPage() {
         onClose={() => setPdfUploadModal(prev => ({ ...prev, isOpen: false }))}
         gameId={pdfUploadModal.gameId}
         gameTitle={pdfUploadModal.gameTitle}
+      />
+
+      {/* Share Library Modal (Issue #2614) */}
+      <ShareLibraryModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
       />
     </main>
   );

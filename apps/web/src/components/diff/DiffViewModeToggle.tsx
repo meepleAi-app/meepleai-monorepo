@@ -2,7 +2,7 @@ import React from 'react';
 
 import { List, Columns2 } from 'lucide-react';
 
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/primitives/toggle-group';
 
 export interface DiffViewModeToggleProps {
   currentMode: 'list' | 'side-by-side';

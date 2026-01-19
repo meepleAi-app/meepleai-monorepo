@@ -18,7 +18,7 @@ import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { toast } from '@/components/layout';
 import { Spinner } from '@/components/loading';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui/data-display/card';
 import { api } from '@/lib/api';
 
 import { ChatSetupStep } from './steps/ChatSetupStep';

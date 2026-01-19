@@ -21,7 +21,7 @@
 
 import React from 'react';
 
-import { Button, ButtonProps } from '@/components/ui/button';
+import { Button, ButtonProps } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 export interface RateLimitedButtonProps extends ButtonProps {

@@ -29,8 +29,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Loader2, X } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/primitives/button';
+import { Progress } from '@/components/ui/feedback/progress';
 import { useReducedMotion } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 

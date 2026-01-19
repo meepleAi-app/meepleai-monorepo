@@ -12,8 +12,8 @@
 
 import { useState, useEffect } from 'react';
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Button } from '@/components/ui/primitives/button';
 import { AlertTriangle, AlertCircle, X } from 'lucide-react';
 
 import { BUDGET_ALERT_THRESHOLDS, type CostTrackingDto } from '@/lib/api';

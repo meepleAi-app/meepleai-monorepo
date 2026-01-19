@@ -19,7 +19,7 @@ import { useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 
 export interface PaginationProps {
   /** Current page (1-indexed) */

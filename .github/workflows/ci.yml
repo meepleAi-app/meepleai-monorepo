@@ -125,8 +125,9 @@ jobs:
 
       qdrant:
         image: qdrant/qdrant:v1.12.4
+        # Note: wget/curl not available in Qdrant image, use bash TCP health check
         options: >-
-          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:6333/healthz || exit 1"
+          --health-cmd "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /readyz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n\" >&3 && grep -q \"HTTP/1.1 200\" <&3'"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20

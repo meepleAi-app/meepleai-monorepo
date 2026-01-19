@@ -34,7 +34,7 @@ export class ChatHelper {
     sources?: Array<{ title: string; page: number; snippet: string }>;
     confidence?: number;
   }): Promise<void> {
-    await this.page.route(`${apiBase}/api/v1/chat`, async route => {
+    await this.page.route(`${apiBase}/api/v1/chat-threads/*/messages`, async route => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,
@@ -53,7 +53,7 @@ export class ChatHelper {
    * Mock SSE streaming chat endpoint
    */
   async mockChatStreaming(chunks: string[], sources?: Array<any>): Promise<void> {
-    await this.page.route(`${apiBase}/api/v1/chat/stream`, async route => {
+    await this.page.route(`${apiBase}/api/v1/chat-threads/*/messages/stream`, async route => {
       // Build SSE response with data chunks
       let sseBody = '';
 
@@ -128,7 +128,7 @@ export class ChatHelper {
    * Mock QA agent endpoint
    */
   async mockQAAgent(answer: string, sources?: Array<any>): Promise<void> {
-    await this.page.route(`${apiBase}/agents/qa`, async route => {
+    await this.page.route(`${apiBase}/api/v1/agents/qa`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -144,7 +144,7 @@ export class ChatHelper {
    * Mock chat history endpoint
    */
   async mockChatHistory(messages: ChatMessage[]): Promise<void> {
-    await this.page.route(`${apiBase}/api/v1/chat/history*`, async route => {
+    await this.page.route(`${apiBase}/api/v1/chat-threads/*/history`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -166,7 +166,7 @@ export class ChatHelper {
       },
     ];
 
-    await this.page.route(`${apiBase}/api/v1/chat/threads*`, async route => {
+    await this.page.route(`${apiBase}/api/v1/chat-threads*`, async route => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
           status: 200,
@@ -195,7 +195,7 @@ export class ChatHelper {
   async mockChatExport(format: 'txt' | 'json' | 'md' = 'txt'): Promise<void> {
     const exportData = format === 'json' ? JSON.stringify({ messages: [] }) : 'Chat export data';
 
-    await this.page.route(`${apiBase}/api/v1/chat/export*`, async route => {
+    await this.page.route(`${apiBase}/api/v1/chat-threads/*/export`, async route => {
       await route.fulfill({
         status: 200,
         headers: {
@@ -211,7 +211,7 @@ export class ChatHelper {
    * Mock feedback endpoint
    */
   async mockFeedback(success: boolean = true): Promise<void> {
-    await this.page.route(`${apiBase}/api/v1/chat/feedback`, async route => {
+    await this.page.route(`${apiBase}/api/v1/chat-threads/*/feedback`, async route => {
       if (success) {
         await route.fulfill({
           status: 200,
@@ -232,7 +232,7 @@ export class ChatHelper {
    * Mock citations endpoint
    */
   async mockCitations(citations: Array<any>): Promise<void> {
-    await this.page.route(`${apiBase}/api/v1/chat/citations*`, async route => {
+    await this.page.route(`${apiBase}/api/v1/chat-threads/*/citations`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -247,7 +247,7 @@ export class ChatHelper {
    * @param statusCode - HTTP status code for failures (default: 403)
    */
   async mockMessageEdit(success: boolean = true, statusCode: number = 403): Promise<void> {
-    await this.page.route('**/api/v1/chats/*/messages/*', async route => {
+    await this.page.route('**/api/v1/chat-threads/*/messages/*', async route => {
       const method = route.request().method();
       if (method === 'PUT') {
         if (success) {
@@ -281,7 +281,7 @@ export class ChatHelper {
    * @param statusCode - HTTP status code for failures (default: 403)
    */
   async mockMessageDelete(success: boolean = true, statusCode: number = 403): Promise<void> {
-    await this.page.route('**/api/v1/chats/*/messages/*', async route => {
+    await this.page.route('**/api/v1/chat-threads/*/messages/*', async route => {
       const method = route.request().method();
       if (method === 'DELETE') {
         if (success) {
@@ -310,7 +310,7 @@ export class ChatHelper {
     editSuccess: boolean = true,
     deleteSuccess: boolean = true
   ): Promise<void> {
-    await this.page.route('**/api/v1/chats/*/messages/*', async route => {
+    await this.page.route('**/api/v1/chat-threads/*/messages/*', async route => {
       const method = route.request().method();
 
       if (method === 'PUT') {

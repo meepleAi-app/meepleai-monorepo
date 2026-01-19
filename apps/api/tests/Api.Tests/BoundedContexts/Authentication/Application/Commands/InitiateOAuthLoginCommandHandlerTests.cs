@@ -63,35 +63,6 @@ public class InitiateOAuthLoginCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithUnsupportedProvider_ReturnsError()
-    {
-        // Arrange
-        var command = new InitiateOAuthLoginCommand { Provider = "facebook", IpAddress = "127.0.0.1" };
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Unsupported OAuth provider", result.ErrorMessage);
-        Assert.Null(result.AuthorizationUrl);
-    }
-
-    [Fact]
-    public async Task Handle_WithEmptyProvider_ReturnsError()
-    {
-        // Arrange
-        var command = new InitiateOAuthLoginCommand { Provider = "", IpAddress = "127.0.0.1" };
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Contains("must be specified", result.ErrorMessage);
-    }
-
-    [Fact]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert

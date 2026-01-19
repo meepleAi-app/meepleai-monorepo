@@ -308,8 +308,8 @@ public class AuthenticationFlowTests : IAsyncLifetime
     [Fact(DisplayName = "GET with invalid API key should return 401 Unauthorized")]
     public async Task Get_WithInvalidApiKey_Returns401Unauthorized()
     {
-        // Arrange
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
+        // Arrange - Use authenticated endpoint instead of public /games endpoint
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "mpl_test_invalidkey123");
 
         // Act

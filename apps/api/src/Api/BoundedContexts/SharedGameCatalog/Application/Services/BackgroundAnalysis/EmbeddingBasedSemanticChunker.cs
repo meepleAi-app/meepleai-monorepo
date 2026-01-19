@@ -265,7 +265,17 @@ internal sealed partial class EmbeddingBasedSemanticChunker : ISemanticChunker
                 position,
                 position + chunkSize));
 
-            position += chunkSize - _options.OverlapSize;
+            // Calculate next position with overlap, ensuring we always advance
+            // and never go negative (when content is smaller than overlap size)
+            var nextPosition = position + chunkSize - _options.OverlapSize;
+
+            // Ensure we always advance by at least 1 character to avoid infinite loop
+            // and never go negative to avoid ArgumentOutOfRangeException
+            position = Math.Max(nextPosition, position + 1);
+
+            // If we've processed all content, exit
+            if (position >= content.Length)
+                break;
         }
 
         return chunks;

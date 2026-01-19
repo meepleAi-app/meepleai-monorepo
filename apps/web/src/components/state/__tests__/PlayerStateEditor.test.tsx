@@ -124,10 +124,19 @@ describe('PlayerStateEditor', () => {
 
     render(<PlayerStateEditor players={players} onChange={mockOnChange} />);
 
-    expect(screen.getByText('Giocatori:')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('Punteggio totale:')).toBeInTheDocument();
-    expect(screen.getByText('27')).toBeInTheDocument();
+    // Text is split across <strong> and text nodes, use custom matcher
+    expect(screen.getByText(/Giocatori:/)).toBeInTheDocument();
+    expect(screen.getByText(/Punteggio totale:/)).toBeInTheDocument();
+    // Find the summary div and check its full text content
+    const summaryDiv = screen.getByText((content, element) => {
+      return element?.tagName === 'DIV' &&
+             element?.className.includes('bg-blue-50') &&
+             element?.textContent?.includes('Giocatori:') === true &&
+             element?.textContent?.includes('2') === true &&
+             element?.textContent?.includes('Punteggio totale:') === true &&
+             element?.textContent?.includes('27') === true;
+    });
+    expect(summaryDiv).toBeInTheDocument();
   });
 
   it('hides add/remove buttons in readonly mode', () => {

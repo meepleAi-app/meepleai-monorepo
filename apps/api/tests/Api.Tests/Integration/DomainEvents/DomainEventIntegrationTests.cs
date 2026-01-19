@@ -27,12 +27,14 @@ public class DomainEventIntegrationTests : IAsyncLifetime
 {
     private MeepleAiDbContext _dbContext = null!;
     private IMediator _mediator = null!;
+    private IServiceScope _scope = null!;
 
     public async ValueTask InitializeAsync()
     {
-        // Setup in-memory database
+        // Setup in-memory database with shared database name
+        var databaseName = Guid.NewGuid().ToString();
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(databaseName: databaseName)
             .Options;
 
         // Create mediator with real handler registration
@@ -44,10 +46,10 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         services.AddLogging();
 
         var serviceProvider = services.BuildServiceProvider();
-        _mediator = serviceProvider.GetRequiredService<IMediator>();
-        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-
-
+        _scope = serviceProvider.CreateScope();
+        _mediator = _scope.ServiceProvider.GetRequiredService<IMediator>();
+        // Use the SAME DbContext instance from DI - critical for audit log visibility
+        _dbContext = _scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await Task.CompletedTask;
     }
@@ -58,6 +60,7 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         {
             await _dbContext.DisposeAsync();
         }
+        _scope?.Dispose();
     }
 
     [Fact]

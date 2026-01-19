@@ -19,7 +19,7 @@
 
 import React, { useState } from 'react';
 
-import { BookOpen, CheckSquare, Plus } from 'lucide-react';
+import { BookOpen, CheckSquare, Plus, Share2 } from 'lucide-react';
 import Link from 'next/link';
 
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -33,6 +33,7 @@ import {
   AgentConfigModal,
   PdfUploadModal,
   BulkActionBar,
+  ShareLibraryModal,
 } from '@/components/library';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
@@ -95,6 +96,9 @@ export default function LibraryPage() {
     gameId: '',
     gameTitle: '',
   });
+
+  // Share library modal state (Issue #2614)
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   // Bulk selection state (Issue #2613)
   const {
@@ -257,6 +261,13 @@ export default function LibraryPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <h1 className="text-3xl font-bold font-quicksand">La Mia Libreria</h1>
           <div className="flex gap-2">
+            {/* Share Library Button (Issue #2614) */}
+            {hasGames && (
+              <Button variant="outline" onClick={() => setShareModalOpen(true)}>
+                <Share2 className="mr-2 h-4 w-4" />
+                Condividi
+              </Button>
+            )}
             {/* Selection Mode Toggle (Issue #2613) */}
             {hasGames && (
               <Button
@@ -399,6 +410,12 @@ export default function LibraryPage() {
         onClose={() => setPdfUploadModal(prev => ({ ...prev, isOpen: false }))}
         gameId={pdfUploadModal.gameId}
         gameTitle={pdfUploadModal.gameTitle}
+      />
+
+      {/* Share Library Modal (Issue #2614) */}
+      <ShareLibraryModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
       />
     </main>
   );

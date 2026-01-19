@@ -44,6 +44,12 @@ export {
   useRemoveGameFromLibrary,
   useUpdateLibraryEntry,
   useToggleLibraryFavorite,
+  // Library Sharing (Issue #2614)
+  useLibraryShareLink,
+  useCreateShareLink,
+  useUpdateShareLink,
+  useRevokeShareLink,
+  useSharedLibrary,
   libraryKeys,
 } from './useLibrary';
 

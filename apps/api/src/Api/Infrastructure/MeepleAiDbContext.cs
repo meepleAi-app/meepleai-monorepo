@@ -89,6 +89,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<RulebookAnalysisEntity> RulebookAnalyses => Set<RulebookAnalysisEntity>(); // ISSUE-2402: Sprint 3 - Rulebook analysis service
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
+    public DbSet<LibraryShareLinkEntity> LibraryShareLinks => Set<LibraryShareLinkEntity>(); // ISSUE-2614: Library sharing
     public DbSet<GameSessionStateEntity> GameSessionStates => Set<GameSessionStateEntity>(); // ISSUE-2403: Sprint 4 - Game session state tracking
     public DbSet<GameStateSnapshotEntity> GameStateSnapshots => Set<GameStateSnapshotEntity>(); // ISSUE-2403: Sprint 4 - State snapshots
     public DbSet<AiModelConfigurationEntity> AiModelConfigurations => Set<AiModelConfigurationEntity>(); // ISSUE-2512: Auto-configuration pipeline - AI model seed

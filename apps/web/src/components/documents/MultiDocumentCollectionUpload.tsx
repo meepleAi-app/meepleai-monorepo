@@ -81,7 +81,7 @@ export function MultiDocumentCollectionUpload({
     formData.append('gameId', gameId);
     formData.append('language', 'en'); // Default to English
 
-    const response = await fetch(`${API_BASE}/api/v1/pdfs/upload`, {
+    const response = await fetch(`${API_BASE}/api/v1/ingest/pdf`, {
       method: 'POST',
       credentials: 'include',
       body: formData,

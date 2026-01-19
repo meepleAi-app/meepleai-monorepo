@@ -1,5 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.BoundedContexts.SystemConfiguration.Application.Services;
+using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
 using Api.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -11,11 +13,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 /// ISSUE-959 (BGAI-019): Hybrid LLM routing with adaptive tier-based model selection
 /// ISSUE-963 (BGAI-021): Enhanced with AI:Providers configuration integration (Option C)
 /// ISSUE-1725: Enhanced with budget-aware model override support
+/// ISSUE-2596: Enhanced with database-driven tier routing (database > appsettings fallback)
 /// </summary>
 internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 {
     private readonly IConfiguration _configuration;
     private readonly ILlmModelOverrideService _modelOverrideService;
+    private readonly ILlmTierRoutingService? _tierRoutingService;
     private readonly ILogger<HybridAdaptiveRoutingStrategy> _logger;
     private readonly IOptions<AiProviderSettings> _aiSettings;
 
@@ -53,15 +57,25 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         IConfiguration configuration,
         IOptions<AiProviderSettings> aiSettings,
         ILogger<HybridAdaptiveRoutingStrategy> logger,
-        ILlmModelOverrideService? modelOverrideService = null)
+        ILlmModelOverrideService? modelOverrideService = null,
+        ILlmTierRoutingService? tierRoutingService = null)
     {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _aiSettings = aiSettings ?? throw new ArgumentNullException(nameof(aiSettings));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _modelOverrideService = modelOverrideService ?? new NullModelOverrideService();
+        _tierRoutingService = tierRoutingService; // Nullable for backward compatibility
 
-        _logger.LogInformation(
-            "HybridAdaptiveRoutingStrategy initialized with budget-aware model override support");
+        if (_tierRoutingService != null)
+        {
+            _logger.LogInformation(
+                "HybridAdaptiveRoutingStrategy initialized with budget-aware model override support and database-driven tier routing");
+        }
+        else
+        {
+            _logger.LogInformation(
+                "HybridAdaptiveRoutingStrategy initialized with budget-aware model override support (database routing not available)");
+        }
     }
 
     /// <inheritdoc/>
@@ -80,7 +94,17 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
             return preferredDecision!;
         }
 
-        // BGAI-022 Step 2: Use existing user-tier routing
+        // ISSUE-2596 Step 2: Try database-driven tier routing first
+        if (_tierRoutingService != null)
+        {
+            var databaseDecision = TryGetDatabaseRoutingDecision(userRole, isAnonymous, userId);
+            if (databaseDecision != null)
+            {
+                return ApplyBudgetModeOverride(databaseDecision, userId);
+            }
+        }
+
+        // BGAI-022 Step 2 (fallback): Use appsettings.json user-tier routing
         var (ollamaModel, openRouterModel, openRouterPercent) = GetTierConfiguration(userRole, isAnonymous);
 
         // Traffic split: Random selection based on configured percentage
@@ -107,6 +131,70 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 
         // If ollamaModel contains '/', it's actually an OpenRouter model ID
         return ollamaModel.Contains('/') ? "OpenRouter" : "Ollama";
+    }
+
+    /// <summary>
+    /// ISSUE-2596: Try to get routing decision from database tier configuration.
+    /// Returns null if database routing is not available or not configured for this tier.
+    /// </summary>
+    private LlmRoutingDecision? TryGetDatabaseRoutingDecision(Role userRole, bool isAnonymous, string userId)
+    {
+        try
+        {
+            var tier = MapRoleToTier(userRole, isAnonymous);
+
+            // Use GetAwaiter().GetResult() since this is called from sync context
+            // HybridCache L1 in-memory cache makes this safe for the common case
+            var modelConfig = _tierRoutingService!
+                .GetModelForTierAsync(tier, CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+
+            if (modelConfig == null)
+            {
+                _logger.LogDebug(
+                    "[{UserId}] No database tier routing configured for {Tier}, falling back to appsettings",
+                    userId, tier);
+                return null;
+            }
+
+            // Determine provider from model ID pattern (OpenRouter models contain '/')
+            var provider = modelConfig.ModelId.Contains('/') ? "OpenRouter" : "Ollama";
+
+            _logger.LogDebug(
+                "[{UserId}] Database tier routing: {Tier} → {Provider} ({Model})",
+                userId, tier, provider, modelConfig.ModelId);
+
+            return new LlmRoutingDecision(
+                provider,
+                modelConfig.ModelId,
+                $"Database tier routing: {tier} (environment: {modelConfig.EnvironmentType})");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "[{UserId}] Database tier routing failed, falling back to appsettings",
+                userId);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// ISSUE-2596: Map authentication Role to LlmUserTier.
+    /// </summary>
+    private static LlmUserTier MapRoleToTier(Role userRole, bool isAnonymous)
+    {
+        if (isAnonymous)
+        {
+            return LlmUserTier.Anonymous;
+        }
+
+        return userRole.Value switch
+        {
+            "admin" => LlmUserTier.Admin,
+            "editor" => LlmUserTier.Editor,
+            _ => LlmUserTier.User
+        };
     }
 
     private bool TryGetPreferredDecision(AiProviderSettings settings, Role userRole, string userId, out LlmRoutingDecision? decision)

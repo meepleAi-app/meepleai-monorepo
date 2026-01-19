@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.Infrastructure;
 /// This prevents the startup failure that occurred when EnableL2Cache=false but services
 /// still required IDistributedCache (e.g., EditorLockService, ShareLink handlers).
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class DistributedCacheRegistrationTests
 {
     private static IWebHostEnvironment CreateTestEnvironment()

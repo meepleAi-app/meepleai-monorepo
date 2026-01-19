@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Npgsql;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.Authentication;
 
@@ -35,7 +36,7 @@ namespace Api.Tests.Integration.Authentication;
 /// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL
 /// </remarks>
 [Collection("SharedTestcontainers")]
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]
 [Trait("Issue", "575")]

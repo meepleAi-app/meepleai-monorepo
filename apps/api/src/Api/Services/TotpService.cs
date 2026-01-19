@@ -143,9 +143,9 @@ internal class TotpService : ITotpService
             return false;
         }
 
-        // Decrypt secret and verify code
+        // Decrypt secret and verify code (constant-time with artificial delay - Issue #2621)
         var secret = await _encryptionService.DecryptAsync(user.TotpSecretEncrypted, purpose: "TotpSecrets").ConfigureAwait(false);
-        var isValid = VerifyTotpCode(secret, totpCode, out _); // Discard timeStep during setup
+        var (isValid, _) = await VerifyTotpCodeAsync(secret, totpCode, cancellationToken).ConfigureAwait(false); // Discard timeStep during setup
 
         if (!isValid)
         {
@@ -199,9 +199,9 @@ internal class TotpService : ITotpService
             return false;
         }
 
-        // Decrypt secret and verify code
+        // Decrypt secret and verify code (constant-time with artificial delay - Issue #2621)
         var secret = await _encryptionService.DecryptAsync(user.TotpSecretEncrypted, purpose: "TotpSecrets").ConfigureAwait(false);
-        var isValid = VerifyTotpCode(secret, code, out long timeStep);
+        var (isValid, timeStep) = await VerifyTotpCodeAsync(secret, code, cancellationToken).ConfigureAwait(false);
 
         if (!isValid)
         {
@@ -578,10 +578,21 @@ internal class TotpService : ITotpService
     /// <summary>
     /// Verify TOTP code with time window (±2 steps = 60 seconds total)
     /// SECURITY: Issue #1787 - Returns timeStep for nonce tracking
+    /// SECURITY: Issue #2621 - Constant-time verification with artificial delay to prevent timing attacks
     /// </summary>
-    private bool VerifyTotpCode(string secret, string code, out long timeStep)
+    private async Task<(bool isValid, long timeStep)> VerifyTotpCodeAsync(
+        string secret,
+        string code,
+        CancellationToken cancellationToken = default)
     {
-        timeStep = 0;
+        // ⚠️ SECURITY CRITICAL: Constant-time implementation
+        // All code paths MUST take the same execution time to prevent timing attacks
+        // that could allow attackers to optimize TOTP brute force attempts.
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        long timeStep = 0;
+        bool isValid = false;
+
         try
         {
             var secretBytes = Base32Encoding.ToBytes(secret);
@@ -589,7 +600,7 @@ internal class TotpService : ITotpService
 
             // Verify with time window for clock skew tolerance
             // VerificationWindow(previous: 2, future: 2) = ±60 seconds
-            var isValid = totp.VerifyTotp(code, out long timeStepMatched,
+            isValid = totp.VerifyTotp(code, out long timeStepMatched,
                 new VerificationWindow(previous: TimeWindowSteps, future: TimeWindowSteps));
 
             if (isValid)
@@ -597,19 +608,32 @@ internal class TotpService : ITotpService
                 timeStep = timeStepMatched;
                 _logger.LogDebug("TOTP code verified at time step {TimeStep}", timeStepMatched);
             }
-
-            return isValid;
         }
         catch (ArgumentException ex)
         {
             _logger.LogError(ex, "Invalid TOTP secret or code format during verification");
-            return false;
+            // isValid already false
         }
         catch (FormatException ex)
         {
             _logger.LogError(ex, "TOTP code format error during verification");
-            return false;
+            // isValid already false
         }
+
+        // ⚠️ CRITICAL: Artificial delay to normalize timing across all code paths
+        // Target: 5ms baseline - prevents timing attack differentiation between valid/invalid codes
+        // Must execute AFTER verification completes to avoid leaking information through early returns
+        sw.Stop();
+        var targetDelay = TimeSpan.FromMilliseconds(5);
+        var elapsed = sw.Elapsed;
+
+        if (elapsed < targetDelay)
+        {
+            var remainingDelay = targetDelay - elapsed;
+            await Task.Delay(remainingDelay, cancellationToken).ConfigureAwait(false);
+        }
+
+        return (isValid, timeStep);
     }
 
     /// <summary>

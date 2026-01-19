@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration;
 
@@ -33,7 +34,7 @@ namespace Api.Tests.Integration;
 ///
 /// Dependencies: BGAI-020, BGAI-021
 /// </remarks>
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Integration)]
 public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
 {
     private readonly ILoggerFactory _loggerFactory;

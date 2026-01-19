@@ -5,12 +5,14 @@ using Api.BoundedContexts.Administration.Domain.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
 /// <summary>
 /// Issue #894: Tests for GetInfrastructureDetailsQueryHandler
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetInfrastructureDetailsQueryHandlerTests
 {
     private readonly Mock<IInfrastructureDetailsService> _mockDetailsService;

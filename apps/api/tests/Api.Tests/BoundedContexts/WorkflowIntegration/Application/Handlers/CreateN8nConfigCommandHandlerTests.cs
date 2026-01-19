@@ -5,6 +5,7 @@ using Api.BoundedContexts.WorkflowIntegration.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 /// Tests for CreateN8NConfigCommandHandler.
 /// Tests creation of n8n workflow configurations.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CreateN8NConfigCommandHandlerTests
 {
     private readonly Mock<IN8NConfigurationRepository> _mockConfigRepository;

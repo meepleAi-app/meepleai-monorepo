@@ -39,7 +39,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Spinner } from '@/components/ui/spinner';
+import { Spinner } from '@/components/loading/Spinner';
 
 import { useApiClient } from '@/lib/api/context';
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';

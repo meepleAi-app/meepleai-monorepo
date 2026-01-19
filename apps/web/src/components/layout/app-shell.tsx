@@ -11,7 +11,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { MeepleLogo } from '../ui/meeple-logo';
+import { MeepleLogo } from '../ui/meeple/meeple-logo';
 
 interface AppShellProps {
   children: React.ReactNode;

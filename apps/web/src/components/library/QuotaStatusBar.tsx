@@ -9,7 +9,7 @@
 import { AlertCircle, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
-import { Progress } from '@/components/ui/progress';
+import { Progress } from '@/components/ui/feedback/progress';
 import { cn } from '@/lib/utils';
 
 export interface QuotaStatusBarProps {

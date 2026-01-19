@@ -9,13 +9,13 @@
 
 import { Download } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/components/ui/navigation/dropdown-menu';
 import type { GameStateSnapshot } from '@/types/game-state';
 
 interface LedgerTimelineExportProps {

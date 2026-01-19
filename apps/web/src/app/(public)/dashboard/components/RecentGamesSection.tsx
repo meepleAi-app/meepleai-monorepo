@@ -29,9 +29,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { GameCard } from '@/components/games/GameCard';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Button } from '@/components/ui/primitives/button';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import type { Game } from '@/lib/api';
 
 export interface RecentGamesSectionProps {

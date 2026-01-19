@@ -21,9 +21,9 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/primitives/button';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { AlertCircle, Library } from 'lucide-react';
 
 import { useSharedGames, useGameCategories, useGameMechanics } from '@/hooks/queries';

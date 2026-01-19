@@ -14,7 +14,7 @@
 import React from 'react';
 
 import { GameCard } from '@/components/games/GameCard';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Game } from '@/lib/api';
 
 export interface GameGridProps {

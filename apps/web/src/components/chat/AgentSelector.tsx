@@ -13,7 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
 import { AgentDto } from '@/lib/api/schemas/agents.schemas';
 import { useChatStore } from '@/store/chat/store';
 

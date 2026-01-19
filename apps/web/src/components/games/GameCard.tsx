@@ -21,9 +21,9 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { Users, Clock, Calendar, HelpCircle } from 'lucide-react';
 import Image from 'next/image';
 
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RatingStars } from '@/components/ui/rating-stars';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { RatingStars } from '@/components/ui/data-display/rating-stars';
 import { Game } from '@/lib/api';
 import { cn } from '@/lib/utils';
 

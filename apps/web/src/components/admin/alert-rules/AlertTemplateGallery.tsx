@@ -1,6 +1,6 @@
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/data-display/card';
 import type { AlertTemplate } from '@/lib/api/schemas/alert-rules.schemas';
 
 interface AlertTemplateGalleryProps {

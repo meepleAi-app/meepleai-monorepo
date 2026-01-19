@@ -1,7 +1,7 @@
 import { FileText } from 'lucide-react';
 
-import { Card } from '@/components/ui/card';
-import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card } from '@/components/ui/data-display/card';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/data-display/table';
 
 import { PdfTableRow } from './PdfTableRow';
 

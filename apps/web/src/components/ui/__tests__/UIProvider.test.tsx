@@ -4,7 +4,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { UIProvider } from '../UIProvider';
+import { UIProvider } from '../meeple/UIProvider';
 
 describe('UIProvider', () => {
   describe('Rendering', () => {

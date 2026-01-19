@@ -16,7 +16,7 @@
 
 import { fn, userEvent, within, expect } from 'storybook/test';
 
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/overlays/tooltip';
 
 import { QuickQuestionEditor } from './QuickQuestionEditor';
 

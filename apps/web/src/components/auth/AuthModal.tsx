@@ -16,7 +16,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { AccessibleModal } from '@/components/accessible';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { useAuth, type AuthUser } from '@/hooks/useAuth';
 
 import { LoginForm, LoginFormData } from './LoginForm';

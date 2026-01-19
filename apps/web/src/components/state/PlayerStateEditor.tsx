@@ -17,10 +17,10 @@ import { useState } from 'react';
 
 import { Plus, Trash2, User } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent } from '@/components/ui/data-display/card';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 
 import type { PlayerState } from './StateEditor';
 

@@ -2,9 +2,9 @@ import React from 'react';
 
 import Link from 'next/link';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
 
 interface PromptVersionCardProps {
   version: {

@@ -6,3 +6,6 @@ export * from './checkbox';
 export * from './textarea';
 export * from './toggle';
 export * from './toggle-group';
+export * from './radio-group';
+export * from './slider';
+export * from './scroll-area';

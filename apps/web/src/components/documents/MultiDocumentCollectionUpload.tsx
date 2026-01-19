@@ -19,12 +19,12 @@ import * as React from 'react';
 import { AlertCircle, CheckCircle2, Upload } from 'lucide-react';
 
 import { LoadingButton } from '@/components/loading';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Card } from '@/components/ui/data-display/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { Button } from '@/components/ui/primitives/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { api, ApiError } from '@/lib/api';
 import type { DocumentMetadata } from '@/lib/api/schemas/documents.schemas';
 

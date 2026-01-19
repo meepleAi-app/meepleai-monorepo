@@ -13,7 +13,7 @@
 
 import * as React from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/overlays/dialog';
 import type { RuleSpecConflict } from '@/lib/api/schemas';
 
 export interface ConflictResolutionModalProps {

@@ -7,3 +7,4 @@ export * from './accordion';
 export * from './confidence-badge';
 export * from './rating-stars';
 export * from './citation-link';
+export * from './collapsible';

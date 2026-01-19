@@ -20,12 +20,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+} from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { Progress } from '@/components/ui/feedback/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { toast } from '@/components/layout/Toast';
 import { Loader2, Upload, FileText, X, Check } from 'lucide-react';
 

@@ -19,15 +19,15 @@ import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { MenuIcon } from 'lucide-react';
 
 import { ChatHeader } from '@/components/chat/ChatHeader';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
   SheetTitle,
   SheetDescription,
-} from '@/components/ui/sheet';
-import { TooltipProvider } from '@/components/ui/tooltip';
+} from '@/components/ui/navigation/sheet';
+import { TooltipProvider } from '@/components/ui/overlays/tooltip';
 import { cn } from '@/lib/utils';
 import { Game } from '@/types';
 

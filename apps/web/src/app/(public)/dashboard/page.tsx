@@ -37,8 +37,8 @@ import { AlertCircle } from 'lucide-react';
 import { QuickActions } from '@/components/dashboard/QuickActions';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { TopNav } from '@/components/layout/TopNav';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useGames } from '@/hooks/queries/useGames';
 

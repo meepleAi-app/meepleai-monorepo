@@ -22,10 +22,10 @@ import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { ErrorDisplay } from '@/components/errors';
 import { toast } from '@/components/layout';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { api, type GameLibraryLimitsDto } from '@/lib/api';
 import { categorizeError, type CategorizedError } from '@/lib/errorUtils';
 

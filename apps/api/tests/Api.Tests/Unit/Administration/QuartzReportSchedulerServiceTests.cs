@@ -6,6 +6,7 @@ using Moq;
 using Quartz;
 using Quartz.Impl;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Unit.Administration;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.Unit.Administration;
 /// Unit tests for QuartzReportSchedulerService
 /// ISSUE-919: Scheduling logic testing (90%+ coverage)
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class QuartzReportSchedulerServiceTests : IAsyncDisposable
 {
     private readonly Mock<ILogger<QuartzReportSchedulerService>> _loggerMock;

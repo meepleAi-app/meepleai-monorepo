@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Services;
 
@@ -17,6 +18,7 @@ namespace Api.Tests.BoundedContexts.Administration.Services;
 /// Unit tests for ReportGeneratorService
 /// ISSUE-919: Comprehensive test coverage for report generation
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class ReportGeneratorServiceTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;

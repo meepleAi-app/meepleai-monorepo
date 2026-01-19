@@ -514,10 +514,11 @@ services:
     profiles: [dev, observability, full]
     env_file:
       - ./secrets/monitoring.secret
+    entrypoint: ["/scripts/load-secrets-env.sh"]
+    command: ["/run.sh"]
     environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      # Issue #2570: Use GRAFANA_ADMIN_PASSWORD from monitoring.secret via env_file
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      # Issue #2570: GRAFANA_ADMIN_PASSWORD from monitoring.secret, mapped by load-secrets-env.sh
+      GF_SECURITY_ADMIN_USER: admin
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SERVER_ROOT_URL: "http://localhost:3001"
       # Issue #901: Enable iframe embedding for Infrastructure page
@@ -525,6 +526,7 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
     volumes:
+      - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
       - grafanadata:/var/lib/grafana
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
       - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
@@ -617,7 +619,7 @@ services:
       EMBEDDING_FALLBACK_ENABLED: "false"
       Embedding__FallbackEnabled: "false"
       # ADR-016 Phase 4: Reranker service configuration
-      RERANKER_SERVICE_URL: http://reranker-service:8003
+      RERANKER_URL: http://reranker-service:8003
       # Issue #2570: Secrets now loaded from .secret files via env_file
       # All variables (POSTGRES_*, REDIS_*, JWT_*, OPENROUTER_*, ADMIN_*, OAuth) come from env_file
       # No need for *_FILE environment variables or Docker secrets section

@@ -125,6 +125,12 @@ jobs:
 
       qdrant:
         image: qdrant/qdrant:v1.12.4
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:6333/healthz || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+          --start-period 30s
         ports:
           - 6333:6333
 
@@ -161,34 +167,27 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y redis-tools
 
       - name: Wait for Services
-        timeout-minutes: 2
+        timeout-minutes: 3
         run: |
           echo "⏳ Waiting for PostgreSQL..."
           until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
           echo "✅ PostgreSQL ready"
 
+          echo "⏳ Waiting for Redis..."
+          until redis-cli -h localhost -p 6379 ping > /dev/null 2>&1; do sleep 1; done
+          echo "✅ Redis ready"
+
           echo "⏳ Waiting for Qdrant..."
-          for i in {1..30}; do
+          # Health check configured with 30s start-period + 100s retries (20×5s)
+          # Manual wait as backup with extended timeout (120s)
+          for i in {1..60}; do
             if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
               echo "✅ Qdrant ready"
-              break
+              exit 0
             fi
             sleep 2
           done
-
-          echo "⏳ Waiting for Redis..."
-          # Redis service has health-check configured - just wait for port availability
-          for i in {1..30}; do
-            if nc -z localhost 6379 2>/dev/null; then
-              echo "✅ Redis ready"
-              break
-            fi
-            sleep 1
-          done
-
-          echo "⏳ Waiting for Qdrant..."
-          until curl -sf http://localhost:6333/healthz > /dev/null; do sleep 1; done
-          echo "✅ Qdrant ready"
+          echo "⚠️ Qdrant health check timeout - relying on container health check"
 
       - name: Build
         run: dotnet build --no-restore --configuration Release

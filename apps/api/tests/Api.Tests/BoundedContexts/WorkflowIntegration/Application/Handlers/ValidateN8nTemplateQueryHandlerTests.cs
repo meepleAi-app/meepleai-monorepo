@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 /// Tests for ValidateN8NTemplateQueryHandler.
 /// Tests n8n workflow template JSON validation.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ValidateN8nTemplateQueryHandlerTests
 {
     private readonly Mock<IN8NTemplateService> _mockTemplateService;

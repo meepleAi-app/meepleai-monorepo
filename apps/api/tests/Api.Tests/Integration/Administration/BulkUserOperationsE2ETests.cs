@@ -37,7 +37,7 @@ namespace Api.Tests.Integration.Administration;
 /// Execution Time Target: <30s for full suite
 /// </remarks>
 [Collection("SharedTestcontainers")]
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Integration)]
 [Trait("Type", "E2E")]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

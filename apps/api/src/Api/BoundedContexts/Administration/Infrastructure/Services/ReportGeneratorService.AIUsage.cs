@@ -24,6 +24,19 @@ internal sealed partial class ReportGeneratorService
             return (false, "Parameter 'endDate' (DateTime) is required");
         }
 
+        var startDate = (DateTime)startObj;
+        var endDate = (DateTime)endObj;
+
+        if (endDate < startDate)
+        {
+            return (false, "Parameter 'endDate' must be after 'startDate'");
+        }
+
+        if ((endDate - startDate).TotalDays > 365)
+        {
+            return (false, "Date range cannot exceed 365 days");
+        }
+
         return (true, null);
     }
 
@@ -36,8 +49,15 @@ internal sealed partial class ReportGeneratorService
         var endDate = (DateTime)parameters["endDate"];
 
         // AI request metrics (using LlmCostLogs)
-        var aiRequests = await _dbContext.LlmCostLogs
+        // EF Core + PostgreSQL limitation: GroupBy with .Date property doesn't translate
+        // Solution: Load data first, then group in memory
+        var llmLogs = await _dbContext.LlmCostLogs
             .Where(r => r.CreatedAt >= startDate && r.CreatedAt <= endDate)
+            .Select(r => new { r.CreatedAt, r.TotalTokens, r.TotalCost })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var aiRequests = llmLogs
             .GroupBy(r => r.CreatedAt.Date)
             .Select(g => new
             {
@@ -47,8 +67,7 @@ internal sealed partial class ReportGeneratorService
                 TotalCost = g.Sum(r => r.TotalCost)
             })
             .OrderBy(x => x.Date)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .ToList();
 
         // Model usage breakdown
         var modelUsage = await _dbContext.LlmCostLogs
@@ -121,7 +140,8 @@ internal sealed partial class ReportGeneratorService
                 ["startDate"] = startDate,
                 ["endDate"] = endDate,
                 ["totalRequests"] = aiRequests.Sum(r => r.Count),
-                ["totalCost"] = aiRequests.Sum(r => r.TotalCost)
+                ["totalCost"] = aiRequests.Sum(r => r.TotalCost),
+                ["tokenUsage"] = aiRequests.Sum(r => r.TotalTokens)
             },
             Sections: sections);
     }

@@ -281,7 +281,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     /// <summary>
     /// Internal DTO for JSON serialization of AgentConfiguration.
     /// </summary>
-    private record AgentConfigJson(
+    private sealed record AgentConfigJson(
         string LlmModel,
         double Temperature,
         int MaxTokens,

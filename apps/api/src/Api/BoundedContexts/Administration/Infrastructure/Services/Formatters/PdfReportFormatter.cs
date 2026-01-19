@@ -16,8 +16,8 @@ internal sealed class PdfReportFormatter : IReportFormatter
     {
         _chartService = new ChartGenerationService();
 
-        // Configure QuestPDF license (Community license for non-commercial use)
-        QuestPDF.Settings.License = LicenseType.Community;
+        // Note: QuestPDF license configured globally via Module Initializer
+        // See Api.Infrastructure.QuestPdfConfiguration for centralized setup
     }
 
     public byte[] Format(ReportContent content)
@@ -48,6 +48,7 @@ internal sealed class PdfReportFormatter : IReportFormatter
                             .FontSize(10)
                             .FontColor(Colors.Grey.Medium);
 
+                        // Horizontal separator (QuestPDF 2025.12+ API)
                         column.Item().PaddingTop(10).LineHorizontal(1).LineColor(Colors.Grey.Lighten1);
                     });
 

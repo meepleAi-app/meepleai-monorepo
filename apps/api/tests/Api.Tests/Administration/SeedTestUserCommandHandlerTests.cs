@@ -8,8 +8,11 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Administration.AutoConfiguration;
+
+[Trait("Category", TestCategories.Unit)]
 
 public sealed class SeedTestUserCommandHandlerTests
 {

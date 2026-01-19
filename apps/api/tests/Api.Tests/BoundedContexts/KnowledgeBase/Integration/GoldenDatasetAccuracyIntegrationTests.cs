@@ -4,6 +4,7 @@ using Api.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 
@@ -24,7 +25,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 /// Note: Full RAG pipeline testing (with real LLM) is in Phase 4 manual script
 /// This integration test focuses on validation logic without external dependencies
 /// </remarks>
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public class GoldenDatasetAccuracyIntegrationTests
 {

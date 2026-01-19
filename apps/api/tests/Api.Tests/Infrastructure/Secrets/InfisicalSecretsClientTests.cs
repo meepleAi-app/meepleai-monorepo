@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure.Secrets;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.Infrastructure.Secrets;
 /// Unit tests for InfisicalSecretsClient (Issue #936 POC).
 /// Tests authentication, secret fetching, and version history capabilities.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class InfisicalSecretsClientTests
 {
     private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;

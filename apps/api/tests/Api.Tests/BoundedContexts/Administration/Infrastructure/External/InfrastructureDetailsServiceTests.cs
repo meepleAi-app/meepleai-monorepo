@@ -4,12 +4,14 @@ using Api.BoundedContexts.Administration.Infrastructure.External;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Infrastructure.External;
 
 /// <summary>
 /// Issue #894: Tests for InfrastructureDetailsService orchestration logic
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class InfrastructureDetailsServiceTests
 {
     private readonly Mock<IInfrastructureHealthService> _mockHealthService;

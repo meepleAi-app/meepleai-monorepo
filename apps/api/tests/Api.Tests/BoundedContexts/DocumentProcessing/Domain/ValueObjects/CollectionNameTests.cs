@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using FluentAssertions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 
@@ -9,6 +10,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 /// Unit tests for CollectionName value object.
 /// Issue #2051: Collection naming validation
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CollectionNameTests
 {
     [Theory]

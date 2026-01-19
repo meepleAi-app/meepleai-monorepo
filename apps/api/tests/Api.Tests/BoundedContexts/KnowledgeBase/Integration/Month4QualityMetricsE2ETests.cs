@@ -44,7 +44,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 /// Infrastructure: Postgres (for data), mocked LLM (no OpenRouter dependency)
 /// </remarks>
 [Collection("SharedTestcontainers")]
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "Testcontainers")]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "995")]

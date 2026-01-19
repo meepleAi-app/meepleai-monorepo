@@ -619,7 +619,7 @@ services:
       EMBEDDING_FALLBACK_ENABLED: "false"
       Embedding__FallbackEnabled: "false"
       # ADR-016 Phase 4: Reranker service configuration
-      RERANKER_SERVICE_URL: http://reranker-service:8003
+      RERANKER_URL: http://reranker-service:8003
       # Issue #2570: Secrets now loaded from .secret files via env_file
       # All variables (POSTGRES_*, REDIS_*, JWT_*, OPENROUTER_*, ADMIN_*, OAuth) come from env_file
       # No need for *_FILE environment variables or Docker secrets section

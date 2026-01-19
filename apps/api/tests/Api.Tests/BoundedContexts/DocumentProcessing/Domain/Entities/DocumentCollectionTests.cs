@@ -11,6 +11,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Entities;
 /// Unit tests for DocumentCollection aggregate root.
 /// Issue #2051: Multi-document collection business logic
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class DocumentCollectionTests
 {
     private static Guid GameId => new("12345678-1234-1234-1234-123456789012");

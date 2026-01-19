@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure.Configuration;
 
@@ -13,6 +14,7 @@ namespace Api.Tests.Infrastructure.Configuration;
 /// <remarks>
 /// ISSUE-2510: Secrets management system validation
 /// </remarks>
+[Trait("Category", TestCategories.Unit)]
 public sealed class SecretLoaderTests : IDisposable
 {
     private readonly string _testSecretsDirectory;

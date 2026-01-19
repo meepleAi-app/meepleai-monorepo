@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using FluentAssertions;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.Infrastructure;
 /// Tests for MeepleAiDbContextFactory to prevent regression of Issue #2112.
 /// Verifies cross-platform environment variable handling (case sensitivity).
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class MeepleAiDbContextFactoryTests
 {
     [Fact]

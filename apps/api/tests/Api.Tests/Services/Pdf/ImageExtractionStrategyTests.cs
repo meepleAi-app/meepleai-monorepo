@@ -1,8 +1,11 @@
 using Xunit;
 using Api.Services.Pdf;
 using iText.Kernel.Pdf.Canvas.Parser;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Services.Pdf;
+
+[Trait("Category", TestCategories.Unit)]
 
 public class ImageExtractionStrategyTests
 {

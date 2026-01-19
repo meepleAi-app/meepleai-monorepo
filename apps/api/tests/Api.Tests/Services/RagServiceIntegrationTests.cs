@@ -17,6 +17,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Services;
 
@@ -27,6 +28,7 @@ namespace Api.Tests.Services;
 /// Tests verify that RagService works correctly with HybridLlmService (BGAI-020)
 /// by validating response structures and error handling for all RAG methods.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class RagServiceIntegrationTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.EventHandlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.EventHandlers;
 /// Issue #879: Unit tests for DashboardCacheInvalidationEventHandler.
 /// Verifies cache invalidation on configuration update and toggle events.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class DashboardCacheInvalidationEventHandlerTests
 {
     private readonly Mock<HybridCache> _cacheMock;

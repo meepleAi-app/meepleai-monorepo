@@ -10,6 +10,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 /// <summary>
 /// ISSUE-1725: Tests for LlmModelOverrideService budget mode functionality
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class LlmModelOverrideServiceTests
 {
     private readonly Mock<ILogger<LlmModelOverrideService>> _loggerMock;

@@ -90,7 +90,7 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     });
 
     // Mock chats API
-    await page.route(`${apiBase}/api/v1/chats?gameId=chess-1`, async route => {
+    await page.route(`${apiBase}/api/v1/chat-threads?gameId=chess-1`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -99,7 +99,7 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     });
 
     // Mock chat creation
-    await page.route(`${apiBase}/api/v1/chats`, async route => {
+    await page.route(`${apiBase}/api/v1/chat-threads`, async route => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,
@@ -226,7 +226,7 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     });
 
     // Mock chats API
-    await page.route(`${apiBase}/api/v1/chats?gameId=chess-1`, async route => {
+    await page.route(`${apiBase}/api/v1/chat-threads?gameId=chess-1`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -235,7 +235,7 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     });
 
     // Mock chat creation
-    await page.route(`${apiBase}/api/v1/chats`, async route => {
+    await page.route(`${apiBase}/api/v1/chat-threads`, async route => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,
@@ -325,7 +325,7 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     });
 
     // Mock chats API
-    await page.route(`${apiBase}/api/v1/chats?gameId=tictactoe-1`, async route => {
+    await page.route(`${apiBase}/api/v1/chat-threads?gameId=tictactoe-1`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -334,7 +334,7 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
     });
 
     // Mock chat creation
-    await page.route(`${apiBase}/api/v1/chats`, async route => {
+    await page.route(`${apiBase}/api/v1/chat-threads`, async route => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,
@@ -440,7 +440,7 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
       });
     });
 
-    await page.route(`${apiBase}/api/v1/chats?gameId=chess-1`, async route => {
+    await page.route(`${apiBase}/api/v1/chat-threads?gameId=chess-1`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -448,7 +448,7 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
       });
     });
 
-    await page.route(`${apiBase}/api/v1/chats`, async route => {
+    await page.route(`${apiBase}/api/v1/chat-threads`, async route => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,
@@ -553,7 +553,7 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
       });
     });
 
-    await page.route(`${apiBase}/api/v1/chats?gameId=game-1`, async route => {
+    await page.route(`${apiBase}/api/v1/chat-threads?gameId=game-1`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -561,7 +561,7 @@ test.describe('AI-04: Q&A with Snippets and Not Specified Fallback', () => {
       });
     });
 
-    await page.route(`${apiBase}/api/v1/chats`, async route => {
+    await page.route(`${apiBase}/api/v1/chat-threads`, async route => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,

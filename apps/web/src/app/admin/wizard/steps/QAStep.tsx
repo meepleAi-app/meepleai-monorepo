@@ -69,7 +69,7 @@ export function QAStep({ gameId, gameName, chatThreadId, onReset }: QAStepProps)
     abortControllerRef.current = new AbortController();
 
     try {
-      const response = await fetch(`${API_BASE}/api/v1/chat`, {
+      const response = await fetch(`${API_BASE}/api/v1/chat-threads/${chatThreadId}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

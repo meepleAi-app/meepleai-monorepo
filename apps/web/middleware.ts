@@ -98,17 +98,23 @@ function cacheSessionValidation(cookieValue: string, valid: boolean) {
 async function isSessionCookieValid(request: NextRequest, cookieValue: string): Promise<boolean> {
   const cached = sessionValidationCache.get(cookieValue);
   if (cached && cached.expiresAt > Date.now()) {
+    console.log(`[middleware] Session validation CACHE HIT for ${cookieValue.substring(0, 10)}... valid=${cached.valid}`);
     return cached.valid;
   }
 
   const cookieHeader = request.headers.get('cookie');
   if (!cookieHeader) {
+    console.log('[middleware] No cookie header found in request');
     cacheSessionValidation(cookieValue, false);
     return false;
   }
 
   try {
-    const apiUrl = `${getApiOrigin()}/api/v1/auth/me`;
+    // Use first API origin (server-side Docker network URL)
+    const apiOrigins = getApiOrigins();
+    const apiUrl = `${apiOrigins[0]}/api/v1/auth/me`;
+    console.log(`[middleware] Validating session at ${apiUrl} with cookie: ${cookieHeader.substring(0, 50)}...`);
+
     const response = await fetch(apiUrl, {
       headers: {
         cookie: cookieHeader,
@@ -117,6 +123,7 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
       cache: 'no-store',
     });
 
+    console.log(`[middleware] Session validation response: ${response.status} ok=${response.ok}`);
     cacheSessionValidation(cookieValue, response.ok);
     return response.ok;
   } catch (error) {
@@ -127,33 +134,50 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
 }
 
 /**
- * Get API base URL origin for CSP
- * Extracts the origin (protocol + host) from the API base URL
+ * Get API base URL origins for CSP
+ * Returns array of unique origins that need to be allowed in connect-src
  * Results are cached for performance
  *
- * Uses API_BASE_URL for server-side (middleware) and NEXT_PUBLIC_API_BASE for client
+ * Uses API_BASE_URL for server-side (Docker service name like http://api:8080)
+ * and NEXT_PUBLIC_API_BASE for client-side (http://localhost:8080)
+ *
+ * Issue: Client-side JavaScript may use NEXT_PUBLIC_API_BASE while middleware
+ * uses API_BASE_URL - CSP must allow both origins
  */
-function getApiOrigin(): string {
+function getApiOrigins(): string[] {
   if (cachedApiOrigin !== null) {
-    return cachedApiOrigin;
+    // Return cached result split by space (may contain multiple origins)
+    return cachedApiOrigin.split(' ').filter(Boolean);
   }
 
-  // For server-side (middleware), prefer API_BASE_URL (Docker service name)
-  // For client-side, NEXT_PUBLIC_API_BASE will be used
+  const origins = new Set<string>();
+
+  // Server-side API base (Docker service name)
   const serverApiBase = process.env.API_BASE_URL?.trim();
-  const clientApiBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
-
-  const apiBase = serverApiBase || clientApiBase || 'http://localhost:8080';
-
-  try {
-    const url = new URL(apiBase);
-    cachedApiOrigin = url.origin;
-    return cachedApiOrigin;
-  } catch {
-    // Fallback if URL parsing fails
-    cachedApiOrigin = 'http://localhost:8080';
-    return cachedApiOrigin;
+  if (serverApiBase) {
+    try {
+      origins.add(new URL(serverApiBase).origin);
+    } catch {
+      // Ignore invalid URLs
+    }
   }
+
+  // Client-side API base (what JavaScript in browser will use)
+  const clientApiBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
+  if (clientApiBase) {
+    try {
+      origins.add(new URL(clientApiBase).origin);
+    } catch {
+      // Ignore invalid URLs
+    }
+  }
+
+  // Always include localhost:8080 as fallback for development
+  origins.add('http://localhost:8080');
+
+  // Cache as space-separated string
+  cachedApiOrigin = Array.from(origins).join(' ');
+  return Array.from(origins);
 }
 
 /**
@@ -165,17 +189,15 @@ function getApiOrigin(): string {
  * @param requestOrigin - The origin of the incoming request (for CSP deduplication)
  */
 function getSecurityHeaders(requestOrigin?: string) {
-  const apiOrigin = getApiOrigin();
+  const apiOrigins = getApiOrigins();
 
-  // Only add API origin to connect-src if it differs from the request origin
-  // This prevents redundant CSP entries like "connect-src 'self' http://localhost:3000"
-  // when the API is on the same origin as the frontend
+  // Build connect-src with all API origins that differ from request origin
+  // This ensures both server-side (Docker) and client-side origins are allowed
   const connectSrcParts = ["'self'"];
-  if (requestOrigin && apiOrigin !== requestOrigin) {
-    connectSrcParts.push(apiOrigin);
-  } else if (!requestOrigin) {
-    // No request origin available (shouldn't happen), include API origin for safety
-    connectSrcParts.push(apiOrigin);
+  for (const apiOrigin of apiOrigins) {
+    if (!requestOrigin || apiOrigin !== requestOrigin) {
+      connectSrcParts.push(apiOrigin);
+    }
   }
   // Allow HyperDX observability telemetry
   connectSrcParts.push('https://in-otel.hyperdx.io');

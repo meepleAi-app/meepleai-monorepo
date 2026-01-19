@@ -49,7 +49,14 @@ infra/traefik/certs/*.*
 # ISSUE-2510: Secret management system
 # Exclude actual secret files but keep templates
 infra/secrets/*.secret
-!infra/secrets.example/*.secret.example
+!infra/secrets/*.secret.example
+
+# Staging/Production secrets (Docker secrets format - plain text files)
+infra/secrets/staging/*.txt
+!infra/secrets/staging/*.txt.example
+infra/secrets/prod/*.txt
+infra/secrets/prod/*.pfx
+!infra/secrets/prod/*.txt.example
 
 # Logs
 logs/

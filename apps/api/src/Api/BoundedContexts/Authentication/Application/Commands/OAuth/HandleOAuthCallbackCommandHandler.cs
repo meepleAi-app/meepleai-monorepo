@@ -94,25 +94,47 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
 
         // Use transaction for atomic user creation + OAuth linking + session creation
         // Note: InMemory database doesn't support transactions (test scenario)
-        IDbContextTransaction? transaction = null;
-        try
+        // Issue #2648: NpgsqlRetryingExecutionStrategy requires wrapping transactions in ExecuteAsync
+        var isInMemory = string.Equals(_db.Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal);
+
+        // For InMemory database (tests), execute directly without transaction
+        if (isInMemory)
         {
-            var isInMemory = string.Equals(_db.Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal);
-            transaction = isInMemory
-                ? null
-                : await _db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (ObjectDisposedException ex)
-        {
-            // Database connection failure scenario (test case)
-            _logger.LogError(ex, "Database connection not available during OAuth callback");
-            return new HandleOAuthCallbackResult
-            {
-                Success = false,
-                ErrorMessage = "Database connection error during authentication. Please try again."
-            };
+            return await ExecuteOAuthCallbackAsync(command, transaction: null, cancellationToken).ConfigureAwait(false);
         }
 
+        // For real database, wrap in execution strategy to support retrying execution strategy
+        var strategy = _db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async ct =>
+        {
+            var transaction = await _db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+            try
+            {
+                var result = await ExecuteOAuthCallbackAsync(command, transaction, ct).ConfigureAwait(false);
+
+                if (result.Success)
+                {
+                    await transaction.CommitAsync(ct).ConfigureAwait(false);
+                }
+
+                return result;
+            }
+            finally
+            {
+                await transaction.DisposeAsync().ConfigureAwait(false);
+            }
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Executes the OAuth callback logic within an optional transaction context.
+    /// Extracted to support both InMemory (tests) and real database with execution strategy.
+    /// </summary>
+    private async Task<HandleOAuthCallbackResult> ExecuteOAuthCallbackAsync(
+        HandleOAuthCallbackCommand command,
+        IDbContextTransaction? transaction,
+        CancellationToken cancellationToken)
+    {
         try
         {
             // Step 1: Validate state and exchange code for user info
@@ -189,11 +211,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                 };
             }
 
-            // Commit transaction if all steps succeeded
-            if (transaction != null)
-            {
-                await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-            }
+            // Note: Transaction commit is handled by the caller (ExecuteAsync wrapper for real DB)
 
             _logger.LogInformation(
                 "OAuth callback successful for provider {Provider}, UserId: {UserId}, IsNewUser: {IsNewUser}",
@@ -256,13 +274,8 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
             };
         }
 #pragma warning restore CA1031
-        finally
-        {
-            if (transaction != null)
-            {
-                await transaction.DisposeAsync().ConfigureAwait(false);
-            }
-        }
+        // Note: Transaction disposal is handled by 'await using' in the ExecuteAsync wrapper
+        // No finally block needed - this avoids double-disposal issues
     }
 
     /// <summary>

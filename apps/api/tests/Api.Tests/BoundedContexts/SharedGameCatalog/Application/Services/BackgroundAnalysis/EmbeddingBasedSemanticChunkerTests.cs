@@ -47,8 +47,17 @@ public class EmbeddingBasedSemanticChunkerTests
     [Fact]
     public async Task ChunkAsync_WithEmbeddingSuccess_ReturnsEmbeddingBasedChunks()
     {
-        // Arrange
-        var rulebookContent = CreateTestRulebookWithParagraphs(5);
+        // Arrange - Content must include the section headers and be >= 100 chars per section
+        var rulebookContent = """
+            Setup
+            Place all game components on the table. Each player takes their starting resources. This section provides the initial game state.
+
+            Gameplay
+            On each turn, players roll dice and move their pieces. Actions include collecting resources, building, and trading with other players.
+
+            Victory
+            The game ends when a player reaches the target score. Victory conditions may vary based on game mode and player count.
+            """;
         var sectionHeaders = new List<string> { "Setup", "Gameplay", "Victory" };
 
         // Mock embedding service to return embeddings with varying similarity
@@ -81,16 +90,22 @@ public class EmbeddingBasedSemanticChunkerTests
     [Fact]
     public async Task ChunkAsync_EmbeddingBasedWithLowSimilarity_CreatesSeparateChunks()
     {
-        // Arrange
+        // Arrange - Each section must be >= 100 chars to pass MinimumSectionSize filter
         var content = string.Join("\n\n",
-            "Section A: First distinct topic.",
-            "Section B: Completely different topic.",
-            "Section C: Another unrelated topic.");
+            "Section A: First distinct topic with enough content to meet the minimum section size requirement of 100 characters for semantic analysis.",
+            "Section B: Completely different topic with sufficient text length to pass the minimum section size threshold for chunking.",
+            "Section C: Another unrelated topic with adequate character count to meet the minimum section size requirement for processing.");
 
         // Create embeddings with low cosine similarity (<0.75 threshold)
-        var embedding1 = Enumerable.Repeat(1.0f, 384).ToArray();
-        var embedding2 = Enumerable.Repeat(0.1f, 384).ToArray(); // Very different
-        var embedding3 = Enumerable.Repeat(0.2f, 384).ToArray(); // Very different
+        // For low cosine similarity, vectors must point in different directions (not just different magnitudes)
+        var embedding1 = new float[384];
+        var embedding2 = new float[384];
+        var embedding3 = new float[384];
+
+        // Set different components to 1.0 to create near-orthogonal vectors
+        embedding1[0] = 1.0f; embedding1[1] = 0.1f;  // Points mostly along dimension 0
+        embedding2[100] = 1.0f; embedding2[101] = 0.1f;  // Points mostly along dimension 100
+        embedding3[200] = 1.0f; embedding3[201] = 0.1f;  // Points mostly along dimension 200
 
         var embeddingResult = EmbeddingResult.CreateSuccess([embedding1, embedding2, embedding3]);
 
@@ -115,16 +130,16 @@ public class EmbeddingBasedSemanticChunkerTests
     [Fact]
     public async Task ChunkAsync_WhenEmbeddingFails_FallsBackToHeaderBased()
     {
-        // Arrange
+        // Arrange - Each section must be >= 100 chars to pass MinimumSectionSize filter
         var rulebookContent = """
             # Setup
-            Place the board in the center.
+            Place the board in the center of the table. Each player takes their starting pieces and resources from the supply. Shuffle the deck and deal initial cards.
 
             # Gameplay
-            Take turns clockwise.
+            Take turns clockwise around the table. On your turn you may perform various actions including moving pieces, collecting resources, and trading with other players.
 
             # Victory
-            First to 10 points wins.
+            First to reach 10 victory points wins the game. Victory points can be earned through building, trading, and completing special objectives during play.
             """;
 
         // Mock embedding failure
@@ -412,13 +427,13 @@ public class EmbeddingBasedSemanticChunkerTests
     [Fact]
     public async Task ChunkAsync_WithSimilarityAboveThreshold_CombinesChunks()
     {
-        // Arrange
+        // Arrange - Each section must be >= 100 chars to pass MinimumSectionSize filter
         var content = """
             # Section A
-            Content A with similar semantic meaning.
+            Content A with similar semantic meaning. This section contains enough text to meet the minimum section size requirement of 100 characters for semantic analysis and chunking.
 
             # Section B
-            Content B with very similar semantic meaning.
+            Content B with very similar semantic meaning. This section also contains sufficient text length to pass the minimum section size threshold for the chunking algorithm.
             """;
 
         // Create highly similar embeddings (cosine similarity > 0.75)
@@ -445,16 +460,21 @@ public class EmbeddingBasedSemanticChunkerTests
     [Fact]
     public async Task ChunkAsync_WithSimilarityBelowThreshold_CreatesSeparateChunks()
     {
-        // Arrange
+        // Arrange - Each section must be >= 100 chars to pass MinimumSectionSize filter
         var content = string.Join("\n\n",
-            "Topic A: Completely different subject matter.",
-            "Topic B: Entirely unrelated content.",
-            "Topic C: Another distinct topic.");
+            "Topic A: Completely different subject matter with enough text to meet the minimum section size requirement of 100 characters for analysis.",
+            "Topic B: Entirely unrelated content with sufficient length to pass the minimum section size threshold for semantic chunking.",
+            "Topic C: Another distinct topic with adequate character count to satisfy the minimum section size requirement for processing.");
 
-        // Create embeddings with similarity < 0.75
-        var embedding1 = Enumerable.Repeat(1.0f, 384).ToArray();
-        var embedding2 = Enumerable.Repeat(0.3f, 384).ToArray(); // Low similarity
-        var embedding3 = Enumerable.Repeat(0.2f, 384).ToArray(); // Low similarity
+        // Create embeddings with similarity < 0.75 (vectors pointing in different directions)
+        var embedding1 = new float[384];
+        var embedding2 = new float[384];
+        var embedding3 = new float[384];
+
+        // Set different components to 1.0 to create near-orthogonal vectors
+        embedding1[0] = 1.0f; embedding1[1] = 0.1f;
+        embedding2[100] = 1.0f; embedding2[101] = 0.1f;
+        embedding3[200] = 1.0f; embedding3[201] = 0.1f;
 
         var embeddingResult = EmbeddingResult.CreateSuccess([embedding1, embedding2, embedding3]);
 
@@ -534,16 +554,16 @@ public class EmbeddingBasedSemanticChunkerTests
     [Fact]
     public async Task ChunkAsync_HeaderRegex_ExtractsMarkdownHeaders()
     {
-        // Arrange
+        // Arrange - Each section must be >= 100 chars to pass MinimumSectionSize filter
         var rulebookContent = """
             # Header Level 1
-            Content under level 1.
+            Content under level 1 with enough text to meet the minimum section size requirement of 100 characters for proper chunking and semantic analysis.
 
             ## Header Level 2
-            Content under level 2.
+            Content under level 2 with sufficient text length to pass the minimum section size threshold required by the chunking algorithm for processing.
 
             ### Header Level 3
-            Content under level 3.
+            Content under level 3 with adequate character count to satisfy the minimum section size requirement for the semantic chunking strategy.
             """;
 
         _mockEmbeddingService

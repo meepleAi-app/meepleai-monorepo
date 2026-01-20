@@ -5,13 +5,13 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 
 /// <summary>
 /// Handler for bulk importing games from BoardGameGeek or manual data.
-/// Processes imports in parallel with error isolation and returns success/failure summary.
+/// Processes imports sequentially to avoid DbContext thread-safety issues.
+/// Error isolation ensures individual failures don't stop the entire batch.
 /// </summary>
 internal sealed class BulkImportGamesCommandHandler : ICommandHandler<BulkImportGamesCommand, BulkImportResultDto>
 {
     private readonly IMediator _mediator;
     private readonly ILogger<BulkImportGamesCommandHandler> _logger;
-    private const int MaxParallelImports = 5; // Rate limiting for BGG API
 
 #pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback placeholder for manual imports
     private const string DefaultPlaceholderImageUrl = "https://via.placeholder.com/300x300?text=No+Image";
@@ -36,79 +36,57 @@ internal sealed class BulkImportGamesCommandHandler : ICommandHandler<BulkImport
         var errors = new List<string>();
         var importedGameIds = new List<Guid>();
 
-        // Process in batches to respect rate limits
-        var batches = command.Games
-            .Select((game, index) => new { game, index })
-            .GroupBy(x => x.index / MaxParallelImports)
-            .Select(g => g.Select(x => x.game).ToList());
-
-        foreach (var batch in batches)
+        // Process games sequentially to avoid DbContext thread-safety issues
+        // EF Core DbContext is not thread-safe and cannot be used concurrently
+        foreach (var game in command.Games)
         {
-            var tasks = batch.Select(async game =>
+            try
             {
-                try
+                Guid gameId;
+
+                if (game.BggId.HasValue)
                 {
-                    Guid gameId;
-
-                    if (game.BggId.HasValue)
-                    {
-                        // Import from BGG using existing handler
-                        var importCommand = new ImportGameFromBggCommand(game.BggId.Value);
-                        gameId = await _mediator.Send(importCommand, cancellationToken).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        // Manual import (create directly)
-                        var createCommand = new CreateSharedGameCommand(
-                            Title: game.Title!,
-                            YearPublished: game.YearPublished ?? DateTime.UtcNow.Year,
-                            Description: game.Description ?? "Manually imported",
-                            MinPlayers: game.MinPlayers ?? 1,
-                            MaxPlayers: game.MaxPlayers ?? 4,
-                            PlayingTimeMinutes: game.PlayingTimeMinutes ?? 60,
-                            MinAge: game.MinAge ?? 8,
-                            ComplexityRating: null,
-                            AverageRating: null,
-                            ImageUrl: DefaultPlaceholderImageUrl,
-                            ThumbnailUrl: DefaultPlaceholderImageUrl,
-                            Rules: null,
-                            CreatedBy: Guid.Empty, // System user
-                            BggId: null);
-
-                        gameId = await _mediator.Send(createCommand, cancellationToken).ConfigureAwait(false);
-                    }
-
-                    lock (importedGameIds)
-                    {
-                        importedGameIds.Add(gameId);
-                        successCount++;
-                    }
-
-                    return (Success: true, GameId: gameId, Error: (string?)null);
+                    // Import from BGG using existing handler
+                    var importCommand = new ImportGameFromBggCommand(game.BggId.Value, command.UserId);
+                    gameId = await _mediator.Send(importCommand, cancellationToken).ConfigureAwait(false);
                 }
+                else
+                {
+                    // Manual import (create directly)
+                    var createCommand = new CreateSharedGameCommand(
+                        Title: game.Title!,
+                        YearPublished: game.YearPublished ?? DateTime.UtcNow.Year,
+                        Description: game.Description ?? "Manually imported",
+                        MinPlayers: game.MinPlayers ?? 1,
+                        MaxPlayers: game.MaxPlayers ?? 4,
+                        PlayingTimeMinutes: game.PlayingTimeMinutes ?? 60,
+                        MinAge: game.MinAge ?? 8,
+                        ComplexityRating: null,
+                        AverageRating: null,
+                        ImageUrl: DefaultPlaceholderImageUrl,
+                        ThumbnailUrl: DefaultPlaceholderImageUrl,
+                        Rules: null,
+                        CreatedBy: command.UserId,
+                        BggId: null);
+
+                    gameId = await _mediator.Send(createCommand, cancellationToken).ConfigureAwait(false);
+                }
+
+                importedGameIds.Add(gameId);
+                successCount++;
+            }
 #pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-                // HANDLER BOUNDARY: Bulk import should continue even if individual imports fail
-#pragma warning restore S125
-                catch (Exception ex)
+            // HANDLER BOUNDARY: Bulk import should continue even if individual imports fail
+            catch (Exception ex)
 #pragma warning restore CA1031
-                {
-                    var errorMsg = $"Failed to import game (BggId: {game.BggId}, Title: {game.Title}): {ex.Message}";
-                    lock (errors)
-                    {
-                        errors.Add(errorMsg);
-                        failureCount++;
-                    }
+            {
+                var errorMsg = $"Failed to import game (BggId: {game.BggId}, Title: {game.Title}): {ex.Message}";
+                errors.Add(errorMsg);
+                failureCount++;
 
-                    _logger.LogWarning(ex, "Bulk import failed for game: BggId={BggId}, Title={Title}",
-                        game.BggId, game.Title);
-
-                    return (Success: false, GameId: Guid.Empty, Error: errorMsg);
-                }
-            });
-
-            // Execute batch in parallel
-            await Task.WhenAll(tasks).ConfigureAwait(false);
+                _logger.LogWarning(ex, "Bulk import failed for game: BggId={BggId}, Title={Title}",
+                    game.BggId, game.Title);
+            }
         }
 
         _logger.LogInformation(

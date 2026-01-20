@@ -447,3 +447,39 @@ export const DeleteRequestAcceptedSchema = z.object({
 });
 
 export type DeleteRequestAccepted = z.infer<typeof DeleteRequestAcceptedSchema>;
+
+// ========== Bulk Import (JSON Import) ==========
+
+/**
+ * Bulk game import DTO for JSON import
+ * Used for batch importing games from JSON files
+ */
+export const BulkGameImportDtoSchema = z.object({
+  bggId: z.number().int().positive().optional(),
+  title: z.string().min(1).optional(),
+  yearPublished: z.number().int().min(1900).max(2100).optional(),
+  description: z.string().optional(),
+  minPlayers: z.number().int().min(1).max(100).optional(),
+  maxPlayers: z.number().int().min(1).max(100).optional(),
+  playingTimeMinutes: z.number().int().min(1).max(10000).optional(),
+  minAge: z.number().int().min(0).max(100).optional(),
+  complexityRating: z.number().min(0).max(5).optional(),
+  averageRating: z.number().min(0).max(10).optional(),
+  imageUrl: z.string().url().optional(),
+  thumbnailUrl: z.string().url().optional(),
+});
+
+export type BulkGameImportDto = z.infer<typeof BulkGameImportDtoSchema>;
+
+/**
+ * Bulk import result schema
+ * Returns summary of import operation
+ */
+export const BulkImportResultSchema = z.object({
+  successCount: z.number().int().nonnegative(),
+  failureCount: z.number().int().nonnegative(),
+  errors: z.array(z.string()),
+  importedGameIds: z.array(z.string().uuid()),
+});
+
+export type BulkImportResult = z.infer<typeof BulkImportResultSchema>;

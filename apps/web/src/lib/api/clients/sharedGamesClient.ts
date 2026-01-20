@@ -17,6 +17,7 @@ import {
   CreatedResponseSchema,
   DeleteRequestAcceptedSchema,
   SharedGameDocumentSchema,
+  BulkImportResultSchema,
   type SharedGameDetail,
   type PagedSharedGames,
   type GameCategory,
@@ -37,6 +38,8 @@ import {
   type SharedGameDocument,
   type SharedGameDocumentTypeNumeric,
   type AddDocumentRequest,
+  type BulkGameImportDto,
+  type BulkImportResult,
 } from '../schemas/shared-games.schemas';
 
 export interface CreateSharedGamesClientParams {
@@ -211,6 +214,24 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      */
     async delete(id: string): Promise<void> {
       await httpClient.delete(`/api/v1/admin/shared-games/${id}`);
+    },
+
+    /**
+     * Bulk import games from JSON (ADMIN ONLY)
+     *
+     * Batch import multiple games in a single request.
+     * More efficient than individual create calls.
+     * Max 100 games per request.
+     *
+     * @param games - Array of game data to import
+     * @returns Import result with success/failure counts and imported game IDs
+     */
+    async bulkImport(games: BulkGameImportDto[]): Promise<BulkImportResult> {
+      return httpClient.post<BulkImportResult>(
+        '/api/v1/admin/shared-games/bulk-import',
+        { games },
+        BulkImportResultSchema
+      );
     },
 
     // ========== Approval Workflow Endpoints (Issue #2514) ==========

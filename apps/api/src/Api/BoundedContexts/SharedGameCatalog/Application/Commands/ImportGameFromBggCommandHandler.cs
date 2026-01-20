@@ -66,7 +66,7 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
             bggDetails.Name, bggDetails.YearPublished);
 
         // Map BGG data to SharedGame aggregate
-        var sharedGame = MapBggDetailsToSharedGame(bggDetails, command.BggId);
+        var sharedGame = MapBggDetailsToSharedGame(bggDetails, command.BggId, command.UserId);
 
         // Add aggregate to repository (converts to entity)
         await _repository.AddAsync(sharedGame, cancellationToken).ConfigureAwait(false);
@@ -75,8 +75,10 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
         // We need the SharedGameEntity to be tracked before setting navigation properties
 
         // Get the tracked entity to setup relationships
+        // Use Find() which checks the change tracker first before querying the database
+        // This is necessary because the entity was just added and not yet persisted
         var gameEntity = await _dbContext.Set<SharedGameEntity>()
-            .FirstOrDefaultAsync(g => g.Id == sharedGame.Id, cancellationToken)
+            .FindAsync([sharedGame.Id], cancellationToken)
             .ConfigureAwait(false);
 
         if (gameEntity is null)
@@ -100,7 +102,7 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
         return sharedGame.Id;
     }
 
-    private SharedGame MapBggDetailsToSharedGame(Models.BggGameDetailsDto bggDetails, int bggId)
+    private SharedGame MapBggDetailsToSharedGame(Models.BggGameDetailsDto bggDetails, int bggId, Guid userId)
     {
         // Map ratings (BGG uses different scales)
         var complexityRating = bggDetails.AverageWeight.HasValue
@@ -126,9 +128,6 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
             rules = GameRules.Create(bggDetails.Description, "en");
         }
 
-        // Use system user ID for import (Guid.Empty means "system")
-        var systemUserId = Guid.Empty;
-
         return SharedGame.Create(
             title: bggDetails.Name,
             yearPublished: bggDetails.YearPublished ?? DateTime.UtcNow.Year,
@@ -142,7 +141,7 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
             imageUrl: imageUrl,
             thumbnailUrl: thumbnailUrl,
             rules: rules,
-            createdBy: systemUserId,
+            createdBy: userId,
             bggId: bggId);
     }
 
@@ -160,7 +159,9 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
                 continue;
 
             // Find or create designer
+            // Use AsNoTracking to avoid tracking issues, then attach if found
             var designer = await _dbContext.GameDesigners
+                .AsNoTracking()
                 .FirstOrDefaultAsync(d => d.Name == designerName, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -174,6 +175,21 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
                 };
                 await _dbContext.GameDesigners.AddAsync(designer, cancellationToken).ConfigureAwait(false);
                 _logger.LogDebug("Created new designer: {DesignerName}", designerName);
+            }
+            else
+            {
+                // Check if already tracked (parallel imports may share entities)
+                var tracked = _dbContext.ChangeTracker.Entries<GameDesignerEntity>()
+                    .FirstOrDefault(e => e.Entity.Id == designer.Id);
+                if (tracked != null)
+                {
+                    designer = tracked.Entity;
+                }
+                else
+                {
+                    // Attach existing entity as Unchanged to avoid duplicate insert
+                    _dbContext.Attach(designer);
+                }
             }
 
             gameEntity.Designers.Add(designer);
@@ -194,7 +210,9 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
                 continue;
 
             // Find or create publisher
+            // Use AsNoTracking to avoid tracking issues, then attach if found
             var publisher = await _dbContext.GamePublishers
+                .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.Name == publisherName, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -208,6 +226,21 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
                 };
                 await _dbContext.GamePublishers.AddAsync(publisher, cancellationToken).ConfigureAwait(false);
                 _logger.LogDebug("Created new publisher: {PublisherName}", publisherName);
+            }
+            else
+            {
+                // Check if already tracked (parallel imports may share entities)
+                var tracked = _dbContext.ChangeTracker.Entries<GamePublisherEntity>()
+                    .FirstOrDefault(e => e.Entity.Id == publisher.Id);
+                if (tracked != null)
+                {
+                    publisher = tracked.Entity;
+                }
+                else
+                {
+                    // Attach existing entity as Unchanged to avoid duplicate insert
+                    _dbContext.Attach(publisher);
+                }
             }
 
             gameEntity.Publishers.Add(publisher);
@@ -228,7 +261,9 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
                 continue;
 
             // Find existing category (categories should be pre-seeded)
+            // Use AsNoTracking to avoid tracking issues, then attach if found
             var category = await _dbContext.GameCategories
+                .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Name == categoryName, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -245,6 +280,21 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
                 };
                 await _dbContext.GameCategories.AddAsync(category, cancellationToken).ConfigureAwait(false);
                 _logger.LogDebug("Created new category: {CategoryName}", categoryName);
+            }
+            else
+            {
+                // Check if already tracked (parallel imports may share entities)
+                var tracked = _dbContext.ChangeTracker.Entries<GameCategoryEntity>()
+                    .FirstOrDefault(e => e.Entity.Id == category.Id);
+                if (tracked != null)
+                {
+                    category = tracked.Entity;
+                }
+                else
+                {
+                    // Attach existing entity as Unchanged to avoid duplicate insert
+                    _dbContext.Attach(category);
+                }
             }
 
             gameEntity.Categories.Add(category);
@@ -265,7 +315,9 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
                 continue;
 
             // Find existing mechanic (mechanics should be pre-seeded)
+            // Use AsNoTracking to avoid tracking issues, then attach if found
             var mechanic = await _dbContext.GameMechanics
+                .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.Name == mechanicName, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -282,6 +334,21 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
                 };
                 await _dbContext.GameMechanics.AddAsync(mechanic, cancellationToken).ConfigureAwait(false);
                 _logger.LogDebug("Created new mechanic: {MechanicName}", mechanicName);
+            }
+            else
+            {
+                // Check if already tracked (parallel imports may share entities)
+                var tracked = _dbContext.ChangeTracker.Entries<GameMechanicEntity>()
+                    .FirstOrDefault(e => e.Entity.Id == mechanic.Id);
+                if (tracked != null)
+                {
+                    mechanic = tracked.Entity;
+                }
+                else
+                {
+                    // Attach existing entity as Unchanged to avoid duplicate insert
+                    _dbContext.Attach(mechanic);
+                }
             }
 
             gameEntity.Mechanics.Add(mechanic);

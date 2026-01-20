@@ -6,8 +6,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// Command to bulk import multiple games from BoardGameGeek or CSV data.
 /// Processes imports in parallel with rate limiting and returns success/failure summary.
 /// </summary>
+/// <param name="Games">List of games to import</param>
+/// <param name="UserId">ID of the user performing the import (will be set as CreatedBy)</param>
 public record BulkImportGamesCommand(
-    List<BulkGameImportDto> Games
+    List<BulkGameImportDto> Games,
+    Guid UserId
 ) : ICommand<BulkImportResultDto>;
 
 /// <summary>

@@ -103,8 +103,7 @@ internal static class SecretDefinitions
 
         ["bgg"] = new(
             SecretLevel.Important,
-            "BGG_USERNAME",
-            "BGG_PASSWORD"
+            "BGG_API_TOKEN"
         ),
 
         // ===== OPTIONAL SECRETS (Info if missing) =====

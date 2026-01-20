@@ -12,6 +12,9 @@ namespace Api.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.EnsureSchema(
+                name: "SystemConfiguration");
+
             migrationBuilder.CreateTable(
                 name: "admin_reports",
                 columns: table => new
@@ -84,6 +87,32 @@ namespace Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ai_request_logs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AiModelConfigurations",
+                schema: "SystemConfiguration",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ModelId = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    DisplayName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Provider = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Priority = table.Column<int>(type: "integer", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    IsPrimary = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    applicable_tier = table.Column<int>(type: "integer", nullable: true),
+                    environment_type = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    is_default_for_tier = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    settings_json = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "{}"),
+                    PricingJson = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "{}"),
+                    usage_json = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "{}")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AiModelConfigurations", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -455,7 +484,9 @@ namespace Api.Migrations
                     question = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     answer = table.Column<string>(type: "text", nullable: false),
                     order = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
+                    upvote_count = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -742,6 +773,32 @@ namespace Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "library_share_links",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    share_token = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    privacy_level = table.Column<int>(type: "integer", nullable: false),
+                    include_notes = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    expires_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    revoked_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    view_count = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    last_accessed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_library_share_links", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_library_share_links_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "llm_cost_logs",
                 columns: table => new
                 {
@@ -988,7 +1045,12 @@ namespace Api.Migrations
                     GameId = table.Column<Guid>(type: "uuid", nullable: false),
                     AddedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Notes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    IsFavorite = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false)
+                    IsFavorite = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    CustomAgentConfigJson = table.Column<string>(type: "jsonb", nullable: true),
+                    CustomPdfUrl = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
+                    CustomPdfUploadedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CustomPdfFileSizeBytes = table.Column<long>(type: "bigint", nullable: true),
+                    CustomPdfOriginalFileName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1829,6 +1891,31 @@ namespace Api.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AiModelConfigurations_IsPrimary_IsActive",
+                schema: "SystemConfiguration",
+                table: "AiModelConfigurations",
+                columns: new[] { "IsPrimary", "IsActive" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AiModelConfigurations_ModelId",
+                schema: "SystemConfiguration",
+                table: "AiModelConfigurations",
+                column: "ModelId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AiModelConfigurations_Priority",
+                schema: "SystemConfiguration",
+                table: "AiModelConfigurations",
+                column: "Priority");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AiModelConfigurations_TierRouting",
+                schema: "SystemConfiguration",
+                table: "AiModelConfigurations",
+                columns: new[] { "applicable_tier", "environment_type", "is_default_for_tier" });
+
+            migrationBuilder.CreateIndex(
                 name: "ix_alert_configurations_category",
                 table: "alert_configurations",
                 column: "category");
@@ -2166,6 +2253,32 @@ namespace Api.Migrations
                 name: "IX_GameSessions_Status_StartedAt",
                 table: "GameSessions",
                 columns: new[] { "Status", "StartedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_library_share_links_expires_at",
+                table: "library_share_links",
+                column: "expires_at");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_library_share_links_privacy_level",
+                table: "library_share_links",
+                column: "privacy_level");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_library_share_links_revoked_at",
+                table: "library_share_links",
+                column: "revoked_at");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_library_share_links_share_token",
+                table: "library_share_links",
+                column: "share_token",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_library_share_links_user_id",
+                table: "library_share_links",
+                column: "user_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_llm_cost_logs_created_at",
@@ -2662,6 +2775,12 @@ namespace Api.Migrations
                 column: "AddedAt");
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserLibraryEntries_CustomAgentConfigJson",
+                table: "user_library_entries",
+                column: "CustomAgentConfigJson")
+                .Annotation("Npgsql:IndexMethod", "gin");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserLibraryEntries_UserId",
                 table: "user_library_entries",
                 column: "UserId");
@@ -2762,6 +2881,10 @@ namespace Api.Migrations
                 name: "ai_request_logs");
 
             migrationBuilder.DropTable(
+                name: "AiModelConfigurations",
+                schema: "SystemConfiguration");
+
+            migrationBuilder.DropTable(
                 name: "alert_configurations");
 
             migrationBuilder.DropTable(
@@ -2799,6 +2922,9 @@ namespace Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "game_state_templates");
+
+            migrationBuilder.DropTable(
+                name: "library_share_links");
 
             migrationBuilder.DropTable(
                 name: "llm_cost_logs");

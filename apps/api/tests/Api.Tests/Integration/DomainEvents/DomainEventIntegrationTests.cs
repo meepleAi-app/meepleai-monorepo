@@ -10,6 +10,7 @@ using Api.SharedKernel.Application.Services;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -30,24 +31,32 @@ public class DomainEventIntegrationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        // Setup in-memory database
+        // Setup in-memory database with shared options
+        var dbName = Guid.NewGuid().ToString();
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(databaseName: dbName)
+            .ConfigureWarnings(warnings =>
+            {
+                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning);
+                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning);
+            })
             .Options;
 
         // Create mediator with real handler registration
         var services = new ServiceCollection();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<PasswordChangedEventHandler>());
         services.AddSingleton(options);
-        services.AddScoped<MeepleAiDbContext>(sp => new MeepleAiDbContext(options, sp.GetRequiredService<IMediator>(), sp.GetRequiredService<IDomainEventCollector>()));
         services.AddScoped<IDomainEventCollector, DomainEventCollector>();
+        services.AddScoped<MeepleAiDbContext>(sp => new MeepleAiDbContext(
+            sp.GetRequiredService<DbContextOptions<MeepleAiDbContext>>(),
+            sp.GetRequiredService<IMediator>(),
+            sp.GetRequiredService<IDomainEventCollector>()));
         services.AddLogging();
 
         var serviceProvider = services.BuildServiceProvider();
         _mediator = serviceProvider.GetRequiredService<IMediator>();
-        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-
-
+        // Use the same DbContext instance that handlers will use
+        _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await Task.CompletedTask;
     }

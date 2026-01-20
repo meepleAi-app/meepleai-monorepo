@@ -105,11 +105,14 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
           POSTGRES_DB: meepleai_test
+        # Issue #2693: Increase max_connections from 100 (default) to 500 for parallel tests
+        # --shm-size=512mb provides shared memory for the increased connection pool
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+          --shm-size=512mb
         ports:
           - 5432:5432
 

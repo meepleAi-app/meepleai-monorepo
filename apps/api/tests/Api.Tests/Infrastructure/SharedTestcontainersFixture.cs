@@ -93,6 +93,8 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                     try
                     {
                         // Start shared PostgreSQL container
+                        // Issue #2693: Increased max_connections to handle parallel test execution in CI
+                        // Default 100 connections gets exhausted when 34+ test classes run in parallel
                         _postgresContainer = new ContainerBuilder()
                             .WithImage("postgres:16-alpine")
                             .WithEnvironment("POSTGRES_USER", "postgres")
@@ -104,6 +106,8 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                             // Issue #2513: Use tmpfs for PostgreSQL data to prevent orphaned anonymous volumes
                             // Faster test execution (in-memory) and zero volume cleanup needed
                             .WithTmpfsMount("/var/lib/postgresql/data")
+                            // Issue #2693: Increase max_connections from 100 (default) to 500 for CI parallel tests
+                            .WithCommand("-c", "max_connections=500", "-c", "shared_buffers=256MB")
                             .WithCleanUp(true)
                             .Build();
 

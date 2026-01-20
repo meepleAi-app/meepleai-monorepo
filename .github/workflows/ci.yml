@@ -137,6 +137,7 @@ jobs:
           --health-retries 30
         ports:
           - 6333:6333
+          - 6334:6334  # gRPC port for Qdrant client
 
     defaults:
       run:

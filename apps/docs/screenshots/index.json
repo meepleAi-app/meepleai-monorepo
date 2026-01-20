@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-01-20T12:35:38.296Z",
+  "totalScreenshots": 0,
+  "flows": {
+    "user": [],
+    "editor": [],
+    "admin": []
+  },
+  "summary": {
+    "userFlows": 0,
+    "editorFlows": 0,
+    "adminFlows": 0,
+    "totalFlows": 0
+  }
+}

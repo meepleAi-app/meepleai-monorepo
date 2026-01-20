@@ -1,0 +1,37 @@
+{
+  "screenshot": {
+    "id": "admin-approval-workflow-01",
+    "filename": "01-approval-queue.png",
+    "flow": "approval-workflow",
+    "role": "admin",
+    "step": 1,
+    "totalSteps": 1,
+    "title": "Approval Queue",
+    "description": "View all games pending admin approval"
+  },
+  "capture": {
+    "timestamp": "2026-01-20T13:10:56.250Z",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "browser": "chromium",
+    "fullPage": true
+  },
+  "interaction": {
+    "previousAction": null,
+    "nextAction": "Review submissions",
+    "highlightedElements": [
+      {
+        "selector": "h1, [data-testid=\"approvals-heading\"]",
+        "type": "box",
+        "label": "Approvals"
+      }
+    ]
+  },
+  "navigation": {
+    "url": "http://localhost:3000/admin/approvals",
+    "previousStep": null,
+    "nextStep": null
+  }
+}

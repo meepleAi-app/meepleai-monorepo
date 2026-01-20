@@ -1,0 +1,37 @@
+{
+  "screenshot": {
+    "id": "admin-monitoring-01",
+    "filename": "01-admin-dashboard.png",
+    "flow": "monitoring",
+    "role": "admin",
+    "step": 1,
+    "totalSteps": 1,
+    "title": "Admin Dashboard",
+    "description": "Overview of system metrics and health"
+  },
+  "capture": {
+    "timestamp": "2026-01-20T13:11:07.233Z",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "browser": "chromium",
+    "fullPage": true
+  },
+  "interaction": {
+    "previousAction": null,
+    "nextAction": "Review metrics",
+    "highlightedElements": [
+      {
+        "selector": "h1, [data-testid=\"dashboard-heading\"]",
+        "type": "box",
+        "label": "Dashboard"
+      }
+    ]
+  },
+  "navigation": {
+    "url": "http://localhost:3000/admin/dashboard",
+    "previousStep": null,
+    "nextStep": null
+  }
+}

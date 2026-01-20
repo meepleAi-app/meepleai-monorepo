@@ -50,6 +50,8 @@ export {
   useUpdateShareLink,
   useRevokeShareLink,
   useSharedLibrary,
+  // Recently Added Games
+  useRecentlyAddedGames,
   libraryKeys,
 } from './useLibrary';
 

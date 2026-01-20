@@ -30,7 +30,7 @@ import { useSharedLibrary } from '@/hooks/queries';
 
 export default function SharedLibraryPage() {
   const params = useParams();
-  const shareToken = params.token as string;
+  const shareToken = params?.token as string;
 
   // Fetch shared library data
   const {

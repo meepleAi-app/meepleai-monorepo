@@ -1,0 +1,31 @@
+{
+  "screenshot": {
+    "id": "admin-monitoring-01",
+    "filename": "01-system-health.png",
+    "flow": "monitoring",
+    "role": "admin",
+    "step": 1,
+    "totalSteps": 1,
+    "title": "System Health",
+    "description": "Detailed health status of all services"
+  },
+  "capture": {
+    "timestamp": "2026-01-20T13:11:09.793Z",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "browser": "chromium",
+    "fullPage": true
+  },
+  "interaction": {
+    "previousAction": null,
+    "nextAction": "Review services",
+    "highlightedElements": []
+  },
+  "navigation": {
+    "url": "http://localhost:3000/admin/health",
+    "previousStep": null,
+    "nextStep": null
+  }
+}

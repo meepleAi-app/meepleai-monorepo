@@ -280,5 +280,6 @@ ChatMessage.displayName = 'ChatMessage';
 // Re-export standalone ConfidenceBadge for backward compatibility
 export { StandaloneConfidenceBadge as ConfidenceBadge };
 export type { ConfidenceBadgeProps } from '../data-display/confidence-badge';
-export { CitationLink, TypingIndicator };
-export type { CitationLinkProps, TypingIndicatorProps };
+// Note: CitationLink renamed to ChatCitationLink to avoid conflict with data-display/citation-link
+export { CitationLink as ChatCitationLink, TypingIndicator };
+export type { CitationLinkProps as ChatCitationLinkProps, TypingIndicatorProps };

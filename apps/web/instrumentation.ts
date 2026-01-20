@@ -16,8 +16,10 @@ export async function register() {
   // Only run in Node.js environment (server-side)
   if (typeof window === 'undefined' && typeof globalThis !== 'undefined') {
     // DOMMatrix polyfill for pdfjs-dist and framer-motion SSR
-    if (!globalThis.DOMMatrix) {
-      globalThis.DOMMatrix = class DOMMatrix {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(globalThis as any).DOMMatrix) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (globalThis as any).DOMMatrix = class DOMMatrix {
         m11 = 1;
         m12 = 0;
         m13 = 0;
@@ -153,17 +155,9 @@ export async function register() {
           return this;
         }
 
-        transformPoint(_point?: DOMPointInit): DOMPoint {
+        transformPoint(_point?: DOMPointInit) {
           // Returns a minimal DOMPoint-like object
-          const result: DOMPoint = {
-            x: 0,
-            y: 0,
-            z: 0,
-            w: 1,
-            matrixTransform: () => result,
-            toJSON: () => ({ x: 0, y: 0, z: 0, w: 1 }),
-          };
-          return result;
+          return { x: 0, y: 0, z: 0, w: 1 };
         }
 
         toFloat32Array(): Float32Array {
@@ -249,8 +243,10 @@ export async function register() {
     }
 
     // DOMPoint polyfill (used by DOMMatrix.transformPoint)
-    if (!globalThis.DOMPoint) {
-      globalThis.DOMPoint = class DOMPoint {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(globalThis as any).DOMPoint) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (globalThis as any).DOMPoint = class DOMPoint {
         x: number;
         y: number;
         z: number;

@@ -1,8 +1,6 @@
 import { Edit, Trash2 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/data-display/badge';
 import {
   Table,
   TableBody,
@@ -10,7 +8,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/components/ui/data-display/table';
+import { Switch } from '@/components/ui/forms/switch';
+import { Button } from '@/components/ui/primitives/button';
 import type { AlertRule } from '@/lib/api/schemas/alert-rules.schemas';
 
 interface AlertRuleListProps {

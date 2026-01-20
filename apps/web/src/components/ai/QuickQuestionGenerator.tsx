@@ -27,11 +27,11 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 
 import { LoadingButton } from '@/components/loading/LoadingButton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Progress } from '@/components/ui/feedback/progress';
+import { Label } from '@/components/ui/primitives/label';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { cn } from '@/lib/utils';
 
 // ==================== Types ====================

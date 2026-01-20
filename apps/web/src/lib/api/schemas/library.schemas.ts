@@ -89,3 +89,69 @@ export const LibraryQuotaResponseSchema = z.object({
 });
 
 export type LibraryQuotaResponse = z.infer<typeof LibraryQuotaResponseSchema>;
+
+// ========================================
+// Library Share Link Schemas (Issue #2614)
+// ========================================
+
+// Library share link response DTO
+export const LibraryShareLinkSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  shareToken: z.string().length(32),
+  shareUrl: z.string().url(),
+  privacyLevel: z.enum(['public', 'unlisted']),
+  includeNotes: z.boolean(),
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime().nullable(),
+  revokedAt: z.string().datetime().nullable(),
+  viewCount: z.number().int().nonnegative(),
+  lastAccessedAt: z.string().datetime().nullable(),
+  isActive: z.boolean(),
+});
+
+export type LibraryShareLink = z.infer<typeof LibraryShareLinkSchema>;
+
+// Create share link request
+export const CreateLibraryShareLinkRequestSchema = z.object({
+  privacyLevel: z.enum(['public', 'unlisted']).default('unlisted'),
+  includeNotes: z.boolean().default(false),
+  expiresAt: z.string().datetime().nullable().optional(),
+});
+
+export type CreateLibraryShareLinkRequest = z.infer<typeof CreateLibraryShareLinkRequestSchema>;
+
+// Update share link request
+export const UpdateLibraryShareLinkRequestSchema = z.object({
+  privacyLevel: z.enum(['public', 'unlisted']).optional(),
+  includeNotes: z.boolean().optional(),
+  expiresAt: z.string().datetime().nullable().optional(),
+});
+
+export type UpdateLibraryShareLinkRequest = z.infer<typeof UpdateLibraryShareLinkRequestSchema>;
+
+// Shared library public view response
+export const SharedLibraryGameSchema = z.object({
+  gameId: z.string().uuid(),
+  title: z.string(),
+  publisher: z.string().nullable(),
+  yearPublished: z.number().nullable(),
+  iconUrl: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  isFavorite: z.boolean(),
+  notes: z.string().nullable(),
+  addedAt: z.string().datetime(),
+});
+
+export type SharedLibraryGame = z.infer<typeof SharedLibraryGameSchema>;
+
+export const SharedLibrarySchema = z.object({
+  ownerDisplayName: z.string(),
+  games: z.array(SharedLibraryGameSchema),
+  totalGames: z.number().int().nonnegative(),
+  favoritesCount: z.number().int().nonnegative(),
+  privacyLevel: z.enum(['public', 'unlisted']),
+  sharedAt: z.string().datetime(),
+});
+
+export type SharedLibrary = z.infer<typeof SharedLibrarySchema>;

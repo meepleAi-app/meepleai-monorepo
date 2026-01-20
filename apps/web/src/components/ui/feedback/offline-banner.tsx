@@ -24,7 +24,7 @@ import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { WifiOff, RefreshCw, AlertTriangle, X, Loader2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { cn } from '@/lib/utils';
 

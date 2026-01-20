@@ -23,7 +23,7 @@ import {
   getConfidenceConfig,
   validateConfidence,
   CONFIDENCE_LEVELS,
-} from '../confidence-badge';
+} from '../data-display/confidence-badge';
 
 // ============================================================================
 // Helper Function Tests

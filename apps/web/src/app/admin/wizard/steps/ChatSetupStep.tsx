@@ -10,8 +10,8 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { toast } from '@/components/layout';
 import { Spinner } from '@/components/loading';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 
 interface ChatSetupStepProps {
@@ -108,7 +108,7 @@ export function ChatSetupStep({ gameId, gameName, pdfId, onComplete, onBack }: C
       // Note: This uses the chat store or API to create a thread
       const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
-      const response = await fetch(`${API_BASE}/api/v1/chat/threads`, {
+      const response = await fetch(`${API_BASE}/api/v1/chat-threads`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

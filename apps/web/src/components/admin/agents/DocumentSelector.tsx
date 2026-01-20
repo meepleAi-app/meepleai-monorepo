@@ -12,12 +12,12 @@ import * as React from 'react';
 
 import { FileText, Search, Check, Loader2 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
+import { Input } from '@/components/ui/primitives/input';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import type { SharedGameDocument } from '@/lib/api/schemas/shared-games.schemas';
 import { cn } from '@/lib/utils';
 

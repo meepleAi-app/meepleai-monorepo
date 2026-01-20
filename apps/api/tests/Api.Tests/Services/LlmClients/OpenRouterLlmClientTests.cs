@@ -9,6 +9,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Services.LlmClients;
 
@@ -104,7 +105,7 @@ public class OpenRouterLlmClientTests
     }
 
     [Fact]
-    [Trait("Category", "Integration")]
+    [Trait("Category", TestCategories.Integration)]
     public async Task GenerateCompletion_ApiError_ReturnsFailure()
     {
         // Arrange
@@ -155,7 +156,7 @@ public class OpenRouterLlmClientTests
     }
 
     [Fact]
-    [Trait("Category", "Integration")]
+    [Trait("Category", TestCategories.Integration)]
     public async Task GenerateCompletionStream_Success_YieldsChunks()
     {
         // Arrange - SSE format streaming
@@ -246,7 +247,7 @@ public class OpenRouterLlmClientTests
     }
 
     [Fact]
-    [Trait("Category", "Integration")]
+    [Trait("Category", TestCategories.Integration)]
     public async Task ConcurrentRequests_HandledCorrectly()
     {
         // Arrange

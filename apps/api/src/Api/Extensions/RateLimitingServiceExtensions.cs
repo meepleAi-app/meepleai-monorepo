@@ -73,6 +73,23 @@ internal static class RateLimitingServiceExtensions
                     });
             });
 
+            // Policy 3: FaqUpvote - 10 req/min per IP for FAQ upvoting (Issue #2681)
+            options.AddPolicy("FaqUpvote", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"faq-upvote-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 10, // Low limit to prevent vote manipulation
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
             // Rejection behavior: Return 429 Too Many Requests
             options.OnRejected = async (context, cancellationToken) =>
             {

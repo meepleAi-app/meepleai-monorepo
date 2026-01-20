@@ -4,18 +4,18 @@ import { AlertCircle, Upload } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 import { LoadingButton } from '@/components/loading';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
+import { Card } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Progress } from '@/components/ui/feedback/progress';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { useChunkedUpload } from '@/hooks/useChunkedUpload';
 import { ApiError } from '@/lib/api';
 import { categorizeError, type CategorizedError, extractCorrelationId } from '@/lib/errorUtils';

@@ -127,11 +127,11 @@ Write-Host "  [OK] SMOLDOCLING_API_KEY:      $(Mask-Secret $generatedValues['SMO
 $generatedValues['UNSTRUCTURED_API_KEY'] = New-SecureApiKey -ByteLength 32
 Write-Host "  [OK] UNSTRUCTURED_API_KEY:     $(Mask-Secret $generatedValues['UNSTRUCTURED_API_KEY'])" -ForegroundColor Green
 
-# Admin Password
+# Admin Password (Issue #2570: Single source of truth)
 $generatedValues['ADMIN_PASSWORD'] = New-SecurePassword -Length 16
 Write-Host "  [OK] ADMIN_PASSWORD:           $(Mask-Secret $generatedValues['ADMIN_PASSWORD'])" -ForegroundColor Green
 
-# Monitoring Passwords (optional)
+# Monitoring Passwords (optional - Issue #2570: Generic names, mapped by script)
 $generatedValues['GRAFANA_ADMIN_PASSWORD'] = New-SecurePassword -Length 16
 Write-Host "  [OK] GRAFANA_ADMIN_PASSWORD:   $(Mask-Secret $generatedValues['GRAFANA_ADMIN_PASSWORD'])" -ForegroundColor Green
 

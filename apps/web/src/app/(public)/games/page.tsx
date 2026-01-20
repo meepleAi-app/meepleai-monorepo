@@ -20,7 +20,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 
 import { GameGrid } from './components/GameGrid';
 import { Pagination } from './components/Pagination';

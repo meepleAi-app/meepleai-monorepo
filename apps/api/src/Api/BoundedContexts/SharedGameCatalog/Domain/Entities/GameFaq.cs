@@ -13,7 +13,9 @@ public sealed class GameFaq : Entity<Guid>
     private readonly string _question = string.Empty;
     private readonly string _answer = string.Empty;
     private int _order;
+    private int _upvoteCount;
     private readonly DateTime _createdAt;
+    private DateTime? _updatedAt;
 
     /// <summary>
     /// Gets the unique identifier of this FAQ.
@@ -41,9 +43,19 @@ public sealed class GameFaq : Entity<Guid>
     public int Order => _order;
 
     /// <summary>
+    /// Gets the number of upvotes for this FAQ.
+    /// </summary>
+    public int UpvoteCount => _upvoteCount;
+
+    /// <summary>
     /// Gets the creation timestamp.
     /// </summary>
     public DateTime CreatedAt => _createdAt;
+
+    /// <summary>
+    /// Gets the last update timestamp.
+    /// </summary>
+    public DateTime? UpdatedAt => _updatedAt;
 
     /// <summary>
     /// Parameterless constructor for EF Core.
@@ -61,14 +73,18 @@ public sealed class GameFaq : Entity<Guid>
         string question,
         string answer,
         int order,
-        DateTime createdAt) : base(id)
+        int upvoteCount,
+        DateTime createdAt,
+        DateTime? updatedAt) : base(id)
     {
         _id = id;
         _sharedGameId = sharedGameId;
         _question = question;
         _answer = answer;
         _order = order;
+        _upvoteCount = upvoteCount;
         _createdAt = createdAt;
+        _updatedAt = updatedAt;
     }
 
     /// <summary>
@@ -101,7 +117,9 @@ public sealed class GameFaq : Entity<Guid>
             question,
             answer,
             order,
-            DateTime.UtcNow);
+            upvoteCount: 0,
+            DateTime.UtcNow,
+            updatedAt: null);
     }
 
     /// <summary>
@@ -113,5 +131,17 @@ public sealed class GameFaq : Entity<Guid>
             throw new ArgumentException("Order cannot be negative", nameof(newOrder));
 
         _order = newOrder;
+        _updatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Increments the upvote count for this FAQ.
+    /// </summary>
+    /// <returns>The new upvote count.</returns>
+    public int Upvote()
+    {
+        _upvoteCount++;
+        _updatedAt = DateTime.UtcNow;
+        return _upvoteCount;
     }
 }

@@ -382,7 +382,7 @@ public sealed class OAuthErrorTests : IDisposable
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().Be("Database connection error. Please try again.");
     }
 
     [Theory]

@@ -13,3 +13,12 @@ export { RemoveGameDialog, type RemoveGameDialogProps } from './RemoveGameDialog
 export { UserGameCard } from './UserGameCard';
 export { AgentConfigModal } from './AgentConfigModal';
 export { PdfUploadModal } from './PdfUploadModal';
+export { RecentLibraryCard, type RecentLibraryCardProps } from './RecentLibraryCard';
+
+// Bulk Operations (Issue #2613)
+export { BulkActionBar, type BulkActionBarProps } from './BulkActionBar';
+export { BulkRemoveDialog, type BulkRemoveDialogProps } from './BulkRemoveDialog';
+
+// Library Sharing (Issue #2614)
+export { ShareLibraryModal } from './ShareLibraryModal';
+export { SharedLibraryGameCard } from './SharedLibraryGameCard';

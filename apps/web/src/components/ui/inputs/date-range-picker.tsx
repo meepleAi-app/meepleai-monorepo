@@ -13,15 +13,15 @@ import React, { useState } from 'react';
 
 import { Calendar, X } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Label } from '@/components/ui/primitives/label';
 
 export interface DateRange {
   from?: Date;

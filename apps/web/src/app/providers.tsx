@@ -20,7 +20,7 @@ import { ErrorBoundary, RouteErrorBoundary } from '@/components/errors';
 import { KeyboardShortcutsHelp } from '@/components/layout';
 import { SessionWarningModal } from '@/components/modals';
 import { IntlProvider } from '@/components/providers/IntlProvider';
-import { Toaster } from '@/components/ui/sonner';
+import { Toaster } from '@/components/ui/feedback/sonner';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { api } from '@/lib/api';

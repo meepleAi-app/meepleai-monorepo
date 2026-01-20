@@ -24,7 +24,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// Issue #2371 Phase 2
 /// </summary>
 [Collection("SharedTestcontainers")]
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
 {

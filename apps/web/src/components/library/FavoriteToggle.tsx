@@ -15,7 +15,7 @@ import React from 'react';
 import { Heart, Loader2 } from 'lucide-react';
 
 import { toast } from '@/components/layout/Toast';
-import { Button, type ButtonProps } from '@/components/ui/button';
+import { Button, type ButtonProps } from '@/components/ui/primitives/button';
 import { useToggleLibraryFavorite } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
 

@@ -8,9 +8,9 @@
 
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Separator } from '@/components/ui/navigation/separator';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { useGameStateStore } from '@/lib/stores/game-state-store';
 
 import { LedgerTimelineExport } from './LedgerTimelineExport';

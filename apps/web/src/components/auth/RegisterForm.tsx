@@ -22,7 +22,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
 import { useTranslation } from '@/hooks/useTranslation';
 
 // ============================================================================

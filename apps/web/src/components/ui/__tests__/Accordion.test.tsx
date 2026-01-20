@@ -5,7 +5,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../accordion';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../data-display/accordion';
 
 describe('Accordion', () => {
   describe('Rendering', () => {

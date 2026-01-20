@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 /// Tests for GetN8NTemplateByIdQueryHandler.
 /// Tests retrieval of a specific n8n workflow template by ID with full details.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetN8nTemplateByIdQueryHandlerTests
 {
     private readonly Mock<IN8NTemplateService> _mockTemplateService;

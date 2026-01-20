@@ -20,7 +20,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 import {
   RefreshCwIcon,
@@ -33,23 +33,22 @@ import {
 import { toast } from 'sonner';
 
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { ServiceStatusCard } from '@/components/admin/ServiceStatusCard';
 import { OverallStatusBadge } from '@/components/admin/OverallStatusBadge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { ServiceStatusCard } from '@/components/admin/ServiceStatusCard';
+import { Card, CardContent } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { useUserLocale } from '@/hooks/useUserLocale';
 import { api } from '@/lib/api';
-import type { InfrastructureDetails, ServiceHealth, HealthState } from '@/lib/api';
+import type { InfrastructureDetails, HealthState } from '@/lib/api';
 
 type FilterMode = 'all' | 'critical' | 'unhealthy';
 
@@ -77,7 +76,7 @@ export function ServicesClient() {
   const previousStates = useRef<PreviousServiceState>({});
 
   // Critical services (hardcoded - could come from API metadata)
-  const criticalServices = ['postgres', 'qdrant', 'redis'];
+  const criticalServices = useMemo(() => ['postgres', 'qdrant', 'redis'], []);
 
   // Fetch service health data
   const fetchData = useCallback(async () => {
@@ -287,14 +286,19 @@ export function ServicesClient() {
   };
 
   return (
-    <AdminLayout
-      title={locale === 'it' ? 'Stato Servizi' : 'Service Status'}
-      description={
-        locale === 'it'
-          ? 'Monitoraggio in tempo reale dello stato di salute dei servizi'
-          : 'Real-time service health monitoring'
-      }
-    >
+    <AdminLayout>
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight">
+          {locale === 'it' ? 'Stato Servizi' : 'Service Status'}
+        </h1>
+        <p className="text-muted-foreground">
+          {locale === 'it'
+            ? 'Monitoraggio in tempo reale dello stato di salute dei servizi'
+            : 'Real-time service health monitoring'}
+        </p>
+      </div>
+
       {/* Header with overall status and controls */}
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">

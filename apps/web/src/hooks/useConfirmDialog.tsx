@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ConfirmDialog } from '@/components/ui/feedback/confirm-dialog';
 
 export interface ConfirmOptions {
   title: string;

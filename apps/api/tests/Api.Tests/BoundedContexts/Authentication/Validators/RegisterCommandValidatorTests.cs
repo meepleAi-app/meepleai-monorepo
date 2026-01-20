@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Application.Validators;
 using FluentAssertions;
 using FluentValidation.TestHelper;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Validators;
 
@@ -15,6 +16,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Validators;
 /// Root cause: AddValidatorsFromAssemblyContaining() requires includeInternalTypes: true
 /// for internal sealed class validators.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class RegisterCommandValidatorTests
 {
     private readonly RegisterCommandValidator _validator;

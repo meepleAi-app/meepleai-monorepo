@@ -3,7 +3,7 @@
  * Displays final statistics after all uploads complete
  */
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import type { UploadQueueStats } from '@/hooks/useUploadQueue';
 
 interface UploadSummaryProps {

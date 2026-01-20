@@ -6,14 +6,17 @@ using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Moq;
 using Npgsql;
 using Xunit;
 using SystemConfig = Api.BoundedContexts.SystemConfiguration.Domain.Entities.SystemConfiguration;
@@ -32,6 +35,7 @@ namespace Api.Tests.BoundedContexts.SystemConfiguration.Integration;
 [Trait("BoundedContext", "SystemConfiguration")]
 [Trait("Issue", "2188")]
 [Trait("Issue", "2031")]
+[Trait("Issue", "2620")]
 public class ConfigImportExportIntegrationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
@@ -39,6 +43,9 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
     private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
+
+    // Test data constants
+    private static readonly Guid TestUserId = new("40000000-0000-0000-0000-000000000001");
 
     public ConfigImportExportIntegrationTests(SharedTestcontainersFixture fixture)
     {
@@ -70,6 +77,13 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
         services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
         services.AddSingleton<TimeProvider>(TimeProvider.System);
 
+        // HybridCache (required by event handlers) - Issue #2620
+        services.AddHybridCache();
+
+        // Mock IHybridCacheService for testing (required by event handlers) - Issue #2620
+        services.AddScoped<Api.Services.IHybridCacheService>(_ =>
+            Moq.Mock.Of<Api.Services.IHybridCacheService>());
+
         // DbContext with enforced connection settings (Issue #2031 best practices)
         var enforcedBuilder = new NpgsqlConnectionStringBuilder(_isolatedDbConnectionString)
         {
@@ -99,6 +113,9 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
         // Initialize database schema
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
         await _dbContext.Database.EnsureCreatedAsync();
+
+        // Seed required User for FK constraints (Issue #2620)
+        await SeedTestUserAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -117,11 +134,34 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
         await _fixture.DropIsolatedDatabaseAsync(_databaseName);
     }
 
+    #region Helper Methods
+
+    /// <summary>
+    /// Seeds a test user to satisfy CreatedByUserId FK constraint.
+    /// Issue: #2620
+    /// </summary>
+    private async Task SeedTestUserAsync()
+    {
+        var user = new UserEntity
+        {
+            Id = TestUserId,
+            Email = "test-configimportexport@meepleai.dev",
+            DisplayName = "Test User",
+            Role = "admin",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _dbContext!.Set<UserEntity>().Add(user);
+        await _dbContext.SaveChangesAsync(CancellationToken.None);
+    }
+
+    #endregion
+
     [Fact(Timeout = 30000)] // 30s timeout for integration tests
     public async Task ImportAndExport_EndToEnd_WithRealDatabase()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        var userId = TestUserId;
         var importHandler = _serviceProvider!.GetRequiredService<ImportConfigsCommandHandler>();
         var exportHandler = _serviceProvider!.GetRequiredService<ExportConfigsQueryHandler>();
 
@@ -160,7 +200,7 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
     public async Task ImportWithOverwrite_UpdatesExistingConfig_InRealDatabase()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        var userId = TestUserId;
         var repository = _serviceProvider!.GetRequiredService<IConfigurationRepository>();
         var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
         var importHandler = _serviceProvider!.GetRequiredService<ImportConfigsCommandHandler>();
@@ -180,8 +220,8 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
         await repository.AddAsync(initialConfig, CancellationToken.None);
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
-        // Detach to allow fresh load
-        _dbContext!.Entry(initialConfig).State = EntityState.Detached;
+        // Clear change tracker to allow fresh load (Issue #2620)
+        _dbContext!.ChangeTracker.Clear();
 
         // Import with overwrite
         var configsToImport = new List<ConfigurationImportItem>
@@ -208,7 +248,7 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
     public async Task Export_WithActiveOnlyFilter_ReturnsOnlyActiveConfigs()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        var userId = TestUserId;
         var repository = _serviceProvider!.GetRequiredService<IConfigurationRepository>();
         var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
         var exportHandler = _serviceProvider!.GetRequiredService<ExportConfigsQueryHandler>();
@@ -252,7 +292,7 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
     public async Task Export_WithEnvironmentFilter_ReturnsMatchingConfigs()
     {
         // Arrange
-        var userId = Guid.NewGuid();
+        var userId = TestUserId;
         var repository = _serviceProvider!.GetRequiredService<IConfigurationRepository>();
         var unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWork>();
         var exportHandler = _serviceProvider!.GetRequiredService<ExportConfigsQueryHandler>();

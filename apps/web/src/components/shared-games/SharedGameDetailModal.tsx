@@ -40,12 +40,12 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from '@/components/ui/data-display/accordion';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { api } from '@/lib/api';
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
 import { cn } from '@/lib/utils';

@@ -12,8 +12,8 @@ import React from 'react';
 
 import { MessageSquare, Star, HelpCircle, Users, AlertCircle } from 'lucide-react';
 
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Game } from '@/lib/api';
 
 interface GameCommunityTabProps {

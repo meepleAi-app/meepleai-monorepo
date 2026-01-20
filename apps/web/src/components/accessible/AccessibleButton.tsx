@@ -50,7 +50,7 @@ import { ButtonHTMLAttributes, forwardRef } from 'react';
 
 import { Loader2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 export interface AccessibleButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

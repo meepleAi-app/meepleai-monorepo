@@ -3,9 +3,9 @@ import React from 'react';
 
 import { FileText, RotateCw } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/data-display/badge';
+import { TableCell, TableRow } from '@/components/ui/data-display/table';
+import { Button } from '@/components/ui/primitives/button';
 
 interface PdfDocument {
   id: string;

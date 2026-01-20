@@ -7,7 +7,7 @@ import { render, screen } from '@testing-library/react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { FormDescription } from '../FormDescription';
 import { FormField } from '../FormField';
-import { FormItem } from '@/components/ui/form';
+import { FormItem } from '@/components/ui/forms/form';
 
 // Test wrapper with FormProvider
 function TestForm({

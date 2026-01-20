@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.Tests.Constants;
 using FluentAssertions;
 using Xunit;
 
@@ -10,6 +11,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Entities;
 /// Unit tests for DocumentCollection aggregate root.
 /// Issue #2051: Multi-document collection business logic
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class DocumentCollectionTests
 {
     private static Guid GameId => new("12345678-1234-1234-1234-123456789012");
@@ -256,7 +258,7 @@ public class DocumentCollectionTests
     }
 
     [Fact]
-    public void UpdateMetadata_ValidInput_UpdatesSuccessfully()
+    public async Task UpdateMetadata_ValidInput_UpdatesSuccessfully()
     {
         // Arrange
         var collection = CreateTestCollection();
@@ -264,7 +266,7 @@ public class DocumentCollectionTests
         var newName = new CollectionName("New Collection Name");
 
         // Simulate time passing
-        Thread.Sleep(10);
+        await Task.Delay(TestConstants.Timing.TinyDelay);
 
         // Act
         collection.UpdateMetadata(newName, "New description");

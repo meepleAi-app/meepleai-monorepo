@@ -11,12 +11,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
 /// <summary>
 /// ISSUE-1725: Tests for LLM budget monitoring and alerting
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class LlmBudgetMonitoringServiceTests
 {
     private readonly Mock<ILlmCostLogRepository> _costLogRepositoryMock;

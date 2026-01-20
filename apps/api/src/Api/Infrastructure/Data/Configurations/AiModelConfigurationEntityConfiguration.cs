@@ -42,6 +42,25 @@ public sealed class AiModelConfigurationEntityConfiguration : IEntityTypeConfigu
         builder.Property(e => e.UpdatedAt)
             .IsRequired(false);
 
+        // Issue #2596: Tier routing configuration
+        builder.Property(e => e.ApplicableTier)
+            .HasColumnName("applicable_tier")
+            .IsRequired(false);
+
+        builder.Property(e => e.EnvironmentType)
+            .HasColumnName("environment_type")
+            .IsRequired()
+            .HasDefaultValue(0); // Production
+
+        builder.Property(e => e.IsDefaultForTier)
+            .HasColumnName("is_default_for_tier")
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        // Issue #2596: Composite index for tier routing lookups
+        builder.HasIndex(e => new { e.ApplicableTier, e.EnvironmentType, e.IsDefaultForTier })
+            .HasDatabaseName("IX_AiModelConfigurations_TierRouting");
+
         // JSON Settings (JSONB) - Issue #2520
         builder.Property(e => e.SettingsJson)
             .HasColumnName("settings_json")

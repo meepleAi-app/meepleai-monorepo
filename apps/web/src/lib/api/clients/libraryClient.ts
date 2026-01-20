@@ -10,11 +10,18 @@
  */
 
 import {
+  AgentConfigDtoSchema,
+  type AgentConfigDto,
+  type UpdateAgentConfigRequest,
+} from '../schemas/agent-config.schemas';
+import {
   PaginatedLibraryResponseSchema,
   UserLibraryStatsSchema,
   UserLibraryEntrySchema,
   GameInLibraryStatusSchema,
   LibraryQuotaResponseSchema,
+  LibraryShareLinkSchema,
+  SharedLibrarySchema,
   type PaginatedLibraryResponse,
   type UserLibraryStats,
   type UserLibraryEntry,
@@ -23,13 +30,12 @@ import {
   type GetUserLibraryParams,
   type AddGameToLibraryRequest,
   type UpdateLibraryEntryRequest,
+  type LibraryShareLink,
+  type CreateLibraryShareLinkRequest,
+  type UpdateLibraryShareLinkRequest,
+  type SharedLibrary,
 } from '../schemas/library.schemas';
 
-import {
-  AgentConfigDtoSchema,
-  type AgentConfigDto,
-  type UpdateAgentConfigRequest,
-} from '../schemas/agent-config.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -48,6 +54,12 @@ export interface LibraryClient {
   // Agent Configuration (Issue #2518)
   getAgentConfig(gameId: string): Promise<AgentConfigDto | null>;
   updateAgentConfig(gameId: string, request: UpdateAgentConfigRequest): Promise<AgentConfigDto>;
+  // Library Sharing (Issue #2614)
+  getShareLink(): Promise<LibraryShareLink | null>;
+  createShareLink(request: CreateLibraryShareLinkRequest): Promise<LibraryShareLink>;
+  updateShareLink(shareToken: string, request: UpdateLibraryShareLinkRequest): Promise<LibraryShareLink>;
+  revokeShareLink(shareToken: string): Promise<void>;
+  getSharedLibrary(shareToken: string): Promise<SharedLibrary | null>;
 }
 
 /**
@@ -224,6 +236,77 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
         throw new Error('Failed to update agent configuration');
       }
       return data;
+    },
+
+    // ========================================
+    // Library Sharing Methods (Issue #2614)
+    // ========================================
+
+    /**
+     * Get the user's active share link
+     * @returns Active share link or null if none exists
+     */
+    async getShareLink(): Promise<LibraryShareLink | null> {
+      return httpClient.get<LibraryShareLink>('/api/v1/library/share', LibraryShareLinkSchema);
+    },
+
+    /**
+     * Create a new share link for the user's library
+     * This revokes any existing active share link
+     * @param request - Share link configuration
+     * @returns Created share link
+     */
+    async createShareLink(request: CreateLibraryShareLinkRequest): Promise<LibraryShareLink> {
+      const data = await httpClient.post<LibraryShareLink>(
+        '/api/v1/library/share',
+        request,
+        LibraryShareLinkSchema
+      );
+      if (!data) {
+        throw new Error('Failed to create share link');
+      }
+      return data;
+    },
+
+    /**
+     * Update an existing share link's settings
+     * @param shareToken - Share token to update
+     * @param request - Updated settings
+     * @returns Updated share link
+     */
+    async updateShareLink(
+      shareToken: string,
+      request: UpdateLibraryShareLinkRequest
+    ): Promise<LibraryShareLink> {
+      const data = await httpClient.patch<LibraryShareLink>(
+        `/api/v1/library/share/${shareToken}`,
+        request,
+        LibraryShareLinkSchema
+      );
+      if (!data) {
+        throw new Error('Failed to update share link');
+      }
+      return data;
+    },
+
+    /**
+     * Revoke a share link (permanently disable it)
+     * @param shareToken - Share token to revoke
+     */
+    async revokeShareLink(shareToken: string): Promise<void> {
+      await httpClient.delete(`/api/v1/library/share/${shareToken}`);
+    },
+
+    /**
+     * Get a shared library by its share token (public access, no auth required)
+     * @param shareToken - Share token from URL
+     * @returns Shared library data or null if not found/invalid
+     */
+    async getSharedLibrary(shareToken: string): Promise<SharedLibrary | null> {
+      return httpClient.get<SharedLibrary>(
+        `/api/v1/library/shared/${shareToken}`,
+        SharedLibrarySchema
+      );
     },
   };
 }

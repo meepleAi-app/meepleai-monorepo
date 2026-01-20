@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { SharedGameSearch, type SharedGameSearchResult } from '@/components/shared-games';
+import { Badge } from '@/components/ui/data-display/badge';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -27,8 +28,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
+} from '@/components/ui/overlays/alert-dialog-primitives';
 import { api } from '@/lib/api';
 
 // ISSUE #2374 Phase 5: Lazy load heavy modal component for bundle optimization

@@ -29,18 +29,18 @@ import React from 'react';
 
 import { X, Search, Clock, Shield } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/data-display/badge';
 import { DateRangePicker } from '@/components/ui/inputs/date-range-picker';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import type { ApiKeyFilters, ApiKeyScope, ApiKeyStatus } from '@/types';
 import { AVAILABLE_SCOPES, AVAILABLE_STATUSES } from '@/types';
 

@@ -13,6 +13,11 @@
 
 import { useState, useEffect } from 'react';
 
+import { Loader2, Check, TestTube2, Zap } from 'lucide-react';
+
+import { toast } from '@/components/layout/Toast';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent } from '@/components/ui/data-display/card';
 import {
   Dialog,
   DialogContent,
@@ -20,17 +25,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Slider } from '@/components/ui/slider';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { toast } from '@/components/layout/Toast';
-import { Loader2, Check, TestTube2, Zap } from 'lucide-react';
-
+} from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { Slider } from '@/components/ui/primitives/slider';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { useUpdateModelConfig, useTestModel } from '@/hooks/queries';
 import { DEFAULT_MODEL_CONFIG, type AiModelDto, type ConfigureModelRequest } from '@/lib/api';
 
@@ -43,8 +43,8 @@ interface ModelConfigModalProps {
 
 export function ModelConfigModal({ isOpen, onClose, modelId, model }: ModelConfigModalProps) {
   // Form state
-  const [temperature, setTemperature] = useState(DEFAULT_MODEL_CONFIG.temperature);
-  const [maxTokens, setMaxTokens] = useState(DEFAULT_MODEL_CONFIG.maxTokens);
+  const [temperature, setTemperature] = useState<number>(DEFAULT_MODEL_CONFIG.temperature);
+  const [maxTokens, setMaxTokens] = useState<number>(DEFAULT_MODEL_CONFIG.maxTokens);
   const [maxTokensError, setMaxTokensError] = useState<string | null>(null);
   const [testPrompt, setTestPrompt] = useState('Explain quantum computing in one sentence.');
   const [testResult, setTestResult] = useState<{

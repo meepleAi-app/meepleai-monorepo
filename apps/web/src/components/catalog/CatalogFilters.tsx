@@ -16,22 +16,22 @@
 
 import { useState, useEffect } from 'react';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Search, X, ArrowUpDown } from 'lucide-react';
+
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, X, ArrowUpDown } from 'lucide-react';
-
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import type { GameCategory, GameMechanic } from '@/lib/api';
 
 interface CatalogFiltersProps {

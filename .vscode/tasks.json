@@ -137,10 +137,50 @@
       "problemMatcher": []
     },
     {
+      "label": "docker-up-dev",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "--profile", "dev", "up", "-d"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "docker-down",
       "type": "shell",
       "command": "docker",
       "args": ["compose", "down"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-down-volumes",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "down", "-v"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-build-no-cache",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "build", "--no-cache", "--pull"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-rebuild-all",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "up", "-d", "--build", "--force-recreate", "--no-cache"],
       "options": {
         "cwd": "${workspaceFolder}/infra"
       },
@@ -155,6 +195,50 @@
         "cwd": "${workspaceFolder}/infra"
       },
       "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-logs-api",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "logs", "-f", "api"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-ps",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "ps"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-restart-service",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-Command",
+        "docker compose stop ${input:serviceName}; docker compose rm -f ${input:serviceName}; docker compose up -d ${input:serviceName}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "setup-secrets",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-File", "setup-secrets.ps1", "-SaveGenerated"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra/secrets"
+      },
       "problemMatcher": []
     },
 
@@ -181,6 +265,18 @@
       "label": "start-all-dev",
       "dependsOn": ["docker-up", "watch-api", "dev"],
       "problemMatcher": []
+    },
+    {
+      "label": "docker-fresh-start",
+      "dependsOrder": "sequence",
+      "dependsOn": ["docker-down-volumes", "setup-secrets", "docker-build-no-cache", "docker-up-dev"],
+      "problemMatcher": []
+    },
+    {
+      "label": "docker-quick-rebuild",
+      "dependsOrder": "sequence",
+      "dependsOn": ["docker-down", "docker-rebuild-all"],
+      "problemMatcher": []
     }
   ],
   "inputs": [
@@ -188,6 +284,11 @@
       "id": "migrationName",
       "type": "promptString",
       "description": "Migration name (e.g., AddUserTable)"
+    },
+    {
+      "id": "serviceName",
+      "type": "promptString",
+      "description": "Service name (e.g., api, postgres, redis)"
     }
   ]
 }

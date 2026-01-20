@@ -12,10 +12,13 @@
  */
 
 import { useState } from 'react';
-import { MoreHorizontal, Edit, Send, CheckCircle, XCircle, Archive, Trash2, Eye } from 'lucide-react';
-import { format } from 'date-fns';
 
-import { Button } from '@/components/ui/button';
+import { format } from 'date-fns';
+import { MoreHorizontal, Edit, Send, CheckCircle, XCircle, Archive, Trash2, Eye } from 'lucide-react';
+import { toast } from 'sonner';
+
+import { Badge } from '@/components/ui/data-display/badge';
+import { TableCell, TableRow } from '@/components/ui/data-display/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,13 +26,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { TableCell, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-
+} from '@/components/ui/navigation/dropdown-menu';
+import { Button } from '@/components/ui/primitives/button';
 import { useApiClient } from '@/lib/api/context';
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
-import { toast } from 'sonner';
+
 
 interface GamesTableRowProps {
   game: SharedGameDetail;
@@ -42,19 +43,19 @@ export function GamesTableRow({ game, onEdit, onReviewApproval, onRefresh }: Gam
   const { sharedGames } = useApiClient();
   const [loading, setLoading] = useState(false);
 
-  // Get status badge variant
-  const getStatusBadge = (status: string) => {
+  // Get status badge variant (status is numeric: 0=Draft, 1=PendingApproval, 2=Published, 3=Archived)
+  const getStatusBadge = (status: number) => {
     switch (status) {
-      case 'Draft':
+      case 0: // Draft
         return <Badge variant="secondary">Draft</Badge>;
-      case 'PendingApproval':
+      case 1: // PendingApproval
         return <Badge variant="outline">Pending Approval</Badge>;
-      case 'Published':
+      case 2: // Published
         return <Badge variant="default">Published</Badge>;
-      case 'Archived':
+      case 3: // Archived
         return <Badge variant="destructive">Archived</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge>Unknown ({status})</Badge>;
     }
   };
 
@@ -132,7 +133,7 @@ export function GamesTableRow({ game, onEdit, onReviewApproval, onRefresh }: Gam
       <TableCell className="font-medium">{game.title}</TableCell>
       <TableCell>{game.bggId || 'N/A'}</TableCell>
       <TableCell>{getStatusBadge(game.status)}</TableCell>
-      <TableCell>{format(new Date(game.lastModifiedAt), 'PPp')}</TableCell>
+      <TableCell>{game.modifiedAt ? format(new Date(game.modifiedAt), 'PPp') : 'N/A'}</TableCell>
       <TableCell className="text-right">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -145,7 +146,7 @@ export function GamesTableRow({ game, onEdit, onReviewApproval, onRefresh }: Gam
             <DropdownMenuSeparator />
 
             {/* Draft (0) actions */}
-            {game.status === 'Draft' && (
+            {game.status === 0 && (
               <>
                 <DropdownMenuItem onClick={handleConfigure}>
                   <Edit className="h-4 w-4 mr-2" />
@@ -164,7 +165,7 @@ export function GamesTableRow({ game, onEdit, onReviewApproval, onRefresh }: Gam
             )}
 
             {/* PendingApproval (1) actions */}
-            {game.status === 'PendingApproval' && (
+            {game.status === 1 && (
               <>
                 <DropdownMenuItem onClick={handleReview}>
                   <Eye className="h-4 w-4 mr-2" />
@@ -182,7 +183,7 @@ export function GamesTableRow({ game, onEdit, onReviewApproval, onRefresh }: Gam
             )}
 
             {/* Published (2) actions */}
-            {game.status === 'Published' && (
+            {game.status === 2 && (
               <>
                 <DropdownMenuItem onClick={handleConfigure}>
                   <Edit className="h-4 w-4 mr-2" />
@@ -196,7 +197,7 @@ export function GamesTableRow({ game, onEdit, onReviewApproval, onRefresh }: Gam
             )}
 
             {/* Archived (3) actions */}
-            {game.status === 'Archived' && (
+            {game.status === 3 && (
               <>
                 <DropdownMenuItem onClick={handleConfigure}>
                   <Edit className="h-4 w-4 mr-2" />

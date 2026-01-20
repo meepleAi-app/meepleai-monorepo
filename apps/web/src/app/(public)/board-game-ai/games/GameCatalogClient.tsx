@@ -22,10 +22,10 @@ import { AlignJustify, Grid3x3, MessageSquare, Search, X } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { GameCard } from '@/components/games/GameCard';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/primitives/toggle-group';
 import { api, type Game } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';

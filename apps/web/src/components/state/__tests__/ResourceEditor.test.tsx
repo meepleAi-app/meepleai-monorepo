@@ -129,10 +129,19 @@ describe('ResourceEditor', () => {
 
     render(<ResourceEditor resources={resources} players={mockPlayers} onChange={mockOnChange} />);
 
-    expect(screen.getByText('Risorse totali:')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('Quantità totale:')).toBeInTheDocument();
-    expect(screen.getByText('35')).toBeInTheDocument();
+    // Text is split across <strong> and text nodes, use custom matcher
+    expect(screen.getByText(/Risorse totali:/)).toBeInTheDocument();
+    expect(screen.getByText(/Quantità totale:/)).toBeInTheDocument();
+    // Find the summary div and check its full text content
+    const summaryDiv = screen.getByText((content, element) => {
+      return element?.tagName === 'DIV' &&
+             element?.className.includes('bg-blue-50') &&
+             element?.textContent?.includes('Risorse totali:') === true &&
+             element?.textContent?.includes('2') === true &&
+             element?.textContent?.includes('Quantità totale:') === true &&
+             element?.textContent?.includes('35') === true;
+    });
+    expect(summaryDiv).toBeInTheDocument();
   });
 
   it('hides add/remove buttons in readonly mode', () => {

@@ -12,7 +12,7 @@ import React, { FormEvent } from 'react';
 
 import { SearchModeToggle, SearchMode, DocumentSourceSelector } from '@/components';
 import type { DocumentSource } from '@/components';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/primitives/input';
 import { useDocumentsByGame } from '@/hooks/queries/useDocumentsByGame';
 import { useChatWithStreaming } from '@/hooks/useChatWithStreaming';
 import { useChatStore } from '@/store/chat/store';

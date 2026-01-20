@@ -33,16 +33,16 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/data-display/badge';
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
   SheetTitle,
   SheetDescription,
-} from '@/components/ui/sheet';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+} from '@/components/ui/navigation/sheet';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed';

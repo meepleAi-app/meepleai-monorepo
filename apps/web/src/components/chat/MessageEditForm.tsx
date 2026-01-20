@@ -12,8 +12,8 @@
 
 import React from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/primitives/button';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { useChatStore } from '@/store/chat/store';
 
 export function MessageEditForm() {

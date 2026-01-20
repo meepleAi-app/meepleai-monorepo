@@ -13,9 +13,9 @@ import Link from 'next/link';
 
 import { toast } from '@/components/layout';
 import { Spinner } from '@/components/loading';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 
 interface QAStepProps {
   gameId: string;
@@ -69,7 +69,7 @@ export function QAStep({ gameId, gameName, chatThreadId, onReset }: QAStepProps)
     abortControllerRef.current = new AbortController();
 
     try {
-      const response = await fetch(`${API_BASE}/api/v1/chat`, {
+      const response = await fetch(`${API_BASE}/api/v1/chat-threads/${chatThreadId}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

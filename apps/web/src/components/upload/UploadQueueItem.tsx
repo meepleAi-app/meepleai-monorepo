@@ -4,9 +4,9 @@
  * Displays a single file in the upload queue with progress bar and actions
  */
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Progress } from '@/components/ui/feedback/progress';
+import { Button } from '@/components/ui/primitives/button';
 import type { UploadQueueItem as UploadQueueItemType, UploadStatus } from '@/hooks/useUploadQueue';
 
 interface UploadQueueItemProps {

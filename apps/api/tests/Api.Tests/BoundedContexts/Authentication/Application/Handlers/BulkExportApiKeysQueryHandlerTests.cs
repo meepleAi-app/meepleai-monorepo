@@ -5,6 +5,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Application.Handlers;
 /// Tests for BulkExportApiKeysQueryHandler (ISSUE-906).
 /// Verifies CSV export functionality with filtering and CSV escaping.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class BulkExportApiKeysQueryHandlerTests
 {
     private readonly Mock<IApiKeyRepository> _mockApiKeyRepository;

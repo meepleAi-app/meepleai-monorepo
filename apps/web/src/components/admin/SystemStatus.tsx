@@ -20,9 +20,9 @@ import {
   ActivityIcon,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 export type ServiceHealthStatus = 'healthy' | 'degraded' | 'unhealthy' | 'unknown';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import type { Game } from '@/lib/api';
 
 import { SessionSetupModal } from './SessionSetupModal';

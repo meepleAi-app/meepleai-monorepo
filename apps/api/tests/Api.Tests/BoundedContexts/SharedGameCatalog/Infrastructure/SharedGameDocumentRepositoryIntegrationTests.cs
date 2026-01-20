@@ -12,6 +12,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
@@ -21,7 +22,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// Issue #2409 - Optimize tag search with JSONB operators.
 /// </summary>
 [Collection("SharedTestcontainers")]
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetime
 {

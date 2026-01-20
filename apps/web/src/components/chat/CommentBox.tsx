@@ -29,8 +29,8 @@ import { useState } from 'react';
 import { Send, AlertCircle, Check } from 'lucide-react';
 
 import { LoadingButton } from '@/components/loading/LoadingButton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';

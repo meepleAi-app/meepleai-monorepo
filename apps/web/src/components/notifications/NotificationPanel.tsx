@@ -18,8 +18,8 @@ import { useEffect } from 'react';
 
 import { Bell, CheckCheck } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Separator } from '@/components/ui/navigation/separator';
+import { Button } from '@/components/ui/primitives/button';
 import {
   useNotificationStore,
   selectNotifications,

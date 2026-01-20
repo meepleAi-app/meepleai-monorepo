@@ -18,7 +18,7 @@
 
 import React from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { FEEDBACK_OUTCOMES, type FeedbackOutcome } from '@/lib/constants/feedback';
 import { cn } from '@/lib/utils';
 import { Message } from '@/types';

@@ -75,7 +75,8 @@ public sealed class SeedTestUserCommandHandlerTests
         // Act
         await _handler.Handle(command, CancellationToken.None);
 
-        // Assert - Email value object normalizes to lowercase
+        // Assert
+        // Note: Email value object normalizes to lowercase
         _userRepositoryMock.Verify(
             x => x.AddAsync(It.Is<User>(u =>
                 u.Email.Value == "test@meepleai.com" &&

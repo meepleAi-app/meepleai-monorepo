@@ -211,6 +211,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
 
         // Assert - When embedding fails, no results are returned → "Not specified"
         Assert.NotNull(result);
+        // When embedding fails, RagService returns empty results which triggers "Not specified" response
         Assert.Equal("Not specified", result.answer);
         Assert.Empty(result.snippets);
     }

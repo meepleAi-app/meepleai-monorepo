@@ -11,7 +11,9 @@ public class GameFaqEntity
     public string Question { get; set; } = string.Empty;
     public string Answer { get; set; } = string.Empty;
     public int Order { get; set; }
+    public int UpvoteCount { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
     public SharedGameEntity SharedGame { get; set; } = default!;
 }

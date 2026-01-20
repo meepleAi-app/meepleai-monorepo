@@ -16,8 +16,11 @@
  * - Framer Motion animations (Issue #2618)
  *
  * Note: Uses next/dynamic with ssr: false to avoid DOMMatrix SSR issues
- * with framer-motion during static page generation.
+ * with framer-motion during static page generation. Must be a Client
+ * Component to use ssr: false with next/dynamic.
  */
+
+'use client';
 
 import dynamic from 'next/dynamic';
 

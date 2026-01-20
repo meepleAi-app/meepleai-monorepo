@@ -72,10 +72,30 @@ async function proxyRequest(request: NextRequest, method: string) {
       statusText: response.statusText,
     });
 
-    // Copy response headers (especially Set-Cookie)
+    // Copy response headers with special handling for Set-Cookie
+    // Issue: headers.forEach + headers.set may not handle Set-Cookie correctly in all environments
+    // Fix: Handle Set-Cookie explicitly first, then copy other headers
+    const setCookieHeader = response.headers.get('set-cookie');
+    if (setCookieHeader) {
+      // Debug logging for auth troubleshooting
+      // eslint-disable-next-line no-console
+      console.log(`[API Proxy] Set-Cookie header received: ${setCookieHeader.substring(0, 100)}...`);
+      nextResponse.headers.set('set-cookie', setCookieHeader);
+    }
+
+    // Copy other response headers (excluding set-cookie which was already handled)
     response.headers.forEach((value, key) => {
-      nextResponse.headers.set(key, value);
+      const lowerKey = key.toLowerCase();
+      if (lowerKey !== 'set-cookie') {
+        nextResponse.headers.set(key, value);
+      }
     });
+
+    // Debug: Log response status for auth endpoints
+    if (apiPath.includes('/auth/')) {
+      // eslint-disable-next-line no-console
+      console.log(`[API Proxy] Auth response: ${response.status} ${response.statusText}, Set-Cookie: ${setCookieHeader ? 'present' : 'absent'}`);
+    }
 
     // Disable Next.js compression to prevent ERR_CONTENT_DECODING_FAILED
     nextResponse.headers.set('x-no-compression', '1');

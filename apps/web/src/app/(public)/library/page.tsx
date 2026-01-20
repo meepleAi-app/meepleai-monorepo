@@ -18,6 +18,9 @@
 
 'use client';
 
+// Force dynamic rendering to avoid SSG/framer-motion DOMMatrix issues
+export const dynamic = 'force-dynamic';
+
 import React, { useState } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';

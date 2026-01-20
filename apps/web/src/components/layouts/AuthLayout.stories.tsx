@@ -5,7 +5,7 @@
  * for authentication pages (login, register, reset-password).
  */
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 

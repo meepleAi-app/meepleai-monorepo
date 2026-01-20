@@ -8,10 +8,10 @@ import React from 'react';
 
 import { FileText, Download, Eye, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
 
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Button } from '@/components/ui/primitives/button';
 import { Game, PdfDocumentDto } from '@/lib/api';
 
 interface GameRulesTabProps {

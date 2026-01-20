@@ -1,7 +1,7 @@
 /* eslint-disable security/detect-object-injection -- Safe event type config access */
 // UI-04: Timeline filters sidebar component
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import type { TimelineFilters as TimelineFiltersType } from '@/lib/timeline-types';
 import {
   TimelineEventType,

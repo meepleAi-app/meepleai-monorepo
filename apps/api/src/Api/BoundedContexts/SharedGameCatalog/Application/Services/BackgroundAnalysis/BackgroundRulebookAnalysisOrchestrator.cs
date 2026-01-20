@@ -140,7 +140,7 @@ internal sealed class BackgroundRulebookAnalysisOrchestrator : IBackgroundRulebo
             if (parallelResult.SuccessRate < _options.MinimumChunkSuccessRate)
             {
                 var errorMsg = $"Chunk analysis success rate too low: {parallelResult.SuccessRate:F2} < {_options.MinimumChunkSuccessRate:F2} threshold";
-                _logger.LogError(errorMsg);
+                _logger.LogError("Chunk analysis success rate too low: {SuccessRate} < {Threshold} threshold", parallelResult.SuccessRate, _options.MinimumChunkSuccessRate);
                 await UpdateProgressAsync(taskId, AnalysisPhase.ChunkAnalysis, phase3CompleteProgress, $"FAILED: {errorMsg}", effectiveCt).ConfigureAwait(false);
                 return OrchestrationResult.CreateFailure(errorMsg);
             }

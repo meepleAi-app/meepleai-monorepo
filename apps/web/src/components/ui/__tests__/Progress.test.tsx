@@ -4,7 +4,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { Progress } from '../progress';
+import { Progress } from '../feedback/progress';
 
 describe('Progress', () => {
   describe('Rendering', () => {

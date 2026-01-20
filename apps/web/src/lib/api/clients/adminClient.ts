@@ -7,6 +7,7 @@
 
 import { z } from 'zod';
 
+import { getApiBase } from '../core/httpClient';
 import {
   AdminUserSchema,
   AdminUserResponseSchema,
@@ -330,7 +331,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
 
     /**
      * Get audit logs for prompt template (admin only)
-     * GET /api/v1/admin/prompts/{id}/audit
+     * GET /api/v1/prompts/{templateId}/audit-log
      */
     async getPromptAuditLogs(
       promptId: string,
@@ -345,7 +346,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
 
       const query = queryParams.toString();
       const result = await httpClient.get(
-        `/api/v1/admin/prompts/${promptId}/audit${query ? `?${query}` : ''}`,
+        `/api/v1/prompts/${promptId}/audit-log${query ? `?${query}` : ''}`,
         PromptAuditLogsResponseSchema
       );
       return result ?? { logs: [], totalPages: 0 };
@@ -904,7 +905,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const queryString = queryParams.toString();
       const url = `/api/v1/admin/ai-models/export?${queryString}`;
 
-      const response = await fetch(`${httpClient.baseUrl}${url}`, {
+      const response = await fetch(`${getApiBase()}${url}`, {
         method: 'GET',
         credentials: 'include',
         headers: {

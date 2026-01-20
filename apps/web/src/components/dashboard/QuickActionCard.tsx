@@ -18,7 +18,7 @@ import React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { LucideIcon } from 'lucide-react';
 
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/data-display/card';
 import { cn } from '@/lib/utils';
 
 // ============================================================================

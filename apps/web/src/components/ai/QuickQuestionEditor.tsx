@@ -24,13 +24,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Check, Edit2, RefreshCw, RotateCcw, Save, X } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { ConfirmDialog } from '@/components/ui/feedback/confirm-dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
+import { Label } from '@/components/ui/primitives/label';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { cn } from '@/lib/utils';
 
 import type { GeneratedQuestion } from './QuickQuestionGenerator';

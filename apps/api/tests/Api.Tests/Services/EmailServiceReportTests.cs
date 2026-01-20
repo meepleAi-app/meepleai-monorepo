@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Services;
 
@@ -10,6 +11,7 @@ namespace Api.Tests.Services;
 /// Unit tests for EmailService report delivery methods
 /// ISSUE-918: Email delivery integration tests
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class EmailServiceReportTests
 {
     private readonly Mock<ILogger<EmailService>> _mockLogger;

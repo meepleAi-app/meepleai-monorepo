@@ -8,21 +8,21 @@
 
 import { useState } from 'react';
 
-import { AdminLayout } from '@/components/admin/AdminLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Star, TrendingUp } from 'lucide-react';
+import { AlertCircle, Star } from 'lucide-react';
 
-import { useAiModels, useCostTracking, useSetPrimaryModel } from '@/hooks/queries';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AiModelsTable } from '@/components/admin/AiModelsTable';
-import { SetPrimaryModelDialog } from '@/components/admin/SetPrimaryModelDialog';
-import { ModelConfigModal } from '@/components/admin/ModelConfigModal';
 import { BudgetAlertBanner } from '@/components/admin/BudgetAlertBanner';
 import { ExportUsageButton } from '@/components/admin/ExportUsageButton';
+import { ModelConfigModal } from '@/components/admin/ModelConfigModal';
+import { SetPrimaryModelDialog } from '@/components/admin/SetPrimaryModelDialog';
 import { toast } from '@/components/layout/Toast';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
+import { useAiModels, useCostTracking, useSetPrimaryModel } from '@/hooks/queries';
 import type { AiModelDto } from '@/lib/api';
 
 export function AiModelsClient() {

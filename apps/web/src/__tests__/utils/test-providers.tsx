@@ -9,7 +9,7 @@ import React from 'react';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { GameProvider } from '@/components/game/GameProvider';
 import { ChatStoreProvider } from '@/store/chat/ChatStoreProvider';
-import { UIProvider } from '@/components/ui/UIProvider';
+import { UIProvider } from '@/components/ui/meeple/UIProvider';
 import { api } from '@/lib/api';
 
 // Mock API reference for setup
@@ -31,7 +31,7 @@ export function setupProviderMocks() {
     if (path.startsWith('/api/v1/games/') && path.endsWith('/agents')) {
       return Promise.resolve([]); // No agents by default
     }
-    if (path.startsWith('/api/v1/chats?gameId=')) {
+    if (path.startsWith('/api/v1/chat-threads?gameId=')) {
       return Promise.resolve([]); // No chats by default
     }
     return Promise.resolve(null);

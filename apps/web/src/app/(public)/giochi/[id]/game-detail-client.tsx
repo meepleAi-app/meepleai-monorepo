@@ -22,8 +22,8 @@ import { ArrowLeft, Info, HelpCircle, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 
 import { GameOverviewTab } from '@/components/games/detail/GameOverviewTab';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { Button } from '@/components/ui/primitives/button';
 
 import { GameChatTab } from './components/GameChatTab';
 import { GameFAQTab } from './components/GameFAQTab';

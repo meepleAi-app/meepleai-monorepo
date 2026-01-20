@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.DomainEvents;
 
@@ -21,16 +22,19 @@ namespace Api.Tests.Integration.DomainEvents;
 /// Integration tests for domain event dispatching and handling.
 /// Tests the complete flow: Aggregate → Event → Handler → Audit Log.
 /// </summary>
+[Trait("Category", TestCategories.Integration)]
 public class DomainEventIntegrationTests : IAsyncLifetime
 {
     private MeepleAiDbContext _dbContext = null!;
     private IMediator _mediator = null!;
+    private IServiceScope _scope = null!;
 
     public async ValueTask InitializeAsync()
     {
-        // Setup in-memory database
+        // Setup in-memory database with shared database name
+        var databaseName = Guid.NewGuid().ToString();
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(databaseName: databaseName)
             .Options;
 
         // Create mediator with real handler registration
@@ -42,10 +46,10 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         services.AddLogging();
 
         var serviceProvider = services.BuildServiceProvider();
-        _mediator = serviceProvider.GetRequiredService<IMediator>();
-        _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
-
-
+        _scope = serviceProvider.CreateScope();
+        _mediator = _scope.ServiceProvider.GetRequiredService<IMediator>();
+        // Use the SAME DbContext instance from DI - critical for audit log visibility
+        _dbContext = _scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         await Task.CompletedTask;
     }
@@ -56,6 +60,7 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         {
             await _dbContext.DisposeAsync();
         }
+        _scope?.Dispose();
     }
 
     [Fact]

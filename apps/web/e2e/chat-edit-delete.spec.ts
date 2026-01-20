@@ -87,7 +87,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await editTextarea.fill(editedMessage);
 
     // ✅ REMOVED MOCK: Use real message edit API
-    // Real backend PUT /api/v1/chats/{threadId}/messages/{messageId} must work
+    // Real backend PUT /api/v1/chat-threads/{threadId}/messages/{messageId} must work
 
     // Click Save button
     const saveButton = page.locator('button[aria-label="Save edited message"]');
@@ -182,7 +182,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await expect(page.getByText(/eliminerà permanentemente/i)).toBeVisible();
 
     // ✅ REMOVED MOCK: Use real message delete API
-    // Real backend DELETE /api/v1/chats/{threadId}/messages/{messageId} must work
+    // Real backend DELETE /api/v1/chat-threads/{threadId}/messages/{messageId} must work
 
     // Click "Elimina" button
     await page.getByRole('button', { name: 'Elimina' }).click({ force: true });

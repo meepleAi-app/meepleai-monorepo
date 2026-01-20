@@ -12,8 +12,8 @@
 
 import { CheckCircleIcon, AlertTriangleIcon, XCircleIcon } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent } from '@/components/ui/data-display/card';
 import type { HealthState } from '@/lib/api';
 
 interface OverallStatusBadgeProps {
@@ -55,6 +55,7 @@ export function OverallStatusBadge({
   unhealthyCount,
   totalCount,
 }: OverallStatusBadgeProps) {
+  // eslint-disable-next-line security/detect-object-injection -- overallState comes from typed props
   const config = stateConfig[overallState];
   const Icon = config.icon;
 

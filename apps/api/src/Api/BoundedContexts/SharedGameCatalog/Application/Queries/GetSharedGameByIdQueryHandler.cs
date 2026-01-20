@@ -68,7 +68,7 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
         // Map FAQs (ordered by Order property)
         var faqDtos = game.Faqs
             .OrderBy(f => f.Order)
-            .Select(f => new GameFaqDto(f.Id, f.Question, f.Answer, f.Order, f.CreatedAt))
+            .Select(f => new GameFaqDto(f.Id, f.SharedGameId, f.Question, f.Answer, f.Order, f.UpvoteCount, f.CreatedAt, f.UpdatedAt))
             .ToList();
 
         // Map Errata (ordered by PublishedDate descending)

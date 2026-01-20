@@ -16,35 +16,35 @@
  */
 
 import { useState, useEffect } from 'react';
+
 import { Plus, Search, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/loading/Spinner';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/data-display/card';
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/data-display/table';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Spinner } from '@/components/ui/spinner';
-
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { useApiClient } from '@/lib/api/context';
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
-import { GamesTableRow } from './GamesTableRow';
+
 import { GamesTablePagination } from './GamesTablePagination';
+import { GamesTableRow } from './GamesTableRow';
 
 type StatusFilter = 'all' | '0' | '1' | '2' | '3'; // All, Draft, PendingApproval, Published, Archived
 

@@ -44,6 +44,14 @@ export {
   useRemoveGameFromLibrary,
   useUpdateLibraryEntry,
   useToggleLibraryFavorite,
+  // Library Sharing (Issue #2614)
+  useLibraryShareLink,
+  useCreateShareLink,
+  useUpdateShareLink,
+  useRevokeShareLink,
+  useSharedLibrary,
+  // Dashboard widget (Issue #2612)
+  useRecentlyAddedGames,
   libraryKeys,
 } from './useLibrary';
 
@@ -80,6 +88,16 @@ export {
   useTestModel,
   aiModelsKeys,
 } from './useAiModels';
+
+// Active Sessions queries and mutations (Issue #2617)
+export {
+  useActiveSessions,
+  useSession,
+  usePauseSession,
+  useResumeSession,
+  useEndSession,
+  sessionsKeys,
+} from './useActiveSessions';
 
 // Re-export from @tanstack/react-query for convenience
 export {

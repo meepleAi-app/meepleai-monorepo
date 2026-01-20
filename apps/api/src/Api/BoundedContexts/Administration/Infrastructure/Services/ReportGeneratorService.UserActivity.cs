@@ -43,32 +43,47 @@ internal sealed partial class ReportGeneratorService
         var startDate = (DateTime)parameters["startDate"];
         var endDate = (DateTime)parameters["endDate"];
 
+        // EF Core + PostgreSQL limitation: GroupBy with .Date property doesn't translate
+        // Solution: Load data first, then group in memory
+
         // User registration trends
-        var registrations = await _dbContext.Users
+        var users = await _dbContext.Users
             .Where(u => u.CreatedAt >= startDate && u.CreatedAt <= endDate)
-            .GroupBy(u => u.CreatedAt.Date)
-            .Select(g => new { Date = g.Key, Count = g.Count() })
-            .OrderBy(x => x.Date)
+            .Select(u => u.CreatedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        var registrations = users
+            .GroupBy(date => date.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .OrderBy(x => x.Date)
+            .ToList();
 
         // Login activity (via sessions)
-        var logins = await _dbContext.UserSessions
+        var sessionLogins = await _dbContext.UserSessions
             .Where(s => s.CreatedAt >= startDate && s.CreatedAt <= endDate)
-            .GroupBy(s => s.CreatedAt.Date)
-            .Select(g => new { Date = g.Key, Count = g.Count() })
-            .OrderBy(x => x.Date)
+            .Select(s => s.CreatedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        // Session creation
-        var sessions = await _dbContext.UserSessions
-            .Where(s => s.CreatedAt >= startDate && s.CreatedAt <= endDate)
-            .GroupBy(s => s.CreatedAt.Date)
+        var logins = sessionLogins
+            .GroupBy(date => date.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .OrderBy(x => x.Date)
+            .ToList();
+
+        // Session creation
+        var sessionData = await _dbContext.UserSessions
+            .Where(s => s.CreatedAt >= startDate && s.CreatedAt <= endDate)
+            .Select(s => s.CreatedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        var sessions = sessionData
+            .GroupBy(date => date.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .OrderBy(x => x.Date)
+            .ToList();
 
         // ISSUE-917: Enhanced with multi-line chart
         var dateLabels = registrations.Select(r => r.Date.ToString("MMM dd", CultureInfo.InvariantCulture)).ToArray();
@@ -114,6 +129,9 @@ internal sealed partial class ReportGeneratorService
                     YAxisLabel: "Count"))
         };
 
+        var totalRegistrations = registrations.Sum(r => r.Count);
+        var totalLogins = logins.Sum(l => l.Count);
+
         return new ReportContent(
             Title: "User Activity Report",
             Description: $"User engagement from {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}",
@@ -123,8 +141,9 @@ internal sealed partial class ReportGeneratorService
             {
                 ["startDate"] = startDate,
                 ["endDate"] = endDate,
-                ["totalRegistrations"] = registrations.Sum(r => r.Count),
-                ["totalLogins"] = logins.Sum(l => l.Count)
+                ["totalRegistrations"] = totalRegistrations,
+                ["totalLogins"] = totalLogins,
+                ["activeUsers"] = totalRegistrations // Active users count (new registrations in period)
             },
             Sections: sections);
     }

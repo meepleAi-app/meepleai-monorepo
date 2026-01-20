@@ -3,6 +3,7 @@ using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Configuration;
 using Api.Models;
 using Api.Services.LlmClients;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Integration.Administration;
 
@@ -29,6 +31,7 @@ namespace Api.Tests.Integration.Administration;
 /// Coverage Target: ≥90% for GetLlmHealthQueryHandler
 /// Execution Time Target: <10s
 /// </summary>
+[Trait("Category", TestCategories.Integration)]
 public sealed class LlmHealthIntegrationTests
 {
     private static GetLlmHealthQueryHandler CreateHandler(
@@ -51,6 +54,7 @@ public sealed class LlmHealthIntegrationTests
         var loggerMock = new Mock<ILogger<HybridLlmService>>();
         var aiSettingsMock = new Mock<IOptions<AiProviderSettings>>();
         aiSettingsMock.Setup(x => x.Value).Returns(new AiProviderSettings());
+        var modelConfigRepositoryMock = new Mock<IAiModelConfigurationRepository>();
         var healthCheckServiceMock = new Mock<IProviderHealthCheckService>();
 
         var hybridServiceMock = new Mock<HybridLlmService>(
@@ -59,6 +63,7 @@ public sealed class LlmHealthIntegrationTests
             costLogRepositoryMock.Object,
             loggerMock.Object,
             aiSettingsMock.Object,
+            modelConfigRepositoryMock.Object,
             healthCheckServiceMock.Object);
 
         hybridServiceMock.Setup(s => s.GetMonitoringStatus()).Returns(monitoringStatus);

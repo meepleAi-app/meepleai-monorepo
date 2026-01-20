@@ -159,7 +159,7 @@ public class ValidateShareLinkQueryHandlerTests
         );
 
         // Wait for token to expire
-        await Task.Delay(1500);
+        await Task.Delay(TestConstants.Timing.MediumTimeout);
 
         var query = new ValidateShareLinkQuery(token.Value);
 

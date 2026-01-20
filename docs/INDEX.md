@@ -49,6 +49,12 @@
 - Debugging & Performance Optimization
 - Common Tasks & Troubleshooting
 
+**Essential Guides**:
+- **[Visual Studio Code Setup](02-development/guida-visualcode.md)** ⭐ Task automation, Docker workflow, troubleshooting
+- [Git Workflow](02-development/git-workflow.md)
+- [Local Secrets Setup](02-development/local-secrets-setup.md)
+- [Operational Guide](02-development/operational-guide.md)
+
 ### 03. API Documentation ⭐ NEW
 
 **[API Reference](03-api/README.md)** - Complete REST API documentation
@@ -90,6 +96,41 @@
 - Best Practices & CI/CD Integration
 - Performance Testing (k6)
 - Accessibility Testing
+
+### 08. User Flows ⭐ NEW
+
+**[User Flows Documentation](08-user-flows/README.md)** - Complete user flow documentation by role
+
+**Topics Covered**:
+- User Stories (Gherkin format)
+- Sequence Diagrams (Mermaid)
+- Screen Flows (ASCII diagrams)
+- API Flows (endpoint chains)
+- Implementation Status
+- Gap Analysis
+
+**User Role** (`08-user-flows/user-role/`):
+- [Authentication](08-user-flows/user-role/01-authentication.md): Registration, Login, OAuth, 2FA, API Keys
+- [Game Discovery](08-user-flows/user-role/02-game-discovery.md): Browse, Search, Filter, Game Details
+- [Library Management](08-user-flows/user-role/03-library-management.md): Tier-based quotas (A games, B/C PDFs, D sessions)
+- [AI Chat](08-user-flows/user-role/04-ai-chat.md): RAG questions, Threads, History, Export
+- [Game Sessions](08-user-flows/user-role/05-game-sessions.md): Create, Players, State Tracking, Player Mode
+
+**Editor Role** (`08-user-flows/editor-role/`):
+- [Game Management](08-user-flows/editor-role/01-game-management.md): Create, Edit, BGG Import, Archive
+- [Document Management](08-user-flows/editor-role/02-document-management.md): PDF Upload, Versions, Processing
+- [Content Management](08-user-flows/editor-role/03-content-management.md): Quick Questions, FAQ, Errata
+- [Publication Workflow](08-user-flows/editor-role/04-publication-workflow.md): Submit, Track, Handle Rejection
+
+**Admin Role** (`08-user-flows/admin-role/`):
+- [Approval Workflow](08-user-flows/admin-role/01-approval-workflow.md): Queue, Approve/Reject, Delete
+- [User Management](08-user-flows/admin-role/02-user-management.md): CRUD, Roles, Tiers, Bulk Ops
+- [System Configuration](08-user-flows/admin-role/03-system-configuration.md): Quotas, Feature Flags, AI Models
+- [Monitoring](08-user-flows/admin-role/04-monitoring.md): Health, Services, Alerts, Analytics
+
+**Supporting Documents**:
+- [Core Flow Diagrams](08-user-flows/diagrams/core-flows.md): Mermaid sequence diagrams
+- [Gap Analysis](08-user-flows/gap-analysis.md): Implementation status & proposed features
 
 ---
 
@@ -261,12 +302,13 @@ export async function askQuestion(
 3. **Backups**: [Deployment Guide - Database](04-deployment/README.md#database-management)
 
 ### For Product/QA
-1. **API Testing**: [API Documentation](03-api/README.md)
-2. **E2E Testing**: [Testing Guide - E2E](05-testing/README.md#e2e-testing-playwright)
-3. **System Overview**: [Architecture](01-architecture/overview/system-architecture.md)
+1. **User Flows**: [User Flows Documentation](08-user-flows/README.md)
+2. **API Testing**: [API Documentation](03-api/README.md)
+3. **E2E Testing**: [Testing Guide - E2E](05-testing/README.md#e2e-testing-playwright)
+4. **System Overview**: [Architecture](01-architecture/overview/system-architecture.md)
 
 ---
 
-**Version**: 1.2
-**Last Updated**: 2026-01-15
+**Version**: 1.3
+**Last Updated**: 2026-01-19
 **Maintainers**: Engineering Team

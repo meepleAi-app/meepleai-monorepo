@@ -4,6 +4,7 @@ using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.Extensions;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -27,12 +28,20 @@ internal static class UserLibraryEndpoints
         MapGetGameInLibraryStatusEndpoint(group);
 
         // Agent configuration endpoints
+        MapGetGameAgentConfigEndpoint(group);
         MapConfigureGameAgentEndpoint(group);
         MapResetGameAgentEndpoint(group);
 
         // Custom PDF endpoints
         MapUploadCustomGamePdfEndpoint(group);
         MapResetGamePdfEndpoint(group);
+
+        // Library sharing endpoints
+        MapCreateLibraryShareLinkEndpoint(group);
+        MapGetLibraryShareLinkEndpoint(group);
+        MapUpdateLibraryShareLinkEndpoint(group);
+        MapRevokeLibraryShareLinkEndpoint(group);
+        MapGetSharedLibraryEndpoint(group);
 
         return group;
     }
@@ -282,6 +291,35 @@ internal static class UserLibraryEndpoints
         .WithDescription("Returns whether a game is in user's library and if it's marked as favorite.");
     }
 
+    private static void MapGetGameAgentConfigEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/games/{gameId:guid}/agent-config", async (
+            Guid gameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetGameAgentConfigQuery(userId, gameId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<AgentConfigDto?>(200)
+        .Produces(401)
+        .WithTags("Library")
+        .WithSummary("Get AI agent configuration")
+        .WithDescription("Returns the custom AI agent configuration for a game in user's library. Returns null if no custom configuration exists (defaults should be used).");
+    }
+
     private static void MapConfigureGameAgentEndpoint(RouteGroupBuilder group)
     {
         group.MapPut("/library/games/{gameId:guid}/agent", async (
@@ -438,6 +476,192 @@ internal static class UserLibraryEndpoints
         .WithDescription("Resets to use SharedGame's default PDF rulebook for a game in user's library.");
     }
 
+    private static void MapCreateLibraryShareLinkEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/library/share", async (
+            [FromBody] CreateLibraryShareRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new CreateLibraryShareLinkCommand(
+                UserId: userId,
+                PrivacyLevel: request.PrivacyLevel,
+                IncludeNotes: request.IncludeNotes,
+                ExpiresAt: request.ExpiresAt
+            );
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Created($"/api/v1/library/share", result);
+            }
+            catch (DomainException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<LibraryShareLinkDto>(201)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Library", "Sharing")
+        .WithSummary("Create library share link")
+        .WithDescription("Creates a new share link for user's library. Revokes any existing active link. Max 10 per day.");
+    }
+
+    private static void MapGetLibraryShareLinkEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/share", async (
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetLibraryShareLinkQuery(userId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            if (result == null)
+            {
+                return Results.Ok((LibraryShareLinkDto?)null);
+            }
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<LibraryShareLinkDto?>(200)
+        .Produces(401)
+        .WithTags("Library", "Sharing")
+        .WithSummary("Get active library share link")
+        .WithDescription("Returns the user's active library share link, or null if none exists.");
+    }
+
+    private static void MapUpdateLibraryShareLinkEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPatch("/library/share/{shareToken}", async (
+            string shareToken,
+            [FromBody] UpdateLibraryShareRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new UpdateLibraryShareLinkCommand(
+                UserId: userId,
+                ShareToken: shareToken,
+                PrivacyLevel: request.PrivacyLevel,
+                IncludeNotes: request.IncludeNotes,
+                ExpiresAt: request.ExpiresAt
+            );
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (DomainException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<LibraryShareLinkDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Library", "Sharing")
+        .WithSummary("Update library share link")
+        .WithDescription("Updates settings for an existing library share link.");
+    }
+
+    private static void MapRevokeLibraryShareLinkEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/library/share/{shareToken}", async (
+            string shareToken,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new RevokeLibraryShareLinkCommand(userId, shareToken);
+
+            try
+            {
+                await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.NoContent();
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces(204)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Library", "Sharing")
+        .WithSummary("Revoke library share link")
+        .WithDescription("Revokes (deletes) a library share link. The link will return 404 after revocation.");
+    }
+
+    private static void MapGetSharedLibraryEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/shared/{shareToken}", async (
+            string shareToken,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new GetSharedLibraryQuery(shareToken);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            if (result == null)
+            {
+                return Results.NotFound(new { error = "Shared library not found or link has expired" });
+            }
+
+            return Results.Ok(result);
+        })
+        .AllowAnonymous()
+        .Produces<SharedLibraryDto>(200)
+        .Produces(404)
+        .WithTags("Library", "Sharing", "Public")
+        .WithSummary("Get shared library (public)")
+        .WithDescription("Returns a publicly shared library. No authentication required.");
+    }
+
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)
     {
         userId = Guid.Empty;
@@ -480,4 +704,22 @@ public record UploadCustomPdfRequest(
     string PdfUrl,
     long FileSizeBytes,
     string OriginalFileName
+);
+
+/// <summary>
+/// Request body for creating a library share link.
+/// </summary>
+public record CreateLibraryShareRequest(
+    string PrivacyLevel,
+    bool IncludeNotes = false,
+    DateTime? ExpiresAt = null
+);
+
+/// <summary>
+/// Request body for updating a library share link.
+/// </summary>
+public record UpdateLibraryShareRequest(
+    string? PrivacyLevel = null,
+    bool? IncludeNotes = null,
+    DateTime? ExpiresAt = null
 );

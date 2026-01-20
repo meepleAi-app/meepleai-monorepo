@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { MeepleAvatar } from '../meeple-avatar';
-import type { MeepleAvatarState, MeepleAvatarSize } from '../meeple-avatar';
+import { MeepleAvatar } from '../meeple/meeple-avatar';
+import type { MeepleAvatarState, MeepleAvatarSize } from '../meeple/meeple-avatar';
 
 describe('MeepleAvatar', () => {
   describe('Rendering', () => {

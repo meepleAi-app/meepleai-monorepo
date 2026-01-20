@@ -1,10 +1,11 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.Tests;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
+using Api.Tests.Constants;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
-using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Authentication.Domain.Entities;
 
@@ -264,14 +265,14 @@ public class SessionEntityTests
     }
 
     [Fact]
-    public void UpdateLastSeen_CalledMultipleTimes_UpdatesTimestamp()
+    public async Task UpdateLastSeen_CalledMultipleTimes_UpdatesTimestamp()
     {
         // Arrange
         var session = new SessionBuilder().Build();
         session.UpdateLastSeen();
         var firstUpdate = session.LastSeenAt;
 
-        Thread.Sleep(10); // Small delay to ensure different timestamp
+        await Task.Delay(TestConstants.Timing.TinyDelay); // Ensure different timestamp
 
         // Act
         session.UpdateLastSeen();

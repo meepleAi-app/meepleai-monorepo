@@ -1,6 +1,9 @@
 # HyperDX Observability Platform
 # Unified logs, traces, and session replay for MeepleAI
 #
+# Note: Inherits project name from docker-compose.yml (name: meepleai)
+# Volumes will be named: meepleai_hyperdx_data, meepleai_hyperdx_logs
+#
 # Usage: docker compose -f docker-compose.yml -f docker-compose.hyperdx.yml up -d
 #
 # Ports:
@@ -33,10 +36,10 @@ services:
 
     volumes:
       # ClickHouse data persistence
-      - hyperdx-data:/var/lib/clickhouse
+      - hyperdx_data:/var/lib/clickhouse
 
       # HyperDX application logs
-      - hyperdx-logs:/var/log/hyperdx
+      - hyperdx_logs:/var/log/hyperdx
 
     environment:
       # Core Configuration
@@ -79,9 +82,9 @@ services:
           memory: 2G
 
 volumes:
-  hyperdx-data:
+  hyperdx_data:
     driver: local
-  hyperdx-logs:
+  hyperdx_logs:
     driver: local
 
 networks:

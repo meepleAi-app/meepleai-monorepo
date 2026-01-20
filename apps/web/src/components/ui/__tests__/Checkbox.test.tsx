@@ -5,7 +5,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Checkbox } from '../checkbox';
+import { Checkbox } from '../primitives/checkbox';
 
 describe('Checkbox', () => {
   describe('Rendering', () => {

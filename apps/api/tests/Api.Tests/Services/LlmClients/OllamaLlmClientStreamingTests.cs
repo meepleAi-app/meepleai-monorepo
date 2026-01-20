@@ -15,12 +15,14 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Services.LlmClients;
 
 /// <summary>
 /// ISSUE-1725: Tests for streaming token tracking in OllamaLlmClient
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class OllamaLlmClientStreamingTests
 {
     private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;

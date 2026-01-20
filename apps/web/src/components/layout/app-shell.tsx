@@ -11,7 +11,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { MeepleLogo } from '../ui/meeple-logo';
+import { MeepleLogo } from '../ui/meeple/meeple-logo';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -28,7 +28,7 @@ interface NavItem {
 const navigationItems: NavItem[] = [
   {
     label: 'Dashboard',
-    href: '/dashboard-redesign',
+    href: '/dashboard',
     icon: '🎲',
     color: 'var(--color-primary-500)',
   },
@@ -57,7 +57,7 @@ export function AppShell({ children }: AppShellProps) {
       <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         {/* Logo Header */}
         <div className="sidebar-header">
-          <Link href="/dashboard-redesign">
+          <Link href="/dashboard">
             <MeepleLogo variant={sidebarCollapsed ? 'icon' : 'full'} size="md" animated />
           </Link>
 

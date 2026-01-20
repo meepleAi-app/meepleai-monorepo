@@ -8,10 +8,10 @@ import userEvent from '@testing-library/user-event';
 import {
   ChatMessage,
   ConfidenceBadge,
-  CitationLink,
+  ChatCitationLink,
   TypingIndicator,
   type Citation,
-} from '../chat-message';
+} from '../meeple/chat-message';
 
 // ============================================================================
 // Helper Functions
@@ -349,12 +349,12 @@ describe('ConfidenceBadge', () => {
 });
 
 // ============================================================================
-// CitationLink Component Tests
+// ChatCitationLink Component Tests
 // ============================================================================
 
-describe('CitationLink', () => {
+describe('ChatCitationLink', () => {
   it('renders citation with label and page', () => {
-    render(<CitationLink citation={mockCitation} />);
+    render(<ChatCitationLink citation={mockCitation} />);
 
     expect(screen.getByLabelText('Citation: Regolamento page 5')).toBeInTheDocument();
     expect(screen.getByText('Regolamento p.5')).toBeInTheDocument();
@@ -362,7 +362,7 @@ describe('CitationLink', () => {
 
   it('renders citation without page number', () => {
     const citation: Citation = { id: '1', label: 'FAQ' };
-    render(<CitationLink citation={citation} />);
+    render(<ChatCitationLink citation={citation} />);
 
     expect(screen.getByLabelText('Citation: FAQ')).toBeInTheDocument();
     expect(screen.getByText('FAQ')).toBeInTheDocument();
@@ -372,7 +372,7 @@ describe('CitationLink', () => {
     const user = userEvent.setup();
     const handleClick = vi.fn();
 
-    render(<CitationLink citation={mockCitation} onClick={handleClick} />);
+    render(<ChatCitationLink citation={mockCitation} onClick={handleClick} />);
 
     await user.click(screen.getByLabelText('Citation: Regolamento page 5'));
 
@@ -383,7 +383,7 @@ describe('CitationLink', () => {
     const user = userEvent.setup();
     const handleClick = vi.fn();
 
-    render(<CitationLink citation={mockCitation} onClick={handleClick} />);
+    render(<ChatCitationLink citation={mockCitation} onClick={handleClick} />);
 
     const link = screen.getByLabelText('Citation: Regolamento page 5');
     link.focus();
@@ -396,7 +396,7 @@ describe('CitationLink', () => {
     const user = userEvent.setup();
     const handleClick = vi.fn();
 
-    render(<CitationLink citation={mockCitation} onClick={handleClick} />);
+    render(<ChatCitationLink citation={mockCitation} onClick={handleClick} />);
 
     const link = screen.getByLabelText('Citation: Regolamento page 5');
     link.focus();
@@ -406,13 +406,13 @@ describe('CitationLink', () => {
   });
 
   it('applies custom className', () => {
-    render(<CitationLink citation={mockCitation} className="custom-link" />);
+    render(<ChatCitationLink citation={mockCitation} className="custom-link" />);
 
     expect(screen.getByLabelText('Citation: Regolamento page 5')).toHaveClass('custom-link');
   });
 
   it('has correct focus styles', () => {
-    render(<CitationLink citation={mockCitation} />);
+    render(<ChatCitationLink citation={mockCitation} />);
 
     const link = screen.getByLabelText('Citation: Regolamento page 5');
     expect(link).toHaveClass('focus:ring-2', 'focus:ring-orange-400');

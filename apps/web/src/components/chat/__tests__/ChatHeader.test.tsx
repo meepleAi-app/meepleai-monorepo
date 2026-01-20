@@ -15,6 +15,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatHeader, type ChatHeaderProps } from '../ChatHeader';
 import { Game } from '@/types';
+import { getMenuItem, queryMenuItem } from '@/test-utils/locale-queries';
 
 const mockGames: Game[] = [
   { id: 'game-1', title: 'Catan', bggId: 13, year: 1995, description: '' },
@@ -236,9 +237,9 @@ describe('ChatHeader', () => {
       const menuButton = screen.getByLabelText('Thread actions menu');
       await user.click(menuButton);
 
-      expect(screen.getByText('Share Thread')).toBeInTheDocument();
-      expect(screen.getByText('Export Chat')).toBeInTheDocument();
-      expect(screen.getByText('Delete Thread')).toBeInTheDocument();
+      expect(getMenuItem(/share thread/i)).toBeInTheDocument();
+      expect(getMenuItem(/export chat/i)).toBeInTheDocument();
+      expect(getMenuItem(/delete thread/i)).toBeInTheDocument();
     });
 
     it('calls onShare when Share is clicked', async () => {
@@ -247,7 +248,7 @@ describe('ChatHeader', () => {
       render(<ChatHeader {...defaultProps} onShare={onShare} />);
 
       await user.click(screen.getByLabelText('Thread actions menu'));
-      await user.click(screen.getByText('Share Thread'));
+      await user.click(getMenuItem(/share thread/i));
 
       expect(onShare).toHaveBeenCalledTimes(1);
     });
@@ -258,7 +259,7 @@ describe('ChatHeader', () => {
       render(<ChatHeader {...defaultProps} onExport={onExport} />);
 
       await user.click(screen.getByLabelText('Thread actions menu'));
-      await user.click(screen.getByText('Export Chat'));
+      await user.click(getMenuItem(/export chat/i));
 
       expect(onExport).toHaveBeenCalledTimes(1);
     });
@@ -269,7 +270,7 @@ describe('ChatHeader', () => {
       render(<ChatHeader {...defaultProps} onDelete={onDelete} />);
 
       await user.click(screen.getByLabelText('Thread actions menu'));
-      await user.click(screen.getByText('Delete Thread'));
+      await user.click(getMenuItem(/delete thread/i));
 
       expect(onDelete).toHaveBeenCalledTimes(1);
     });
@@ -280,7 +281,7 @@ describe('ChatHeader', () => {
 
       await user.click(screen.getByLabelText('Thread actions menu'));
 
-      expect(screen.queryByText('Share Thread')).not.toBeInTheDocument();
+      expect(queryMenuItem(/share thread/i)).not.toBeInTheDocument();
     });
 
     it('does not render Export if onExport is undefined', async () => {
@@ -289,7 +290,7 @@ describe('ChatHeader', () => {
 
       await user.click(screen.getByLabelText('Thread actions menu'));
 
-      expect(screen.queryByText('Export Chat')).not.toBeInTheDocument();
+      expect(queryMenuItem(/export chat/i)).not.toBeInTheDocument();
     });
 
     it('does not render Delete if onDelete is undefined', async () => {
@@ -298,7 +299,7 @@ describe('ChatHeader', () => {
 
       await user.click(screen.getByLabelText('Thread actions menu'));
 
-      expect(screen.queryByText('Delete Thread')).not.toBeInTheDocument();
+      expect(queryMenuItem(/delete thread/i)).not.toBeInTheDocument();
     });
   });
 

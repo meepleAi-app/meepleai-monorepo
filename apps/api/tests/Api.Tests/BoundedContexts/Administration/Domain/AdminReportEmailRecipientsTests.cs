@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain;
 
@@ -8,6 +9,7 @@ namespace Api.Tests.BoundedContexts.Administration.Domain;
 /// Unit tests for AdminReport email recipients validation
 /// ISSUE-918: Email delivery integration tests
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public sealed class AdminReportEmailRecipientsTests
 {
     [Fact]

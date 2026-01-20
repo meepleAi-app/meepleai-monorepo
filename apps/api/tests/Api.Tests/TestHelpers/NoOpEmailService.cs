@@ -1,0 +1,33 @@
+using Api.Services;
+
+namespace Api.Tests.TestHelpers;
+
+/// <summary>
+/// No-op implementation of IEmailService for testing.
+/// All methods complete successfully without sending actual emails.
+/// </summary>
+internal class NoOpEmailService : IEmailService
+{
+    public Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetToken, CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendTwoFactorDisabledEmailAsync(string toEmail, string toName, bool wasAdminOverride, CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendReportEmailAsync(
+        IReadOnlyList<string> recipients,
+        string reportName,
+        string reportDescription,
+        byte[] reportContent,
+        string fileName,
+        long fileSizeBytes,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendReportFailureEmailAsync(
+        IReadOnlyList<string> recipients,
+        string reportName,
+        string errorMessage,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+}

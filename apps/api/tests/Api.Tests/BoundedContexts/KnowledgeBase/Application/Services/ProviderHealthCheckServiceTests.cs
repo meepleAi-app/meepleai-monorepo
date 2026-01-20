@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -132,7 +133,7 @@ public class ProviderHealthCheckServiceTests
     }
 
     [Fact]
-    [Trait("Category", "Integration")]
+    [Trait("Category", TestCategories.Integration)]
     public async Task HealthCheck_SuccessfulResponse_UpdatesHealthyStatus()
     {
         // Arrange
@@ -168,7 +169,7 @@ public class ProviderHealthCheckServiceTests
     }
 
     [Fact]
-    [Trait("Category", "Integration")]
+    [Trait("Category", TestCategories.Integration)]
     public async Task HealthCheck_FailedResponse_UpdatesUnhealthyStatus()
     {
         // Arrange
@@ -204,7 +205,7 @@ public class ProviderHealthCheckServiceTests
     }
 
     [Fact]
-    [Trait("Category", "Integration")]
+    [Trait("Category", TestCategories.Integration)]
     public async Task HealthCheck_Timeout_UpdatesUnhealthyStatus()
     {
         // Arrange

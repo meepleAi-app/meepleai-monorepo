@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
+using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Extensions;
 using MediatR;
@@ -10,10 +11,11 @@ namespace Api.Routing;
 
 /// <summary>
 /// AI Model administration endpoints (Admin only).
-/// Handles AI model CRUD operations, priority management, and activation control.
+/// Handles AI model CRUD operations, priority management, activation control, and tier routing.
 /// </summary>
 /// <remarks>
 /// Issue #2567: Complete HTTP API layer for AI model management (Issue #2520)
+/// Issue #2596: Tier routing endpoints for database-driven LLM model selection
 /// </remarks>
 internal static class AiModelAdminEndpoints
 {
@@ -95,7 +97,39 @@ internal static class AiModelAdminEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status409Conflict);
 
+        // Issue #2596: Tier routing endpoints
+        MapTierRoutingEndpoints(group);
+
         return group;
+    }
+
+    /// <summary>
+    /// Issue #2596: Map tier routing endpoints for database-driven LLM model selection.
+    /// </summary>
+    private static void MapTierRoutingEndpoints(RouteGroupBuilder group)
+    {
+        var tierRoutingGroup = group.MapGroup("/admin/tier-routing")
+            .WithTags("Admin - Tier Routing");
+
+        // GET /api/v1/admin/tier-routing - Get all tier routing configurations
+        tierRoutingGroup.MapGet("/", HandleGetTierRouting)
+            .WithName("GetTierRouting")
+            .WithSummary("Get all tier routing configurations")
+            .WithDescription("Returns all LLM model routing configurations grouped by user tier (Anonymous, User, Editor, Admin, Premium) and environment (Production, Test).")
+            .Produces<TierRoutingListDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // PUT /api/v1/admin/tier-routing - Update tier routing
+        tierRoutingGroup.MapPut("/", HandleUpdateTierRouting)
+            .WithName("UpdateTierRouting")
+            .WithSummary("Update tier routing configuration")
+            .WithDescription("Updates the LLM model routing for a specific user tier. Allows setting different models for production and test environments.")
+            .Produces<TierRoutingDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
     }
 
     // ========================================
@@ -247,6 +281,48 @@ internal static class AiModelAdminEndpoints
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
+
+    // Issue #2596: Tier routing handlers
+    private static async Task<IResult> HandleGetTierRouting(
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var query = new GetTierRoutingQuery();
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleUpdateTierRouting(
+        [FromBody] UpdateTierRoutingRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation(
+            "Admin {AdminId} updating tier routing for {Tier}: Production={ProductionModel}, Test={TestModel}",
+            session!.User!.Id,
+            request.Tier,
+            request.ProductionModelId,
+            request.TestModelId
+        );
+
+        var command = new UpdateTierRoutingCommand(
+            request.Tier,
+            request.ProductionModelId,
+            request.TestModelId
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
 }
 
 // ========================================
@@ -268,3 +344,13 @@ internal sealed record UpdateAiModelRequest(
 /// Request DTO for updating model priority
 /// </summary>
 internal sealed record UpdatePriorityRequest(int NewPriority);
+
+/// <summary>
+/// Request DTO for updating tier routing.
+/// Issue #2596: LLM tier routing with test/production separation.
+/// </summary>
+internal sealed record UpdateTierRoutingRequest(
+    LlmUserTier Tier,
+    string ProductionModelId,
+    string TestModelId
+);

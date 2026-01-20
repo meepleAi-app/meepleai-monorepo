@@ -16,7 +16,7 @@ import AutoSizer from 'react-virtualized-auto-sizer';
 import { List as FixedSizeList } from 'react-window';
 
 // @ts-ignore - auto-sizer types
-import { ChatMessage, type Citation } from '@/components/ui/chat-message';
+import { ChatMessage, type Citation } from '@/components/ui/meeple/chat-message';
 import { Message as MessageType } from '@/types';
 
 // Type for list children (from react-window)

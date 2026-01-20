@@ -1,5 +1,5 @@
 /**
- * UserGameCard Component (Issue #2518)
+ * UserGameCard Component (Issue #2518, #2613, #2618)
  *
  * Enhanced library card with:
  * - Game cover image
@@ -8,22 +8,26 @@
  * - PDF document status
  * - Actions: Chat, Configure Agent, Upload PDF, Edit Notes, Remove
  * - Favorite toggle
+ * - Selection mode with checkbox (Issue #2613)
+ * - Framer Motion animations (Issue #2618)
  */
 
 'use client';
 
-import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { MessageCircle, Settings, Upload, Edit2, Trash2, Library } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Settings, Upload, Edit2, Trash2, Library } from 'lucide-react';
 
 import { FavoriteToggle } from '@/components/library/FavoriteToggle';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { useAgentConfig } from '@/hooks/queries';
 import type { UserLibraryEntry } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 interface UserGameCardProps {
   game: UserLibraryEntry;
@@ -31,7 +35,39 @@ interface UserGameCardProps {
   onUploadPdf: (gameId: string, gameTitle: string) => void;
   onEditNotes: (gameId: string, gameTitle: string, currentNotes?: string | null) => void;
   onRemove: (gameId: string, gameTitle: string) => void;
+  /** Selection mode props (Issue #2613) */
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onSelect?: (gameId: string, shiftKey: boolean) => void;
+  /** Animation props for staggered entrance (Issue #2618) */
+  index?: number;
 }
+
+// Animation variants for card entrance (Issue #2618)
+const cardVariants = {
+  hidden: {
+    opacity: 0,
+    y: 20,
+    scale: 0.95,
+  },
+  visible: (index: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: index * 0.05, // Staggered delay based on index
+      duration: 0.3,
+      ease: 'easeOut' as const,
+    },
+  }),
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    transition: {
+      duration: 0.2,
+    },
+  },
+};
 
 export function UserGameCard({
   game,
@@ -39,6 +75,10 @@ export function UserGameCard({
   onUploadPdf,
   onEditNotes,
   onRemove,
+  selectionMode = false,
+  isSelected = false,
+  onSelect,
+  index = 0,
 }: UserGameCardProps) {
   // Fetch agent configuration status
   const { data: agentConfig } = useAgentConfig(game.gameId, true);
@@ -56,8 +96,40 @@ export function UserGameCard({
     default: 'Default',
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (selectionMode && onSelect) {
+      e.preventDefault();
+      e.stopPropagation();
+      onSelect(game.gameId, e.shiftKey);
+    }
+  };
+
+  const handleCheckboxChange = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onSelect) {
+      onSelect(game.gameId, e.shiftKey);
+    }
+  };
+
   return (
-    <Card className="flex flex-col hover:shadow-lg transition-shadow" data-testid="game-card">
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      custom={index}
+      layout
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+    >
+      <Card
+        className={cn(
+          'flex flex-col hover:shadow-lg transition-shadow',
+          selectionMode && 'cursor-pointer',
+          isSelected && 'ring-2 ring-primary bg-primary/5'
+        )}
+        data-testid="game-card"
+        onClick={handleCardClick}
+      >
       <CardHeader className="p-0">
         {/* Cover Image */}
         <div className="relative w-full h-40 bg-muted">
@@ -74,15 +146,32 @@ export function UserGameCard({
               <Library className="h-12 w-12" />
             </div>
           )}
-          {/* Favorite Toggle */}
-          <div className="absolute top-2 right-2">
-            <FavoriteToggle
-              gameId={game.gameId}
-              isFavorite={game.isFavorite}
-              gameTitle={game.gameTitle}
-              size="sm"
-            />
-          </div>
+
+          {/* Selection Checkbox (Issue #2613) */}
+          {selectionMode && (
+            <div
+              className="absolute top-2 left-2 z-10"
+              onClick={handleCheckboxChange}
+            >
+              <Checkbox
+                checked={isSelected}
+                className="h-5 w-5 bg-background border-2 shadow-md"
+                aria-label={`Seleziona ${game.gameTitle}`}
+              />
+            </div>
+          )}
+
+          {/* Favorite Toggle - hide in selection mode */}
+          {!selectionMode && (
+            <div className="absolute top-2 right-2">
+              <FavoriteToggle
+                gameId={game.gameId}
+                isFavorite={game.isFavorite}
+                gameTitle={game.gameTitle}
+                size="sm"
+              />
+            </div>
+          )}
         </div>
       </CardHeader>
 
@@ -93,9 +182,6 @@ export function UserGameCard({
           {game.gamePublisher && (
             <p className="text-sm text-muted-foreground">{game.gamePublisher}</p>
           )}
-          {game.gameBggId && (
-            <p className="text-xs text-muted-foreground">BGG ID: {game.gameBggId}</p>
-          )}
         </div>
 
         {/* Agent Configuration Status */}
@@ -103,6 +189,7 @@ export function UserGameCard({
           <span className="text-muted-foreground">🤖 Agente:</span>
           {agentConfigured ? (
             <Badge variant="secondary" className="text-xs">
+              {/* eslint-disable-next-line security/detect-object-injection -- agentModel is from controlled config */}
               Configurato ({modelDisplayName[agentModel]})
             </Badge>
           ) : (
@@ -185,6 +272,7 @@ export function UserGameCard({
           Aggiunto il {new Date(game.addedAt).toLocaleDateString('it-IT')}
         </p>
       </CardContent>
-    </Card>
+      </Card>
+    </motion.div>
   );
 }

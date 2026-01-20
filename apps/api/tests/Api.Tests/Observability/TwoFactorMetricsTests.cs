@@ -1,5 +1,6 @@
 using Api.Observability;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Observability;
 
@@ -17,7 +18,7 @@ namespace Api.Tests.Observability;
 ///
 /// Pattern: Simple unit tests (no Testcontainers), smoke test coverage
 /// </remarks>
-[Trait("Category", "Unit")]
+[Trait("Category", TestCategories.Unit)]
 [Trait("Area", "Observability")]
 [Trait("Issue", "1788")]
 [Trait("Security", "SEC-08")]

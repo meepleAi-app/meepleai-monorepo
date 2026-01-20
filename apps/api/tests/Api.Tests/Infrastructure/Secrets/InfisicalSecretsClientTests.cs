@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Infrastructure.Secrets;
 
@@ -14,6 +15,7 @@ namespace Api.Tests.Infrastructure.Secrets;
 /// Unit tests for InfisicalSecretsClient (Issue #936 POC).
 /// Tests authentication, secret fetching, and version history capabilities.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class InfisicalSecretsClientTests
 {
     private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
@@ -63,7 +65,7 @@ public class InfisicalSecretsClientTests
     }
 
     [Fact]
-    public async Task GetSecretAsync_WithInvalidSecret_ShouldThrowHttpRequestException()
+    public async Task GetSecretAsync_WithInvalidSecret_ShouldThrowInvalidOperationException()
     {
         // Arrange
         SetupAuthResponse();
@@ -74,8 +76,8 @@ public class InfisicalSecretsClientTests
         // Act
         var act = () => client.GetSecretAsync("NON_EXISTENT_SECRET", "dev", "/");
 
-        // Assert
-        await act.Should().ThrowAsync<HttpRequestException>();
+        // Assert - Implementation wraps HTTP errors in InvalidOperationException
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]

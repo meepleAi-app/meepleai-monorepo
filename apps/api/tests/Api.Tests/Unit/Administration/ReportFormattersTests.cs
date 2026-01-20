@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Infrastructure.Services.Formatters;
+using Api.Tests.Constants;
 using System.Text;
 using System.Text.Json;
 using Xunit;
@@ -8,6 +9,7 @@ namespace Api.Tests.Unit.Administration;
 /// <summary>
 /// Unit tests for report formatters (CSV, JSON, PDF)
 /// ISSUE-919: Format conversion testing (90%+ coverage)
+/// ISSUE-2601: PDF tests marked as Integration (require QuestPDF)
 /// </summary>
 public sealed class ReportFormattersTests
 {
@@ -295,6 +297,7 @@ public sealed class ReportFormattersTests
     #region PDF Formatter Tests
 
     [Fact]
+    [Trait("Category", TestCategories.Integration)]
     public void PdfFormatter_Format_WithEmptyContent_ShouldReturnValidPdf()
     {
         // Arrange
@@ -318,6 +321,7 @@ public sealed class ReportFormattersTests
     }
 
     [Fact]
+    [Trait("Category", TestCategories.Integration)]
     public void PdfFormatter_Format_WithSingleSection_ShouldGeneratePdf()
     {
         // Arrange
@@ -334,6 +338,7 @@ public sealed class ReportFormattersTests
     }
 
     [Fact]
+    [Trait("Category", TestCategories.Integration)]
     public void PdfFormatter_Format_WithMultipleSections_ShouldGeneratePdf()
     {
         // Arrange
@@ -364,6 +369,7 @@ public sealed class ReportFormattersTests
     }
 
     [Fact]
+    [Trait("Category", TestCategories.Integration)]
     public void PdfFormatter_Format_WithChartData_ShouldIncludeChart()
     {
         // Arrange
@@ -401,6 +407,7 @@ public sealed class ReportFormattersTests
     }
 
     [Fact]
+    [Trait("Category", TestCategories.Integration)]
     public void PdfFormatter_Format_WithLargeDataset_ShouldHandleCorrectly()
     {
         // Arrange
@@ -433,6 +440,7 @@ public sealed class ReportFormattersTests
     }
 
     [Fact]
+    [Trait("Category", TestCategories.Integration)]
     public void PdfFormatter_GetFileExtension_ShouldReturnPdf()
     {
         // Arrange
@@ -450,6 +458,7 @@ public sealed class ReportFormattersTests
     #region All Formatters Tests
 
     [Fact]
+    [Trait("Category", TestCategories.Integration)]
     public void AllFormatters_WithSameContent_ShouldProduceDifferentFormats()
     {
         // Arrange
@@ -470,6 +479,7 @@ public sealed class ReportFormattersTests
     }
 
     [Fact]
+    [Trait("Category", TestCategories.Integration)]
     public void AllFormatters_ShouldHaveUniqueExtensions()
     {
         // Arrange

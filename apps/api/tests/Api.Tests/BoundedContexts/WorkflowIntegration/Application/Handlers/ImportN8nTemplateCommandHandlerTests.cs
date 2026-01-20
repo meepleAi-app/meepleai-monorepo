@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 
@@ -12,6 +13,7 @@ namespace Api.Tests.BoundedContexts.WorkflowIntegration.Application.Handlers;
 /// Tests for ImportN8NTemplateCommandHandler.
 /// Tests n8n workflow template import with parameter substitution.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class ImportN8nTemplateCommandHandlerTests
 {
     private readonly Mock<IN8NTemplateService> _mockTemplateService;

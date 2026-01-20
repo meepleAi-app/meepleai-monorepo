@@ -33,7 +33,7 @@ import * as React from 'react';
 
 import { motion } from 'framer-motion';
 
-import { Button, type ButtonProps } from '@/components/ui/button';
+import { Button, type ButtonProps } from '@/components/ui/primitives/button';
 
 export interface MotionButtonProps extends ButtonProps {
   /**

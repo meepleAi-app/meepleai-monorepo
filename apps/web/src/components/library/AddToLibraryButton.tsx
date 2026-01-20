@@ -16,13 +16,13 @@ import React from 'react';
 import { BookmarkPlus, BookmarkMinus, Loader2 } from 'lucide-react';
 
 import { toast } from '@/components/layout/Toast';
-import { Button, type ButtonProps } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@/components/ui/overlays/tooltip';
+import { Button, type ButtonProps } from '@/components/ui/primitives/button';
 import {
   useGameInLibraryStatus,
   useAddGameToLibrary,

@@ -14,12 +14,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ChevronDown, Filter, X } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Switch } from '@/components/ui/forms/switch';
+import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { api } from '@/lib/api';
 import type { GameCategory, GameMechanic } from '@/lib/api/schemas/shared-games.schemas';
 import { cn } from '@/lib/utils';

@@ -30,6 +30,30 @@ if [ -n "$REDIS_PASSWORD" ]; then
     echo "[secrets] built REDIS_URL with password from redis.secret"
 fi
 
+# Map generic GRAFANA_ADMIN_PASSWORD to Grafana-specific env var
+if [ -n "$GRAFANA_ADMIN_PASSWORD" ]; then
+    export GF_SECURITY_ADMIN_PASSWORD="$GRAFANA_ADMIN_PASSWORD"
+    echo "[secrets] mapped GRAFANA_ADMIN_PASSWORD to GF_SECURITY_ADMIN_PASSWORD"
+fi
+
+# OAuth backward-compatibility mapping (old names → new standardized names)
+# Supports migration from oauth.secret files using old naming convention
+if [ -n "$GOOGLE_CLIENT_ID" ] && [ -z "$GOOGLE_OAUTH_CLIENT_ID" ]; then
+    export GOOGLE_OAUTH_CLIENT_ID="$GOOGLE_CLIENT_ID"
+    export GOOGLE_OAUTH_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET"
+    echo "[secrets] mapped GOOGLE_CLIENT_* to GOOGLE_OAUTH_CLIENT_* (backward compatibility)"
+fi
+if [ -n "$GITHUB_CLIENT_ID" ] && [ -z "$GITHUB_OAUTH_CLIENT_ID" ]; then
+    export GITHUB_OAUTH_CLIENT_ID="$GITHUB_CLIENT_ID"
+    export GITHUB_OAUTH_CLIENT_SECRET="$GITHUB_CLIENT_SECRET"
+    echo "[secrets] mapped GITHUB_CLIENT_* to GITHUB_OAUTH_CLIENT_* (backward compatibility)"
+fi
+if [ -n "$DISCORD_CLIENT_ID" ] && [ -z "$DISCORD_OAUTH_CLIENT_ID" ]; then
+    export DISCORD_OAUTH_CLIENT_ID="$DISCORD_CLIENT_ID"
+    export DISCORD_OAUTH_CLIENT_SECRET="$DISCORD_CLIENT_SECRET"
+    echo "[secrets] mapped DISCORD_CLIENT_* to DISCORD_OAUTH_CLIENT_* (backward compatibility)"
+fi
+
 # Issue #2570: Secret consolidation complete
 # All secrets now loaded from .secret files via env_file
 # No Docker secrets (/run/secrets) needed anymore

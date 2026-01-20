@@ -57,12 +57,14 @@ jobs:
               - 'apps/api/**'
               - '.github/workflows/e2e-tests.yml'
 
-  # Backend API (required for E2E)
-  backend:
-    name: Start Backend API
+  # E2E Tests with Sharding (4 shards) - Backend runs in same job
+  e2e-tests:
+    name: E2E Tests (Shard ${{ matrix.shard }})
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.e2e-needed == 'true' || github.event_name == 'workflow_dispatch'
+
+    # Service containers for backend
     services:
       postgres:
         image: postgres:16-alpine
@@ -71,7 +73,7 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres_test_password
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -89,13 +91,31 @@ jobs:
           - 6379:6379
 
       qdrant:
-        image: qdrant/qdrant:latest
+        image: qdrant/qdrant:v1.12.4
+        options: >-
+          --health-cmd "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /readyz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n\" >&3 && grep -q \"HTTP/1.1 200\" <&3'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
         ports:
           - 6333:6333
+          - 6334:6334  # gRPC port for Qdrant client
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+
+    env:
+      CI: true
+      SHARD_INDEX: ${{ matrix.shard }}
+      TOTAL_SHARDS: 4
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
+      # ===== Backend Setup =====
       - name: Wait for Services
         timeout-minutes: 2
         run: |
@@ -113,7 +133,6 @@ jobs:
           done
 
           echo "⏳ Waiting for Redis..."
-          # Redis service has health-check configured - just wait for port availability
           for i in {1..30}; do
             if nc -z localhost 6379 2>/dev/null; then
               echo "✅ Redis ready"
@@ -135,54 +154,28 @@ jobs:
         working-directory: apps/api/src/Api
         run: dotnet build --no-restore --configuration Release
 
-      - name: Run Backend Migrations
-        working-directory: apps/api/src/Api
-        run: dotnet ef database update
-        env:
-          ConnectionStrings__DefaultConnection: "Host=localhost;Database=meepleai_test;Username=postgres;Password=postgres_test_password"
-
       - name: Start Backend API
         working-directory: apps/api/src/Api
         run: |
-          dotnet run --no-build --configuration Release &
+          dotnet run --no-build --configuration Release --no-launch-profile &
           echo $! > api.pid
-          sleep 10
+          sleep 30  # Wait for migrations and startup
         env:
-          ASPNETCORE_ENVIRONMENT: Test
-          ConnectionStrings__DefaultConnection: "Host=localhost;Database=meepleai_test;Username=postgres;Password=postgres_test_password"
-          Redis__ConnectionString: "localhost:6379"
-          Qdrant__Url: "http://localhost:6333"
+          ASPNETCORE_ENVIRONMENT: Testing
+          ASPNETCORE_URLS: "http://localhost:8080"
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5432"
+          POSTGRES_DB: meepleai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_test_password
+          REDIS_URL: "localhost:6379"
+          QDRANT_URL: "http://localhost:6333"
+          OPENROUTER_API_KEY: "test-key-for-ci-placeholder"
 
-      - name: Health Check
-        run: |
-          curl --retry 5 --retry-delay 2 --retry-max-time 30 http://localhost:8080/health
+      - name: Backend Health Check
+        run: curl --retry 10 --retry-delay 3 --retry-max-time 60 http://localhost:8080/health
 
-      - name: Keep Backend Running
-        run: |
-          PID=$(cat apps/api/src/Api/api.pid)
-          while kill -0 $PID 2>/dev/null; do sleep 1; done
-
-  # E2E Tests with Sharding (4 shards)
-  e2e-tests:
-    name: E2E Tests (Shard ${{ matrix.shard }})
-    runs-on: ubuntu-latest
-    needs: [changes, backend]
-    if: needs.changes.outputs.e2e-needed == 'true' || github.event_name == 'workflow_dispatch'
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
-    defaults:
-      run:
-        working-directory: apps/web
-    env:
-      CI: true
-      SHARD_INDEX: ${{ matrix.shard }}
-      TOTAL_SHARDS: 4
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      # ===== Frontend Setup =====
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
@@ -191,19 +184,32 @@ jobs:
           working-directory: apps/web
 
       - name: Install Playwright Browsers
+        working-directory: apps/web
         run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       - name: Build Frontend (Production Mode for Stability)
+        working-directory: apps/web
         run: pnpm build
         env:
           NEXT_PUBLIC_API_BASE: http://localhost:8080
 
+      # ===== Run E2E Tests =====
       - name: Run E2E Tests (Shard ${{ matrix.shard }}/4)
+        working-directory: apps/web
         run: pnpm test:e2e:shard${{ matrix.shard }}
         env:
-          PLAYWRIGHT_SKIP_WEB_SERVER: '1'  # Backend already running
+          PLAYWRIGHT_SKIP_WEB_SERVER: '1'
           FORCE_PRODUCTION_SERVER: 'true'
 
+      # ===== Cleanup =====
+      - name: Stop Backend
+        if: always()
+        run: |
+          if [ -f apps/api/src/Api/api.pid ]; then
+            kill $(cat apps/api/src/Api/api.pid) 2>/dev/null || true
+          fi
+
+      # ===== Upload Artifacts =====
       - name: Upload Test Report (Shard ${{ matrix.shard }})
         if: always()
         uses: actions/upload-artifact@v4
@@ -331,22 +337,119 @@ jobs:
               body: body
             });
 
-# Manual trigger for full suite (all browsers)
+  # Manual trigger for full suite (all browsers)
   e2e-full-suite:
     name: E2E Full Suite (All Browsers)
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
-    needs: backend
+    needs: changes
+
+    # Service containers for backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: meepleai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_test_password
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      qdrant:
+        image: qdrant/qdrant:v1.12.4
+        options: >-
+          --health-cmd "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /readyz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n\" >&3 && grep -q \"HTTP/1.1 200\" <&3'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+        ports:
+          - 6333:6333
+          - 6334:6334
+
     strategy:
       fail-fast: false
       matrix:
         project: [desktop-chrome, desktop-firefox, desktop-safari, mobile-chrome, mobile-safari, tablet-chrome]
-    defaults:
-      run:
-        working-directory: apps/web
+
     steps:
       - uses: actions/checkout@v4
 
+      # ===== Backend Setup =====
+      - name: Wait for Services
+        timeout-minutes: 2
+        run: |
+          echo "⏳ Waiting for PostgreSQL..."
+          until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
+          echo "✅ PostgreSQL ready"
+
+          echo "⏳ Waiting for Qdrant..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
+              echo "✅ Qdrant ready"
+              break
+            fi
+            sleep 2
+          done
+
+          echo "⏳ Waiting for Redis..."
+          for i in {1..30}; do
+            if nc -z localhost 6379 2>/dev/null; then
+              echo "✅ Redis ready"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore Backend Dependencies
+        working-directory: apps/api/src/Api
+        run: dotnet restore
+
+      - name: Build Backend
+        working-directory: apps/api/src/Api
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Start Backend API
+        working-directory: apps/api/src/Api
+        run: |
+          dotnet run --no-build --configuration Release --no-launch-profile &
+          echo $! > api.pid
+          sleep 30
+        env:
+          ASPNETCORE_ENVIRONMENT: Testing
+          ASPNETCORE_URLS: "http://localhost:8080"
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5432"
+          POSTGRES_DB: meepleai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_test_password
+          REDIS_URL: "localhost:6379"
+          QDRANT_URL: "http://localhost:6333"
+          OPENROUTER_API_KEY: "test-key-for-ci-placeholder"
+
+      - name: Backend Health Check
+        run: curl --retry 10 --retry-delay 3 --retry-max-time 60 http://localhost:8080/health
+
+      # ===== Frontend Setup =====
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
@@ -355,18 +458,30 @@ jobs:
           working-directory: apps/web
 
       - name: Install Playwright Browsers
+        working-directory: apps/web
         run: pnpm exec playwright install --with-deps ${{ matrix.project == 'desktop-safari' && 'webkit' || matrix.project == 'desktop-firefox' && 'firefox' || 'chromium' }}
 
       - name: Build Frontend
+        working-directory: apps/web
         run: pnpm build
         env:
           NEXT_PUBLIC_API_BASE: http://localhost:8080
 
+      # ===== Run E2E Tests =====
       - name: Run E2E Tests (${{ matrix.project }})
+        working-directory: apps/web
         run: pnpm test:e2e --project=${{ matrix.project }}
         env:
           PLAYWRIGHT_SKIP_WEB_SERVER: '1'
           FORCE_PRODUCTION_SERVER: 'true'
+
+      # ===== Cleanup =====
+      - name: Stop Backend
+        if: always()
+        run: |
+          if [ -f apps/api/src/Api/api.pid ]; then
+            kill $(cat apps/api/src/Api/api.pid) 2>/dev/null || true
+          fi
 
       - name: Upload Results (${{ matrix.project }})
         if: always()

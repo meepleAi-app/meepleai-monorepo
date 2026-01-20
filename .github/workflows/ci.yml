@@ -105,11 +105,14 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
           POSTGRES_DB: meepleai_test
+        # Issue #2693: Increase max_connections from 100 (default) to 500 for parallel tests
+        # --shm-size=512mb provides shared memory for the increased connection pool
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+          --shm-size=512mb
         ports:
           - 5432:5432
 
@@ -125,8 +128,16 @@ jobs:
 
       qdrant:
         image: qdrant/qdrant:v1.12.4
+        # Note: wget/curl not available in Qdrant image, use bash TCP health check
+        # Removed --start-period (unsupported in GH Actions Docker), increased retries instead
+        options: >-
+          --health-cmd "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /readyz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n\" >&3 && grep -q \"HTTP/1.1 200\" <&3'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
         ports:
           - 6333:6333
+          - 6334:6334  # gRPC port for Qdrant client
 
     defaults:
       run:
@@ -161,34 +172,27 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y redis-tools
 
       - name: Wait for Services
-        timeout-minutes: 2
+        timeout-minutes: 3
         run: |
           echo "⏳ Waiting for PostgreSQL..."
           until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
           echo "✅ PostgreSQL ready"
 
+          echo "⏳ Waiting for Redis..."
+          until redis-cli -h localhost -p 6379 ping > /dev/null 2>&1; do sleep 1; done
+          echo "✅ Redis ready"
+
           echo "⏳ Waiting for Qdrant..."
-          for i in {1..30}; do
+          # Health check configured with 150s retries (30×5s)
+          # Manual wait as backup with extended timeout (120s)
+          for i in {1..60}; do
             if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
               echo "✅ Qdrant ready"
-              break
+              exit 0
             fi
             sleep 2
           done
-
-          echo "⏳ Waiting for Redis..."
-          # Redis service has health-check configured - just wait for port availability
-          for i in {1..30}; do
-            if nc -z localhost 6379 2>/dev/null; then
-              echo "✅ Redis ready"
-              break
-            fi
-            sleep 1
-          done
-
-          echo "⏳ Waiting for Qdrant..."
-          until curl -sf http://localhost:6333/healthz > /dev/null; do sleep 1; done
-          echo "✅ Qdrant ready"
+          echo "⚠️ Qdrant health check timeout - relying on container health check"
 
       - name: Build
         run: dotnet build --no-restore --configuration Release

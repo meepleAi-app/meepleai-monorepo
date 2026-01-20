@@ -111,12 +111,12 @@ internal static class SecretDefinitions
 
         ["oauth"] = new(
             SecretLevel.Optional,
-            "GOOGLE_CLIENT_ID",
-            "GOOGLE_CLIENT_SECRET",
-            "GITHUB_CLIENT_ID",
-            "GITHUB_CLIENT_SECRET",
-            "DISCORD_CLIENT_ID",
-            "DISCORD_CLIENT_SECRET"
+            "GOOGLE_OAUTH_CLIENT_ID",
+            "GOOGLE_OAUTH_CLIENT_SECRET",
+            "GITHUB_OAUTH_CLIENT_ID",
+            "GITHUB_OAUTH_CLIENT_SECRET",
+            "DISCORD_OAUTH_CLIENT_ID",
+            "DISCORD_OAUTH_CLIENT_SECRET"
         ),
 
         ["email"] = new(

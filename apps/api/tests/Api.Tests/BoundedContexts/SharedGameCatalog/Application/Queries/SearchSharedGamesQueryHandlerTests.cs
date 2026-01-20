@@ -28,7 +28,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// Issue #2371 Phase 2 - Coverage gap resolution
 /// </summary>
 [Collection("SharedTestcontainers")]
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class SearchSharedGamesQueryHandlerTests : IAsyncLifetime
 {

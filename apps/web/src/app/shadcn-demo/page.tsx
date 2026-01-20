@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardHeader,
@@ -10,7 +9,7 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from '@/components/ui/card';
+} from '@/components/ui/data-display/card';
 import {
   Dialog,
   DialogTrigger,
@@ -19,15 +18,16 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+} from '@/components/ui/overlays/dialog';
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from '@/components/ui/select';
+} from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 
 /**
  * Shadcn/UI Demo Page (App Router)

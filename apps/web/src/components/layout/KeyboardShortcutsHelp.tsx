@@ -14,14 +14,14 @@ import React from 'react';
 
 import { Keyboard, MessageSquare, Upload, Search, HelpCircle } from 'lucide-react';
 
+import { Separator } from '@/components/ui/navigation/separator';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
+} from '@/components/ui/overlays/dialog';
 import { formatShortcut, isMac, type KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 
 interface KeyboardShortcutsHelpProps {

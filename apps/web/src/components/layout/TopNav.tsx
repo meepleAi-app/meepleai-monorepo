@@ -29,15 +29,15 @@ import { NotificationBell } from '@/components/notifications';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { cn } from '@/lib/utils';
 
-import { Button } from '../ui/button';
+import { MeepleLogo } from '../ui/meeple/meeple-logo';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
-import { MeepleLogo } from '../ui/meeple-logo';
+} from '../ui/navigation/dropdown-menu';
+import { Button } from '../ui/primitives/button';
 
 interface NavItem {
   href: string;

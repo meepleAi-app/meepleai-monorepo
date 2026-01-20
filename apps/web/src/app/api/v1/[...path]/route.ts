@@ -18,6 +18,10 @@ export const dynamic = 'force-dynamic';
 const API_BASE =
   process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
+// Log API_BASE on module load for debugging
+// eslint-disable-next-line no-console
+console.log('[API Proxy] Module initialized with API_BASE:', API_BASE);
+
 async function proxyRequest(request: NextRequest, method: string) {
   try {
     // Extract path segments after /api/v1/
@@ -26,6 +30,8 @@ async function proxyRequest(request: NextRequest, method: string) {
 
     // Build target URL
     const targetUrl = `${API_BASE}${apiPath}${request.nextUrl.search}`;
+    // eslint-disable-next-line no-console
+    console.log(`[API Proxy] ${method} ${targetUrl}`);
 
     // Get request body for methods that support it
     // Issue #2432: Use arrayBuffer() instead of text() to preserve exact binary content
@@ -36,10 +42,15 @@ async function proxyRequest(request: NextRequest, method: string) {
       body = await request.arrayBuffer();
     }
 
-    // Forward headers (exclude host, connection)
+    // Forward headers (exclude problematic headers)
+    // - host: Must match target server
+    // - connection: Managed by HTTP client
+    // - content-length: Recalculated for body
+    // - expect: Node.js fetch doesn't support Expect: 100-continue
     const headers = new Headers();
+    const excludedHeaders = ['host', 'connection', 'content-length', 'expect'];
     request.headers.forEach((value, key) => {
-      if (!['host', 'connection', 'content-length'].includes(key.toLowerCase())) {
+      if (!excludedHeaders.includes(key.toLowerCase())) {
         headers.set(key, value);
       }
     });

@@ -427,7 +427,7 @@ public class EdgeCaseTests : IAsyncLifetime
 
         // Act - Start request and cancel after short delay
         var task = _client.SendAsync(request, cts.Token);
-        await Task.Delay(10); // Allow request to start
+        await Task.Delay(TimeSpan.FromMilliseconds(10), cts.Token); // Allow request to start
         await cts.CancelAsync();
 
         // Assert

@@ -62,7 +62,7 @@ export function useUpdateAgentConfig(): UseMutationResult<
   AgentConfigDto,
   Error,
   { gameId: string; request: UpdateAgentConfigRequest },
-  { previousConfig: AgentConfigDto | null }
+  { previousConfig: AgentConfigDto | null | undefined }
 > {
   const queryClient = useQueryClient();
 
@@ -85,14 +85,15 @@ export function useUpdateAgentConfig(): UseMutationResult<
       queryClient.setQueryData<AgentConfigDto>(agentConfigKeys.byGame(gameId), (old) => {
         if (!old) {
           // If no config exists, create optimistic one
-          return {
+          const optimisticConfig: AgentConfigDto = {
             id: 'temp-id',
             userId: 'temp-user',
             gameId,
             ...request,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-          } as AgentConfigDto;
+          };
+          return optimisticConfig;
         }
         // Update existing config
         return {

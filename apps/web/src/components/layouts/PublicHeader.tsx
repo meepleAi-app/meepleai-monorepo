@@ -31,7 +31,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { ThemeSwitcher } from '@/components/layout/ThemeSwitcher';
-import { Button } from '@/components/ui/button';
+import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,15 +39,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
+} from '@/components/ui/navigation/dropdown-menu';
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
   SheetTitle,
   SheetDescription,
-} from '@/components/ui/sheet';
+} from '@/components/ui/navigation/sheet';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 export interface PublicUser {

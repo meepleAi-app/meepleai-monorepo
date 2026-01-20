@@ -7,8 +7,11 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
+
+[Trait("Category", TestCategories.Unit)]
 
 public class BulkExportUsersQueryHandlerTests
 {
@@ -143,8 +146,8 @@ public class BulkExportUsersQueryHandlerTests
         // Act
         var csv = await _handler.Handle(query, CancellationToken.None);
 
-        // Assert
-        csv.Should().Be("email,displayName,role,createdAt\r\n");
+        // Assert - Use Environment.NewLine for platform independence
+        csv.Should().Be($"email,displayName,role,createdAt{Environment.NewLine}");
     }
 
     [Fact]

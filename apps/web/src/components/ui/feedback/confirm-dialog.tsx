@@ -4,7 +4,6 @@ import * as React from 'react';
 
 import { AlertTriangle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +11,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 
 export interface ConfirmDialogProps {
   open: boolean;

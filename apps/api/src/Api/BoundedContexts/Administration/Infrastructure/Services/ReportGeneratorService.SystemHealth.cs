@@ -13,11 +13,35 @@ internal sealed partial class ReportGeneratorService
         IReadOnlyDictionary<string, object> parameters)
     {
         ArgumentNullException.ThrowIfNull(parameters);
+
+        // Validate no unexpected parameters
+        var validKeys = new HashSet<string>(StringComparer.Ordinal) { "hours", "startDate", "endDate" };
+        var invalidKeys = parameters.Keys.Where(k => !validKeys.Contains(k)).ToList();
+        if (invalidKeys.Count > 0)
+        {
+            return (false, $"Unknown parameter(s): {string.Join(", ", invalidKeys)}");
+        }
+
         // Optional: hours parameter (default: 24)
         if (parameters.TryGetValue("hours", out var hoursObj) &&
             (hoursObj is not int hours || hours <= 0 || hours > 720))
         {
             return (false, "Parameter 'hours' must be between 1 and 720");
+        }
+
+        // Optional: startDate, endDate for alternative date range syntax
+        if (parameters.TryGetValue("startDate", out var startObj) && startObj is DateTime startDate &&
+            parameters.TryGetValue("endDate", out var endObj) && endObj is DateTime endDate)
+        {
+            if (endDate < startDate)
+            {
+                return (false, "Parameter 'endDate' must be after 'startDate'");
+            }
+
+            if ((endDate - startDate).TotalDays > 365)
+            {
+                return (false, "Date range cannot exceed 365 days");
+            }
         }
 
         return (true, null);
@@ -45,7 +69,10 @@ internal sealed partial class ReportGeneratorService
             Metadata: new Dictionary<string, object>(StringComparer.Ordinal)
             {
                 ["hours"] = hours,
-                ["since"] = since
+                ["since"] = since,
+                ["uptime"] = hours, // System uptime in hours
+                ["errorRate"] = 0.0, // Error rate percentage (placeholder for future implementation)
+                ["responseTime"] = 0.0 // Average response time in ms (placeholder for future implementation)
             },
             Sections: sections);
     }

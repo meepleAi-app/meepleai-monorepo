@@ -31,8 +31,11 @@ describe('BoardStateEditor', () => {
   it('renders grid dimensions', () => {
     render(<BoardStateEditor board={emptyBoard} players={mockPlayers} onChange={mockOnChange} />);
 
-    expect(screen.getByDisplayValue('10')).toBeInTheDocument(); // gridWidth
-    expect(screen.getAllByDisplayValue('10')).toHaveLength(2); // gridWidth + gridHeight
+    // Both gridWidth and gridHeight have value '10', use getAllBy
+    const dimensionInputs = screen.getAllByDisplayValue('10');
+    expect(dimensionInputs).toHaveLength(2); // gridWidth + gridHeight
+    expect(dimensionInputs[0]).toBeInTheDocument();
+    expect(dimensionInputs[1]).toBeInTheDocument();
   });
 
   it('shows add piece button', () => {
@@ -143,8 +146,13 @@ describe('BoardStateEditor', () => {
       <BoardStateEditor board={boardWithPieces} players={mockPlayers} onChange={mockOnChange} />
     );
 
-    expect(screen.getByText(/Pezzi posizionati: 2/)).toBeInTheDocument();
-    expect(screen.getByText(/8 × 8 celle/)).toBeInTheDocument();
+    // Text is split across <strong> and text nodes, so use partial matching
+    expect(screen.getByText(/Pezzi posizionati/)).toBeInTheDocument();
+    expect(screen.getByText((content, element) => {
+      return element?.tagName === 'DIV' &&
+             element?.className.includes('bg-blue-50') &&
+             content.includes('2 su 8 × 8 celle');
+    })).toBeInTheDocument();
   });
 
   it('renders grid preview', () => {

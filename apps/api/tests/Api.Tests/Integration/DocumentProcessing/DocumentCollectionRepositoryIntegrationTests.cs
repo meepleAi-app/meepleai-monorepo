@@ -337,7 +337,7 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         await _repository!.AddAsync(collection1, TestCancellationToken);
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
-        await Task.Delay(100); // Ensure different timestamps
+        await Task.Delay(TimeSpan.FromMilliseconds(100), TestCancellationToken); // Ensure different timestamps
 
         var game2Id = Guid.NewGuid();
         var game2 = new GameEntity { Id = game2Id, Name = "Test Game 2 for Ordering" };

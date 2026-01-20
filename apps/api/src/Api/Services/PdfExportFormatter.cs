@@ -23,8 +23,8 @@ internal class PdfExportFormatter : IExportFormatter
     {
         _logger = logger;
 
-        // Required for QuestPDF Community license (free tier)
-        QuestPDF.Settings.License = LicenseType.Community;
+        // Note: QuestPDF license configured globally via Module Initializer
+        // See Api.Infrastructure.QuestPdfConfiguration for centralized setup
     }
 
     public Task<Stream> FormatAsync(ChatEntity chat, DateTime? dateFrom, DateTime? dateTo)

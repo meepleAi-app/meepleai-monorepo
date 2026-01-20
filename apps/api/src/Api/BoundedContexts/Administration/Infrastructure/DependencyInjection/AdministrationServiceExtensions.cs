@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Application.Configuration;
 using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Administration.Domain.Repositories;
@@ -8,6 +9,7 @@ using Api.BoundedContexts.Administration.Infrastructure.Repositories;
 using Api.BoundedContexts.Administration.Infrastructure.Scheduling;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Polly;
 using Polly.CircuitBreaker;
@@ -21,7 +23,9 @@ internal static class AdministrationServiceExtensions
 {
 #pragma warning disable S1133 // Method marked obsolete but kept for backward compatibility during migration
     [Obsolete("Use AddAdministrationInfrastructure instead for modular registration")]
-    public static IServiceCollection AddAdministrationContext(this IServiceCollection services)
+    public static IServiceCollection AddAdministrationContext(
+        this IServiceCollection services,
+        IConfiguration configuration)
 #pragma warning restore S1133
     {
         // Repositories
@@ -34,6 +38,11 @@ internal static class AdministrationServiceExtensions
         // ISSUE-916: Reporting repositories
         services.AddScoped<IAdminReportRepository, AdminReportRepository>();
         services.AddScoped<IReportExecutionRepository, ReportExecutionRepository>();
+
+        // ISSUE-2528: Orphaned task cleanup configuration and service
+        services.Configure<OrphanedTaskCleanupOptions>(
+            configuration.GetSection(OrphanedTaskCleanupOptions.SectionKey));
+        services.AddScoped<IOrphanedTaskCleanupService, OrphanedTaskCleanupService>();
 
         // Issue #891: Infrastructure health monitoring service
         services.AddScoped<IInfrastructureHealthService, InfrastructureHealthService>();
@@ -74,6 +83,17 @@ internal static class AdministrationServiceExtensions
             q.AddJob<GenerateReportJob>(opts => opts
                 .WithIdentity("report-job-template", "reports")
                 .StoreDurably(true));  // Must be true - job has no default trigger
+
+            // ISSUE-2528: Register orphaned task cleanup job with hourly cron trigger
+            q.AddJob<OrphanedTaskCleanupJob>(opts => opts
+                .WithIdentity("orphaned-task-cleanup-job", "maintenance")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("orphaned-task-cleanup-job", "maintenance")
+                .WithIdentity("orphaned-task-cleanup-trigger", "maintenance")
+                .WithCronSchedule("0 0 * * * ?")  // Every hour at minute 0
+                .WithDescription("Runs hourly to clean up orphaned analysis tasks older than retention period"));
         });
 
         services.AddQuartzHostedService(options =>

@@ -10,8 +10,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Api.Tests.Constants;
 
 namespace Api.Tests.Administration.AutoConfiguration;
+
+[Trait("Category", TestCategories.Unit)]
 
 public sealed class SeedAdminUserCommandHandlerTests
 {
@@ -70,7 +73,7 @@ public sealed class SeedAdminUserCommandHandlerTests
             .ReturnsAsync(0);
 
         _configurationMock.Setup(x => x["INITIAL_ADMIN_EMAIL"]).Returns("admin@test.com");
-        _configurationMock.Setup(x => x["INITIAL_ADMIN_PASSWORD"]).Returns("Admin123!");
+        _configurationMock.Setup(x => x["ADMIN_PASSWORD"]).Returns("Admin123!");
         _configurationMock.Setup(x => x["INITIAL_ADMIN_DISPLAY_NAME"]).Returns("Test Admin");
 
         var command = new SeedAdminUserCommand();
@@ -121,7 +124,7 @@ public sealed class SeedAdminUserCommandHandlerTests
             .ReturnsAsync(0);
 
         _configurationMock.Setup(x => x["INITIAL_ADMIN_EMAIL"]).Returns("admin@test.com");
-        _configurationMock.Setup(x => x["INITIAL_ADMIN_PASSWORD"]).Returns("Short1");
+        _configurationMock.Setup(x => x["ADMIN_PASSWORD"]).Returns("Short1");
 
         var command = new SeedAdminUserCommand();
 
@@ -142,7 +145,7 @@ public sealed class SeedAdminUserCommandHandlerTests
             .ReturnsAsync(0);
 
         _configurationMock.Setup(x => x["INITIAL_ADMIN_EMAIL"]).Returns("admin@test.com");
-        _configurationMock.Setup(x => x["INITIAL_ADMIN_PASSWORD"]).Returns("lowercase123");
+        _configurationMock.Setup(x => x["ADMIN_PASSWORD"]).Returns("lowercase123");
 
         var command = new SeedAdminUserCommand();
 
@@ -163,7 +166,7 @@ public sealed class SeedAdminUserCommandHandlerTests
             .ReturnsAsync(0);
 
         _configurationMock.Setup(x => x["INITIAL_ADMIN_EMAIL"]).Returns("admin@test.com");
-        _configurationMock.Setup(x => x["INITIAL_ADMIN_PASSWORD"]).Returns("NoDigitPass");
+        _configurationMock.Setup(x => x["ADMIN_PASSWORD"]).Returns("NoDigitPass");
 
         var command = new SeedAdminUserCommand();
 

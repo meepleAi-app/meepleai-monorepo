@@ -233,7 +233,7 @@ internal static class GameEndpoints
         // Get all active sessions (with pagination)
         group.MapGet("/sessions/active", HandleGetActiveSessions)
         .RequireAuthenticatedUser() // Issue #1446: Dual authentication (session OR API key)
-        .Produces<List<GameSessionDto>>(200)
+        .Produces<PaginatedSessionsResponseDto>(200)
         .Produces(401)
         .WithTags("Sessions")
         .WithSummary("Get all active sessions")

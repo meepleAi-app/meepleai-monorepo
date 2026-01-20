@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries;
@@ -34,46 +35,99 @@ internal static class GameEndpoints
         // Get all games (DDD/CQRS) with pagination support
         // PUBLIC: Allow unauthenticated access for game discovery
         group.MapGet("/games", HandleGetAllGames)
-        .AllowAnonymous();
+        .AllowAnonymous()
+        .Produces<PaginatedGamesResponse>(200)
+        .WithTags("Games")
+        .WithSummary("Get all games")
+        .WithDescription("Returns paginated list of all board games in the catalog. Supports search filtering and pagination. Public endpoint accessible without authentication.");
 
         // Get game by ID (DDD/CQRS)
         // PUBLIC: Allow unauthenticated access for game details
         group.MapGet("/games/{id}", HandleGetGameById)
-        .AllowAnonymous();
+        .AllowAnonymous()
+        .Produces<GameDto>(200)
+        .Produces(404)
+        .WithTags("Games")
+        .WithSummary("Get game by ID")
+        .WithDescription("Returns detailed information for a specific board game. Public endpoint accessible without authentication.");
 
         // Get all sessions for a game (DDD/CQRS)
         // Issue #1675: Frontend needs game sessions listing
         group.MapGet("/games/{id}/sessions", HandleGetGameSessions)
-        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+        .RequireAuthenticatedUser() // Issue #1446: Dual authentication (session OR API key)
+        .Produces<List<GameSessionDto>>(200)
+        .Produces(401)
+        .WithTags("Games", "Sessions")
+        .WithSummary("Get all sessions for a game")
+        .WithDescription("Returns paginated list of all game sessions for a specific board game. Requires authentication.");
 
         // Get game details with extended metadata and statistics (DDD/CQRS)
         // Issue #1196: Supports Game Detail Page (Issue #855)
         group.MapGet("/games/{id}/details", HandleGetGameDetails)
-        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+        .RequireAuthenticatedUser() // Issue #1446: Dual authentication (session OR API key)
+        .Produces<GameDetailsDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Games")
+        .WithSummary("Get game details with statistics")
+        .WithDescription("Returns extended game information including metadata, statistics, and session history. Supports Game Detail Page. Requires authentication.");
 
         // Get rule specifications for a game (DDD/CQRS)
         // Issue #1196: Supports Rules tab in Game Detail Page (Issue #855)
         group.MapGet("/games/{id}/rules", HandleGetGameRules)
-        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+        .RequireAuthenticatedUser() // Issue #1446: Dual authentication (session OR API key)
+        .Produces<IReadOnlyList<RuleSpecDto>>(200)
+        .Produces(401)
+        .WithTags("Games", "Rules")
+        .WithSummary("Get game rule specifications")
+        .WithDescription("Returns all rule specification versions for a game. Supports Rules tab in Game Detail Page. Requires authentication.");
 
         // Get AI agents available for a game
         // Issue #2677: Frontend uses this endpoint for game detail page agent list
         // Note: Agents are game-agnostic, returns all active agents
         group.MapGet("/games/{id}/agents", HandleGetGameAgents)
-        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+        .RequireAuthenticatedUser() // Issue #1446: Dual authentication (session OR API key)
+        .Produces<List<AgentDto>>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Games", "Agents")
+        .WithSummary("Get AI agents for a game")
+        .WithDescription("Returns all active AI agents available for the game. Agents are currently game-agnostic. Requires authentication.");
     }
 
     private static void MapGameManagementEndpoints(RouteGroupBuilder group)
     {
         // Create game (DDD/CQRS) - Admin/Editor only
-        group.MapPost("/games", HandleCreateGame);
+        group.MapPost("/games", HandleCreateGame)
+        .Produces<GameDto>(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .WithTags("Games", "Admin")
+        .WithSummary("Create a new game")
+        .WithDescription("Creates a new board game in the catalog. Admin or Editor role required. Returns created game with generated ID.");
 
         // Update game (DDD/CQRS) - Admin/Editor only
-        group.MapPut("/games/{id}", HandleUpdateGame);
+        group.MapPut("/games/{id}", HandleUpdateGame)
+        .Produces<GameDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .WithTags("Games", "Admin")
+        .WithSummary("Update an existing game")
+        .WithDescription("Updates board game information. Admin or Editor role required. Partial updates supported.");
 
         // Upload game image (icon or cover) - Issue #2255
         group.MapPost("/games/upload-image", HandleUploadGameImage)
-        .DisableAntiforgery(); // Required for multipart/form-data file uploads
+        .DisableAntiforgery() // Required for multipart/form-data file uploads
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .WithTags("Games", "Admin", "Upload")
+        .WithSummary("Upload game image")
+        .WithDescription("Uploads game icon or cover image. Admin or Editor role required. Accepts multipart/form-data with file, gameId, and imageType fields.");
     }
 
     private static void MapSessionLifecycleEndpoints(RouteGroupBuilder group)
@@ -84,54 +138,124 @@ internal static class GameEndpoints
 
         // Start game session
         group.MapPost("/sessions", HandleStartSession)
-        .RequireSession(); // Issue #1446: Automatic session validation
+        .RequireSession() // Issue #1446: Automatic session validation
+        .Produces<GameSessionDto>(201)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Sessions")
+        .WithSummary("Start a new game session")
+        .WithDescription("Creates a new game session with players. Requires active user session.");
 
         // Add player to session
         group.MapPost("/sessions/{id}/players", HandleAddPlayer)
-        .RequireSession(); // Issue #1446: Automatic session validation
+        .RequireSession() // Issue #1446: Automatic session validation
+        .Produces<GameSessionDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions")
+        .WithSummary("Add player to session")
+        .WithDescription("Adds a new player to an existing game session. Requires active user session.");
 
         // Complete game session
         group.MapPost("/sessions/{id}/complete", HandleCompleteSession)
-        .RequireSession(); // Issue #1446: Automatic session validation
+        .RequireSession() // Issue #1446: Automatic session validation
+        .Produces<GameSessionDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions")
+        .WithSummary("Complete a game session")
+        .WithDescription("Marks a game session as completed with optional winner. Requires active user session.");
 
         // Abandon game session
         group.MapPost("/sessions/{id}/abandon", HandleAbandonSession)
-        .RequireSession(); // Issue #1446: Automatic session validation
+        .RequireSession() // Issue #1446: Automatic session validation
+        .Produces<GameSessionDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions")
+        .WithSummary("Abandon a game session")
+        .WithDescription("Marks a game session as abandoned. Requires active user session.");
 
         // Pause game session
         group.MapPost("/sessions/{id}/pause", HandlePauseSession)
-        .RequireSession(); // Issue #1446: Automatic session validation
+        .RequireSession() // Issue #1446: Automatic session validation
+        .Produces<GameSessionDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions")
+        .WithSummary("Pause a game session")
+        .WithDescription("Pauses an active game session. Requires active user session.");
 
         // Resume game session
         group.MapPost("/sessions/{id}/resume", HandleResumeSession)
-        .RequireSession(); // Issue #1446: Automatic session validation
+        .RequireSession() // Issue #1446: Automatic session validation
+        .Produces<GameSessionDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions")
+        .WithSummary("Resume a paused game session")
+        .WithDescription("Resumes a previously paused game session. Requires active user session.");
 
         // End game session (alias for complete)
         group.MapPost("/sessions/{id}/end", HandleEndSession)
-        .RequireSession(); // Issue #1446: Automatic session validation
+        .RequireSession() // Issue #1446: Automatic session validation
+        .Produces<GameSessionDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions")
+        .WithSummary("End a game session")
+        .WithDescription("Ends a game session (alias for complete). Requires active user session.");
     }
 
     private static void MapSessionQueryEndpoints(RouteGroupBuilder group)
     {
         // Get session by ID
         group.MapGet("/sessions/{id}", HandleGetSessionById)
-        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+        .RequireAuthenticatedUser() // Issue #1446: Dual authentication (session OR API key)
+        .Produces<GameSessionDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions")
+        .WithSummary("Get session by ID")
+        .WithDescription("Returns detailed information for a specific game session. Requires authentication.");
 
         // Get active sessions for game
         group.MapGet("/games/{gameId}/sessions/active", HandleGetActiveSessionsByGame)
-        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+        .RequireAuthenticatedUser() // Issue #1446: Dual authentication (session OR API key)
+        .Produces<IReadOnlyList<GameSessionDto>>(200)
+        .Produces(401)
+        .WithTags("Games", "Sessions")
+        .WithSummary("Get active sessions for a game")
+        .WithDescription("Returns all currently active game sessions for a specific board game. Requires authentication.");
 
         // Get all active sessions (with pagination)
         group.MapGet("/sessions/active", HandleGetActiveSessions)
-        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+        .RequireAuthenticatedUser() // Issue #1446: Dual authentication (session OR API key)
+        .Produces<List<GameSessionDto>>(200)
+        .Produces(401)
+        .WithTags("Sessions")
+        .WithSummary("Get all active sessions")
+        .WithDescription("Returns paginated list of all currently active game sessions across all games. Supports limit and offset query parameters. Requires authentication.");
 
         // Get session history (with filters and pagination)
         group.MapGet("/sessions/history", HandleGetSessionHistory)
-        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+        .RequireAuthenticatedUser() // Issue #1446: Dual authentication (session OR API key)
+        .Produces<List<GameSessionDto>>(200)
+        .Produces(401)
+        .WithTags("Sessions")
+        .WithSummary("Get session history")
+        .WithDescription("Returns paginated list of completed or abandoned game sessions with optional date and game filtering. Requires authentication.");
 
         // Get session statistics (aggregated stats with filters)
         group.MapGet("/sessions/statistics", HandleGetSessionStats)
-        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+        .RequireAuthenticatedUser() // Issue #1446: Dual authentication (session OR API key)
+        .Produces<SessionStatsDto>(200)
+        .Produces(401)
+        .WithTags("Sessions", "Statistics")
+        .WithSummary("Get session statistics")
+        .WithDescription("Returns aggregated game session statistics with optional filtering by game, date range, and top players limit. Requires authentication.");
     }
 
 
@@ -598,27 +722,66 @@ internal static class GameEndpoints
 
         // Initialize game state
         group.MapPost("/sessions/{sessionId}/state/initialize", HandleInitializeGameState)
-        .RequireSession();
+        .RequireSession()
+        .Produces<GameSessionStateDto>(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions", "State")
+        .WithSummary("Initialize game state")
+        .WithDescription("Creates initial game state for a session from a template. Requires active user session.");
 
         // Get current game state
         group.MapGet("/sessions/{sessionId}/state", HandleGetGameState)
-        .RequireAuthenticatedUser();
+        .RequireAuthenticatedUser()
+        .Produces<GameSessionStateDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions", "State")
+        .WithSummary("Get current game state")
+        .WithDescription("Returns the current state of a game session. Requires authentication.");
 
         // Update game state
         group.MapPatch("/sessions/{sessionId}/state", HandleUpdateGameState)
-        .RequireSession();
+        .RequireSession()
+        .Produces<GameSessionStateDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions", "State")
+        .WithSummary("Update game state")
+        .WithDescription("Updates the current game state with new state data. Requires active user session.");
 
         // Create state snapshot
         group.MapPost("/sessions/{sessionId}/state/snapshots", HandleCreateStateSnapshot)
-        .RequireSession();
+        .RequireSession()
+        .Produces<GameStateSnapshotDto>(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions", "State", "Snapshots")
+        .WithSummary("Create state snapshot")
+        .WithDescription("Creates a snapshot of the current game state for save/restore functionality. Requires active user session.");
 
         // Get state snapshots
         group.MapGet("/sessions/{sessionId}/state/snapshots", HandleGetStateSnapshots)
-        .RequireAuthenticatedUser();
+        .RequireAuthenticatedUser()
+        .Produces<List<GameStateSnapshotDto>>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions", "State", "Snapshots")
+        .WithSummary("Get state snapshots")
+        .WithDescription("Returns all saved state snapshots for a game session. Requires authentication.");
 
         // Restore from snapshot
         group.MapPost("/sessions/{sessionId}/state/restore/{snapshotId}", HandleRestoreStateSnapshot)
-        .RequireSession();
+        .RequireSession()
+        .Produces<GameSessionStateDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions", "State", "Snapshots")
+        .WithSummary("Restore from snapshot")
+        .WithDescription("Restores game state from a previously saved snapshot. Requires active user session.");
 
         // ========================================
         // Player Mode Move Suggestions - Issue #2404
@@ -626,11 +789,25 @@ internal static class GameEndpoints
 
         // Suggest moves for current game state
         group.MapPost("/sessions/{sessionId}/suggest-move", HandleSuggestMove)
-        .RequireSession();
+        .RequireSession()
+        .Produces<MoveSuggestionsDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions", "AI", "PlayerMode")
+        .WithSummary("Suggest moves using AI")
+        .WithDescription("Generates AI-powered move suggestions for the current game state using Player Mode agent. Requires active user session.");
 
         // Apply a move suggestion to game state
         group.MapPost("/sessions/{sessionId}/apply-suggestion", HandleApplySuggestion)
-        .RequireSession();
+        .RequireSession()
+        .Produces<GameSessionStateDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Sessions", "AI", "PlayerMode")
+        .WithSummary("Apply AI move suggestion")
+        .WithDescription("Applies a suggested move to the game state, updating the current position. Requires active user session.");
     }
 
     // Issue #2403: GameSessionState handlers

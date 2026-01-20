@@ -19,7 +19,7 @@ public class ImportGameFromBggCommandValidatorTests
     [Fact]
     public void Validate_WithValidCommand_PassesValidation()
     {
-        var command = new ImportGameFromBggCommand(123);
+        var command = new ImportGameFromBggCommand(123, Guid.NewGuid());
         var result = _validator.TestValidate(command);
         result.ShouldNotHaveAnyValidationErrors();
     }
@@ -30,8 +30,16 @@ public class ImportGameFromBggCommandValidatorTests
     [InlineData(-100)]
     public void Validate_WithInvalidBggId_FailsValidation(int bggId)
     {
-        var command = new ImportGameFromBggCommand(bggId);
+        var command = new ImportGameFromBggCommand(bggId, Guid.NewGuid());
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.BggId);
+    }
+
+    [Fact]
+    public void Validate_WithEmptyUserId_FailsValidation()
+    {
+        var command = new ImportGameFromBggCommand(123, Guid.Empty);
+        var result = _validator.TestValidate(command);
+        result.ShouldHaveValidationErrorFor(x => x.UserId);
     }
 }

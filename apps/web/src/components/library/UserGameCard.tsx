@@ -58,7 +58,7 @@ const cardVariants = {
     transition: {
       delay: index * 0.05, // Staggered delay based on index
       duration: 0.3,
-      ease: 'easeOut',
+      ease: 'easeOut' as const,
     },
   }),
   exit: {

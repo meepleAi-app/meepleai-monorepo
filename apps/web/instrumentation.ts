@@ -73,7 +73,7 @@ export async function register() {
           }
         }
 
-        static fromMatrix(other?: DOMMatrixInit): DOMMatrix {
+        static fromMatrix(_other?: DOMMatrixInit): DOMMatrix {
           return new DOMMatrix();
         }
 
@@ -238,7 +238,7 @@ export async function register() {
         }
       };
 
-      console.log('[Instrumentation] DOMMatrix polyfill registered');
+      console.warn('[Instrumentation] DOMMatrix polyfill registered');
     }
 
     // DOMPoint polyfill (used by DOMMatrix.transformPoint)
@@ -270,7 +270,7 @@ export async function register() {
         }
       };
 
-      console.log('[Instrumentation] DOMPoint polyfill registered');
+      console.warn('[Instrumentation] DOMPoint polyfill registered');
     }
   }
 }

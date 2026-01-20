@@ -1,0 +1,483 @@
+{
+  "info": {
+    "_postman_id": "game-sessions-collection-005",
+    "name": "05 - Game Sessions Flows",
+    "description": "MeepleAI Game Sessions API endpoints for managing game sessions, state tracking, and AI assistance during play.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "gameId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Session Management",
+      "item": [
+        {
+          "name": "List My Sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.items && jsonData.items.length > 0) {",
+                  "        pm.collectionVariables.set('sessionId', jsonData.items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions?status=active&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "Options: active, paused, completed"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List all game sessions for current user"
+          }
+        },
+        {
+          "name": "Create Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('sessionId', jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{gameId}}\",\n  \"playerCount\": 4,\n  \"playerMode\": \"solo\",\n  \"notes\": \"Family game night\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions"]
+            },
+            "description": "Create a new game session. playerMode: 'solo' (all players on one device) or 'multiplayer' (multiple devices via SignalR)"
+          }
+        },
+        {
+          "name": "Get Session Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}"]
+            },
+            "description": "Get full session details including current state"
+          }
+        },
+        {
+          "name": "Pause Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}/pause",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}", "pause"]
+            },
+            "description": "Pause an active session for later resumption"
+          }
+        },
+        {
+          "name": "Resume Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}/resume",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}", "resume"]
+            },
+            "description": "Resume a paused session"
+          }
+        },
+        {
+          "name": "Complete Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"winner\": \"Player 2\",\n  \"finalScores\": {\n    \"Player 1\": 8,\n    \"Player 2\": 10,\n    \"Player 3\": 7,\n    \"Player 4\": 6\n  },\n  \"notes\": \"Great game, close finish!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}", "complete"]
+            },
+            "description": "Mark session as complete with final results"
+          }
+        },
+        {
+          "name": "Delete Session",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}"]
+            },
+            "description": "Delete a session (soft delete)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "State Management",
+      "item": [
+        {
+          "name": "Get Current State",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}/state",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}", "state"]
+            },
+            "description": "Get current game state for the session"
+          }
+        },
+        {
+          "name": "Update State",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playerStates\": {\n    \"Player 1\": {\n      \"resources\": { \"brick\": 3, \"wood\": 2, \"wheat\": 1 },\n      \"score\": 3,\n      \"settlements\": 2\n    }\n  },\n  \"sharedState\": {\n    \"currentTurn\": 5,\n    \"phase\": \"main\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}/state",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}", "state"]
+            },
+            "description": "Update game state (partial update with merge)"
+          }
+        },
+        {
+          "name": "Get State History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}/state/history?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}", "state", "history"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get history of state changes for undo/review"
+          }
+        },
+        {
+          "name": "Undo Last Change",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}/state/undo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}", "state", "undo"]
+            },
+            "description": "Undo the last state change"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Assistance",
+      "item": [
+        {
+          "name": "Get Move Suggestion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playerId\": \"Player 1\",\n  \"context\": \"It's my turn and I have these resources. What should I build?\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}/suggest-move",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}", "suggest-move"]
+            },
+            "description": "Get AI suggestion for next move based on current state"
+          }
+        },
+        {
+          "name": "Ask Game Question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Can I build a road here if another player's road is blocking?\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}/ask",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}", "ask"]
+            },
+            "description": "Ask a rules question in the context of current session"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Players (Multiplayer)",
+      "item": [
+        {
+          "name": "Get Players",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}/players",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}", "players"]
+            },
+            "description": "Get list of players in the session"
+          }
+        },
+        {
+          "name": "Join Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Player 2\",\n  \"color\": \"blue\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}/join",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}", "join"]
+            },
+            "description": "Join an existing multiplayer session"
+          }
+        },
+        {
+          "name": "Leave Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}/leave",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}", "leave"]
+            },
+            "description": "Leave a multiplayer session"
+          }
+        },
+        {
+          "name": "Get Join Code",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/{{sessionId}}/join-code",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "{{sessionId}}", "join-code"]
+            },
+            "description": "Get a shareable code for others to join the session"
+          }
+        },
+        {
+          "name": "Join via Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"ABC123\",\n  \"displayName\": \"Player 3\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/join-by-code",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "join-by-code"]
+            },
+            "description": "Join a session using a share code"
+          }
+        }
+      ]
+    }
+  ]
+}

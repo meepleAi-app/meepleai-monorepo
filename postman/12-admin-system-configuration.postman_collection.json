@@ -1,0 +1,522 @@
+{
+  "info": {
+    "_postman_id": "admin-config-collection-012",
+    "name": "12 - Admin: System Configuration",
+    "description": "MeepleAI Admin API endpoints for managing quotas, feature flags, AI models, prompts, and API keys.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "promptId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Quota Configuration",
+      "item": [
+        {
+          "name": "Get Game Library Limits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/system/game-library-limits",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "system", "game-library-limits"]
+            },
+            "description": "Get current game library limits by tier"
+          }
+        },
+        {
+          "name": "Update Game Library Limits",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"free\": { \"maxGames\": 5 },\n  \"normal\": { \"maxGames\": 20 },\n  \"premium\": { \"maxGames\": 50 }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/system/game-library-limits",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "system", "game-library-limits"]
+            },
+            "description": "Update game library limits by tier"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Feature Flags",
+      "item": [
+        {
+          "name": "List Feature Flags",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/feature-flags",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "feature-flags"]
+            },
+            "description": "List all feature flags with their states"
+          }
+        },
+        {
+          "name": "Create Feature Flag",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"NEW_FEATURE\",\n  \"description\": \"Enable the new feature\",\n  \"enabledForAll\": false,\n  \"enabledRoles\": [\"Admin\", \"Editor\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/feature-flags",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "feature-flags"]
+            },
+            "description": "Create a new feature flag"
+          }
+        },
+        {
+          "name": "Update Feature Flag",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enabledForAll\": true,\n  \"enabledRoles\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/feature-flags/:flagName",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "feature-flags", ":flagName"],
+              "variable": [
+                {
+                  "key": "flagName",
+                  "value": "RAG_V2"
+                }
+              ]
+            },
+            "description": "Update a feature flag's state"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Models",
+      "item": [
+        {
+          "name": "List AI Models",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/ai-models",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "ai-models"]
+            },
+            "description": "List all configured AI models"
+          }
+        },
+        {
+          "name": "Add AI Model",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modelId\": \"claude-3-opus\",\n  \"provider\": \"openrouter\",\n  \"displayName\": \"Claude 3 Opus\",\n  \"maxTokens\": 4096,\n  \"temperature\": 0.7,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/ai-models",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "ai-models"]
+            },
+            "description": "Add a new AI model configuration"
+          }
+        },
+        {
+          "name": "Set Primary Model",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modelId\": \"claude-3-opus\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/ai-models/set-primary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "ai-models", "set-primary"]
+            },
+            "description": "Set the primary AI model for all requests"
+          }
+        },
+        {
+          "name": "Disable AI Model",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/ai-models/:modelId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "ai-models", ":modelId"],
+              "variable": [
+                {
+                  "key": "modelId",
+                  "value": "gpt-4-turbo"
+                }
+              ]
+            },
+            "description": "Disable an AI model"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Prompt Management",
+      "item": [
+        {
+          "name": "List Prompts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.items && jsonData.items.length > 0) {",
+                  "        pm.collectionVariables.set('promptId', jsonData.items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/prompts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "prompts"]
+            },
+            "description": "List all system prompts"
+          }
+        },
+        {
+          "name": "Get Prompt Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/prompts/{{promptId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "prompts", "{{promptId}}"]
+            },
+            "description": "Get prompt details including current content"
+          }
+        },
+        {
+          "name": "Update Prompt",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"systemMessage\": \"You are MeepleAI, a helpful board game assistant. Help users understand rules and provide strategy tips...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/prompts/{{promptId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "prompts", "{{promptId}}"]
+            },
+            "description": "Update prompt content"
+          }
+        },
+        {
+          "name": "Get Prompt Versions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/prompts/{{promptId}}/versions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "prompts", "{{promptId}}", "versions"]
+            },
+            "description": "Get version history for a prompt"
+          }
+        },
+        {
+          "name": "Create New Version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"systemMessage\": \"Updated prompt content for version 2...\",\n  \"changeNotes\": \"Improved tone and added examples\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/prompts/{{promptId}}/versions/new",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "prompts", "{{promptId}}", "versions", "new"]
+            },
+            "description": "Create a new version of a prompt"
+          }
+        },
+        {
+          "name": "Compare Versions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/prompts/{{promptId}}/compare?version1=v1.0&version2=v2.0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "prompts", "{{promptId}}", "compare"],
+              "query": [
+                {
+                  "key": "version1",
+                  "value": "v1.0"
+                },
+                {
+                  "key": "version2",
+                  "value": "v2.0"
+                }
+              ]
+            },
+            "description": "Compare two prompt versions (diff view)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "API Key Administration",
+      "item": [
+        {
+          "name": "Get All API Keys Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/api-keys/stats?page=1&pageSize=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "api-keys", "stats"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Get all API keys across all users with usage statistics"
+          }
+        },
+        {
+          "name": "Search API Keys",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/api-keys/stats?search=user@example.com",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "api-keys", "stats"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "user@example.com"
+                }
+              ]
+            },
+            "description": "Search API keys by user email"
+          }
+        },
+        {
+          "name": "Revoke API Key",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/api-keys/:keyId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "api-keys", ":keyId"],
+              "variable": [
+                {
+                  "key": "keyId",
+                  "value": "api-key-uuid"
+                }
+              ]
+            },
+            "description": "Revoke an API key immediately"
+          }
+        },
+        {
+          "name": "Export API Keys (CSV)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Accept",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/api-keys/bulk/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "api-keys", "bulk", "export"]
+            },
+            "description": "Export all API keys to CSV"
+          }
+        }
+      ]
+    }
+  ]
+}

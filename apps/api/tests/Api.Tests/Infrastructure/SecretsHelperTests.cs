@@ -158,10 +158,20 @@ public class SecretsHelperTests
     [Fact]
     public void BuildPostgresConnectionString_Success()
     {
-        // Arrange
+        // Arrange - Save and clear environment variables to isolate from CI
+        var originalHost = Environment.GetEnvironmentVariable("POSTGRES_HOST");
+        var originalPort = Environment.GetEnvironmentVariable("POSTGRES_PORT");
+        var originalDb = Environment.GetEnvironmentVariable("POSTGRES_DB");
+        var originalUser = Environment.GetEnvironmentVariable("POSTGRES_USER");
         var tempFile = Path.GetTempFileName();
         try
         {
+            // Clear CI environment variables that would override test config
+            Environment.SetEnvironmentVariable("POSTGRES_HOST", null);
+            Environment.SetEnvironmentVariable("POSTGRES_PORT", null);
+            Environment.SetEnvironmentVariable("POSTGRES_DB", null);
+            Environment.SetEnvironmentVariable("POSTGRES_USER", null);
+
             File.WriteAllText(tempFile, "secure-db-password");
 
             var config = new ConfigurationBuilder()
@@ -188,16 +198,31 @@ public class SecretsHelperTests
         finally
         {
             File.Delete(tempFile);
+            // Restore original environment variables
+            Environment.SetEnvironmentVariable("POSTGRES_HOST", originalHost);
+            Environment.SetEnvironmentVariable("POSTGRES_PORT", originalPort);
+            Environment.SetEnvironmentVariable("POSTGRES_DB", originalDb);
+            Environment.SetEnvironmentVariable("POSTGRES_USER", originalUser);
         }
     }
 
     [Fact]
     public void BuildPostgresConnectionString_UsesDefaults()
     {
-        // Arrange
+        // Arrange - Save and clear environment variables to isolate from CI
+        var originalHost = Environment.GetEnvironmentVariable("POSTGRES_HOST");
+        var originalPort = Environment.GetEnvironmentVariable("POSTGRES_PORT");
+        var originalDb = Environment.GetEnvironmentVariable("POSTGRES_DB");
+        var originalUser = Environment.GetEnvironmentVariable("POSTGRES_USER");
         var tempFile = Path.GetTempFileName();
         try
         {
+            // Clear CI environment variables to test actual defaults
+            Environment.SetEnvironmentVariable("POSTGRES_HOST", null);
+            Environment.SetEnvironmentVariable("POSTGRES_PORT", null);
+            Environment.SetEnvironmentVariable("POSTGRES_DB", null);
+            Environment.SetEnvironmentVariable("POSTGRES_USER", null);
+
             File.WriteAllText(tempFile, "password");
 
             var config = new ConfigurationBuilder()
@@ -211,7 +236,8 @@ public class SecretsHelperTests
             var connectionString = SecretsHelper.BuildPostgresConnectionString(config, NullLogger.Instance);
 
             // Assert - should use defaults (Issue #2152: default username is now 'postgres')
-            Assert.Contains("Host=postgres", connectionString);
+            // Note: Default host is 'localhost' for local development; Docker sets POSTGRES_HOST=postgres
+            Assert.Contains("Host=localhost", connectionString);
             Assert.Contains("Port=5432", connectionString);
             Assert.Contains("Database=meepleai", connectionString);
             Assert.Contains("Username=postgres", connectionString);
@@ -220,6 +246,11 @@ public class SecretsHelperTests
         finally
         {
             File.Delete(tempFile);
+            // Restore original environment variables
+            Environment.SetEnvironmentVariable("POSTGRES_HOST", originalHost);
+            Environment.SetEnvironmentVariable("POSTGRES_PORT", originalPort);
+            Environment.SetEnvironmentVariable("POSTGRES_DB", originalDb);
+            Environment.SetEnvironmentVariable("POSTGRES_USER", originalUser);
         }
     }
 

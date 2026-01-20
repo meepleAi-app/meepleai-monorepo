@@ -1,8 +1,9 @@
 # MeepleAI Infrastructure Cost Summary
 
-**Version**: 1.0
-**Last Updated**: 2026-01-18
+**Version**: 1.2
+**Last Updated**: 2026-01-20
 **Source Analysis**: infrastructure-sizing-analysis-2026-01-18.md
+**Added**: GitHub Repository & CI/CD Cost Analysis section
 
 ---
 
@@ -1172,6 +1173,480 @@ vs Infrastructure (€367.65): +€592.35 profit (+46% margin improvement)
 **Revenue**: 125 Normal × €6 + 35 Premium × €14 = €750 + €490 = **€1,240/mese**
 
 **vs Baseline**: €1,240 - €880 = **+€360/mese** (+41% revenue increase)
+
+---
+
+## Staging Environment Cost Analysis
+
+### Principle: Staging = Production Replica
+
+A staging environment replicates production infrastructure for pre-release testing. The cost impact depends on which production phase you're replicating and your optimization strategy.
+
+### Staging Cost by Production Phase
+
+| Production Phase | Prod Cost/month | Full Staging | Reduced Staging (50%) | **Total with Staging** |
+|------------------|-----------------|--------------|----------------------|------------------------|
+| **Alpha** (10 users) | €19.30 | €19.30 | €12-14 | €31-38 (+60-100%) |
+| **Beta** (100 users) | €78.85 | €78.85 | €40 | €119-158 (+50-100%) |
+| **Release 1K** | €367.65 | €367.65 | €183.83 | €551-735 (+50-100%) |
+| **Release 10K** | €1,714 | €1,714 | €857 | €2,571-3,428 (+50-100%) |
+
+### Staging Optimization Strategies
+
+#### Strategy 1: Reduced Staging (Recommended for Alpha/Beta)
+
+Staging uses 50-70% of production resources with reduced redundancy:
+
+```yaml
+# Staging configuration - reduced resources
+staging_resources:
+  postgres:
+    production: 2GB
+    staging: 1GB           # -€7.50/month savings
+  qdrant:
+    production: 4GB
+    staging: 512MB         # -€5/month savings
+  redis:
+    production: 768MB
+    staging: 256MB         # -€2/month savings
+
+# Total savings: 30-40% vs full replica
+# Alpha staging cost: ~€12-14/month (vs €19.30 full)
+# Beta staging cost: ~€40/month (vs €78.85 full)
+```
+
+#### Strategy 2: On-Demand Staging (Maximum Savings)
+
+Start staging only when needed, stop after validation:
+
+```bash
+# Start staging 4-8 hours before deployment
+docker compose --profile staging up -d
+
+# Run UAT tests and validation
+./scripts/run-uat-tests.sh
+
+# Stop after validation complete
+docker compose --profile staging down
+```
+
+**Cost Formula:**
+```
+On-Demand Cost = Full Staging Cost × (Active Hours / 730)
+
+Example (Beta, 50 hours/month active):
+€78.85 × (50/730) = €5.40/month
+```
+
+**Typical Usage Patterns:**
+
+| Usage Pattern | Hours/month | Beta Staging Cost |
+|---------------|-------------|-------------------|
+| Weekly deploys (8h each) | 32 | €3.46 |
+| Bi-weekly releases (8h each) | 16 | €1.73 |
+| Major releases only | 8-16 | €0.86-1.73 |
+| Always-on | 730 | €78.85 |
+
+#### Strategy 3: Synthetic Data Staging (No Storage Duplication)
+
+Use seed data instead of production data copy:
+
+| Component | Production | Staging | Savings |
+|-----------|------------|---------|---------|
+| Storage (1K users) | 40GB | 2GB (seed) | €6.80/month |
+| Database size | 1GB | 50MB | Minimal I/O costs |
+| Vector DB | 390MB | 10MB | Reduced memory needs |
+
+**Trade-off:** Cannot test with production-scale data patterns.
+
+### Total Infrastructure Costs (Dev + Staging + Prod)
+
+#### Scenario: Beta Phase Target
+
+| Environment | Cost/month | Configuration |
+|-------------|-----------|---------------|
+| **Development** | €0 | Local Docker Compose |
+| **Staging (reduced)** | €40 | 50% resources |
+| **Production** | €78.85 | Full Beta infrastructure |
+| **TOTAL** | **€118.85** | Within €200 budget ✅ |
+
+**Budget Analysis:**
+- Budget target: €200/month
+- Total with staging: €118.85
+- **Buffer remaining: €81.15 (41% margin)**
+
+#### Scenario: Release 1K Phase
+
+| Environment | Cost/month | Configuration |
+|-------------|-----------|---------------|
+| **Development** | €0 | Local Docker Compose |
+| **Staging (reduced)** | €183.83 | 50% resources |
+| **Production** | €367.65 | Full Release 1K infrastructure |
+| **TOTAL** | **€551.48** | Requires revenue stream |
+
+**Revenue Requirement:**
+- Monthly cost: €551.48
+- At €0.88 ARPU: Need 627 users minimum
+- At target 1,000 users: €880 revenue → €328.52 profit ✅
+
+### When Staging is Worth the Cost
+
+| Phase | Staging Recommended | Rationale |
+|-------|---------------------|-----------|
+| **Alpha** (10 users) | ❌ No | Test on prod with rollback capability |
+| **Beta** (100 users) | ⚠️ Optional | Consider on-demand for major releases |
+| **Release 1K** | ✅ Yes (reduced) | Downtime risk outweighs cost |
+| **Release 10K** | ✅ Yes (full) | Business-critical, must mirror prod |
+
+### Recommended Staging Strategy by Phase
+
+#### Alpha Phase (€200 budget)
+- **Skip dedicated staging**
+- Use feature flags + canary releases on production
+- Local docker-compose for pre-deployment testing
+- **Cost impact: €0 additional**
+
+#### Beta Phase (€200 budget)
+- **On-demand staging** for major releases
+- Spin up 4-8 hours before deploy, shut down after
+- **Cost impact: €3-10/month** (depending on release frequency)
+
+#### Release 1K (Revenue-backed)
+- **Reduced staging** (50% resources)
+- Always-on for continuous UAT and QA
+- **Cost impact: €183.83/month**
+- **ROI:** Prevents downtime that costs more in lost users
+
+#### Release 10K (Enterprise)
+- **Full staging mirror**
+- Include load testing capabilities
+- **Cost impact: €857-1,714/month**
+- **ROI:** Required for SLA compliance and enterprise clients
+
+### Staging Cost Formula
+
+```
+Staging_Cost = Prod_Cost × Reduction_Factor × (Active_Hours / 730)
+
+Where:
+- Reduction_Factor: 0.5-1.0 (resource reduction percentage)
+- Active_Hours: 730 (always-on) or less (on-demand)
+
+Examples:
+
+1. Beta, always-on, 50% reduced:
+   €78.85 × 0.5 × 1 = €39.43/month
+
+2. Beta, on-demand (50h/month), full resources:
+   €78.85 × 1.0 × (50/730) = €5.40/month
+
+3. Release 1K, always-on, 50% reduced:
+   €367.65 × 0.5 × 1 = €183.83/month
+```
+
+### Implementation: Docker Compose Staging Profile
+
+Create staging profile in `docker-compose.yml`:
+
+```yaml
+# Staging profile with reduced resources
+services:
+  postgres:
+    profiles: ["dev", "staging", "prod"]
+    deploy:
+      resources:
+        limits:
+          memory: ${POSTGRES_MEMORY:-2G}  # Override for staging
+
+  # Staging-specific overrides
+  postgres-staging:
+    profiles: ["staging"]
+    extends:
+      service: postgres
+    deploy:
+      resources:
+        limits:
+          memory: 1G  # 50% of production
+```
+
+**Usage:**
+```bash
+# Start staging environment
+docker compose --profile staging up -d
+
+# Start production environment
+docker compose --profile prod up -d
+```
+
+### Cost Monitoring for Staging
+
+Track staging costs separately:
+
+```yaml
+# Hetzner/AWS tagging for cost allocation
+tags:
+  environment: staging
+  project: meepleai
+  cost-center: infrastructure
+
+# Monthly review checklist
+staging_cost_review:
+  - [ ] Check staging uptime hours
+  - [ ] Compare actual vs budgeted staging cost
+  - [ ] Evaluate on-demand vs always-on ROI
+  - [ ] Adjust resources based on usage patterns
+```
+
+---
+
+## GitHub Repository & CI/CD Cost Analysis
+
+### GitHub Plans Comparison
+
+**Repository Hosting Costs** (Private Repositories):
+
+| Plan | Monthly Cost | Actions Minutes | Packages Storage | Best For |
+|------|-------------|-----------------|------------------|----------|
+| **Free** | €0 | 2,000/month | 500MB | Solo developers, early projects |
+| **Team** | €4/user/month | 3,000/month | 2GB | Small teams (3-10 members) |
+| **Enterprise** | €21/user/month | 50,000/month | 50GB | Large organizations, compliance needs |
+
+**Key Features**:
+- **Private Repositories**: Unlimited on all plans
+- **Public Repository Actions**: Always free (unlimited minutes)
+- **Private Repository Actions**: Counted against plan quota
+
+---
+
+### MeepleAI CI/CD Workflow Analysis
+
+**Current Workflows** (analyzed from `.github/workflows/`):
+
+| Workflow | Trigger | Estimated Duration | Monthly Runs (estimate) |
+|----------|---------|-------------------|------------------------|
+| **CI** (ci.yml) | Push/PR to main, main-dev, frontend-dev | 15-20 min | 200-400 |
+| **E2E Tests** (e2e-tests.yml) | Push/PR with code changes | 25-35 min | 100-200 |
+| **Security Scan** (security.yml) | Push/PR + Weekly schedule | 10-15 min | 60-100 |
+| **K6 Performance** (k6-performance.yml) | Nightly + Manual | 30-45 min | 30-60 |
+| **Security Penetration** (security-penetration-tests.yml) | Weekly + Security PRs | 8-10 min | 10-20 |
+| **Branch Policy** (branch-policy.yml) | PR events | 1-2 min | 200-400 |
+| **Dependabot Automerge** (dependabot-automerge.yml) | Dependabot PRs | 2-5 min | 20-40 |
+
+**Workflow Complexity**:
+- **CI Job**: Path filtering (frontend/backend/infra), parallel jobs, services (Postgres, Redis, Qdrant)
+- **E2E Tests**: 4-shard parallelization, backend services, Playwright browsers
+- **Security**: CodeQL analysis (C#, JavaScript), dependency scanning, Semgrep secrets detection
+
+---
+
+### CI Minutes Consumption Estimate
+
+**Alpha/Beta Phase** (1-3 developers, moderate activity):
+
+| Workflow | Minutes/Run | Monthly Runs | Total Minutes |
+|----------|-------------|--------------|---------------|
+| CI (frontend) | 12 | 150 | 1,800 |
+| CI (backend) | 18 | 100 | 1,800 |
+| E2E Tests (4 shards) | 30 | 80 | 2,400 |
+| Security Scan | 12 | 50 | 600 |
+| K6 Performance | 40 | 30 | 1,200 |
+| Security Penetration | 10 | 10 | 100 |
+| Misc (branch, deps) | 3 | 200 | 600 |
+| **TOTAL** | - | ~620 | **~8,500 min/month** |
+
+**OS Multipliers** (GitHub billing):
+- Linux: 1× (standard)
+- Windows: 2× (not used in current workflows)
+- macOS: 10× (not used in current workflows)
+
+**Effective Minutes** (all Linux): **~8,500 min/month**
+
+---
+
+### Cost Projection by Phase
+
+#### Alpha Phase (1-2 developers)
+
+| Item | Quantity | Unit Cost | Monthly Cost |
+|------|----------|-----------|--------------|
+| **GitHub Plan** | Free | €0 | €0 |
+| **Actions Minutes** | 2,000 included | €0 | €0 |
+| **Overage** | ~4,000 min × €0.006 | €0.006/min | **€24** |
+| **TOTAL** | - | - | **€24/month** |
+
+**Alternative - GitHub Team Plan**:
+| Item | Quantity | Unit Cost | Monthly Cost |
+|------|----------|-----------|--------------|
+| **GitHub Team** | 2 users | €4/user | €8 |
+| **Actions Minutes** | 3,000 included | €0 | €0 |
+| **Overage** | ~5,500 min × €0.006 | €0.006/min | €33 |
+| **TOTAL** | - | - | **€41/month** |
+
+**Recommendation (Alpha)**: ✅ **Stay on Free plan** - €24/month overage is less than Team plan cost
+
+---
+
+#### Beta Phase (3-5 developers, increased activity)
+
+**Estimated Activity**:
+- PRs per month: 100-150
+- CI runs: 400-600
+- Total minutes: 15,000-20,000
+
+| Item | Quantity | Unit Cost | Monthly Cost |
+|------|----------|-----------|--------------|
+| **GitHub Team** | 4 users | €4/user | €16 |
+| **Actions Minutes** | 3,000 included | €0 | €0 |
+| **Overage** | ~15,000 min × €0.006 | €0.006/min | €90 |
+| **TOTAL** | - | - | **€106/month** |
+
+**With Optimization** (path filtering, caching already in place):
+- Skip unchanged paths: -30% runs
+- Optimized minutes: ~10,500
+- Overage cost: €45
+- **Optimized Total**: **€61/month**
+
+---
+
+#### Release 1K Phase (5-8 developers)
+
+| Item | Quantity | Unit Cost | Monthly Cost |
+|------|----------|-----------|--------------|
+| **GitHub Team** | 7 users | €4/user | €28 |
+| **Actions Minutes** | 3,000 included | €0 | €0 |
+| **Overage** | ~25,000 min × €0.006 | €0.006/min | €150 |
+| **TOTAL** | - | - | **€178/month** |
+
+---
+
+#### Release 10K Phase (10-15 developers)
+
+| Item | Quantity | Unit Cost | Monthly Cost |
+|------|----------|-----------|--------------|
+| **GitHub Enterprise** | 12 users | €21/user | €252 |
+| **Actions Minutes** | 50,000 included | €0 | €0 |
+| **Overage** | ~10,000 min × €0.006 | €0.006/min | €60 |
+| **TOTAL** | - | - | **€312/month** |
+
+**Alternative - Team Plan**:
+| Item | Quantity | Unit Cost | Monthly Cost |
+|------|----------|-----------|--------------|
+| **GitHub Team** | 12 users | €4/user | €48 |
+| **Actions Minutes** | 3,000 included | €0 | €0 |
+| **Overage** | ~57,000 min × €0.006 | €0.006/min | €342 |
+| **TOTAL** | - | - | **€390/month** |
+
+**Recommendation (Release 10K)**: ✅ **Enterprise plan** saves €78/month + compliance features
+
+---
+
+### CI Optimization Strategies
+
+#### Quick Wins (Already Implemented)
+
+1. **Path Filtering** (`dorny/paths-filter`):
+   - Skip frontend jobs when only backend changes
+   - Skip backend jobs when only frontend changes
+   - **Savings**: ~30% workflow runs skipped
+
+2. **Concurrency Groups**:
+   - Cancel in-progress runs for same PR/branch
+   - **Savings**: ~15% duplicate runs avoided
+
+3. **Dependency Caching**:
+   - pnpm, NuGet, Playwright browsers cached
+   - **Savings**: 3-5 minutes per run
+
+#### Medium-Term Optimizations
+
+4. **E2E Sharding Optimization**:
+   - Currently: 4 shards (all run in parallel)
+   - Optimization: Dynamic sharding based on test changes
+   - **Potential savings**: 20-30% E2E minutes
+
+5. **Conditional Security Scans**:
+   - Run CodeQL only on code changes (not docs/infra)
+   - **Potential savings**: 10-15% security workflow minutes
+
+6. **Self-Hosted Runners** (Release 1K+):
+   - Hetzner dedicated runners: €15-30/month
+   - Unlimited minutes on self-hosted
+   - **Break-even**: >5,000 minutes/month overage
+
+---
+
+### Self-Hosted Runners Analysis
+
+**When Self-Hosted Makes Sense**:
+
+| Scenario | GitHub-Hosted | Self-Hosted (Hetzner) | Savings |
+|----------|---------------|----------------------|---------|
+| 5,000 min/month overage | €30 | €15 (CPX11) | €15/month |
+| 15,000 min/month overage | €90 | €30 (CPX21) | €60/month |
+| 30,000 min/month overage | €180 | €45 (CPX31) | €135/month |
+
+**Self-Hosted Runner Setup** (Hetzner CPX21):
+- VPS: €7.15/month (3 vCPU, 8GB RAM)
+- Docker + GitHub Actions Runner
+- Maintenance: 1-2h/month
+
+**Note**: GitHub announced (Dec 2025) plans to charge €0.002/min for self-hosted runners starting March 2026, but this was **postponed for re-evaluation** after community feedback.
+
+---
+
+### GitHub Actions Pricing Changes (2026)
+
+**Effective January 1, 2026**:
+- Linux minutes: €0.006/min (previously €0.008, **-25% reduction**)
+- Windows minutes: €0.010/min (reduced from €0.016, **-37.5%**)
+- macOS minutes: €0.080/min (unchanged)
+
+**Impact on MeepleAI**: ✅ **Costs will decrease** ~25% for Linux-only workflows
+
+**Self-Hosted Runner Charge** (Postponed):
+- Originally planned: €0.002/min from March 2026
+- Status: **Postponed indefinitely** after community feedback
+- Recommendation: Monitor GitHub announcements
+
+---
+
+### Total GitHub Costs by Phase
+
+| Phase | Plan Cost | Actions Overage | **GitHub Total** | Infrastructure | **Grand Total** |
+|-------|-----------|-----------------|------------------|----------------|-----------------|
+| **Alpha** | €0 (Free) | €24 | **€24** | €19.30 | **€43.30** |
+| **Beta** | €16 (Team) | €45 | **€61** | €78.85 | **€139.85** |
+| **Release 1K** | €28 (Team) | €150 | **€178** | €367.65 | **€545.65** |
+| **Release 10K** | €252 (Enterprise) | €60 | **€312** | €1,714 | **€2,026** |
+
+**Budget Impact Analysis**:
+
+| Phase | Budget Target | Infra Only | With GitHub CI | Status |
+|-------|---------------|------------|----------------|--------|
+| Alpha | €50-200 | €19.30 | €43.30 | ✅ Within budget |
+| Beta | €50-200 | €78.85 | €139.85 | ✅ Within budget |
+| Release 1K | Revenue-backed | €367.65 | €545.65 | ⚠️ Requires revenue |
+| Release 10K | Series A | €1,714 | €2,026 | ❌ Requires funding |
+
+---
+
+### Recommendations
+
+1. **Alpha Phase**:
+   - Stay on **GitHub Free** plan
+   - Accept €24/month Actions overage
+   - Total: €43.30/month (within €200 budget)
+
+2. **Beta Phase**:
+   - Upgrade to **GitHub Team** when team reaches 3+ members
+   - Optimize workflows (already well-optimized)
+   - Consider self-hosted runner at €15/month if overage exceeds €50/month
+   - Total: €61-139.85/month
+
+3. **Release Phases**:
+   - Evaluate **GitHub Enterprise** for compliance and advanced security
+   - Implement **self-hosted runners** cluster for cost control
+   - Total: €178-312/month depending on scale
 
 ---
 

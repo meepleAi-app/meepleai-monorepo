@@ -1,0 +1,37 @@
+{
+  "screenshot": {
+    "id": "admin-monitoring-01",
+    "filename": "01-system-alerts.png",
+    "flow": "monitoring",
+    "role": "admin",
+    "step": 1,
+    "totalSteps": 1,
+    "title": "System Alerts",
+    "description": "View active and past system alerts"
+  },
+  "capture": {
+    "timestamp": "2026-01-20T13:11:11.581Z",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "browser": "chromium",
+    "fullPage": true
+  },
+  "interaction": {
+    "previousAction": null,
+    "nextAction": "Review alerts",
+    "highlightedElements": [
+      {
+        "selector": "text=/\\d+ alert/i, [data-testid=\"alert-count\"]",
+        "type": "box",
+        "label": "Count"
+      }
+    ]
+  },
+  "navigation": {
+    "url": "http://localhost:3000/admin/alerts",
+    "previousStep": null,
+    "nextStep": null
+  }
+}

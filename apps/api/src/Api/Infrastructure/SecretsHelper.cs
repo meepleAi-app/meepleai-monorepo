@@ -118,11 +118,22 @@ internal static class SecretsHelper
     {
         Console.WriteLine("[DEBUG #2152] SecretsHelper.BuildPostgresConnectionString() called");
 
-        var host = config["POSTGRES_HOST"] ?? "postgres";
-        var port = config["POSTGRES_PORT"] ?? "5432";
-        var database = config["POSTGRES_DB"] ?? config["ConnectionStrings:DefaultDatabase"] ?? "meepleai";
+        // Priority: Environment variable > Configuration > Default
+        // This ensures launchSettings.json and SecretLoader env vars work correctly
+        var host = Environment.GetEnvironmentVariable("POSTGRES_HOST")
+            ?? config["POSTGRES_HOST"]
+            ?? "localhost";
+        var port = Environment.GetEnvironmentVariable("POSTGRES_PORT")
+            ?? config["POSTGRES_PORT"]
+            ?? "5432";
+        var database = Environment.GetEnvironmentVariable("POSTGRES_DB")
+            ?? config["POSTGRES_DB"]
+            ?? config["ConnectionStrings:DefaultDatabase"]
+            ?? "meepleai";
         // Issue #2152: Change default username from 'meeple' to 'postgres' for CI/standard PostgreSQL compatibility
-        var username = config["POSTGRES_USER"] ?? "postgres";
+        var username = Environment.GetEnvironmentVariable("POSTGRES_USER")
+            ?? config["POSTGRES_USER"]
+            ?? "postgres";
 
         Console.WriteLine($"[DEBUG #2152] SecretsHelper values: Host={host}, Port={port}, DB={database}, User={username}");
 

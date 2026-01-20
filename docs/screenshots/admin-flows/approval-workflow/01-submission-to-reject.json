@@ -1,0 +1,31 @@
+{
+  "screenshot": {
+    "id": "admin-approval-workflow-01",
+    "filename": "01-submission-to-reject.png",
+    "flow": "approval-workflow",
+    "role": "admin",
+    "step": 1,
+    "totalSteps": 1,
+    "title": "Submission to Reject",
+    "description": "Submission requiring rejection with feedback"
+  },
+  "capture": {
+    "timestamp": "2026-01-20T13:11:05.828Z",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "browser": "chromium",
+    "fullPage": true
+  },
+  "interaction": {
+    "previousAction": null,
+    "nextAction": "Click reject",
+    "highlightedElements": []
+  },
+  "navigation": {
+    "url": "http://localhost:3000/admin/approvals/pending-1",
+    "previousStep": null,
+    "nextStep": null
+  }
+}

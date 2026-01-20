@@ -66,6 +66,26 @@ internal static class SharedGameCatalogEndpoints
             .WithSummary("Get all game mechanics")
             .WithDescription("Returns all available game mechanics for filtering.")
             .Produces<List<GameMechanicDto>>();
+
+        // Get FAQs for a game with pagination - Issue #2681
+        group.MapGet("/games/{gameId:guid}/faqs", HandleGetGameFaqs)
+            .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
+            .WithName("GetGameFaqs")
+            .WithSummary("Get FAQs for a game")
+            .WithDescription("Returns FAQs for a published game with pagination. Ordered by display order then by upvote count (descending).")
+            .Produces<GetGameFaqsResultDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Upvote a FAQ - Issue #2681
+        group.MapPost("/faqs/{faqId:guid}/upvote", HandleUpvoteFaq)
+            .AllowAnonymous()
+            .RequireRateLimiting("FaqUpvote")
+            .WithName("UpvoteFaq")
+            .WithSummary("Upvote a FAQ")
+            .WithDescription("Increments the upvote count for a FAQ. Rate limited to prevent abuse.")
+            .Produces<UpvoteFaqResultDto>()
+            .Produces(StatusCodes.Status404NotFound);
     }
 
     // ========================================
@@ -404,6 +424,35 @@ internal static class SharedGameCatalogEndpoints
         var query = new GetGameMechanicsQuery();
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetGameFaqs(
+        Guid gameId,
+        IMediator mediator,
+        [FromQuery] int limit = 10,
+        [FromQuery] int offset = 0,
+        CancellationToken ct = default)
+    {
+        var query = new GetGameFaqsQuery(gameId, limit, offset);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleUpvoteFaq(
+        Guid faqId,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var command = new UpvoteFaqCommand(faqId);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
     }
 
     // ========================================

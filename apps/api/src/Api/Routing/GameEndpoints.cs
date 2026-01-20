@@ -2,6 +2,8 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
 using Api.Models.Requests;
@@ -52,6 +54,12 @@ internal static class GameEndpoints
         // Get rule specifications for a game (DDD/CQRS)
         // Issue #1196: Supports Rules tab in Game Detail Page (Issue #855)
         group.MapGet("/games/{id}/rules", HandleGetGameRules)
+        .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
+
+        // Get AI agents available for a game
+        // Issue #2677: Frontend uses this endpoint for game detail page agent list
+        // Note: Agents are game-agnostic, returns all active agents
+        group.MapGet("/games/{id}/agents", HandleGetGameAgents)
         .RequireAuthenticatedUser(); // Issue #1446: Dual authentication (session OR API key)
     }
 
@@ -188,6 +196,32 @@ internal static class GameEndpoints
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// Get AI agents available for a game.
+    /// Issue #2677: Frontend uses this endpoint for game detail page agent list.
+    /// Note: Agents are currently game-agnostic, returns all active agents.
+    /// </summary>
+    private static async Task<IResult> HandleGetGameAgents(
+        Guid id,
+        IMediator mediator,
+                CancellationToken ct)
+    {
+        // Validate game exists first
+        var gameQuery = new GetGameByIdQuery(id);
+        var game = await mediator.Send(gameQuery, ct).ConfigureAwait(false);
+
+        if (game == null)
+        {
+            return Results.NotFound(new { error = $"Game {id} not found" });
+        }
+
+        // Get all active agents (agents are game-agnostic in current design)
+        var agentsQuery = new GetAllAgentsQuery(ActiveOnly: true);
+        var agents = await mediator.Send(agentsQuery, ct).ConfigureAwait(false);
+
+        return Results.Ok(agents);
     }
 
     private static async Task<IResult> HandleCreateGame(

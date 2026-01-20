@@ -164,6 +164,9 @@ jobs:
           ConnectionStrings__Postgres: "Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres_test_password"
           Redis__ConnectionString: "localhost:6379"
           Qdrant__Url: "http://localhost:6333"
+          QDRANT_URL: "http://localhost:6333"
+          # Test placeholder for OpenRouter (won't make actual API calls in testing)
+          OPENROUTER_API_KEY: "test-key-for-ci-placeholder"
 
       - name: Health Check
         run: |

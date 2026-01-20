@@ -1,5 +1,5 @@
 /**
- * User Library Page (Issue #2464, #2613)
+ * User Library Page (Issue #2464, #2613, #2618)
  *
  * Enhanced user library management with search, filtering, and actions.
  *
@@ -13,12 +13,14 @@
  * - Quota status bar
  * - Empty state with CTA
  * - Bulk selection mode with floating action bar (Issue #2613)
+ * - Framer Motion animations (Issue #2618)
  */
 
 'use client';
 
 import React, { useState } from 'react';
 
+import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpen, CheckSquare, Plus, Share2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -193,17 +195,45 @@ export default function LibraryPage() {
     });
   };
 
-  // Loading state
+  // Loading state with staggered skeleton animations (Issue #2618)
   if (libraryLoading || quotaLoading) {
     return (
       <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
         <TopNav />
         <div className="container mx-auto px-4 py-8 space-y-6">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-16 w-full" />
+          {/* Quota skeleton */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Skeleton className="h-24 w-full" />
+          </motion.div>
+
+          {/* Filters skeleton */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+          >
+            <Skeleton className="h-16 w-full" />
+          </motion.div>
+
+          {/* Cards grid skeleton with staggered animation */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-64 w-full" />
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.3,
+                  delay: 0.2 + i * 0.08,
+                  ease: 'easeOut',
+                }}
+              >
+                <Skeleton className="h-64 w-full rounded-lg" />
+              </motion.div>
             ))}
           </div>
         </div>
@@ -316,21 +346,27 @@ export default function LibraryPage() {
         {hasGames ? (
           <>
             {filteredGames.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredGames.map(game => (
-                  <UserGameCard
-                    key={game.id}
-                    game={game}
-                    onConfigureAgent={handleConfigureAgent}
-                    onUploadPdf={handleUploadPdf}
-                    onEditNotes={handleEditNotes}
-                    onRemove={handleRemoveGame}
-                    selectionMode={selectionMode}
-                    isSelected={isSelected(game.gameId)}
-                    onSelect={handleGameSelect}
-                  />
-                ))}
-              </div>
+              <motion.div
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                layout
+              >
+                <AnimatePresence mode="popLayout">
+                  {filteredGames.map((game, index) => (
+                    <UserGameCard
+                      key={game.id}
+                      game={game}
+                      onConfigureAgent={handleConfigureAgent}
+                      onUploadPdf={handleUploadPdf}
+                      onEditNotes={handleEditNotes}
+                      onRemove={handleRemoveGame}
+                      selectionMode={selectionMode}
+                      isSelected={isSelected(game.gameId)}
+                      onSelect={handleGameSelect}
+                      index={index}
+                    />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
             ) : (
               /* No Results from Search */
               <Card className="border-dashed">

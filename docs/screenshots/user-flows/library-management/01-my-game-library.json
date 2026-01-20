@@ -1,0 +1,37 @@
+{
+  "screenshot": {
+    "id": "user-library-management-01",
+    "filename": "01-my-game-library.png",
+    "flow": "library-management",
+    "role": "user",
+    "step": 1,
+    "totalSteps": 1,
+    "title": "My Game Library",
+    "description": "Personal game library showing owned games"
+  },
+  "capture": {
+    "timestamp": "2026-01-20T14:42:13.265Z",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "browser": "chromium",
+    "fullPage": true
+  },
+  "interaction": {
+    "previousAction": null,
+    "nextAction": "Browse library",
+    "highlightedElements": [
+      {
+        "selector": "h1, [data-testid=\"library-heading\"]",
+        "type": "box",
+        "label": "Library"
+      }
+    ]
+  },
+  "navigation": {
+    "url": "http://localhost:3000/library",
+    "previousStep": null,
+    "nextStep": null
+  }
+}

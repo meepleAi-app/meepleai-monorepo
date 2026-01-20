@@ -19,33 +19,52 @@
 #   With profiles: COMPOSE_PROFILES=minimal,proxy docker compose up -d
 
 services:
-  # PRODUCTION SECURITY: Socket Proxy (uncomment for production)
+  # PRODUCTION SECURITY: Socket Proxy
   # Limits Traefik's access to Docker API (read-only containers)
-  # docker-socket-proxy:
-  #   image: ghcr.io/tecnativa/docker-socket-proxy:0.3.0
-  #   container_name: meepleai-socket-proxy
-  #   restart: unless-stopped
-  #   profiles: [minimal, dev, observability, ai, automation, full]
-  #   environment:
-  #     CONTAINERS: 1  # Allow Traefik to read container info
-  #     POST: 0        # Deny write operations
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock:ro
-  #   networks:
-  #     - meepleai
-  #   security_opt:
-  #     - no-new-privileges=true
-  #   read_only: true
-  #   tmpfs:
-  #     - /run
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         cpus: '0.5'
-  #         memory: 256M
-  #       reservations:
-  #         cpus: '0.25'
-  #         memory: 128M
+  # IMPORTANT: Enable this in production to prevent container escape attacks
+  #
+  # Development: Disabled (uses direct socket access)
+  # Production: Enabled via compose.prod.yml override
+  docker-socket-proxy:
+    image: ghcr.io/tecnativa/docker-socket-proxy:0.3.0
+    container_name: meepleai-socket-proxy
+    restart: unless-stopped
+    profiles: [prod]  # Only enabled in production profile
+    environment:
+      CONTAINERS: 1     # Allow Traefik to read container info
+      SERVICES: 1       # Allow service discovery
+      TASKS: 1          # Allow task info (for Swarm compatibility)
+      NETWORKS: 1       # Allow network info
+      POST: 0           # Deny write operations (critical for security)
+      BUILD: 0          # Deny build operations
+      COMMIT: 0         # Deny commit operations
+      EXEC: 0           # Deny exec operations
+      IMAGES: 0         # Deny image operations
+      VOLUMES: 0        # Deny volume operations
+      SWARM: 0          # Deny swarm operations (unless using Swarm)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - meepleai
+    security_opt:
+      - no-new-privileges=true
+    read_only: true
+    tmpfs:
+      - /run
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:2375/version"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
   traefik:
     image: traefik:v3.2

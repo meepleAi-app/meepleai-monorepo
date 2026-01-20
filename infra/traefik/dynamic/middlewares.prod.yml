@@ -1,8 +1,41 @@
 # Traefik Dynamic Configuration - Production Middlewares
 # Security headers and rate limiting for meepleai.io
+#
+# Environment-specific CORS:
+# - Development: localhost:3000, localhost:8080 (see middlewares.yml)
+# - Production: meepleai.io, api.meepleai.io (this file)
 
 http:
   middlewares:
+    # CORS for API services - Production
+    # Configure actual production domains here
+    cors-api:
+      headers:
+        accessControlAllowOriginList:
+          - "https://meepleai.io"
+          - "https://www.meepleai.io"
+          - "https://api.meepleai.io"
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "Content-Type"
+          - "Authorization"
+          - "X-Requested-With"
+          - "Accept"
+          - "Origin"
+          - "X-CSRF-Token"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 7200  # Cache preflight for 2 hours
+        accessControlExposeHeaders:
+          - "X-Request-Id"
+          - "X-RateLimit-Limit"
+          - "X-RateLimit-Remaining"
+
     # Security Headers (OWASP recommended)
     security-headers:
       headers:
@@ -70,10 +103,15 @@ http:
         attempts: 3
         initialInterval: 100ms
 
-    # Circuit breaker
+    # Circuit breaker - prevents cascading failures
+    # Trips when: >30% network errors OR >25% 5xx responses
+    # After tripping: waits 30s before allowing test requests
     circuit-breaker:
       circuitBreaker:
         expression: "NetworkErrorRatio() > 0.30 || ResponseCodeRatio(500, 600, 0, 600) > 0.25"
+        checkPeriod: 10s
+        fallbackDuration: 30s
+        recoveryDuration: 15s
 
     # IP Whitelist (for admin endpoints)
     ip-whitelist-admin:
@@ -86,12 +124,14 @@ http:
           # Add your office/admin IPs here
           # - "YOUR_ADMIN_IP/32"
 
-    # Chain for API
+    # Chain for API (includes circuit breaker for resilience)
     api-chain:
       chain:
         middlewares:
           - security-headers
           - rate-limit-api
+          - circuit-breaker
+          - retry
           - compress
 
     # Chain for Web

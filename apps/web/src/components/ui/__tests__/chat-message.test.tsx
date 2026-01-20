@@ -8,7 +8,7 @@ import userEvent from '@testing-library/user-event';
 import {
   ChatMessage,
   ConfidenceBadge,
-  ChatChatCitationLink,
+  ChatCitationLink,
   TypingIndicator,
   type Citation,
 } from '../meeple/chat-message';

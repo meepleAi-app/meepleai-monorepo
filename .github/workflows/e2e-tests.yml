@@ -146,7 +146,8 @@ jobs:
       - name: Start Backend API
         working-directory: apps/api/src/Api
         run: |
-          dotnet run --no-build --configuration Release &
+          # Use --no-launch-profile to prevent launchSettings.json from overriding ASPNETCORE_ENVIRONMENT
+          dotnet run --no-build --configuration Release --no-launch-profile &
           echo $! > api.pid
           # Wait longer for auto-migration to complete on first startup
           sleep 30

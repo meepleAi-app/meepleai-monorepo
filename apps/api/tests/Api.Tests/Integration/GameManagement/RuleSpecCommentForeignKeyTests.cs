@@ -67,14 +67,19 @@ public class RuleSpecCommentForeignKeyTests : IAsyncLifetime
         _dbContext.RuleSpecComments.Add(comment);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        // Act & Assert - FK Restrict prevents user deletion
-        _dbContext.Users.Remove(user);
+        // Use fresh DbContext to test database-level FK constraint, not EF tracking
+        await using var freshContext = await Api.Tests.Infrastructure.TestHelpers.CreateDbContextAndMigrateAsync(_connectionString!);
+
+        // Act & Assert - FK Restrict prevents user deletion at DB level
+        var userToDelete = await freshContext.Users.FindAsync(userId);
+        freshContext.Users.Remove(userToDelete!);
+
         var exception = await Assert.ThrowsAsync<DbUpdateException>(() =>
-            _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken)
+            freshContext.SaveChangesAsync(TestContext.Current.CancellationToken)
         );
 
         exception.Should().NotBeNull();
-        exception.Message.Should().Contain("violates foreign key constraint");
+        exception.InnerException?.Message.Should().Contain("foreign key constraint");
     }
 
     [Fact]
@@ -197,13 +202,18 @@ public class RuleSpecCommentForeignKeyTests : IAsyncLifetime
         _dbContext.RuleSpecComments.Add(replyComment);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        // Act & Assert - FK Restrict prevents parent deletion with replies
-        _dbContext.RuleSpecComments.Remove(parentComment);
+        // Use fresh DbContext to test database-level FK constraint, not EF tracking
+        await using var freshContext = await Api.Tests.Infrastructure.TestHelpers.CreateDbContextAndMigrateAsync(_connectionString!);
+
+        // Act & Assert - FK Restrict prevents parent deletion at DB level
+        var parentToDelete = await freshContext.RuleSpecComments.FindAsync(parentCommentId);
+        freshContext.RuleSpecComments.Remove(parentToDelete!);
+
         var exception = await Assert.ThrowsAsync<DbUpdateException>(() =>
-            _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken)
+            freshContext.SaveChangesAsync(TestContext.Current.CancellationToken)
         );
 
         exception.Should().NotBeNull();
-        exception.Message.Should().Contain("violates foreign key constraint");
+        exception.InnerException?.Message.Should().Contain("foreign key constraint");
     }
 }

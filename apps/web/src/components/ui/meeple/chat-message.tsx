@@ -84,15 +84,15 @@ function formatTimestamp(timestamp?: string | Date): string {
 // Note: ConfidenceBadge now imported from standalone component (confidence-badge.tsx)
 
 /**
- * CitationLink - Clickable citation badge
+ * ChatCitationLink - Clickable citation badge
  */
-interface CitationLinkProps {
+interface ChatCitationLinkProps {
   citation: Citation;
   onClick?: (documentId: string, pageNumber: number) => void;
   className?: string;
 }
 
-const CitationLink = React.memo<CitationLinkProps>(({ citation, onClick, className }) => {
+const ChatCitationLink = React.memo<ChatCitationLinkProps>(({ citation, onClick, className }) => {
   const handleClick = () => {
     onClick?.(citation.id, citation.page ?? 1);
   };
@@ -126,7 +126,7 @@ const CitationLink = React.memo<CitationLinkProps>(({ citation, onClick, classNa
     </button>
   );
 });
-CitationLink.displayName = 'CitationLink';
+ChatCitationLink.displayName = 'ChatCitationLink';
 
 /**
  * TypingIndicator - Animated 3-dot loading indicator
@@ -248,7 +248,7 @@ export const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
             {isAssistant && citations && citations.length > 0 && !isTyping && (
               <div className="mt-3 flex flex-wrap gap-2" role="list">
                 {citations.map(citation => (
-                  <CitationLink key={citation.id} citation={citation} onClick={onCitationClick} />
+                  <ChatCitationLink key={citation.id} citation={citation} onClick={onCitationClick} />
                 ))}
               </div>
             )}
@@ -280,6 +280,5 @@ ChatMessage.displayName = 'ChatMessage';
 // Re-export standalone ConfidenceBadge for backward compatibility
 export { StandaloneConfidenceBadge as ConfidenceBadge };
 export type { ConfidenceBadgeProps } from '../data-display/confidence-badge';
-// Note: CitationLink renamed to ChatCitationLink to avoid conflict with data-display/citation-link
-export { CitationLink as ChatCitationLink, TypingIndicator };
-export type { CitationLinkProps as ChatCitationLinkProps, TypingIndicatorProps };
+export { ChatCitationLink, TypingIndicator };
+export type { ChatCitationLinkProps, TypingIndicatorProps };

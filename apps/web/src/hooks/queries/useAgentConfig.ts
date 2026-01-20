@@ -85,14 +85,15 @@ export function useUpdateAgentConfig(): UseMutationResult<
       queryClient.setQueryData<AgentConfigDto>(agentConfigKeys.byGame(gameId), (old) => {
         if (!old) {
           // If no config exists, create optimistic one
-          return {
+          const optimisticConfig: AgentConfigDto = {
             id: 'temp-id',
             userId: 'temp-user',
             gameId,
             ...request,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-          } as AgentConfigDto;
+          };
+          return optimisticConfig;
         }
         // Update existing config
         return {

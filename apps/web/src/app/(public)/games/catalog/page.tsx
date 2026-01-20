@@ -19,19 +19,18 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+
+import { AlertCircle, Library } from 'lucide-react';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/primitives/button';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { CatalogFilters } from '@/components/catalog/CatalogFilters';
+import { CatalogPagination } from '@/components/catalog/CatalogPagination';
+import { GameCatalogCard } from '@/components/catalog/GameCatalogCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
-import { AlertCircle, Library } from 'lucide-react';
-
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import { useSharedGames, useGameCategories, useGameMechanics } from '@/hooks/queries';
 import type { SearchSharedGamesParams } from '@/lib/api';
-
-import { CatalogFilters } from '@/components/catalog/CatalogFilters';
-import { GameCatalogCard } from '@/components/catalog/GameCatalogCard';
-import { CatalogPagination } from '@/components/catalog/CatalogPagination';
 
 export default function SharedGamesCatalogPage() {
   // Filter and pagination state

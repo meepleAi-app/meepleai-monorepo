@@ -17,8 +17,7 @@ export { CitationCard } from './citations/CitationCard';
 export { CitationList } from './citations/CitationList';
 
 // Issue #1833: UI-006 - CitationLink component
-// TODO: Component not yet implemented - uncomment when citation-link.tsx is created
-// export { CitationLink } from './ui/meeple/citation-link';
+export { CitationLink } from './ui/data-display/citation-link';
 
 // Issue #898: MetricsChart component (Chart.js/Recharts)
 export { MetricsChart } from './metrics/MetricsChart';

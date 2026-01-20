@@ -15,10 +15,10 @@ import { useParams, useRouter } from 'next/navigation';
 
 import { ErrorDisplay } from '@/components/errors';
 import { GameStateEditor, GameStateViewer, StateHistoryTimeline } from '@/components/game-state';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { Button } from '@/components/ui/primitives/button';
 import { useGameStateKeyboard } from '@/hooks/useGameStateKeyboard';
 import { useGameStateSignalR } from '@/hooks/useGameStateSignalR';
 import { categorizeError } from '@/lib/errorUtils';

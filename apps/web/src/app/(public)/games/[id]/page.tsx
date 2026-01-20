@@ -36,13 +36,13 @@ import { useParams, useRouter } from 'next/navigation';
 
 import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
 import { PdfViewerModal } from '@/components/pdf/PdfViewerModal';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Separator } from '@/components/ui/navigation/separator';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Separator } from '@/components/ui/navigation/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api, BggGameDetails, Game, GameSessionDto, PdfDocumentDto, RuleSpec } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';

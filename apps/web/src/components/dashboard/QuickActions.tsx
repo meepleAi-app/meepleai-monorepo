@@ -21,7 +21,7 @@
 
 import React from 'react';
 
-import { PlusCircle, MessageSquarePlus, LucideIcon } from 'lucide-react';
+import { PlusCircle, MessageSquarePlus, PlayCircle, LucideIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
@@ -80,6 +80,14 @@ function useDefaultActions(): QuickAction[] {
         title: 'New Chat',
         description: 'Start a conversation about game rules',
         onClick: () => router.push('/chat/new'),
+        variant: 'default' as const,
+      },
+      {
+        id: 'sessions',
+        icon: PlayCircle,
+        title: 'Partite',
+        description: 'Visualizza le tue sessioni di gioco',
+        onClick: () => router.push('/sessions'),
         variant: 'default' as const,
       },
     ],

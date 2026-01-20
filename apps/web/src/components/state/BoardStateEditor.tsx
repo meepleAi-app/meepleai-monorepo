@@ -17,10 +17,7 @@
 
 import { Grid3x3, Plus, Trash2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent } from '@/components/ui/data-display/card';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
 import {
   Select,
   SelectContent,
@@ -28,6 +25,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 
 import type { BoardState, PlayerState } from './StateEditor';
 

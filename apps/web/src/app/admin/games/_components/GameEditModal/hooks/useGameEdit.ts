@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+
 import { toast } from 'sonner';
 
 import { useApiClient } from '@/lib/api/context';
@@ -52,7 +53,7 @@ export function useGameEdit({ game, onSuccess }: UseGameEditParams) {
     }
   }, [game]);
 
-  const handleFormChange = (field: string, value: any) => {
+  const handleFormChange = (field: string, value: string | number | boolean | string[] | File | null | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -83,16 +84,16 @@ export function useGameEdit({ game, onSuccess }: UseGameEditParams) {
         toast.success('Game saved as draft');
       } else {
         // Create new game
-        const newId = await sharedGames.create(request);
+        await sharedGames.create(request);
         toast.success('Game created as draft');
 
         // TODO: Handle file uploads for PDF and image
-        if (formData.pdfDocument) {
-          // await uploadPdf(newId, formData.pdfDocument);
-        }
-        if (formData.coverImage) {
-          // await uploadImage(newId, formData.coverImage);
-        }
+        // if (formData.pdfDocument) {
+        //   await uploadPdf(newId, formData.pdfDocument);
+        // }
+        // if (formData.coverImage) {
+        //   await uploadImage(newId, formData.coverImage);
+        // }
       }
 
       if (onSuccess) onSuccess();

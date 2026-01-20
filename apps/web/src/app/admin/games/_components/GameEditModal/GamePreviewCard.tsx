@@ -9,11 +9,22 @@
 
 import { Users, Clock, BarChart3, Image as ImageIcon } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+
+interface FormData {
+  name?: string;
+  description?: string;
+  minPlayers?: number;
+  maxPlayers?: number;
+  playingTime?: number;
+  complexity?: number;
+  tags?: string[];
+  coverImageUrl?: string;
+}
 
 interface GamePreviewCardProps {
-  formData: any; // Form data from useGameEdit hook
+  formData: FormData | null;
 }
 
 export function GamePreviewCard({ formData }: GamePreviewCardProps) {
@@ -34,6 +45,7 @@ export function GamePreviewCard({ formData }: GamePreviewCardProps) {
         {/* Cover Image */}
         <div className="aspect-video bg-muted rounded-md flex items-center justify-center overflow-hidden">
           {coverImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- preview uses dynamic external URLs
             <img
               src={coverImageUrl}
               alt={name}

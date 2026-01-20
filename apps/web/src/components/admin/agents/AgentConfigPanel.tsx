@@ -32,7 +32,6 @@ import { Settings2, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/data-display/collapsible';
 import {
@@ -44,9 +43,10 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/forms/form';
+import { Switch } from '@/components/ui/forms/switch';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Slider } from '@/components/ui/primitives/slider';
-import { Switch } from '@/components/ui/forms/switch';
 import { cn } from '@/lib/utils';
 
 // ============================================================================

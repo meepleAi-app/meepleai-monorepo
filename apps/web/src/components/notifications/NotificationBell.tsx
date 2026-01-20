@@ -18,12 +18,12 @@ import { useEffect } from 'react';
 import { Bell } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
 } from '@/components/ui/navigation/dropdown-menu';
+import { Button } from '@/components/ui/primitives/button';
 import { useNotificationStore, selectUnreadCount } from '@/store/notification/store';
 
 import { NotificationPanel } from './NotificationPanel';

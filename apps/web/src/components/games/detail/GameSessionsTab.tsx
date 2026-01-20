@@ -8,10 +8,10 @@ import React from 'react';
 
 import { Users, Clock, Calendar, Trophy, PlayCircle, AlertCircle } from 'lucide-react';
 
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Button } from '@/components/ui/primitives/button';
 import { Game, GameSessionDto } from '@/lib/api';
 
 interface GameSessionsTabProps {

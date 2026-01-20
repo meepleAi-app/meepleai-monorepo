@@ -7,6 +7,7 @@
 
 import { z } from 'zod';
 
+import { getApiBase } from '../core/httpClient';
 import {
   AdminUserSchema,
   AdminUserResponseSchema,
@@ -81,7 +82,6 @@ import {
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
-import { getApiBase } from '../core/httpClient';
 
 export interface CreateAdminClientParams {
   httpClient: HttpClient;

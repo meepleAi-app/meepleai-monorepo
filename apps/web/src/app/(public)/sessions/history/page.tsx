@@ -21,11 +21,7 @@ import { useRouter } from 'next/navigation';
 
 import { ErrorDisplay } from '@/components/errors';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   Table,
   TableBody,
@@ -34,6 +30,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/data-display/table';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { api, GameSessionDto, Game, SessionHistoryFilters } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { categorizeError } from '@/lib/errorUtils';

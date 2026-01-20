@@ -6,6 +6,7 @@
  */
 
 import { Metadata } from 'next';
+
 import { GamesClient } from './client';
 
 export const metadata: Metadata = {

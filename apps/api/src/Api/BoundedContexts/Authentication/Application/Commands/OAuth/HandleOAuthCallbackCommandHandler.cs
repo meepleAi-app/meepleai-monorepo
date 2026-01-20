@@ -95,7 +95,21 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         // Use transaction for atomic user creation + OAuth linking + session creation
         // Note: InMemory database doesn't support transactions (test scenario)
         // Issue #2648: NpgsqlRetryingExecutionStrategy requires wrapping transactions in ExecuteAsync
-        var isInMemory = string.Equals(_db.Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal);
+        bool isInMemory;
+        try
+        {
+            isInMemory = string.Equals(_db.Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal);
+        }
+        catch (ObjectDisposedException ex)
+        {
+            // Database context disposed - connection unavailable (simulated in tests, or real connection failure)
+            _logger.LogError(ex, "Database connection unavailable during OAuth callback");
+            return new HandleOAuthCallbackResult
+            {
+                Success = false,
+                ErrorMessage = "Database connection error. Please try again."
+            };
+        }
 
         // For InMemory database (tests), execute directly without transaction
         if (isInMemory)

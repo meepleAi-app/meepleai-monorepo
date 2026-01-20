@@ -11,10 +11,10 @@ import { Users, Clock, Calendar, Star, TrendingUp, ExternalLink } from 'lucide-r
 import Image from 'next/image';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Separator } from '@/components/ui/navigation/separator';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Separator } from '@/components/ui/navigation/separator';
+import { Button } from '@/components/ui/primitives/button';
 import { Game, BggGameDetails, api } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';

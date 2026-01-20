@@ -39,12 +39,12 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { GrafanaEmbed } from '@/components/admin/GrafanaEmbed';
 import { ServiceHealthMatrix } from '@/components/admin/ServiceHealthMatrix';
 import { MetricsChart, type DataPoint, type DataSeries } from '@/components/metrics/MetricsChart';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Switch } from '@/components/ui/forms/switch';
+import { Separator } from '@/components/ui/navigation/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Select,
   SelectContent,
@@ -52,9 +52,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-import { Separator } from '@/components/ui/navigation/separator';
-import { Switch } from '@/components/ui/forms/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { useUserLocale } from '@/hooks/useUserLocale';
 import { api } from '@/lib/api';
 import type { InfrastructureDetails, HealthState } from '@/lib/api';

@@ -12,10 +12,13 @@
  */
 
 import { useState } from 'react';
-import { MoreHorizontal, Edit, Send, CheckCircle, XCircle, Archive, Trash2, Eye } from 'lucide-react';
-import { format } from 'date-fns';
 
-import { Button } from '@/components/ui/primitives/button';
+import { format } from 'date-fns';
+import { MoreHorizontal, Edit, Send, CheckCircle, XCircle, Archive, Trash2, Eye } from 'lucide-react';
+import { toast } from 'sonner';
+
+import { Badge } from '@/components/ui/data-display/badge';
+import { TableCell, TableRow } from '@/components/ui/data-display/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,12 +27,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
-import { TableCell, TableRow } from '@/components/ui/data-display/table';
-import { Badge } from '@/components/ui/data-display/badge';
-
+import { Button } from '@/components/ui/primitives/button';
 import { useApiClient } from '@/lib/api/context';
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
-import { toast } from 'sonner';
+
 
 interface GamesTableRowProps {
   game: SharedGameDetail;

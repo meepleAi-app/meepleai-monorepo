@@ -23,9 +23,7 @@ import { useRouter } from 'next/navigation';
 import { ErrorDisplay } from '@/components/errors';
 import { LoadingButton } from '@/components/loading/LoadingButton';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   Table,
   TableBody,
@@ -34,6 +32,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/data-display/table';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import { api, GameSessionDto, Game, PaginatedSessionsResponse } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { categorizeError } from '@/lib/errorUtils';

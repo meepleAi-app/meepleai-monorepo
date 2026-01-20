@@ -18,8 +18,8 @@
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/primitives/button';
 import { MeepleAvatar } from '@/components/ui/meeple/meeple-avatar';
+import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
 
 export function HeroSection() {

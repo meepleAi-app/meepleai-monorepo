@@ -23,9 +23,9 @@ import { useSearchParams } from 'next/navigation';
 
 import { CommentBox } from '@/components/chat/CommentBox';
 import { Message } from '@/components/chat/Message';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Separator } from '@/components/ui/navigation/separator';
 import { api, type GetSharedThreadResponse } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';

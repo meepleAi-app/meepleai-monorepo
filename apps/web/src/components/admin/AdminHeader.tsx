@@ -18,7 +18,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Avatar, AvatarFallback } from '@/components/ui/data-display/avatar';
-import { Button } from '@/components/ui/primitives/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 

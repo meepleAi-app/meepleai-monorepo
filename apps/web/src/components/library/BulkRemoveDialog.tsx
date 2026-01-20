@@ -65,7 +65,7 @@ export function BulkRemoveDialog({
 
       onSuccess?.();
       onClose();
-    } catch (error) {
+    } catch (_error) {
       toast.error('Errore durante la rimozione');
     } finally {
       setIsRemoving(false);

@@ -78,12 +78,13 @@ jobs:
           - 6379:6379
 
       qdrant:
-        image: qdrant/qdrant:v1.12.5
+        image: qdrant/qdrant:v1.12.4
+        # Note: wget/curl not available in Qdrant image, use bash TCP health check
         options: >-
-          --health-cmd "curl -sf http://localhost:6333/healthz || exit 1"
-          --health-interval 10s
+          --health-cmd "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /readyz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n\" >&3 && grep -q \"HTTP/1.1 200\" <&3'"
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 30
         ports:
           - 6333:6333
           - 6334:6334
@@ -104,7 +105,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       # Issue #2152: Re-enabled caching with fixed cache key (now includes appsettings*.json hash)
       - name: Setup backend environment
@@ -347,7 +348,7 @@ jobs:
       issues: write   # Required: Create GitHub issues
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Send Slack notification
         uses: actions/github-script@v8

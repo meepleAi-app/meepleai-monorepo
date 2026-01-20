@@ -37,7 +37,7 @@ vi.mock('next/link', () => ({
 }));
 
 // Mock MeepleAvatar
-vi.mock('@/components/ui/meeple-avatar', () => ({
+vi.mock('@/components/ui/meeple/meeple-avatar', () => ({
   MeepleAvatar: ({ state, size, className }: any) => (
     <div data-testid="meeple-avatar" data-state={state} data-size={size} className={className}>
       MeepleAvatar Mock

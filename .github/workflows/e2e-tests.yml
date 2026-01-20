@@ -71,7 +71,7 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres_test_password
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -152,6 +152,13 @@ jobs:
           sleep 30
         env:
           ASPNETCORE_ENVIRONMENT: Test
+          # Individual POSTGRES_* vars for SecretsHelper.BuildPostgresConnectionString()
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5432"
+          POSTGRES_DB: meepleai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_test_password
+          # Fallback connection string
           ConnectionStrings__Postgres: "Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres_test_password"
           Redis__ConnectionString: "localhost:6379"
           Qdrant__Url: "http://localhost:6333"

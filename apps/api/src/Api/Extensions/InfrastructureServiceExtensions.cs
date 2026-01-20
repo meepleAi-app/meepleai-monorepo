@@ -330,12 +330,14 @@ internal static class InfrastructureServiceExtensions
 
         // Load BGG API token from secret file (required as of Jan 2026)
         // Register at: https://boardgamegeek.com/using_the_xml_api
+        // Issue #2570: Fallback to Environment.GetEnvironmentVariable for values
+        // set by SecretLoader after IConfiguration was built
         var bggToken = SecretsHelper.GetSecretOrValue(
             configuration,
             "BGG_API_TOKEN",
             logger: null,
             required: false
-        );
+        ) ?? Environment.GetEnvironmentVariable("BGG_API_TOKEN");
 
         services.AddHttpClient("BggApi", (serviceProvider, client) =>
         {

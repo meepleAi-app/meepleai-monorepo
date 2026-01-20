@@ -49,14 +49,19 @@ internal sealed class SeedAdminUserCommandHandler : ICommandHandler<SeedAdminUse
         }
 
         // Read admin credentials from configuration
-        var adminEmail = _configuration["INITIAL_ADMIN_EMAIL"];
+        // Issue #2152: Fallback to Environment.GetEnvironmentVariable for values
+        // set by SecretLoader after IConfiguration was built
+        var adminEmail = _configuration["INITIAL_ADMIN_EMAIL"]
+            ?? Environment.GetEnvironmentVariable("INITIAL_ADMIN_EMAIL");
         var adminPassword = SecretsHelper.GetSecretOrValue(
             _configuration,
             "ADMIN_PASSWORD",
             _logger,
             required: false
-        );
-        var adminDisplayName = _configuration["INITIAL_ADMIN_DISPLAY_NAME"] ?? "System Administrator";
+        ) ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
+        var adminDisplayName = _configuration["INITIAL_ADMIN_DISPLAY_NAME"]
+            ?? Environment.GetEnvironmentVariable("INITIAL_ADMIN_DISPLAY_NAME")
+            ?? "System Administrator";
 
         // Validate credentials
         if (string.IsNullOrWhiteSpace(adminEmail))

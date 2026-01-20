@@ -259,7 +259,7 @@ if ($copied -gt 0) {
     Write-Host ""
 
     Write-Host "  IMPORTANT (Optional features):" -ForegroundColor Yellow
-    Write-Host "     - bgg.secret           -> BoardGameGeek username/password" -ForegroundColor White
+    Write-Host "     - bgg.secret           -> BoardGameGeek API token (https://boardgamegeek.com/using_the_xml_api)" -ForegroundColor White
     Write-Host "     - openrouter.secret    -> OpenRouter API key" -ForegroundColor White
     Write-Host ""
 

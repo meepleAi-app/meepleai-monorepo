@@ -26,7 +26,10 @@ public static class TestDbContextFactory
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseInMemoryDatabase(databaseName: dbName)
             .ConfigureWarnings(warnings =>
-                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
+            {
+                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning);
+                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning);
+            })
             .Options;
 
         var mockMediator = new Mock<IMediator>();

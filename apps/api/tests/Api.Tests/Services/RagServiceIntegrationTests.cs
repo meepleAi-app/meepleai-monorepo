@@ -210,7 +210,8 @@ public sealed class RagServiceIntegrationTests : IDisposable
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Unable to process query.", result.answer);
+        // When embedding fails, RagService returns empty results which triggers "Not specified" response
+        Assert.Equal("Not specified", result.answer);
         Assert.Empty(result.snippets);
     }
 

@@ -1,0 +1,42 @@
+{
+  "screenshot": {
+    "id": "user-authentication-01",
+    "filename": "01-registration-page.png",
+    "flow": "authentication",
+    "role": "user",
+    "step": 1,
+    "totalSteps": 1,
+    "title": "Registration Page",
+    "description": "New user registration form"
+  },
+  "capture": {
+    "timestamp": "2026-01-20T14:41:46.107Z",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "browser": "chromium",
+    "fullPage": true
+  },
+  "interaction": {
+    "previousAction": null,
+    "nextAction": "Fill registration form",
+    "highlightedElements": [
+      {
+        "selector": "input[type=\"email\"]",
+        "type": "box",
+        "label": "Email"
+      },
+      {
+        "selector": "input[type=\"password\"]",
+        "type": "box",
+        "label": "Password"
+      }
+    ]
+  },
+  "navigation": {
+    "url": "http://localhost:3000/register",
+    "previousStep": null,
+    "nextStep": null
+  }
+}

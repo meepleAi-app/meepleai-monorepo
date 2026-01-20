@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "node ./node_modules/next/dist/bin/next dev -p 3000",
-    "dev:visual-docs": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" node ./node_modules/next/dist/bin/next dev -p 3000",
+    "dev:visual-docs": "cross-env NODE_OPTIONS=\"--max-old-space-size=16384\" node ./node_modules/next/dist/bin/next dev -p 3000",
     "build": "node ./node_modules/next/dist/bin/next build",
     "build:analyze": "cross-env ANALYZE=true node ./node_modules/next/dist/bin/next build",
     "start": "node ./node_modules/next/dist/bin/next start -p 3000",

@@ -29,6 +29,12 @@ internal interface IGameSessionRepository : IRepository<GameSession, Guid>
     Task<IReadOnlyList<GameSession>> FindActiveAsync(int? limit = null, int? offset = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Counts all active sessions.
+    /// Issue #2755: Required for paginated response.
+    /// </summary>
+    Task<int> CountActiveAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds session history (Completed, Abandoned) with filters and pagination.
     /// </summary>
     Task<IReadOnlyList<GameSession>> FindHistoryAsync(

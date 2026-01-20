@@ -16,9 +16,32 @@ namespace Api.Extensions;
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
-    public static IServiceCollection AddRateLimitingServices(this IServiceCollection services)
+    public static IServiceCollection AddRateLimitingServices(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
+
+        // Issue #2705: Allow disabling rate limiting for integration tests
+        var rateLimitingEnabled = configuration.GetValue("RateLimiting:Enabled", true);
+        if (!rateLimitingEnabled)
+        {
+            // Register a permissive rate limiter that allows all requests
+            services.AddRateLimiter(options =>
+            {
+                options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(_ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("SharedGamesAdmin", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("SharedGamesPublic", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("FaqUpvote", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+            });
+
+            return services;
+        }
 
         services.AddRateLimiter(options =>
         {

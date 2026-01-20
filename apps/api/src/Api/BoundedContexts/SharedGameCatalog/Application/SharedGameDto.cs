@@ -43,13 +43,33 @@ public sealed record GameRulesDto(
 
 /// <summary>
 /// Data transfer object for game FAQ.
+/// Issue #2681: Added GameId, Upvotes, UpdatedAt for public API
 /// </summary>
 public sealed record GameFaqDto(
     Guid Id,
+    Guid GameId,
     string Question,
     string Answer,
     int Order,
-    DateTime CreatedAt);
+    int Upvotes,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt);
+
+/// <summary>
+/// Response DTO for paginated FAQ results.
+/// Issue #2681: Public FAQs endpoints
+/// </summary>
+public sealed record GetGameFaqsResultDto(
+    IReadOnlyCollection<GameFaqDto> Faqs,
+    int TotalCount);
+
+/// <summary>
+/// Response DTO for upvote operation.
+/// Issue #2681: Public FAQs endpoints
+/// </summary>
+public sealed record UpvoteFaqResultDto(
+    Guid Id,
+    int UpvoteCount);
 
 /// <summary>
 /// Data transfer object for game errata.

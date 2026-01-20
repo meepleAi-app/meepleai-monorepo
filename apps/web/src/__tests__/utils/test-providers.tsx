@@ -31,7 +31,7 @@ export function setupProviderMocks() {
     if (path.startsWith('/api/v1/games/') && path.endsWith('/agents')) {
       return Promise.resolve([]); // No agents by default
     }
-    if (path.startsWith('/api/v1/chats?gameId=')) {
+    if (path.startsWith('/api/v1/chat-threads?gameId=')) {
       return Promise.resolve([]); // No chats by default
     }
     return Promise.resolve(null);

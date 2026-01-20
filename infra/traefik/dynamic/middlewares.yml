@@ -63,22 +63,31 @@ http:
         # accessControlAllowCredentials: true
         # accessControlMaxAge: 100
 
-    # CORS for API services
+    # CORS for API services - Development
+    # NOTE: Production CORS is configured in middlewares.prod.yml with actual domains
     cors-api:
       headers:
         accessControlAllowOriginList:
           - "http://localhost:3000"
           - "http://localhost:8080"
+          - "http://127.0.0.1:3000"
+          - "http://127.0.0.1:8080"
         accessControlAllowMethods:
           - GET
           - POST
           - PUT
           - DELETE
+          - PATCH
           - OPTIONS
         accessControlAllowHeaders:
-          - "*"
+          - "Content-Type"
+          - "Authorization"
+          - "X-Requested-With"
+          - "Accept"
+          - "Origin"
+          - "X-CSRF-Token"
         accessControlAllowCredentials: true
-        accessControlMaxAge: 100
+        accessControlMaxAge: 7200  # Cache preflight for 2 hours
 
     # Compression
     # Reduces bandwidth usage

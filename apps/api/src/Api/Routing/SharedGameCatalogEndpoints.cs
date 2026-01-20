@@ -658,16 +658,22 @@ internal static class SharedGameCatalogEndpoints
         }
     }
 
-#pragma warning disable S1172 // Unused method parameters - HttpContext required by ASP.NET routing
     private static async Task<IResult> HandleImportFromBgg(
         ImportFromBggRequest request,
         IMediator mediator,
-        HttpContext _,
+        HttpContext context,
         CancellationToken ct)
     {
-        // Policies already verified Admin/Editor role - no additional check needed
+        // Policies already verified Admin/Editor role - extract userId from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        var command = new ImportGameFromBggCommand(request.BggId);
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new ImportGameFromBggCommand(request.BggId, userId);
         var gameId = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Created($"/api/v1/shared-games/{gameId}", gameId);
     }
@@ -675,16 +681,22 @@ internal static class SharedGameCatalogEndpoints
     private static async Task<IResult> HandleBulkImport(
         BulkImportRequest request,
         IMediator mediator,
-        HttpContext _,
+        HttpContext context,
         CancellationToken ct)
     {
-        // Policies already verified Admin role - no additional check needed
+        // Policies already verified Admin role - extract userId from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        var command = new BulkImportGamesCommand(request.Games);
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new BulkImportGamesCommand(request.Games, userId);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
-#pragma warning restore S1172
 
     private static async Task<IResult> HandleDeleteGame(
         Guid id,

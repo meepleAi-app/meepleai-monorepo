@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   Upload,
   FileSpreadsheet,
+  FileJson,
   Globe,
   AlertCircle,
   CheckCircle2,
@@ -49,7 +50,12 @@ import { Label } from '@/components/ui/primitives/label';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { useApiClient } from '@/lib/api/context';
-import type { CreateSharedGameRequest } from '@/lib/api/schemas/shared-games.schemas';
+import type {
+  CreateSharedGameRequest,
+  BulkGameImportDto,
+  BulkImportResult,
+} from '@/lib/api/schemas/shared-games.schemas';
+import { BulkGameImportDtoSchema } from '@/lib/api/schemas/shared-games.schemas';
 
 // CSV column mapping for game data
 interface CsvRow {
@@ -85,7 +91,15 @@ interface BggImportItem {
   gameId?: string;
 }
 
-type ImportMode = 'csv' | 'bgg';
+// JSON import item
+interface JsonImportItem {
+  id: string;
+  data: BulkGameImportDto;
+  status: 'pending' | 'valid' | 'invalid';
+  validationError?: string;
+}
+
+type ImportMode = 'csv' | 'bgg' | 'json';
 
 // CSV template headers
 const CSV_HEADERS = [
@@ -123,6 +137,15 @@ export function ImportClient() {
   // BGG Import state
   const [bggInput, setBggInput] = useState<string>('');
   const [bggItems, setBggItems] = useState<BggImportItem[]>([]);
+
+  // JSON Import state
+  const [jsonItems, setJsonItems] = useState<JsonImportItem[]>([]);
+  const [jsonParseError, setJsonParseError] = useState<string | null>(null);
+  const [jsonInputSource, setJsonInputSource] = useState<'file' | 'textarea'>('file');
+  const [jsonTextInput, setJsonTextInput] = useState<string>('');
+  const [jsonFileName, setJsonFileName] = useState<string>('');
+  const [jsonImportResult, setJsonImportResult] = useState<BulkImportResult | null>(null);
+  const jsonFileInputRef = useRef<HTMLInputElement>(null);
 
   // Import progress
   const [importing, setImporting] = useState(false);
@@ -372,6 +395,240 @@ export function ImportClient() {
     toast.success('Dati BGG recuperati');
   }, [bggItems, fetchBggData]);
 
+  // ========== JSON Import Functions ==========
+
+  const parseJsonInput = useCallback(
+    (content: string): JsonImportItem[] => {
+      let parsed: unknown;
+
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        throw new Error('JSON non valido. Verifica la sintassi del file.');
+      }
+
+      // Support both [...] and { "games": [...] } formats
+      let gamesArray: unknown[];
+      if (Array.isArray(parsed)) {
+        gamesArray = parsed;
+      } else if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        'games' in parsed &&
+        Array.isArray((parsed as { games: unknown[] }).games)
+      ) {
+        gamesArray = (parsed as { games: unknown[] }).games;
+      } else {
+        throw new Error(
+          'Formato non valido. Atteso un array di giochi o un oggetto con proprietà "games".'
+        );
+      }
+
+      if (gamesArray.length === 0) {
+        throw new Error('Il file JSON non contiene giochi.');
+      }
+
+      if (gamesArray.length > 100) {
+        throw new Error('Massimo 100 giochi per importazione. Il file ne contiene ' + gamesArray.length + '.');
+      }
+
+      const items: JsonImportItem[] = gamesArray.map((item, index) => {
+        const id = `json-${index}-${Date.now()}`;
+
+        // Validate with Zod schema
+        const validation = BulkGameImportDtoSchema.safeParse(item);
+
+        if (!validation.success) {
+          const errorMessages = validation.error.errors
+            .map(e => `${e.path.join('.')}: ${e.message}`)
+            .join(', ');
+          return {
+            id,
+            data: item as BulkGameImportDto,
+            status: 'invalid' as const,
+            validationError: errorMessages,
+          };
+        }
+
+        // Check that at least bggId or title is present
+        const data = validation.data;
+        if (!data.bggId && !data.title) {
+          return {
+            id,
+            data,
+            status: 'invalid' as const,
+            validationError: 'Richiesto almeno bggId o title',
+          };
+        }
+
+        return {
+          id,
+          data,
+          status: 'valid' as const,
+        };
+      });
+
+      return items;
+    },
+    []
+  );
+
+  const handleJsonFileSelect = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (!file.name.endsWith('.json')) {
+        setJsonParseError('Seleziona un file JSON (.json)');
+        return;
+      }
+
+      setJsonFileName(file.name);
+      setJsonParseError(null);
+      setJsonImportResult(null);
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const content = e.target?.result as string;
+          const items = parseJsonInput(content);
+          setJsonItems(items);
+
+          const validCount = items.filter(i => i.status === 'valid').length;
+          const invalidCount = items.filter(i => i.status === 'invalid').length;
+
+          if (invalidCount > 0) {
+            toast.warning(`${items.length} giochi trovati: ${validCount} validi, ${invalidCount} con errori`);
+          } else {
+            toast.success(`${items.length} giochi trovati nel file JSON`);
+          }
+        } catch (error) {
+          setJsonParseError(
+            error instanceof Error ? error.message : 'Errore durante il parsing del JSON'
+          );
+          setJsonItems([]);
+        }
+      };
+
+      reader.onerror = () => {
+        setJsonParseError('Errore durante la lettura del file');
+      };
+
+      reader.readAsText(file);
+    },
+    [parseJsonInput]
+  );
+
+  const parseJsonTextarea = useCallback(() => {
+    if (!jsonTextInput.trim()) {
+      toast.error('Inserisci del JSON da analizzare');
+      return;
+    }
+
+    setJsonParseError(null);
+    setJsonImportResult(null);
+
+    try {
+      const items = parseJsonInput(jsonTextInput);
+      setJsonItems(items);
+
+      const validCount = items.filter(i => i.status === 'valid').length;
+      const invalidCount = items.filter(i => i.status === 'invalid').length;
+
+      if (invalidCount > 0) {
+        toast.warning(`${items.length} giochi trovati: ${validCount} validi, ${invalidCount} con errori`);
+      } else {
+        toast.success(`${items.length} giochi trovati`);
+      }
+    } catch (error) {
+      setJsonParseError(
+        error instanceof Error ? error.message : 'Errore durante il parsing del JSON'
+      );
+      setJsonItems([]);
+    }
+  }, [jsonTextInput, parseJsonInput]);
+
+  const startJsonImport = useCallback(async () => {
+    const validItems = jsonItems.filter(item => item.status === 'valid');
+    if (validItems.length === 0) {
+      toast.warning('Nessun gioco valido da importare');
+      return;
+    }
+
+    setImporting(true);
+    setJsonImportResult(null);
+
+    try {
+      const gamesToImport: BulkGameImportDto[] = validItems.map(item => item.data);
+      const result = await sharedGames.bulkImport(gamesToImport);
+
+      setJsonImportResult(result);
+
+      if (result.failureCount === 0) {
+        toast.success(`Importazione completata: ${result.successCount} giochi importati`);
+      } else {
+        toast.warning(
+          `Importazione completata: ${result.successCount} successi, ${result.failureCount} errori`
+        );
+      }
+
+      // Clear items on success
+      if (result.successCount > 0 && result.failureCount === 0) {
+        setJsonItems([]);
+        setJsonTextInput('');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Errore durante l'importazione");
+    } finally {
+      setImporting(false);
+    }
+  }, [jsonItems, sharedGames]);
+
+  const downloadJsonTemplate = useCallback(() => {
+    const template = [
+      {
+        bggId: 13,
+        title: 'Catan',
+        yearPublished: 1995,
+        description: 'I coloni di Catan è un gioco da tavolo...',
+        minPlayers: 3,
+        maxPlayers: 4,
+        playingTimeMinutes: 90,
+        minAge: 10,
+        complexityRating: 2.3,
+        averageRating: 7.2,
+        imageUrl: 'https://example.com/catan.jpg',
+        thumbnailUrl: 'https://example.com/catan_thumb.jpg',
+      },
+    ];
+
+    const content = JSON.stringify(template, null, 2);
+    const blob = new Blob([content], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'shared_games_template.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const clearJsonImport = useCallback(() => {
+    setJsonItems([]);
+    setJsonFileName('');
+    setJsonParseError(null);
+    setJsonTextInput('');
+    setJsonImportResult(null);
+    if (jsonFileInputRef.current) {
+      jsonFileInputRef.current.value = '';
+    }
+  }, []);
+
+  const removeJsonItem = useCallback((id: string) => {
+    setJsonItems(prev => prev.filter(item => item.id !== id));
+  }, []);
+
   // ========== Import Execution ==========
 
   const convertToCreateRequest = (row: CsvRow): CreateSharedGameRequest => {
@@ -585,6 +842,9 @@ export function ImportClient() {
   const bggSuccessCount = bggItems.filter(i => i.status === 'success').length;
   const bggErrorCount = bggItems.filter(i => i.status === 'error').length;
 
+  const jsonValidCount = jsonItems.filter(i => i.status === 'valid').length;
+  const jsonInvalidCount = jsonItems.filter(i => i.status === 'invalid').length;
+
   return (
     <AdminAuthGuard loading={authLoading} user={user}>
       <div className="container mx-auto py-8 px-4">
@@ -623,7 +883,7 @@ export function ImportClient() {
 
         {/* Import Tabs */}
         <Tabs value={mode} onValueChange={v => setMode(v as ImportMode)}>
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="csv" className="flex items-center gap-2">
               <FileSpreadsheet className="h-4 w-4" />
               Importa da CSV
@@ -631,6 +891,10 @@ export function ImportClient() {
             <TabsTrigger value="bgg" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
               Importa da BGG
+            </TabsTrigger>
+            <TabsTrigger value="json" className="flex items-center gap-2">
+              <FileJson className="h-4 w-4" />
+              Importa da JSON
             </TabsTrigger>
           </TabsList>
 
@@ -923,6 +1187,247 @@ export function ImportClient() {
                 L&apos;integrazione con l&apos;API di BoardGameGeek recupera dati di base. Potrebbe
                 essere necessario completare manualmente alcuni campi come descrizione, immagini e
                 regole dopo l&apos;importazione.
+              </AlertDescription>
+            </Alert>
+          </TabsContent>
+
+          {/* JSON Import Tab */}
+          <TabsContent value="json" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Importa da File JSON</CardTitle>
+                <CardDescription>
+                  Carica un file JSON o incolla direttamente il contenuto JSON. Massimo 100 giochi
+                  per importazione. Ogni gioco deve avere almeno bggId o title.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Input Source Toggle */}
+                <div className="flex gap-2 mb-4">
+                  <Button
+                    variant={jsonInputSource === 'file' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setJsonInputSource('file')}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Carica File
+                  </Button>
+                  <Button
+                    variant={jsonInputSource === 'textarea' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setJsonInputSource('textarea')}
+                  >
+                    Incolla JSON
+                  </Button>
+                </div>
+
+                {jsonInputSource === 'file' ? (
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <Label htmlFor="json-file">File JSON</Label>
+                      <Input
+                        ref={jsonFileInputRef}
+                        id="json-file"
+                        type="file"
+                        accept=".json"
+                        onChange={handleJsonFileSelect}
+                        disabled={importing}
+                        className="mt-1"
+                      />
+                      {jsonFileName && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          File selezionato: {jsonFileName}
+                        </p>
+                      )}
+                    </div>
+                    <Button variant="outline" onClick={downloadJsonTemplate} className="mt-6">
+                      <Download className="h-4 w-4 mr-2" />
+                      Scarica Template
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="json-textarea">Contenuto JSON</Label>
+                    <Textarea
+                      id="json-textarea"
+                      placeholder='[{"bggId": 13, "title": "Catan", ...}]'
+                      value={jsonTextInput}
+                      onChange={e => setJsonTextInput(e.target.value)}
+                      disabled={importing}
+                      className="font-mono text-sm"
+                      rows={8}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={parseJsonTextarea}
+                        disabled={importing || !jsonTextInput.trim()}
+                      >
+                        Analizza JSON
+                      </Button>
+                      <Button variant="outline" onClick={downloadJsonTemplate}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Scarica Template
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {jsonParseError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Errore</AlertTitle>
+                    <AlertDescription>{jsonParseError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Import Result */}
+                {jsonImportResult && (
+                  <Alert variant={jsonImportResult.failureCount === 0 ? 'default' : 'destructive'}>
+                    <CheckCircle2 className="h-4 w-4" />
+                    <AlertTitle>Risultato Importazione</AlertTitle>
+                    <AlertDescription>
+                      <p>
+                        Successi: {jsonImportResult.successCount} | Errori:{' '}
+                        {jsonImportResult.failureCount}
+                      </p>
+                      {jsonImportResult.errors.length > 0 && (
+                        <ul className="mt-2 list-disc list-inside text-sm">
+                          {jsonImportResult.errors.slice(0, 5).map((err, idx) => (
+                            <li key={idx}>{err}</li>
+                          ))}
+                          {jsonImportResult.errors.length > 5 && (
+                            <li>...e altri {jsonImportResult.errors.length - 5} errori</li>
+                          )}
+                        </ul>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {jsonItems.length > 0 && (
+                  <div className="flex items-center gap-4">
+                    <Badge variant="default" className="bg-green-600">
+                      {jsonValidCount} validi
+                    </Badge>
+                    {jsonInvalidCount > 0 && (
+                      <Badge variant="destructive">{jsonInvalidCount} con errori</Badge>
+                    )}
+                    <div className="flex-1" />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearJsonImport}
+                      disabled={importing}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Cancella
+                    </Button>
+                    <Button onClick={startJsonImport} disabled={importing || jsonValidCount === 0}>
+                      {importing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Importazione...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Importa {jsonValidCount} giochi
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* JSON Preview Table */}
+            {jsonItems.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Anteprima Importazione JSON</CardTitle>
+                  <CardDescription>
+                    Verifica i dati prima di procedere con l&apos;importazione
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[50px]">Stato</TableHead>
+                          <TableHead>Titolo</TableHead>
+                          <TableHead>BGG ID</TableHead>
+                          <TableHead>Anno</TableHead>
+                          <TableHead>Giocatori</TableHead>
+                          <TableHead>Tempo</TableHead>
+                          <TableHead className="w-[100px]">Azioni</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {jsonItems.map(item => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              {item.status === 'valid' ? (
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <XCircle className="h-4 w-4 text-destructive" />
+                              )}
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {item.data.title || '-'}
+                              {item.validationError && (
+                                <p className="text-xs text-destructive mt-1">
+                                  {item.validationError}
+                                </p>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-mono">{item.data.bggId || '-'}</TableCell>
+                            <TableCell>{item.data.yearPublished || '-'}</TableCell>
+                            <TableCell>
+                              {item.data.minPlayers && item.data.maxPlayers
+                                ? `${item.data.minPlayers}-${item.data.maxPlayers}`
+                                : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {item.data.playingTimeMinutes
+                                ? `${item.data.playingTimeMinutes} min`
+                                : '-'}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeJsonItem(item.id)}
+                                disabled={importing}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* JSON Format Note */}
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Formato JSON Supportato</AlertTitle>
+              <AlertDescription>
+                <p className="mb-2">
+                  Il file JSON deve contenere un array di oggetti gioco o un oggetto con proprietà
+                  &quot;games&quot;:
+                </p>
+                <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
+                  {`[{"bggId": 13, "title": "Catan", "yearPublished": 1995, ...}]`}
+                </pre>
+                <p className="mt-2 text-sm">
+                  Campi supportati: bggId, title, yearPublished, description, minPlayers, maxPlayers,
+                  playingTimeMinutes, minAge, complexityRating, averageRating, imageUrl, thumbnailUrl
+                </p>
               </AlertDescription>
             </Alert>
           </TabsContent>

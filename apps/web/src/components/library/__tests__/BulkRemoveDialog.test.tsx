@@ -94,7 +94,8 @@ describe('BulkRemoveDialog - Rendering', () => {
   it('renders dialog with game count', () => {
     render(<BulkRemoveDialog {...defaultProps} />, { wrapper: createWrapper() });
 
-    expect(screen.getByText(/Rimuovi 3 giochi/i)).toBeInTheDocument();
+    // Use heading role to avoid matching both dialog title and button
+    expect(screen.getByRole('heading', { name: /Rimuovi 3 giochi/i })).toBeInTheDocument();
   });
 
   it('displays game titles', () => {

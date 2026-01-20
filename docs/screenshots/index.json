@@ -1,0 +1,283 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-01-20T13:14:14.075Z",
+  "totalScreenshots": 7,
+  "flows": {
+    "user": [],
+    "editor": [],
+    "admin": [
+      {
+        "name": "approval-workflow",
+        "role": "admin",
+        "description": "Reviewing and approving/rejecting submitted content",
+        "directory": "admin-flows\\approval-workflow",
+        "screenshots": [
+          {
+            "screenshot": {
+              "id": "admin-approval-workflow-01",
+              "filename": "01-approval-queue.png",
+              "flow": "approval-workflow",
+              "role": "admin",
+              "step": 1,
+              "totalSteps": 1,
+              "title": "Approval Queue",
+              "description": "View all games pending admin approval"
+            },
+            "capture": {
+              "timestamp": "2026-01-20T13:10:56.250Z",
+              "viewport": {
+                "width": 1280,
+                "height": 720
+              },
+              "browser": "chromium",
+              "fullPage": true
+            },
+            "interaction": {
+              "previousAction": null,
+              "nextAction": "Review submissions",
+              "highlightedElements": [
+                {
+                  "selector": "h1, [data-testid=\"approvals-heading\"]",
+                  "type": "box",
+                  "label": "Approvals"
+                }
+              ]
+            },
+            "navigation": {
+              "url": "http://localhost:3000/admin/approvals",
+              "previousStep": null,
+              "nextStep": "01-ready-to-approve.png"
+            }
+          },
+          {
+            "screenshot": {
+              "id": "admin-approval-workflow-01",
+              "filename": "01-ready-to-approve.png",
+              "flow": "approval-workflow",
+              "role": "admin",
+              "step": 1,
+              "totalSteps": 1,
+              "title": "Ready to Approve",
+              "description": "Submission reviewed and ready for approval"
+            },
+            "capture": {
+              "timestamp": "2026-01-20T13:11:04.264Z",
+              "viewport": {
+                "width": 1280,
+                "height": 720
+              },
+              "browser": "chromium",
+              "fullPage": true
+            },
+            "interaction": {
+              "previousAction": null,
+              "nextAction": "Click approve",
+              "highlightedElements": []
+            },
+            "navigation": {
+              "url": "http://localhost:3000/admin/approvals/pending-1",
+              "previousStep": "01-approval-queue.png",
+              "nextStep": "01-review-submission.png"
+            }
+          },
+          {
+            "screenshot": {
+              "id": "admin-approval-workflow-01",
+              "filename": "01-review-submission.png",
+              "flow": "approval-workflow",
+              "role": "admin",
+              "step": 1,
+              "totalSteps": 1,
+              "title": "Review Submission",
+              "description": "Detailed view of submitted game for review"
+            },
+            "capture": {
+              "timestamp": "2026-01-20T13:11:02.797Z",
+              "viewport": {
+                "width": 1280,
+                "height": 720
+              },
+              "browser": "chromium",
+              "fullPage": true
+            },
+            "interaction": {
+              "previousAction": null,
+              "nextAction": "Review content",
+              "highlightedElements": [
+                {
+                  "selector": "h1, [data-testid=\"game-title\"]",
+                  "type": "box",
+                  "label": "Game"
+                },
+                {
+                  "selector": "text=/submitted by/i",
+                  "type": "box",
+                  "label": "Submitter"
+                }
+              ]
+            },
+            "navigation": {
+              "url": "http://localhost:3000/admin/approvals/pending-1",
+              "previousStep": "01-ready-to-approve.png",
+              "nextStep": "01-submission-to-reject.png"
+            }
+          },
+          {
+            "screenshot": {
+              "id": "admin-approval-workflow-01",
+              "filename": "01-submission-to-reject.png",
+              "flow": "approval-workflow",
+              "role": "admin",
+              "step": 1,
+              "totalSteps": 1,
+              "title": "Submission to Reject",
+              "description": "Submission requiring rejection with feedback"
+            },
+            "capture": {
+              "timestamp": "2026-01-20T13:11:05.828Z",
+              "viewport": {
+                "width": 1280,
+                "height": 720
+              },
+              "browser": "chromium",
+              "fullPage": true
+            },
+            "interaction": {
+              "previousAction": null,
+              "nextAction": "Click reject",
+              "highlightedElements": []
+            },
+            "navigation": {
+              "url": "http://localhost:3000/admin/approvals/pending-1",
+              "previousStep": "01-review-submission.png",
+              "nextStep": null
+            }
+          }
+        ],
+        "totalSteps": 4,
+        "generatedAt": "2026-01-20T13:14:14.078Z"
+      },
+      {
+        "name": "monitoring",
+        "role": "admin",
+        "description": "System monitoring - dashboard, alerts, logs",
+        "directory": "admin-flows\\monitoring",
+        "screenshots": [
+          {
+            "screenshot": {
+              "id": "admin-monitoring-01",
+              "filename": "01-admin-dashboard.png",
+              "flow": "monitoring",
+              "role": "admin",
+              "step": 1,
+              "totalSteps": 1,
+              "title": "Admin Dashboard",
+              "description": "Overview of system metrics and health"
+            },
+            "capture": {
+              "timestamp": "2026-01-20T13:11:07.233Z",
+              "viewport": {
+                "width": 1280,
+                "height": 720
+              },
+              "browser": "chromium",
+              "fullPage": true
+            },
+            "interaction": {
+              "previousAction": null,
+              "nextAction": "Review metrics",
+              "highlightedElements": [
+                {
+                  "selector": "h1, [data-testid=\"dashboard-heading\"]",
+                  "type": "box",
+                  "label": "Dashboard"
+                }
+              ]
+            },
+            "navigation": {
+              "url": "http://localhost:3000/admin/dashboard",
+              "previousStep": null,
+              "nextStep": "01-system-alerts.png"
+            }
+          },
+          {
+            "screenshot": {
+              "id": "admin-monitoring-01",
+              "filename": "01-system-alerts.png",
+              "flow": "monitoring",
+              "role": "admin",
+              "step": 1,
+              "totalSteps": 1,
+              "title": "System Alerts",
+              "description": "View active and past system alerts"
+            },
+            "capture": {
+              "timestamp": "2026-01-20T13:11:11.581Z",
+              "viewport": {
+                "width": 1280,
+                "height": 720
+              },
+              "browser": "chromium",
+              "fullPage": true
+            },
+            "interaction": {
+              "previousAction": null,
+              "nextAction": "Review alerts",
+              "highlightedElements": [
+                {
+                  "selector": "text=/\\d+ alert/i, [data-testid=\"alert-count\"]",
+                  "type": "box",
+                  "label": "Count"
+                }
+              ]
+            },
+            "navigation": {
+              "url": "http://localhost:3000/admin/alerts",
+              "previousStep": "01-admin-dashboard.png",
+              "nextStep": "01-system-health.png"
+            }
+          },
+          {
+            "screenshot": {
+              "id": "admin-monitoring-01",
+              "filename": "01-system-health.png",
+              "flow": "monitoring",
+              "role": "admin",
+              "step": 1,
+              "totalSteps": 1,
+              "title": "System Health",
+              "description": "Detailed health status of all services"
+            },
+            "capture": {
+              "timestamp": "2026-01-20T13:11:09.793Z",
+              "viewport": {
+                "width": 1280,
+                "height": 720
+              },
+              "browser": "chromium",
+              "fullPage": true
+            },
+            "interaction": {
+              "previousAction": null,
+              "nextAction": "Review services",
+              "highlightedElements": []
+            },
+            "navigation": {
+              "url": "http://localhost:3000/admin/health",
+              "previousStep": "01-system-alerts.png",
+              "nextStep": null
+            }
+          }
+        ],
+        "totalSteps": 3,
+        "generatedAt": "2026-01-20T13:14:14.079Z"
+      }
+    ]
+  },
+  "summary": {
+    "userFlows": 0,
+    "editorFlows": 0,
+    "adminFlows": 2,
+    "totalFlows": 2
+  }
+}

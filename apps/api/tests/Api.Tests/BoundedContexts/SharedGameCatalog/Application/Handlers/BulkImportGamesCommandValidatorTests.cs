@@ -24,7 +24,7 @@ public class BulkImportGamesCommandValidatorTests
             new BulkGameImportDto(123, null, null, null, null, null, null, null),
             new BulkGameImportDto(null, "Manual Game", 2020, "Description", 2, 4, 60, 10)
         };
-        var command = new BulkImportGamesCommand(games);
+        var command = new BulkImportGamesCommand(games, Guid.NewGuid());
         var result = _validator.TestValidate(command);
         result.ShouldNotHaveAnyValidationErrors();
     }
@@ -32,7 +32,7 @@ public class BulkImportGamesCommandValidatorTests
     [Fact]
     public void Validate_WithNullGames_FailsValidation()
     {
-        var command = new BulkImportGamesCommand(null!);
+        var command = new BulkImportGamesCommand(null!, Guid.NewGuid());
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.Games);
     }
@@ -40,7 +40,7 @@ public class BulkImportGamesCommandValidatorTests
     [Fact]
     public void Validate_WithEmptyGames_FailsValidation()
     {
-        var command = new BulkImportGamesCommand(new List<BulkGameImportDto>());
+        var command = new BulkImportGamesCommand(new List<BulkGameImportDto>(), Guid.NewGuid());
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.Games);
     }
@@ -51,7 +51,7 @@ public class BulkImportGamesCommandValidatorTests
         var games = Enumerable.Range(1, 101)
             .Select(i => new BulkGameImportDto(i, null, null, null, null, null, null, null))
             .ToList();
-        var command = new BulkImportGamesCommand(games);
+        var command = new BulkImportGamesCommand(games, Guid.NewGuid());
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.Games);
     }
@@ -63,7 +63,7 @@ public class BulkImportGamesCommandValidatorTests
         {
             new BulkGameImportDto(null, null, null, null, null, null, null, null)
         };
-        var command = new BulkImportGamesCommand(games);
+        var command = new BulkImportGamesCommand(games, Guid.NewGuid());
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor("Games[0]");
     }
@@ -75,8 +75,20 @@ public class BulkImportGamesCommandValidatorTests
         {
             new BulkGameImportDto(null, "   ", null, null, null, null, null, null)
         };
-        var command = new BulkImportGamesCommand(games);
+        var command = new BulkImportGamesCommand(games, Guid.NewGuid());
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor("Games[0]");
+    }
+
+    [Fact]
+    public void Validate_WithEmptyUserId_FailsValidation()
+    {
+        var games = new List<BulkGameImportDto>
+        {
+            new BulkGameImportDto(123, null, null, null, null, null, null, null)
+        };
+        var command = new BulkImportGamesCommand(games, Guid.Empty);
+        var result = _validator.TestValidate(command);
+        result.ShouldHaveValidationErrorFor(x => x.UserId);
     }
 }

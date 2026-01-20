@@ -1,0 +1,202 @@
+# Docker Compose - Production Override for meepleai.io
+#
+# This file extends docker-compose.yml + compose.prod.yml with meepleai.io specific config
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.traefik.yml -f compose.prod.yml -f compose.meepleai.yml up -d
+#
+# Or use the deploy script:
+#   ./scripts/deploy-meepleai.sh
+#
+# Domain Configuration:
+#   - www.meepleai.io    → Web Frontend (Next.js)
+#   - api.meepleai.io    → Backend API (.NET)
+#   - grafana.meepleai.io → Monitoring Dashboard
+#   - traefik.meepleai.io → Traefik Dashboard (admin only)
+
+services:
+  # ============================================================================
+  # Security: Docker Socket Proxy (REQUIRED for production)
+  # ============================================================================
+  docker-socket-proxy:
+    image: ghcr.io/tecnativa/docker-socket-proxy:0.3.0
+    container_name: meepleai-socket-proxy
+    restart: always
+    environment:
+      CONTAINERS: 1
+      SERVICES: 0
+      TASKS: 0
+      NETWORKS: 0
+      NODES: 0
+      POST: 0
+      BUILD: 0
+      COMMIT: 0
+      CONFIGS: 0
+      DISTRIBUTION: 0
+      EXEC: 0
+      IMAGES: 0
+      INFO: 0
+      PLUGINS: 0
+      SECRETS: 0
+      SWARM: 0
+      SYSTEM: 0
+      VOLUMES: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - meepleai
+    security_opt:
+      - no-new-privileges=true
+    read_only: true
+    tmpfs:
+      - /run
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+  # ============================================================================
+  # Traefik Reverse Proxy - Production Config
+  # ============================================================================
+  traefik:
+    image: traefik:v3.2
+    container_name: meepleai-traefik
+    restart: always
+    depends_on:
+      - docker-socket-proxy
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "443:443"
+      # Dashboard NOT exposed publicly - access via traefik.meepleai.io with auth
+    environment:
+      TZ: Europe/Rome
+    volumes:
+      - ./traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./traefik/letsencrypt:/letsencrypt
+      - ./traefik/logs:/var/log/traefik
+    labels:
+      - "traefik.enable=true"
+      # Dashboard - HTTPS with basic auth
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.meepleai.io`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.routers.traefik-dashboard.middlewares=dashboard-auth@file,ip-whitelist-admin@file"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - meepleai
+    security_opt:
+      - no-new-privileges=true
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # ============================================================================
+  # API Backend - meepleai.io
+  # ============================================================================
+  api:
+    labels:
+      - "traefik.enable=true"
+      # Main API router
+      - "traefik.http.routers.api.rule=Host(`api.meepleai.io`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api.middlewares=api-chain@file"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+      - "traefik.http.services.api.loadbalancer.server.scheme=http"
+      # Health check endpoint
+      - "traefik.http.services.api.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.api.loadbalancer.healthcheck.interval=30s"
+      # Auth endpoints with stricter rate limiting
+      - "traefik.http.routers.api-auth.rule=Host(`api.meepleai.io`) && PathPrefix(`/api/v1/auth`)"
+      - "traefik.http.routers.api-auth.entrypoints=websecure"
+      - "traefik.http.routers.api-auth.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api-auth.middlewares=auth-chain@file"
+      - "traefik.http.routers.api-auth.service=api"
+      - "traefik.http.routers.api-auth.priority=100"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: "http://+:8080"
+      # CORS configuration for frontend
+      CORS_ORIGINS: "https://www.meepleai.io,https://meepleai.io"
+
+  # ============================================================================
+  # Web Frontend - meepleai.io
+  # ============================================================================
+  web:
+    labels:
+      - "traefik.enable=true"
+      # Main website router (www + apex)
+      - "traefik.http.routers.web.rule=Host(`www.meepleai.io`) || Host(`meepleai.io`)"
+      - "traefik.http.routers.web.entrypoints=websecure"
+      - "traefik.http.routers.web.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.web.middlewares=web-chain@file"
+      - "traefik.http.services.web.loadbalancer.server.port=3000"
+      # Redirect apex to www
+      - "traefik.http.routers.web-apex.rule=Host(`meepleai.io`)"
+      - "traefik.http.routers.web-apex.entrypoints=websecure"
+      - "traefik.http.routers.web-apex.middlewares=redirect-to-www"
+      - "traefik.http.middlewares.redirect-to-www.redirectregex.regex=^https://meepleai\\.io/(.*)"
+      - "traefik.http.middlewares.redirect-to-www.redirectregex.replacement=https://www.meepleai.io/$${1}"
+      - "traefik.http.middlewares.redirect-to-www.redirectregex.permanent=true"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE: "https://api.meepleai.io"
+      NEXT_PUBLIC_APP_URL: "https://www.meepleai.io"
+
+  # ============================================================================
+  # Grafana Monitoring - meepleai.io
+  # ============================================================================
+  grafana:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.meepleai.io`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.grafana.middlewares=security-headers@file"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    environment:
+      GF_SERVER_ROOT_URL: "https://grafana.meepleai.io"
+      GF_SERVER_DOMAIN: "grafana.meepleai.io"
+
+  # ============================================================================
+  # Seq Logging (Internal Only - not exposed)
+  # ============================================================================
+  seq:
+    labels:
+      - "traefik.enable=false"
+
+  # ============================================================================
+  # Jaeger Tracing (Internal Only - not exposed)
+  # ============================================================================
+  jaeger:
+    labels:
+      - "traefik.enable=false"
+
+  # ============================================================================
+  # Prometheus (Internal Only - accessed via Grafana)
+  # ============================================================================
+  prometheus:
+    labels:
+      - "traefik.enable=false"
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  meepleai:
+    name: meepleai
+    driver: bridge

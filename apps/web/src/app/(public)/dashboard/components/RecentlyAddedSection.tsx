@@ -18,7 +18,8 @@ import { AlertCircle, ArrowRight, Library } from 'lucide-react';
 import Link from 'next/link';
 
 
-import { RecentLibraryCard } from '@/components/library';
+// Direct import to avoid loading framer-motion through barrel export (UserGameCard)
+import { RecentLibraryCard } from '@/components/library/RecentLibraryCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';

@@ -44,7 +44,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
     private readonly string _testDbName;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
-    private MeepleAiDbContext _dbContext = null!;
+    // Issue #2707: Removed _dbContext field - use fresh scope for each operation to prevent ObjectDisposedException
 
     private static readonly Guid TestUserId = Guid.NewGuid();
 
@@ -100,21 +100,20 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
                 });
             });
 
-        // Initialize database
+        // Issue #2707: Initialize database using scoped context (disposed after setup)
         using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             await dbContext.Database.MigrateAsync();
-            _dbContext = dbContext;
 
-            // Seed test data
-            await SeedTestDataAsync();
+            // Seed test data within the same scope
+            await SeedTestDataAsync(dbContext);
         }
 
         _client = _factory.CreateClient();
     }
 
-    private async Task SeedTestDataAsync()
+    private async Task SeedTestDataAsync(MeepleAiDbContext dbContext)
     {
         // Seed test user for FK
         var user = new UserEntity
@@ -125,27 +124,24 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
             Role = "Admin",
             CreatedAt = DateTime.UtcNow
         };
-        _dbContext.Set<UserEntity>().Add(user);
+        dbContext.Set<UserEntity>().Add(user);
 
         // Seed categories
         var category = new GameCategoryEntity { Id = Guid.NewGuid(), Name = "Strategy", Slug = "strategy" };
-        _dbContext.Set<GameCategoryEntity>().Add(category);
+        dbContext.Set<GameCategoryEntity>().Add(category);
 
         // Seed mechanics
         var mechanic = new GameMechanicEntity { Id = Guid.NewGuid(), Name = "Deck Building", Slug = "deck-building" };
-        _dbContext.Set<GameMechanicEntity>().Add(mechanic);
+        dbContext.Set<GameMechanicEntity>().Add(mechanic);
 
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
     }
 
     public async ValueTask DisposeAsync()
     {
         _client?.Dispose();
         _factory?.Dispose();
-        if (_dbContext != null)
-        {
-            await _dbContext.DisposeAsync();
-        }
+        // Issue #2707: No _dbContext field to dispose - all contexts are scoped and disposed automatically
         await _fixture.DropIsolatedDatabaseAsync(_testDbName);
     }
 
@@ -216,8 +212,10 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        // Verify game status changed
-        var updatedGame = await _dbContext.SharedGames.FindAsync(game.Id);
+        // Issue #2707: Use fresh scope for assertions to prevent ObjectDisposedException
+        using var assertScope = _factory.Services.CreateScope();
+        var dbContext = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var updatedGame = await dbContext.SharedGames.FindAsync(game.Id);
         Assert.NotNull(updatedGame);
         Assert.Equal((int)GameStatus.PendingApproval, updatedGame.Status);
     }
@@ -234,8 +232,10 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        // Verify game status changed
-        var updatedGame = await _dbContext.SharedGames.FindAsync(game.Id);
+        // Issue #2707: Use fresh scope for assertions to prevent ObjectDisposedException
+        using var assertScope = _factory.Services.CreateScope();
+        var dbContext = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var updatedGame = await dbContext.SharedGames.FindAsync(game.Id);
         Assert.NotNull(updatedGame);
         Assert.Equal((int)GameStatus.Published, updatedGame.Status);
     }
@@ -253,8 +253,10 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        // Verify game status changed back to Draft
-        var updatedGame = await _dbContext.SharedGames.FindAsync(game.Id);
+        // Issue #2707: Use fresh scope for assertions to prevent ObjectDisposedException
+        using var assertScope = _factory.Services.CreateScope();
+        var dbContext = assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var updatedGame = await dbContext.SharedGames.FindAsync(game.Id);
         Assert.NotNull(updatedGame);
         Assert.Equal((int)GameStatus.Draft, updatedGame.Status);
     }
@@ -278,8 +280,14 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         Assert.All(result.Items, g => Assert.Equal(GameStatus.PendingApproval, g.Status));
     }
 
+    /// <summary>
+    /// Issue #2707: Use fresh scope to prevent ObjectDisposedException
+    /// </summary>
     private async Task<SharedGameEntity> CreateTestGameAsync(GameStatus status)
     {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
         var game = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
@@ -297,8 +305,8 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
             CreatedAt = DateTime.UtcNow
         };
 
-        _dbContext.SharedGames.Add(game);
-        await _dbContext.SaveChangesAsync();
+        dbContext.SharedGames.Add(game);
+        await dbContext.SaveChangesAsync();
         return game;
     }
 }

@@ -155,6 +155,8 @@ jobs:
         env:
           # Issue #2556: Use "Testing" to skip secret validation at startup
           ASPNETCORE_ENVIRONMENT: Testing
+          # Explicit port binding (--no-launch-profile ignores launchSettings.json)
+          ASPNETCORE_URLS: "http://localhost:8080"
           # PostgreSQL - UPPER_SNAKE_CASE format (preferred by SecretsHelper)
           POSTGRES_HOST: localhost
           POSTGRES_PORT: "5432"

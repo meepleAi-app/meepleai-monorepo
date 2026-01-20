@@ -14,18 +14,17 @@
 
 'use client';
 
+import { motion } from 'framer-motion';
+import { MessageCircle, Settings, Upload, Edit2, Trash2, Library } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { motion } from 'framer-motion';
-
-import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
-import { Button } from '@/components/ui/primitives/button';
-import { Badge } from '@/components/ui/data-display/badge';
-import { Checkbox } from '@/components/ui/primitives/checkbox';
-import { MessageCircle, Settings, Upload, Edit2, Trash2, Library } from 'lucide-react';
 
 import { FavoriteToggle } from '@/components/library/FavoriteToggle';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { useAgentConfig } from '@/hooks/queries';
 import type { UserLibraryEntry } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -190,6 +189,7 @@ export function UserGameCard({
           <span className="text-muted-foreground">🤖 Agente:</span>
           {agentConfigured ? (
             <Badge variant="secondary" className="text-xs">
+              {/* eslint-disable-next-line security/detect-object-injection -- agentModel is from controlled config */}
               Configurato ({modelDisplayName[agentModel]})
             </Badge>
           ) : (

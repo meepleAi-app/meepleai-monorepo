@@ -13,8 +13,8 @@ import { useState } from 'react';
 import { Clock, ChevronDown, ChevronUp } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
 import type { GameState, GameStateSnapshot } from '@/types/game-state';
 
 interface LedgerTimelineItemProps {

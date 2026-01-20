@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 
-import { Button } from '@/components/ui/primitives/button';
 import {
   Card,
   CardHeader,
@@ -20,7 +19,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/overlays/dialog';
-import { Input } from '@/components/ui/primitives/input';
 import {
   Select,
   SelectTrigger,
@@ -28,6 +26,8 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 
 /**
  * Shadcn/UI Demo Page (App Router)

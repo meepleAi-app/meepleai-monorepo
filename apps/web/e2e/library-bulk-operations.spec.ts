@@ -7,8 +7,9 @@
  * - Keyboard range selection (Shift+Click)
  */
 
-import { test, expect } from './test';
 import { Page } from '@playwright/test';
+
+import { test, expect } from './test';
 
 // Issue #841: Make API_BASE configurable via environment variables
 const API_BASE =

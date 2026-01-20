@@ -98,12 +98,15 @@ function cacheSessionValidation(cookieValue: string, valid: boolean) {
 async function isSessionCookieValid(request: NextRequest, cookieValue: string): Promise<boolean> {
   const cached = sessionValidationCache.get(cookieValue);
   if (cached && cached.expiresAt > Date.now()) {
+    // Debug logging for session validation (use warn which is allowed by ESLint)
+    // eslint-disable-next-line no-console
     console.log(`[middleware] Session validation CACHE HIT for ${cookieValue.substring(0, 10)}... valid=${cached.valid}`);
     return cached.valid;
   }
 
   const cookieHeader = request.headers.get('cookie');
   if (!cookieHeader) {
+    // eslint-disable-next-line no-console
     console.log('[middleware] No cookie header found in request');
     cacheSessionValidation(cookieValue, false);
     return false;
@@ -113,6 +116,7 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
     // Use first API origin (server-side Docker network URL)
     const apiOrigins = getApiOrigins();
     const apiUrl = `${apiOrigins[0]}/api/v1/auth/me`;
+    // eslint-disable-next-line no-console
     console.log(`[middleware] Validating session at ${apiUrl} with cookie: ${cookieHeader.substring(0, 50)}...`);
 
     const response = await fetch(apiUrl, {
@@ -123,6 +127,7 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
       cache: 'no-store',
     });
 
+    // eslint-disable-next-line no-console
     console.log(`[middleware] Session validation response: ${response.status} ok=${response.ok}`);
     cacheSessionValidation(cookieValue, response.ok);
     return response.ok;

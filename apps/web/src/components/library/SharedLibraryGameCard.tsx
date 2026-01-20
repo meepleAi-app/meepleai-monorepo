@@ -7,11 +7,11 @@
 
 'use client';
 
+import { Star, Calendar, FileText } from 'lucide-react';
 import Image from 'next/image';
 
-import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Star, Calendar, FileText } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
 import type { SharedLibraryGame } from '@/lib/api/schemas/library.schemas';
 
 interface SharedLibraryGameCardProps {

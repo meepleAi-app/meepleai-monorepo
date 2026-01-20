@@ -29,6 +29,16 @@ import { toast } from 'sonner';
 
 import { AdminAuthGuard } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/data-display/table';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,19 +49,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/overlays/alert-dialog-primitives';
-import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/data-display/table';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { useApiClient } from '@/lib/api/context';
 import { type DeleteRequest } from '@/lib/api/schemas/shared-games.schemas';

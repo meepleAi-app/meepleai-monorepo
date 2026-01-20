@@ -21,20 +21,22 @@
 
 import { useState } from 'react';
 
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
-import { Textarea } from '@/components/ui/primitives/textarea';
-import { Slider } from '@/components/ui/primitives/slider';
+import { X } from 'lucide-react';
+
+import { toast } from '@/components/layout/Toast';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
-import { Upload, Image as ImageIcon, X } from 'lucide-react';
-import { toast } from '@/components/layout/Toast';
-
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { Slider } from '@/components/ui/primitives/slider';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
+
+type FormFieldValue = string | number | boolean | string[] | File | null | undefined;
 
 interface GameEditFormProps {
   game?: SharedGameDetail | null;
-  onChange: (field: string, value: any) => void;
+  onChange: (field: string, value: FormFieldValue) => void;
   isSubmitting: boolean;
 }
 

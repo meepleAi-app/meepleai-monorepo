@@ -35,7 +35,7 @@ export interface ExportResult {
  * Handles quotes, commas, and newlines.
  */
 function escapeCsvValue(value: string | null | undefined): string {
-  if (value == null) return '';
+  if (value === null || value === undefined) return '';
 
   const str = String(value);
   // If the value contains quotes, commas, or newlines, wrap in quotes and escape internal quotes

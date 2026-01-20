@@ -25,12 +25,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Edit2, RefreshCw, RotateCcw, Save, X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { ConfirmDialog } from '@/components/ui/feedback/confirm-dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/overlays/tooltip';
 import { cn } from '@/lib/utils';
 
 import type { GeneratedQuestion } from './QuickQuestionGenerator';

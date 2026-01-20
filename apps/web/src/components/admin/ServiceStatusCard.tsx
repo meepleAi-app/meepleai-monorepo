@@ -17,8 +17,8 @@
 import { CheckCircleIcon, AlertTriangleIcon, XCircleIcon, PlayIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
 import type { ServiceHealthStatus } from '@/lib/api';
 
 interface ServiceStatusCardProps {

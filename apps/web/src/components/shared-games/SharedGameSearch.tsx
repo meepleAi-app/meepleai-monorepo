@@ -21,10 +21,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ExternalLink, Loader2, Search, X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent } from '@/components/ui/data-display/card';
-import { Input } from '@/components/ui/primitives/input';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 

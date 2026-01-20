@@ -1,0 +1,392 @@
+{
+  "info": {
+    "_postman_id": "editor-game-mgmt-collection-006",
+    "name": "06 - Editor: Game Management",
+    "description": "MeepleAI Editor API endpoints for creating, editing, and managing games including BGG import.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "gameId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Game CRUD",
+      "item": [
+        {
+          "name": "List My Games",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.items && jsonData.items.length > 0) {",
+                  "        pm.collectionVariables.set('gameId', jsonData.items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games?status=all&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "all",
+                  "description": "Options: all, draft, pending_approval, published, rejected"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List games created by the editor"
+          }
+        },
+        {
+          "name": "Create Game",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('gameId', jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My New Game\",\n  \"description\": \"A strategic board game for 2-4 players where you build settlements and trade resources.\",\n  \"minPlayers\": 2,\n  \"maxPlayers\": 4,\n  \"minPlayTime\": 60,\n  \"maxPlayTime\": 120,\n  \"yearPublished\": 2026,\n  \"publisher\": \"Game Publisher Inc\",\n  \"designer\": \"Famous Designer\",\n  \"categories\": [\"strategy\", \"family\"],\n  \"mechanics\": [\"trading\", \"area-control\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games"]
+            },
+            "description": "Create a new game in draft status"
+          }
+        },
+        {
+          "name": "Get Game Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}"]
+            },
+            "description": "Get full game details for editing"
+          }
+        },
+        {
+          "name": "Update Game",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Updated Game\",\n  \"description\": \"Updated description with more details about gameplay mechanics and strategy.\",\n  \"minPlayers\": 2,\n  \"maxPlayers\": 6,\n  \"minPlayTime\": 45,\n  \"maxPlayTime\": 90,\n  \"complexity\": 2.5,\n  \"categories\": [\"strategy\", \"family\", \"economic\"],\n  \"mechanics\": [\"trading\", \"area-control\", \"resource-management\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}"]
+            },
+            "description": "Update game details"
+          }
+        },
+        {
+          "name": "Delete Game (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}"]
+            },
+            "description": "Soft delete a game (marks for deletion, requires admin approval)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cover Image",
+      "item": [
+        {
+          "name": "Upload Cover Image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/cover-image.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/cover",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "cover"]
+            },
+            "description": "Upload cover image for a game"
+          }
+        },
+        {
+          "name": "Delete Cover Image",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/cover",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "cover"]
+            },
+            "description": "Delete cover image"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BGG Import",
+      "item": [
+        {
+          "name": "Search BGG",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/bgg-search?query=catan&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "bgg-search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "catan"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Search BoardGameGeek for games to import"
+          }
+        },
+        {
+          "name": "Import from BGG",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bggId\": 13,\n  \"importOptions\": {\n    \"includeDescription\": true,\n    \"includeCategories\": true,\n    \"includeMechanics\": true,\n    \"importImage\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/import-bgg",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "import-bgg"]
+            },
+            "description": "Import game data from BoardGameGeek by BGG ID"
+          }
+        },
+        {
+          "name": "Get BGG Game Preview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/bgg-preview/:bggId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "bgg-preview", ":bggId"],
+              "variable": [
+                {
+                  "key": "bggId",
+                  "value": "13"
+                }
+              ]
+            },
+            "description": "Preview what data will be imported from BGG before importing"
+          }
+        },
+        {
+          "name": "Refresh from BGG",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fields\": [\"rating\", \"complexity\", \"categories\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/refresh-bgg",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "refresh-bgg"]
+            },
+            "description": "Refresh specific fields from BGG for an imported game"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Game Specifications",
+      "item": [
+        {
+          "name": "Get Specifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/specifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "specifications"]
+            },
+            "description": "Get game specifications (components, setup, rules summary)"
+          }
+        },
+        {
+          "name": "Update Specifications",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"components\": [\n    { \"name\": \"Game Board\", \"quantity\": 1 },\n    { \"name\": \"Resource Cards\", \"quantity\": 95 },\n    { \"name\": \"Settlement Pieces\", \"quantity\": 20 },\n    { \"name\": \"Dice\", \"quantity\": 2 }\n  ],\n  \"setupSummary\": \"Place the board in the center. Each player chooses a color and takes their pieces.\",\n  \"turnStructure\": \"1. Roll dice\\n2. Collect resources\\n3. Trade\\n4. Build\",\n  \"winCondition\": \"First player to reach 10 victory points wins.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/specifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "specifications"]
+            },
+            "description": "Update game specifications"
+          }
+        }
+      ]
+    }
+  ]
+}

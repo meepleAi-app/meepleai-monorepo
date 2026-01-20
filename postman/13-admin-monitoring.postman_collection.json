@@ -1,0 +1,568 @@
+{
+  "info": {
+    "_postman_id": "admin-monitoring-collection-013",
+    "name": "13 - Admin: Monitoring",
+    "description": "MeepleAI Admin API endpoints for system health, service monitoring, alerts, analytics, n8n workflows, and cache management.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "alertRuleId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "n8nConfigId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "System Health",
+      "item": [
+        {
+          "name": "Basic Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Basic health check - returns overall system status"
+          }
+        },
+        {
+          "name": "Liveness Probe",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health/live",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "live"]
+            },
+            "description": "Liveness probe for Kubernetes - is the service alive?"
+          }
+        },
+        {
+          "name": "Readiness Probe",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "ready"]
+            },
+            "description": "Readiness probe for Kubernetes - is the service ready to accept traffic?"
+          }
+        },
+        {
+          "name": "Detailed Health Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health/detailed",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "detailed"]
+            },
+            "description": "Detailed health check with individual service statuses (requires auth)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alert Management",
+      "item": [
+        {
+          "name": "Get Active Alerts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/alerts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "alerts"]
+            },
+            "description": "Get all currently active alerts"
+          }
+        },
+        {
+          "name": "Acknowledge Alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/alerts/:alertId/acknowledge",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "alerts", ":alertId", "acknowledge"],
+              "variable": [
+                {
+                  "key": "alertId",
+                  "value": "alert-uuid"
+                }
+              ]
+            },
+            "description": "Acknowledge an active alert"
+          }
+        },
+        {
+          "name": "List Alert Rules",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.items && jsonData.items.length > 0) {",
+                  "        pm.collectionVariables.set('alertRuleId', jsonData.items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/alert-rules",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "alert-rules"]
+            },
+            "description": "List all alert rules"
+          }
+        },
+        {
+          "name": "Create Alert Rule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"High API Latency\",\n  \"condition\": \"api_latency_ms > 500\",\n  \"duration\": \"5m\",\n  \"severity\": \"warning\",\n  \"isEnabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/alert-rules",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "alert-rules"]
+            },
+            "description": "Create a new alert rule"
+          }
+        },
+        {
+          "name": "Update Alert Rule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isEnabled\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/alert-rules/{{alertRuleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "alert-rules", "{{alertRuleId}}"]
+            },
+            "description": "Update an alert rule"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/analytics?period=30d",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "analytics"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "30d",
+                  "description": "Options: 7d, 30d, 90d, 1y"
+                }
+              ]
+            },
+            "description": "Get key analytics metrics for dashboard"
+          }
+        },
+        {
+          "name": "Get User Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/analytics/users?from=2026-01-01&to=2026-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "analytics", "users"],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-01-31"
+                }
+              ]
+            },
+            "description": "Get user growth and activity metrics"
+          }
+        },
+        {
+          "name": "Get Game Popularity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/analytics/games?limit=20&period=30d",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "analytics", "games"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "period",
+                  "value": "30d"
+                }
+              ]
+            },
+            "description": "Get most popular games by sessions/chats"
+          }
+        },
+        {
+          "name": "Generate Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"usage\",\n  \"from\": \"2026-01-01\",\n  \"to\": \"2026-01-31\",\n  \"format\": \"pdf\",\n  \"sections\": [\"users\", \"games\", \"chats\", \"sessions\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "reports"]
+            },
+            "description": "Generate an analytics report"
+          }
+        }
+      ]
+    },
+    {
+      "name": "N8N Workflows",
+      "item": [
+        {
+          "name": "List N8N Configurations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.items && jsonData.items.length > 0) {",
+                  "        pm.collectionVariables.set('n8nConfigId', jsonData.items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/n8n",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "n8n"]
+            },
+            "description": "List all n8n configurations"
+          }
+        },
+        {
+          "name": "Create N8N Configuration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main n8n Instance\",\n  \"webhookUrl\": \"https://n8n.example.com/webhook\",\n  \"apiKey\": \"n8n-api-key\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/n8n",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "n8n"]
+            },
+            "description": "Create a new n8n configuration"
+          }
+        },
+        {
+          "name": "Test N8N Connection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/n8n/{{n8nConfigId}}/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "n8n", "{{n8nConfigId}}", "test"]
+            },
+            "description": "Test connection to n8n instance"
+          }
+        },
+        {
+          "name": "List Workflow Templates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/n8n/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "n8n", "templates"]
+            },
+            "description": "List available workflow templates"
+          }
+        },
+        {
+          "name": "Import Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/n8n/templates/:templateId/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "n8n", "templates", ":templateId", "import"],
+              "variable": [
+                {
+                  "key": "templateId",
+                  "value": "user-onboarding"
+                }
+              ]
+            },
+            "description": "Import a workflow template"
+          }
+        },
+        {
+          "name": "Get Workflow Errors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/workflows/errors?period=24h",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "workflows", "errors"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "24h"
+                }
+              ]
+            },
+            "description": "Get recent workflow errors"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cache Management",
+      "item": [
+        {
+          "name": "Get Cache Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/cache/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "cache", "stats"]
+            },
+            "description": "Get cache statistics (hit rate, memory usage)"
+          }
+        },
+        {
+          "name": "List Cache Entries",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/cache/entries",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "cache", "entries"]
+            },
+            "description": "List all cache entries by category"
+          }
+        },
+        {
+          "name": "Clear Specific Cache",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/cache/:cacheName",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "cache", ":cacheName"],
+              "variable": [
+                {
+                  "key": "cacheName",
+                  "value": "games"
+                }
+              ]
+            },
+            "description": "Clear a specific cache (games, users, sessions, embeddings)"
+          }
+        },
+        {
+          "name": "Clear All Caches",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/cache/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "cache", "all"]
+            },
+            "description": "Clear all caches (use with caution)"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "screenshot": {
+    "id": "user-ai-chat-01",
+    "filename": "01-chat-interface.png",
+    "flow": "ai-chat",
+    "role": "user",
+    "step": 1,
+    "totalSteps": 1,
+    "title": "Chat Interface",
+    "description": "AI chat interface for asking game-related questions"
+  },
+  "capture": {
+    "timestamp": "2026-01-20T14:41:36.872Z",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "browser": "chromium",
+    "fullPage": true
+  },
+  "interaction": {
+    "previousAction": null,
+    "nextAction": "Type a question",
+    "highlightedElements": [
+      {
+        "selector": "[data-testid=\"chat-input\"], textarea, input[type=\"text\"]",
+        "type": "box",
+        "label": "Message Input"
+      }
+    ]
+  },
+  "navigation": {
+    "url": "http://localhost:3000/login?from=%2Fchat",
+    "previousStep": null,
+    "nextStep": null
+  }
+}

@@ -1,16 +1,16 @@
 {
   "screenshot": {
-    "id": "admin-monitoring-01",
-    "filename": "01-system-health.png",
-    "flow": "monitoring",
-    "role": "admin",
+    "id": "user-game-sessions-01",
+    "filename": "01-session-to-end.png",
+    "flow": "game-sessions",
+    "role": "user",
     "step": 1,
     "totalSteps": 1,
-    "title": "System Health",
-    "description": "Detailed health status of all services"
+    "title": "Session to End",
+    "description": "Active session ready to be completed"
   },
   "capture": {
-    "timestamp": "2026-01-20T13:11:09.793Z",
+    "timestamp": "2026-01-20T14:42:10.889Z",
     "viewport": {
       "width": 1280,
       "height": 720
@@ -20,11 +20,11 @@
   },
   "interaction": {
     "previousAction": null,
-    "nextAction": "Review services",
+    "nextAction": "End session",
     "highlightedElements": []
   },
   "navigation": {
-    "url": "http://localhost:3000/admin/health",
+    "url": "http://localhost:3000/sessions/session-1",
     "previousStep": null,
     "nextStep": null
   }

@@ -8,14 +8,14 @@
 
 'use client';
 
-import Image from 'next/image';
-import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { Library, Star } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
 
 import { Card, CardContent } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
-import { Library, Star } from 'lucide-react';
 import type { UserLibraryEntry } from '@/lib/api';
 
 export interface RecentLibraryCardProps {

@@ -16,7 +16,6 @@ import React from 'react';
 import { ChevronDown, FileText, Check } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -25,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
+import { Button } from '@/components/ui/primitives/button';
 
 export interface DocumentSource {
   id: string;

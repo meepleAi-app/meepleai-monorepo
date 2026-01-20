@@ -19,7 +19,6 @@ import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { MenuIcon } from 'lucide-react';
 
 import { ChatHeader } from '@/components/chat/ChatHeader';
-import { Button } from '@/components/ui/primitives/button';
 import {
   Sheet,
   SheetContent,
@@ -28,6 +27,7 @@ import {
   SheetDescription,
 } from '@/components/ui/navigation/sheet';
 import { TooltipProvider } from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 import { Game } from '@/types';
 

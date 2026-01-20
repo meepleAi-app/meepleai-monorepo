@@ -23,10 +23,10 @@ import { useRouter, useParams } from 'next/navigation';
 import { ErrorDisplay } from '@/components/errors';
 import { Avatar } from '@/components/ui/data-display/avatar';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Separator } from '@/components/ui/navigation/separator';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Separator } from '@/components/ui/navigation/separator';
+import { Button } from '@/components/ui/primitives/button';
 import { api, GameSessionDto, Game } from '@/lib/api';
 import { categorizeError } from '@/lib/errorUtils';
 

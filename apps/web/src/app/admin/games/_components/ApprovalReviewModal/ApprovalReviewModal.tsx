@@ -13,8 +13,11 @@
  */
 
 import { useState, useEffect } from 'react';
+
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Dialog,
   DialogContent,
@@ -26,13 +29,11 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-
 import { useApiClient } from '@/lib/api/context';
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
-import { GamePreviewCard } from '../GameEditModal/GamePreviewCard';
+
 import { GameDiffView } from './GameDiffView';
+import { GamePreviewCard } from '../GameEditModal/GamePreviewCard';
 import { useApprovalReview } from './hooks/useApprovalReview';
 
 interface ApprovalReviewModalProps {
@@ -142,6 +143,7 @@ export function ApprovalReviewModal({
                 </TabsContent>
 
                 <TabsContent value="diff" className="space-y-4">
+                  {/* eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- gameId is verified above */}
                   <GameDiffView gameId={gameId!} currentData={game} />
                 </TabsContent>
               </Tabs>

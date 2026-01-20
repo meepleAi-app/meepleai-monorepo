@@ -16,10 +16,10 @@
 
 import { AlertCircle } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Badge } from '@/components/ui/data-display/badge';
-
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+// CardDescription removed - not used
 import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
 
 interface GameDiffViewProps {
@@ -35,7 +35,7 @@ interface FieldChange {
   after: string;
 }
 
-export function GameDiffView({ gameId, currentData, previousData }: GameDiffViewProps) {
+export function GameDiffView({ gameId: _gameId, currentData, previousData }: GameDiffViewProps) {
   // If no previous data, this is a new game submission (no diff to show)
   const isNewGame = !previousData;
 

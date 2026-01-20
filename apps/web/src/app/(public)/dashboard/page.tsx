@@ -30,6 +30,10 @@
 
 'use client';
 
+// Skip static prerendering - page uses client-side data fetching with React Query
+// and imports components that require DOMMatrix (framer-motion)
+export const dynamic = 'force-dynamic';
+
 import React from 'react';
 
 import { AlertCircle } from 'lucide-react';
@@ -42,6 +46,7 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useGames } from '@/hooks/queries/useGames';
 
+import { ActiveSessionsSection } from './components/ActiveSessionsSection';
 import { ChatHistorySection } from './components/ChatHistorySection';
 import { GreetingSection } from './components/GreetingSection';
 import { LibraryQuotaSection } from './components/LibraryQuotaSection';
@@ -153,6 +158,9 @@ export default function DashboardPage() {
 
         {/* Library Quota Widget (Issue #2445) */}
         <LibraryQuotaSection />
+
+        {/* Active Sessions Widget (Issue #2617) */}
+        <ActiveSessionsSection />
 
         {/* Recently Added Games from Library (Issue #2612) */}
         <RecentlyAddedSection />

@@ -19,8 +19,9 @@ import { useAuthUser } from '@/components/auth/AuthProvider';
 import { ErrorDisplay } from '@/components/errors';
 import { toast } from '@/components/layout';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card } from '@/components/ui/data-display/card';
+import { Separator } from '@/components/ui/navigation/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Dialog,
   DialogContent,
@@ -29,8 +30,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
 import {
   Select,
   SelectContent,
@@ -38,8 +37,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-import { Separator } from '@/components/ui/navigation/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import type {
   ScheduledReportDto,

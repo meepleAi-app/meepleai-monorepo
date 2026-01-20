@@ -139,8 +139,8 @@ internal static class WebApplicationExtensions
         // AUTH-03: Authorization middleware (must be after all authentication middleware)
         app.UseAuthorization();
 
-        // Rate limiting middleware (must be after authorization to read user role from ActiveSession)
-        app.UseRoleAwareRateLimiting();
+        // ISSUE #2424: Rate limiting middleware (must be after authorization)
+        app.UseRateLimiter();
     }
 
     public static IServiceCollection AddCorsServices(

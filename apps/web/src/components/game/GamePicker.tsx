@@ -3,10 +3,9 @@ import { type FormEvent, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 
 import { LoadingButton } from '@/components/loading';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Card } from '@/components/ui/data-display/card';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Separator } from '@/components/ui/navigation/separator';
 import {
   Select,
   SelectContent,
@@ -14,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-import { Separator } from '@/components/ui/navigation/separator';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 
 interface GameSummary {
   id: string;

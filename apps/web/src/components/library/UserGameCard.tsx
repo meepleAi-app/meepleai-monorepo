@@ -1,5 +1,5 @@
 /**
- * UserGameCard Component (Issue #2518, #2613)
+ * UserGameCard Component (Issue #2518, #2613, #2618)
  *
  * Enhanced library card with:
  * - Game cover image
@@ -9,20 +9,22 @@
  * - Actions: Chat, Configure Agent, Upload PDF, Edit Notes, Remove
  * - Favorite toggle
  * - Selection mode with checkbox (Issue #2613)
+ * - Framer Motion animations (Issue #2618)
  */
 
 'use client';
 
+import { motion } from 'framer-motion';
+import { MessageCircle, Settings, Upload, Edit2, Trash2, Library } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
-import { Button } from '@/components/ui/primitives/button';
-import { Badge } from '@/components/ui/data-display/badge';
-import { Checkbox } from '@/components/ui/primitives/checkbox';
-import { MessageCircle, Settings, Upload, Edit2, Trash2, Library } from 'lucide-react';
 
 import { FavoriteToggle } from '@/components/library/FavoriteToggle';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { useAgentConfig } from '@/hooks/queries';
 import type { UserLibraryEntry } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -37,7 +39,35 @@ interface UserGameCardProps {
   selectionMode?: boolean;
   isSelected?: boolean;
   onSelect?: (gameId: string, shiftKey: boolean) => void;
+  /** Animation props for staggered entrance (Issue #2618) */
+  index?: number;
 }
+
+// Animation variants for card entrance (Issue #2618)
+const cardVariants = {
+  hidden: {
+    opacity: 0,
+    y: 20,
+    scale: 0.95,
+  },
+  visible: (index: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: index * 0.05, // Staggered delay based on index
+      duration: 0.3,
+      ease: 'easeOut' as const,
+    },
+  }),
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    transition: {
+      duration: 0.2,
+    },
+  },
+};
 
 export function UserGameCard({
   game,
@@ -48,6 +78,7 @@ export function UserGameCard({
   selectionMode = false,
   isSelected = false,
   onSelect,
+  index = 0,
 }: UserGameCardProps) {
   // Fetch agent configuration status
   const { data: agentConfig } = useAgentConfig(game.gameId, true);
@@ -81,15 +112,24 @@ export function UserGameCard({
   };
 
   return (
-    <Card
-      className={cn(
-        'flex flex-col hover:shadow-lg transition-all',
-        selectionMode && 'cursor-pointer',
-        isSelected && 'ring-2 ring-primary bg-primary/5'
-      )}
-      data-testid="game-card"
-      onClick={handleCardClick}
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      custom={index}
+      layout
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
     >
+      <Card
+        className={cn(
+          'flex flex-col hover:shadow-lg transition-shadow',
+          selectionMode && 'cursor-pointer',
+          isSelected && 'ring-2 ring-primary bg-primary/5'
+        )}
+        data-testid="game-card"
+        onClick={handleCardClick}
+      >
       <CardHeader className="p-0">
         {/* Cover Image */}
         <div className="relative w-full h-40 bg-muted">
@@ -149,6 +189,7 @@ export function UserGameCard({
           <span className="text-muted-foreground">🤖 Agente:</span>
           {agentConfigured ? (
             <Badge variant="secondary" className="text-xs">
+              {/* eslint-disable-next-line security/detect-object-injection -- agentModel is from controlled config */}
               Configurato ({modelDisplayName[agentModel]})
             </Badge>
           ) : (
@@ -231,6 +272,7 @@ export function UserGameCard({
           Aggiunto il {new Date(game.addedAt).toLocaleDateString('it-IT')}
         </p>
       </CardContent>
-    </Card>
+      </Card>
+    </motion.div>
   );
 }

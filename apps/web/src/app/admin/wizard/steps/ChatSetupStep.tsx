@@ -10,8 +10,8 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { toast } from '@/components/layout';
 import { Spinner } from '@/components/loading';
-import { Button } from '@/components/ui/primitives/button';
 import { Card } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 
 interface ChatSetupStepProps {

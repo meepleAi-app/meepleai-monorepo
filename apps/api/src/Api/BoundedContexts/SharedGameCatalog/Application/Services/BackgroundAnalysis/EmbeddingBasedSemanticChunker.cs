@@ -68,6 +68,11 @@ internal sealed partial class EmbeddingBasedSemanticChunker : ISemanticChunker
             chunks = ChunkFixedSize(rulebookContent);
             return SemanticChunkingResult.Create(chunks, ChunkingStrategy.FixedSize);
         }
+        catch (OperationCanceledException)
+        {
+            // Propagate cancellation
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during chunking, using fixed-size fallback");
@@ -196,11 +201,10 @@ internal sealed partial class EmbeddingBasedSemanticChunker : ISemanticChunker
                 .Matches(content)
                 .Select(m =>
                 {
-                    // Group 1: Markdown headers (# Header)
-                    // Group 2: Uppercase headers (HEADER)
-                    var header = !string.IsNullOrWhiteSpace(m.Groups[1].Value)
-                        ? m.Groups[1].Value
-                        : m.Groups[2].Value;
+                    // Named groups: markdown (# Header) or caps (HEADER)
+                    var header = !string.IsNullOrWhiteSpace(m.Groups["markdown"].Value)
+                        ? m.Groups["markdown"].Value
+                        : m.Groups["caps"].Value;
                     return header.Trim();
                 })
                 .Where(h => !string.IsNullOrWhiteSpace(h))
@@ -256,7 +260,8 @@ internal sealed partial class EmbeddingBasedSemanticChunker : ISemanticChunker
 
         while (position < content.Length)
         {
-            var chunkSize = Math.Min(_options.MaxChunkSize, content.Length - position);
+            var remainingLength = content.Length - position;
+            var chunkSize = Math.Min(_options.MaxChunkSize, remainingLength);
             var chunkContent = content.Substring(position, chunkSize);
 
             chunks.Add(SemanticChunk.Create(
@@ -265,7 +270,16 @@ internal sealed partial class EmbeddingBasedSemanticChunker : ISemanticChunker
                 position,
                 position + chunkSize));
 
-            position += chunkSize - _options.OverlapSize;
+            // If we've captured all remaining content, we're done
+            if (chunkSize >= remainingLength)
+                break;
+
+            // Calculate next position with overlap
+            // Only apply overlap when chunk is at max size and there's more content
+            var nextPosition = position + chunkSize - _options.OverlapSize;
+
+            // Ensure we always advance by at least 1 character to avoid infinite loop
+            position = Math.Max(nextPosition, position + 1);
         }
 
         return chunks;
@@ -334,7 +348,7 @@ internal sealed partial class EmbeddingBasedSemanticChunker : ISemanticChunker
             headers);
     }
 
-    [GeneratedRegex(@"^#{1,3}\s+(.+)$|^([A-Z][A-Z\s]{2,100})$", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex(@"^#{1,3}\s+(?<markdown>.+)$|^(?<caps>[A-Z][A-Z\s]{2,100})$", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex HeaderRegex();
 
     private sealed record CandidateSection(string? Header, int StartIndex)

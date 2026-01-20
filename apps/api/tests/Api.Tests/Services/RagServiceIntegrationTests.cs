@@ -191,6 +191,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
 
     /// <summary>
     /// Test05: Verify error handling when embedding service fails
+    /// When embedding fails, retrieval returns empty results → "Not specified" response
     /// </summary>
     [Fact]
     public async Task AskAsync_WhenEmbeddingFails_ReturnsErrorMessage()
@@ -208,7 +209,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
         // Act
         var result = await ragService.AskAsync(gameId, query, cancellationToken: TestCancellationToken);
 
-        // Assert
+        // Assert - When embedding fails, no results are returned → "Not specified"
         Assert.NotNull(result);
         // When embedding fails, RagService returns empty results which triggers "Not specified" response
         Assert.Equal("Not specified", result.answer);

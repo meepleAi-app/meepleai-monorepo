@@ -28,6 +28,7 @@ public static class TestDbContextFactory
             .ConfigureWarnings(warnings =>
             {
                 warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning);
+                // Suppress InMemory transaction warning - transactions are no-op in InMemory but shouldn't throw
                 warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning);
             })
             .Options;

@@ -50,7 +50,7 @@ export {
   useUpdateShareLink,
   useRevokeShareLink,
   useSharedLibrary,
-  // Recently Added Games
+  // Dashboard widget (Issue #2612) + Recently Added Games
   useRecentlyAddedGames,
   libraryKeys,
 } from './useLibrary';
@@ -88,6 +88,16 @@ export {
   useTestModel,
   aiModelsKeys,
 } from './useAiModels';
+
+// Active Sessions queries and mutations (Issue #2617)
+export {
+  useActiveSessions,
+  useSession,
+  usePauseSession,
+  useResumeSession,
+  useEndSession,
+  sessionsKeys,
+} from './useActiveSessions';
 
 // Re-export from @tanstack/react-query for convenience
 export {

@@ -32,11 +32,8 @@ import { useState, useEffect } from 'react';
 import { Copy, Check, AlertCircle, Info, Calendar, Key } from 'lucide-react';
 
 import { LoadingButton } from '@/components/loading/LoadingButton';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import {
   Dialog,
   DialogContent,
@@ -45,6 +42,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api, CreateApiKeyResponse } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';

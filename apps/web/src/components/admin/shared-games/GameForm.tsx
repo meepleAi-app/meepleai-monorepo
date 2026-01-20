@@ -21,10 +21,8 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
+import { Separator } from '@/components/ui/navigation/separator';
 import {
   Select,
   SelectContent,
@@ -32,7 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-import { Separator } from '@/components/ui/navigation/separator';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api, type GameCategory, type GameMechanic, type SharedGameDetail } from '@/lib/api';
 

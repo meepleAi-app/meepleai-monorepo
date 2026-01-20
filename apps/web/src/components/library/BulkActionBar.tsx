@@ -15,17 +15,9 @@
 import { useState } from 'react';
 
 import { Download, Heart, Loader2, Trash2, X, CheckSquare, Square } from 'lucide-react';
+import { FileText, FileJson, ChevronDown } from 'lucide-react';
 
 import { toast } from '@/components/layout/Toast';
-import { Button } from '@/components/ui/primitives/button';
-import { BulkRemoveDialog } from './BulkRemoveDialog';
-import { useUpdateLibraryEntry } from '@/hooks/queries/useLibrary';
-import {
-  exportLibrary,
-  type ExportFormat,
-  type ExportScope,
-} from '@/lib/export/libraryExport';
-import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +25,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
-import { FileText, FileJson, ChevronDown } from 'lucide-react';
+import { Button } from '@/components/ui/primitives/button';
+import { useUpdateLibraryEntry } from '@/hooks/queries/useLibrary';
+import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import {
+  exportLibrary,
+  type ExportFormat,
+  type ExportScope,
+} from '@/lib/export/libraryExport';
+
+import { BulkRemoveDialog } from './BulkRemoveDialog';
 
 export interface BulkActionBarProps {
   selectedCount: number;
@@ -88,7 +89,7 @@ export function BulkActionBar({
       }
 
       onClearSelection();
-    } catch (error) {
+    } catch (_error) {
       toast.error('Errore durante l\'aggiornamento');
     } finally {
       setIsFavoriting(false);
@@ -107,7 +108,7 @@ export function BulkActionBar({
       });
       const formatLabel = format === 'csv' ? 'CSV' : 'JSON';
       toast.success(`${selectedGames.length} giochi esportati (${formatLabel})`);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Errore durante l\'esportazione');
     } finally {
       setIsExporting(false);

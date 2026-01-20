@@ -14,10 +14,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { Button } from '@/components/ui/primitives/button';
 import { Card } from '@/components/ui/data-display/card';
-import { Label } from '@/components/ui/primitives/label';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import {
   Select,
   SelectContent,
@@ -25,6 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
 import { GamesArrayResponseSchema } from '@/lib/api/schemas/games.schemas';

@@ -29,15 +29,8 @@ import { toast } from 'sonner';
 
 import { AdminAuthGuard } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
-import { Progress } from '@/components/ui/feedback/progress';
-import { ScrollArea } from '@/components/ui/primitives/scroll-area';
-import { Separator } from '@/components/ui/navigation/separator';
 import {
   Table,
   TableBody,
@@ -46,7 +39,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/data-display/table';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Progress } from '@/components/ui/feedback/progress';
+import { Separator } from '@/components/ui/navigation/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { useApiClient } from '@/lib/api/context';
 import type { CreateSharedGameRequest } from '@/lib/api/schemas/shared-games.schemas';

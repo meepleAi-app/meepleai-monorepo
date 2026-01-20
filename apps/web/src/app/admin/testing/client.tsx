@@ -7,7 +7,6 @@ import { useQuery } from '@tanstack/react-query';
 import { ExportButton } from '@/components/admin/ExportButton';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Progress } from '@/components/ui/feedback/progress';
 import {
   Table,
   TableBody,
@@ -16,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/data-display/table';
+import { Progress } from '@/components/ui/feedback/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { api } from '@/lib/api';
 import type {

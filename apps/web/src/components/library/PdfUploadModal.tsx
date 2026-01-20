@@ -15,8 +15,13 @@
 
 import { useState, ChangeEvent, FormEvent, useCallback, useEffect } from 'react';
 
+import { Loader2, Upload, FileText, X, Check, Eye, ChevronLeft } from 'lucide-react';
 import { pdfjs } from 'react-pdf';
 
+import { toast } from '@/components/layout/Toast';
+import { PdfPreview } from '@/components/pdf/PdfPreview';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Progress } from '@/components/ui/feedback/progress';
 import {
   Dialog,
   DialogContent,
@@ -28,11 +33,6 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
-import { Progress } from '@/components/ui/feedback/progress';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
-import { toast } from '@/components/layout/Toast';
-import { Loader2, Upload, FileText, X, Check, Eye, ChevronLeft } from 'lucide-react';
-import { PdfPreview } from '@/components/pdf/PdfPreview';
 
 // Configure PDF.js worker for page count validation
 if (typeof window !== 'undefined') {
@@ -53,7 +53,7 @@ interface PdfUploadModalProps {
   gameTitle: string;
 }
 
-export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle }: PdfUploadModalProps) {
+export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: PdfUploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [step, setStep] = useState<UploadStep>('select');
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -108,7 +108,7 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle }: PdfUpload
         return `Il PDF ha troppe pagine: ${pages} (max ${MAX_PAGE_COUNT} pagine)`;
       }
       return null;
-    } catch (error) {
+    } catch (_error) {
       return 'Impossibile leggere il PDF. Il file potrebbe essere corrotto.';
     }
   }, []);
@@ -157,6 +157,17 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle }: PdfUpload
     setStep('select');
   }, []);
 
+  // Close modal and reset state
+  const handleClose = useCallback(() => {
+    setFile(null);
+    setStep('select');
+    setUploadProgress(0);
+    setValidationErrors([]);
+    setPageCount(null);
+    setIsValidating(false);
+    onClose();
+  }, [onClose]);
+
   // Confirm upload from preview
   const handleConfirmUpload = useCallback(async () => {
     if (!file) return;
@@ -195,22 +206,12 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle }: PdfUpload
       setUploadProgress(0);
       setStep('preview'); // Go back to preview on error
     }
-  }, [file, gameTitle]);
+  }, [file, gameTitle, handleClose]);
 
   const handleUpload = async (e: FormEvent) => {
     e.preventDefault();
     handleShowPreview();
   };
-
-  const handleClose = useCallback(() => {
-    setFile(null);
-    setStep('select');
-    setUploadProgress(0);
-    setValidationErrors([]);
-    setPageCount(null);
-    setIsValidating(false);
-    onClose();
-  }, [onClose]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';

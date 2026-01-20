@@ -16,11 +16,10 @@
 
 import { useState, useEffect } from 'react';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
-import { Button } from '@/components/ui/primitives/button';
+import { Search, X, ArrowUpDown } from 'lucide-react';
+
 import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import {
   Select,
   SelectContent,
@@ -28,10 +27,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
-import { Search, X, ArrowUpDown } from 'lucide-react';
-
 import type { GameCategory, GameMechanic } from '@/lib/api';
 
 interface CatalogFiltersProps {

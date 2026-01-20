@@ -10,6 +10,11 @@
  */
 
 import {
+  AgentConfigDtoSchema,
+  type AgentConfigDto,
+  type UpdateAgentConfigRequest,
+} from '../schemas/agent-config.schemas';
+import {
   PaginatedLibraryResponseSchema,
   UserLibraryStatsSchema,
   UserLibraryEntrySchema,
@@ -31,11 +36,6 @@ import {
   type SharedLibrary,
 } from '../schemas/library.schemas';
 
-import {
-  AgentConfigDtoSchema,
-  type AgentConfigDto,
-  type UpdateAgentConfigRequest,
-} from '../schemas/agent-config.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 

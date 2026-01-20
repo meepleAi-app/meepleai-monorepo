@@ -13,6 +13,9 @@
 
 import { useState } from 'react';
 
+import { Star, Settings, ArrowUpDown } from 'lucide-react';
+
+import { Badge } from '@/components/ui/data-display/badge';
 import {
   Table,
   TableBody,
@@ -22,9 +25,6 @@ import {
   TableRow,
 } from '@/components/ui/data-display/table';
 import { Button } from '@/components/ui/primitives/button';
-import { Badge } from '@/components/ui/data-display/badge';
-import { Star, Settings, TrendingUp, ArrowUpDown } from 'lucide-react';
-
 import type { AiModelDto } from '@/lib/api';
 
 interface AiModelsTableProps {
@@ -37,7 +37,7 @@ interface AiModelsTableProps {
 type SortField = 'name' | 'provider' | 'cost' | 'usage' | 'status';
 type SortOrder = 'asc' | 'desc';
 
-export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading }: AiModelsTableProps) {
+export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading: _isLoading }: AiModelsTableProps) {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 

@@ -13,6 +13,11 @@
 
 import { useState, useEffect } from 'react';
 
+import { Loader2, Check, TestTube2, Zap } from 'lucide-react';
+
+import { toast } from '@/components/layout/Toast';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent } from '@/components/ui/data-display/card';
 import {
   Dialog,
   DialogContent,
@@ -22,15 +27,10 @@ import {
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
-import { Label } from '@/components/ui/primitives/label';
 import { Input } from '@/components/ui/primitives/input';
-import { Textarea } from '@/components/ui/primitives/textarea';
+import { Label } from '@/components/ui/primitives/label';
 import { Slider } from '@/components/ui/primitives/slider';
-import { Card, CardContent } from '@/components/ui/data-display/card';
-import { Badge } from '@/components/ui/data-display/badge';
-import { toast } from '@/components/layout/Toast';
-import { Loader2, Check, TestTube2, Zap } from 'lucide-react';
-
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { useUpdateModelConfig, useTestModel } from '@/hooks/queries';
 import { DEFAULT_MODEL_CONFIG, type AiModelDto, type ConfigureModelRequest } from '@/lib/api';
 

@@ -15,17 +15,17 @@
 
 'use client';
 
-import { useParams } from 'next/navigation';
 
 import { BookOpen, AlertTriangle, Star, Library, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 
 import { SharedLibraryGameCard } from '@/components/library';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
-import { Button } from '@/components/ui/primitives/button';
-import { Card, CardContent } from '@/components/ui/data-display/card';
 import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import { useSharedLibrary } from '@/hooks/queries';
 
 export default function SharedLibraryPage() {

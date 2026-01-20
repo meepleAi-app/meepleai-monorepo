@@ -10,10 +10,10 @@
 import { Clock, RotateCcw } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { Separator } from '@/components/ui/navigation/separator';
+import { Button } from '@/components/ui/primitives/button';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { useGameStateStore } from '@/lib/stores/game-state-store';
 
 interface StateHistoryTimelineProps {

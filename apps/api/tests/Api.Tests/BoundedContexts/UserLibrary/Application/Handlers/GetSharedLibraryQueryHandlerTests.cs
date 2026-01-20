@@ -61,16 +61,16 @@ public class GetSharedLibraryQueryHandlerTests
     [Fact]
     public void ShareLink_WhenExpired_IsInvalid()
     {
-        // Arrange - Create a valid link first, then test the IsExpired property directly
-        // Note: Domain prevents creating expired links at creation time (correct behavior)
+        // Arrange - Create valid link first (domain validation prevents creating with past date)
         var shareLink = LibraryShareLink.Create(
             Guid.NewGuid(),
             LibrarySharePrivacyLevel.Public,
             true,
-            DateTime.UtcNow.AddMilliseconds(1)); // Expires in 1ms
+            null);
 
-        // Wait for expiration
-        Thread.Sleep(10);
+        // Use reflection to set ExpiresAt to a past date (simulating time passage)
+        var expiresAtProperty = typeof(LibraryShareLink).GetProperty("ExpiresAt");
+        expiresAtProperty!.SetValue(shareLink, DateTime.UtcNow.AddDays(-1)); // Expired yesterday
 
         // Assert
         shareLink.IsExpired.Should().BeTrue();

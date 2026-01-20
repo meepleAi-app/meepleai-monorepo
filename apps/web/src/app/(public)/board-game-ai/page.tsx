@@ -8,8 +8,8 @@ import { useRouter } from 'next/navigation';
 import { useInView } from 'react-intersection-observer';
 
 import { LoadingButton } from '@/components/loading/LoadingButton';
-import { Button } from '@/components/ui/primitives/button';
 import { Card } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';

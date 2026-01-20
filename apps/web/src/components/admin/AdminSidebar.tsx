@@ -34,7 +34,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import {
   Sheet,
   SheetContent,
@@ -43,6 +42,7 @@ import {
   SheetDescription,
 } from '@/components/ui/navigation/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed';

@@ -2,8 +2,9 @@
  * Storybook stories for PlayerModeHelpModal - Issue #2475
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { PlayerModeHelpModal } from './PlayerModeHelpModal';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof PlayerModeHelpModal> = {
   title: 'Components/PlayerMode/HelpModal',

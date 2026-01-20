@@ -16,9 +16,10 @@ import { useState } from 'react';
 
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { GamesTable } from './_components/GamesTable/GamesTable';
-import { GameEditModal } from './_components/GameEditModal/GameEditModal';
+
 import { ApprovalReviewModal } from './_components/ApprovalReviewModal/ApprovalReviewModal';
+import { GameEditModal } from './_components/GameEditModal/GameEditModal';
+import { GamesTable } from './_components/GamesTable/GamesTable';
 
 export function GamesClient() {
   const { user, loading: authLoading } = useAuth();

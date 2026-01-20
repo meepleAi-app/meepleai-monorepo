@@ -15,6 +15,9 @@
 
 import { useState, useEffect } from 'react';
 
+import { Loader2, Check, RotateCcw, MessageCircle } from 'lucide-react';
+
+import { toast } from '@/components/layout/Toast';
 import {
   Dialog,
   DialogContent,
@@ -23,11 +26,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
-import { Button } from '@/components/ui/primitives/button';
-import { Label } from '@/components/ui/primitives/label';
-import { Input } from '@/components/ui/primitives/input';
-import { Textarea } from '@/components/ui/primitives/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
 import {
   Select,
   SelectContent,
@@ -35,10 +33,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
 import { Slider } from '@/components/ui/primitives/slider';
-import { toast } from '@/components/layout/Toast';
-import { Loader2, Check, RotateCcw, MessageCircle } from 'lucide-react';
-
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { useAgentConfig, useUpdateAgentConfig } from '@/hooks/queries';
 import {
   MODEL_OPTIONS,

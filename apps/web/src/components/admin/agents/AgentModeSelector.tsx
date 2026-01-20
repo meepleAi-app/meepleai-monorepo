@@ -8,8 +8,8 @@
 
 import { MessageCircle, Gamepad2, BookOpen } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
 import { cn } from '@/lib/utils';
 

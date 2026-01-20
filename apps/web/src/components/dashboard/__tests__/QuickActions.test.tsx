@@ -48,11 +48,12 @@ describe('QuickActions', () => {
   // ============================================================================
 
   describe('Default Actions', () => {
-    it('renders two default actions', () => {
+    it('renders three default actions', () => {
       render(<QuickActions />);
 
       expect(screen.getByRole('button', { name: /Add Game/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /New Chat/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Partite/i })).toBeInTheDocument();
     });
 
     it('renders Add Game action with correct text', () => {
@@ -281,14 +282,17 @@ describe('QuickActions', () => {
       expect(
         screen.getByRole('button', { name: 'New Chat: Start a conversation about game rules' })
       ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Partite: Visualizza le tue sessioni di gioco' })
+      ).toBeInTheDocument();
     });
 
     it('maintains semantic HTML structure', () => {
       const { container } = render(<QuickActions />);
 
-      // Should have h3 headings for titles
+      // Should have h3 headings for titles (3 default actions)
       const headings = container.querySelectorAll('h3');
-      expect(headings.length).toBeGreaterThanOrEqual(2);
+      expect(headings.length).toBeGreaterThanOrEqual(3);
     });
   });
 
@@ -300,9 +304,9 @@ describe('QuickActions', () => {
     it('passes icon prop to QuickActionCard', () => {
       const { container } = render(<QuickActions />);
 
-      // Should have SVG icons (lucide-react renders as SVG)
+      // Should have SVG icons (lucide-react renders as SVG) - 3 default actions
       const icons = container.querySelectorAll('svg');
-      expect(icons.length).toBeGreaterThanOrEqual(2);
+      expect(icons.length).toBeGreaterThanOrEqual(3);
     });
 
     it('passes title prop to QuickActionCard', () => {
@@ -310,6 +314,7 @@ describe('QuickActions', () => {
 
       expect(screen.getByText('Add Game')).toBeInTheDocument();
       expect(screen.getByText('New Chat')).toBeInTheDocument();
+      expect(screen.getByText('Partite')).toBeInTheDocument();
     });
 
     it('passes description prop to QuickActionCard', () => {
@@ -317,6 +322,7 @@ describe('QuickActions', () => {
 
       expect(screen.getByText(/Add a new board game/i)).toBeInTheDocument();
       expect(screen.getByText(/Start a conversation/i)).toBeInTheDocument();
+      expect(screen.getByText(/Visualizza le tue sessioni/i)).toBeInTheDocument();
     });
 
     it('passes onClick prop to QuickActionCard', async () => {
@@ -412,12 +418,12 @@ describe('QuickActions', () => {
       const { rerender } = render(<QuickActions />);
 
       const firstButtons = screen.getAllByRole('button');
-      expect(firstButtons).toHaveLength(2);
+      expect(firstButtons).toHaveLength(3);
 
       rerender(<QuickActions />);
 
       const secondButtons = screen.getAllByRole('button');
-      expect(secondButtons).toHaveLength(2);
+      expect(secondButtons).toHaveLength(3);
       expect(firstButtons[0].textContent).toBe(secondButtons[0].textContent);
     });
   });

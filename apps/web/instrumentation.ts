@@ -155,7 +155,15 @@ export async function register() {
 
         transformPoint(_point?: DOMPointInit): DOMPoint {
           // Returns a minimal DOMPoint-like object
-          return { x: 0, y: 0, z: 0, w: 1 } as DOMPoint;
+          const result: DOMPoint = {
+            x: 0,
+            y: 0,
+            z: 0,
+            w: 1,
+            matrixTransform: () => result,
+            toJSON: () => ({ x: 0, y: 0, z: 0, w: 1 }),
+          };
+          return result;
         }
 
         toFloat32Array(): Float32Array {

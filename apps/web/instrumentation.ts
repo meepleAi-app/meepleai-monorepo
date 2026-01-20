@@ -17,7 +17,6 @@ export async function register() {
   if (typeof window === 'undefined' && typeof globalThis !== 'undefined') {
     // DOMMatrix polyfill for pdfjs-dist and framer-motion SSR
     if (!globalThis.DOMMatrix) {
-      // @ts-expect-error - Polyfill implementation
       globalThis.DOMMatrix = class DOMMatrix {
         m11 = 1;
         m12 = 0;
@@ -155,8 +154,8 @@ export async function register() {
         }
 
         transformPoint(_point?: DOMPointInit): DOMPoint {
-          // @ts-expect-error - Minimal polyfill
-          return { x: 0, y: 0, z: 0, w: 1 };
+          // Returns a minimal DOMPoint-like object
+          return { x: 0, y: 0, z: 0, w: 1 } as DOMPoint;
         }
 
         toFloat32Array(): Float32Array {
@@ -243,7 +242,6 @@ export async function register() {
 
     // DOMPoint polyfill (used by DOMMatrix.transformPoint)
     if (!globalThis.DOMPoint) {
-      // @ts-expect-error - Polyfill implementation
       globalThis.DOMPoint = class DOMPoint {
         x: number;
         y: number;

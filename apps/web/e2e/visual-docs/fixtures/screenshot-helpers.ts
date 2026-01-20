@@ -7,9 +7,10 @@
  * @module visual-docs/fixtures/screenshot-helpers
  */
 
-import { Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+
+import { Page } from '@playwright/test';
 
 // ============================================================================
 // Types & Interfaces

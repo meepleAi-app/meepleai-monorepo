@@ -10,7 +10,7 @@
  * @see docs/08-user-flows/user-role/01-authentication.md
  */
 
-import { test, expect } from '../../fixtures/chromatic';
+import { test } from '../../fixtures/chromatic';
 import { AuthHelper, USER_FIXTURES } from '../../pages';
 import {
   ScreenshotHelper,

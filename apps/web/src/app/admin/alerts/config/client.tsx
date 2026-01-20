@@ -26,14 +26,14 @@ import {
 
 import { AdminAuthGuard } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Switch } from '@/components/ui/forms/switch';
+import { Separator } from '@/components/ui/navigation/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
-import { Separator } from '@/components/ui/navigation/separator';
-import { Switch } from '@/components/ui/forms/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { alertConfigApi } from '@/lib/api/alert-config.api';
 import { alertRulesApi } from '@/lib/api/alert-rules.api';
 import type { UpdateAlertConfiguration } from '@/lib/api/schemas/alert-config.schemas';

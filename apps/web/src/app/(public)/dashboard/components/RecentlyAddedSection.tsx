@@ -14,14 +14,14 @@
 
 'use client';
 
+import { AlertCircle, ArrowRight, Library } from 'lucide-react';
 import Link from 'next/link';
 
-import { AlertCircle, ArrowRight, Library } from 'lucide-react';
 
 import { RecentLibraryCard } from '@/components/library';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
-import { Button } from '@/components/ui/primitives/button';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import { useRecentlyAddedGames } from '@/hooks/queries';
 
 export interface RecentlyAddedSectionProps {

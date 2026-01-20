@@ -3,8 +3,8 @@ import React from 'react';
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
 
 interface PromptVersionCardProps {
   version: {

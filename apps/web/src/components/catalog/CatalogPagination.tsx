@@ -10,8 +10,9 @@
 
 'use client';
 
-import { Button } from '@/components/ui/primitives/button';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+
+import { Button } from '@/components/ui/primitives/button';
 
 interface CatalogPaginationProps {
   currentPage: number;

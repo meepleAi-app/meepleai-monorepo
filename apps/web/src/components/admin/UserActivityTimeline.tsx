@@ -15,8 +15,8 @@ import { useState, useMemo } from 'react';
 
 import { ActivityIcon, FilterIcon } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
 
 import { UserActivityFilters, UserActivityFiltersState } from './UserActivityFilters';
 import { UserActivityItem, UserActivityEvent } from './UserActivityItem';

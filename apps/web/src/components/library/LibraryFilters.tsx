@@ -15,9 +15,7 @@ import React, { useState, useEffect } from 'react';
 
 import { Search, X, SortAsc } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
+import { Switch } from '@/components/ui/forms/switch';
 import {
   Select,
   SelectContent,
@@ -25,7 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-import { Switch } from '@/components/ui/forms/switch';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { cn } from '@/lib/utils';
 
 export interface LibraryFiltersProps {

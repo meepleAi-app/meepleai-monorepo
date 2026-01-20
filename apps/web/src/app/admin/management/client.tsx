@@ -46,11 +46,11 @@ import type { UserActivityEvent } from '@/components/admin/UserActivityItem';
 import { UserActivityTimeline } from '@/components/admin/UserActivityTimeline';
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { ApiKeyCreationModal } from '@/components/modals/ApiKeyCreationModal';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog';
+import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { ApiKeyWithStatsDto, AdminUser } from '@/lib/api/schemas/admin.schemas';
 

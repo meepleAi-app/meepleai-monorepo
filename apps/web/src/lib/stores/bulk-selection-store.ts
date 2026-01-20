@@ -120,6 +120,7 @@ export const useBulkSelectionStore = create<BulkSelectionStore>()(
         const newSet = new Set(selectedIds);
 
         for (let i = start; i <= end; i++) {
+          // eslint-disable-next-line security/detect-object-injection -- i is a controlled loop index
           newSet.add(ids[i]);
         }
 

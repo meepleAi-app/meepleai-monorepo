@@ -14,15 +14,15 @@
 'use client';
 
 import { useState } from 'react';
+
+import { Library, Plus, Check } from 'lucide-react';
 import Image from 'next/image';
 
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/data-display/card';
-import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { toast } from '@/components/layout/Toast';
-import { Library, Plus, Check } from 'lucide-react';
-
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/data-display/card';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
 import type { SharedGame, SharedGameDetail } from '@/lib/api';
 

@@ -14,9 +14,8 @@
 
 'use client';
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-
+import { formatDistanceToNow } from 'date-fns';
+import { it } from 'date-fns/locale';
 import {
   AlertCircle,
   ArrowRight,
@@ -26,12 +25,11 @@ import {
   PlayCircle,
   Users,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { it } from 'date-fns/locale';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import {
   Card,
   CardContent,
@@ -39,11 +37,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import { useActiveSessions, usePauseSession, useResumeSession } from '@/hooks/queries';
 import { useGames } from '@/hooks/queries/useGames';
 import type { GameSessionDto, Game } from '@/lib/api';
-import { toast } from 'sonner';
+
 
 export interface ActiveSessionsSectionProps {
   /** Number of sessions to display (default: 3) */
@@ -67,7 +67,9 @@ function SessionStatusBadge({ status }: { status: string }) {
   };
 
   return (
+    // eslint-disable-next-line security/detect-object-injection -- status comes from typed API response
     <Badge variant={variants[status] || 'outline'} className="text-xs">
+      {/* eslint-disable-next-line security/detect-object-injection -- status is controlled */}
       {labels[status] || status}
     </Badge>
   );

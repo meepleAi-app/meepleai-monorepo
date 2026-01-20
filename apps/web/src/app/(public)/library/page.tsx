@@ -37,13 +37,13 @@ import {
   BulkActionBar,
   ShareLibraryModal,
 } from '@/components/library';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import { useLibrary, useLibraryQuota } from '@/hooks/queries/useLibrary';
-import { useBulkSelectionStore } from '@/lib/stores/bulk-selection-store';
 import type { GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
+import { useBulkSelectionStore } from '@/lib/stores/bulk-selection-store';
 
 export default function LibraryPage() {
   // Filter state
@@ -104,7 +104,6 @@ export default function LibraryPage() {
 
   // Bulk selection state (Issue #2613)
   const {
-    selectedIds,
     selectionMode,
     toggleSelectionMode,
     toggleSelection,

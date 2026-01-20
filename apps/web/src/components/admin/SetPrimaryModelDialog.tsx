@@ -9,6 +9,8 @@
 
 'use client';
 
+import { Loader2, Star } from 'lucide-react';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +21,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/overlays/alert-dialog-primitives';
-import { Loader2, Star } from 'lucide-react';
 
 interface SetPrimaryModelDialogProps {
   isOpen: boolean;

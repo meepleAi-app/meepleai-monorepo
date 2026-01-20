@@ -55,6 +55,7 @@ export function OverallStatusBadge({
   unhealthyCount,
   totalCount,
 }: OverallStatusBadgeProps) {
+  // eslint-disable-next-line security/detect-object-injection -- overallState comes from typed props
   const config = stateConfig[overallState];
   const Icon = config.icon;
 

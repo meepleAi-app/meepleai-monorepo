@@ -14,6 +14,7 @@ import React from 'react';
 
 import { Keyboard, MessageSquare, Upload, Search, HelpCircle } from 'lucide-react';
 
+import { Separator } from '@/components/ui/navigation/separator';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +22,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/overlays/dialog';
-import { Separator } from '@/components/ui/navigation/separator';
 import { formatShortcut, isMac, type KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 
 interface KeyboardShortcutsHelpProps {

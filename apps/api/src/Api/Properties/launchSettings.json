@@ -9,8 +9,14 @@
       "applicationUrl": "http://localhost:8080",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
+        "POSTGRES_HOST": "localhost",
+        "REDIS_HOST": "localhost",
         "QDRANT_URL": "http://localhost:6333",
-        "OLLAMA_URL": "http://localhost:11434"
+        "OLLAMA_URL": "http://localhost:11434",
+        "LOCAL_EMBEDDING_URL": "http://localhost:8000",
+        "N8N_URL": "http://localhost:5678",
+        "Monitoring__GrafanaUrl": "http://localhost:3001",
+        "Monitoring__PrometheusUrl": "http://localhost:9090"
       }
     }
   }

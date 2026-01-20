@@ -30,6 +30,10 @@
 
 'use client';
 
+// Skip static prerendering - page uses client-side data fetching with React Query
+// and imports components that require DOMMatrix (framer-motion)
+export const dynamic = 'force-dynamic';
+
 import React from 'react';
 
 import { AlertCircle } from 'lucide-react';

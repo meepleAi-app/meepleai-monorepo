@@ -50,6 +50,8 @@ export {
   useUpdateShareLink,
   useRevokeShareLink,
   useSharedLibrary,
+  // Dashboard widget (Issue #2612)
+  useRecentlyAddedGames,
   libraryKeys,
 } from './useLibrary';
 

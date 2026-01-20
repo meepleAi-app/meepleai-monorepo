@@ -71,18 +71,33 @@ export default defineConfig({
     },
   ],
 
-  /* Local dev server - disabled by default to avoid memory issues
-   * Start the dev server manually with: pnpm dev:visual-docs
-   * Then run tests with: pnpm test:visual-docs
+  /* Web server configuration for visual docs tests
+   *
+   * VISUAL_DOCS_AUTO_SERVER=true: Uses production build (more memory efficient)
+   * VISUAL_DOCS_DEV_SERVER=true: Uses dev server (requires more RAM)
+   * Neither set: Expects server already running at localhost:3000
    */
   webServer: process.env.VISUAL_DOCS_AUTO_SERVER
     ? {
-        command: 'cross-env NODE_OPTIONS="--max-old-space-size=8192" pnpm dev',
+        // Production build is more memory efficient (~2GB vs 16GB+ for dev)
+        command: 'pnpm build && pnpm start',
         url: 'http://localhost:3000',
         reuseExistingServer: true,
-        timeout: 120000,
+        timeout: 300000, // 5 minutes for build + start
+        stdout: 'pipe',
+        stderr: 'pipe',
       }
-    : undefined,
+    : process.env.VISUAL_DOCS_DEV_SERVER
+      ? {
+          // Dev server mode - requires 16GB+ RAM
+          command: 'cross-env NODE_OPTIONS="--max-old-space-size=16384" pnpm dev',
+          url: 'http://localhost:3000',
+          reuseExistingServer: true,
+          timeout: 180000,
+          stdout: 'pipe',
+          stderr: 'pipe',
+        }
+      : undefined,
 
   /* Global setup/teardown */
   globalSetup: './e2e/visual-docs/global-setup.ts',

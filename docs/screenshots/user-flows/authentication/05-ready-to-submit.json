@@ -1,0 +1,37 @@
+{
+  "screenshot": {
+    "id": "user-authentication-05",
+    "filename": "05-ready-to-submit.png",
+    "flow": "authentication",
+    "role": "user",
+    "step": 5,
+    "totalSteps": 5,
+    "title": "Ready to Submit",
+    "description": "Login form filled and ready for submission"
+  },
+  "capture": {
+    "timestamp": "2026-01-20T14:41:44.580Z",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "browser": "chromium",
+    "fullPage": true
+  },
+  "interaction": {
+    "previousAction": "Form filled",
+    "nextAction": "Click to login",
+    "highlightedElements": [
+      {
+        "selector": "[data-testid=\"login-submit\"], button[type=\"submit\"]",
+        "type": "box",
+        "label": "Login Button"
+      }
+    ]
+  },
+  "navigation": {
+    "url": "http://localhost:3000/login",
+    "previousStep": "04-previous",
+    "nextStep": null
+  }
+}

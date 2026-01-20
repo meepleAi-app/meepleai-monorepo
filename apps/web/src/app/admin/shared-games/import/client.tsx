@@ -439,8 +439,8 @@ export function ImportClient() {
         const validation = BulkGameImportDtoSchema.safeParse(item);
 
         if (!validation.success) {
-          const errorMessages = validation.error.errors
-            .map(e => `${e.path.join('.')}: ${e.message}`)
+          const errorMessages = validation.error.issues
+            .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
             .join(', ');
           return {
             id,

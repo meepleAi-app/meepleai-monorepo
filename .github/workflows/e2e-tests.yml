@@ -154,18 +154,17 @@ jobs:
         env:
           # Issue #2556: Use "Testing" to skip secret validation at startup
           ASPNETCORE_ENVIRONMENT: Testing
-          # Individual POSTGRES_* vars for SecretsHelper.BuildPostgresConnectionString()
+          # PostgreSQL - UPPER_SNAKE_CASE format (preferred by SecretsHelper)
           POSTGRES_HOST: localhost
           POSTGRES_PORT: "5432"
           POSTGRES_DB: meepleai_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres_test_password
-          # Fallback connection string
-          ConnectionStrings__Postgres: "Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=postgres_test_password"
-          Redis__ConnectionString: "localhost:6379"
-          Qdrant__Url: "http://localhost:6333"
+          # Redis - UPPER_SNAKE_CASE format
+          REDIS_URL: "localhost:6379"
+          # Qdrant - UPPER_SNAKE_CASE format
           QDRANT_URL: "http://localhost:6333"
-          # Test placeholder for OpenRouter (won't make actual API calls in testing)
+          # OpenRouter - test placeholder (no real API calls in testing)
           OPENROUTER_API_KEY: "test-key-for-ci-placeholder"
 
       - name: Health Check

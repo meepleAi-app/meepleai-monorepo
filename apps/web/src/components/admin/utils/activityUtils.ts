@@ -7,6 +7,22 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
+
+/**
+ * Activity event data structure shared across all activity components.
+ * Centralized type definition to prevent duplication (Issue #2787 code review).
+ */
+export interface ActivityEvent {
+  id: string;
+  eventType: string;
+  description: string;
+  userId?: string | null;
+  userEmail?: string | null;
+  entityId?: string | null;
+  entityType?: string | null;
+  timestamp: string;
+  severity?: 'Info' | 'Warning' | 'Error' | 'Critical';
+}
 import {
   UserPlusIcon,
   FileUpIcon,
@@ -14,6 +30,10 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   ActivityIcon,
+  UserIcon,
+  GamepadIcon,
+  SettingsIcon,
+  SparklesIcon,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -44,6 +64,43 @@ export const eventIcons: Record<string, LucideIcon> = {
   ErrorOccurred: XCircleIcon,
   SystemEvent: ActivityIcon,
 };
+
+/**
+ * Activity type categories for the new design system (Issue #2787).
+ * Maps event types to high-level category types with colored icons.
+ */
+export type ActivityType = 'user' | 'game' | 'system' | 'ai';
+
+/**
+ * Category-based icon configuration with Tailwind color classes (Issue #2787).
+ */
+export const typeIcons: Record<ActivityType, { icon: LucideIcon; colorClass: string }> = {
+  user: { icon: UserIcon, colorClass: 'text-blue-600' },
+  game: { icon: GamepadIcon, colorClass: 'text-green-600' },
+  system: { icon: SettingsIcon, colorClass: 'text-stone-600' },
+  ai: { icon: SparklesIcon, colorClass: 'text-purple-600' },
+};
+
+/**
+ * Maps event types to activity type categories (Issue #2787).
+ * Used to determine which category icon to display for each event type.
+ */
+export function getActivityType(eventType: string): ActivityType {
+  const eventToType: Record<string, ActivityType> = {
+    UserRegistered: 'user',
+    UserLogin: 'user',
+    GameAdded: 'game',
+    ConfigurationChanged: 'system',
+    SystemEvent: 'system',
+    ErrorOccurred: 'ai',
+    PdfUploaded: 'ai',
+    PdfProcessed: 'ai',
+    AlertCreated: 'system',
+    AlertResolved: 'system',
+  };
+
+  return eventToType[eventType] ?? 'system';
+}
 
 /**
  * Formats a timestamp as a relative time string in Italian.

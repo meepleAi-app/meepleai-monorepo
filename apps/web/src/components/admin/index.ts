@@ -14,6 +14,10 @@ export { StatCard, type StatCardProps } from './StatCard';
 export { MetricsGrid, type MetricsGridProps } from './MetricsGrid';
 export { ActivityFeed, type ActivityFeedProps, type ActivityEvent } from './ActivityFeed';
 
+// Issue #2787: Activity Timeline with new design system
+export { ActivityTimeline, type ActivityTimelineProps } from './ActivityTimeline';
+export type { ActivityEvent } from './utils/activityUtils';
+
 // Issue #881: Modular admin layout components
 export {
   AdminSidebar,

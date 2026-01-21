@@ -51,6 +51,10 @@ internal static class DocumentProcessingServiceExtensions
         services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>(); // User tier-based upload quotas
         services.AddScoped<CitationPriorityService>(); // ISSUE-2051: Citation priority and deduplication
 
+        // Issue #2732: Share request document services
+        services.AddScoped<IShareRequestDocumentService, ShareRequestDocumentService>();
+        services.AddScoped<IStorageQuotaService, StorageQuotaService>();
+
         // Infrastructure Adapters (scoped - may use file I/O)
         services.AddScoped<IPdfTableExtractor, ITextPdfTableExtractor>();
         services.AddScoped<IPdfValidator, DocnetPdfValidator>(); // PDF-09: DDD validation adapter

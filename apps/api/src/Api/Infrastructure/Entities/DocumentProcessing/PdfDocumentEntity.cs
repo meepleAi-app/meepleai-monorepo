@@ -54,6 +54,11 @@ public class PdfDocumentEntity
     // Admin Wizard: Public library visibility (visible to all registered users)
     public bool IsPublic { get; set; }
 
+    // Issue #2732: Shared game document support
+    public Guid? SharedGameId { get; set; }
+    public Guid? ContributorId { get; set; }
+    public Guid? SourceDocumentId { get; set; }
+
     [NotMapped]
     public ProcessingProgress? ProcessingProgress
     {

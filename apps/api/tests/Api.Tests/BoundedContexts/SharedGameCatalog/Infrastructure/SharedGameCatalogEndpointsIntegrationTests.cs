@@ -16,6 +16,7 @@ using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using Api.Tests.TestHelpers;
 using MediatR;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -96,6 +97,10 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
 
                     // Ensure domain event collector is registered
                     services.AddScoped<IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
+
+                    // Issue #2688: Mock IHybridCacheService (required for session validation)
+                    services.RemoveAll(typeof(Api.Services.IHybridCacheService));
+                    services.AddScoped<Api.Services.IHybridCacheService>(_ => Mock.Of<Api.Services.IHybridCacheService>());
 
                     // Register authorization policies
                     services.AddSharedGameCatalogPolicies();
@@ -200,16 +205,25 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
 
     // ========================================
     // APPROVAL WORKFLOW TESTS (Issue #2514)
+    // Issue #2688: Admin endpoint tests now use TestSessionHelper for authentication
     // ========================================
 
-    [Fact(Skip = "Requires test authentication infrastructure - Issue #2688")]
+    [Fact]
     public async Task SubmitForApproval_WithDraftGame_ReturnsNoContent()
     {
-        // Arrange
-        var game = await CreateTestGameAsync(GameStatus.Draft);
+        // Arrange - Issue #2688: Setup admin authentication
+        using var authScope = _factory.Services.CreateScope();
+        var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (adminUserId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(authDbContext);
 
-        // Act
-        var response = await _client.PostAsync($"/api/v1/admin/shared-games/{game.Id}/submit-for-approval", null);
+        var game = await CreateTestGameAsync(GameStatus.Draft, adminUserId);
+
+        // Act - Use HttpRequestMessage with Cookie header for authentication
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"/api/v1/admin/shared-games/{game.Id}/submit-for-approval",
+            sessionToken);
+        var response = await _client.SendAsync(request);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -222,14 +236,22 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         Assert.Equal((int)GameStatus.PendingApproval, updatedGame.Status);
     }
 
-    [Fact(Skip = "Requires test authentication infrastructure - Issue #2688")]
+    [Fact]
     public async Task ApprovePublication_WithPendingApprovalGame_ReturnsNoContent()
     {
-        // Arrange
-        var game = await CreateTestGameAsync(GameStatus.PendingApproval);
+        // Arrange - Issue #2688: Setup admin authentication
+        using var authScope = _factory.Services.CreateScope();
+        var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (adminUserId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(authDbContext);
 
-        // Act
-        var response = await _client.PostAsync($"/api/v1/admin/shared-games/{game.Id}/approve-publication", null);
+        var game = await CreateTestGameAsync(GameStatus.PendingApproval, adminUserId);
+
+        // Act - Use HttpRequestMessage with Cookie header for authentication
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"/api/v1/admin/shared-games/{game.Id}/approve-publication",
+            sessionToken);
+        var response = await _client.SendAsync(request);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -242,15 +264,24 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         Assert.Equal((int)GameStatus.Published, updatedGame.Status);
     }
 
-    [Fact(Skip = "Requires test authentication infrastructure - Issue #2688")]
+    [Fact]
     public async Task RejectPublication_WithPendingApprovalGame_ReturnsNoContent()
     {
-        // Arrange
-        var game = await CreateTestGameAsync(GameStatus.PendingApproval);
-        var request = new { Reason = "Needs better description" };
+        // Arrange - Issue #2688: Setup admin authentication
+        using var authScope = _factory.Services.CreateScope();
+        var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (adminUserId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(authDbContext);
 
-        // Act
-        var response = await _client.PostAsJsonAsync($"/api/v1/admin/shared-games/{game.Id}/reject-publication", request);
+        var game = await CreateTestGameAsync(GameStatus.PendingApproval, adminUserId);
+        var requestBody = new { Reason = "Needs better description" };
+
+        // Act - Use HttpRequestMessage with Cookie header and JSON content for authentication
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"/api/v1/admin/shared-games/{game.Id}/reject-publication",
+            sessionToken,
+            requestBody);
+        var response = await _client.SendAsync(request);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -263,16 +294,24 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         Assert.Equal((int)GameStatus.Draft, updatedGame.Status);
     }
 
-    [Fact(Skip = "Requires test authentication infrastructure - Issue #2688")]
+    [Fact]
     public async Task GetPendingApprovals_ReturnsPendingGames()
     {
-        // Arrange
-        await CreateTestGameAsync(GameStatus.PendingApproval);
-        await CreateTestGameAsync(GameStatus.PendingApproval);
-        await CreateTestGameAsync(GameStatus.Draft); // Should not appear in results
+        // Arrange - Issue #2688: Setup admin authentication
+        using var authScope = _factory.Services.CreateScope();
+        var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (adminUserId, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(authDbContext);
 
-        // Act
-        var response = await _client.GetAsync("/api/v1/admin/shared-games/pending-approvals?pageNumber=1&pageSize=20");
+        await CreateTestGameAsync(GameStatus.PendingApproval, adminUserId);
+        await CreateTestGameAsync(GameStatus.PendingApproval, adminUserId);
+        await CreateTestGameAsync(GameStatus.Draft, adminUserId); // Should not appear in results
+
+        // Act - Use HttpRequestMessage with Cookie header for authentication
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            "/api/v1/admin/shared-games/pending-approvals?pageNumber=1&pageSize=20",
+            sessionToken);
+        var response = await _client.SendAsync(request);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -282,10 +321,49 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         Assert.All(result.Items, g => Assert.Equal(GameStatus.PendingApproval, g.Status));
     }
 
+    // ========================================
+    // AUTHORIZATION TESTS (Issue #2688)
+    // ========================================
+
+    [Fact]
+    public async Task AdminEndpoint_WithoutAuth_Returns401Unauthorized()
+    {
+        // Arrange - No authentication setup (unauthenticated client)
+        var game = await CreateTestGameAsync(GameStatus.PendingApproval);
+
+        // Act - Try to access admin endpoint without auth
+        var response = await _client.GetAsync("/api/v1/admin/shared-games/pending-approvals?pageNumber=1&pageSize=20");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminOnlyEndpoint_WithRegularUser_Returns403Forbidden()
+    {
+        // Arrange - Setup regular user authentication (not admin)
+        using var authScope = _factory.Services.CreateScope();
+        var authDbContext = authScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(authDbContext);
+
+        var game = await CreateTestGameAsync(GameStatus.PendingApproval, userId);
+
+        // Act - Use HttpRequestMessage with Cookie header for authentication
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"/api/v1/admin/shared-games/{game.Id}/approve-publication",
+            sessionToken);
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     /// <summary>
     /// Issue #2707: Use fresh scope to prevent ObjectDisposedException
+    /// Issue #2688: Added optional createdBy parameter for admin tests
     /// </summary>
-    private async Task<SharedGameEntity> CreateTestGameAsync(GameStatus status)
+    private async Task<SharedGameEntity> CreateTestGameAsync(GameStatus status, Guid? createdBy = null)
     {
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -303,7 +381,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
             ImageUrl = "https://example.com/image.jpg",
             ThumbnailUrl = "https://example.com/thumb.jpg",
             Status = (int)status,
-            CreatedBy = TestUserId,
+            CreatedBy = createdBy ?? TestUserId,
             CreatedAt = DateTime.UtcNow
         };
 

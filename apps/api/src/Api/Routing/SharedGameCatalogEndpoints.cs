@@ -172,6 +172,34 @@ internal static class SharedGameCatalogEndpoints
             .WithSummary("Import game from BoardGameGeek (Admin/Editor)")
             .Produces<Guid>(StatusCodes.Status201Created);
 
+        // BGG Search - searches BoardGameGeek for games (autocomplete)
+        group.MapGet("/admin/shared-games/bgg/search", HandleBggSearch)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("SearchBggGames")
+            .WithSummary("Search BoardGameGeek for games (Admin/Editor)")
+            .WithDescription("Search BGG API for board games by name. Used for autocomplete in add-from-BGG flow.")
+            .Produces<List<BggSearchResultDto>>();
+
+        // BGG Duplicate Check - check if game exists and return diff data
+        group.MapGet("/admin/shared-games/bgg/check-duplicate/{bggId:int}", HandleCheckBggDuplicate)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("CheckBggDuplicate")
+            .WithSummary("Check if BGG game already exists (Admin/Editor)")
+            .WithDescription("Checks if a game with given BGG ID exists. Returns both existing game data and fresh BGG data for diff comparison.")
+            .Produces<BggDuplicateCheckResult>();
+
+        // Update existing game from BGG with selective field updates
+        group.MapPut("/admin/shared-games/{id:guid}/update-from-bgg", HandleUpdateFromBgg)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("UpdateGameFromBgg")
+            .WithSummary("Update existing game from BGG data (Admin/Editor)")
+            .WithDescription("Updates an existing game with fresh data from BGG. Supports selective field updates via fieldsToUpdate parameter.")
+            .Produces<Guid>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);
+
         // Bulk import games
         group.MapPost("/admin/shared-games/bulk-import", HandleBulkImport)
             .RequireAuthorization("AdminOnlyPolicy")
@@ -698,6 +726,66 @@ internal static class SharedGameCatalogEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleBggSearch(
+        IMediator mediator,
+        [FromQuery] string query,
+        [FromQuery] bool exact = false,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return Results.BadRequest(new { error = "Search query is required" });
+        }
+
+        try
+        {
+            var searchQuery = new SearchBggGamesQuery(query, exact);
+            var results = await mediator.Send(searchQuery, ct).ConfigureAwait(false);
+            return Results.Ok(results);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Rate limit"))
+        {
+            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+        }
+    }
+
+    private static async Task<IResult> HandleCheckBggDuplicate(
+        int bggId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new CheckBggDuplicateQuery(bggId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleUpdateFromBgg(
+        Guid id,
+        [FromBody] UpdateFromBggRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var command = new UpdateSharedGameFromBggCommand(
+            id,
+            request.BggId,
+            session!.User!.Id,
+            request.FieldsToUpdate);
+
+        try
+        {
+            var gameId = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(gameId);
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
+
     private static async Task<IResult> HandleDeleteGame(
         Guid id,
         IMediator mediator,
@@ -1199,6 +1287,14 @@ internal record UpdateSharedGameRequest(
 /// Request DTO for importing a game from BoardGameGeek.
 /// </summary>
 internal record ImportFromBggRequest(int BggId);
+
+/// <summary>
+/// Request DTO for updating an existing game from BoardGameGeek data.
+/// Issue: Admin Add Shared Game from BGG flow - "Propose Update" functionality
+/// </summary>
+/// <param name="BggId">BoardGameGeek game ID to fetch fresh data from</param>
+/// <param name="FieldsToUpdate">List of field names to update. If null/empty, updates all fields.</param>
+internal record UpdateFromBggRequest(int BggId, List<string>? FieldsToUpdate);
 
 /// <summary>
 /// Request DTO for bulk importing games.

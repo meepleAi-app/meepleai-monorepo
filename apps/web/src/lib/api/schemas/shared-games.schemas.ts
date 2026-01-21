@@ -483,3 +483,90 @@ export const BulkImportResultSchema = z.object({
 });
 
 export type BulkImportResult = z.infer<typeof BulkImportResultSchema>;
+
+// ========== BGG Import/Update Flow (Admin Add from BGG) ==========
+
+/**
+ * BGG Search Result schema (matches backend BggSearchResultDto)
+ */
+export const BggSearchResultSchema = z.object({
+  bggId: z.number().int().positive(),
+  name: z.string().min(1),
+  yearPublished: z.number().int().nullable(),
+  thumbnailUrl: z.string().nullable(),
+  type: z.string(),
+});
+
+export type BggSearchResult = z.infer<typeof BggSearchResultSchema>;
+
+/**
+ * BGG Game Details schema (matches backend BggGameDetailsDto)
+ */
+export const BggGameDetailsSchema = z.object({
+  bggId: z.number().int().positive(),
+  name: z.string().min(1),
+  description: z.string().nullable(),
+  yearPublished: z.number().int().nullable(),
+  minPlayers: z.number().int().nullable(),
+  maxPlayers: z.number().int().nullable(),
+  playingTime: z.number().int().nullable(),
+  minPlayTime: z.number().int().nullable(),
+  maxPlayTime: z.number().int().nullable(),
+  minAge: z.number().int().nullable(),
+  averageRating: z.number().nullable(),
+  bayesAverageRating: z.number().nullable(),
+  usersRated: z.number().int().nullable(),
+  averageWeight: z.number().nullable(),
+  thumbnailUrl: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  categories: z.array(z.string()),
+  mechanics: z.array(z.string()),
+  designers: z.array(z.string()),
+  publishers: z.array(z.string()),
+});
+
+export type BggGameDetails = z.infer<typeof BggGameDetailsSchema>;
+
+/**
+ * BGG Duplicate Check Result schema
+ * Returns both existing game data and fresh BGG data for diff comparison
+ */
+export const BggDuplicateCheckResultSchema = z.object({
+  isDuplicate: z.boolean(),
+  existingGameId: z.string().uuid().nullable(),
+  existingGame: SharedGameDetailSchema.nullable(),
+  bggData: BggGameDetailsSchema.nullable(),
+});
+
+export type BggDuplicateCheckResult = z.infer<typeof BggDuplicateCheckResultSchema>;
+
+/**
+ * Update from BGG request body
+ */
+export interface UpdateFromBggRequest {
+  bggId: number;
+  fieldsToUpdate?: string[];
+}
+
+/**
+ * Valid fields for selective BGG update
+ */
+export const BggUpdatableFields = [
+  'title',
+  'description',
+  'yearPublished',
+  'minPlayers',
+  'maxPlayers',
+  'playingTime',
+  'minAge',
+  'complexityRating',
+  'averageRating',
+  'imageUrl',
+  'thumbnailUrl',
+  'designers',
+  'publishers',
+  'categories',
+  'mechanics',
+] as const;
+
+export type BggUpdatableField = (typeof BggUpdatableFields)[number];

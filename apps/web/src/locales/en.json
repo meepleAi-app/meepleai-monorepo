@@ -631,6 +631,245 @@
           "content": "For privacy questions or to exercise your rights, contact: privacy@meepleai.com. You also have the right to file a complaint with the Data Protection Authority if you believe the processing of your data violates GDPR."
         }
       }
+    },
+    "cookies": {
+      "title": "Cookie Policy",
+      "description": "How we use cookies and similar technologies",
+      "sections": {
+        "whatAreCookies": {
+          "title": "1. What are Cookies",
+          "content": "Cookies are small text files that are stored on your device when you visit a website. They are used to remember your preferences and improve user experience."
+        },
+        "typesOfCookies": {
+          "title": "2. Types of Cookies We Use",
+          "content": "We use three types of cookies: Technical cookies (essential for service operation), Analytical cookies (to understand how you use the site), Functional cookies (to remember your preferences such as language and theme)."
+        },
+        "technicalCookies": {
+          "title": "3. Technical Cookies",
+          "content": "These cookies are essential for proper operation: session cookies (authentication), security cookies (CSRF protection), load balancing cookies. They cannot be disabled."
+        },
+        "analyticalCookies": {
+          "title": "4. Analytical Cookies",
+          "content": "With your consent, we use anonymized analytical cookies to: understand which pages are most visited, identify navigation issues, improve service performance. We do not share this data with third parties."
+        },
+        "functionalCookies": {
+          "title": "5. Functional Cookies",
+          "content": "These cookies remember your preferences: language (Italian/English), theme (light/dark), view preferences (lists, filters). They make your experience more personalized."
+        },
+        "thirdPartyCookies": {
+          "title": "6. Third-Party Cookies",
+          "content": "We may use third-party services that install their own cookies: Cloudflare (security and performance), authentication providers (if you use social login). These services have their own privacy policies."
+        },
+        "cookieManagement": {
+          "title": "7. Managing Cookies",
+          "content": "You can manage cookies in several ways: via our cookie banner on first visit, via your browser settings (instructions on aboutcookies.org), by deleting cookies already stored. Note that disabling technical cookies may affect service operation."
+        },
+        "cookieDuration": {
+          "title": "8. Cookie Duration",
+          "content": "Technical cookies: session duration. Preference cookies: 1 year. Analytical cookies: 13 months maximum. Authentication cookies: until logout or token expiration."
+        },
+        "policyUpdates": {
+          "title": "9. Policy Updates",
+          "content": "We may update this Cookie Policy periodically. Changes will be communicated through the cookie banner or on this page. Last update: January 2026."
+        }
+      }
+    }
+  },
+  "pages": {
+    "about": {
+      "title": "About MeepleAI",
+      "description": "Discover who we are and our mission to improve your gaming experience",
+      "mission": {
+        "title": "Our Mission",
+        "content": "MeepleAI was born from the passion for board games and the desire to make rules more accessible. We believe that understanding rules shouldn't be a barrier to fun."
+      },
+      "story": {
+        "title": "Our Story",
+        "content": "It all started from a simple problem: finding a specific rule in a 50-page rulebook during a gaming session. From that frustration came the idea of an intelligent assistant that knows the rules better than you do."
+      },
+      "values": {
+        "title": "Our Values",
+        "accessibility": {
+          "title": "Accessibility",
+          "description": "Making rules understandable for everyone, from beginners to experts"
+        },
+        "precision": {
+          "title": "Precision",
+          "description": "Answers based directly on official rulebooks, with cited sources"
+        },
+        "community": {
+          "title": "Community",
+          "description": "Building a community of players who share knowledge and passion"
+        },
+        "innovation": {
+          "title": "Innovation",
+          "description": "Using AI to solve real problems in board gaming"
+        }
+      },
+      "team": {
+        "title": "The Team",
+        "content": "We are a small team of board game enthusiasts and developers, united by the passion to make gaming sessions more fluid and enjoyable."
+      }
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "description": "Discover how MeepleAI helps you with board game rules",
+      "steps": {
+        "step1": {
+          "title": "1. Choose Your Game",
+          "description": "Select a game from our catalog or upload your own rulebook PDF. We support hundreds of popular games."
+        },
+        "step2": {
+          "title": "2. Ask a Question",
+          "description": "Write your question in natural language: 'Can I move two characters on the same turn?', 'How does scoring work at the end?'"
+        },
+        "step3": {
+          "title": "3. Get the Answer",
+          "description": "Receive a precise answer with direct references to the rulebook. You can always verify the source of the response."
+        }
+      },
+      "features": {
+        "title": "Main Features",
+        "rag": {
+          "title": "Intelligent RAG",
+          "description": "Our Retrieval-Augmented Generation system finds the most relevant sections in the rulebook to answer your question."
+        },
+        "multilingual": {
+          "title": "Multilingual",
+          "description": "Ask questions in Italian or English, regardless of the rulebook language."
+        },
+        "pdfUpload": {
+          "title": "PDF Upload",
+          "description": "Upload your game rulebook and our AI will analyze it to answer your questions."
+        },
+        "gameLibrary": {
+          "title": "Personal Library",
+          "description": "Save your games and access them quickly. Track your collection and preferences."
+        }
+      }
+    },
+    "blog": {
+      "title": "Blog",
+      "description": "News, guides, and insights on the world of board games",
+      "comingSoon": {
+        "title": "Coming Soon",
+        "content": "We're working on interesting content for you. In the meantime, follow us on social media for the latest updates!",
+        "cta": "Follow us"
+      },
+      "categories": {
+        "news": "News",
+        "guides": "Guides",
+        "reviews": "Reviews",
+        "tutorials": "Tutorials"
+      }
+    },
+    "contact": {
+      "title": "Contact Us",
+      "description": "Do you have questions, suggestions, or feedback? We're here to help",
+      "form": {
+        "name": "Full Name",
+        "namePlaceholder": "Your name",
+        "email": "Email",
+        "emailPlaceholder": "your.email@example.com",
+        "subject": "Subject",
+        "subjectPlaceholder": "What is it about?",
+        "message": "Message",
+        "messagePlaceholder": "Write your message here...",
+        "submit": "Send Message",
+        "sending": "Sending...",
+        "success": "Message sent successfully! We'll respond as soon as possible.",
+        "error": "An error occurred sending the message. Please try again."
+      },
+      "subjects": {
+        "general": "General Information",
+        "support": "Technical Support",
+        "feedback": "Feedback and Suggestions",
+        "partnership": "Partnerships",
+        "press": "Press and Media",
+        "other": "Other"
+      },
+      "info": {
+        "title": "Other Ways to Reach Us",
+        "email": "Email",
+        "emailValue": "info@meepleai.com",
+        "social": "Social",
+        "response": "Average response time",
+        "responseValue": "Within 48 hours"
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "description": "Answers to the most common questions about MeepleAI",
+      "categories": {
+        "general": {
+          "title": "General",
+          "questions": {
+            "q1": {
+              "question": "What is MeepleAI?",
+              "answer": "MeepleAI is an intelligent assistant that helps you understand board game rules. Using artificial intelligence, it analyzes rulebooks and answers your questions in a precise and sourced way."
+            },
+            "q2": {
+              "question": "Is MeepleAI free?",
+              "answer": "MeepleAI offers a free plan with limited functionality and a premium plan with advanced features. Check the pricing page for details."
+            },
+            "q3": {
+              "question": "Which games are supported?",
+              "answer": "We support hundreds of popular games and continuously add new ones. You can also upload your own rulebook PDF for games not in our catalog."
+            }
+          }
+        },
+        "usage": {
+          "title": "How to Use",
+          "questions": {
+            "q1": {
+              "question": "How do I ask a question?",
+              "answer": "Select a game, then type your question in the chat. You can ask in natural language, as if you were asking a friend who knows the rules well."
+            },
+            "q2": {
+              "question": "Can I upload my rulebook PDF?",
+              "answer": "Yes! With the free plan you can upload 1 PDF per month, while with the premium plan you have unlimited uploads."
+            },
+            "q3": {
+              "question": "In which languages can I ask questions?",
+              "answer": "Currently we support Italian and English. The AI can understand your question regardless of the rulebook language."
+            }
+          }
+        },
+        "technical": {
+          "title": "Technical Questions",
+          "questions": {
+            "q1": {
+              "question": "How accurate is the AI?",
+              "answer": "Our RAG system is designed to provide answers based directly on the rulebook text. Each answer includes the reference to the original source for verification."
+            },
+            "q2": {
+              "question": "Is my data safe?",
+              "answer": "Yes, we take your privacy seriously. Uploaded PDFs are processed and deleted within 30 days. See our Privacy Policy for more details."
+            },
+            "q3": {
+              "question": "Does it work on mobile?",
+              "answer": "Yes, MeepleAI is fully responsive and works on any device: smartphone, tablet, or desktop."
+            }
+          }
+        },
+        "account": {
+          "title": "Account and Billing",
+          "questions": {
+            "q1": {
+              "question": "How do I create an account?",
+              "answer": "Click 'Sign Up' in the upper right corner and follow the instructions. You can register with email or through Google/Discord."
+            },
+            "q2": {
+              "question": "Can I cancel my subscription?",
+              "answer": "Yes, you can cancel anytime from your profile settings. You'll continue to have access to premium features until the end of the already paid period."
+            },
+            "q3": {
+              "question": "How do I delete my account?",
+              "answer": "You can request account deletion from your privacy settings. We will delete all your data within 30 days of your request."
+            }
+          }
+        }
+      }
     }
   }
 }

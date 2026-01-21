@@ -53,6 +53,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
     private readonly List<GameFaq> _faqs = new();
     private readonly List<GameErrata> _erratas = new();
     private readonly List<QuickQuestion> _quickQuestions = new();
+    private readonly List<Contributor> _contributors = new();
 
     /// <summary>
     /// Gets the unique identifier of this game.
@@ -188,6 +189,11 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Gets the quick questions for this game.
     /// </summary>
     public IReadOnlyCollection<QuickQuestion> QuickQuestions => _quickQuestions.AsReadOnly();
+
+    /// <summary>
+    /// Gets the contributors who have contributed to this game.
+    /// </summary>
+    public IReadOnlyCollection<Contributor> Contributors => _contributors.AsReadOnly();
 
     /// <summary>
     /// Parameterless constructor for EF Core.
@@ -730,6 +736,126 @@ public sealed class SharedGame : AggregateRoot<Guid>
 
         _quickQuestions.Clear();
         _quickQuestions.AddRange(questions);
+    }
+
+    // Contributor Methods
+
+    /// <summary>
+    /// Adds a contributor to this shared game.
+    /// If isPrimary is true, ensures no other primary contributor exists.
+    /// </summary>
+    /// <param name="userId">The ID of the user becoming a contributor.</param>
+    /// <param name="isPrimary">Whether this is the primary (original) contributor.</param>
+    /// <returns>The created Contributor entity.</returns>
+    /// <exception cref="ArgumentException">Thrown when userId is empty.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when user is already a contributor or when trying to add a second primary contributor.</exception>
+    public Contributor AddContributor(Guid userId, bool isPrimary)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("UserId cannot be empty", nameof(userId));
+
+        // Check if user is already a contributor
+        if (_contributors.Any(c => c.UserId == userId))
+            throw new InvalidOperationException($"User {userId} is already a contributor to this game");
+
+        // Check if trying to add a second primary contributor
+        if (isPrimary && _contributors.Any(c => c.IsPrimaryContributor))
+            throw new InvalidOperationException("A primary contributor already exists for this game");
+
+        var contributor = Contributor.Create(userId, _id, isPrimary);
+        _contributors.Add(contributor);
+
+        AddDomainEvent(new ContributorAddedEvent(
+            contributor.Id,
+            userId,
+            _id,
+            isPrimary));
+
+        return contributor;
+    }
+
+    /// <summary>
+    /// Adds a primary contributor with their initial submission record.
+    /// Used when a share request is approved and the game is created.
+    /// </summary>
+    /// <param name="userId">The ID of the user becoming the primary contributor.</param>
+    /// <param name="shareRequestId">The ID of the share request that created this game.</param>
+    /// <param name="documentIds">Optional document IDs included in the initial submission.</param>
+    /// <returns>The created Contributor entity with initial contribution record.</returns>
+    /// <exception cref="ArgumentException">Thrown when userId or shareRequestId is empty.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a primary contributor already exists.</exception>
+    public Contributor AddPrimaryContributorWithInitialSubmission(
+        Guid userId,
+        Guid shareRequestId,
+        IReadOnlyList<Guid>? documentIds = null)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("UserId cannot be empty", nameof(userId));
+
+        if (shareRequestId == Guid.Empty)
+            throw new ArgumentException("ShareRequestId cannot be empty", nameof(shareRequestId));
+
+        if (_contributors.Any(c => c.IsPrimaryContributor))
+            throw new InvalidOperationException("A primary contributor already exists for this game");
+
+        var contributor = Contributor.CreatePrimaryWithInitialSubmission(
+            userId,
+            _id,
+            shareRequestId,
+            documentIds);
+
+        _contributors.Add(contributor);
+
+        AddDomainEvent(new ContributorAddedEvent(
+            contributor.Id,
+            userId,
+            _id,
+            isPrimary: true));
+
+        return contributor;
+    }
+
+    /// <summary>
+    /// Gets the primary (original) contributor of this game.
+    /// </summary>
+    /// <returns>The primary contributor, or null if none exists.</returns>
+    public Contributor? GetPrimaryContributor()
+    {
+        return _contributors.FirstOrDefault(c => c.IsPrimaryContributor);
+    }
+
+    /// <summary>
+    /// Gets all contributors to this game.
+    /// </summary>
+    /// <returns>An enumerable of all contributors.</returns>
+    public IEnumerable<Contributor> GetAllContributors()
+    {
+        return _contributors.AsEnumerable();
+    }
+
+    /// <summary>
+    /// Gets a contributor by their user ID.
+    /// </summary>
+    /// <param name="userId">The user ID to search for.</param>
+    /// <returns>The contributor, or null if not found.</returns>
+    public Contributor? GetContributorByUserId(Guid userId)
+    {
+        return _contributors.FirstOrDefault(c => c.UserId == userId);
+    }
+
+    /// <summary>
+    /// Gets the total number of contributors to this game.
+    /// </summary>
+    public int ContributorCount => _contributors.Count;
+
+    /// <summary>
+    /// Gets whether a user is a contributor to this game.
+    /// </summary>
+    /// <param name="userId">The user ID to check.</param>
+    /// <returns>True if the user is a contributor, false otherwise.</returns>
+    public bool IsContributor(Guid userId)
+    {
+        return _contributors.Any(c => c.UserId == userId);
     }
 
     // Validation Methods

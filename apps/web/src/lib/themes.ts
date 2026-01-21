@@ -541,10 +541,11 @@ export function createCustomTheme(
 
 /**
  * Validate HSL color string
+ * Supports both integer and decimal values (e.g., "221 83% 53%" or "240 4.8% 95.9%")
  */
 export function isValidHSL(hsl: string): boolean {
-  // Format: "H S% L%" e.g., "221 83% 53%"
-  const regex = /^(\d{1,3})\s+(\d{1,3})%\s+(\d{1,3})%$/;
+  // Format: "H S% L%" e.g., "221 83% 53%" or "240 4.8% 95.9%"
+  const regex = /^(\d{1,3}(?:\.\d+)?)\s+(\d{1,3}(?:\.\d+)?)%\s+(\d{1,3}(?:\.\d+)?)%$/;
   const match = hsl.match(regex);
 
   if (!match) return false;
@@ -555,9 +556,10 @@ export function isValidHSL(hsl: string): boolean {
 
 /**
  * Parse HSL string to components
+ * Supports both integer and decimal values (e.g., "221 83% 53%" or "240 4.8% 95.9%")
  */
 export function parseHSL(hsl: string): { h: number; s: number; l: number } | null {
-  const regex = /^(\d{1,3})\s+(\d{1,3})%\s+(\d{1,3})%$/;
+  const regex = /^(\d{1,3}(?:\.\d+)?)\s+(\d{1,3}(?:\.\d+)?)%\s+(\d{1,3}(?:\.\d+)?)%$/;
   const match = hsl.match(regex);
 
   if (!match) return null;

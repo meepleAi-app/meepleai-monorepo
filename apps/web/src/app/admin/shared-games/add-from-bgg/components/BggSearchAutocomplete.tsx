@@ -16,11 +16,11 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Search, Loader2, ExternalLink, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
 import type { BggSearchResult } from '@/lib/api/schemas/shared-games.schemas';
+import { cn } from '@/lib/utils';
 
 export interface BggSearchAutocompleteProps {
   onSelect: (result: BggSearchResult) => void;
@@ -94,6 +94,7 @@ export function BggSearchAutocomplete({ onSelect }: BggSearchAutocompleteProps) 
       case 'Enter':
         e.preventDefault();
         if (highlightedIndex >= 0 && highlightedIndex < results.length) {
+          // eslint-disable-next-line security/detect-object-injection
           onSelect(results[highlightedIndex]);
           setIsOpen(false);
         }
@@ -225,6 +226,7 @@ export function BggSearchAutocomplete({ onSelect }: BggSearchAutocompleteProps) 
             >
               {/* Thumbnail */}
               {result.thumbnailUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={result.thumbnailUrl}
                   alt={result.name}

@@ -6,6 +6,26 @@ process.env.NODE_ENV = 'test';
 import '@testing-library/jest-dom/vitest';
 import { toHaveNoViolations } from 'jest-axe';
 
+// MSW Server Setup for API mocking (Issue #2760)
+import { server } from './src/__tests__/mocks/server';
+
+// Start MSW server before all tests
+beforeAll(() => {
+  server.listen({
+    onUnhandledRequest: 'bypass', // Don't fail on unhandled requests (allows real API calls in integration tests)
+  });
+});
+
+// Reset handlers after each test to ensure test isolation
+afterEach(() => {
+  server.resetHandlers();
+});
+
+// Close server after all tests
+afterAll(() => {
+  server.close();
+});
+
 // Extend Vitest matchers with jest-axe for accessibility testing
 expect.extend(toHaveNoViolations);
 

@@ -73,14 +73,18 @@ async function proxyRequest(request: NextRequest, method: string) {
     });
 
     // Copy response headers with special handling for Set-Cookie
-    // Issue: headers.forEach + headers.set may not handle Set-Cookie correctly in all environments
-    // Fix: Handle Set-Cookie explicitly first, then copy other headers
-    const setCookieHeader = response.headers.get('set-cookie');
-    if (setCookieHeader) {
+    // Issue #2778: headers.get('set-cookie') doesn't handle multiple cookies correctly
+    // Fix: Use getSetCookie() which returns an array of all Set-Cookie headers
+    // This is critical for login which sets both meepleai_session and meepleai_user_role cookies
+    const setCookies = response.headers.getSetCookie();
+    if (setCookies.length > 0) {
       // Debug logging for auth troubleshooting
       // eslint-disable-next-line no-console
-      console.log(`[API Proxy] Set-Cookie header received: ${setCookieHeader.substring(0, 100)}...`);
-      nextResponse.headers.set('set-cookie', setCookieHeader);
+      console.log(`[API Proxy] Set-Cookie headers received: ${setCookies.length} cookie(s)`);
+      // Append each Set-Cookie header separately (required by HTTP spec)
+      for (const cookie of setCookies) {
+        nextResponse.headers.append('set-cookie', cookie);
+      }
     }
 
     // Copy other response headers (excluding set-cookie which was already handled)
@@ -94,7 +98,7 @@ async function proxyRequest(request: NextRequest, method: string) {
     // Debug: Log response status for auth endpoints
     if (apiPath.includes('/auth/')) {
       // eslint-disable-next-line no-console
-      console.log(`[API Proxy] Auth response: ${response.status} ${response.statusText}, Set-Cookie: ${setCookieHeader ? 'present' : 'absent'}`);
+      console.log(`[API Proxy] Auth response: ${response.status} ${response.statusText}, Set-Cookie: ${setCookies.length > 0 ? `${setCookies.length} cookie(s)` : 'absent'}`);
     }
 
     // Disable Next.js compression to prevent ERR_CONTENT_DECODING_FAILED

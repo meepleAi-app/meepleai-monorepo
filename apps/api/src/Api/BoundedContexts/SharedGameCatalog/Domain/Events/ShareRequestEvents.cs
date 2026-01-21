@@ -141,3 +141,46 @@ internal sealed class ShareRequestWithdrawnEvent : DomainEventBase
         ShareRequestId = shareRequestId;
     }
 }
+
+/// <summary>
+/// Domain event raised when a review lock expires due to inactivity.
+/// </summary>
+internal sealed class ShareRequestLockExpiredEvent : DomainEventBase
+{
+    public Guid ShareRequestId { get; }
+    public Guid AdminId { get; }
+    public DateTime ExpiredAt { get; }
+    public ShareRequestStatus ReturnedToStatus { get; }
+
+    public ShareRequestLockExpiredEvent(
+        Guid shareRequestId,
+        Guid adminId,
+        DateTime expiredAt,
+        ShareRequestStatus returnedToStatus)
+    {
+        ShareRequestId = shareRequestId;
+        AdminId = adminId;
+        ExpiredAt = expiredAt;
+        ReturnedToStatus = returnedToStatus;
+    }
+}
+
+/// <summary>
+/// Domain event raised when a review lock is extended.
+/// </summary>
+internal sealed class ShareRequestLockExtendedEvent : DomainEventBase
+{
+    public Guid ShareRequestId { get; }
+    public Guid AdminId { get; }
+    public DateTime NewExpirationTime { get; }
+
+    public ShareRequestLockExtendedEvent(
+        Guid shareRequestId,
+        Guid adminId,
+        DateTime newExpirationTime)
+    {
+        ShareRequestId = shareRequestId;
+        AdminId = adminId;
+        NewExpirationTime = newExpirationTime;
+    }
+}

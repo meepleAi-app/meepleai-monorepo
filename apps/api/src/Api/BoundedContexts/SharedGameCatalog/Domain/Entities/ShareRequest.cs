@@ -1,7 +1,8 @@
+using System.ComponentModel.DataAnnotations;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
-using Api.SharedKernel.Domain.Interfaces;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 
@@ -11,16 +12,28 @@ namespace Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 /// </summary>
 public sealed class ShareRequest : AggregateRoot<Guid>
 {
+    /// <summary>
+    /// Default lock duration for review in minutes.
+    /// </summary>
+    public const int DefaultLockDurationMinutes = 30;
+
+    /// <summary>
+    /// Maximum number of documents that can be attached to a share request.
+    /// </summary>
+    public const int MaxDocumentCount = 10;
+
     private Guid _id;
     private Guid _userId;
     private Guid _sourceGameId;
     private Guid? _targetSharedGameId;
     private ShareRequestStatus _status;
+    private ShareRequestStatus? _statusBeforeReview;
     private readonly ContributionType _contributionType;
     private string? _userNotes;
     private string? _adminFeedback;
     private Guid? _reviewingAdminId;
     private DateTime? _reviewStartedAt;
+    private DateTime? _reviewLockExpiresAt;
     private DateTime? _resolvedAt;
     private readonly DateTime _createdAt;
     private DateTime? _modifiedAt;
@@ -56,6 +69,12 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     public ShareRequestStatus Status => _status;
 
     /// <summary>
+    /// Gets the status before the current review started.
+    /// Used to return to the correct state when review is released.
+    /// </summary>
+    public ShareRequestStatus? StatusBeforeReview => _statusBeforeReview;
+
+    /// <summary>
     /// Gets the type of contribution (new game or additional content).
     /// </summary>
     public ContributionType ContributionType => _contributionType;
@@ -81,6 +100,12 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     /// Null if not under review.
     /// </summary>
     public DateTime? ReviewStartedAt => _reviewStartedAt;
+
+    /// <summary>
+    /// Gets the date and time when the review lock expires.
+    /// Null if not under review.
+    /// </summary>
+    public DateTime? ReviewLockExpiresAt => _reviewLockExpiresAt;
 
     /// <summary>
     /// Gets the date and time when this request was resolved (approved/rejected/withdrawn).
@@ -114,6 +139,12 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     public IReadOnlyCollection<ShareRequestDocument> AttachedDocuments => _attachedDocuments.AsReadOnly();
 
     /// <summary>
+    /// Gets or sets the row version for optimistic concurrency control.
+    /// </summary>
+    [Timestamp]
+    public byte[]? RowVersion { get; private set; }
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable S1144 // Unused private types or members should be removed - Required for EF Core
@@ -132,16 +163,19 @@ public sealed class ShareRequest : AggregateRoot<Guid>
         Guid sourceGameId,
         Guid? targetSharedGameId,
         ShareRequestStatus status,
+        ShareRequestStatus? statusBeforeReview,
         ContributionType contributionType,
         string? userNotes,
         string? adminFeedback,
         Guid? reviewingAdminId,
         DateTime? reviewStartedAt,
+        DateTime? reviewLockExpiresAt,
         DateTime? resolvedAt,
         DateTime createdAt,
         DateTime? modifiedAt,
         Guid createdBy,
         Guid? modifiedBy,
+        byte[]? rowVersion = null,
         List<ShareRequestDocument>? attachedDocuments = null) : base(id)
     {
         _id = id;
@@ -149,16 +183,19 @@ public sealed class ShareRequest : AggregateRoot<Guid>
         _sourceGameId = sourceGameId;
         _targetSharedGameId = targetSharedGameId;
         _status = status;
+        _statusBeforeReview = statusBeforeReview;
         _contributionType = contributionType;
         _userNotes = userNotes;
         _adminFeedback = adminFeedback;
         _reviewingAdminId = reviewingAdminId;
         _reviewStartedAt = reviewStartedAt;
+        _reviewLockExpiresAt = reviewLockExpiresAt;
         _resolvedAt = resolvedAt;
         _createdAt = createdAt;
         _modifiedAt = modifiedAt;
         _createdBy = createdBy;
         _modifiedBy = modifiedBy;
+        RowVersion = rowVersion;
 
         if (attachedDocuments != null)
             _attachedDocuments.AddRange(attachedDocuments);
@@ -210,8 +247,10 @@ public sealed class ShareRequest : AggregateRoot<Guid>
             sourceGameId,
             targetSharedGameId,
             ShareRequestStatus.Pending,
+            null,
             contributionType,
             userNotes?.Trim(),
+            null,
             null,
             null,
             null,
@@ -229,30 +268,41 @@ public sealed class ShareRequest : AggregateRoot<Guid>
 
     /// <summary>
     /// Starts the review process by an admin.
-    /// Acquires an exclusive lock for the reviewing admin.
+    /// Acquires an exclusive lock for the reviewing admin with a time-limited duration.
     /// </summary>
     /// <param name="adminId">The ID of the admin starting the review.</param>
+    /// <param name="lockDurationMinutes">Duration of the review lock in minutes (default: 30).</param>
     /// <exception cref="ArgumentException">Thrown when adminId is empty.</exception>
-    /// <exception cref="InvalidOperationException">
+    /// <exception cref="InvalidShareRequestStateException">
     /// Thrown when the request is not in a reviewable state.
     /// </exception>
-    public void StartReview(Guid adminId)
+    /// <exception cref="ShareRequestAlreadyInReviewException">
+    /// Thrown when the request is already being reviewed by another admin.
+    /// </exception>
+    public void StartReview(Guid adminId, int lockDurationMinutes = DefaultLockDurationMinutes)
     {
         if (adminId == Guid.Empty)
             throw new ArgumentException("AdminId cannot be empty", nameof(adminId));
 
         if (_status != ShareRequestStatus.Pending && _status != ShareRequestStatus.ChangesRequested)
-            throw new InvalidOperationException(
-                $"Cannot start review for request in {_status} status. " +
-                "Only Pending or ChangesRequested requests can be reviewed.");
+            throw new InvalidShareRequestStateException(
+                _id,
+                _status,
+                "start review",
+                ShareRequestStatus.Pending,
+                ShareRequestStatus.ChangesRequested);
 
         if (_reviewingAdminId != null)
-            throw new InvalidOperationException(
-                $"Request is already being reviewed by another admin.");
+            throw new ShareRequestAlreadyInReviewException(
+                _id,
+                _reviewingAdminId.Value,
+                _reviewStartedAt ?? DateTime.UtcNow);
 
+        _statusBeforeReview = _status;
         _status = ShareRequestStatus.InReview;
         _reviewingAdminId = adminId;
         _reviewStartedAt = DateTime.UtcNow;
+        _reviewLockExpiresAt = DateTime.UtcNow.AddMinutes(lockDurationMinutes);
         _modifiedAt = DateTime.UtcNow;
         _modifiedBy = adminId;
 
@@ -260,26 +310,114 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Releases the review lock without making a decision.
+    /// Extends the review lock for additional time.
     /// </summary>
-    /// <exception cref="InvalidOperationException">
+    /// <param name="adminId">The ID of the admin extending the lock.</param>
+    /// <param name="additionalMinutes">Additional minutes to extend the lock.</param>
+    /// <exception cref="InvalidShareRequestStateException">
+    /// Thrown when the request is not in review.
+    /// </exception>
+    /// <exception cref="ShareRequestReviewerMismatchException">
+    /// Thrown when the admin is not the current reviewer.
+    /// </exception>
+    public void ExtendReviewLock(Guid adminId, int additionalMinutes = DefaultLockDurationMinutes)
+    {
+        if (adminId == Guid.Empty)
+            throw new ArgumentException("AdminId cannot be empty", nameof(adminId));
+
+        if (_status != ShareRequestStatus.InReview)
+            throw new InvalidShareRequestStateException(
+                _id,
+                _status,
+                "extend review lock",
+                ShareRequestStatus.InReview);
+
+        if (_reviewingAdminId != adminId)
+            throw new ShareRequestReviewerMismatchException(_id, _reviewingAdminId!.Value, adminId);
+
+        _reviewLockExpiresAt = DateTime.UtcNow.AddMinutes(additionalMinutes);
+        _modifiedAt = DateTime.UtcNow;
+        _modifiedBy = adminId;
+
+        AddDomainEvent(new ShareRequestLockExtendedEvent(_id, adminId, _reviewLockExpiresAt.Value));
+    }
+
+    /// <summary>
+    /// Releases the review lock without making a decision.
+    /// Returns to the previous state (Pending or ChangesRequested).
+    /// </summary>
+    /// <exception cref="InvalidShareRequestStateException">
     /// Thrown when the request is not currently in review.
     /// </exception>
     public void ReleaseReview()
     {
         if (_status != ShareRequestStatus.InReview)
-            throw new InvalidOperationException(
-                $"Cannot release review for request in {_status} status. " +
-                "Only InReview requests can have their review released.");
+            throw new InvalidShareRequestStateException(
+                _id,
+                _status,
+                "release review",
+                ShareRequestStatus.InReview);
 
         var adminId = _reviewingAdminId!.Value;
-        _status = ShareRequestStatus.Pending;
+        _status = _statusBeforeReview ?? ShareRequestStatus.Pending;
+        _statusBeforeReview = null;
         _reviewingAdminId = null;
         _reviewStartedAt = null;
+        _reviewLockExpiresAt = null;
         _modifiedAt = DateTime.UtcNow;
         _modifiedBy = adminId;
 
         AddDomainEvent(new ShareRequestReviewReleasedEvent(_id, adminId));
+    }
+
+    /// <summary>
+    /// Expires the review lock due to timeout.
+    /// Called by a background process when the lock has expired.
+    /// Returns to the previous state (Pending or ChangesRequested).
+    /// </summary>
+    /// <exception cref="InvalidShareRequestStateException">
+    /// Thrown when the request is not currently in review.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the lock has not yet expired.
+    /// </exception>
+    public void ExpireLock()
+    {
+        if (_status != ShareRequestStatus.InReview)
+            throw new InvalidShareRequestStateException(
+                _id,
+                _status,
+                "expire lock",
+                ShareRequestStatus.InReview);
+
+        if (_reviewLockExpiresAt == null || DateTime.UtcNow < _reviewLockExpiresAt)
+            throw new InvalidOperationException(
+                "Cannot expire lock that has not yet reached its expiration time.");
+
+        var adminId = _reviewingAdminId!.Value;
+        var expiredAt = _reviewLockExpiresAt.Value;
+        var returnToStatus = _statusBeforeReview ?? ShareRequestStatus.Pending;
+
+        _status = returnToStatus;
+        _statusBeforeReview = null;
+        _reviewingAdminId = null;
+        _reviewStartedAt = null;
+        _reviewLockExpiresAt = null;
+        _modifiedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new ShareRequestLockExpiredEvent(_id, adminId, expiredAt, returnToStatus));
+    }
+
+    /// <summary>
+    /// Checks if the review lock has expired.
+    /// </summary>
+    /// <returns>True if the lock has expired, false otherwise.</returns>
+    public bool IsLockExpired()
+    {
+        if (_status != ShareRequestStatus.InReview || _reviewLockExpiresAt == null)
+            return false;
+
+        return DateTime.UtcNow >= _reviewLockExpiresAt;
     }
 
     /// <summary>
@@ -292,8 +430,14 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     /// </param>
     /// <param name="feedback">Optional feedback from the admin.</param>
     /// <exception cref="ArgumentException">Thrown when adminId is empty.</exception>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the request is not in review or admin is not the reviewer.
+    /// <exception cref="InvalidShareRequestStateException">
+    /// Thrown when the request is not in review.
+    /// </exception>
+    /// <exception cref="ShareRequestReviewerMismatchException">
+    /// Thrown when the admin is not the current reviewer.
+    /// </exception>
+    /// <exception cref="ShareRequestLockExpiredException">
+    /// Thrown when the review lock has expired.
     /// </exception>
     public void Approve(Guid adminId, Guid? targetSharedGameId = null, string? feedback = null)
     {
@@ -301,21 +445,27 @@ public sealed class ShareRequest : AggregateRoot<Guid>
             throw new ArgumentException("AdminId cannot be empty", nameof(adminId));
 
         if (_status != ShareRequestStatus.InReview)
-            throw new InvalidOperationException(
-                $"Cannot approve request in {_status} status. " +
-                "Only InReview requests can be approved.");
+            throw new InvalidShareRequestStateException(
+                _id,
+                _status,
+                "approve",
+                ShareRequestStatus.InReview);
 
         if (_reviewingAdminId != adminId)
-            throw new InvalidOperationException(
-                "Only the reviewing admin can approve this request.");
+            throw new ShareRequestReviewerMismatchException(_id, _reviewingAdminId!.Value, adminId);
+
+        if (IsLockExpired())
+            throw new ShareRequestLockExpiredException(_id, adminId, _reviewLockExpiresAt!.Value);
 
         if (feedback != null && feedback.Length > 2000)
             throw new ArgumentException("Feedback cannot exceed 2000 characters", nameof(feedback));
 
         _status = ShareRequestStatus.Approved;
+        _statusBeforeReview = null;
         _targetSharedGameId = targetSharedGameId ?? _targetSharedGameId;
         _adminFeedback = feedback?.Trim();
         _resolvedAt = DateTime.UtcNow;
+        _reviewLockExpiresAt = null;
         _modifiedAt = DateTime.UtcNow;
         _modifiedBy = adminId;
 
@@ -330,8 +480,14 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     /// <exception cref="ArgumentException">
     /// Thrown when adminId is empty or reason is not provided.
     /// </exception>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the request is not in review or admin is not the reviewer.
+    /// <exception cref="InvalidShareRequestStateException">
+    /// Thrown when the request is not in review.
+    /// </exception>
+    /// <exception cref="ShareRequestReviewerMismatchException">
+    /// Thrown when the admin is not the current reviewer.
+    /// </exception>
+    /// <exception cref="ShareRequestLockExpiredException">
+    /// Thrown when the review lock has expired.
     /// </exception>
     public void Reject(Guid adminId, string reason)
     {
@@ -345,17 +501,23 @@ public sealed class ShareRequest : AggregateRoot<Guid>
             throw new ArgumentException("Reason cannot exceed 2000 characters", nameof(reason));
 
         if (_status != ShareRequestStatus.InReview)
-            throw new InvalidOperationException(
-                $"Cannot reject request in {_status} status. " +
-                "Only InReview requests can be rejected.");
+            throw new InvalidShareRequestStateException(
+                _id,
+                _status,
+                "reject",
+                ShareRequestStatus.InReview);
 
         if (_reviewingAdminId != adminId)
-            throw new InvalidOperationException(
-                "Only the reviewing admin can reject this request.");
+            throw new ShareRequestReviewerMismatchException(_id, _reviewingAdminId!.Value, adminId);
+
+        if (IsLockExpired())
+            throw new ShareRequestLockExpiredException(_id, adminId, _reviewLockExpiresAt!.Value);
 
         _status = ShareRequestStatus.Rejected;
+        _statusBeforeReview = null;
         _adminFeedback = reason.Trim();
         _resolvedAt = DateTime.UtcNow;
+        _reviewLockExpiresAt = null;
         _modifiedAt = DateTime.UtcNow;
         _modifiedBy = adminId;
 
@@ -370,8 +532,14 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     /// <exception cref="ArgumentException">
     /// Thrown when adminId is empty or feedback is not provided.
     /// </exception>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the request is not in review or admin is not the reviewer.
+    /// <exception cref="InvalidShareRequestStateException">
+    /// Thrown when the request is not in review.
+    /// </exception>
+    /// <exception cref="ShareRequestReviewerMismatchException">
+    /// Thrown when the admin is not the current reviewer.
+    /// </exception>
+    /// <exception cref="ShareRequestLockExpiredException">
+    /// Thrown when the review lock has expired.
     /// </exception>
     public void RequestChanges(Guid adminId, string feedback)
     {
@@ -385,18 +553,24 @@ public sealed class ShareRequest : AggregateRoot<Guid>
             throw new ArgumentException("Feedback cannot exceed 2000 characters", nameof(feedback));
 
         if (_status != ShareRequestStatus.InReview)
-            throw new InvalidOperationException(
-                $"Cannot request changes for request in {_status} status. " +
-                "Only InReview requests can have changes requested.");
+            throw new InvalidShareRequestStateException(
+                _id,
+                _status,
+                "request changes",
+                ShareRequestStatus.InReview);
 
         if (_reviewingAdminId != adminId)
-            throw new InvalidOperationException(
-                "Only the reviewing admin can request changes.");
+            throw new ShareRequestReviewerMismatchException(_id, _reviewingAdminId!.Value, adminId);
+
+        if (IsLockExpired())
+            throw new ShareRequestLockExpiredException(_id, adminId, _reviewLockExpiresAt!.Value);
 
         _status = ShareRequestStatus.ChangesRequested;
+        _statusBeforeReview = null;
         _adminFeedback = feedback.Trim();
         _reviewingAdminId = null;
         _reviewStartedAt = null;
+        _reviewLockExpiresAt = null;
         _modifiedAt = DateTime.UtcNow;
         _modifiedBy = adminId;
 
@@ -407,15 +581,17 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     /// Resubmits the request after making requested changes.
     /// </summary>
     /// <param name="updatedNotes">Optional updated notes from the user.</param>
-    /// <exception cref="InvalidOperationException">
+    /// <exception cref="InvalidShareRequestStateException">
     /// Thrown when the request is not in ChangesRequested status.
     /// </exception>
     public void Resubmit(string? updatedNotes = null)
     {
         if (_status != ShareRequestStatus.ChangesRequested)
-            throw new InvalidOperationException(
-                $"Cannot resubmit request in {_status} status. " +
-                "Only requests with ChangesRequested status can be resubmitted.");
+            throw new InvalidShareRequestStateException(
+                _id,
+                _status,
+                "resubmit",
+                ShareRequestStatus.ChangesRequested);
 
         if (updatedNotes != null && updatedNotes.Length > 2000)
             throw new ArgumentException("UserNotes cannot exceed 2000 characters", nameof(updatedNotes));
@@ -433,15 +609,18 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     /// Withdraws the share request.
     /// Only pending or changes-requested requests can be withdrawn.
     /// </summary>
-    /// <exception cref="InvalidOperationException">
+    /// <exception cref="InvalidShareRequestStateException">
     /// Thrown when the request cannot be withdrawn in its current state.
     /// </exception>
     public void Withdraw()
     {
         if (_status != ShareRequestStatus.Pending && _status != ShareRequestStatus.ChangesRequested)
-            throw new InvalidOperationException(
-                $"Cannot withdraw request in {_status} status. " +
-                "Only Pending or ChangesRequested requests can be withdrawn.");
+            throw new InvalidShareRequestStateException(
+                _id,
+                _status,
+                "withdraw",
+                ShareRequestStatus.Pending,
+                ShareRequestStatus.ChangesRequested);
 
         _status = ShareRequestStatus.Withdrawn;
         _resolvedAt = DateTime.UtcNow;
@@ -458,15 +637,24 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     /// <param name="fileName">The original file name.</param>
     /// <param name="contentType">The MIME content type.</param>
     /// <param name="fileSize">The file size in bytes.</param>
-    /// <exception cref="InvalidOperationException">
+    /// <exception cref="InvalidShareRequestStateException">
     /// Thrown when documents cannot be attached in the current state.
+    /// </exception>
+    /// <exception cref="ShareRequestDocumentLimitExceededException">
+    /// Thrown when the maximum document count would be exceeded.
     /// </exception>
     public void AttachDocument(Guid documentId, string fileName, string contentType, long fileSize)
     {
         if (_status != ShareRequestStatus.Pending && _status != ShareRequestStatus.ChangesRequested)
-            throw new InvalidOperationException(
-                $"Cannot attach documents to request in {_status} status. " +
-                "Only Pending or ChangesRequested requests can have documents attached.");
+            throw new InvalidShareRequestStateException(
+                _id,
+                _status,
+                "attach documents",
+                ShareRequestStatus.Pending,
+                ShareRequestStatus.ChangesRequested);
+
+        if (_attachedDocuments.Count >= MaxDocumentCount)
+            throw new ShareRequestDocumentLimitExceededException(_id, _attachedDocuments.Count, MaxDocumentCount);
 
         var document = ShareRequestDocument.Create(_id, documentId, fileName, contentType, fileSize);
         _attachedDocuments.Add(document);
@@ -478,15 +666,18 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     /// Removes a document from this share request.
     /// </summary>
     /// <param name="documentId">The ID of the document to remove.</param>
-    /// <exception cref="InvalidOperationException">
+    /// <exception cref="InvalidShareRequestStateException">
     /// Thrown when documents cannot be removed in the current state.
     /// </exception>
     public void RemoveDocument(Guid documentId)
     {
         if (_status != ShareRequestStatus.Pending && _status != ShareRequestStatus.ChangesRequested)
-            throw new InvalidOperationException(
-                $"Cannot remove documents from request in {_status} status. " +
-                "Only Pending or ChangesRequested requests can have documents removed.");
+            throw new InvalidShareRequestStateException(
+                _id,
+                _status,
+                "remove documents",
+                ShareRequestStatus.Pending,
+                ShareRequestStatus.ChangesRequested);
 
         var document = _attachedDocuments.FirstOrDefault(d => d.DocumentId == documentId);
         if (document != null)
@@ -516,4 +707,17 @@ public sealed class ShareRequest : AggregateRoot<Guid>
         _status == ShareRequestStatus.Approved ||
         _status == ShareRequestStatus.Rejected ||
         _status == ShareRequestStatus.Withdrawn;
+
+    /// <summary>
+    /// Gets the remaining time on the review lock.
+    /// </summary>
+    /// <returns>The remaining time, or null if not locked or expired.</returns>
+    public TimeSpan? GetRemainingLockTime()
+    {
+        if (_status != ShareRequestStatus.InReview || _reviewLockExpiresAt == null)
+            return null;
+
+        var remaining = _reviewLockExpiresAt.Value - DateTime.UtcNow;
+        return remaining > TimeSpan.Zero ? remaining : null;
+    }
 }

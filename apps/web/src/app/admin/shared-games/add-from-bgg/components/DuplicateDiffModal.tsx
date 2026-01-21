@@ -15,16 +15,16 @@ import { useState, useCallback, useMemo } from 'react';
 
 import { AlertTriangle, ArrowRight, Check, Loader2, RefreshCw, X } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Separator } from '@/components/ui/navigation/separator';
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Label } from '@/components/ui/primitives/label';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
-import { Separator } from '@/components/ui/navigation/separator';
-import { cn } from '@/lib/utils';
 import type { BggDuplicateCheckResult, BggUpdatableField } from '@/lib/api/schemas/shared-games.schemas';
+import { cn } from '@/lib/utils';
 
 export interface DuplicateDiffModalProps {
   duplicateResult: BggDuplicateCheckResult;

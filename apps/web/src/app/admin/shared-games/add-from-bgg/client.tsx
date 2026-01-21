@@ -19,14 +19,14 @@ import { toast } from 'sonner';
 
 import { AdminAuthGuard } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { BggSearchResult, BggDuplicateCheckResult } from '@/lib/api/schemas/shared-games.schemas';
 
-import { BggSearchAutocomplete } from './components/BggSearchAutocomplete';
 import { BggGamePreviewForm } from './components/BggGamePreviewForm';
+import { BggSearchAutocomplete } from './components/BggSearchAutocomplete';
 import { DuplicateDiffModal } from './components/DuplicateDiffModal';
 
 type FlowStep = 'search' | 'loading' | 'preview' | 'duplicate';

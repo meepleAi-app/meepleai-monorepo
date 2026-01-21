@@ -14,8 +14,8 @@ import { ExternalLink, Gamepad2, Users, Clock, BarChart3, Star, Loader2 } from '
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Button } from '@/components/ui/primitives/button';
 import { Separator } from '@/components/ui/navigation/separator';
+import { Button } from '@/components/ui/primitives/button';
 import type { BggGameDetails } from '@/lib/api/schemas/shared-games.schemas';
 
 export interface BggGamePreviewFormProps {
@@ -63,6 +63,7 @@ export function BggGamePreviewForm({
         <div className="flex items-start gap-4">
           {/* Thumbnail */}
           {bggData.thumbnailUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={bggData.thumbnailUrl}
               alt={bggData.name}

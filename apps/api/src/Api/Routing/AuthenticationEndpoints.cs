@@ -68,6 +68,7 @@ internal static class AuthenticationEndpoints
             logger.LogInformation("User registration attempt for {Email}", DataMasking.MaskEmail(payload.Email));
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
             CookieHelpers.WriteSessionCookie(context, result.SessionToken, result.ExpiresAt);
+            CookieHelpers.WriteUserRoleCookie(context, result.User.Role, result.ExpiresAt);
             logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
 
             return Results.Json(new { user = result.User, expiresAt = result.ExpiresAt });
@@ -120,7 +121,8 @@ internal static class AuthenticationEndpoints
             var sessionExpirationDays = (await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30).ConfigureAwait(false)) ?? 30;
             var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
             CookieHelpers.WriteSessionCookie(context, result.SessionToken, expiresAt);
-            logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
+            CookieHelpers.WriteUserRoleCookie(context, result.User.Role, expiresAt);
+            logger.LogInformation("User {UserId} logged in successfully with role {Role}", result.User.Id, result.User.Role);
 
             return Results.Json(new { user = result.User, expiresAt });
         });
@@ -141,6 +143,7 @@ internal static class AuthenticationEndpoints
             }
 
             CookieHelpers.RemoveSessionCookie(context);
+            CookieHelpers.RemoveUserRoleCookie(context);
             return Results.Json(new { ok = true });
         });
     }

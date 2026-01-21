@@ -23,7 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/al
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
-import type { BggSearchResult, BggDuplicateCheckResult, BggGameDetails } from '@/lib/api/schemas/shared-games.schemas';
+import type { BggSearchResult, BggDuplicateCheckResult } from '@/lib/api/schemas/shared-games.schemas';
 
 import { BggSearchAutocomplete } from './components/BggSearchAutocomplete';
 import { BggGamePreviewForm } from './components/BggGamePreviewForm';

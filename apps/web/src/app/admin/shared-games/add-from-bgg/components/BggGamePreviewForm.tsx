@@ -52,7 +52,7 @@ export function BggGamePreviewForm({
   onCancel,
   isSubmitting,
 }: BggGamePreviewFormProps) {
-  const plainDescription = stripHtml(bggData.description);
+  const plainDescription = bggData.description ? stripHtml(bggData.description) : '';
   const truncatedDescription = plainDescription.length > 500
     ? plainDescription.substring(0, 500) + '...'
     : plainDescription;
@@ -125,9 +125,9 @@ export function BggGamePreviewForm({
               Durata
             </div>
             <p className="font-medium">
-              {bggData.minPlaytime === bggData.maxPlaytime
-                ? `${bggData.minPlaytime} min`
-                : `${bggData.minPlaytime}-${bggData.maxPlaytime} min`}
+              {bggData.minPlayTime === bggData.maxPlayTime
+                ? `${bggData.minPlayTime} min`
+                : `${bggData.minPlayTime}-${bggData.maxPlayTime} min`}
             </p>
           </div>
 
@@ -138,7 +138,7 @@ export function BggGamePreviewForm({
               Complessità
             </div>
             <p className="font-medium">
-              {bggData.complexity ? `${bggData.complexity.toFixed(2)} / 5` : 'N/A'}
+              {bggData.averageWeight ? `${bggData.averageWeight.toFixed(2)} / 5` : 'N/A'}
             </p>
           </div>
 

@@ -25,7 +25,6 @@ import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { Separator } from '@/components/ui/navigation/separator';
 import { cn } from '@/lib/utils';
 import type { BggDuplicateCheckResult, BggUpdatableField } from '@/lib/api/schemas/shared-games.schemas';
-import { BggUpdatableFields } from '@/lib/api/schemas/shared-games.schemas';
 
 export interface DuplicateDiffModalProps {
   duplicateResult: BggDuplicateCheckResult;
@@ -65,20 +64,6 @@ function formatNumber(num: number | undefined | null): string {
   return num.toString();
 }
 
-// Format player range
-function formatPlayerRange(min: number | undefined | null, max: number | undefined | null): string {
-  if (!min && !max) return '-';
-  if (min === max) return formatNumber(min);
-  return `${min || '?'}-${max || '?'}`;
-}
-
-// Format time range
-function formatTimeRange(min: number | undefined | null, max: number | undefined | null): string {
-  if (!min && !max) return '-';
-  if (min === max) return `${min} min`;
-  return `${min || '?'}-${max || '?'} min`;
-}
-
 export function DuplicateDiffModal({
   duplicateResult,
   onUpdate,
@@ -98,9 +83,9 @@ export function DuplicateDiffModal({
       {
         field: 'title',
         label: 'Titolo',
-        existingValue: existingGame.name,
+        existingValue: existingGame.title,
         bggValue: bggData.name,
-        isDifferent: existingGame.name !== bggData.name,
+        isDifferent: existingGame.title !== bggData.name,
       },
       {
         field: 'description',
@@ -124,32 +109,25 @@ export function DuplicateDiffModal({
         isDifferent: existingGame.maxPlayers !== bggData.maxPlayers,
       },
       {
-        field: 'minPlaytime',
-        label: 'Durata Min',
-        existingValue: existingGame.minPlaytime ? `${existingGame.minPlaytime} min` : '-',
-        bggValue: bggData.minPlaytime ? `${bggData.minPlaytime} min` : '-',
-        isDifferent: existingGame.minPlaytime !== bggData.minPlaytime,
+        field: 'playingTime',
+        label: 'Durata',
+        existingValue: existingGame.playingTimeMinutes ? `${existingGame.playingTimeMinutes} min` : '-',
+        bggValue: bggData.playingTime ? `${bggData.playingTime} min` : '-',
+        isDifferent: existingGame.playingTimeMinutes !== bggData.playingTime,
       },
       {
-        field: 'maxPlaytime',
-        label: 'Durata Max',
-        existingValue: existingGame.maxPlaytime ? `${existingGame.maxPlaytime} min` : '-',
-        bggValue: bggData.maxPlaytime ? `${bggData.maxPlaytime} min` : '-',
-        isDifferent: existingGame.maxPlaytime !== bggData.maxPlaytime,
-      },
-      {
-        field: 'complexity',
+        field: 'complexityRating',
         label: 'Complessità',
-        existingValue: existingGame.complexity?.toFixed(2) || '-',
-        bggValue: bggData.complexity?.toFixed(2) || '-',
-        isDifferent: Math.abs((existingGame.complexity || 0) - (bggData.complexity || 0)) > 0.01,
+        existingValue: existingGame.complexityRating?.toFixed(2) || '-',
+        bggValue: bggData.averageWeight?.toFixed(2) || '-',
+        isDifferent: Math.abs((existingGame.complexityRating || 0) - (bggData.averageWeight || 0)) > 0.01,
       },
       {
         field: 'averageRating',
         label: 'Voto BGG',
-        existingValue: existingGame.bggRating?.toFixed(1) || '-',
+        existingValue: existingGame.averageRating?.toFixed(1) || '-',
         bggValue: bggData.averageRating?.toFixed(1) || '-',
-        isDifferent: Math.abs((existingGame.bggRating || 0) - (bggData.averageRating || 0)) > 0.1,
+        isDifferent: Math.abs((existingGame.averageRating || 0) - (bggData.averageRating || 0)) > 0.1,
       },
       {
         field: 'thumbnailUrl',

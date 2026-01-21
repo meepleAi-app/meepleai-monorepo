@@ -1,11 +1,16 @@
 /**
- * QuickActions Component Tests - Issue #885
+ * QuickActions Component Tests - Issue #885, Extended in #2788
  */
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { QuickActions, defaultQuickActions, type QuickAction } from '../QuickActions';
-import { FileUpIcon, UsersIcon, AlertTriangleIcon } from 'lucide-react';
+import {
+  QuickActions,
+  defaultQuickActions,
+  type QuickAction,
+  type GradientKey,
+} from '../QuickActions';
+import { FileUpIcon, UsersIcon, AlertTriangleIcon, CheckIcon } from 'lucide-react';
 
 describe('QuickActions', () => {
   describe('Default rendering', () => {
@@ -28,14 +33,15 @@ describe('QuickActions', () => {
 
     it('renders action labels', () => {
       render(<QuickActions />);
-      expect(screen.getByText('Upload PDF')).toBeInTheDocument();
-      expect(screen.getByText('Manage Users')).toBeInTheDocument();
+      expect(screen.getByText('Approva Giochi')).toBeInTheDocument();
+      expect(screen.getByText('Gestisci Utenti')).toBeInTheDocument();
     });
 
-    it('renders action descriptions', () => {
+    it('renders 6 default actions', () => {
       render(<QuickActions />);
-      expect(screen.getByText('Add new game rules')).toBeInTheDocument();
-      expect(screen.getByText('View and edit users')).toBeInTheDocument();
+      const links = screen.getAllByRole('link');
+      // 6 actions + title doesn't count as link
+      expect(links).toHaveLength(6);
     });
   });
 
@@ -275,6 +281,124 @@ describe('QuickActions', () => {
       const { container } = render(<QuickActions />);
       const iconContainers = container.querySelectorAll('[aria-hidden="true"]');
       expect(iconContainers.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Gradient system (Issue #2788)', () => {
+    const gradientActions: QuickAction[] = [
+      {
+        id: 'approve-games',
+        label: 'Approva Giochi',
+        href: '/admin/games/pending',
+        icon: CheckIcon,
+        gradient: 'green-emerald',
+        badge: 5,
+      },
+      {
+        id: 'manage-users',
+        label: 'Gestisci Utenti',
+        href: '/admin/users',
+        icon: UsersIcon,
+        gradient: 'blue-indigo',
+      },
+    ];
+
+    it('renders gradient actions', () => {
+      render(<QuickActions actions={gradientActions} />);
+      expect(screen.getByText('Approva Giochi')).toBeInTheDocument();
+      expect(screen.getByText('Gestisci Utenti')).toBeInTheDocument();
+    });
+
+    it('applies gradient styling classes', () => {
+      const { container } = render(<QuickActions actions={gradientActions} />);
+      const icons = container.querySelectorAll('.bg-gradient-to-br');
+      expect(icons.length).toBeGreaterThan(0);
+    });
+
+    it('applies orange border hover for gradient actions', () => {
+      render(<QuickActions actions={gradientActions} />);
+      const link = screen.getByTestId('quick-action-approve-games');
+      expect(link).toHaveClass('hover:border-orange-500');
+    });
+
+    it('applies group class for icon scale hover', () => {
+      render(<QuickActions actions={gradientActions} />);
+      const link = screen.getByTestId('quick-action-approve-games');
+      expect(link).toHaveClass('group');
+    });
+
+    it('uses orange badge color for gradient actions', () => {
+      const { container } = render(<QuickActions actions={gradientActions} />);
+      const badge = screen.getByText('5');
+      expect(badge).toHaveClass('bg-orange-500');
+    });
+
+    it('supports dynamic badges via props', () => {
+      render(<QuickActions actions={gradientActions} badges={{ 'approve-games': 12 }} />);
+      expect(screen.getByText('12')).toBeInTheDocument();
+    });
+
+    it('overrides action badge with prop badge', () => {
+      render(<QuickActions actions={gradientActions} badges={{ 'approve-games': 99 }} />);
+      expect(screen.getByText('99')).toBeInTheDocument();
+      expect(screen.queryByText('5')).not.toBeInTheDocument();
+    });
+
+    it('displays 99+ for dynamic badges over 99', () => {
+      render(<QuickActions actions={gradientActions} badges={{ 'approve-games': 150 }} />);
+      expect(screen.getByText('99+')).toBeInTheDocument();
+    });
+
+    it('supports backward compatibility with variant system', () => {
+      const mixedActions: QuickAction[] = [
+        {
+          id: 'gradient-action',
+          label: 'Gradient',
+          href: '/test',
+          icon: CheckIcon,
+          gradient: 'green-emerald',
+        },
+        {
+          id: 'variant-action',
+          label: 'Variant',
+          href: '/test',
+          icon: UsersIcon,
+          variant: 'primary',
+        },
+      ];
+      render(<QuickActions actions={mixedActions} />);
+      expect(screen.getByText('Gradient')).toBeInTheDocument();
+      expect(screen.getByText('Variant')).toBeInTheDocument();
+    });
+
+    it('default actions use gradient system', () => {
+      render(<QuickActions />);
+      defaultQuickActions.forEach(action => {
+        expect(action.gradient).toBeDefined();
+      });
+    });
+
+    it('all gradient keys are valid', () => {
+      const gradientKeys: GradientKey[] = [
+        'green-emerald',
+        'blue-indigo',
+        'amber-orange',
+        'red-rose',
+        'purple-violet',
+        'stone-stone',
+      ];
+
+      gradientKeys.forEach(gradient => {
+        const action: QuickAction = {
+          id: `test-${gradient}`,
+          label: `Test ${gradient}`,
+          href: '/test',
+          icon: CheckIcon,
+          gradient,
+        };
+        render(<QuickActions actions={[action]} />);
+        expect(screen.getByText(`Test ${gradient}`)).toBeInTheDocument();
+      });
     });
   });
 });

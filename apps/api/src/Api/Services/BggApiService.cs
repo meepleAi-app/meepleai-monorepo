@@ -143,9 +143,10 @@ internal class BggApiService : IBggApiService
         }
         catch (HttpRequestException ex)
         {
-            // Issue #1444: Use centralized logging for HTTP failures, then wrap and re-throw
-            _logger.LogError(ex, "BGG API request failed for search query: {Query}", query);
-            throw new InvalidOperationException("BoardGameGeek API is currently unavailable", ex);
+            // Issue #2755: Return null gracefully for BGG API failures (external service degradation)
+            // This prevents 500 errors when BGG is unavailable - user gets empty search results instead
+            _logger.LogWarning(ex, "BGG API unavailable for search query: {Query}. Returning empty results.", query);
+            return null;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
@@ -202,9 +203,10 @@ internal class BggApiService : IBggApiService
         }
         catch (HttpRequestException ex)
         {
-            // Issue #1444: Use centralized logging for HTTP failures, then wrap and re-throw
-            _logger.LogError(ex, "BGG API request failed for game ID: {BggId}", bggId);
-            throw new InvalidOperationException("BoardGameGeek API is currently unavailable", ex);
+            // Issue #2755: Return null gracefully for BGG API failures (external service degradation)
+            // This prevents 500 errors when BGG is unavailable - user gets null game details instead
+            _logger.LogWarning(ex, "BGG API unavailable for game ID: {BggId}. Returning null.", bggId);
+            return null;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out

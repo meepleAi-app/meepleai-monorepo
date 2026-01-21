@@ -157,12 +157,13 @@ export default function SettingsPage() {
       setProfile(user);
       setDisplayName(user.displayName);
       setEmail(user.email);
-      // Hydrate preferences from profile
+      // Hydrate preferences from profile with defensive defaults
+      // Issue #2755: Fix TypeError when user properties are undefined
       setPreferences({
-        language: user.language,
+        language: user.language || 'en',
         theme: (user.theme as 'light' | 'dark' | 'system') || 'system',
-        emailNotifications: user.emailNotifications,
-        dataRetentionDays: user.dataRetentionDays,
+        emailNotifications: user.emailNotifications ?? true,
+        dataRetentionDays: user.dataRetentionDays ?? 90,
       });
       setError(null);
     } catch (err) {

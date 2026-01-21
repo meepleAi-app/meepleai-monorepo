@@ -40,13 +40,17 @@ public class GetActiveSessionsQueryHandlerTests
         _sessionRepositoryMock
             .Setup(r => r.FindActiveAsync(null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(sessions);
+        _sessionRepositoryMock
+            .Setup(r => r.CountActiveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(2);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
+        Assert.Equal(2, result.Sessions.Count);
+        Assert.Equal(2, result.Total);
     }
 
     [Fact]
@@ -58,13 +62,17 @@ public class GetActiveSessionsQueryHandlerTests
         _sessionRepositoryMock
             .Setup(r => r.FindActiveAsync(null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<GameSession>());
+        _sessionRepositoryMock
+            .Setup(r => r.CountActiveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
-        Assert.Empty(result);
+        Assert.Empty(result.Sessions);
+        Assert.Equal(0, result.Total);
     }
 
     [Fact]
@@ -76,6 +84,9 @@ public class GetActiveSessionsQueryHandlerTests
         _sessionRepositoryMock
             .Setup(r => r.FindActiveAsync(10, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<GameSession>());
+        _sessionRepositoryMock
+            .Setup(r => r.CountActiveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
 
         // Act
         await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -93,6 +104,9 @@ public class GetActiveSessionsQueryHandlerTests
         _sessionRepositoryMock
             .Setup(r => r.FindActiveAsync(null, 5, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<GameSession>());
+        _sessionRepositoryMock
+            .Setup(r => r.CountActiveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
 
         // Act
         await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -110,6 +124,9 @@ public class GetActiveSessionsQueryHandlerTests
         _sessionRepositoryMock
             .Setup(r => r.FindActiveAsync(10, 5, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<GameSession>());
+        _sessionRepositoryMock
+            .Setup(r => r.CountActiveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
 
         // Act
         await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -168,6 +185,9 @@ public class GetActiveSessionsQueryHandlerTests
         _sessionRepositoryMock
             .Setup(r => r.FindActiveAsync(null, null, token))
             .ReturnsAsync(new List<GameSession>());
+        _sessionRepositoryMock
+            .Setup(r => r.CountActiveAsync(token))
+            .ReturnsAsync(0);
 
         // Act
         await _handler.Handle(query, token);

@@ -90,4 +90,26 @@ public interface IShareRequestRepository
     Task<IReadOnlyCollection<ShareRequest>> GetStaleReviewsAsync(
         TimeSpan duration,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the total number of approved share requests for a user.
+    /// Used for badge evaluation (contribution count requirements).
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Count of approved share requests.</returns>
+    Task<int> CountApprovedByUserAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the most recent resolved share requests for a user (approved or rejected).
+    /// Used for quality streak badge evaluation.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="count">Number of recent requests to retrieve.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>List of recent resolved share requests, ordered by resolution date descending.</returns>
+    Task<List<ShareRequest>> GetRecentResolvedByUserAsync(
+        Guid userId,
+        int count,
+        CancellationToken cancellationToken = default);
 }

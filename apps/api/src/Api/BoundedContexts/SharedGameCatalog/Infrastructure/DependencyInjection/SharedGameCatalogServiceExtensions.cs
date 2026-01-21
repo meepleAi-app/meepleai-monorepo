@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Services.BackgroundAnaly
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,9 +38,14 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IRulebookAnalysisRepository, RulebookAnalysisRepository>(); // Issue #2402 Sprint 3
         services.AddScoped<IShareRequestRepository, ShareRequestRepository>(); // Issue #2724: CreateShareRequest
 
+        // Issue #2728: Badge system repositories (NOTE: Requires EF entity implementations)
+        // services.AddScoped<IBadgeRepository, BadgeRepository>();
+        // services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
+
         // Register domain services
         services.AddScoped<DocumentVersioningService>(); // Issue #2391 Sprint 1
         services.AddScoped<TemplateVersioningService>(); // Issue #2400 Sprint 3
+        services.AddScoped<IBadgeEvaluator, BadgeEvaluator>(); // Issue #2728: Badge assignment logic
 
         // Register application services
         services.AddScoped<IGameStateSchemaGenerator, LlmGameStateSchemaGenerator>(); // Issue #2400 Sprint 3

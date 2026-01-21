@@ -214,5 +214,30 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         return entity;
     }
 
+    public async Task<int> CountApprovedByUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<ShareRequestEntity>()
+            .Where(r => r.UserId == userId && r.Status == (int)ShareRequestStatus.Approved)
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<List<ShareRequest>> GetRecentResolvedByUserAsync(
+        Guid userId,
+        int count,
+        CancellationToken cancellationToken = default)
+    {
+        var entities = await _context.Set<ShareRequestEntity>()
+            .Where(r => r.UserId == userId &&
+                       (r.Status == (int)ShareRequestStatus.Approved ||
+                        r.Status == (int)ShareRequestStatus.Rejected))
+            .OrderByDescending(r => r.ModifiedAt)
+            .Take(count)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     #endregion
 }

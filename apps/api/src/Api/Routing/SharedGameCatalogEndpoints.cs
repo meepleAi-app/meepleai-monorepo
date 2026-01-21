@@ -95,6 +95,15 @@ internal static class SharedGameCatalogEndpoints
 #pragma warning disable MA0051 // Method is too long - endpoint registration methods are inherently long
     private static void MapAdminEndpoints(RouteGroupBuilder group)
     {
+        // Get all shared games for admin management (Issue #2773)
+        group.MapGet("/admin/shared-games", HandleListAllGames)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("ListAllSharedGames")
+            .WithSummary("Get all shared games (Admin/Editor)")
+            .WithDescription("Returns all shared games with optional status filter for admin management.")
+            .Produces<PagedResult<SharedGameDto>>();
+
         // Create new shared game
         group.MapPost("/admin/shared-games", HandleCreateGame)
             .RequireAuthorization("AdminOrEditorPolicy")
@@ -486,6 +495,17 @@ internal static class SharedGameCatalogEndpoints
     // ========================================
     // ADMIN HANDLERS
     // ========================================
+
+    private static async Task<IResult> HandleListAllGames(
+        IMediator mediator,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var query = new GetAllSharedGamesQuery(null, pageNumber, pageSize);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
 
     private static async Task<IResult> HandleCreateGame(
         CreateSharedGameRequest request,

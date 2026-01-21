@@ -28,6 +28,7 @@ function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reason = searchParams?.get('reason') ?? null;
+  const from = searchParams?.get('from') ?? '/dashboard';
 
   const isSessionExpired = reason === 'session_expired';
 
@@ -55,6 +56,7 @@ function LoginPageContent() {
         onClose={handleClose}
         defaultMode="login"
         sessionExpiredMessage={isSessionExpired}
+        redirectTo={from}
       />
     </AuthLayout>
   );

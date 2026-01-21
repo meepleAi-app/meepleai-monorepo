@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Api.Models;
 using Api.Services;
 using MediatR;
@@ -36,8 +37,8 @@ internal static class TwoFactorEndpoints
     {
         group.MapPost("/auth/2fa/setup", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var userIdStr = context.User.FindFirst("sub")?.Value;
-            var userEmail = context.User.FindFirst("email")?.Value;
+            var userIdStr = GetUserIdFromClaims(context.User);
+            var userEmail = GetEmailFromClaims(context.User);
 
             if (string.IsNullOrEmpty(userIdStr) || string.IsNullOrEmpty(userEmail))
             {
@@ -66,7 +67,7 @@ internal static class TwoFactorEndpoints
 
         group.MapPost("/auth/2fa/enable", async (TwoFactorEnableRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var userIdStr = context.User.FindFirst("sub")?.Value;
+            var userIdStr = GetUserIdFromClaims(context.User);
             if (string.IsNullOrEmpty(userIdStr))
             {
                 return Results.Unauthorized();
@@ -155,7 +156,7 @@ internal static class TwoFactorEndpoints
     {
         group.MapPost("/auth/2fa/disable", async (TwoFactorDisableRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var userIdStr = context.User.FindFirst("sub")?.Value;
+            var userIdStr = GetUserIdFromClaims(context.User);
             if (string.IsNullOrEmpty(userIdStr))
             {
                 return Results.Unauthorized();
@@ -194,7 +195,7 @@ internal static class TwoFactorEndpoints
 
         group.MapGet("/users/me/2fa/status", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            var userIdStr = context.User.FindFirst("sub")?.Value;
+            var userIdStr = GetUserIdFromClaims(context.User);
             if (string.IsNullOrEmpty(userIdStr))
             {
                 return Results.Unauthorized();
@@ -231,7 +232,7 @@ internal static class TwoFactorEndpoints
         group.MapPost("/auth/admin/2fa/disable", async (AdminDisable2FARequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Get admin user ID from authentication context
-            var adminUserIdStr = context.User.FindFirst("sub")?.Value;
+            var adminUserIdStr = GetUserIdFromClaims(context.User);
             if (string.IsNullOrEmpty(adminUserIdStr))
             {
                 return Results.Unauthorized();
@@ -304,4 +305,22 @@ internal static class TwoFactorEndpoints
 
     }
 
+    /// <summary>
+    /// Extracts user ID from claims with fallback for different claim types.
+    /// Supports both "sub" (JWT standard) and ClaimTypes.NameIdentifier (session auth).
+    /// </summary>
+    private static string? GetUserIdFromClaims(ClaimsPrincipal user)
+    {
+        return user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? user.FindFirst("sub")?.Value;
+    }
+
+    /// <summary>
+    /// Extracts email from claims with fallback for different claim types.
+    /// </summary>
+    private static string? GetEmailFromClaims(ClaimsPrincipal user)
+    {
+        return user.FindFirst(ClaimTypes.Email)?.Value
+            ?? user.FindFirst("email")?.Value;
+    }
 }

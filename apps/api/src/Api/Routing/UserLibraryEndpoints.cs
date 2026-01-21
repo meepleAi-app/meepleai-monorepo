@@ -82,7 +82,8 @@ internal static class UserLibraryEndpoints
         .Produces<PaginatedLibraryResponseDto>(200)
         .WithTags("Library")
         .WithSummary("Get user's game library")
-        .WithDescription("Returns paginated list of games in user's library. Supports filtering by favorites and sorting by addedAt, title, or favorite status.");
+        .WithDescription("Returns paginated list of games in user's library. Supports filtering by favorites and sorting by addedAt, title, or favorite status.")
+        .WithOpenApi();
     }
 
     private static void MapGetLibraryStatsEndpoint(RouteGroupBuilder group)
@@ -109,7 +110,8 @@ internal static class UserLibraryEndpoints
         .Produces<UserLibraryStatsDto>(200)
         .WithTags("Library")
         .WithSummary("Get library statistics")
-        .WithDescription("Returns statistics about user's library including total games, favorites count, and date range.");
+        .WithDescription("Returns statistics about user's library including total games, favorites count, and date range.")
+        .WithOpenApi();
     }
 
     private static void MapGetLibraryQuotaEndpoint(RouteGroupBuilder group)
@@ -136,7 +138,8 @@ internal static class UserLibraryEndpoints
         .Produces<LibraryQuotaDto>(200)
         .WithTags("Library")
         .WithSummary("Get library quota")
-        .WithDescription("Returns quota information for user's library including games in library, max allowed, remaining slots, and tier.");
+        .WithDescription("Returns quota information for user's library including games in library, max allowed, remaining slots, and tier.")
+        .WithOpenApi();
     }
 
     private static void MapAddGameToLibraryEndpoint(RouteGroupBuilder group)
@@ -179,7 +182,8 @@ internal static class UserLibraryEndpoints
         .Produces(409)
         .WithTags("Library")
         .WithSummary("Add game to library")
-        .WithDescription("Adds a game to user's library with optional notes and favorite status. Returns 409 if game already in library.");
+        .WithDescription("Adds a game to user's library with optional notes and favorite status. Returns 409 if game already in library.")
+        .WithOpenApi();
     }
 
     private static void MapRemoveGameFromLibraryEndpoint(RouteGroupBuilder group)
@@ -216,7 +220,8 @@ internal static class UserLibraryEndpoints
         .Produces(404)
         .WithTags("Library")
         .WithSummary("Remove game from library")
-        .WithDescription("Removes a game from user's library. Returns 404 if game not in library.");
+        .WithDescription("Removes a game from user's library. Returns 404 if game not in library.")
+        .WithOpenApi();
     }
 
     private static void MapUpdateLibraryEntryEndpoint(RouteGroupBuilder group)
@@ -259,7 +264,8 @@ internal static class UserLibraryEndpoints
         .Produces(404)
         .WithTags("Library")
         .WithSummary("Update library entry")
-        .WithDescription("Updates notes and/or favorite status for a game in user's library. Returns 404 if game not in library.");
+        .WithDescription("Updates notes and/or favorite status for a game in user's library. Returns 404 if game not in library.")
+        .WithOpenApi();
     }
 
     private static void MapGetGameInLibraryStatusEndpoint(RouteGroupBuilder group)
@@ -288,7 +294,8 @@ internal static class UserLibraryEndpoints
         .Produces(401)
         .WithTags("Library")
         .WithSummary("Check if game is in library")
-        .WithDescription("Returns whether a game is in user's library and if it's marked as favorite.");
+        .WithDescription("Returns whether a game is in user's library and if it's marked as favorite.")
+        .WithOpenApi();
     }
 
     private static void MapGetGameAgentConfigEndpoint(RouteGroupBuilder group)
@@ -317,7 +324,8 @@ internal static class UserLibraryEndpoints
         .Produces(401)
         .WithTags("Library")
         .WithSummary("Get AI agent configuration")
-        .WithDescription("Returns the custom AI agent configuration for a game in user's library. Returns null if no custom configuration exists (defaults should be used).");
+        .WithDescription("Returns the custom AI agent configuration for a game in user's library. Returns null if no custom configuration exists (defaults should be used).")
+        .WithOpenApi();
     }
 
     private static void MapConfigureGameAgentEndpoint(RouteGroupBuilder group)
@@ -355,7 +363,8 @@ internal static class UserLibraryEndpoints
         .Produces(404)
         .WithTags("Library")
         .WithSummary("Configure custom AI agent")
-        .WithDescription("Configures a custom AI agent for a game in user's library. Replaces any existing configuration.");
+        .WithDescription("Configures a custom AI agent for a game in user's library. Replaces any existing configuration.")
+        .WithOpenApi();
     }
 
     private static void MapResetGameAgentEndpoint(RouteGroupBuilder group)
@@ -392,7 +401,8 @@ internal static class UserLibraryEndpoints
         .Produces(404)
         .WithTags("Library")
         .WithSummary("Reset AI agent to default")
-        .WithDescription("Resets AI agent to system default configuration for a game in user's library.");
+        .WithDescription("Resets AI agent to system default configuration for a game in user's library.")
+        .WithOpenApi();
     }
 
     private static void MapUploadCustomGamePdfEndpoint(RouteGroupBuilder group)
@@ -436,7 +446,8 @@ internal static class UserLibraryEndpoints
         .Produces(404)
         .WithTags("Library")
         .WithSummary("Upload custom PDF rulebook")
-        .WithDescription("Uploads a custom PDF rulebook for a game in user's library. Overrides the SharedGame's default PDF.");
+        .WithDescription("Uploads a custom PDF rulebook for a game in user's library. Overrides the SharedGame's default PDF.")
+        .WithOpenApi();
     }
 
     private static void MapResetGamePdfEndpoint(RouteGroupBuilder group)
@@ -473,7 +484,8 @@ internal static class UserLibraryEndpoints
         .Produces(404)
         .WithTags("Library")
         .WithSummary("Reset to default PDF")
-        .WithDescription("Resets to use SharedGame's default PDF rulebook for a game in user's library.");
+        .WithDescription("Resets to use SharedGame's default PDF rulebook for a game in user's library.")
+        .WithOpenApi();
     }
 
     private static void MapCreateLibraryShareLinkEndpoint(RouteGroupBuilder group)
@@ -515,7 +527,8 @@ internal static class UserLibraryEndpoints
         .Produces(401)
         .WithTags("Library", "Sharing")
         .WithSummary("Create library share link")
-        .WithDescription("Creates a new share link for user's library. Revokes any existing active link. Max 10 per day.");
+        .WithDescription("Creates a new share link for user's library. Revokes any existing active link. Max 10 per day.")
+        .WithOpenApi();
     }
 
     private static void MapGetLibraryShareLinkEndpoint(RouteGroupBuilder group)
@@ -548,7 +561,8 @@ internal static class UserLibraryEndpoints
         .Produces(401)
         .WithTags("Library", "Sharing")
         .WithSummary("Get active library share link")
-        .WithDescription("Returns the user's active library share link, or null if none exists.");
+        .WithDescription("Returns the user's active library share link, or null if none exists.")
+        .WithOpenApi();
     }
 
     private static void MapUpdateLibraryShareLinkEndpoint(RouteGroupBuilder group)
@@ -597,7 +611,8 @@ internal static class UserLibraryEndpoints
         .Produces(404)
         .WithTags("Library", "Sharing")
         .WithSummary("Update library share link")
-        .WithDescription("Updates settings for an existing library share link.");
+        .WithDescription("Updates settings for an existing library share link.")
+        .WithOpenApi();
     }
 
     private static void MapRevokeLibraryShareLinkEndpoint(RouteGroupBuilder group)
@@ -634,7 +649,8 @@ internal static class UserLibraryEndpoints
         .Produces(404)
         .WithTags("Library", "Sharing")
         .WithSummary("Revoke library share link")
-        .WithDescription("Revokes (deletes) a library share link. The link will return 404 after revocation.");
+        .WithDescription("Revokes (deletes) a library share link. The link will return 404 after revocation.")
+        .WithOpenApi();
     }
 
     private static void MapGetSharedLibraryEndpoint(RouteGroupBuilder group)
@@ -659,7 +675,8 @@ internal static class UserLibraryEndpoints
         .Produces(404)
         .WithTags("Library", "Sharing", "Public")
         .WithSummary("Get shared library (public)")
-        .WithDescription("Returns a publicly shared library. No authentication required.");
+        .WithDescription("Returns a publicly shared library. No authentication required.")
+        .WithOpenApi();
     }
 
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)

@@ -2,6 +2,7 @@ using Api.BoundedContexts.SystemConfiguration.Application.Services;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.Services;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
+using Api.BoundedContexts.SystemConfiguration.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
@@ -22,6 +23,7 @@ internal static class SystemConfigurationServiceExtensions
 
         // Register domain services
         services.AddScoped<ConfigurationValidator>();
+        services.AddScoped<IRateLimitEvaluator, RateLimitEvaluator>(); // Issue #2724: CreateShareRequest
 
         // Issue #2596: LLM tier routing service (Singleton - uses IServiceScopeFactory for DB access)
         // Registered as Singleton for use by HybridAdaptiveRoutingStrategy

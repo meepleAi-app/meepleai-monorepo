@@ -45,13 +45,18 @@ Workflow completo di implementazione issue con:
 ### Phase 5: Validazione
 1. **Esegui tests** (`dotnet test`, `pnpm test`)
 2. **Verifica build** senza warning
-3. **Code review** automatica
 
-### Phase 6: Chiusura
+### Phase 6: PR e Code Review
 1. **Crea PR** verso branch padre
-2. **Aggiorna issue** locale e GitHub (stato, task, DoD)
-3. **Merge** dopo approvazione
-4. **Cleanup** branch locale
+2. **Esegui code review** automatica (`/code-review:code-review`)
+3. **Risolvi problemi** con confidence score > 75
+4. **Ripeti code review** finché tutti i problemi > 75 sono risolti
+5. **Aggiorna issue** checkbox su GitHub via `mcp__MCP_DOCKER__issue_write`
+
+### Phase 7: Chiusura
+1. **Aggiorna issue** locale e GitHub (stato finale, task completati, DoD)
+2. **Merge** PR al branch padre
+3. **Cleanup** branch locale (`git branch -D`), prune remotes
 
 ## Regole
 
@@ -72,6 +77,8 @@ Workflow completo di implementazione issue con:
 | Complex analysis | `mcp__sequential-thinking__sequentialthinking` |
 | Symbol operations | `mcp__serena__*` |
 | UI components | `mcp__magic__*` |
+| Code review | Skill `/code-review:code-review` |
+| PR operations | `gh pr create`, `gh pr merge` |
 
 ## Esempi
 
@@ -89,7 +96,11 @@ Phase 2: Pianificazione ✅
 Phase 3: Setup (branch created) ✅
 Phase 4: Implementazione ✅
 Phase 5: Validazione ✅
-Phase 6: Chiusura ✅
+Phase 6: PR e Code Review ✅
+  - PR created: <url>
+  - Code review: X issues found
+  - Issues resolved (score > 75): Y/Z
+Phase 7: Chiusura ✅
 
 Issue #<N> completata e chiusa.
 PR: <url>
@@ -110,10 +121,13 @@ Esegui `/sc:implement --uc Issue $ARGUMENTS` con il seguente workflow:
 6. **Aggiorna issue**: Task checkbox e DoD durante implementazione via `mcp__MCP_DOCKER__issue_write`
 7. **Valida**: Esegui tests, verifica no warning
 8. **Crea PR**: Usa `gh pr create` con summary
-9. **Code review**: Verifica automatica
-10. **Chiudi issue**: Stato `closed`, reason `completed`
-11. **Merge**: Al branch padre
-12. **Cleanup**: Elimina branch locale, prune remotes
+9. **Code review**: Esegui `/code-review:code-review` sulla PR
+10. **Risolvi problemi**: Fix automatico di tutti i problemi con confidence score > 75
+11. **Ripeti code review**: Continua finché non ci sono più problemi con score > 75
+12. **Aggiorna issue checkbox**: Via `mcp__MCP_DOCKER__issue_write` aggiorna task completati
+13. **Chiudi issue**: Stato `closed`, reason `completed`
+14. **Merge**: Al branch padre
+15. **Cleanup**: Elimina branch locale (`git branch -D`), prune remotes (`git remote prune origin`)
 
 **Regole critiche**:
 - Non skippare errori, replica e crea guardie
@@ -122,3 +136,4 @@ Esegui `/sc:implement --uc Issue $ARGUMENTS` con il seguente workflow:
 - Non interrompere workflow, pianifica prima
 - Non aspettare CI (alpha)
 - No nuovi warning
+- Code review: risolvi SOLO problemi con score > 75 (ignora score ≤ 75)

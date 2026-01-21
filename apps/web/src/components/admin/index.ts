@@ -36,6 +36,9 @@ export { SystemStatus, type SystemStatusProps, type ServiceStatus } from './Syst
 export { ServiceCard, type ServiceCardProps } from './ServiceCard';
 export { ServiceHealthMatrix, type ServiceHealthMatrixProps } from './ServiceHealthMatrix';
 
+// Issue #2784: Dashboard Redesign - Enhanced Header
+export { DashboardHeader, type DashboardHeaderProps } from './DashboardHeader';
+
 // Issue #901: Grafana embed iframe
 export { GrafanaEmbed } from './GrafanaEmbed';
 

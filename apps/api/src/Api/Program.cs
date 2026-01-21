@@ -381,6 +381,10 @@ using (var scope = app.Services.CreateScope())
                 var bggService = scope.ServiceProvider.GetRequiredService<IBggApiService>();
                 await Api.Infrastructure.Seeders.SharedGameSeeder.SeedSharedGamesAsync(
                     db, bggService, adminUser.Id, app.Logger).ConfigureAwait(false);
+
+                // Seed predefined badges (ISSUE-2731)
+                await Api.Infrastructure.Seeders.BadgeSeeder.SeedBadgesAsync(
+                    db, app.Logger).ConfigureAwait(false);
             }
         }
     }

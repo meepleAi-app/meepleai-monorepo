@@ -39,6 +39,17 @@ export { ServiceHealthMatrix, type ServiceHealthMatrixProps } from './ServiceHea
 // Issue #2784: Dashboard Redesign - Enhanced Header
 export { DashboardHeader, type DashboardHeaderProps } from './DashboardHeader';
 
+// Issue #2785: Dashboard Redesign - KPI Cards
+export { KPICard, type KPICardData, type KPICardProps, type BadgeVariant } from './KPICard';
+export {
+  KPICardsGrid,
+  buildKPICards,
+  calculateTrendPercent,
+  estimateAiCost,
+  type KPICardsGridProps,
+  type BuildKPICardsOptions,
+} from './KPICardsGrid';
+
 // Issue #901: Grafana embed iframe
 export { GrafanaEmbed } from './GrafanaEmbed';
 

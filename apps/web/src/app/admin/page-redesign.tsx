@@ -26,8 +26,6 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  TrendingUp,
-  TrendingDown,
   AlertTriangle,
   Settings,
   Download,
@@ -42,22 +40,11 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-import { DashboardHeader } from '@/components/admin';
+import { DashboardHeader, KPICardsGrid, type KPICardData } from '@/components/admin';
 
 // ============================================================================
 // Types
 // ============================================================================
-
-interface KPICard {
-  title: string;
-  value: string | number;
-  trend?: number;
-  trendLabel?: string;
-  icon: React.ReactNode;
-  badge?: string;
-  badgeVariant?: 'warning' | 'success' | 'error';
-  subtitle?: string;
-}
 
 interface ServiceStatus {
   name: string;
@@ -85,7 +72,7 @@ interface PendingApproval {
 // Mock Data
 // ============================================================================
 
-const mockKPIs: KPICard[] = [
+const mockKPIs: KPICardData[] = [
   {
     title: 'Utenti Totali',
     value: '2,847',
@@ -172,63 +159,6 @@ function DicePattern({ className }: { className?: string }) {
 // ============================================================================
 // Sub-Components
 // ============================================================================
-
-function KPICardsGrid({ cards }: { cards: KPICard[] }) {
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {cards.map((card, index) => (
-        <div
-          key={index}
-          className="group relative overflow-hidden rounded-xl border border-stone-200 bg-white p-5 shadow-sm transition-all hover:border-orange-200 hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
-          style={{ animationDelay: `${index * 100}ms` }}
-        >
-          {/* Decorative corner */}
-          <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-gradient-to-br from-orange-500/10 to-amber-500/10 transition-transform group-hover:scale-150" />
-
-          <div className="relative">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400">
-                {card.icon}
-              </div>
-              {card.badge && (
-                <span className={`rounded-full px-2 py-1 text-xs font-medium ${
-                  card.badgeVariant === 'warning'
-                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
-                    : card.badgeVariant === 'error'
-                    ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'
-                    : 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400'
-                }`}>
-                  {card.badge}
-                </span>
-              )}
-            </div>
-
-            <p className="text-sm font-medium text-stone-500 dark:text-stone-400">{card.title}</p>
-            <p className="mt-1 font-quicksand text-3xl font-bold text-stone-900 dark:text-white">{card.value}</p>
-
-            {card.trend !== undefined && (
-              <div className="mt-2 flex items-center gap-1 text-sm">
-                {card.trend > 0 ? (
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-red-500" />
-                )}
-                <span className={card.trend > 0 ? 'text-green-600' : 'text-red-600'}>
-                  {card.trend > 0 ? '+' : ''}{card.trend}%
-                </span>
-                <span className="text-stone-400">{card.trendLabel}</span>
-              </div>
-            )}
-
-            {card.subtitle && (
-              <p className="mt-2 text-sm text-stone-400">{card.subtitle}</p>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function SystemHealthMatrix({ services }: { services: ServiceStatus[] }) {
   const getStatusColor = (status: ServiceStatus['status']) => {

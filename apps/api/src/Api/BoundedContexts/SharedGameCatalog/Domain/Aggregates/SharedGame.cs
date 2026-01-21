@@ -468,33 +468,6 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// [DEPRECATED] Legacy method for backward compatibility.
-    /// Use SubmitForApproval() followed by ApprovePublication() instead.
-    /// Direct publishing bypasses the approval workflow (Issue #2514).
-    /// Planned for removal in 2026-Q2 after client migration.
-    /// </summary>
-    /// <param name="publishedBy">The ID of the user publishing the game</param>
-    /// <exception cref="InvalidOperationException">Thrown when game is not in Draft status</exception>
-#pragma warning disable S1133 // Deprecated code should be removed - Planned removal in 2026-Q2
-    [Obsolete("Use SubmitForApproval() and ApprovePublication() for proper approval workflow (Issue #2514)")]
-    public void Publish(Guid publishedBy)
-#pragma warning restore S1133
-    {
-        if (_status != GameStatus.Draft)
-            throw new InvalidOperationException($"Cannot publish game in {_status} status");
-
-        if (publishedBy == Guid.Empty)
-            throw new ArgumentException("PublishedBy cannot be empty", nameof(publishedBy));
-
-        // Direct transition: Draft → Published (bypassing approval)
-        _status = GameStatus.Published;
-        _modifiedBy = publishedBy;
-        _modifiedAt = DateTime.UtcNow;
-
-        AddDomainEvent(new SharedGamePublishedEvent(_id, publishedBy));
-    }
-
-    /// <summary>
     /// Archives the game, removing it from public view.
     /// </summary>
     /// <param name="archivedBy">The ID of the user archiving the game</param>

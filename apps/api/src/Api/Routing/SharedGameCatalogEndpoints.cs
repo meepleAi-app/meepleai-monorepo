@@ -123,15 +123,6 @@ internal static class SharedGameCatalogEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
-        // Publish game (Draft → Published) [DEPRECATED - use approval workflow]
-        group.MapPost("/admin/shared-games/{id:guid}/publish", HandlePublishGame)
-            .RequireAuthorization("AdminOrEditorPolicy")
-            .WithName("PublishSharedGame")
-            .WithSummary("[DEPRECATED] Publish shared game directly (Admin/Editor)")
-            .WithDescription("Legacy endpoint. Use submit-for-approval workflow instead. Issue #2514")
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces(StatusCodes.Status404NotFound);
-
         // Submit game for approval (Draft → PendingApproval) - Issue #2514
         group.MapPost("/admin/shared-games/{id:guid}/submit-for-approval", HandleSubmitForApproval)
             .RequireAuthorization("AdminOrEditorPolicy")
@@ -568,28 +559,6 @@ internal static class SharedGameCatalogEndpoints
             request.ThumbnailUrl,
             request.Rules,
             session!.User!.Id);
-
-        try
-        {
-            await mediator.Send(command, ct).ConfigureAwait(false);
-            return Results.NoContent();
-        }
-        catch (InvalidOperationException)
-        {
-            return Results.NotFound();
-        }
-    }
-
-    private static async Task<IResult> HandlePublishGame(
-        Guid id,
-        IMediator mediator,
-        HttpContext context,
-        CancellationToken ct)
-    {
-        var (authorized, session, error) = context.RequireAdminOrEditorSession();
-        if (!authorized) return error!;
-
-        var command = new PublishSharedGameCommand(id, session!.User!.Id);
 
         try
         {

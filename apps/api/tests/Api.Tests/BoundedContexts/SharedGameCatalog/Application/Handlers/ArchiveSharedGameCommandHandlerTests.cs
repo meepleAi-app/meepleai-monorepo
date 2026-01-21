@@ -54,7 +54,9 @@ public class ArchiveSharedGameCommandHandlerTests
             null,
             creatorId);
 
-        game.Publish(Guid.NewGuid());
+        var adminId = Guid.NewGuid();
+        game.SubmitForApproval(adminId);
+        game.ApprovePublication(adminId);
 
         var command = new ArchiveSharedGameCommand(game.Id, archiverId);
 
@@ -138,7 +140,9 @@ public class ArchiveSharedGameCommandHandlerTests
             null,
             Guid.NewGuid());
 
-        game.Publish(Guid.NewGuid());
+        var adminId = Guid.NewGuid();
+        game.SubmitForApproval(adminId);
+        game.ApprovePublication(adminId);
         game.Archive(Guid.NewGuid());
         return game;
     }

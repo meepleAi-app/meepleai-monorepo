@@ -25,6 +25,15 @@ internal static class InfrastructureServiceExtensions
         services.AddHttpClients(configuration);
         services.AddTimeProvider();
         services.AddBackgroundServices();
+        services.AddStorageServices(); // Issue #2732: Storage services
+
+        return services;
+    }
+
+    private static IServiceCollection AddStorageServices(this IServiceCollection services)
+    {
+        // Issue #2732: File storage service for document operations
+        services.AddScoped<Infrastructure.Services.IStorageService, Infrastructure.Services.LocalStorageService>();
 
         return services;
     }

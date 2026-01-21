@@ -175,15 +175,19 @@ internal static class WebApplicationExtensions
                 }
 
                 // Issue #1448: Whitelist specific headers instead of AllowAnyHeader() for security
+                // Issue #2755: Add W3C Trace Context headers (traceparent, tracestate) for OpenTelemetry
                 policy
                     .WithHeaders(
                         "Content-Type",
                         "Authorization",
                         "X-Correlation-ID",
-                        "X-API-Key"
+                        "X-API-Key",
+                        "traceparent",  // W3C Trace Context propagation
+                        "tracestate"    // W3C Trace Context state
                     )
                     .AllowAnyMethod()
-                    .AllowCredentials();
+                    .AllowCredentials()
+                    .WithExposedHeaders("X-Trace-Id", "X-Span-Id", "traceparent", "tracestate");
             });
         });
 

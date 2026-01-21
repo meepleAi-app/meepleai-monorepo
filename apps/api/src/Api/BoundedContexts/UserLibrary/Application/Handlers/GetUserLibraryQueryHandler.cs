@@ -62,13 +62,17 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
         }
 
         var totalPages = (int)Math.Ceiling((double)total / query.PageSize);
+        var hasNextPage = query.Page < totalPages;
+        var hasPreviousPage = query.Page > 1;
 
         return new PaginatedLibraryResponseDto(
-            Entries: entryDtos,
-            Total: total,
+            Items: entryDtos,
             Page: query.Page,
             PageSize: query.PageSize,
-            TotalPages: totalPages
+            TotalCount: total,
+            TotalPages: totalPages,
+            HasNextPage: hasNextPage,
+            HasPreviousPage: hasPreviousPage
         );
     }
 }

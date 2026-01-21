@@ -133,6 +133,8 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame>(); // ISSUE-2370
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.GameCategory>(); // ISSUE-2370
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.GameMechanic>(); // ISSUE-2370
+        modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.ShareRequest>(); // ISSUE-2726
+        modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.Contributor>(); // ISSUE-2726
         modelBuilder.Ignore<BoundedContexts.SystemConfiguration.Domain.Entities.AiModelConfiguration>(); // ISSUE-2512
         modelBuilder.Ignore<BoundedContexts.UserLibrary.Domain.Entities.UserLibraryEntry>(); // User Library feature
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.RulebookAnalysis>(); // ISSUE-2402

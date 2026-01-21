@@ -3,6 +3,8 @@ using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
 namespace Api.Tests.TestHelpers;
@@ -58,5 +60,17 @@ public static class TestDbContextFactory
     public static Mock<IMediator> CreateMockMediator()
     {
         return new Mock<IMediator>();
+    }
+
+    /// <summary>
+    /// Creates a real HybridCache (in-memory only) for unit testing.
+    /// Issue #2790: HybridCache cannot be mocked (sealed class with non-virtual methods).
+    /// </summary>
+    public static HybridCache CreateInMemoryHybridCache()
+    {
+        var services = new ServiceCollection();
+        services.AddHybridCache(); // L1 in-memory only (no Redis L2 in unit tests)
+        var serviceProvider = services.BuildServiceProvider();
+        return serviceProvider.GetRequiredService<HybridCache>();
     }
 }

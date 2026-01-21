@@ -30,6 +30,7 @@ import { MetricsGrid } from '@/components/admin/MetricsGrid';
 import { QuickActions, type QuickAction } from '@/components/admin/QuickActions';
 import type { StatCardProps } from '@/components/admin/StatCard';
 import { SystemStatus, type ServiceStatus } from '@/components/admin/SystemStatus';
+import { ChartsSection } from '@/components/admin/charts/ChartsSection';
 import { useDashboardData } from '@/hooks/queries/useDashboardData';
 import type { DashboardMetrics } from '@/lib/api';
 
@@ -331,6 +332,9 @@ export function DashboardClient() {
 
         {/* Metrics Grid - 16 metrics in 4x4 responsive grid */}
         <MetricsGrid metrics={metricCards} />
+
+        {/* Charts Section - Issue #2790: API Requests & AI Usage */}
+        <ChartsSection />
 
         {/* Activity Feed */}
         {events.length > 0 && <ActivityFeed events={events} />}

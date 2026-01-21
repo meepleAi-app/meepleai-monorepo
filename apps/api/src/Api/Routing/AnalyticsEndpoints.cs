@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -119,6 +120,23 @@ internal static class AnalyticsEndpoints
         .WithDescription("Export analytics dashboard data in CSV or JSON format")
         .Produces(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden);
+
+        // Issue #2790: Admin Dashboard Charts - API Requests & AI Usage
+        group.MapGet("/admin/analytics/api-requests", HandleGetApiRequestsByDay)
+        .WithName("GetApiRequestsByDay")
+        .WithTags("Admin", "Charts")
+        .WithDescription("Get API requests grouped by day for bar chart visualization")
+        .Produces<ApiRequestByDayDto[]>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden);
+
+        group.MapGet("/admin/analytics/ai-usage", HandleGetAiUsageStats)
+        .WithName("GetAiUsageStats")
+        .WithTags("Admin", "Charts")
+        .WithDescription("Get AI usage statistics by model for donut chart visualization")
+        .Produces<AiUsageStatsDto[]>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);
     }
@@ -386,5 +404,33 @@ internal static class AnalyticsEndpoints
         var result = await mediator.Send(new CheckLlmCostAlertsCommand(), ct).ConfigureAwait(false);
 
         return Results.Json(new { success = result.Success, message = result.Message });
+    }
+
+    // Issue #2790: Admin Dashboard Charts - Handler methods
+    private static async Task<IResult> HandleGetApiRequestsByDay(
+        HttpContext context,
+        IMediator mediator,
+        int days = 7,
+        CancellationToken ct = default)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var query = new GetApiRequestsByDayQuery(days);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetAiUsageStats(
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var query = new GetAiUsageStatsQuery();
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 }

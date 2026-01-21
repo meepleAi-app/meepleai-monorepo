@@ -98,7 +98,7 @@ export function RecentGamesSection({ games, isLoading, error }: RecentGamesSecti
             Aggiungi i tuoi giochi da tavolo preferiti per iniziare a chattare con l'AI.
           </p>
           <Button asChild>
-            <Link href="/giochi">
+            <Link href="/games">
               Esplora Catalogo
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
@@ -114,7 +114,7 @@ export function RecentGamesSection({ games, isLoading, error }: RecentGamesSecti
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-quicksand font-semibold">Giochi Recenti</h2>
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/giochi">
+          <Link href="/games">
             Vedi Tutti
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>

@@ -84,7 +84,7 @@ export function GameDetailClient({ game }: GameDetailClientProps) {
       {/* Back Navigation */}
       <div className="mb-6">
         <Button asChild variant="ghost" size="sm">
-          <Link href="/giochi">
+          <Link href="/games">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Torna al Catalogo
           </Link>

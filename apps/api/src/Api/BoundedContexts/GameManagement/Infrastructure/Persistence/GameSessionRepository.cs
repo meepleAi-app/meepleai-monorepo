@@ -99,6 +99,14 @@ internal class GameSessionRepository : RepositoryBase, IGameSessionRepository
         return sessionEntities.Select(MapToDomain).ToList();
     }
 
+    public async Task<int> CountActiveAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbContext.GameSessions
+            .AsNoTracking()
+            .Where(s => s.Status == "Setup" || s.Status == "InProgress" || s.Status == "Paused")
+            .CountAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyList<GameSession>> FindHistoryAsync(
         Guid? gameId = null,
         DateTime? startDate = null,

@@ -601,10 +601,14 @@ services:
     env_file:
       - ./secrets/database.secret
       - ./secrets/redis.secret
+      - ./secrets/qdrant.secret
       - ./secrets/jwt.secret
       - ./secrets/openrouter.secret
       - ./secrets/admin.secret
       - ./secrets/oauth.secret
+      - ./secrets/bgg.secret
+      - ./secrets/email.secret
+      - ./secrets/embedding-service.secret
       - ./env/api.env.dev
     environment:
       ASPNETCORE_ENVIRONMENT: Development

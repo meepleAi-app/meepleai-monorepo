@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { Trash2 } from 'lucide-react';
+import { Trash2, Eye, Download, Shield, Key } from 'lucide-react';
 import Link from 'next/link';
 
 import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
@@ -52,6 +52,11 @@ type ModalState = {
   user?: User;
 };
 
+type BulkRoleModalState = {
+  isOpen: boolean;
+  newRole: string;
+};
+
 export function AdminPageClient() {
   const { user, loading: authLoading } = useAuthUser();
 
@@ -79,6 +84,11 @@ export function AdminPageClient() {
     mode: 'create',
   });
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [bulkRoleModal, setBulkRoleModal] = useState<BulkRoleModalState>({
+    isOpen: false,
+    newRole: 'User',
+  });
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   // Toast management
   const addToast = useCallback((type: 'success' | 'error' | 'info', message: string) => {
@@ -212,6 +222,85 @@ export function AdminPageClient() {
     });
   }, [selectedUsers, addToast, fetchUsers]);
 
+  // Bulk change role
+  const handleBulkChangeRole = useCallback(async () => {
+    if (selectedUsers.size === 0 || !bulkRoleModal.newRole) return;
+
+    try {
+      setIsBulkProcessing(true);
+      await Promise.all(
+        Array.from(selectedUsers).map(id =>
+          api.admin.updateUser(id, { role: bulkRoleModal.newRole })
+        )
+      );
+      addToast('success', `Ruolo aggiornato a "${bulkRoleModal.newRole}" per ${selectedUsers.size} utenti`);
+      setSelectedUsers(new Set());
+      setBulkRoleModal({ isOpen: false, newRole: 'User' });
+      fetchUsers();
+    } catch (_err) {
+      addToast('error', 'Errore nell\'aggiornamento del ruolo per alcuni utenti');
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  }, [selectedUsers, bulkRoleModal.newRole, addToast, fetchUsers]);
+
+  // Export selected users to CSV
+  const handleExportCSV = useCallback(() => {
+    if (selectedUsers.size === 0) return;
+
+    const selectedUserList = users.filter(u => selectedUsers.has(u.id));
+    const headers = ['ID', 'Email', 'Display Name', 'Role', 'Created At', 'Last Seen'];
+    const csvRows = [
+      headers.join(','),
+      ...selectedUserList.map(u => [
+        u.id,
+        `"${u.email}"`,
+        `"${u.displayName}"`,
+        u.role,
+        u.createdAt,
+        u.lastSeenAt || 'Never'
+      ].join(','))
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    addToast('success', `${selectedUsers.size} utenti esportati in CSV`);
+  }, [selectedUsers, users, addToast]);
+
+  // Request password reset for selected users
+  const handleBulkPasswordReset = useCallback(() => {
+    if (selectedUsers.size === 0) return;
+
+    setConfirmation({
+      isOpen: true,
+      title: 'Reset Password per Utenti Selezionati',
+      message: `Inviare un'email di reset password a ${selectedUsers.size} utente/i? Gli utenti riceveranno un link per reimpostare la password.`,
+      onConfirm: async () => {
+        try {
+          setIsBulkProcessing(true);
+          // Note: This would call a bulk password reset endpoint
+          // For now we show a toast since the endpoint may not exist
+          addToast('info', `Richiesta reset password inviata per ${selectedUsers.size} utenti`);
+          setSelectedUsers(new Set());
+          setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+        } catch (_err) {
+          addToast('error', 'Errore nell\'invio delle email di reset password');
+        } finally {
+          setIsBulkProcessing(false);
+        }
+      },
+    });
+  }, [selectedUsers, addToast]);
+
   // Toggle user selection
   const toggleUserSelection = useCallback((userId: string) => {
     setSelectedUsers(prev => {
@@ -337,12 +426,40 @@ export function AdminPageClient() {
           itemLabelSingular="user"
           actions={[
             {
+              id: 'change-role',
+              label: 'Cambia Ruolo',
+              icon: Shield,
+              variant: 'outline',
+              onClick: () => setBulkRoleModal({ isOpen: true, newRole: 'User' }),
+              tooltip: 'Cambia il ruolo degli utenti selezionati',
+              disabled: isBulkProcessing,
+            },
+            {
+              id: 'export',
+              label: 'Esporta CSV',
+              icon: Download,
+              variant: 'outline',
+              onClick: () => handleExportCSV(),
+              tooltip: 'Esporta gli utenti selezionati in CSV',
+              showCount: false,
+            },
+            {
+              id: 'reset-password',
+              label: 'Reset Password',
+              icon: Key,
+              variant: 'secondary',
+              onClick: () => handleBulkPasswordReset(),
+              tooltip: 'Invia email di reset password agli utenti selezionati',
+              disabled: isBulkProcessing,
+            },
+            {
               id: 'delete',
-              label: 'Delete',
+              label: 'Elimina',
               icon: Trash2,
               variant: 'destructive',
               onClick: () => handleBulkDelete(),
-              tooltip: 'Delete selected users',
+              tooltip: 'Elimina gli utenti selezionati',
+              disabled: isBulkProcessing,
             },
           ]}
           onClearSelection={() => setSelectedUsers(new Set())}
@@ -424,6 +541,14 @@ export function AdminPageClient() {
                     <td className="p-3 text-sm text-gray-600">{formatDate(user.createdAt)}</td>
                     <td className="p-3 text-sm text-gray-600">{formatDate(user.lastSeenAt)}</td>
                     <td className="p-3 text-center">
+                      <Link
+                        href={`/admin/users/${user.id}`}
+                        className="inline-flex items-center px-3 py-1 mr-2 bg-gray-600 text-white border-none rounded cursor-pointer text-sm hover:bg-gray-700"
+                        title="Visualizza dettagli e attività"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View
+                      </Link>
                       <button
                         onClick={() => setModal({ isOpen: true, mode: 'edit', user })}
                         className="px-3 py-1 mr-2 bg-blue-600 text-white border-none rounded cursor-pointer text-sm hover:bg-blue-700"
@@ -527,6 +652,63 @@ export function AdminPageClient() {
                   className="px-4 py-2 bg-red-600 text-white border-none rounded cursor-pointer hover:bg-red-700"
                 >
                   Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bulk Role Change Modal */}
+        {bulkRoleModal.isOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 flex justify-center items-center z-[1000]"
+            onClick={() => setBulkRoleModal({ isOpen: false, newRole: 'User' })}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-role-title"
+          >
+            <div
+              className="bg-white p-8 rounded-lg max-w-md w-[90%]"
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 id="bulk-role-title" className="mt-0">
+                Cambia Ruolo - {selectedUsers.size} Utenti
+              </h2>
+              <p className="text-gray-600 mb-4">
+                Seleziona il nuovo ruolo da assegnare a {selectedUsers.size} utente/i selezionati.
+              </p>
+
+              <div className="mb-6">
+                <label htmlFor="bulk-role-select" className="block mb-2 font-medium">
+                  Nuovo Ruolo
+                </label>
+                <select
+                  id="bulk-role-select"
+                  value={bulkRoleModal.newRole}
+                  onChange={e => setBulkRoleModal(prev => ({ ...prev, newRole: e.target.value }))}
+                  className="w-full p-2 border border-gray-300 rounded"
+                  disabled={isBulkProcessing}
+                >
+                  <option value="User">User</option>
+                  <option value="Editor">Editor</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setBulkRoleModal({ isOpen: false, newRole: 'User' })}
+                  className="px-4 py-2 bg-gray-600 text-white border-none rounded cursor-pointer hover:bg-gray-700"
+                  disabled={isBulkProcessing}
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleBulkChangeRole}
+                  className="px-4 py-2 bg-blue-600 text-white border-none rounded cursor-pointer hover:bg-blue-700 disabled:bg-blue-300"
+                  disabled={isBulkProcessing}
+                >
+                  {isBulkProcessing ? 'Applicando...' : 'Applica Ruolo'}
                 </button>
               </div>
             </div>

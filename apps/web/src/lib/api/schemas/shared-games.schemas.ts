@@ -7,6 +7,15 @@
 
 import { z } from 'zod';
 
+// Import and re-export BGG types from games.schemas for convenience
+import {
+  BggGameDetailsSchema,
+  type BggGameDetails,
+  BggSearchResultSchema,
+  type BggSearchResult,
+} from './games.schemas';
+export { BggGameDetailsSchema, type BggGameDetails, BggSearchResultSchema, type BggSearchResult };
+
 // ========== Enums ==========
 
 /**
@@ -483,3 +492,52 @@ export const BulkImportResultSchema = z.object({
 });
 
 export type BulkImportResult = z.infer<typeof BulkImportResultSchema>;
+
+// ========== BGG Import/Update Flow (Admin Add from BGG) ==========
+
+// Note: BggSearchResultSchema, BggSearchResult, BggGameDetailsSchema, and BggGameDetails
+// are imported from games.schemas.ts and re-exported at the top of this file
+
+/**
+ * BGG Duplicate Check Result schema
+ * Returns both existing game data and fresh BGG data for diff comparison
+ */
+export const BggDuplicateCheckResultSchema = z.object({
+  isDuplicate: z.boolean(),
+  existingGameId: z.string().uuid().nullable(),
+  existingGame: SharedGameDetailSchema.nullable(),
+  bggData: BggGameDetailsSchema.nullable(),
+});
+
+export type BggDuplicateCheckResult = z.infer<typeof BggDuplicateCheckResultSchema>;
+
+/**
+ * Update from BGG request body
+ */
+export interface UpdateFromBggRequest {
+  bggId: number;
+  fieldsToUpdate?: string[];
+}
+
+/**
+ * Valid fields for selective BGG update
+ */
+export const BggUpdatableFields = [
+  'title',
+  'description',
+  'yearPublished',
+  'minPlayers',
+  'maxPlayers',
+  'playingTime',
+  'minAge',
+  'complexityRating',
+  'averageRating',
+  'imageUrl',
+  'thumbnailUrl',
+  'designers',
+  'publishers',
+  'categories',
+  'mechanics',
+] as const;
+
+export type BggUpdatableField = (typeof BggUpdatableFields)[number];

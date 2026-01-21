@@ -194,6 +194,7 @@ export function useChunkStreaming(
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const optionsRef = useRef(options);
   optionsRef.current = options;
+  const connectRef = useRef<((url: string) => void) | null>(null);
 
   /**
    * Close the EventSource connection
@@ -252,7 +253,7 @@ export function useChunkStreaming(
   /**
    * Connect to SSE endpoint
    */
-  const connect = useCallback((url: string) => {
+  const connect = useCallback((url: string): void => {
     // Close any existing connection
     closeConnection();
 
@@ -347,8 +348,8 @@ export function useChunkStreaming(
           // Exponential backoff: 1s, 2s, 4s...
           const delay = Math.pow(2, currentAttempts) * 1000;
           reconnectTimeoutRef.current = setTimeout(() => {
-            if (lastUrlRef.current) {
-              connect(lastUrlRef.current);
+            if (lastUrlRef.current && connectRef.current) {
+              connectRef.current(lastUrlRef.current);
             }
           }, delay);
 
@@ -371,20 +372,23 @@ export function useChunkStreaming(
         }
       });
     };
-  }, [closeConnection, autoReconnect, maxReconnectAttempts, connect]);
+  }, [closeConnection, autoReconnect, maxReconnectAttempts]);
+
+  // Keep ref updated for recursive calls
+  connectRef.current = connect;
 
   /**
    * Retry connection after error
    */
-  const retry = useCallback(() => {
-    if (lastUrlRef.current) {
+  const retry = useCallback((): void => {
+    if (lastUrlRef.current && connectRef.current) {
       setState(prev => ({
         ...INITIAL_STATE,
         reconnectAttempts: prev.reconnectAttempts,
       }));
-      connect(lastUrlRef.current);
+      connectRef.current(lastUrlRef.current);
     }
-  }, [connect]);
+  }, []);
 
   return [
     state,

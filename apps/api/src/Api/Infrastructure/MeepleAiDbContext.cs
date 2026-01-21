@@ -93,6 +93,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameSessionStateEntity> GameSessionStates => Set<GameSessionStateEntity>(); // ISSUE-2403: Sprint 4 - Game session state tracking
     public DbSet<GameStateSnapshotEntity> GameStateSnapshots => Set<GameStateSnapshotEntity>(); // ISSUE-2403: Sprint 4 - State snapshots
     public DbSet<AiModelConfigurationEntity> AiModelConfigurations => Set<AiModelConfigurationEntity>(); // ISSUE-2512: Auto-configuration pipeline - AI model seed
+    public DbSet<BadgeEntity> Badges => Set<BadgeEntity>(); // ISSUE-2731: Badge gamification system
+    public DbSet<UserBadgeEntity> UserBadges => Set<UserBadgeEntity>(); // ISSUE-2731: User badge awards
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -135,6 +137,8 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.GameMechanic>(); // ISSUE-2370
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.ShareRequest>(); // ISSUE-2726
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.Contributor>(); // ISSUE-2726
+        modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.Badge>(); // ISSUE-2731
+        modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.UserBadge>(); // ISSUE-2731
         modelBuilder.Ignore<BoundedContexts.SystemConfiguration.Domain.Entities.AiModelConfiguration>(); // ISSUE-2512
         modelBuilder.Ignore<BoundedContexts.UserLibrary.Domain.Entities.UserLibraryEntry>(); // User Library feature
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.RulebookAnalysis>(); // ISSUE-2402

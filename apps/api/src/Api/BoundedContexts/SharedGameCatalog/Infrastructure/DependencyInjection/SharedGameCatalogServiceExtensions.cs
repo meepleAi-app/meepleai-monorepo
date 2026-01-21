@@ -37,10 +37,8 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IGameStateTemplateRepository, GameStateTemplateRepository>(); // Issue #2400 Sprint 3
         services.AddScoped<IRulebookAnalysisRepository, RulebookAnalysisRepository>(); // Issue #2402 Sprint 3
         services.AddScoped<IShareRequestRepository, ShareRequestRepository>(); // Issue #2724: CreateShareRequest
-
-        // Issue #2728: Badge system repositories (NOTE: Requires EF entity implementations)
-        // services.AddScoped<IBadgeRepository, BadgeRepository>();
-        // services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
+        services.AddScoped<IBadgeRepository, BadgeRepository>(); // Issue #2731: Badge gamification system
+        services.AddScoped<IUserBadgeRepository, UserBadgeRepository>(); // Issue #2731: User badge awards
 
         // Register domain services
         services.AddScoped<DocumentVersioningService>(); // Issue #2391 Sprint 1

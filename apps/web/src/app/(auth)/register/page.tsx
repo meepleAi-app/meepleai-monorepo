@@ -25,7 +25,9 @@ function RegisterPageContent() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const from = searchParams?.get('from') ?? '/dashboard';
+  const finalDestination = searchParams?.get('from') ?? '/dashboard';
+  // Redirect to welcome page first, which will then redirect to final destination
+  const redirectTo = `/welcome?redirectTo=${encodeURIComponent(finalDestination)}`;
 
   const handleClose = () => {
     setShowAuthModal(false);
@@ -54,7 +56,7 @@ function RegisterPageContent() {
         isOpen={showAuthModal}
         onClose={handleClose}
         defaultMode="register"
-        redirectTo={from}
+        redirectTo={redirectTo}
       />
     </AuthLayout>
   );

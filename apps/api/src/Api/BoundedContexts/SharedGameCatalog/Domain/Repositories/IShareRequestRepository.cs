@@ -112,4 +112,33 @@ public interface IShareRequestRepository
         Guid userId,
         int count,
         CancellationToken cancellationToken = default);
+
+    // ===== Rate Limiting Support Methods (Issue #2730) =====
+
+    /// <summary>
+    /// Counts the number of pending share requests for a user.
+    /// Used for rate limit evaluation (max pending requests check).
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Count of pending share requests.</returns>
+    Task<int> CountPendingByUserAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the number of share requests created by a user in the current calendar month (UTC).
+    /// Used for rate limit evaluation (monthly request limit check).
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Count of share requests created this month.</returns>
+    Task<int> CountThisMonthByUserAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the date/time when the user's most recent request was rejected.
+    /// Used for rate limit cooldown calculation.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The rejection date/time if any rejected requests exist; otherwise null.</returns>
+    Task<DateTime?> GetLastRejectionDateAsync(Guid userId, CancellationToken cancellationToken = default);
 }

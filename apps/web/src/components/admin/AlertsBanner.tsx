@@ -1,3 +1,12 @@
+/**
+ * AlertsBanner Component - Issue #2791 (Updated for Issue #2792)
+ *
+ * System-wide alerts banner displaying real-time alert status from metrics.
+ * Fully integrated with useDashboardData hook.
+ *
+ * Part of Epic #2783 - Admin Dashboard Redesign
+ */
+
 'use client';
 
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
@@ -6,11 +15,16 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { variants } from '@/lib/animations/variants';
+import type { DashboardMetrics } from '@/lib/api';
 
 interface AlertsBannerProps {
-  criticalCount: number;
+  /** Dashboard metrics for deriving alert status */
+  metrics: DashboardMetrics | null;
+  /** Number of healthy services */
   healthyServices: number;
+  /** Total number of services */
   totalServices: number;
+  /** Additional CSS classes */
   className?: string;
 }
 
@@ -31,35 +45,43 @@ interface AlertsBannerProps {
  * @example
  * ```tsx
  * <AlertsBanner
- *   criticalCount={5}
+ *   metrics={dashboardMetrics}
  *   healthyServices={8}
  *   totalServices={10}
  * />
  * ```
  */
 export function AlertsBanner({
-  criticalCount,
+  metrics,
   healthyServices,
   totalServices,
   className,
-}: AlertsBannerProps) {
+}: AlertsBannerProps): JSX.Element | null {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
+
+  // Extract critical count from metrics
+  const criticalCount = metrics?.activeAlerts ?? 0;
 
   // Validate and normalize props
   const safeCriticalCount = Math.max(0, criticalCount);
   const safeHealthyServices = Math.max(0, Math.min(healthyServices, totalServices));
   const safeTotalServices = Math.max(0, totalServices);
 
-  // Compute state
-  const hasIssues = safeCriticalCount > 0 || safeHealthyServices < safeTotalServices;
+  // Compute state - consider both alerts and error rate
+  const errorRate = metrics?.errorRate24h ?? 0;
+  const hasIssues = safeCriticalCount > 0 || safeHealthyServices < safeTotalServices || errorRate > 0.05;
 
-  // Messages
+  // Messages with error rate context
   const primaryMessage =
     safeTotalServices === 0
       ? 'Nessun servizio configurato'
       : hasIssues
-        ? `${safeCriticalCount} alert critic${safeCriticalCount === 1 ? 'o' : 'i'} attiv${safeCriticalCount === 1 ? 'o' : 'i'}`
+        ? safeCriticalCount > 0
+          ? `${safeCriticalCount} alert critic${safeCriticalCount === 1 ? 'o' : 'i'} attiv${safeCriticalCount === 1 ? 'o' : 'i'}`
+          : errorRate > 0.1
+            ? `Tasso di errore elevato (${(errorRate * 100).toFixed(1)}%)`
+            : 'Anomalie di sistema rilevate'
         : 'Tutti i sistemi operativi';
 
   const secondaryMessage =

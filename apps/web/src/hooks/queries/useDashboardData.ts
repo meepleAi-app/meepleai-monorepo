@@ -13,7 +13,7 @@
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 
-import { api, type DashboardStats, type RecentActivityDto } from '@/lib/api';
+import { api, type DashboardStats, type RecentActivityDto, type InfrastructureDetails } from '@/lib/api';
 
 /**
  * Polling configuration
@@ -31,6 +31,7 @@ export const adminKeys = {
     [...adminKeys.dashboard(), 'analytics', params] as const,
   activity: (params?: { limit?: number; since?: Date }) =>
     [...adminKeys.dashboard(), 'activity', params] as const,
+  infrastructure: () => [...adminKeys.dashboard(), 'infrastructure'] as const,
 };
 
 /**
@@ -122,9 +123,44 @@ export function useDashboardActivity(
 }
 
 /**
- * Combined hook for dashboard data (analytics + activity)
+ * Hook to fetch infrastructure details with 30s polling
  *
- * Provides convenient access to both queries with unified loading/error states.
+ * Provides real-time service health status and Prometheus metrics.
+ * Part of Issue #2792 - Admin Dashboard Data Integration
+ *
+ * @param options Query options
+ * @returns UseQueryResult with InfrastructureDetails
+ */
+export function useInfrastructureDetails(
+  options: DashboardQueryOptions = {}
+): UseQueryResult<InfrastructureDetails | null, Error> {
+  const { enablePolling = true, pauseOnHidden = true, enabled = true } = options;
+
+  return useQuery({
+    queryKey: adminKeys.infrastructure(),
+    queryFn: async (): Promise<InfrastructureDetails | null> => {
+      return api.admin.getInfrastructureDetails();
+    },
+    enabled,
+    refetchInterval: enablePolling ? POLLING_INTERVAL_MS : false,
+    refetchIntervalInBackground: !pauseOnHidden,
+    refetchOnWindowFocus: true,
+    staleTime: POLLING_INTERVAL_MS,
+    retry: (failureCount, error) => {
+      if (error.message?.includes('401') || error.message?.includes('403')) {
+        return false;
+      }
+      return failureCount < MAX_CONSECUTIVE_FAILURES;
+    },
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+}
+
+/**
+ * Combined hook for dashboard data (analytics + activity + infrastructure)
+ *
+ * Provides convenient access to all dashboard queries with unified loading/error states.
+ * Part of Issue #2792 - Admin Dashboard Data Integration
  *
  * @param activityLimit Number of activity events (default: 10)
  * @param options Query options
@@ -133,30 +169,40 @@ export function useDashboardActivity(
 export function useDashboardData(activityLimit: number = 10, options: DashboardQueryOptions = {}) {
   const analyticsQuery = useDashboardAnalytics(options);
   const activityQuery = useDashboardActivity(activityLimit, options);
+  const infrastructureQuery = useInfrastructureDetails(options);
 
   return {
     // Individual query results
     analytics: analyticsQuery,
     activity: activityQuery,
+    infrastructure: infrastructureQuery,
 
     // Convenience accessors
     metrics: analyticsQuery.data?.metrics ?? null,
+    trends: {
+      user: analyticsQuery.data?.userTrend ?? [],
+      session: analyticsQuery.data?.sessionTrend ?? [],
+      apiRequest: analyticsQuery.data?.apiRequestTrend ?? [],
+      pdfUpload: analyticsQuery.data?.pdfUploadTrend ?? [],
+      chatMessage: analyticsQuery.data?.chatMessageTrend ?? [],
+    },
     events: activityQuery.data?.events ?? [],
+    services: infrastructureQuery.data?.services ?? [],
 
     // Combined states
-    isLoading: analyticsQuery.isLoading || activityQuery.isLoading,
-    isError: analyticsQuery.isError || activityQuery.isError,
-    error: analyticsQuery.error || activityQuery.error,
+    isLoading: analyticsQuery.isLoading || activityQuery.isLoading || infrastructureQuery.isLoading,
+    isError: analyticsQuery.isError || activityQuery.isError || infrastructureQuery.isError,
+    error: analyticsQuery.error || activityQuery.error || infrastructureQuery.error,
 
     // Last successful update time
     lastUpdate: analyticsQuery.dataUpdatedAt ? new Date(analyticsQuery.dataUpdatedAt) : new Date(),
 
-    // Refetch both queries
+    // Refetch all queries
     refetch: async () => {
-      await Promise.all([analyticsQuery.refetch(), activityQuery.refetch()]);
+      await Promise.all([analyticsQuery.refetch(), activityQuery.refetch(), infrastructureQuery.refetch()]);
     },
 
-    // Check if either query is currently fetching
-    isFetching: analyticsQuery.isFetching || activityQuery.isFetching,
+    // Check if any query is currently fetching
+    isFetching: analyticsQuery.isFetching || activityQuery.isFetching || infrastructureQuery.isFetching,
   };
 }

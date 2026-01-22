@@ -110,6 +110,19 @@ export {
 
 export { useCanShareGame, type CanShareGameResult } from './useCanShareGame';
 
+// Admin Share Requests queries and mutations (Issue #2745)
+export {
+  useAdminShareRequests,
+  useShareRequestDetails,
+  useMyReviews,
+  useStartReview,
+  useReleaseReview,
+  useApproveRequest,
+  useRejectRequest,
+  useRequestChanges,
+  adminShareRequestsKeys,
+} from './useAdminShareRequests';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

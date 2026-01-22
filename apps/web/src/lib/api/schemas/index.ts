@@ -51,6 +51,9 @@ export * from './library.schemas';
 // Share Requests schemas (Issue #2743)
 export * from './share-requests.schemas';
 
+// Admin Share Requests schemas (Issue #2745)
+export * from './admin-share-requests.schemas';
+
 // Agent Configuration schemas (Issue #2518)
 export * from './agent-config.schemas';
 

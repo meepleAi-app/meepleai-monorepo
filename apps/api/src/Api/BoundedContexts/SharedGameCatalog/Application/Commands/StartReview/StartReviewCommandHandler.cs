@@ -1,3 +1,5 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetShareRequestDetails;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -11,23 +13,26 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// Handler for StartReviewCommand.
 /// Starts the review process by acquiring an exclusive lock for the admin.
 /// </summary>
-internal sealed class StartReviewCommandHandler : ICommandHandler<StartReviewCommand, Unit>
+internal sealed class StartReviewCommandHandler : ICommandHandler<StartReviewCommand, StartReviewResponse>
 {
     private readonly IShareRequestRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<StartReviewCommandHandler> _logger;
+    private readonly IMediator _mediator;
 
     public StartReviewCommandHandler(
         IShareRequestRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<StartReviewCommandHandler> logger)
+        ILogger<StartReviewCommandHandler> logger,
+        IMediator mediator)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
-    public async Task<Unit> Handle(StartReviewCommand command, CancellationToken cancellationToken)
+    public async Task<StartReviewResponse> Handle(StartReviewCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -49,6 +54,14 @@ internal sealed class StartReviewCommandHandler : ICommandHandler<StartReviewCom
             "Review started successfully for share request: {ShareRequestId}",
             command.ShareRequestId);
 
-        return Unit.Value;
+        // Get request details for response
+        var detailsQuery = new GetShareRequestDetailsQuery(command.ShareRequestId, command.ReviewingAdminId);
+        var requestDetails = await _mediator.Send(detailsQuery, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("ShareRequest", command.ShareRequestId.ToString());
+
+        return new StartReviewResponse(
+            command.ShareRequestId,
+            shareRequest.ReviewLockExpiresAt ?? DateTime.UtcNow.AddMinutes(30),
+            requestDetails);
     }
 }

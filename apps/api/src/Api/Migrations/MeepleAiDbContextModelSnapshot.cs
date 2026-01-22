@@ -3609,7 +3609,7 @@ namespace Api.Migrations
                     b.HasIndex("UserId")
                         .IsUnique()
                         .HasDatabaseName("ix_user_rate_limit_overrides_user_id_active")
-                        .HasFilter("expires_at IS NULL OR expires_at > NOW()");
+                        .HasFilter("expires_at IS NULL");
 
                     b.ToTable("user_rate_limit_overrides", (string)null);
                 });

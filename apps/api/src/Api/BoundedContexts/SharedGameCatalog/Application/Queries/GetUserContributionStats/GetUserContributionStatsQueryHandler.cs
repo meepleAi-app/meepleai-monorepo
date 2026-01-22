@@ -184,9 +184,9 @@ internal sealed class GetUserContributionStatsQueryHandler : IRequestHandler<Get
             MonthResetAt: status.MonthResetAt);
     }
 
-    private record ShareRequestStats(int Total, int Pending, int Approved, int Rejected);
+    private sealed record ShareRequestStats(int Total, int Pending, int Approved, int Rejected);
 
-    private record ContributionStats(
+    private sealed record ContributionStats(
         int TotalContributions,
         int UniqueGames,
         int TotalDocuments,

@@ -82,7 +82,7 @@ internal sealed class AdminShareRequestDigestJob : IJob
                 {
                     await _emailService.SendAdminShareRequestDigestEmailAsync(
                         admin.Email,
-                        admin.DisplayName,
+                        admin.DisplayName ?? "Admin",
                         pendingStats.TotalPending,
                         (int)pendingStats.OldestPendingAge.TotalDays,
                         pendingStats.CreatedToday,

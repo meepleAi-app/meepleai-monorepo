@@ -54,6 +54,24 @@ internal static class UserNotificationsServiceExtensions
                 .WithDescription("Warns admins about share requests pending longer than threshold"));
         });
 
+        // ISSUE-2742: Quartz.NET configuration for cooldown reminder scheduling
+        services.AddQuartz(q =>
+        {
+            // Register cooldown end reminder job (runs hourly)
+            q.AddJob<CooldownEndReminderJob>(opts => opts
+                .WithIdentity("cooldown-end-reminder-job", "notifications")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("cooldown-end-reminder-job", "notifications")
+                .WithIdentity("cooldown-end-reminder-trigger", "notifications")
+                .WithCronSchedule("0 0 * * * ?")  // Every hour at minute 0
+                .WithDescription("Runs hourly to notify users when their cooldown period ends"));
+        });
+
+        // Note: AddQuartzHostedService is called once in Administration context
+        // No need to duplicate - jobs from all contexts share the same Quartz scheduler
+
         return services;
     }
 }

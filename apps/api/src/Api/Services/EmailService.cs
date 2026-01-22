@@ -1317,4 +1317,120 @@ internal class EmailService : IEmailService
 </html>
 ";
     }
+
+    // ISSUE-2742: Rate limit cooldown ended email implementation
+    public async Task SendCooldownEndedEmailAsync(
+        string toEmail,
+        string userName,
+        int remainingMonthly,
+        int remainingPending,
+        string libraryUrl,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var subject = "Ready to Contribute Again! 🎉";
+            var body = BuildCooldownEndedEmailBody(
+                userName,
+                remainingMonthly,
+                remainingPending,
+                libraryUrl);
+
+            using var message = new MailMessage();
+            message.From = new MailAddress(_fromAddress, _fromName);
+            message.To.Add(new MailAddress(toEmail, userName));
+            message.Subject = subject;
+            message.Body = body;
+            message.IsBodyHtml = true;
+
+            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
+            smtpClient.EnableSsl = _enableSsl;
+
+            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
+            {
+                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+            }
+
+            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Cooldown ended email sent successfully to {Email}",
+                DataMasking.MaskEmail(toEmail));
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
+        // External service integration requires catching all SMTP exceptions to provide consistent error handling
+#pragma warning restore S125
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send cooldown ended email to {Email}",
+                DataMasking.MaskEmail(toEmail));
+            throw new InvalidOperationException("Failed to send cooldown ended email", ex);
+        }
+#pragma warning restore CA1031
+    }
+
+    private static string BuildCooldownEndedEmailBody(
+        string userName,
+        int remainingMonthly,
+        int remainingPending,
+        string libraryUrl)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Ready to Contribute Again</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
+        <h1 style=""color: #2c3e50; margin: 0;"">MeepleAI</h1>
+    </div>
+
+    <div style=""background-color: #d4edda; padding: 20px; border-radius: 5px; border: 2px solid #28a745; margin-bottom: 20px; text-align: center;"">
+        <h2 style=""color: #155724; margin-top: 0;"">🎉 Ready to Contribute Again!</h2>
+        <p style=""margin: 0; color: #155724; font-size: 18px; font-weight: bold;"">Your cooldown period has ended</p>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
+        <p>Hi {userName},</p>
+
+        <p>Great news! Your cooldown period has ended and you can now submit new share requests to the community.</p>
+
+        <div style=""margin: 20px 0; padding: 20px; background-color: #f8f9fa; border-radius: 3px; text-align: center;"">
+            <p style=""margin: 0; font-size: 16px; color: #333;""><strong>Your Current Limits:</strong></p>
+            <div style=""display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;"">
+                <div style=""padding: 15px; background-color: #28a745; color: white; border-radius: 5px;"">
+                    <div style=""font-size: 28px; font-weight: bold;"">{remainingMonthly}</div>
+                    <div style=""font-size: 12px;"">Monthly requests remaining</div>
+                </div>
+                <div style=""padding: 15px; background-color: #17a2b8; color: white; border-radius: 5px;"">
+                    <div style=""font-size: 28px; font-weight: bold;"">{remainingPending}</div>
+                    <div style=""font-size: 12px;"">Pending slots available</div>
+                </div>
+            </div>
+        </div>
+
+        <div style=""text-align: center; margin: 30px 0;"">
+            <a href=""{libraryUrl}"" style=""display: inline-block; padding: 12px 30px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;"">Share a Game from Your Library</a>
+        </div>
+
+        <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666; text-align: center;"">
+            Thank you for being part of the MeepleAI community. We look forward to your next contribution!
+        </p>
+    </div>
+
+    <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
+        <p>Happy sharing!</p>
+        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+    </div>
+</body>
+</html>
+";
+    }
 }

@@ -1,8 +1,12 @@
 /**
- * ChartsSection Component - Issue #2790 (Part of Issue #2792)
+ * ChartsSection Component - Issue #2790, #2850
  *
  * Analytics charts section using real data from useDashboardData hook.
  * Replaces mock API endpoints with existing trend data from DashboardStats.
+ *
+ * MeepleAI Design System (Issue #2850):
+ * - Section title: 'Quicksand' font, 1.75rem, bold, #2d2d2d
+ * - Warm color palette integration
  *
  * Data Sources:
  * - API Requests: apiRequestTrend from DashboardStats
@@ -77,9 +81,13 @@ export function ChartsSection({ className }: ChartsSectionProps): JSX.Element {
   }, [metrics]);
 
   return (
-    <section className={`mb-8 ${className ?? ''}`}>
-      <h2 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">Analytics</h2>
+    <section className={`mb-12 ${className ?? ''}`}>
+      {/* Issue #2850: MeepleAI section title styling */}
+      <h2 className="mb-7 font-['Quicksand',sans-serif] text-[1.75rem] font-bold text-[#2d2d2d] dark:text-gray-100">
+        Analytics
+      </h2>
 
+      {/* Issue #2850: Gap 1.5rem (6) */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* API Requests Chart - Using real apiRequestTrend data */}
         <APIRequestsChart

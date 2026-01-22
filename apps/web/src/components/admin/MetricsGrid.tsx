@@ -1,7 +1,14 @@
 /**
- * MetricsGrid Component - Issue #874, #883
+ * MetricsGrid Component - Issue #874, #883, #2850
  *
- * 4x3 responsive grid layout for displaying admin dashboard metrics.
+ * Responsive grid layout for displaying admin dashboard metrics.
+ * MeepleAI Design System: warm palette, smooth hover effects.
+ *
+ * Responsive breakpoints (Issue #2850):
+ * - Desktop: 4 columns
+ * - Tablet: 3 columns
+ * - Mobile: 2 columns
+ *
  * Features: responsive layout, loading skeleton, smooth transitions, empty state.
  */
 
@@ -26,19 +33,20 @@ function MetricsGridSkeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4',
+        // Issue #2850: Responsive grid 2→3→4 columns, gap 1.5rem
+        'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6',
         className
       )}
       data-testid="metrics-grid-skeleton"
     >
       {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
-        <Card key={`skeleton-${index}`} className="border-gray-200">
-          <CardContent className="p-6">
+        <Card key={`skeleton-${index}`} className="border-[#e8e4d8]">
+          <CardContent className="p-8">
             <div className="flex items-start gap-4">
-              <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+              <Skeleton className="h-12 w-12 rounded-xl shrink-0 bg-[#fef3e2]" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-3 w-20" />
-                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-10 w-24" />
                 <Skeleton className="h-4 w-28" />
               </div>
             </div>
@@ -55,10 +63,11 @@ function MetricsGridEmpty({ message }: { message: string }) {
       className="flex flex-col items-center justify-center py-12 px-4 text-center"
       data-testid="metrics-grid-empty"
     >
-      <div className="p-3 bg-gray-100 rounded-full mb-4">
-        <BarChart3 className="h-8 w-8 text-gray-400" aria-hidden="true" />
+      {/* Issue #2850: MeepleAI warm empty state */}
+      <div className="p-3 bg-[#fef3e2] rounded-full mb-4">
+        <BarChart3 className="h-8 w-8 text-[#d2691e]" aria-hidden="true" />
       </div>
-      <p className="text-gray-500 text-sm">{message}</p>
+      <p className="text-[#666] text-sm">{message}</p>
     </div>
   );
 }
@@ -80,7 +89,8 @@ export function MetricsGrid({
   return (
     <div
       className={cn(
-        'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4',
+        // Issue #2850: Responsive grid 2→3→4 columns, gap 1.5rem (6)
+        'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6',
         className
       )}
       data-testid="metrics-grid"

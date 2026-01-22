@@ -99,6 +99,17 @@ export {
   sessionsKeys,
 } from './useActiveSessions';
 
+// Share Requests queries and mutations (Issue #2743)
+export {
+  useShareRequests,
+  useShareRequest,
+  useRateLimitStatus,
+  useCreateShareRequest,
+  shareRequestsKeys,
+} from './useShareRequests';
+
+export { useCanShareGame, type CanShareGameResult } from './useCanShareGame';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

@@ -1,4 +1,4 @@
-import type { HttpClient } from '../httpClient';
+import type { HttpClient } from '../core/httpClient';
 import {
   CreateShareRequestCommand,
   CreateShareRequestResponse,

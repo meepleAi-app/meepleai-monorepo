@@ -89,4 +89,13 @@ internal interface IEmailService
         string profileUrl,
         string leaderboardUrl,
         CancellationToken ct = default);
+
+    // ISSUE-2742: Rate limit cooldown email
+    Task SendCooldownEndedEmailAsync(
+        string toEmail,
+        string userName,
+        int remainingMonthly,
+        int remainingPending,
+        string libraryUrl,
+        CancellationToken ct = default);
 }

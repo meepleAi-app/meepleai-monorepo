@@ -9,6 +9,7 @@
  * - Breadcrumb navigation
  * - Mobile responsive with Sheet drawer
  * - Dark mode support
+ * - MeepleAI background texture (Issue #2847)
  */
 
 'use client';
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/navigation/sheet';
 import { TooltipProvider } from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
+import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
 import { cn } from '@/lib/utils';
 
 import { AdminBreadcrumbs, type BreadcrumbItem } from './AdminBreadcrumbs';
@@ -118,7 +120,10 @@ export function AdminLayout({
     ) : null;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-meeple-warm-bg dark:bg-gray-950 relative">
+      {/* Background Texture Overlay - Issue #2847 */}
+      <BackgroundTexture opacity={0.6} intensity="normal" />
+
       {/* Header */}
       <AdminHeader
         user={user}

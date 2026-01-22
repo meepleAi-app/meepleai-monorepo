@@ -339,7 +339,10 @@ public sealed class HybridCacheServiceIntegrationTests : IAsyncLifetime
     public async Task RemoveByTagAsync_WithMatchingTag_InvalidatesAllTaggedEntries()
     {
         // Arrange
+        // Issue #2920: Clean tag-specific entries before test to prevent cross-test contamination
         var tag = "game:chess";
+        await _cacheService.RemoveByTagAsync(tag, TestContext.Current.CancellationToken);
+
         var key1 = _keyPrefix + "chess_qa_1";
         var key2 = _keyPrefix + "chess_qa_2";
         var key3 = _keyPrefix + "monopoly_qa_1"; // Different tag, should not be affected

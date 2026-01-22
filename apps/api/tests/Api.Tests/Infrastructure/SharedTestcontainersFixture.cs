@@ -74,175 +74,200 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                 return; // Already initialized
             }
 
+            // Issue #2920: Validate configuration before starting containers
+            var (isValid, warnings, errors) = TestcontainersConfiguration.Validate();
+            if (!isValid)
+            {
+                throw new InvalidOperationException(
+                    $"Testcontainers configuration validation failed:\n{string.Join("\n", errors)}");
+            }
+            foreach (var warning in warnings)
+            {
+                Console.WriteLine($"⚠️ Configuration warning: {warning}");
+            }
+
             // Prefer external infrastructure if provided (faster in CI)
-            var externalPostgres = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNSTRING");
-            var externalRedis = Environment.GetEnvironmentVariable("TEST_REDIS_CONNSTRING");
+            var externalPostgres = Environment.GetEnvironmentVariable(TestcontainersConfiguration.EnvPostgresConnectionString);
+            var externalRedis = Environment.GetEnvironmentVariable(TestcontainersConfiguration.EnvRedisConnectionString);
 
-            if (!string.IsNullOrWhiteSpace(externalPostgres))
-            {
-                PostgresConnectionString = externalPostgres;
-            }
-            else
-            {
-                // Issue #2474: Retry logic for container startup (handles port conflicts and transient failures)
-                const int maxRetries = 3;
-                var retryDelays = new[] { TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(8) };
+            // Issue #2920: Parallel container startup for faster initialization
+            var postgresTask = string.IsNullOrWhiteSpace(externalPostgres)
+                ? StartPostgresContainerAsync()
+                : Task.FromResult(externalPostgres);
 
-                for (int attempt = 0; attempt < maxRetries; attempt++)
-                {
-                    try
-                    {
-                        // Start shared PostgreSQL container
-                        // Issue #2693: Increased max_connections to handle parallel test execution in CI
-                        // Default 100 connections gets exhausted when 34+ test classes run in parallel
-                        _postgresContainer = new ContainerBuilder()
-                            .WithImage("postgres:16-alpine")
-                            .WithEnvironment("POSTGRES_USER", "postgres")
-                            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
-                            .WithEnvironment("POSTGRES_DB", "test_shared")
-                            .WithPortBinding(5432, true)
-                            // Issue #2031: Removed .UntilCommandIsCompleted("pg_isready") to prevent Docker hijack errors
-                            // Default TCP port check + retry mechanism is more reliable than hijacked command execution
-                            // Issue #2513: Use tmpfs for PostgreSQL data to prevent orphaned anonymous volumes
-                            // Faster test execution (in-memory) and zero volume cleanup needed
-                            .WithTmpfsMount("/var/lib/postgresql/data")
-                            // Issue #2693: Increase max_connections from 100 (default) to 500 for CI parallel tests
-                            .WithCommand("-c", "max_connections=500", "-c", "shared_buffers=256MB")
-                            .WithCleanUp(true)
-                            .Build();
+            var redisTask = string.IsNullOrWhiteSpace(externalRedis)
+                ? StartRedisContainerAsync()
+                : Task.FromResult(externalRedis);
 
-                        await _postgresContainer.StartAsync();
+            // Wait for both containers to start in parallel
+            var startTime = DateTime.UtcNow;
+            await Task.WhenAll(postgresTask, redisTask);
+            var duration = (DateTime.UtcNow - startTime).TotalSeconds;
 
-                        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-                        // Issue #2577: Optimized connection string for long-running test suites
-                        // Issue #2902: Reduced MaxPoolSize from 50 to 5 to prevent connection exhaustion
-                        // With 94+ test classes, 94 × 50 = 4700 potential connections > max_connections=500
-                        // - Pooling=true: Prevents TCP connection accumulation (was causing timeouts after 22 minutes)
-                        // - MinPoolSize=1: Minimal warm connections per database (94 DBs × 1 = 94 baseline)
-                        // - MaxPoolSize=5: Conservative pool per test class (94 × 5 = 470 < 500 max_connections)
-                        // - Timeout=30: Increased from 10s to handle connection establishment under load
-                        // - CommandTimeout=60: Prevent query timeout for long-running test operations
-                        // - KeepAlive=10: More frequent keep-alive to prevent idle connection closure (was 30s)
-                        // - ConnectionIdleLifetime=30: Faster recycling to free connections for other test classes
-                        // - ConnectionPruningInterval=5: More aggressive cleanup for large test suites
-                        PostgresConnectionString = $"Host=localhost;Port={postgresPort};Database=test_shared;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=10;Pooling=true;MinPoolSize=1;MaxPoolSize=5;Timeout=30;CommandTimeout=60;ConnectionIdleLifetime=30;ConnectionPruningInterval=5;";
+            PostgresConnectionString = await postgresTask;
+            RedisConnectionString = await redisTask;
 
-                        // Issue #2031: Wait for PostgreSQL to accept connections with retry
-                        // Issue #2474: Increased timeout from 5s to 10s for better stability
-                        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(PostgresConnectionString);
+            Console.WriteLine($"✅ Containers initialized in {duration:F2}s (parallel startup)");
 
-                        break; // Success, exit retry loop
-                    }
-                    catch (Exception ex) when (attempt < maxRetries - 1)
-                    {
-                        // Log diagnostic information for troubleshooting
-                        Console.WriteLine($"⚠️ PostgreSQL container startup attempt {attempt + 1}/{maxRetries} failed: {ex.Message}");
-
-                        // Cleanup failed container before retry
-                        if (_postgresContainer != null)
-                        {
-                            try
-                            {
-                                await _postgresContainer.DisposeAsync();
-                            }
-                            catch
-                            {
-                                // Ignore cleanup errors
-                            }
-                            _postgresContainer = null;
-                        }
-
-                        // Wait before retry with exponential backoff
-                        await Task.Delay(retryDelays[attempt]);
-                    }
-                    catch (Exception ex) when (attempt == maxRetries - 1)
-                    {
-                        // Final attempt failed, provide detailed diagnostics
-                        var diagnostics = $"PostgreSQL container failed to start after {maxRetries} attempts.\n" +
-                                        $"Last error: {ex.Message}\n" +
-                                        $"Container ID: {_postgresContainer?.Id ?? "null"}\n" +
-                                        $"Ensure Docker is running and ports are available.";
-                        throw new InvalidOperationException(diagnostics, ex);
-                    }
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(externalRedis))
-            {
-                RedisConnectionString = externalRedis;
-            }
-            else
-            {
-                // Issue #2474: Retry logic for Redis container startup
-                const int maxRetries = 3;
-                var retryDelays = new[] { TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(8) };
-
-                for (int attempt = 0; attempt < maxRetries; attempt++)
-                {
-                    try
-                    {
-                        // Start shared Redis container
-                        _redisContainer = new ContainerBuilder()
-                            .WithImage("redis:7-alpine")
-                            .WithPortBinding(6379, true)
-                            // Issue #2031: Removed .UntilCommandIsCompleted("redis-cli", "ping") to prevent Docker hijack errors
-                            // Default TCP port check + retry mechanism is more reliable than hijacked command execution
-                            // Issue #2513: Use tmpfs for Redis data to prevent orphaned anonymous volumes
-                            // Faster test execution (in-memory) and zero volume cleanup needed
-                            .WithTmpfsMount("/data")
-                            .WithCleanUp(true)
-                            .Build();
-
-                        await _redisContainer.StartAsync();
-
-                        var redisPort = _redisContainer.GetMappedPublicPort(6379);
-                        // Issue #2474: Increased connectTimeout from 5s to 10s for better stability
-                        RedisConnectionString = $"localhost:{redisPort},abortConnect=false,connectTimeout=10000,syncTimeout=10000,connectRetry=3";
-
-                        // Issue #2031: Wait for Redis to accept connections with retry
-                        await TestcontainersWaitHelpers.WaitForRedisReadyAsync(RedisConnectionString);
-
-                        break; // Success, exit retry loop
-                    }
-                    catch (Exception ex) when (attempt < maxRetries - 1)
-                    {
-                        // Log diagnostic information for troubleshooting
-                        Console.WriteLine($"⚠️ Redis container startup attempt {attempt + 1}/{maxRetries} failed: {ex.Message}");
-
-                        // Cleanup failed container before retry
-                        if (_redisContainer != null)
-                        {
-                            try
-                            {
-                                await _redisContainer.DisposeAsync();
-                            }
-                            catch
-                            {
-                                // Ignore cleanup errors
-                            }
-                            _redisContainer = null;
-                        }
-
-                        // Wait before retry with exponential backoff
-                        await Task.Delay(retryDelays[attempt]);
-                    }
-                    catch (Exception ex) when (attempt == maxRetries - 1)
-                    {
-                        // Final attempt failed, provide detailed diagnostics
-                        var diagnostics = $"Redis container failed to start after {maxRetries} attempts.\n" +
-                                        $"Last error: {ex.Message}\n" +
-                                        $"Container ID: {_redisContainer?.Id ?? "null"}\n" +
-                                        $"Ensure Docker is running and ports are available.";
-                        throw new InvalidOperationException(diagnostics, ex);
-                    }
-                }
-            }
+            // Issue #2920: Pre-warm connection pools with health check queries
+            await PreWarmConnectionPoolsAsync();
 
             _initialized = true;
         }
         finally
         {
             _initLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Starts PostgreSQL container with retry logic.
+    /// Issue #2920: Extracted for parallel startup optimization.
+    /// </summary>
+    private async Task<string> StartPostgresContainerAsync()
+    {
+        for (int attempt = 0; attempt < TestcontainersConfiguration.ContainerStartupMaxRetries; attempt++)
+        {
+            try
+            {
+                // Start shared PostgreSQL container
+                _postgresContainer = new ContainerBuilder()
+                    .WithImage(TestcontainersConfiguration.PostgresImage)
+                    .WithEnvironment("POSTGRES_USER", TestcontainersConfiguration.PostgresUsername)
+                    .WithEnvironment("POSTGRES_PASSWORD", TestcontainersConfiguration.PostgresPassword)
+                    .WithEnvironment("POSTGRES_DB", TestcontainersConfiguration.PostgresDefaultDatabase)
+                    .WithPortBinding(5432, true)
+                    .WithTmpfsMount("/var/lib/postgresql/data")
+                    .WithCommand(
+                        "-c", $"max_connections={TestcontainersConfiguration.PostgresMaxConnections}",
+                        "-c", $"shared_buffers={TestcontainersConfiguration.PostgresSharedBuffers}")
+                    .WithCleanUp(true)
+                    .Build();
+
+                await _postgresContainer.StartAsync();
+
+                var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
+                var connectionString = TestcontainersConfiguration.BuildPostgresConnectionString(
+                    "localhost", postgresPort, TestcontainersConfiguration.PostgresDefaultDatabase);
+
+                // Wait for PostgreSQL to accept connections with retry
+                await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
+
+                return connectionString;
+            }
+            catch (Exception ex) when (attempt < TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                Console.WriteLine($"⚠️ PostgreSQL container startup attempt {attempt + 1}/{TestcontainersConfiguration.ContainerStartupMaxRetries} failed: {ex.Message}");
+
+                // Cleanup failed container before retry
+                if (_postgresContainer != null)
+                {
+                    try { await _postgresContainer.DisposeAsync(); }
+                    catch { /* Ignore cleanup errors */ }
+                    _postgresContainer = null;
+                }
+
+                await Task.Delay(TestcontainersConfiguration.ContainerStartupRetryDelays[attempt]);
+            }
+            catch (Exception ex) when (attempt == TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                var diagnostics = $"PostgreSQL container failed to start after {TestcontainersConfiguration.ContainerStartupMaxRetries} attempts.\n" +
+                                $"Last error: {ex.Message}\n" +
+                                $"Container ID: {_postgresContainer?.Id ?? "null"}\n" +
+                                $"Ensure Docker is running and ports are available.";
+                throw new InvalidOperationException(diagnostics, ex);
+            }
+        }
+
+        throw new InvalidOperationException("Unreachable code: PostgreSQL container startup failed");
+    }
+
+    /// <summary>
+    /// Starts Redis container with retry logic.
+    /// Issue #2920: Extracted for parallel startup optimization.
+    /// </summary>
+    private async Task<string> StartRedisContainerAsync()
+    {
+        for (int attempt = 0; attempt < TestcontainersConfiguration.ContainerStartupMaxRetries; attempt++)
+        {
+            try
+            {
+                // Start shared Redis container
+                _redisContainer = new ContainerBuilder()
+                    .WithImage(TestcontainersConfiguration.RedisImage)
+                    .WithPortBinding(6379, true)
+                    .WithTmpfsMount("/data")
+                    .WithCleanUp(true)
+                    .Build();
+
+                await _redisContainer.StartAsync();
+
+                var redisPort = _redisContainer.GetMappedPublicPort(6379);
+                var connectionString = TestcontainersConfiguration.BuildRedisConnectionString("localhost", redisPort);
+
+                // Wait for Redis to accept connections with retry
+                await TestcontainersWaitHelpers.WaitForRedisReadyAsync(connectionString);
+
+                return connectionString;
+            }
+            catch (Exception ex) when (attempt < TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                Console.WriteLine($"⚠️ Redis container startup attempt {attempt + 1}/{TestcontainersConfiguration.ContainerStartupMaxRetries} failed: {ex.Message}");
+
+                // Cleanup failed container before retry
+                if (_redisContainer != null)
+                {
+                    try { await _redisContainer.DisposeAsync(); }
+                    catch { /* Ignore cleanup errors */ }
+                    _redisContainer = null;
+                }
+
+                await Task.Delay(TestcontainersConfiguration.ContainerStartupRetryDelays[attempt]);
+            }
+            catch (Exception ex) when (attempt == TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                var diagnostics = $"Redis container failed to start after {TestcontainersConfiguration.ContainerStartupMaxRetries} attempts.\n" +
+                                $"Last error: {ex.Message}\n" +
+                                $"Container ID: {_redisContainer?.Id ?? "null"}\n" +
+                                $"Ensure Docker is running and ports are available.";
+                throw new InvalidOperationException(diagnostics, ex);
+            }
+        }
+
+        throw new InvalidOperationException("Unreachable code: Redis container startup failed");
+    }
+
+    /// <summary>
+    /// Pre-warms connection pools with health check queries.
+    /// Issue #2920: Reduces first-test latency by establishing initial connections.
+    /// </summary>
+    private async Task PreWarmConnectionPoolsAsync()
+    {
+        var warmupStart = DateTime.UtcNow;
+
+        try
+        {
+            // PostgreSQL pool warmup
+            await using var pgConnection = new NpgsqlConnection(PostgresConnectionString);
+            await pgConnection.OpenAsync();
+            await using var pgCommand = pgConnection.CreateCommand();
+            pgCommand.CommandText = "SELECT 1;";
+            await pgCommand.ExecuteScalarAsync();
+
+            // Redis pool warmup
+            var redis = await ConnectionMultiplexer.ConnectAsync(RedisConnectionString);
+            var db = redis.GetDatabase();
+            await db.PingAsync();
+            await redis.CloseAsync();
+            redis.Dispose();
+
+            var warmupDuration = (DateTime.UtcNow - warmupStart).TotalMilliseconds;
+            Console.WriteLine($"🔥 Connection pools pre-warmed in {warmupDuration:F0}ms");
+        }
+        catch (Exception ex)
+        {
+            // Non-fatal: warmup failure doesn't prevent tests from running
+            Console.WriteLine($"⚠️ Connection pool warmup warning: {ex.Message}");
         }
     }
 
@@ -292,10 +317,8 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         }
 
         // Issue #2706: Retry logic for handling 57P01 errors in parallel test execution
-        const int maxRetries = 3;
-        var retryDelays = new[] { TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1) };
-
-        for (int attempt = 0; attempt < maxRetries; attempt++)
+        // Issue #2920: Use centralized configuration
+        for (int attempt = 0; attempt < TestcontainersConfiguration.DatabaseOperationMaxRetries; attempt++)
         {
             try
             {
@@ -323,12 +346,12 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
 
                 return builder.ConnectionString;
             }
-            catch (NpgsqlException ex) when (ex.SqlState == "57P01" && attempt < maxRetries - 1)
+            catch (NpgsqlException ex) when (ex.SqlState == "57P01" && attempt < TestcontainersConfiguration.DatabaseOperationMaxRetries - 1)
             {
                 // Issue #2706: Handle 57P01 "terminating connection due to administrator command"
                 // This happens when another test's cleanup terminates our connection during parallel execution
-                Console.WriteLine($"⚠️ Database creation attempt {attempt + 1}/{maxRetries} hit 57P01, retrying...");
-                await Task.Delay(retryDelays[attempt]);
+                Console.WriteLine($"⚠️ Database creation attempt {attempt + 1}/{TestcontainersConfiguration.DatabaseOperationMaxRetries} hit 57P01, retrying...");
+                await Task.Delay(TestcontainersConfiguration.DatabaseOperationRetryDelays[attempt]);
             }
             catch (Exception ex)
             {
@@ -341,7 +364,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         }
 
         // Should never reach here, but compiler needs a return
-        throw new InvalidOperationException($"Failed to create database '{databaseName}' after {maxRetries} attempts");
+        throw new InvalidOperationException($"Failed to create database '{databaseName}' after {TestcontainersConfiguration.DatabaseOperationMaxRetries} attempts");
     }
 
     /// <summary>
@@ -362,10 +385,8 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         }
 
         // Issue #2706: Retry logic for handling 57P01 errors in parallel test execution
-        const int maxRetries = 3;
-        var retryDelays = new[] { TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1) };
-
-        for (int attempt = 0; attempt < maxRetries; attempt++)
+        // Issue #2920: Use centralized configuration
+        for (int attempt = 0; attempt < TestcontainersConfiguration.DatabaseOperationMaxRetries; attempt++)
         {
             try
             {
@@ -389,9 +410,10 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
 
                 // Issue #2706: Brief delay to allow terminated connections to fully close
                 // This prevents race conditions where drop runs before connections are fully terminated
+                // Issue #2920: Use centralized configuration
                 if (terminatedCount > 0)
                 {
-                    await Task.Delay(50);
+                    await Task.Delay(TestcontainersConfiguration.DatabaseDropDelay);
                 }
 
                 // Drop database
@@ -406,12 +428,12 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                 Console.WriteLine($"🧹 Database '{databaseName}' dropped in {duration:F2}s ({terminatedCount} connections terminated)");
                 return; // Success, exit retry loop
             }
-            catch (NpgsqlException ex) when (ex.SqlState == "57P01" && attempt < maxRetries - 1)
+            catch (NpgsqlException ex) when (ex.SqlState == "57P01" && attempt < TestcontainersConfiguration.DatabaseOperationMaxRetries - 1)
             {
                 // Issue #2706: Handle 57P01 "terminating connection due to administrator command"
                 // This happens when another test's cleanup terminates our connection during parallel execution
-                Console.WriteLine($"⚠️ Database cleanup attempt {attempt + 1}/{maxRetries} hit 57P01, retrying...");
-                await Task.Delay(retryDelays[attempt]);
+                Console.WriteLine($"⚠️ Database cleanup attempt {attempt + 1}/{TestcontainersConfiguration.DatabaseOperationMaxRetries} hit 57P01, retrying...");
+                await Task.Delay(TestcontainersConfiguration.DatabaseOperationRetryDelays[attempt]);
             }
             catch (Exception ex)
             {

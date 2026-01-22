@@ -85,8 +85,8 @@ public class ArchiveSharedGameCommandHandlerTests
         Assert.Equal(archiverId, capturedGame.ModifiedBy);
         Assert.NotNull(capturedGame.ModifiedAt);
 
-        // Verify domain event raised (CreatedEvent + PublishedEvent + ArchivedEvent)
-        Assert.Equal(3, capturedGame.DomainEvents.Count);
+        // Verify domain event raised (CreatedEvent + SubmittedForApprovalEvent + PublicationApprovedEvent + ArchivedEvent)
+        Assert.Equal(4, capturedGame.DomainEvents.Count);
         var archivedEvent = Assert.IsType<SharedGameArchivedEvent>(capturedGame.DomainEvents.Last());
         Assert.Equal(game.Id, archivedEvent.GameId);
         Assert.Equal(archiverId, archivedEvent.ArchivedBy);

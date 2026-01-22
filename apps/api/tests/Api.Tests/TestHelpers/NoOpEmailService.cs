@@ -65,4 +65,15 @@ internal class NoOpEmailService : IEmailService
         Guid shareRequestId,
         CancellationToken ct = default)
         => Task.CompletedTask;
+
+    public Task SendAdminShareRequestDigestEmailAsync(
+        string toEmail,
+        string toName,
+        int totalPending,
+        int oldestPendingDays,
+        int createdToday,
+        Dictionary<string, int> pendingByType,
+        string reviewQueueUrl,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
 }

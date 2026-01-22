@@ -22,6 +22,11 @@ internal sealed class NotificationType : ValueObject
     public static readonly NotificationType ShareRequestRejected = new("share_request_rejected");
     public static readonly NotificationType ShareRequestChangesRequested = new("share_request_changes_requested");
 
+    // ISSUE-2740: Admin notification types for share request management
+    public static readonly NotificationType AdminNewShareRequest = new("admin_new_share_request");
+    public static readonly NotificationType AdminStaleShareRequests = new("admin_stale_share_requests");
+    public static readonly NotificationType AdminReviewLockExpiring = new("admin_review_lock_expiring");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -56,6 +61,9 @@ internal sealed class NotificationType : ValueObject
             "share_request_approved" => ShareRequestApproved,
             "share_request_rejected" => ShareRequestRejected,
             "share_request_changes_requested" => ShareRequestChangesRequested,
+            "admin_new_share_request" => AdminNewShareRequest,
+            "admin_stale_share_requests" => AdminStaleShareRequests,
+            "admin_review_lock_expiring" => AdminReviewLockExpiring,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

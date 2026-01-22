@@ -99,6 +99,27 @@ internal sealed class UserBadgeRepository : IUserBadgeRepository
         return entity is null ? null : MapToDomain(entity);
     }
 
+    public async Task<List<UserBadge>> GetTopBadgesByUserAsync(
+        Guid userId,
+        int count,
+        CancellationToken cancellationToken = default)
+    {
+        if (count <= 0)
+            return new List<UserBadge>();
+
+        var entities = await _context.Set<UserBadgeEntity>()
+            .AsNoTracking()
+            .Include(e => e.Badge)
+            .Where(e => e.UserId == userId && e.RevokedAt == null && e.IsDisplayed)
+            .OrderByDescending(e => e.Badge!.Tier)
+            .ThenByDescending(e => e.EarnedAt)
+            .Take(count)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     #region Mapping Methods
 
     private static UserBadge MapToDomain(UserBadgeEntity entity)

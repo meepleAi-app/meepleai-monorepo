@@ -55,4 +55,16 @@ public interface IUserBadgeRepository
         Guid userId,
         Guid badgeId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves the top N badges for a specific user, ordered by tier and earned date.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="count">Maximum number of badges to return.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>List of top user badges.</returns>
+    Task<List<UserBadge>> GetTopBadgesByUserAsync(
+        Guid userId,
+        int count,
+        CancellationToken cancellationToken = default);
 }

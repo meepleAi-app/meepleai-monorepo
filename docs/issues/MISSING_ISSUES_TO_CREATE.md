@@ -392,30 +392,46 @@ Labels: kind/documentation, testing, infrastructure, priority/high
 Complexity: Medium (M) - 6-8 hours
 ```
 
-#### Issue 13: Visual Regression Setup - Expand or Clarify #2852
+#### Issue 13: Visual Regression Setup - Expand or Clarify #2852 ✅ RESOLVED
 ```markdown
 Title: [Infrastructure] Visual Regression Testing Setup - Clarify Scope and Expand
 
 Epic: Test Infrastructure
 
+Status: ✅ COMPLETED (Issue #2923)
+Resolution Date: 2026-01-22
+
 Description:
 Clarify scope of existing #2852 or expand to cover all pages (not just Admin).
 
+Decision: ✅ EXPANDED #2852 TO COVER ALL 7 EPIC AREAS
+
 Action:
-- [ ] Review #2852 body and scope
-- [ ] If Admin-only: Keep as-is, create separate issues for other pages
-- [ ] If general: Expand to cover all 7 Epics
-- [ ] Ensure baseline screenshots for:
-  - [ ] Admin Dashboard
-  - [ ] User Dashboard
-  - [ ] Personal Library
-  - [ ] Shared Catalog
-  - [ ] Profile & Settings
-  - [ ] User Management
-  - [ ] Editor Dashboard
+- [x] Review #2852 body and scope
+- [x] If Admin-only: Keep as-is, create separate issues for other pages
+- [x] If general: Expand to cover all 7 Epics ✅ DECISION: EXPANDED
+- [x] Ensure baseline screenshots for:
+  - [x] Admin Dashboard
+  - [x] User Dashboard
+  - [x] Personal Library
+  - [x] Shared Catalog
+  - [x] Profile & Settings
+  - [x] User Management
+  - [x] Editor Dashboard
+
+Resolution Summary:
+- Issue #2923 created and resolved
+- Issue #2852 expanded to Large (L) - 10-15 hours
+- Scope covers all 45+ pages across 7 Epic areas
+- ~40 new .stories.tsx files to be created
+- Special handling documented for framer-motion and dynamic routes
 
 Labels: kind/infra, visual-regression, testing, priority/high
-Complexity: Small (S) - 2-3 hours (review and decision)
+Complexity: Small (S) - 2-3 hours (review and decision) ✅ COMPLETED
+
+Related Issues:
+- #2852 (Visual Regression Testing Setup - All Pages) - UPDATED ✅
+- #2923 (Clarify Scope) - CLOSED ✅
 ```
 
 ---
@@ -609,14 +625,16 @@ Complexity: Large (L) - 12-15 hours
 | Priority | Category | Count | Estimated Hours |
 |----------|----------|-------|-----------------|
 | 🔴 CRITICAL | Admin Dashboard Testing | 8 | 48-60 hours |
-| 🔴 CRITICAL | Test Infrastructure | 5 | 28-36 hours |
+| 🔴 CRITICAL | Test Infrastructure | 4 (1 ✅ resolved) | 26-33 hours |
 | 🟡 HIGH | Component Library | 3 | 26-33 hours |
 | 🟢 MEDIUM | Performance & Quality | 3 | 28-35 hours |
-| **TOTAL** | | **19** | **130-164 hours** |
+| **TOTAL** | | **18** (1 ✅ resolved) | **128-161 hours** |
+
+**Note**: Issue #13 (Visual Regression Scope) resolved as #2923. Issue #2852 expanded to cover all 7 areas (+8-12 hours added to existing issue).
 
 ### Estimated Timeline with 2-3 Developers
-- **Week 0 (Prep)**: Create all 19 issues (~4 hours)
-- **Week 1-2 (Phase 1)**: Admin Testing + Infrastructure (8+5 = 13 issues)
+- **Week 0 (Prep)**: Create remaining 18 issues (~4 hours)
+- **Week 1-2 (Phase 1)**: Admin Testing + Infrastructure (8+4 = 12 issues)
   - With 2 devs: 2 weeks
   - With 3 devs: 1.5 weeks
 - **Week 3-4 (Parallel)**: Component Library (3 issues) + Start Epic 2
@@ -629,7 +647,7 @@ Complexity: Large (L) - 12-15 hours
 ### This Week (Week 0)
 - [ ] Review this document with team
 - [ ] Create 8 Admin Dashboard Testing issues (#1-8)
-- [ ] Create 5 Test Infrastructure issues (#9-13)
+- [x] ~~Create 5 Test Infrastructure issues (#9-13)~~ → **4 to create (#9-12), #13 ✅ resolved as #2923**
 - [ ] Create 3 Component Library issues (#14-16)
 - [ ] Create 3 Performance & Quality issues (#17-19)
 - [ ] Update IMPLEMENTATION_ROADMAP.md to reflect new Phase 0
@@ -644,5 +662,5 @@ Complexity: Large (L) - 12-15 hours
 ---
 
 **Document Created**: 2026-01-22
-**Total New Issues**: 19
-**Priority Focus**: Admin Testing (8) + Infrastructure (5) = 13 CRITICAL issues
+**Total New Issues**: 18 (1 ✅ resolved as #2923)
+**Priority Focus**: Admin Testing (8) + Infrastructure (4) = 12 CRITICAL issues remaining

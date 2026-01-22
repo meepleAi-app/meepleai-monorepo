@@ -3,17 +3,20 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Api.Migrations
+namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260122091703_AddRateLimitConfiguration")]
+    partial class AddRateLimitConfiguration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3508,110 +3511,71 @@ namespace Api.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<long>("CooldownAfterRejectionSeconds")
-                        .HasColumnType("bigint")
-                        .HasColumnName("cooldown_after_rejection_seconds");
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
+                        .HasColumnType("boolean");
 
                     b.Property<int>("MaxPendingRequests")
-                        .HasColumnType("integer")
-                        .HasColumnName("max_pending_requests");
+                        .HasColumnType("integer");
 
                     b.Property<int>("MaxRequestsPerMonth")
-                        .HasColumnType("integer")
-                        .HasColumnName("max_requests_per_month");
+                        .HasColumnType("integer");
 
                     b.Property<int>("Tier")
-                        .HasColumnType("integer")
-                        .HasColumnName("tier");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("IsActive")
-                        .HasDatabaseName("ix_share_request_limit_configs_is_active");
-
-                    b.HasIndex("Tier")
-                        .IsUnique()
-                        .HasDatabaseName("ix_share_request_limit_configs_tier_unique_active")
-                        .HasFilter("is_active = true");
-
-                    b.ToTable("share_request_limit_configs", (string)null);
+                    b.ToTable("ShareRequestLimitConfigs");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfiguration.UserRateLimitOverrideEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnType("uuid");
 
                     b.Property<long?>("CooldownAfterRejectionSeconds")
-                        .HasColumnType("bigint")
-                        .HasColumnName("cooldown_after_rejection_seconds");
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("CreatedByAdminId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by_admin_id");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("MaxPendingRequests")
-                        .HasColumnType("integer")
-                        .HasColumnName("max_pending_requests");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("MaxRequestsPerMonth")
-                        .HasColumnType("integer")
-                        .HasColumnName("max_requests_per_month");
+                        .HasColumnType("integer");
 
                     b.Property<string>("Reason")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("reason");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedByAdminId")
-                        .HasDatabaseName("ix_user_rate_limit_overrides_created_by_admin_id");
-
-                    b.HasIndex("ExpiresAt")
-                        .HasDatabaseName("ix_user_rate_limit_overrides_expires_at")
-                        .HasFilter("expires_at IS NOT NULL");
-
-                    b.HasIndex("UserId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_user_rate_limit_overrides_user_id_active")
-                        .HasFilter("expires_at IS NULL OR expires_at > NOW()");
-
-                    b.ToTable("user_rate_limit_overrides", (string)null);
+                    b.ToTable("UserRateLimitOverrides");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfigurationEntity", b =>
@@ -5050,21 +5014,6 @@ namespace Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Badge");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfiguration.UserRateLimitOverrideEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.UserEntity", null)
-                        .WithMany()
-                        .HasForeignKey("CreatedByAdminId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Api.Infrastructure.Entities.UserEntity", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfigurationEntity", b =>

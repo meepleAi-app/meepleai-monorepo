@@ -239,5 +239,48 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         return entities.Select(MapToDomain).ToList();
     }
 
+    // ===== Rate Limiting Support Methods (Issue #2730) =====
+
+    public async Task<int> CountPendingByUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<ShareRequestEntity>()
+            .Where(r => r.UserId == userId &&
+                       (r.Status == (int)ShareRequestStatus.Pending ||
+                        r.Status == (int)ShareRequestStatus.InReview ||
+                        r.Status == (int)ShareRequestStatus.ChangesRequested))
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<int> CountThisMonthByUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var firstDayOfMonth = new DateTime(
+            DateTime.UtcNow.Year,
+            DateTime.UtcNow.Month,
+            1,
+            0,
+            0,
+            0,
+            DateTimeKind.Utc);
+
+        return await _context.Set<ShareRequestEntity>()
+            .Where(r => r.UserId == userId && r.CreatedAt >= firstDayOfMonth)
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<DateTime?> GetLastRejectionDateAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var lastRejection = await _context.Set<ShareRequestEntity>()
+            .AsNoTracking()
+            .Where(r => r.UserId == userId && r.Status == (int)ShareRequestStatus.Rejected)
+            .OrderByDescending(r => r.ResolvedAt)
+            .Select(r => r.ResolvedAt)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return lastRejection;
+    }
+
     #endregion
 }

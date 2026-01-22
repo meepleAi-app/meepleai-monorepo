@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - MeepleAI Style</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f5f5;
+            color: #2d2d2d;
+            min-height: 100vh;
+        }
+
+        /* Top Bar - Matching existing screenshots */
+        .top-bar {
+            background: white;
+            border-bottom: 1px solid #e5e5e5;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .top-bar-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Logo - matching existing meeple style */
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #2d2d2d;
+        }
+
+        .logo-icon {
+            color: #d2691e;
+            font-size: 1.75rem;
+        }
+
+        .nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            font-size: 0.9375rem;
+            color: #666;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-link.active {
+            background: #8b5cf6;
+            color: white;
+        }
+
+        .nav-link:hover:not(.active) {
+            background: #f5f5f5;
+            color: #2d2d2d;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn-orange {
+            background: #d2691e;
+            color: white;
+            border: none;
+            padding: 0.625rem 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-orange:hover {
+            background: #b85a19;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(210, 105, 30, 0.3);
+        }
+
+        .btn-green {
+            background: #16a34a;
+            color: white;
+            border: none;
+            padding: 0.625rem 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-green:hover {
+            background: #15803d;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            margin-bottom: 2.5rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2d2d2d;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            font-size: 1rem;
+            color: #666;
+            font-weight: 400;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            color: #16a34a;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #16a34a;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .metric-card {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 0.75rem;
+            padding: 1.75rem;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+            border-color: #d2691e;
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.25rem;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .metric-icon {
+            width: 40px;
+            height: 40px;
+            background: #fef3e2;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #2d2d2d;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-trend {
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .metric-trend.positive {
+            color: #16a34a;
+        }
+
+        .metric-trend.negative {
+            color: #dc2626;
+        }
+
+        .metric-trend.neutral {
+            color: #666;
+        }
+
+        /* Section */
+        .section {
+            margin-bottom: 2.5rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d2d2d;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active {
+            background: #8b5cf6;
+            color: white;
+            border-color: #8b5cf6;
+        }
+
+        .filter-btn:hover:not(.active) {
+            border-color: #d2691e;
+            color: #d2691e;
+        }
+
+        /* Service Health Grid */
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .service-card {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .service-card.healthy {
+            border-left: 4px solid #16a34a;
+        }
+
+        .service-card.degraded {
+            border-left: 4px solid #eab308;
+            background: #fefce8;
+        }
+
+        .service-card.down {
+            border-left: 4px solid #dc2626;
+            background: #fef2f2;
+        }
+
+        .service-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .service-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .service-dot.healthy {
+            background: #16a34a;
+        }
+
+        .service-dot.degraded {
+            background: #eab308;
+        }
+
+        .service-dot.down {
+            background: #dc2626;
+            animation: pulse 1.5s infinite;
+        }
+
+        .service-time {
+            font-size: 0.75rem;
+            color: #999;
+        }
+
+        .service-name {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #2d2d2d;
+            margin-bottom: 0.25rem;
+        }
+
+        .service-response {
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .service-response.healthy {
+            color: #16a34a;
+        }
+
+        .service-response.degraded {
+            color: #eab308;
+        }
+
+        .service-response.down {
+            color: #dc2626;
+        }
+
+        /* Two Column Layout */
+        .two-col {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Activity Feed */
+        .activity-feed {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            padding: 1rem;
+            border-bottom: 1px solid #f5f5f5;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-item:hover {
+            background: #fafafa;
+        }
+
+        .activity-item.warning {
+            background: #fefce8;
+            border-left: 3px solid #eab308;
+            padding-left: calc(1rem - 3px);
+        }
+
+        .activity-item.error {
+            background: #fef2f2;
+            border-left: 3px solid #dc2626;
+            padding-left: calc(1rem - 3px);
+        }
+
+        .activity-content {
+            display: flex;
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .activity-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .activity-details {
+            flex: 1;
+        }
+
+        .activity-message {
+            font-size: 0.9375rem;
+            color: #2d2d2d;
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-time {
+            font-size: 0.8125rem;
+            color: #999;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
+
+        .quick-action-btn {
+            width: 100%;
+            padding: 1.25rem;
+            margin-bottom: 0.75rem;
+            border: 1px solid #e5e5e5;
+            border-radius: 0.5rem;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: white;
+            color: #2d2d2d;
+        }
+
+        .quick-action-btn:last-child {
+            margin-bottom: 0;
+        }
+
+        .quick-action-btn.primary {
+            background: #d2691e;
+            color: white;
+            border-color: #d2691e;
+        }
+
+        .quick-action-btn.primary:hover {
+            background: #b85a19;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(210, 105, 30, 0.3);
+        }
+
+        .quick-action-btn.success {
+            background: #16a34a;
+            color: white;
+            border-color: #16a34a;
+        }
+
+        .quick-action-btn.success:hover {
+            background: #15803d;
+        }
+
+        .quick-action-btn.danger {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+
+        .quick-action-btn.danger:hover {
+            background: #b91c1c;
+        }
+
+        .quick-action-btn:not(.primary):not(.success):not(.danger):hover {
+            background: #fafafa;
+            border-color: #d2691e;
+        }
+
+        .action-icon {
+            font-size: 1.25rem;
+        }
+
+        .action-content {
+            flex: 1;
+            text-align: left;
+        }
+
+        .badge {
+            background: #fef3e2;
+            color: #d2691e;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .badge.purple {
+            background: #f3e8ff;
+            color: #8b5cf6;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-inner">
+            <div class="logo">
+                <span class="logo-icon">🎲</span>
+                <span>MeepleAI</span>
+            </div>
+            <nav class="nav">
+                <a href="#" class="nav-link active">Dashboard</a>
+                <a href="#" class="nav-link">Utenti</a>
+                <a href="#" class="nav-link">Giochi</a>
+                <a href="#" class="nav-link">Analytics</a>
+                <a href="#" class="nav-link">Impostazioni</a>
+            </nav>
+            <div class="user-section">
+                <button class="btn-green">System</button>
+                <button class="btn-orange">Admin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container -->
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1 class="page-title">Dashboard Admin</h1>
+            <p class="page-subtitle">Monitoraggio sistema e statistiche in tempo reale</p>
+            <div class="header-actions">
+                <div class="status-badge">
+                    <div class="status-dot"></div>
+                    <span>Sistema Operativo</span>
+                </div>
+                <span style="font-size: 0.875rem; color: #999;">Ultimo aggiornamento: pochi secondi fa</span>
+            </div>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="metrics-grid">
+            <!-- User Metrics -->
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-label">Utenti Totali</div>
+                    </div>
+                    <div class="metric-icon">👥</div>
+                </div>
+                <div class="metric-value">2,847</div>
+                <div class="metric-trend positive">↗ +12% questa settimana</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-label">Utenti Attivi (24h)</div>
+                    </div>
+                    <div class="metric-icon">✅</div>
+                </div>
+                <div class="metric-value">1,234</div>
+                <div class="metric-trend positive">↗ +8%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-label">Nuovi Utenti (7gg)</div>
+                    </div>
+                    <div class="metric-icon">🆕</div>
+                </div>
+                <div class="metric-value">156</div>
+                <div class="metric-trend positive">↗ +24%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-label">Admin/Editor</div>
+                    </div>
+                    <div class="metric-icon">⚙️</div>
+                </div>
+                <div class="metric-value">24</div>
+                <div class="metric-trend neutral">—</div>
+            </div>
+
+            <!-- Game Metrics -->
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-label">Giochi Totali</div>
+                    </div>
+                    <div class="metric-icon">🎲</div>
+                </div>
+                <div class="metric-value">8,492</div>
+                <div class="metric-trend positive">↗ +3%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-label">Librerie Utente</div>
+                    </div>
+                    <div class="metric-icon">📚</div>
+                </div>
+                <div class="metric-value">12,456</div>
+                <div class="metric-trend positive">↗ +15%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-label">Sessioni Attive</div>
+                    </div>
+                    <div class="metric-icon">🎮</div>
+                </div>
+                <div class="metric-value">89</div>
+                <div class="metric-trend negative">↘ -5%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-label">Approvazioni Pending</div>
+                    </div>
+                    <div class="metric-icon" style="background: #f3e8ff;">⏳</div>
+                </div>
+                <div class="metric-value">7</div>
+                <div class="metric-trend neutral">In attesa</div>
+            </div>
+
+            <!-- System Metrics -->
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-label">API Calls (24h)</div>
+                    </div>
+                    <div class="metric-icon">📡</div>
+                </div>
+                <div class="metric-value">847K</div>
+                <div class="metric-trend positive">↗ +18%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-label">AI Requests (24h)</div>
+                    </div>
+                    <div class="metric-icon">🤖</div>
+                </div>
+                <div class="metric-value">45K</div>
+                <div class="metric-trend positive">↗ +22%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-label">Storage Usato</div>
+                    </div>
+                    <div class="metric-icon">💾</div>
+                </div>
+                <div class="metric-value">234 GB</div>
+                <div class="metric-trend neutral">+2%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div>
+                        <div class="metric-label">Cache Hit Rate</div>
+                    </div>
+                    <div class="metric-icon">⚡</div>
+                </div>
+                <div class="metric-value">94%</div>
+                <div class="metric-trend positive">↗ +1%</div>
+            </div>
+        </div>
+
+        <!-- Service Health -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">Stato Servizi</h2>
+            </div>
+            <div class="service-grid">
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-status">
+                            <div class="service-dot healthy"></div>
+                            <span style="font-size: 0.875rem; color: #16a34a; font-weight: 600;">Operativo</span>
+                        </div>
+                        <div class="service-time">10s fa</div>
+                    </div>
+                    <div class="service-name">PostgreSQL</div>
+                    <div class="service-response healthy">5ms tempo risposta</div>
+                </div>
+
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-status">
+                            <div class="service-dot healthy"></div>
+                            <span style="font-size: 0.875rem; color: #16a34a; font-weight: 600;">Operativo</span>
+                        </div>
+                        <div class="service-time">10s fa</div>
+                    </div>
+                    <div class="service-name">Redis</div>
+                    <div class="service-response healthy">2ms tempo risposta</div>
+                </div>
+
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-status">
+                            <div class="service-dot healthy"></div>
+                            <span style="font-size: 0.875rem; color: #16a34a; font-weight: 600;">Operativo</span>
+                        </div>
+                        <div class="service-time">10s fa</div>
+                    </div>
+                    <div class="service-name">Qdrant</div>
+                    <div class="service-response healthy">45ms tempo risposta</div>
+                </div>
+
+                <div class="service-card degraded">
+                    <div class="service-header">
+                        <div class="service-status">
+                            <div class="service-dot degraded"></div>
+                            <span style="font-size: 0.875rem; color: #eab308; font-weight: 600;">Rallentato</span>
+                        </div>
+                        <div class="service-time">15s fa</div>
+                    </div>
+                    <div class="service-name">OpenRouter</div>
+                    <div class="service-response degraded">850ms tempo risposta</div>
+                </div>
+
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-status">
+                            <div class="service-dot healthy"></div>
+                            <span style="font-size: 0.875rem; color: #16a34a; font-weight: 600;">Operativo</span>
+                        </div>
+                        <div class="service-time">10s fa</div>
+                    </div>
+                    <div class="service-name">Embedding Service</div>
+                    <div class="service-response healthy">120ms tempo risposta</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Feed + Quick Actions -->
+        <div class="two-col">
+            <!-- Activity Feed -->
+            <div>
+                <div class="section-header">
+                    <h2 class="section-title">Attività Recenti</h2>
+                    <div class="section-actions">
+                        <button class="filter-btn active">Tutte</button>
+                        <button class="filter-btn">Solo Errori</button>
+                    </div>
+                </div>
+                <div class="activity-feed">
+                    <div class="activity-item">
+                        <div class="activity-content">
+                            <div class="activity-icon">👤</div>
+                            <div class="activity-details">
+                                <div class="activity-message">Nuovo utente registrato: mario.rossi@email.com</div>
+                                <div class="activity-time">2 minuti fa</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-content">
+                            <div class="activity-icon">🎲</div>
+                            <div class="activity-details">
+                                <div class="activity-message">Gioco approvato: Wingspan (Stonemaier Games)</div>
+                                <div class="activity-time">5 minuti fa</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-item warning">
+                        <div class="activity-content">
+                            <div class="activity-icon">⚠️</div>
+                            <div class="activity-details">
+                                <div class="activity-message">Timeout API OpenRouter su modello claude-3.5-sonnet</div>
+                                <div class="activity-time">8 minuti fa</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-content">
+                            <div class="activity-icon">🎮</div>
+                            <div class="activity-details">
+                                <div class="activity-message">Sessione completata: Catan (4 giocatori, 90min)</div>
+                                <div class="activity-time">12 minuti fa</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-content">
+                            <div class="activity-icon">👤</div>
+                            <div class="activity-details">
+                                <div class="activity-message">Utente promosso a Editor: luca.bianchi@email.com</div>
+                                <div class="activity-time">18 minuti fa</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-content">
+                            <div class="activity-icon">📥</div>
+                            <div class="activity-details">
+                                <div class="activity-message">3 nuovi giochi importati da BGG</div>
+                                <div class="activity-time">25 minuti fa</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-item error">
+                        <div class="activity-content">
+                            <div class="activity-icon">❌</div>
+                            <div class="activity-details">
+                                <div class="activity-message">Errore creazione collezione Qdrant: game-rules-12345</div>
+                                <div class="activity-time">32 minuti fa</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-content">
+                            <div class="activity-icon">🎮</div>
+                            <div class="activity-details">
+                                <div class="activity-message">5 sessioni simultanee avviate</div>
+                                <div class="activity-time">40 minuti fa</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div>
+                <div class="section-header">
+                    <h2 class="section-title">Azioni Rapide</h2>
+                </div>
+                <div class="quick-actions">
+                    <button class="quick-action-btn primary">
+                        <span class="action-icon">👤</span>
+                        <span class="action-content">Crea Utente</span>
+                    </button>
+                    <button class="quick-action-btn success">
+                        <span class="action-icon">✅</span>
+                        <span class="action-content">Approva Giochi</span>
+                        <span class="badge purple">7</span>
+                    </button>
+                    <button class="quick-action-btn danger">
+                        <span class="action-icon">⚠️</span>
+                        <span class="action-content">Log Errori</span>
+                    </button>
+                    <button class="quick-action-btn">
+                        <span class="action-icon">⚙️</span>
+                        <span class="action-content">Configurazione Sistema</span>
+                    </button>
+                    <button class="quick-action-btn">
+                        <span class="action-icon">📊</span>
+                        <span class="action-content">Esporta Dati</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Interactive demos
+        document.querySelectorAll('.metric-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const label = this.querySelector('.metric-label').textContent;
+                alert('📊 Visualizza dettagli: ' + label + '\n\n(Mostrerebbe grafici e analisi dettagliate)');
+            });
+        });
+
+        document.querySelectorAll('.service-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const name = this.querySelector('.service-name').textContent;
+                alert('🔧 Dettagli servizio: ' + name + '\n\n(Mostrerebbe health history, logs, restart option)');
+            });
+        });
+
+        document.querySelectorAll('.activity-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const msg = this.querySelector('.activity-message').textContent;
+                alert('📌 Dettaglio evento:\n' + msg);
+            });
+        });
+
+        document.querySelectorAll('.quick-action-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const text = this.querySelector('.action-content').textContent;
+                alert('⚡ Azione: ' + text);
+            });
+        });
+    </script>
+</body>
+</html>

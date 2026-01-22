@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeepleAI - Design System Complete</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: #f8f6f0;
+            color: #2d2d2d;
+            min-height: 100vh;
+            padding: 3rem 1.5rem;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(210, 105, 30, 0.015) 2px, rgba(210, 105, 30, 0.015) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(139, 90, 60, 0.02) 2px, rgba(139, 90, 60, 0.02) 4px);
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.6;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(210, 105, 30, 0.03), transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 4rem;
+            padding: 3rem 0;
+        }
+
+        .hero-title {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 4rem;
+            font-weight: 700;
+            color: #d2691e;
+            margin-bottom: 1rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1.375rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+
+        .design-specs {
+            background: white;
+            border: 1px solid #e8e4d8;
+            border-radius: 1rem;
+            padding: 2rem;
+            margin: 0 auto 3rem;
+            max-width: 800px;
+            box-shadow: 0 4px 16px rgba(139, 90, 60, 0.08);
+        }
+
+        .spec-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .spec-row:last-child {
+            border-bottom: none;
+        }
+
+        .spec-label {
+            font-weight: 700;
+            color: #2d2d2d;
+        }
+
+        .spec-value {
+            color: #666;
+        }
+
+        .color-swatch {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+            border: 1px solid #e8e4d8;
+        }
+
+        /* Role Sections */
+        .role-section {
+            margin-bottom: 4rem;
+        }
+
+        .role-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e8e4d8;
+        }
+
+        .role-icon {
+            font-size: 3rem;
+        }
+
+        .role-title {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #2d2d2d;
+        }
+
+        .role-description {
+            font-size: 1rem;
+            color: #999;
+        }
+
+        /* Mockup Grid */
+        .mockup-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 2rem;
+        }
+
+        .mockup-card {
+            background: white;
+            border: 1px solid #e8e4d8;
+            border-radius: 1rem;
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(139, 90, 60, 0.06);
+        }
+
+        .mockup-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 32px rgba(139, 90, 60, 0.15);
+            border-color: #d2691e;
+        }
+
+        .mockup-preview {
+            height: 240px;
+            background: linear-gradient(135deg, #fef3e2, #f8f6f0);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            border-bottom: 1px solid #e8e4d8;
+        }
+
+        .mockup-icon {
+            font-size: 4rem;
+        }
+
+        .mockup-label {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: #d2691e;
+        }
+
+        .mockup-content {
+            padding: 2rem;
+        }
+
+        .mockup-title {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d2d2d;
+            margin-bottom: 0.5rem;
+        }
+
+        .mockup-route {
+            font-size: 0.8125rem;
+            color: #999;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 1.25rem;
+        }
+
+        .mockup-features {
+            list-style: none;
+            font-size: 0.9375rem;
+            color: #666;
+        }
+
+        .mockup-features li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+        }
+
+        .mockup-features li::before {
+            content: "→";
+            color: #d2691e;
+            font-weight: 700;
+        }
+
+        .btn-view {
+            width: 100%;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #d2691e;
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-view:hover {
+            background: #b85a19;
+            transform: scale(1.02);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            color: #16a34a;
+            font-weight: 700;
+            margin-top: 1rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #16a34a;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Hero -->
+        <div class="hero">
+            <div style="font-size: 5rem; margin-bottom: 1rem;">🎲</div>
+            <h1 class="hero-title">MeepleAI Design System</h1>
+            <p class="hero-subtitle">Mockup completi - Stile definitivo</p>
+        </div>
+
+        <!-- Design Specs -->
+        <div class="design-specs">
+            <div class="spec-row">
+                <span class="spec-label">Typography</span>
+                <span class="spec-value">Quicksand (titles) + Nunito (body)</span>
+            </div>
+            <div class="spec-row">
+                <span class="spec-label">Primary Color</span>
+                <span class="spec-value">
+                    <span class="color-swatch" style="background: #d2691e;"></span>
+                    Orange #d2691e
+                </span>
+            </div>
+            <div class="spec-row">
+                <span class="spec-label">Active State</span>
+                <span class="spec-value">
+                    <span class="color-swatch" style="background: #8b5cf6;"></span>
+                    Purple #8b5cf6
+                </span>
+            </div>
+            <div class="spec-row">
+                <span class="spec-label">Success</span>
+                <span class="spec-value">
+                    <span class="color-swatch" style="background: #16a34a;"></span>
+                    Green #16a34a
+                </span>
+            </div>
+            <div class="spec-row">
+                <span class="spec-label">Background</span>
+                <span class="spec-value">Warm beige #f8f6f0 + wood texture</span>
+            </div>
+            <div class="spec-row">
+                <span class="spec-label">Total Pages</span>
+                <span class="spec-value">7 mockups completi</span>
+            </div>
+        </div>
+
+        <!-- ADMIN ROLE -->
+        <div class="role-section">
+            <div class="role-header">
+                <div class="role-icon">🔴</div>
+                <div>
+                    <h2 class="role-title">Admin Pages</h2>
+                    <p class="role-description">System monitoring e user management</p>
+                </div>
+            </div>
+
+            <div class="mockup-grid">
+                <div class="mockup-card" onclick="window.open('admin-dashboard-v2.html', '_blank')">
+                    <div class="mockup-preview">
+                        <div class="mockup-icon">📊</div>
+                        <div class="mockup-label">ADMIN DASHBOARD</div>
+                    </div>
+                    <div class="mockup-content">
+                        <h3 class="mockup-title">Admin Dashboard</h3>
+                        <div class="mockup-route">/admin</div>
+                        <ul class="mockup-features">
+                            <li>12 metrics real-time</li>
+                            <li>Service health matrix</li>
+                            <li>Activity feed timeline</li>
+                            <li>Quick actions panel</li>
+                        </ul>
+                        <div class="status-badge">
+                            <div class="status-dot"></div>
+                            HTML Interattivo
+                        </div>
+                        <button class="btn-view">Visualizza Mockup</button>
+                    </div>
+                </div>
+
+                <div class="mockup-card" onclick="window.open('user-management.html', '_blank')">
+                    <div class="mockup-preview">
+                        <div class="mockup-icon">👥</div>
+                        <div class="mockup-label">USER MANAGEMENT</div>
+                    </div>
+                    <div class="mockup-content">
+                        <h3 class="mockup-title">User Management</h3>
+                        <div class="mockup-route">/admin/users</div>
+                        <ul class="mockup-features">
+                            <li>User data table</li>
+                            <li>Search + role filters</li>
+                            <li>Bulk selection</li>
+                            <li>Quick actions menu</li>
+                        </ul>
+                        <div class="status-badge">
+                            <div class="status-dot"></div>
+                            HTML Interattivo
+                        </div>
+                        <button class="btn-view">Visualizza Mockup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- USER ROLE -->
+        <div class="role-section">
+            <div class="role-header">
+                <div class="role-icon">🟢</div>
+                <div>
+                    <h2 class="role-title">User Pages</h2>
+                    <p class="role-description">Personal hub, library, catalog, profile</p>
+                </div>
+            </div>
+
+            <div class="mockup-grid">
+                <div class="mockup-card" onclick="window.open('user-dashboard.html', '_blank')">
+                    <div class="mockup-preview">
+                        <div class="mockup-icon">🏠</div>
+                        <div class="mockup-label">USER DASHBOARD</div>
+                    </div>
+                    <div class="mockup-content">
+                        <h3 class="mockup-title">User Dashboard</h3>
+                        <div class="mockup-route">/dashboard</div>
+                        <ul class="mockup-features">
+                            <li>Personalized greeting</li>
+                            <li>Library quota widget</li>
+                            <li>Active sessions</li>
+                            <li>Recent games & chats</li>
+                        </ul>
+                        <div class="status-badge">
+                            <div class="status-dot"></div>
+                            HTML Interattivo
+                        </div>
+                        <button class="btn-view">Visualizza Mockup</button>
+                    </div>
+                </div>
+
+                <div class="mockup-card" onclick="window.open('complete-mockups.html', '_blank')">
+                    <div class="mockup-preview">
+                        <div class="mockup-icon">📚</div>
+                        <div class="mockup-label">LIBRARY + CATALOG + SETTINGS</div>
+                    </div>
+                    <div class="mockup-content">
+                        <h3 class="mockup-title">Complete User Mockups</h3>
+                        <div class="mockup-route">/library, /catalog, /settings</div>
+                        <ul class="mockup-features">
+                            <li>Personal Library (search, filters, bulk)</li>
+                            <li>Shared Catalog (community browse)</li>
+                            <li>Profile & Settings (4 tabs)</li>
+                        </ul>
+                        <div class="status-badge">
+                            <div class="status-dot"></div>
+                            HTML Interattivo (3-in-1)
+                        </div>
+                        <button class="btn-view">Visualizza Mockup</button>
+                    </div>
+                </div>
+
+                <div class="mockup-card" onclick="window.open('final-pages.html', '_blank')">
+                    <div class="mockup-preview">
+                        <div class="mockup-icon">🎮</div>
+                        <div class="mockup-label">GAME DETAIL + CHAT</div>
+                    </div>
+                    <div class="mockup-content">
+                        <h3 class="mockup-title">Game & Chat Pages</h3>
+                        <div class="mockup-route">/games/[id], /chat</div>
+                        <ul class="mockup-features">
+                            <li>Editor Dashboard (approvals)</li>
+                            <li>Game Detail (AI, checklist, tracking)</li>
+                            <li>AI Chat (context-aware)</li>
+                        </ul>
+                        <div class="status-badge">
+                            <div class="status-dot"></div>
+                            HTML Interattivo (3-in-1)
+                        </div>
+                        <button class="btn-view">Visualizza Mockup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div style="background: white; border: 1px solid #e8e4d8; border-left: 4px solid #d2691e; border-radius: 1rem; padding: 2.5rem; margin-top: 4rem; box-shadow: 0 4px 16px rgba(139, 90, 60, 0.08);">
+            <h3 style="font-family: 'Quicksand', sans-serif; font-size: 1.75rem; font-weight: 700; color: #2d2d2d; margin-bottom: 1.5rem;">
+                ✅ Mockup Completi
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-bottom: 2rem;">
+                <div>
+                    <div style="font-family: 'Quicksand', sans-serif; font-size: 3rem; font-weight: 700; color: #d2691e; margin-bottom: 0.5rem;">7</div>
+                    <div style="color: #666; font-weight: 600;">Pagine Complete</div>
+                </div>
+                <div>
+                    <div style="font-family: 'Quicksand', sans-serif; font-size: 3rem; font-weight: 700; color: #8b5cf6; margin-bottom: 0.5rem;">3</div>
+                    <div style="color: #666; font-weight: 600;">Ruoli Utente</div>
+                </div>
+                <div>
+                    <div style="font-family: 'Quicksand', sans-serif; font-size: 3rem; font-weight: 700; color: #16a34a; margin-bottom: 0.5rem;">100%</div>
+                    <div style="color: #666; font-weight: 600;">MeepleAI Style</div>
+                </div>
+            </div>
+
+            <h4 style="font-family: 'Quicksand', sans-serif; font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">
+                📋 Prossimi Step
+            </h4>
+            <ol style="color: #666; line-height: 2; padding-left: 1.5rem;">
+                <li>Rivedi tutti i 7 mockup HTML (clicca le card sopra)</li>
+                <li>Valida con team/stakeholders</li>
+                <li>Decidi priorità implementazione</li>
+                <li>Richiedi Epic + Implementation Issues</li>
+                <li>Inizia sviluppo component library</li>
+            </ol>
+
+            <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #f5f5f5;">
+                <p style="color: #999; font-size: 0.9375rem;">
+                    <strong style="color: #d2691e;">Design System Ready</strong> • Tutti i mockup sono production-ready HTML/CSS/JS.
+                    Coerenti con le pagine user esistenti (login, catalog, library).
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

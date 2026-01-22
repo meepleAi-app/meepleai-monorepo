@@ -164,12 +164,12 @@
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
   /* MeepleAI brand colors for Tailwind usage */
-  --color-meeple-orange: hsl(var(--color-meeple-orange));
-  --color-meeple-purple: hsl(var(--color-meeple-purple));
-  --color-meeple-warm-bg: hsl(var(--color-meeple-warm-bg));
-  --color-meeple-dark: hsl(var(--color-meeple-dark));
-  --color-meeple-border: hsl(var(--color-meeple-border));
-  --color-meeple-light-orange: hsl(var(--color-meeple-light-orange));
+  --color-meeple-orange: hsl(25 85% 45%);
+  --color-meeple-purple: hsl(262 83% 62%);
+  --color-meeple-warm-bg: hsl(30 25% 97%);
+  --color-meeple-dark: hsl(0 0% 18%);
+  --color-meeple-border: hsl(30 12% 90%);
+  --color-meeple-light-orange: hsl(30 100% 94%);
 }
 
 :root {

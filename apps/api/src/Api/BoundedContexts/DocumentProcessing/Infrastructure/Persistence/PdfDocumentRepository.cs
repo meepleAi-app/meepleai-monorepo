@@ -70,6 +70,17 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         return entities.Select(MapToDomain).ToList();
     }
 
+    public async Task<IReadOnlyList<PdfDocument>> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var entities = await DbContext.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.UploadedByUserId == userId)
+            .OrderByDescending(p => p.UploadedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task AddAsync(PdfDocument document, CancellationToken cancellationToken = default)
     {
         CollectDomainEvents(document);
@@ -121,6 +132,7 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             : new DocumentType(entity.DocumentType);
 
         // Issue #2140: Use Reconstitute factory method instead of reflection
+        // Issue #2732: Added SharedGameId, ContributorId, SourceDocumentId
         return PdfDocument.Reconstitute(
             id: entity.Id,
             gameId: entity.GameId,
@@ -136,7 +148,11 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             language: language,
             collectionId: entity.CollectionId,
             documentType: documentType,
-            sortOrder: entity.SortOrder
+            sortOrder: entity.SortOrder,
+            isPublic: entity.IsPublic,
+            sharedGameId: entity.SharedGameId,
+            contributorId: entity.ContributorId,
+            sourceDocumentId: entity.SourceDocumentId
         );
     }
 
@@ -159,7 +175,11 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             Language = domain.Language.Value, // Issue #2029: Extract string from Value Object
             CollectionId = domain.CollectionId, // Issue #2051
             DocumentType = domain.DocumentType.Value, // Issue #2051: Extract string from Value Object
-            SortOrder = domain.SortOrder // Issue #2051
+            SortOrder = domain.SortOrder, // Issue #2051
+            IsPublic = domain.IsPublic,
+            SharedGameId = domain.SharedGameId, // Issue #2732
+            ContributorId = domain.ContributorId, // Issue #2732
+            SourceDocumentId = domain.SourceDocumentId // Issue #2732
         };
     }
 }

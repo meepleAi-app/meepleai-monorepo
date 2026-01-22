@@ -16,6 +16,12 @@ internal sealed class NotificationType : ValueObject
     public static readonly NotificationType NewComment = new("new_comment");
     public static readonly NotificationType SharedLinkAccessed = new("shared_link_accessed");
 
+    // ISSUE-2739: Share request notification types
+    public static readonly NotificationType ShareRequestCreated = new("share_request_created");
+    public static readonly NotificationType ShareRequestApproved = new("share_request_approved");
+    public static readonly NotificationType ShareRequestRejected = new("share_request_rejected");
+    public static readonly NotificationType ShareRequestChangesRequested = new("share_request_changes_requested");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -46,6 +52,10 @@ internal sealed class NotificationType : ValueObject
             "processing_failed" => ProcessingFailed,
             "new_comment" => NewComment,
             "shared_link_accessed" => SharedLinkAccessed,
+            "share_request_created" => ShareRequestCreated,
+            "share_request_approved" => ShareRequestApproved,
+            "share_request_rejected" => ShareRequestRejected,
+            "share_request_changes_requested" => ShareRequestChangesRequested,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

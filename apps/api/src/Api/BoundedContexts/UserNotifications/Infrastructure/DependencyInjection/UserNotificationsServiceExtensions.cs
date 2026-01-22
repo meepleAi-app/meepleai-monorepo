@@ -23,6 +23,7 @@ internal static class UserNotificationsServiceExtensions
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
+        // Event handlers: ShareRequestCreated, Approved, Rejected, ChangesRequested (Issue #2739)
 
         return services;
     }

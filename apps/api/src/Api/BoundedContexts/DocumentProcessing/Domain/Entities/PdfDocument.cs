@@ -32,6 +32,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // Admin Wizard: Public library visibility (visible to all registered users)
     public bool IsPublic { get; private set; }
 
+    // Issue #2732: Shared game document support
+    public Guid? SharedGameId { get; private set; }
+    public Guid? ContributorId { get; private set; }
+    public Guid? SourceDocumentId { get; private set; }
+
 #pragma warning disable CS8618
     private PdfDocument() : base() { }
 #pragma warning restore CS8618
@@ -71,6 +76,7 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     /// <summary>
     /// Reconstitutes a PdfDocument from persistence.
     /// Issue #2140: Replaces reflection-based property mutation
+    /// Issue #2732: Added SharedGameId, ContributorId, SourceDocumentId
     /// </summary>
     public static PdfDocument Reconstitute(
         Guid id,
@@ -88,7 +94,10 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         Guid? collectionId = null,
         DocumentType? documentType = null,
         int sortOrder = 0,
-        bool isPublic = false)
+        bool isPublic = false,
+        Guid? sharedGameId = null,
+        Guid? contributorId = null,
+        Guid? sourceDocumentId = null)
     {
         var document = new PdfDocument
         {
@@ -108,7 +117,10 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             CollectionId = collectionId,
             DocumentType = documentType ?? ValueObjects.DocumentType.Base,
             SortOrder = sortOrder,
-            IsPublic = isPublic
+            IsPublic = isPublic,
+            SharedGameId = sharedGameId,
+            ContributorId = contributorId,
+            SourceDocumentId = sourceDocumentId
         };
 
         return document;
@@ -180,4 +192,57 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     /// Makes this PDF private (only visible to uploader and admins).
     /// </summary>
     public void MakePrivate() => IsPublic = false;
+
+    /// <summary>
+    /// Creates a copy of this document for a shared game.
+    /// Issue #2732: Document copying on share request approval
+    /// </summary>
+    /// <param name="source">Source document to copy</param>
+    /// <param name="sharedGameId">Target shared game ID</param>
+    /// <param name="contributorId">User who contributed this document</param>
+    /// <param name="newFilePath">Storage path for the copied file</param>
+    /// <returns>New PdfDocument instance for shared game</returns>
+    public static PdfDocument CreateCopy(
+        PdfDocument source,
+        Guid sharedGameId,
+        Guid contributorId,
+        string newFilePath)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        if (sharedGameId == Guid.Empty)
+            throw new ArgumentException("Shared game ID cannot be empty", nameof(sharedGameId));
+
+        if (contributorId == Guid.Empty)
+            throw new ArgumentException("Contributor ID cannot be empty", nameof(contributorId));
+
+        if (string.IsNullOrWhiteSpace(newFilePath))
+            throw new ArgumentException("New file path cannot be empty", nameof(newFilePath));
+
+        var copy = new PdfDocument
+        {
+            Id = Guid.NewGuid(),
+            GameId = source.GameId,
+            FileName = source.FileName,
+            FilePath = newFilePath, // New storage path
+            FileSize = source.FileSize,
+            ContentType = "application/pdf",
+            UploadedByUserId = contributorId, // Contributor becomes uploader
+            UploadedAt = DateTime.UtcNow,
+            ProcessingStatus = source.ProcessingStatus,
+            ProcessedAt = source.ProcessedAt,
+            PageCount = source.PageCount,
+            ProcessingError = null, // Clear errors on copy
+            Language = source.Language,
+            CollectionId = null, // Not in collection initially
+            DocumentType = source.DocumentType,
+            SortOrder = 0, // Reset sort order
+            IsPublic = true, // Shared game documents are public by default
+            SharedGameId = sharedGameId,
+            ContributorId = contributorId,
+            SourceDocumentId = source.Id // Track lineage
+        };
+
+        return copy;
+    }
 }

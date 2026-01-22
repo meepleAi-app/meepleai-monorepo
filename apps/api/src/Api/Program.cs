@@ -381,6 +381,10 @@ using (var scope = app.Services.CreateScope())
                 var bggService = scope.ServiceProvider.GetRequiredService<IBggApiService>();
                 await Api.Infrastructure.Seeders.SharedGameSeeder.SeedSharedGamesAsync(
                     db, bggService, adminUser.Id, app.Logger).ConfigureAwait(false);
+
+                // Seed predefined badges (ISSUE-2731)
+                await Api.Infrastructure.Seeders.BadgeSeeder.SeedBadgesAsync(
+                    db, app.Logger).ConfigureAwait(false);
             }
         }
     }
@@ -471,6 +475,7 @@ v1Api.MapRuleSpecEndpoints();
 
 // Issue #1439: Split AdminEndpoints into focused endpoint files
 v1Api.MapConfigurationEndpoints();     // System configuration CRUD & operations
+v1Api.MapRateLimitAdminEndpoints();    // Issue #2738: Rate limit admin management
 // v1Api.MapAiModelEndpoints();        // Issue #2580: REMOVED - Replaced by MapAiModelAdminEndpoints (Issue #2567)
 v1Api.MapGameLibraryConfigEndpoints(); // Issue #2444: Game library tier limits config
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics

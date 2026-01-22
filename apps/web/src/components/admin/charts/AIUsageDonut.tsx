@@ -1,3 +1,12 @@
+/**
+ * AIUsageDonut Component - Issue #2790, #2850
+ *
+ * MeepleAI Design System:
+ * - Primary (Embeddings): #d2691e (orange)
+ * - Secondary (Completions): #8b5cf6 (purple)
+ * - Success (OCR): #16a34a (green)
+ */
+
 'use client';
 
 import { Suspense } from 'react';
@@ -14,15 +23,15 @@ type AIUsageDonutProps = {
 };
 
 const ChartSkeleton = () => (
-  <div className="h-[300px] w-full animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+  <div className="h-[300px] w-full animate-pulse rounded-2xl bg-[#fef3e2] dark:bg-slate-800" />
 );
 
-// Category colors mapping (Issue #2790, updated for #2792)
+// Issue #2850: MeepleAI color palette for categories
 const CATEGORY_COLORS: Record<string, string> = {
-  'Embeddings': '#f97316', // orange-500
-  'Completions': '#3b82f6',  // blue-500
-  'OCR': '#22c55e',  // green-500
-  'Default': '#6b7280' // gray-500
+  'Embeddings': '#d2691e', // MeepleAI orange (primary)
+  'Completions': '#8b5cf6', // MeepleAI purple (secondary)
+  'OCR': '#16a34a',  // MeepleAI green (success)
+  'Default': '#666' // MeepleAI text gray
 };
 
 function getCategoryColor(category: string): string {
@@ -35,7 +44,7 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps): JSX.Elemen
   }
 
   if (data.length === 0) {
-    return <div className="p-12 text-center text-gray-500 dark:text-gray-400">No AI usage data available</div>;
+    return <div className="p-12 text-center text-[#666] dark:text-gray-400">No AI usage data available</div>;
   }
 
   const totalCalls = data.reduce((sum, item) => sum + item.count, 0);
@@ -51,8 +60,9 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps): JSX.Elemen
   });
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
+    // Issue #2850: MeepleAI warm card styling
+    <div className="rounded-2xl border border-[#e8e4d8] bg-white p-6 shadow-[0_1px_3px_rgba(139,90,60,0.05)] dark:border-gray-700 dark:bg-gray-800">
+      <h3 className="mb-4 font-['Quicksand',sans-serif] text-lg font-bold text-[#2d2d2d] dark:text-gray-100">
         AI Usage by Category
       </h3>
 
@@ -78,11 +88,13 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps): JSX.Elemen
                   />
                 ))}
               </Pie>
+              {/* Issue #2850: MeepleAI tooltip styling */}
               <Tooltip
                 contentStyle={{
                   backgroundColor: '#fff',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '0.5rem',
+                  border: '1px solid #e8e4d8',
+                  borderRadius: '0.75rem',
+                  boxShadow: '0 4px 12px rgba(139, 90, 60, 0.1)',
                 }}
                 formatter={(value: number, name: string, props: { payload: AiUsageStats & { percentage: number } }) => [
                   `${props.payload.count.toLocaleString()} calls (${value}%)`,
@@ -98,13 +110,13 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps): JSX.Elemen
             </PieChart>
           </ResponsiveContainer>
 
-          {/* Center text */}
+          {/* Center text - Issue #2850: MeepleAI styling */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Total Calls</p>
-            <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            <p className="text-sm text-[#666] dark:text-gray-400">Total Calls</p>
+            <p className="font-['Quicksand',sans-serif] text-xl font-bold text-[#2d2d2d] dark:text-gray-100">
               {totalCalls.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Estimated</p>
+            <p className="text-xs text-[#999] dark:text-gray-500">Estimated</p>
           </div>
         </div>
       </Suspense>

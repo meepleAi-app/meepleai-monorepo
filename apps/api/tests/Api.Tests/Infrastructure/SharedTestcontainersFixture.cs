@@ -114,16 +114,18 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                         await _postgresContainer.StartAsync();
 
                         var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-                        // Issue #2577: Optimized connection string for long-running test suites  
+                        // Issue #2577: Optimized connection string for long-running test suites
+                        // Issue #2902: Reduced MaxPoolSize from 50 to 5 to prevent connection exhaustion
+                        // With 94+ test classes, 94 × 50 = 4700 potential connections > max_connections=500
                         // - Pooling=true: Prevents TCP connection accumulation (was causing timeouts after 22 minutes)
-                        // - MinPoolSize=2: Keep connections alive to avoid cold start penalties
-                        // - MaxPoolSize=50: Handle burst of parallel tests
+                        // - MinPoolSize=1: Minimal warm connections per database (94 DBs × 1 = 94 baseline)
+                        // - MaxPoolSize=5: Conservative pool per test class (94 × 5 = 470 < 500 max_connections)
                         // - Timeout=30: Increased from 10s to handle connection establishment under load
                         // - CommandTimeout=60: Prevent query timeout for long-running test operations
                         // - KeepAlive=10: More frequent keep-alive to prevent idle connection closure (was 30s)
-                        // - ConnectionIdleLifetime=60: Recycle idle connections to prevent stale state
-                        // - ConnectionPruningInterval=10: Clean up dead connections proactively
-                        PostgresConnectionString = $"Host=localhost;Port={postgresPort};Database=test_shared;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=10;Pooling=true;MinPoolSize=2;MaxPoolSize=50;Timeout=30;CommandTimeout=60;ConnectionIdleLifetime=60;ConnectionPruningInterval=10;";
+                        // - ConnectionIdleLifetime=30: Faster recycling to free connections for other test classes
+                        // - ConnectionPruningInterval=5: More aggressive cleanup for large test suites
+                        PostgresConnectionString = $"Host=localhost;Port={postgresPort};Database=test_shared;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=10;Pooling=true;MinPoolSize=1;MaxPoolSize=5;Timeout=30;CommandTimeout=60;ConnectionIdleLifetime=30;ConnectionPruningInterval=5;";
 
                         // Issue #2031: Wait for PostgreSQL to accept connections with retry
                         // Issue #2474: Increased timeout from 5s to 10s for better stability

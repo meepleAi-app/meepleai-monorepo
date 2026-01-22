@@ -52,12 +52,12 @@ export interface BuildKPICardsOptions {
 /**
  * Calculate trend percentage from time series data
  *
- * @param trendData Array of {date, count} points from TimeSeriesDataPoint
+ * @param trendData Array of {date, value} points from TimeSeriesDataPoint
  * @param periodDays Number of days to compare (default: 7)
  * @returns Percentage change or undefined if insufficient data
  */
 export function calculateTrendPercent(
-  trendData: Array<{ date: string; count: number }> | undefined,
+  trendData: Array<{ date: string; value: number }> | undefined,
   periodDays: number = 7
 ): number | undefined {
   if (!trendData || trendData.length < periodDays * 2) {
@@ -69,8 +69,8 @@ export function calculateTrendPercent(
   // Get previous period (N days before that)
   const previousPeriod = trendData.slice(-periodDays * 2, -periodDays);
 
-  const currentSum = currentPeriod.reduce((sum, point) => sum + point.count, 0);
-  const previousSum = previousPeriod.reduce((sum, point) => sum + point.count, 0);
+  const currentSum = currentPeriod.reduce((sum, point) => sum + point.value, 0);
+  const previousSum = previousPeriod.reduce((sum, point) => sum + point.value, 0);
 
   if (previousSum === 0) {
     return currentSum > 0 ? 100 : 0;

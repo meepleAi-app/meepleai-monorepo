@@ -1,11 +1,13 @@
 /**
- * Enhanced Admin Dashboard - Issue #874, #885, #886
+ * Enhanced Admin Dashboard - Issue #874, #885, #886, #2792
  *
- * Centralized dashboard with:
- * - System status section
- * - 16 real-time metrics (React Query polling every 30s)
- * - Quick actions for common tasks
+ * Centralized dashboard with full real data integration:
+ * - System status with InfrastructureDetails (Issue #2792)
+ * - KPI Cards with calculated trends (Issue #2792)
+ * - Charts with real apiRequestTrend data (Issue #2792)
+ * - AlertsBanner from metrics (Issue #2792)
  * - Activity feed (last 10 system events)
+ * - React Query polling every 30s
  * - AdminLayout with navigation
  * - Performance optimized (<1s load, <2s TTI)
  * - Tab visibility pause (stops polling when hidden)
@@ -26,6 +28,9 @@ import {
 
 import { ActivityFeed } from '@/components/admin/ActivityFeed';
 import { AdminLayout } from '@/components/admin/AdminLayout';
+import { DashboardHeader } from '@/components/admin/DashboardHeader';
+import { KPICardsGrid, buildKPICards } from '@/components/admin/KPICardsGrid';
+import { AlertsBanner } from '@/components/admin/AlertsBanner';
 import { MetricsGrid } from '@/components/admin/MetricsGrid';
 import { QuickActions, type QuickAction } from '@/components/admin/QuickActions';
 import type { StatCardProps } from '@/components/admin/StatCard';
@@ -244,14 +249,27 @@ function buildMetricCards(metrics: DashboardMetrics): StatCardProps[] {
 }
 
 export function DashboardClient() {
-  // React Query hook with 30s polling and tab visibility pause (Issue #886)
-  const { metrics, events, isLoading, isError, error, lastUpdate, refetch, isFetching, analytics } =
+  // React Query hook with 30s polling, infrastructure details, and trend data (Issue #2792)
+  const { metrics, trends, events, services, isLoading, isError, error, lastUpdate, refetch, isFetching, analytics } =
     useDashboardData(10);
 
   // Memoize derived data to prevent unnecessary re-renders
   const systemStatus = useMemo(() => deriveSystemStatus(metrics), [metrics]);
   const quickActions = useMemo(() => buildQuickActions(metrics), [metrics]);
+
+  // Build KPI cards with real trend calculation (Issue #2792)
+  const kpiCards = useMemo(() => buildKPICards(metrics, {
+    userTrendData: trends.user,
+    sessionTrendData: trends.session,
+  }), [metrics, trends.user, trends.session]);
+
+  // Build metrics cards for MetricsGrid (16 detailed metrics)
   const metricCards = useMemo(() => (metrics ? buildMetricCards(metrics) : []), [metrics]);
+
+  // Calculate healthy services count for AlertsBanner
+  const healthyServicesCount = useMemo(() => {
+    return services.filter(s => s.status === 'healthy').length;
+  }, [services]);
 
   const handleRefresh = useCallback(async () => {
     await refetch();
@@ -303,20 +321,18 @@ export function DashboardClient() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              Dashboard Overview
-            </h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              Centralized system metrics and recent activity
-            </p>
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Last updated: {lastUpdate.toLocaleTimeString('it-IT')}
-          </div>
-        </div>
+        {/* Enhanced Header with admin name and notifications - Issue #2784 */}
+        <DashboardHeader />
+
+        {/* Alerts Banner - Issue #2791 */}
+        <AlertsBanner
+          metrics={metrics}
+          healthyServices={healthyServicesCount}
+          totalServices={services.length}
+        />
+
+        {/* KPI Cards Grid with real trends - Issue #2785 + #2792 */}
+        <KPICardsGrid cards={kpiCards} />
 
         {/* System Status + Quick Actions Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -333,10 +349,10 @@ export function DashboardClient() {
         {/* Metrics Grid - 16 metrics in 4x4 responsive grid */}
         <MetricsGrid metrics={metricCards} />
 
-        {/* Charts Section - Issue #2790: API Requests & AI Usage */}
+        {/* Charts Section - Issue #2790 + #2792: Real trend data */}
         <ChartsSection />
 
-        {/* Activity Feed */}
+        {/* Activity Feed - Issue #2787: Real events */}
         {events.length > 0 && <ActivityFeed events={events} />}
       </div>
     </AdminLayout>

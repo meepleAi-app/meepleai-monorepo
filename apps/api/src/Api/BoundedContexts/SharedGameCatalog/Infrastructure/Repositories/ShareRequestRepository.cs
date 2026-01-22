@@ -282,5 +282,69 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         return lastRejection;
     }
 
+    // ===== Admin Dashboard Support Methods (Issue #2740) =====
+
+    public async Task<int> CountPendingAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<ShareRequestEntity>()
+            .AsNoTracking()
+            .CountAsync(r => r.Status == (int)ShareRequestStatus.Pending, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<int> CountInReviewAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<ShareRequestEntity>()
+            .AsNoTracking()
+            .CountAsync(r => r.Status == (int)ShareRequestStatus.InReview, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyCollection<ShareRequest>> GetPendingOlderThanAsync(
+        DateTime threshold,
+        CancellationToken cancellationToken = default)
+    {
+        var entities = await _context.Set<ShareRequestEntity>()
+            .AsNoTracking()
+            .Include(e => e.AttachedDocuments)
+            .Where(r => r.Status == (int)ShareRequestStatus.Pending && r.CreatedAt < threshold)
+            .OrderBy(r => r.CreatedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList().AsReadOnly();
+    }
+
+    public async Task<PendingShareRequestStats> GetPendingStatsAsync(CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        var todayStart = now.Date;
+
+        var pendingRequests = await _context.Set<ShareRequestEntity>()
+            .AsNoTracking()
+            .Where(r => r.Status == (int)ShareRequestStatus.Pending)
+            .Select(r => new { r.CreatedAt, r.ContributionType })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var totalPending = pendingRequests.Count;
+        var createdToday = pendingRequests.Count(r => r.CreatedAt >= todayStart);
+        var oldestPendingAge = totalPending > 0
+            ? now - pendingRequests.Min(r => r.CreatedAt)
+            : TimeSpan.Zero;
+
+        var byType = pendingRequests
+            .GroupBy(r => ((ContributionType)r.ContributionType).ToString(), StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+
+        return new PendingShareRequestStats
+        {
+            TotalPending = totalPending,
+            CreatedToday = createdToday,
+            OldestPendingAge = oldestPendingAge,
+            ByType = byType
+        };
+    }
+
     #endregion
 }

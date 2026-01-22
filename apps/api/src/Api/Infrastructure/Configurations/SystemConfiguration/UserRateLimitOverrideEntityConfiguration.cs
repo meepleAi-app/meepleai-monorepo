@@ -56,9 +56,11 @@ internal sealed class UserRateLimitOverrideEntityConfiguration
             .IsRequired();
 
         // Indexes
+        // Note: Removed NOW() from filter as PostgreSQL requires index predicates to use IMMUTABLE functions only.
+        // Temporal filtering (expires_at > NOW()) is handled at query level in the application layer.
         builder.HasIndex(e => e.UserId)
             .IsUnique()
-            .HasFilter("expires_at IS NULL OR expires_at > NOW()")
+            .HasFilter("expires_at IS NULL")
             .HasDatabaseName("ix_user_rate_limit_overrides_user_id_active");
 
         builder.HasIndex(e => e.CreatedByAdminId)

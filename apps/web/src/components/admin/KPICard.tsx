@@ -96,12 +96,15 @@ export function KPICard({
   return (
     <div
       className={cn(
-        'group relative overflow-hidden rounded-xl border border-stone-200 bg-white p-5 shadow-sm',
-        'transition-all duration-200 hover:border-orange-200 hover:shadow-md',
-        'dark:border-stone-800 dark:bg-stone-900 dark:hover:border-orange-500/50',
+        'group relative overflow-hidden rounded-xl border border-meeple-border bg-white p-5',
+        'hover-card hover-shadow-meeple',
+        'dark:border-stone-800 dark:bg-stone-900',
         className
       )}
       data-testid={testId}
+      style={{
+        boxShadow: '0 1px 3px rgba(139, 90, 60, 0.05)',
+      }}
     >
       {/* Decorative corner - scales on hover */}
       <div

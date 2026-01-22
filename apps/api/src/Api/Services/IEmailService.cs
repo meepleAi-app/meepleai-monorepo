@@ -21,6 +21,49 @@ internal interface IEmailService
         string errorMessage,
         CancellationToken ct = default);
 
+    // ISSUE-2739: Share request notifications
+    Task SendShareRequestCreatedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        string contributionType,
+        Guid shareRequestId,
+        CancellationToken ct = default);
+
+    Task SendShareRequestApprovedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        Guid sharedGameId,
+        Guid userId,
+        CancellationToken ct = default);
+
+    Task SendShareRequestRejectedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        string reason,
+        CancellationToken ct = default);
+
+    Task SendShareRequestChangesRequestedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        string feedback,
+        Guid shareRequestId,
+        CancellationToken ct = default);
+
+    // ISSUE-2740: Admin share request digest email
+    Task SendAdminShareRequestDigestEmailAsync(
+        string toEmail,
+        string toName,
+        int totalPending,
+        int oldestPendingDays,
+        int createdToday,
+        Dictionary<string, int> pendingByType,
+        string reviewQueueUrl,
+        CancellationToken ct = default);
+
     // ISSUE-2741: Badge earned emails
     Task SendBadgeEarnedEmailAsync(
         string toEmail,

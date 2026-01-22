@@ -61,7 +61,11 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: var(--font-body, var(--font-sans));
+    font-family: var(--font-nunito, var(--font-sans));
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-quicksand, var(--font-sans));
   }
 }
 
@@ -158,6 +162,14 @@
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  /* MeepleAI brand colors for Tailwind usage */
+  --color-meeple-orange: hsl(var(--color-meeple-orange));
+  --color-meeple-purple: hsl(var(--color-meeple-purple));
+  --color-meeple-warm-bg: hsl(var(--color-meeple-warm-bg));
+  --color-meeple-dark: hsl(var(--color-meeple-dark));
+  --color-meeple-border: hsl(var(--color-meeple-border));
+  --color-meeple-light-orange: hsl(var(--color-meeple-light-orange));
 }
 
 :root {

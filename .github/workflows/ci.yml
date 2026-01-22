@@ -65,13 +65,17 @@ jobs:
           working-directory: apps/web
           frozen-lockfile: 'false'
 
+      # Stage 1: Lint + TypeCheck (fail fast)
       - name: Lint
         run: pnpm lint
 
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Unit Tests
+      # Stage 3: Frontend Unit Tests (includes integration tests with MSW)
+      # MSW (Mock Service Worker) is configured globally in vitest.setup.tsx
+      # Tests can use MSW to simulate API responses for both unit and integration testing
+      - name: Unit & Integration Tests
         run: pnpm test:coverage
         env:
           NODE_ENV: test
@@ -212,6 +216,9 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
+      # Stage 2: Backend Unit Tests
+      # Stage 4: Backend Integration Tests (Testcontainers)
+      # Both stages run sequentially in this job with service containers
       - name: Run Tests
         timeout-minutes: 15
         env:
@@ -257,7 +264,8 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
 
-  # E2E Tests (Critical paths only)
+  # Stage 6: E2E Tests (Critical paths only)
+  # Full E2E suite with 4-shard parallel execution runs separately in e2e-tests.yml
   e2e:
     name: E2E - Critical Paths
     runs-on: ubuntu-latest

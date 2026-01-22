@@ -1,0 +1,219 @@
+name: Visual Regression Tests
+
+on:
+  pull_request:
+    branches: [main, main-dev, frontend-dev]
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/visual-regression.yml'
+  push:
+    branches: [main, main-dev]
+    paths:
+      - 'apps/web/**'
+  workflow_dispatch:
+
+# Explicit permissions (Least Privilege Principle)
+permissions:
+  contents: read        # Required: Checkout code
+  pull-requests: write  # Required: Comment on PRs with visual diff results
+  checks: write         # Required: Report visual test results
+  actions: write        # Required: Upload/download artifacts
+
+# Cancel previous runs on same PR/branch
+concurrency:
+  group: visual-regression-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Stage 7: Visual Regression Testing
+  # Two-phase approach: Playwright visual snapshots + Chromatic UI review
+
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'apps/web/**'
+
+  playwright-visual:
+    name: Playwright Visual Snapshots
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    continue-on-error: true  # Non-blocking in alpha phase
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'false'
+
+      - name: Setup Playwright
+        uses: ./.github/actions/setup-playwright
+        with:
+          working-directory: apps/web
+
+      - name: Setup Test Environment
+        run: cp .env.test.example .env.test
+
+      - name: Build App
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+      - name: Run Visual Regression Tests
+        run: pnpm test:e2e:visual --project=desktop-chrome
+        env:
+          CI: true
+        continue-on-error: true
+
+      - name: Upload Visual Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-test-results-${{ github.run_number }}
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7
+
+      - name: Upload Visual Snapshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-snapshots-${{ github.run_number }}
+          path: apps/web/e2e/visual/*.png
+          retention-days: 7
+          if-no-files-found: ignore
+
+  chromatic-visual-review:
+    name: Chromatic UI Review
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    continue-on-error: true  # Non-blocking in alpha phase
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for Chromatic
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'false'
+
+      - name: Build Storybook
+        run: pnpm build-storybook
+        continue-on-error: true
+
+      - name: Run Chromatic
+        id: chromatic
+        uses: chromaui/action@latest
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          workingDir: apps/web
+          exitZeroOnChanges: true
+          exitOnceUploaded: true
+          onlyChanged: true
+          autoAcceptChanges: main
+        continue-on-error: true
+
+      - name: Comment PR with Chromatic Results
+        if: github.event_name == 'pull_request' && steps.chromatic.outputs.url != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const chromaticUrl = '${{ steps.chromatic.outputs.url }}';
+            const buildUrl = '${{ steps.chromatic.outputs.buildUrl }}';
+            const storybookUrl = '${{ steps.chromatic.outputs.storybookUrl }}';
+            const changeCount = '${{ steps.chromatic.outputs.changeCount }}';
+
+            const comment = `## 🎨 Chromatic Visual Review
+
+            ${changeCount > 0 ? '⚠️ **Visual changes detected!**' : '✅ **No visual changes**'}
+
+            **Visual Changes:** ${changeCount}
+
+            📊 **Review Links:**
+            - [Chromatic Build](${buildUrl})
+            - [Storybook Preview](${storybookUrl})
+            - [Full Report](${chromaticUrl})
+
+            ${changeCount > 0 ? `
+            **Action Required:**
+            - Review visual changes in Chromatic
+            - Accept changes if intentional
+            - Fix regressions if unintentional
+            ` : ''}
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  visual-regression-summary:
+    name: Visual Regression Summary
+    runs-on: ubuntu-latest
+    needs: [playwright-visual, chromatic-visual-review]
+    if: always() && github.event_name == 'pull_request'
+    steps:
+      - name: Generate Summary Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const playwrightStatus = '${{ needs.playwright-visual.result }}';
+            const chromaticStatus = '${{ needs.chromatic-visual-review.result }}';
+
+            let emoji = '✅';
+            let message = 'Visual regression tests completed successfully';
+
+            if (playwrightStatus === 'failure' || chromaticStatus === 'failure') {
+              emoji = '❌';
+              message = 'Visual regression tests failed';
+            } else if (playwrightStatus === 'cancelled' || chromaticStatus === 'cancelled') {
+              emoji = '⚠️';
+              message = 'Visual regression tests were cancelled';
+            }
+
+            const comment = `## ${emoji} Visual Regression Test Summary
+
+            **Status:** ${message}
+
+            ### Test Results
+            - **Playwright Visual Tests:** ${playwrightStatus === 'success' ? '✅ Passed' : playwrightStatus === 'failure' ? '❌ Failed' : '⚠️ ' + playwrightStatus}
+            - **Chromatic UI Review:** ${chromaticStatus === 'success' ? '✅ Passed' : chromaticStatus === 'failure' ? '❌ Failed' : '⚠️ ' + chromaticStatus}
+
+            📦 Artifacts and detailed reports are available in the workflow run.
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

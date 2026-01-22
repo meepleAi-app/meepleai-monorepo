@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260120163144_InitialCreate")]
+    [Migration("20260122181559_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1723,6 +1723,9 @@ namespace Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<Guid?>("ContributorId")
+                        .HasColumnType("uuid");
+
                     b.Property<int?>("DiagramCount")
                         .HasColumnType("integer");
 
@@ -1790,10 +1793,16 @@ namespace Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<Guid?>("SharedGameId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("SortOrder")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
+
+                    b.Property<Guid?>("SourceDocumentId")
+                        .HasColumnType("uuid");
 
                     b.Property<int?>("TableCount")
                         .HasColumnType("integer");
@@ -2278,6 +2287,188 @@ namespace Api.Migrations
                     b.ToTable("rule_specs", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.BadgeEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer")
+                        .HasColumnName("category");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("display_order");
+
+                    b.Property<string>("IconUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("icon_url");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("RequirementJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("requirement");
+
+                    b.Property<int>("Tier")
+                        .HasColumnType("integer")
+                        .HasColumnName("tier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Category")
+                        .HasDatabaseName("ix_badges_category");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_badges_code_unique");
+
+                    b.HasIndex("DisplayOrder")
+                        .HasDatabaseName("ix_badges_display_order");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_badges_is_active");
+
+                    b.HasIndex("Tier")
+                        .HasDatabaseName("ix_badges_tier");
+
+                    b.ToTable("badges", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.ContributionRecordEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ContributedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("contributed_at");
+
+                    b.Property<Guid>("ContributorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("contributor_id");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("DocumentIdsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("document_ids");
+
+                    b.Property<bool>("IncludesGameData")
+                        .HasColumnType("boolean")
+                        .HasColumnName("includes_game_data");
+
+                    b.Property<bool>("IncludesMetadata")
+                        .HasColumnType("boolean")
+                        .HasColumnName("includes_metadata");
+
+                    b.Property<Guid?>("ShareRequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("share_request_id");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer")
+                        .HasColumnName("type");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContributorId")
+                        .HasDatabaseName("ix_contribution_records_contributor_id");
+
+                    b.HasIndex("ShareRequestId")
+                        .HasDatabaseName("ix_contribution_records_share_request_id")
+                        .HasFilter("share_request_id IS NOT NULL");
+
+                    b.HasIndex("ContributorId", "Version")
+                        .HasDatabaseName("ix_contribution_records_contributor_version");
+
+                    b.ToTable("contribution_records", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.ContributorEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsPrimaryContributor")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_primary_contributor");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_at");
+
+                    b.Property<Guid>("SharedGameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shared_game_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SharedGameId")
+                        .HasDatabaseName("ix_contributors_shared_game_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_contributors_user_id");
+
+                    b.HasIndex("UserId", "SharedGameId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_contributors_user_shared_game_unique");
+
+                    b.ToTable("contributors", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.GameCategoryEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2752,6 +2943,162 @@ namespace Api.Migrations
                     b.ToTable("rulebook_analyses", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestDocumentEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("AttachedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("attached_at");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("document_id");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("file_name");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint")
+                        .HasColumnName("file_size");
+
+                    b.Property<Guid>("ShareRequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("share_request_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId")
+                        .HasDatabaseName("ix_share_request_documents_document_id");
+
+                    b.HasIndex("ShareRequestId")
+                        .HasDatabaseName("ix_share_request_documents_share_request_id");
+
+                    b.HasIndex("ShareRequestId", "DocumentId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_share_request_documents_request_document");
+
+                    b.ToTable("share_request_documents", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AdminFeedback")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("admin_feedback");
+
+                    b.Property<int>("ContributionType")
+                        .HasColumnType("integer")
+                        .HasColumnName("contribution_type");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_at");
+
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("modified_by");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<DateTime?>("ReviewLockExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("review_lock_expires_at");
+
+                    b.Property<DateTime?>("ReviewStartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("review_started_at");
+
+                    b.Property<Guid?>("ReviewingAdminId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewing_admin_id");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea")
+                        .HasColumnName("row_version");
+
+                    b.Property<Guid>("SourceGameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_game_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<int?>("StatusBeforeReview")
+                        .HasColumnType("integer")
+                        .HasColumnName("status_before_review");
+
+                    b.Property<Guid?>("TargetSharedGameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_shared_game_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("UserNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("user_notes");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewLockExpiresAt")
+                        .HasDatabaseName("ix_share_requests_review_lock_expires_at")
+                        .HasFilter("review_lock_expires_at IS NOT NULL");
+
+                    b.HasIndex("ReviewingAdminId")
+                        .HasDatabaseName("ix_share_requests_reviewing_admin_id")
+                        .HasFilter("reviewing_admin_id IS NOT NULL");
+
+                    b.HasIndex("SourceGameId")
+                        .HasDatabaseName("ix_share_requests_source_game_id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_share_requests_status");
+
+                    b.HasIndex("TargetSharedGameId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_share_requests_user_id");
+
+                    b.HasIndex("UserId", "SourceGameId", "Status")
+                        .HasDatabaseName("ix_share_requests_user_source_status");
+
+                    b.ToTable("share_requests", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameDeleteRequestEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3005,6 +3352,65 @@ namespace Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.UserBadgeEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BadgeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("badge_id");
+
+                    b.Property<DateTime>("EarnedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("earned_at");
+
+                    b.Property<bool>("IsDisplayed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_displayed");
+
+                    b.Property<string>("RevocationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("revocation_reason");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<Guid?>("TriggeringShareRequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("triggering_share_request_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BadgeId")
+                        .HasDatabaseName("ix_user_badges_badge_id");
+
+                    b.HasIndex("RevokedAt")
+                        .HasDatabaseName("ix_user_badges_revoked_at")
+                        .HasFilter("revoked_at IS NOT NULL");
+
+                    b.HasIndex("TriggeringShareRequestId")
+                        .HasDatabaseName("ix_user_badges_triggering_share_request_id")
+                        .HasFilter("triggering_share_request_id IS NOT NULL");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_user_badges_user_id");
+
+                    b.HasIndex("UserId", "BadgeId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_badges_user_badge_unique");
+
+                    b.ToTable("user_badges", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfiguration.AiModelConfigurationEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3099,6 +3505,116 @@ namespace Api.Migrations
                         .HasDatabaseName("IX_AiModelConfigurations_TierRouting");
 
                     b.ToTable("AiModelConfigurations", "SystemConfiguration");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfiguration.ShareRequestLimitConfigEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("CooldownAfterRejectionSeconds")
+                        .HasColumnType("bigint")
+                        .HasColumnName("cooldown_after_rejection_seconds");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<int>("MaxPendingRequests")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_pending_requests");
+
+                    b.Property<int>("MaxRequestsPerMonth")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_requests_per_month");
+
+                    b.Property<int>("Tier")
+                        .HasColumnType("integer")
+                        .HasColumnName("tier");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_share_request_limit_configs_is_active");
+
+                    b.HasIndex("Tier")
+                        .IsUnique()
+                        .HasDatabaseName("ix_share_request_limit_configs_tier_unique_active")
+                        .HasFilter("is_active = true");
+
+                    b.ToTable("share_request_limit_configs", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfiguration.UserRateLimitOverrideEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long?>("CooldownAfterRejectionSeconds")
+                        .HasColumnType("bigint")
+                        .HasColumnName("cooldown_after_rejection_seconds");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByAdminId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_admin_id");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<int?>("MaxPendingRequests")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_pending_requests");
+
+                    b.Property<int?>("MaxRequestsPerMonth")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_requests_per_month");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByAdminId")
+                        .HasDatabaseName("ix_user_rate_limit_overrides_created_by_admin_id");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_user_rate_limit_overrides_expires_at")
+                        .HasFilter("expires_at IS NOT NULL");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_rate_limit_overrides_user_id_active")
+                        .HasFilter("expires_at IS NULL");
+
+                    b.ToTable("user_rate_limit_overrides", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfigurationEntity", b =>
@@ -4392,6 +4908,28 @@ namespace Api.Migrations
                     b.Navigation("ParentVersion");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.ContributionRecordEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.ContributorEntity", "Contributor")
+                        .WithMany("Contributions")
+                        .HasForeignKey("ContributorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Contributor");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.ContributorEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
+                        .WithMany("Contributors")
+                        .HasForeignKey("SharedGameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SharedGame");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.GameErrataEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
@@ -4447,6 +4985,35 @@ namespace Api.Migrations
                     b.Navigation("SharedGame");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestDocumentEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity", "ShareRequest")
+                        .WithMany("AttachedDocuments")
+                        .HasForeignKey("ShareRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ShareRequest");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SourceGame")
+                        .WithMany()
+                        .HasForeignKey("SourceGameId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "TargetSharedGame")
+                        .WithMany()
+                        .HasForeignKey("TargetSharedGameId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("SourceGame");
+
+                    b.Navigation("TargetSharedGame");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameDeleteRequestEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
@@ -4475,6 +5042,32 @@ namespace Api.Migrations
                     b.Navigation("PdfDocument");
 
                     b.Navigation("SharedGame");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.UserBadgeEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.BadgeEntity", "Badge")
+                        .WithMany()
+                        .HasForeignKey("BadgeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Badge");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfiguration.UserRateLimitOverrideEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByAdminId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfigurationEntity", b =>
@@ -4707,8 +5300,20 @@ namespace Api.Migrations
                     b.Navigation("Atoms");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.ContributorEntity", b =>
+                {
+                    b.Navigation("Contributions");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity", b =>
+                {
+                    b.Navigation("AttachedDocuments");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", b =>
                 {
+                    b.Navigation("Contributors");
+
                     b.Navigation("Documents");
 
                     b.Navigation("Erratas");

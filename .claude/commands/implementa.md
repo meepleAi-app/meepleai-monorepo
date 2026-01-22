@@ -109,6 +109,11 @@ Phase 6: PR e Code Review ✅
   - Code review: X issues found
   - Issues resolved (score > 75): Y/Z
 Phase 7: Chiusura ✅
+Phase 6: PR e Code Review ✅
+  - PR created: <url>
+  - Code review: X issues found
+  - Issues resolved (score > 75): Y/Z
+Phase 7: Chiusura ✅
 
 Issue #<N> completata e chiusa.
 PR: <url>
@@ -136,6 +141,13 @@ Esegui `/sc:implement --uc Issue $ARGUMENTS` con il seguente workflow:
 13. **Chiudi issue**: Stato `closed`, reason `completed`
 14. **Merge**: Al branch padre
 15. **Cleanup**: Elimina branch locale (`git branch -D`), prune remotes (`git remote prune origin`)
+16. **Code review**: Esegui `/code-review:code-review` sulla PR
+17. **Risolvi problemi**: Fix automatico di tutti i problemi con confidence score > 75
+18. **Ripeti code review**: Continua finché non ci sono più problemi con score > 75
+19. **Aggiorna issue checkbox**: Via `mcp__MCP_DOCKER__issue_write` aggiorna task completati
+20. **Chiudi issue**: Stato `closed`, reason `completed`
+21. **Merge**: Al branch padre
+22. **Cleanup**: Elimina branch locale (`git branch -D`), prune remotes (`git remote prune origin`)
 
 **Regole critiche**:
 
@@ -145,4 +157,5 @@ Esegui `/sc:implement --uc Issue $ARGUMENTS` con il seguente workflow:
 - Non interrompere workflow, pianifica prima
 - Non aspettare CI (alpha)
 - No nuovi warning
+- Code review: risolvi SOLO problemi con score > 75 (ignora score ≤ 75)
 - Code review: risolvi SOLO problemi con score > 75 (ignora score ≤ 75)

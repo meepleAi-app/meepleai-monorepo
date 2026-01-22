@@ -9,12 +9,13 @@
 
 @theme {
   /* Remove all brand color shade references - migrating to semantic tokens */
-  
+
   --animate-fade-in: fadeIn 0.5s ease-in;
   --animate-slide-up: slideUp 0.6s ease-out;
   --animate-scale-in: scaleIn 0.4s ease-out;
   --animate-bounce-subtle: bounceSubtle 0.35s ease-out;
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-pulse-meeple: pulseMeeple 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @keyframes fadeIn {
@@ -54,6 +55,16 @@
   }
 }
 
+@keyframes pulseMeeple {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -61,7 +72,36 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: var(--font-body, var(--font-sans));
+    font-family: var(--font-nunito, var(--font-sans));
+    position: relative;
+  }
+
+  /* MeepleAI Background Texture System - Issue #2905 */
+  /* Subtle Wood/Paper Texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(210, 105, 30, 0.015) 2px, rgba(210, 105, 30, 0.015) 4px),
+      repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(139, 90, 60, 0.02) 2px, rgba(139, 90, 60, 0.02) 4px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  /* Subtle warm gradient overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(210, 105, 30, 0.03), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-quicksand, var(--font-sans));
   }
 }
 
@@ -119,6 +159,77 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* MeepleAI Hover Effects - Issue #2848 */
+  .hover-card {
+    @apply transition-all duration-300;
+  }
+
+  .hover-card:hover {
+    @apply -translate-y-1 shadow-lg;
+  }
+
+  .hover-button {
+    @apply transition-all duration-200;
+  }
+
+  .hover-button:hover {
+    @apply -translate-y-0.5 shadow-md;
+  }
+
+  .hover-lift-sm {
+    @apply transition-transform duration-200;
+  }
+
+  .hover-lift-sm:hover {
+    @apply -translate-y-1;
+  }
+
+  .hover-lift-md {
+    @apply transition-transform duration-300;
+  }
+
+  .hover-lift-md:hover {
+    @apply -translate-y-2;
+  }
+
+  .hover-shadow-meeple {
+    @apply transition-shadow duration-200;
+  }
+
+  .hover-shadow-meeple:hover {
+    box-shadow: 0 8px 20px rgba(139, 90, 60, 0.12);
+  }
+}
+
+/* Accessibility - Reduce Motion Support (Issue #2848, #2905) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .animate-pulse-meeple,
+  .animate-pulse-slow,
+  .animate-bounce-slow {
+    animation: none !important;
+  }
+
+  .hover-card:hover,
+  .hover-button:hover,
+  .hover-lift-sm:hover,
+  .hover-lift-md:hover {
+    transform: none !important;
+  }
+
+  /* Disable texture overlay for reduced motion (Issue #2905) */
+  body::before,
+  body::after {
+    opacity: 0 !important;
+  }
 }
 
 @theme inline {
@@ -158,6 +269,14 @@
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  /* MeepleAI brand colors for Tailwind usage */
+  --color-meeple-orange: hsl(25 85% 45%);
+  --color-meeple-purple: hsl(262 83% 62%);
+  --color-meeple-warm-bg: hsl(30 25% 97%);
+  --color-meeple-dark: hsl(0 0% 18%);
+  --color-meeple-border: hsl(30 12% 90%);
+  --color-meeple-light-orange: hsl(30 100% 94%);
 }
 
 :root {

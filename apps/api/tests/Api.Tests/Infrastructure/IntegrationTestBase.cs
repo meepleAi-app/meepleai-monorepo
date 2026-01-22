@@ -73,8 +73,9 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
 
             var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
             // Issue #2577: Enable connection pooling to prevent timeout failures
+            // Issue #2902: Reduced MaxPoolSize from 50 to 5 for consistency with SharedTestcontainersFixture
             // Applied to legacy IntegrationTestBase for backward compatibility
-            _connectionString = $"Host=localhost;Port={postgresPort};Database={DatabaseName};Username=testuser;Password=testpass;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=10;Pooling=true;MinPoolSize=2;MaxPoolSize=50;Timeout=30;CommandTimeout=60;ConnectionIdleLifetime=60;ConnectionPruningInterval=10;";
+            _connectionString = $"Host=localhost;Port={postgresPort};Database={DatabaseName};Username=testuser;Password=testpass;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=10;Pooling=true;MinPoolSize=1;MaxPoolSize=5;Timeout=30;CommandTimeout=60;ConnectionIdleLifetime=30;ConnectionPruningInterval=5;";
 
             // Issue #2031: Wait for PostgreSQL to accept connections with retry
             await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(_connectionString);

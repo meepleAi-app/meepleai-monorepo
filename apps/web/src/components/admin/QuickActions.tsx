@@ -1,6 +1,6 @@
 /* eslint-disable security/detect-object-injection -- Safe action config Record access */
 /**
- * QuickActions Component - Issue #885
+ * QuickActions Component - Issue #885, Refactored in #2788
  *
  * Grid of quick action buttons for the admin dashboard.
  * Provides easy access to common admin tasks.
@@ -8,9 +8,13 @@
  * Features:
  * - Responsive grid (3 cols desktop, 2 tablet, 1 mobile)
  * - Icon + label for each action
- * - Hover effects
- * - Loading state
+ * - Dual styling: variant-based (legacy) and gradient-based (new)
+ * - Hover effects: orange border + icon scale for gradients
+ * - Loading state with skeleton
  * - Optional badge for notifications
+ * - Dynamic badge counts via props
+ *
+ * @see Issue #2788 for gradient-based Quick Actions Panel requirements
  */
 
 import {
@@ -21,6 +25,9 @@ import {
   MessageSquareIcon,
   DatabaseIcon,
   ZapIcon,
+  CheckIcon,
+  TrashIcon,
+  DownloadIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -31,6 +38,14 @@ import { cn } from '@/lib/utils';
 
 import type { LucideIcon } from 'lucide-react';
 
+export type GradientKey =
+  | 'green-emerald'
+  | 'blue-indigo'
+  | 'amber-orange'
+  | 'red-rose'
+  | 'purple-violet'
+  | 'stone-stone';
+
 export interface QuickAction {
   id: string;
   label: string;
@@ -39,6 +54,7 @@ export interface QuickAction {
   icon: LucideIcon;
   badge?: number | string;
   variant?: 'default' | 'primary' | 'warning' | 'danger';
+  gradient?: GradientKey;
 }
 
 export interface QuickActionsProps {
@@ -46,6 +62,7 @@ export interface QuickActionsProps {
   loading?: boolean;
   className?: string;
   title?: string;
+  badges?: Record<string, number>;
 }
 
 const variantStyles = {
@@ -69,57 +86,63 @@ const badgeVariantStyles = {
   danger: 'bg-red-500',
 };
 
+const gradientStyles: Record<GradientKey, string> = {
+  'green-emerald': 'bg-gradient-to-br from-green-500 to-emerald-600 text-white',
+  'blue-indigo': 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white',
+  'amber-orange': 'bg-gradient-to-br from-amber-500 to-orange-600 text-white',
+  'red-rose': 'bg-gradient-to-br from-red-500 to-rose-600 text-white',
+  'purple-violet': 'bg-gradient-to-br from-purple-500 to-violet-600 text-white',
+  'stone-stone': 'bg-gradient-to-br from-stone-500 to-stone-600 text-white',
+};
+
 /**
- * Default quick actions for the admin dashboard
+ * Default quick actions for the admin dashboard (Issue #2788)
+ * Uses gradient-based styling for modern look
  */
 export const defaultQuickActions: QuickAction[] = [
   {
-    id: 'upload-pdf',
-    label: 'Upload PDF',
-    description: 'Add new game rules',
-    href: '/admin/bulk-export',
-    icon: FileUpIcon,
-    variant: 'primary',
+    id: 'approve-games',
+    label: 'Approva Giochi',
+    href: '/admin/games/pending',
+    icon: CheckIcon,
+    gradient: 'green-emerald',
+    // TODO: Badge count should be fetched from API endpoint
   },
   {
     id: 'manage-users',
-    label: 'Manage Users',
-    description: 'View and edit users',
+    label: 'Gestisci Utenti',
     href: '/admin/users',
     icon: UsersIcon,
-    variant: 'default',
+    gradient: 'blue-indigo',
   },
   {
     id: 'view-alerts',
-    label: 'View Alerts',
-    description: 'System notifications',
-    href: '/admin/configuration',
+    label: 'Vedi Alert',
+    href: '/admin/alerts',
     icon: AlertTriangleIcon,
-    variant: 'warning',
-  },
-  {
-    id: 'manage-prompts',
-    label: 'Prompts',
-    description: 'AI prompt templates',
-    href: '/admin/prompts',
-    icon: MessageSquareIcon,
-    variant: 'default',
-  },
-  {
-    id: 'configuration',
-    label: 'Configuration',
-    description: 'System settings',
-    href: '/admin/configuration',
-    icon: SettingsIcon,
-    variant: 'default',
+    gradient: 'amber-orange',
+    // TODO: Badge count should be fetched from API endpoint
   },
   {
     id: 'clear-cache',
-    label: 'Cache',
-    description: 'Manage cache',
+    label: 'Svuota Cache',
     href: '/admin/cache',
-    icon: DatabaseIcon,
-    variant: 'default',
+    icon: TrashIcon,
+    gradient: 'red-rose',
+  },
+  {
+    id: 'export-data',
+    label: 'Esporta Dati',
+    href: '/admin/export',
+    icon: DownloadIcon,
+    gradient: 'purple-violet',
+  },
+  {
+    id: 'configuration',
+    label: 'Configurazione',
+    href: '/admin/config',
+    icon: SettingsIcon,
+    gradient: 'stone-stone',
   },
 ];
 
@@ -157,6 +180,7 @@ export function QuickActions({
   loading = false,
   className,
   title = 'Quick Actions',
+  badges,
 }: QuickActionsProps) {
   if (loading) {
     return <QuickActionsSkeleton className={className} />;
@@ -178,19 +202,33 @@ export function QuickActions({
           {actions.map(action => {
             const Icon = action.icon;
             const variant = action.variant || 'default';
+            const badgeCount = badges?.[action.id] ?? action.badge;
+
+            // Use gradient styling if gradient is specified, otherwise use variant
+            const useGradient = !!action.gradient;
+            const linkHoverClass = useGradient
+              ? 'hover:border-orange-500 hover:shadow-md'
+              : variantStyles[variant];
+            const iconClass = useGradient
+              ? gradientStyles[action.gradient!]
+              : iconVariantStyles[variant];
 
             return (
               <Link
                 key={action.id}
                 href={action.href}
                 className={cn(
-                  'flex items-center gap-3 p-3 border rounded-lg transition-all duration-200',
-                  variantStyles[variant]
+                  'group flex items-center gap-3 p-3 border rounded-lg transition-all duration-200',
+                  linkHoverClass
                 )}
                 data-testid={`quick-action-${action.id}`}
               >
                 <div
-                  className={cn('p-2 rounded-lg shrink-0', iconVariantStyles[variant])}
+                  className={cn(
+                    'p-2 rounded-lg shrink-0 transition-transform duration-200',
+                    useGradient && 'group-hover:scale-110',
+                    iconClass
+                  )}
                   aria-hidden="true"
                 >
                   <Icon className="h-5 w-5" />
@@ -198,16 +236,14 @@ export function QuickActions({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-gray-900">{action.label}</span>
-                    {action.badge !== undefined && (
+                    {badgeCount !== undefined && (
                       <Badge
                         className={cn(
                           'text-white text-xs px-1.5 py-0.5',
-                          badgeVariantStyles[variant]
+                          useGradient ? 'bg-orange-500' : badgeVariantStyles[variant]
                         )}
                       >
-                        {typeof action.badge === 'number' && action.badge > 99
-                          ? '99+'
-                          : action.badge}
+                        {typeof badgeCount === 'number' && badgeCount > 99 ? '99+' : badgeCount}
                       </Badge>
                     )}
                   </div>

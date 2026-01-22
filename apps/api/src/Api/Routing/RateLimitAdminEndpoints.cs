@@ -240,7 +240,7 @@ internal static class RateLimitAdminEndpoints
     /// <summary>
     /// Request DTO for updating rate limit configuration.
     /// </summary>
-    private record UpdateRateLimitConfigRequest(
+    private sealed record UpdateRateLimitConfigRequest(
         int MaxPendingRequests,
         int MaxRequestsPerMonth,
         int CooldownDays);
@@ -248,7 +248,7 @@ internal static class RateLimitAdminEndpoints
     /// <summary>
     /// Request DTO for creating rate limit override.
     /// </summary>
-    private record CreateRateLimitOverrideRequest(
+    private sealed record CreateRateLimitOverrideRequest(
         int? MaxPendingRequests,
         int? MaxRequestsPerMonth,
         int? CooldownDays,

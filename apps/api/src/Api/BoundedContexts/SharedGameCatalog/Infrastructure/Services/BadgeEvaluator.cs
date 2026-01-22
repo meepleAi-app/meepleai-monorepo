@@ -12,13 +12,16 @@ internal sealed class BadgeEvaluator : IBadgeEvaluator
 {
     private readonly IBadgeRepository _badgeRepository;
     private readonly IShareRequestRepository _shareRequestRepository;
+    private readonly ISharedGameDocumentRepository _sharedGameDocumentRepository;
 
     public BadgeEvaluator(
         IBadgeRepository badgeRepository,
-        IShareRequestRepository shareRequestRepository)
+        IShareRequestRepository shareRequestRepository,
+        ISharedGameDocumentRepository sharedGameDocumentRepository)
     {
         _badgeRepository = badgeRepository;
         _shareRequestRepository = shareRequestRepository;
+        _sharedGameDocumentRepository = sharedGameDocumentRepository;
     }
 
     public async Task<List<Badge>> EvaluateEligibleBadgesAsync(
@@ -77,10 +80,10 @@ internal sealed class BadgeEvaluator : IBadgeEvaluator
         return count >= minCount;
     }
 
-    private Task<bool> CheckDocumentCountAsync(Guid userId, int minDocuments, CancellationToken cancellationToken)
+    private async Task<bool> CheckDocumentCountAsync(Guid userId, int minDocuments, CancellationToken cancellationToken)
     {
-        // Document counting requires integration with document tracking system (future enhancement)
-        return Task.FromResult(false);
+        var documentCount = await _sharedGameDocumentRepository.CountByUserAsync(userId, cancellationToken).ConfigureAwait(false);
+        return documentCount >= minDocuments;
     }
 
     private async Task<bool> CheckQualityStreakAsync(Guid userId, int minStreak, CancellationToken cancellationToken)

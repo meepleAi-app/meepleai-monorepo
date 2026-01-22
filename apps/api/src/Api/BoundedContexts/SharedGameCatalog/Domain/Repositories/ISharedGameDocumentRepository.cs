@@ -79,4 +79,9 @@ public interface ISharedGameDocumentRepository
         SharedGameDocumentType documentType,
         Guid exceptDocumentId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the number of documents created by a specific user.
+    /// </summary>
+    Task<int> CountByUserAsync(Guid userId, CancellationToken cancellationToken = default);
 }

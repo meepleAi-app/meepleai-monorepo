@@ -73,6 +73,31 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-nunito, var(--font-sans));
+    position: relative;
+  }
+
+  /* MeepleAI Background Texture System - Issue #2905 */
+  /* Subtle Wood/Paper Texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(210, 105, 30, 0.015) 2px, rgba(210, 105, 30, 0.015) 4px),
+      repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(139, 90, 60, 0.02) 2px, rgba(139, 90, 60, 0.02) 4px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  /* Subtle warm gradient overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(210, 105, 30, 0.03), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -177,7 +202,7 @@
   }
 }
 
-/* Accessibility - Reduce Motion Support (Issue #2848) */
+/* Accessibility - Reduce Motion Support (Issue #2848, #2905) */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -198,6 +223,12 @@
   .hover-lift-sm:hover,
   .hover-lift-md:hover {
     transform: none !important;
+  }
+
+  /* Disable texture overlay for reduced motion (Issue #2905) */
+  body::before,
+  body::after {
+    opacity: 0 !important;
   }
 }
 

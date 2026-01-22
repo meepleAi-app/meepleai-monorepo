@@ -1,22 +1,16 @@
 /**
- * Enhanced Admin Dashboard - Redesign Integration (Issue #2793)
+ * Enhanced Admin Dashboard - Issue #874, #885, #886, #2792
  *
- * Complete dashboard redesign with full real data integration:
- * - DashboardHeader with admin greeting (Issue #2784)
- * - AlertsBanner with system health (Issue #2791)
- * - KPICardsGrid with real trends (Issue #2785, #2792)
- * - SystemStatus with infrastructure details (Issue #2792)
- * - QuickActionsPanel with dynamic badges (Issue #2788)
- * - MetricsGrid with 16 detailed metrics (Issue #2792)
- * - ChartsSection with API/AI usage (Issue #2790, #2792)
- * - ActivityFeed with recent events (Issue #2787)
- * - PendingApprovalsWidget with real approvals (Issue #2789)
- *
- * Architecture:
- * - AdminLayout wrapper with navigation
+ * Centralized dashboard with full real data integration:
+ * - System status with InfrastructureDetails (Issue #2792)
+ * - KPI Cards with calculated trends (Issue #2792)
+ * - Charts with real apiRequestTrend data (Issue #2792)
+ * - AlertsBanner from metrics (Issue #2792)
+ * - Activity feed (last 10 system events)
  * - React Query polling every 30s
- * - Tab visibility pause (stops when hidden)
+ * - AdminLayout with navigation
  * - Performance optimized (<1s load, <2s TTI)
+ * - Tab visibility pause (stops polling when hidden)
  */
 
 'use client';
@@ -38,8 +32,7 @@ import { DashboardHeader } from '@/components/admin/DashboardHeader';
 import { KPICardsGrid, buildKPICards } from '@/components/admin/KPICardsGrid';
 import { AlertsBanner } from '@/components/admin/AlertsBanner';
 import { MetricsGrid } from '@/components/admin/MetricsGrid';
-import { PendingApprovalsWidget } from '@/components/admin/PendingApprovalsWidget';
-import { QuickActionsPanel, type QuickAction } from '@/components/admin/QuickActionsPanel';
+import { QuickActions, type QuickAction } from '@/components/admin/QuickActions';
 import type { StatCardProps } from '@/components/admin/StatCard';
 import { SystemStatus, type ServiceStatus } from '@/components/admin/SystemStatus';
 import { ChartsSection } from '@/components/admin/charts/ChartsSection';
@@ -350,11 +343,8 @@ export function DashboardClient() {
             onRefresh={handleRefresh}
             refreshing={isFetching}
           />
-          <QuickActionsPanel actions={quickActions} />
+          <QuickActions actions={quickActions} />
         </div>
-
-        {/* Pending Approvals Widget - Issue #2789 */}
-        <PendingApprovalsWidget />
 
         {/* Metrics Grid - 16 metrics in 4x4 responsive grid */}
         <MetricsGrid metrics={metricCards} />

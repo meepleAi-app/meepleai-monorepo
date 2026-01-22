@@ -37,6 +37,7 @@ import {
   createLibraryClient,
   createShareRequestsClient,
   createAdminShareRequestsClient,
+  createGameContributorsClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -54,6 +55,7 @@ import {
   type LibraryClient,
   type ShareRequestsClient,
   type AdminShareRequestsClient,
+  type GameContributorsClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -187,6 +189,9 @@ export interface ApiClient {
   /** Admin Share Requests Review (Issue #2745) */
   adminShareRequests: AdminShareRequestsClient;
 
+  /** Game Contributors (Issue #2746) */
+  gameContributors: GameContributorsClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -254,6 +259,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     library: createLibraryClient({ httpClient }), // User library
     shareRequests: createShareRequestsClient({ httpClient }), // ISSUE-2743
     adminShareRequests: createAdminShareRequestsClient(httpClient), // ISSUE-2745
+    gameContributors: createGameContributorsClient({ httpClient }), // ISSUE-2746
     delete: (path: string) => httpClient.delete(path),
   };
 

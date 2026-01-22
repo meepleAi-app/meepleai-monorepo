@@ -156,6 +156,21 @@ jobs:
           dotnet-version: '9.0.x'
           working-directory: apps/api
 
+      - name: Cache Docker Images
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-${{ hashFiles('**/Dockerfile', 'docker-compose*.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+
+      - name: Pull Test Container Images
+        run: |
+          echo "📦 Pulling test container images for cache..."
+          docker pull postgres:16-alpine || true
+          docker pull redis:7-alpine || true
+          echo "✅ Test images pulled and cached"
+
       - name: Pre-Test Cleanup
         shell: pwsh
         run: |

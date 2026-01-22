@@ -24,7 +24,7 @@ public class EmbeddingServiceHealthCheck : IHealthCheck
     {
         try
         {
-            var client = _httpClientFactory.CreateClient("embedding");
+            var client = _httpClientFactory.CreateClient("EmbeddingService");
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 

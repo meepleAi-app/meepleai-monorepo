@@ -136,6 +136,27 @@ export const ActivateVersionResponseSchema = z.object({
 
 export type ActivateVersionResponse = z.infer<typeof ActivateVersionResponseSchema>;
 
+// ========== Admin Sessions ==========
+
+export const AdminSessionInfoSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  userEmail: z.string().email(),
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  lastSeenAt: z.string().datetime().nullable().optional(),
+  revokedAt: z.string().datetime().nullable().optional(),
+  ipAddress: z.string().nullable().optional(),
+  userAgent: z.string().nullable().optional(),
+});
+
+export type AdminSessionInfo = z.infer<typeof AdminSessionInfoSchema>;
+
+export interface GetAdminSessionsParams {
+  limit?: number;
+  userId?: string;
+}
+
 // ========== Admin Stats & Analytics ==========
 
 export const AiRequestSchema = z.object({

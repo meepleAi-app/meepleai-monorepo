@@ -201,6 +201,8 @@ public sealed class HybridCacheServiceIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Test 3: Cache miss on both L1 and L2 - factory executes, populate both levels.
     /// Validates full cache miss workflow.
+    /// Issue #2710: Verify L2 population through cache API, not direct Redis key check.
+    /// HybridCache uses internal key format that differs from the key parameter.
     /// </summary>
     [Fact]
     public async Task GetOrCreateAsync_WithFullMiss_ExecutesFactoryAndPopulatesBothLevels()
@@ -219,15 +221,41 @@ public sealed class HybridCacheServiceIntegrationTests : IAsyncLifetime
         // Act
         var result = await _cacheService.GetOrCreateAsync(key, factory, ct: TestContext.Current.CancellationToken);
 
-        // Verify L2 (Redis) has the value
-        var redisDb = _redis.GetDatabase();
-        var redisKey = _keyPrefix + key.Replace(_keyPrefix, "");
-        var redisExists = await redisDb.KeyExistsAsync(redisKey);
+        // Issue #2710: Verify L2 population by creating a new service instance (fresh L1)
+        // and checking if factory is NOT called (proving L2 has the value)
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        services.AddLogging();
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = _fixture.RedisConnectionString;
+            options.InstanceName = _keyPrefix;
+        });
+        services.AddHybridCache();
+
+        var serviceProvider = services.BuildServiceProvider();
+        var newHybridCache = serviceProvider.GetRequiredService<HybridCache>();
+
+        var config = new HybridCacheConfiguration
+        {
+            EnableL2Cache = true,
+            EnableTags = true,
+            DefaultExpiration = TimeSpan.FromMinutes(5)
+        };
+
+        var newCacheService = new HybridCacheService(
+            newHybridCache,
+            Options.Create(config),
+            _loggerMock.Object,
+            _redis
+        );
+
+        // Second call with fresh L1 should hit L2, not execute factory
+        var result2 = await newCacheService.GetOrCreateAsync(key, factory, ct: TestContext.Current.CancellationToken);
 
         // Assert
-        factoryCalls.Should().Be(1);
+        factoryCalls.Should().Be(1, "factory should execute only once - L2 should serve on second call");
         result.Value.Should().Be("new_value");
-        redisExists.Should().BeTrue("value should be stored in Redis L2");
+        result2.Value.Should().Be("new_value", "L2 should return the cached value");
     }
 
     /// <summary>

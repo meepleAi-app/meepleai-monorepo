@@ -24,7 +24,7 @@ public class BggApiHealthCheck : IHealthCheck
     {
         try
         {
-            var client = _httpClientFactory.CreateClient("bggapi");
+            var client = _httpClientFactory.CreateClient("BggApi");
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 

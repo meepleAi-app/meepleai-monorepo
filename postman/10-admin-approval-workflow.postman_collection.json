@@ -1,0 +1,264 @@
+{
+  "info": {
+    "_postman_id": "admin-approval-collection-010",
+    "name": "10 - Admin: Approval Workflow",
+    "description": "MeepleAI Admin API endpoints for managing publication and deletion approval queues.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "gameId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Publication Queue",
+      "item": [
+        {
+          "name": "Get Pending Approvals",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/pending-approvals?page=1&pageSize=20&sortBy=submittedAt&sortOrder=asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "pending-approvals"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "submittedAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "asc"
+                }
+              ]
+            },
+            "description": "List all games pending publication approval (FIFO order)"
+          }
+        },
+        {
+          "name": "Review Game Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/review",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "review"]
+            },
+            "description": "Get detailed game info for review including editor info and submission history"
+          }
+        },
+        {
+          "name": "Approve Publication",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Quality content, well documented.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/approve-publication",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "approve-publication"]
+            },
+            "description": "Approve a game for publication - makes it visible in the public catalog"
+          }
+        },
+        {
+          "name": "Reject Publication",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Cover image resolution is too low. Please upload at least 600x600px.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/reject-publication",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "reject-publication"]
+            },
+            "description": "Reject a game with feedback - returns to editor for fixes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deletion Queue",
+      "item": [
+        {
+          "name": "Get Pending Deletions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/pending-deletions?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "pending-deletions"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List all games pending deletion approval"
+          }
+        },
+        {
+          "name": "Review Deletion Request",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/deletion-request",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "deletion-request"]
+            },
+            "description": "Get deletion request details including reason and impact assessment"
+          }
+        },
+        {
+          "name": "Approve Deletion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Confirmed duplicate entry.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/approve-deletion",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "approve-deletion"]
+            },
+            "description": "Approve deletion - permanently removes the game"
+          }
+        },
+        {
+          "name": "Reject Deletion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"This game has active users. Consider archiving instead.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/reject-deletion",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "reject-deletion"]
+            },
+            "description": "Reject deletion request - game returns to previous state"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Queue Statistics",
+      "item": [
+        {
+          "name": "Get Approval Queue Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/queue-stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "queue-stats"]
+            },
+            "description": "Get statistics for approval and deletion queues"
+          }
+        }
+      ]
+    }
+  ]
+}

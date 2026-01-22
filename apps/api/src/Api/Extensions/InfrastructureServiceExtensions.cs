@@ -25,6 +25,15 @@ internal static class InfrastructureServiceExtensions
         services.AddHttpClients(configuration);
         services.AddTimeProvider();
         services.AddBackgroundServices();
+        services.AddStorageServices(); // Issue #2732: Storage services
+
+        return services;
+    }
+
+    private static IServiceCollection AddStorageServices(this IServiceCollection services)
+    {
+        // Issue #2732: File storage service for document operations
+        services.AddScoped<Infrastructure.Services.IStorageService, Infrastructure.Services.LocalStorageService>();
 
         return services;
     }
@@ -108,12 +117,32 @@ internal static class InfrastructureServiceExtensions
         IConfiguration configuration)
     {
         // PERF-09: Configure Redis with optimized connection pooling
-#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
-        var redisUrl = configuration["REDIS_URL"] ?? "localhost:6379";
-#pragma warning restore S1075
+        // Issue #2152: Priority: Environment variable > Configuration > Default
+        var redisHost = Environment.GetEnvironmentVariable("REDIS_HOST")
+            ?? configuration["REDIS_HOST"]
+            ?? "localhost";
+        var redisPort = Environment.GetEnvironmentVariable("REDIS_PORT")
+            ?? configuration["REDIS_PORT"]
+            ?? "6379";
+
+        // Get Redis password from secrets or environment
+        var redisPassword = SecretsHelper.GetSecretOrValue(configuration, "REDIS_PASSWORD", logger: null, required: false)
+            ?? Environment.GetEnvironmentVariable("REDIS_PASSWORD");
+
+        Console.WriteLine($"[DEBUG #2152] Redis config: Host={redisHost}, Port={redisPort}, Password={(!string.IsNullOrEmpty(redisPassword) ? "SET" : "NOT SET")}");
+
         services.AddSingleton<IConnectionMultiplexer>(sp =>
         {
-            var config = ConfigurationOptions.Parse(redisUrl);
+            var config = new ConfigurationOptions
+            {
+                EndPoints = { $"{redisHost}:{redisPort}" }
+            };
+
+            // Add password if configured
+            if (!string.IsNullOrWhiteSpace(redisPassword))
+            {
+                config.Password = redisPassword;
+            }
 
             // Connection resilience
             config.AbortOnConnectFail = false; // Fail gracefully if Redis unavailable
@@ -129,7 +158,7 @@ internal static class InfrastructureServiceExtensions
             config.DefaultDatabase = 0;
 
             var logger = sp.GetRequiredService<ILogger<Program>>();
-            logger.LogInformation("Connecting to Redis at {RedisUrl} with optimized settings", redisUrl);
+            logger.LogInformation("Connecting to Redis at {RedisHost}:{RedisPort} with optimized settings", redisHost, redisPort);
 
             return ConnectionMultiplexer.Connect(config);
         });
@@ -154,9 +183,14 @@ internal static class InfrastructureServiceExtensions
         // IDistributedCache is required by: EditorLockService, ShareLink handlers, AddCommentToSharedThread
         if (hybridCacheConfig.EnableL2Cache)
         {
+            // Build Redis connection string with password if configured
+            var redisConnectionString = string.IsNullOrWhiteSpace(redisPassword)
+                ? $"{redisHost}:{redisPort}"
+                : $"{redisHost}:{redisPort},password={redisPassword}";
+
             services.AddStackExchangeRedisCache(options =>
             {
-                options.Configuration = redisUrl;
+                options.Configuration = redisConnectionString;
                 options.InstanceName = "meepleai:hybridcache:";
             });
         }
@@ -168,7 +202,9 @@ internal static class InfrastructureServiceExtensions
         }
 
         // Register HybridCache service wrapper
-        services.AddScoped<IHybridCacheService, HybridCacheService>();
+        // Singleton: HybridCacheService is thread-safe (uses Interlocked, thread-safe HybridCache and Redis)
+        // Required for ILlmTierRoutingService and other singleton services that depend on caching
+        services.AddSingleton<IHybridCacheService, HybridCacheService>();
 
         // AI-10: Cache optimization services
         services.Configure<CacheOptimizationConfiguration>(
@@ -303,12 +339,14 @@ internal static class InfrastructureServiceExtensions
 
         // Load BGG API token from secret file (required as of Jan 2026)
         // Register at: https://boardgamegeek.com/using_the_xml_api
+        // Issue #2570: Fallback to Environment.GetEnvironmentVariable for values
+        // set by SecretLoader after IConfiguration was built
         var bggToken = SecretsHelper.GetSecretOrValue(
             configuration,
             "BGG_API_TOKEN",
             logger: null,
             required: false
-        );
+        ) ?? Environment.GetEnvironmentVariable("BGG_API_TOKEN");
 
         services.AddHttpClient("BggApi", (serviceProvider, client) =>
         {

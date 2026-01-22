@@ -218,5 +218,138 @@ describe('ChangeItem', () => {
       expect(screen.getByText('section:')).toBeInTheDocument();
       expect(screen.getByText('page:')).toBeInTheDocument();
     });
+
+    it('handles unknown change type with default styles', () => {
+      // Force an unknown type through type casting to test default branches
+      const change = {
+        type: 'UnknownType' as 'Added', // Cast to satisfy TypeScript
+        oldAtom: 'rule-unknown',
+      };
+
+      const { container } = render(<ChangeItem change={change} />);
+
+      // Default background (#f9f9f9) and border (#ccc) should be applied
+      const changeItem = container.firstChild as HTMLElement;
+      expect(changeItem).toHaveStyle({ background: '#f9f9f9' });
+      expect(changeItem).toHaveStyle({ borderColor: '#ccc' });
+    });
+
+    it('renders without content when Added type has no newValue', () => {
+      const change = {
+        type: 'Added' as const,
+        newAtom: 'rule-empty',
+        newValue: undefined,
+      };
+
+      render(<ChangeItem change={change} />);
+
+      expect(screen.getByText(/\+ Added: rule-empty/i)).toBeInTheDocument();
+      expect(screen.queryByTestId('change-added-content')).not.toBeInTheDocument();
+    });
+
+    it('renders without content when Deleted type has no oldValue', () => {
+      const change = {
+        type: 'Deleted' as const,
+        oldAtom: 'rule-deleted-empty',
+        oldValue: undefined,
+      };
+
+      render(<ChangeItem change={change} />);
+
+      expect(screen.getByText(/- Deleted: rule-deleted-empty/i)).toBeInTheDocument();
+      expect(screen.queryByTestId('change-deleted-content')).not.toBeInTheDocument();
+    });
+
+    it('renders without content when Modified type has no fieldChanges', () => {
+      const change = {
+        type: 'Modified' as const,
+        oldAtom: 'rule-modified-empty',
+        fieldChanges: undefined,
+      };
+
+      render(<ChangeItem change={change} />);
+
+      expect(screen.getByText(/~ Modified: rule-modified-empty/i)).toBeInTheDocument();
+      expect(screen.queryByTestId('change-modified-content')).not.toBeInTheDocument();
+    });
+
+    it('renders without content when Unchanged type has no oldValue', () => {
+      const change = {
+        type: 'Unchanged' as const,
+        oldAtom: 'rule-unchanged-empty',
+        oldValue: undefined,
+      };
+
+      render(<ChangeItem change={change} />);
+
+      expect(screen.getByText(/= Unchanged: rule-unchanged-empty/i)).toBeInTheDocument();
+      expect(screen.queryByTestId('change-unchanged-content')).not.toBeInTheDocument();
+    });
+
+    it('displays oldAtom when newAtom is not provided', () => {
+      const change = {
+        type: 'Modified' as const,
+        oldAtom: 'old-rule-id',
+        newAtom: undefined,
+        fieldChanges: [],
+      };
+
+      render(<ChangeItem change={change} />);
+
+      expect(screen.getByText(/~ Modified: old-rule-id/i)).toBeInTheDocument();
+    });
+
+    it('displays newAtom over oldAtom when both provided', () => {
+      const change = {
+        type: 'Modified' as const,
+        oldAtom: 'old-atom',
+        newAtom: 'new-atom',
+        fieldChanges: [],
+      };
+
+      render(<ChangeItem change={change} />);
+
+      expect(screen.getByText(/~ Modified: new-atom/i)).toBeInTheDocument();
+    });
+
+    it('handles null line property in Added change', () => {
+      const change = {
+        type: 'Added' as const,
+        newAtom: 'rule-with-line',
+        newValue: {
+          id: 'rule-with-line',
+          text: 'Test text',
+          section: 'Test Section',
+          page: null,
+          line: null,
+        },
+      };
+
+      render(<ChangeItem change={change} />);
+
+      expect(screen.getByText('Test text')).toBeInTheDocument();
+      expect(screen.getByText(/Sezione: Test Section/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Pagina:/i)).not.toBeInTheDocument();
+    });
+
+    it('handles null line property in Deleted change', () => {
+      const change = {
+        type: 'Deleted' as const,
+        oldAtom: 'rule-deleted-line',
+        oldValue: {
+          id: 'rule-deleted-line',
+          text: 'Deleted text',
+          section: null,
+          page: '15',
+          line: null,
+        },
+      };
+
+      render(<ChangeItem change={change} />);
+
+      expect(screen.getByText('Deleted text')).toBeInTheDocument();
+      expect(screen.queryByText(/Sezione:/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/Pagina: 15/i)).toBeInTheDocument();
+    });
   });
 });

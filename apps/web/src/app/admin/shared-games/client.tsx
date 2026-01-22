@@ -33,7 +33,9 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  Clock,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { AdminAuthGuard, GameStatusBadge, PlayersBadge, PlayTimeBadge } from '@/components/admin';
@@ -104,6 +106,7 @@ export function SharedGamesClient() {
   const [_categories, setCategories] = useState<GameCategory[]>([]);
   const [_mechanics, setMechanics] = useState<GameMechanic[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -134,7 +137,7 @@ export function SharedGamesClient() {
   // Check if user is admin (for delete permissions)
   const isAdmin = user?.role?.toLowerCase() === 'admin';
 
-  // Fetch reference data (categories, mechanics)
+  // Fetch reference data (categories, mechanics) and pending approvals count
   useEffect(() => {
     const fetchReferenceData = async () => {
       try {
@@ -150,8 +153,20 @@ export function SharedGamesClient() {
       }
     };
 
+    const fetchPendingApprovalsCount = async () => {
+      if (isAdmin) {
+        try {
+          const result = await api.sharedGames.getPendingApprovals({ pageSize: 1 });
+          setPendingApprovalsCount(result.total);
+        } catch (err) {
+          console.error('Failed to fetch pending approvals count:', err);
+        }
+      }
+    };
+
     fetchReferenceData();
-  }, []);
+    fetchPendingApprovalsCount();
+  }, [isAdmin]);
 
   // Fetch games
   const fetchGames = useCallback(async () => {
@@ -293,10 +308,26 @@ export function SharedGamesClient() {
                   archivia i giochi.
                 </CardDescription>
               </div>
-              <Button onClick={handleCreate}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuovo Gioco
-              </Button>
+              <div className="flex items-center gap-3">
+                {/* Pending Approvals Link (Admin Only) */}
+                {isAdmin && (
+                  <Link href="/admin/shared-games/pending-approvals">
+                    <Button variant="outline" className="relative">
+                      <Clock className="h-4 w-4 mr-2" />
+                      Approvazioni
+                      {pendingApprovalsCount > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                          {pendingApprovalsCount > 99 ? '99+' : pendingApprovalsCount}
+                        </span>
+                      )}
+                    </Button>
+                  </Link>
+                )}
+                <Button onClick={handleCreate}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuovo Gioco
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">

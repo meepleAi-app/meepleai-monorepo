@@ -26,6 +26,7 @@ internal sealed class SecretLoader
 {
     private readonly ILogger _logger;
     private readonly string _secretsDirectory;
+    private readonly Dictionary<string, string> _loadedValues = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Initialize secret loader
@@ -39,8 +40,29 @@ internal sealed class SecretLoader
 
         _logger = logger;
 
-        // Allow directory override via configuration (default: infra/secrets)
-        _secretsDirectory = configuration["SecretsDirectory"] ?? "infra/secrets";
+        // Priority order for secrets directory:
+        // 1. Environment variable SECRETS_DIRECTORY (absolute path)
+        // 2. Configuration setting SecretsDirectory
+        // 3. Auto-detect monorepo root + infra/secrets
+        var envSecretsDir = Environment.GetEnvironmentVariable("SECRETS_DIRECTORY");
+        var configSecretsDir = configuration["SecretsDirectory"];
+
+        if (!string.IsNullOrWhiteSpace(envSecretsDir))
+        {
+            _secretsDirectory = envSecretsDir;
+            _logger.LogDebug("Using secrets directory from SECRETS_DIRECTORY env var: {Directory}", _secretsDirectory);
+        }
+        else if (!string.IsNullOrWhiteSpace(configSecretsDir))
+        {
+            _secretsDirectory = configSecretsDir;
+            _logger.LogDebug("Using secrets directory from configuration: {Directory}", _secretsDirectory);
+        }
+        else
+        {
+            // Auto-detect monorepo root by finding infra/secrets or .git directory
+            _secretsDirectory = FindMonorepoSecretsDirectory() ?? "infra/secrets";
+            _logger.LogDebug("Using auto-detected secrets directory: {Directory}", _secretsDirectory);
+        }
 
         // Convert to absolute path if relative
         if (!Path.IsPathRooted(_secretsDirectory))
@@ -50,7 +72,42 @@ internal sealed class SecretLoader
     }
 
     /// <summary>
-    /// Load and validate all secrets according to SecretDefinitions
+    /// Find the secrets directory by searching up the directory tree for the monorepo root.
+    /// Looks for infra/secrets directory or .git marker.
+    /// </summary>
+    /// <returns>Absolute path to secrets directory if found, null otherwise</returns>
+    private static string? FindMonorepoSecretsDirectory()
+    {
+        var currentDir = Directory.GetCurrentDirectory();
+        var searchDir = new DirectoryInfo(currentDir);
+
+        // Search up to 10 levels up (safety limit)
+        for (int i = 0; i < 10 && searchDir != null; i++)
+        {
+            // Check if infra/secrets exists at this level
+            var secretsPath = Path.Combine(searchDir.FullName, "infra", "secrets");
+            if (Directory.Exists(secretsPath))
+            {
+                return secretsPath;
+            }
+
+            // Check if .git exists (monorepo root marker)
+            var gitPath = Path.Combine(searchDir.FullName, ".git");
+            if (Directory.Exists(gitPath) || File.Exists(gitPath))
+            {
+                // Found repo root, return infra/secrets path (may not exist yet)
+                return Path.Combine(searchDir.FullName, "infra", "secrets");
+            }
+
+            searchDir = searchDir.Parent;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Load and validate all secrets according to SecretDefinitions.
+    /// Also loads values into environment variables for use by the application.
     /// </summary>
     /// <returns>Validation result with loaded secrets and missing items</returns>
     public SecretValidationResult LoadAndValidate()
@@ -73,11 +130,51 @@ internal sealed class SecretLoader
             ProcessSecretFile(secretName, secretSpec, result);
         }
 
+        // Apply loaded values as environment variables (for Development/Staging)
+        // This ensures secrets are available to the application without Docker env_file
+        ApplyAsEnvironmentVariables();
+
         // Log summary
         LogValidationSummary(result);
 
         return result;
     }
+
+    /// <summary>
+    /// Apply all loaded secret values as environment variables.
+    /// Only sets variables that are not already set (preserves existing env vars).
+    /// This enables local development without Docker's env_file mechanism.
+    /// </summary>
+    private void ApplyAsEnvironmentVariables()
+    {
+        var applied = 0;
+        var skipped = 0;
+
+        foreach (var (key, value) in _loadedValues)
+        {
+            // Don't override existing environment variables
+            var existingValue = Environment.GetEnvironmentVariable(key);
+            if (!string.IsNullOrEmpty(existingValue))
+            {
+                _logger.LogDebug("Skipping {Key}: already set in environment", key);
+                skipped++;
+                continue;
+            }
+
+            Environment.SetEnvironmentVariable(key, value);
+            applied++;
+        }
+
+        _logger.LogInformation(
+            "Applied {Applied} secret values as environment variables ({Skipped} skipped - already set)",
+            applied, skipped);
+    }
+
+    /// <summary>
+    /// Get all loaded secret values as a dictionary.
+    /// Useful for adding to IConfiguration if needed.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> GetLoadedValues() => _loadedValues;
 
     /// <summary>
     /// Process a single secret file
@@ -97,6 +194,15 @@ internal sealed class SecretLoader
             var secrets = ParseSecretFile(secretFile);
             ValidateRequiredKeys(secretName, secretSpec, secrets, result);
             result.LoadedSecrets.Add(secretName);
+
+            // Store all parsed values for later application as environment variables
+            foreach (var (key, value) in secrets)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    _loadedValues[key] = value;
+                }
+            }
         }
         catch (Exception ex)
         {

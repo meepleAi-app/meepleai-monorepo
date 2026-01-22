@@ -33,6 +33,8 @@ export interface AuthModalProps {
   defaultMode?: 'login' | 'register';
   onSuccess?: (user: AuthUser) => void;
   sessionExpiredMessage?: boolean;
+  /** URL to redirect to after successful authentication. Defaults to '/dashboard' */
+  redirectTo?: string;
 }
 
 // ============================================================================
@@ -45,6 +47,7 @@ export function AuthModal({
   defaultMode = 'login',
   onSuccess,
   sessionExpiredMessage = false,
+  redirectTo = '/dashboard',
 }: AuthModalProps) {
   const router = useRouter();
   const { login, register, error, clearError } = useAuth();
@@ -67,7 +70,7 @@ export function AuthModal({
       const user = await login(data);
       onSuccess?.(user);
       onClose();
-      await router.push('/dashboard');
+      await router.push(redirectTo);
     } catch (err) {
       // Error is already set in useAuth hook
       console.error('Login failed:', err);
@@ -83,7 +86,7 @@ export function AuthModal({
       const user = await register(data);
       onSuccess?.(user);
       onClose();
-      await router.push('/dashboard');
+      await router.push(redirectTo);
     } catch (err) {
       // Error is already set in useAuth hook
       console.error('Registration failed:', err);

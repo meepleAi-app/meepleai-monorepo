@@ -336,6 +336,84 @@ describe('sessionSlice reducers', () => {
   });
 
   // ============================================================================
+  // setSelectedDocuments Action Tests (Issue #2051)
+  // ============================================================================
+
+  describe('setSelectedDocuments', () => {
+    it('should set selected document IDs', () => {
+      expect(store.getState().selectedDocumentIds).toBeNull();
+
+      store.getState().setSelectedDocuments(['doc-1', 'doc-2', 'doc-3']);
+
+      expect(store.getState().selectedDocumentIds).toEqual(['doc-1', 'doc-2', 'doc-3']);
+    });
+
+    it('should set to null for all documents', () => {
+      // First set specific documents
+      store.getState().setSelectedDocuments(['doc-1', 'doc-2']);
+      expect(store.getState().selectedDocumentIds).toEqual(['doc-1', 'doc-2']);
+
+      // Then set to null (all documents)
+      store.getState().setSelectedDocuments(null);
+
+      expect(store.getState().selectedDocumentIds).toBeNull();
+    });
+
+    it('should replace existing selection', () => {
+      store.getState().setSelectedDocuments(['doc-1', 'doc-2']);
+      expect(store.getState().selectedDocumentIds).toEqual(['doc-1', 'doc-2']);
+
+      store.getState().setSelectedDocuments(['doc-3']);
+
+      expect(store.getState().selectedDocumentIds).toEqual(['doc-3']);
+    });
+
+    it('should handle empty array', () => {
+      store.getState().setSelectedDocuments([]);
+
+      expect(store.getState().selectedDocumentIds).toEqual([]);
+    });
+
+    it('should reset when game changes', () => {
+      store.getState().setSelectedDocuments(['doc-1', 'doc-2']);
+      expect(store.getState().selectedDocumentIds).toEqual(['doc-1', 'doc-2']);
+
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000001');
+
+      // selectedDocumentIds should be reset to null on game change
+      expect(store.getState().selectedDocumentIds).toBeNull();
+    });
+
+    it('should not affect other session state', () => {
+      const gameId = '770e8400-e29b-41d4-a716-000000000123';
+      const agentId = 'agent-456';
+
+      store.getState().selectGame(gameId);
+      store.getState().selectAgent(agentId);
+      store.getState().setSidebarCollapsed(true);
+
+      store.getState().setSelectedDocuments(['doc-1', 'doc-2']);
+
+      expect(store.getState().selectedGameId).toBe(gameId);
+      expect(store.getState().selectedAgentId).toBe(agentId);
+      expect(store.getState().sidebarCollapsed).toBe(true);
+      expect(store.getState().selectedDocumentIds).toEqual(['doc-1', 'doc-2']);
+    });
+
+    it('should preserve document selection when agent changes', () => {
+      store.getState().selectGame('770e8400-e29b-41d4-a716-000000000001');
+      store.getState().setSelectedDocuments(['doc-1', 'doc-2']);
+
+      // Agent change should NOT reset documents (same game)
+      store.getState().selectAgent('agent-1');
+      expect(store.getState().selectedDocumentIds).toEqual(['doc-1', 'doc-2']);
+
+      store.getState().selectAgent('agent-2');
+      expect(store.getState().selectedDocumentIds).toEqual(['doc-1', 'doc-2']);
+    });
+  });
+
+  // ============================================================================
   // State Consistency Tests
   // ============================================================================
 

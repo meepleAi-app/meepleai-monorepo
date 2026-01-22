@@ -48,6 +48,9 @@ import {
   type RecentActivityDto,
   type GetUserActivityResult,
   type UserActivityFilters,
+  AdminSessionInfoSchema,
+  type AdminSessionInfo,
+  type GetAdminSessionsParams,
   GetAllApiKeysWithStatsResponseSchema,
   BulkImportApiKeysResultSchema,
   type GetAllApiKeysWithStatsResponse,
@@ -652,6 +655,48 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         GetUserActivityResultSchema
       );
       return result ?? { activities: [], totalCount: 0 };
+    },
+
+    // ========== Admin Sessions Management ==========
+
+    /**
+     * Get all user sessions (admin only)
+     * GET /api/v1/admin/sessions
+     *
+     * @param params - Optional filters (limit, userId)
+     * @returns List of session info
+     */
+    async getAdminSessions(params?: GetAdminSessionsParams): Promise<AdminSessionInfo[]> {
+      const queryParams = new URLSearchParams();
+      if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString());
+      if (params?.userId) queryParams.append('userId', params.userId);
+
+      const query = queryParams.toString();
+      const result = await httpClient.get(
+        `/api/v1/admin/sessions${query ? `?${query}` : ''}`,
+        z.array(AdminSessionInfoSchema)
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Revoke a specific session (admin only)
+     * DELETE /api/v1/admin/sessions/{sessionId}
+     *
+     * @param sessionId - Session UUID to revoke
+     */
+    async revokeSession(sessionId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/sessions/${sessionId}`);
+    },
+
+    /**
+     * Revoke all sessions for a user (admin only)
+     * DELETE /api/v1/admin/users/{userId}/sessions
+     *
+     * @param userId - User UUID
+     */
+    async revokeAllUserSessions(userId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/users/${userId}/sessions`);
     },
 
     // ========== Report Generation & Scheduling (Issue #920) ==========

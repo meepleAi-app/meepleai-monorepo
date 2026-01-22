@@ -9,7 +9,7 @@
 
 import { Suspense, useState, useEffect } from 'react';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { AuthModal } from '@/components/auth';
 import { AuthLayout } from '@/components/layouts';
@@ -24,6 +24,10 @@ function RegisterPageContent() {
   }, []);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const finalDestination = searchParams?.get('from') ?? '/dashboard';
+  // Redirect to welcome page first, which will then redirect to final destination
+  const redirectTo = `/welcome?redirectTo=${encodeURIComponent(finalDestination)}`;
 
   const handleClose = () => {
     setShowAuthModal(false);
@@ -48,7 +52,12 @@ function RegisterPageContent() {
       data-testid="register-page"
     >
       {/* Unified Auth Modal - Registration Mode */}
-      <AuthModal isOpen={showAuthModal} onClose={handleClose} defaultMode="register" />
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={handleClose}
+        defaultMode="register"
+        redirectTo={redirectTo}
+      />
     </AuthLayout>
   );
 }

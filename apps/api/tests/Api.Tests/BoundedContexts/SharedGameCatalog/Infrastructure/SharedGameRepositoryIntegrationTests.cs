@@ -235,7 +235,8 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
         // Arrange - Create test games with Italian text
         var catan = SharedGame.Create("Catan", 1995, "Gioco di costruzione e commercio", 3, 4, 90, 10,
             null, null, "https://example.com/catan.jpg", "https://example.com/catan-thumb.jpg", null, TestUserId);
-        catan.Publish(TestUserId);
+        catan.SubmitForApproval(TestUserId);
+        catan.ApprovePublication(TestUserId);
         await _repository.AddAsync(catan);
         await _dbContext.SaveChangesAsync();
 
@@ -258,7 +259,8 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
         // Arrange - Italian descriptions
         var game1 = SharedGame.Create("Gioco A", 2020, "Avventura fantasy con draghi e cavalieri", 2, 4, 60, 12,
             null, null, "https://example.com/a.jpg", "https://example.com/a-thumb.jpg", null, TestUserId);
-        game1.Publish(TestUserId);
+        game1.SubmitForApproval(TestUserId);
+        game1.ApprovePublication(TestUserId);
         await _repository.AddAsync(game1);
         await _dbContext.SaveChangesAsync();
 

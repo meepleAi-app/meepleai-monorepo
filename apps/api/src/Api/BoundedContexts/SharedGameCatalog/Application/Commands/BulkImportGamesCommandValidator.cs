@@ -10,6 +10,10 @@ public class BulkImportGamesCommandValidator : AbstractValidator<BulkImportGames
 {
     public BulkImportGamesCommandValidator()
     {
+        RuleFor(x => x.UserId)
+            .NotEmpty()
+            .WithMessage("User ID is required");
+
         RuleFor(x => x.Games)
             .NotNull()
             .WithMessage("Games list cannot be null")

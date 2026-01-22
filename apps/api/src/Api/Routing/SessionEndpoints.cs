@@ -25,7 +25,13 @@ internal static class SessionEndpoints
             );
             var sessions = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(sessions);
-        });
+        })
+        .Produces<List<Api.Models.SessionInfo>>(200)
+        .Produces(401)
+        .Produces(403)
+        .WithTags("Admin", "Sessions")
+        .WithSummary("Get all user sessions")
+        .WithDescription("Retrieves a list of all active and revoked sessions. Admin only. Supports optional filtering by userId and pagination via limit parameter.");
 
         group.MapDelete("/admin/sessions/{sessionId:guid}", async (Guid sessionId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
@@ -48,7 +54,14 @@ internal static class SessionEndpoints
 
             logger.LogInformation("Session {SessionId} revoked successfully", sessionId);
             return Results.Json(new { ok = true });
-        });
+        })
+        .Produces(200)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .WithTags("Admin", "Sessions")
+        .WithSummary("Revoke a single session")
+        .WithDescription("Revokes a specific user session by ID. Admin only. The session will be immediately invalidated and the user will be logged out.");
 
         group.MapDelete("/admin/users/{userId:guid}/sessions", async (Guid userId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
@@ -62,7 +75,13 @@ internal static class SessionEndpoints
 
             logger.LogInformation("Revoked {Count} sessions for user {UserId}", count, userId);
             return Results.Json(new { ok = true, revokedCount = count });
-        });
+        })
+        .Produces(200)
+        .Produces(401)
+        .Produces(403)
+        .WithTags("Admin", "Sessions")
+        .WithSummary("Revoke all sessions for a user")
+        .WithDescription("Revokes all active sessions for a specific user. Admin only. Use this to force logout a user across all devices.");
 
         return group;
     }

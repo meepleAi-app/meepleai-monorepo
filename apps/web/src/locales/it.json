@@ -516,5 +516,382 @@
       "upload": "Carica"
     },
     "title": "Wizard Importazione PDF"
+  },
+  "legal": {
+    "tableOfContents": "Indice",
+    "lastUpdated": "Ultimo aggiornamento: {date}",
+    "terms": {
+      "title": "Termini e Condizioni",
+      "description": "Termini e condizioni di utilizzo del servizio MeepleAI",
+      "sections": {
+        "acceptance": {
+          "title": "1. Accettazione dei Termini",
+          "content": "Accedendo e utilizzando MeepleAI, accetti di essere vincolato dai presenti Termini e Condizioni. Se non accetti questi termini, ti preghiamo di non utilizzare il servizio. L'utilizzo del servizio è riservato a utenti di almeno 16 anni di età."
+        },
+        "serviceDescription": {
+          "title": "2. Descrizione del Servizio",
+          "content": "MeepleAI è un assistente basato su intelligenza artificiale progettato per aiutare gli utenti a comprendere le regole dei giochi da tavolo. Il servizio include: elaborazione di PDF di regolamenti, risposte a domande sulle regole tramite AI, gestione di una libreria personale di giochi, e accesso a un catalogo condiviso dalla community."
+        },
+        "freemiumModel": {
+          "title": "3. Modello Freemium",
+          "content": "MeepleAI offre funzionalità base gratuite e funzionalità premium a pagamento. Le funzionalità gratuite includono un numero limitato di query giornaliere e l'accesso al catalogo. Le funzionalità premium includono query illimitate, elaborazione prioritaria e funzionalità avanzate. I dettagli specifici sono disponibili nella pagina dei prezzi."
+        },
+        "userAccount": {
+          "title": "4. Account Utente",
+          "content": "Per utilizzare MeepleAI devi creare un account fornendo informazioni accurate e complete. Sei responsabile della sicurezza delle tue credenziali e di tutte le attività che avvengono sul tuo account. Devi notificarci immediatamente qualsiasi uso non autorizzato del tuo account."
+        },
+        "userContent": {
+          "title": "5. Contenuti Caricati dagli Utenti",
+          "content": "Caricando PDF o altri contenuti su MeepleAI, dichiari e garantisci di avere il diritto di utilizzare tali contenuti e di concedere a MeepleAI una licenza limitata per elaborarli al fine di fornirti il servizio. I contenuti vengono elaborati esclusivamente per il tuo uso personale e non vengono condivisi con altri utenti senza il tuo consenso."
+        },
+        "aiUsage": {
+          "title": "6. Utilizzo dell'Intelligenza Artificiale",
+          "content": "Le risposte fornite dall'AI di MeepleAI sono generate automaticamente e includono sempre un riferimento alla fonte (pagina e sezione del regolamento). Tuttavia, l'AI può commettere errori di interpretazione. Ti consigliamo sempre di verificare le risposte con il regolamento originale. MeepleAI non garantisce l'accuratezza assoluta delle risposte e non si assume responsabilità per decisioni prese basandosi esclusivamente sulle risposte dell'AI."
+        },
+        "intellectualProperty": {
+          "title": "7. Proprietà Intellettuale",
+          "content": "MeepleAI e tutti i suoi contenuti originali, funzionalità e funzionalità sono di proprietà di MeepleAI e sono protetti da copyright, marchi e altre leggi sulla proprietà intellettuale. I regolamenti dei giochi elaborati rimangono di proprietà dei rispettivi editori."
+        },
+        "limitations": {
+          "title": "8. Limitazioni di Responsabilità",
+          "content": "MeepleAI viene fornito \"così com'è\" senza garanzie di alcun tipo. Non garantiamo che il servizio sarà ininterrotto, sicuro o privo di errori. In nessun caso MeepleAI sarà responsabile per danni indiretti, incidentali, speciali o consequenziali derivanti dall'uso o dall'impossibilità di utilizzare il servizio."
+        },
+        "termination": {
+          "title": "9. Sospensione e Terminazione",
+          "content": "Possiamo sospendere o terminare il tuo accesso al servizio immediatamente, senza preavviso, per qualsiasi violazione di questi Termini. Puoi terminare il tuo account in qualsiasi momento dalle impostazioni del profilo. In caso di terminazione, il tuo diritto di utilizzare il servizio cesserà immediatamente."
+        },
+        "modifications": {
+          "title": "10. Modifiche ai Termini",
+          "content": "Ci riserviamo il diritto di modificare questi termini in qualsiasi momento. Ti notificheremo le modifiche via email o tramite un avviso sul servizio. L'uso continuato del servizio dopo tali modifiche costituisce accettazione dei nuovi termini."
+        },
+        "governingLaw": {
+          "title": "11. Legge Applicabile",
+          "content": "Questi Termini sono regolati dalle leggi italiane e dell'Unione Europea. Per qualsiasi controversia derivante da questi Termini, il foro competente è quello di [Città], Italia."
+        },
+        "contact": {
+          "title": "12. Contatti",
+          "content": "Per domande riguardanti questi Termini e Condizioni, puoi contattarci all'indirizzo email: legal@meepleai.com"
+        }
+      }
+    },
+    "privacy": {
+      "title": "Informativa sulla Privacy",
+      "description": "Come raccogliamo, utilizziamo e proteggiamo i tuoi dati personali",
+      "sections": {
+        "introduction": {
+          "title": "1. Introduzione",
+          "content": "La tua privacy è importante per noi. Questa Informativa sulla Privacy spiega come MeepleAI raccoglie, utilizza, conserva e protegge le tue informazioni personali in conformità con il Regolamento Generale sulla Protezione dei Dati (GDPR) e altre leggi applicabili sulla protezione dei dati."
+        },
+        "dataController": {
+          "title": "2. Titolare del Trattamento",
+          "content": "Il titolare del trattamento dei tuoi dati personali è MeepleAI. Per qualsiasi domanda relativa al trattamento dei tuoi dati, puoi contattarci all'indirizzo: privacy@meepleai.com"
+        },
+        "dataCollected": {
+          "title": "3. Dati Raccolti",
+          "content": "Raccogliamo le seguenti categorie di dati: Dati di registrazione (email, nome visualizzato, password criptata); Dati di utilizzo (query all'AI, giochi nella libreria, preferenze); Dati tecnici (indirizzo IP, tipo di browser, sistema operativo); Contenuti caricati (PDF di regolamenti per elaborazione). Non raccogliamo dati sensibili né dati di minori di 16 anni."
+        },
+        "purposes": {
+          "title": "4. Finalità del Trattamento",
+          "content": "Utilizziamo i tuoi dati per: fornirti il servizio MeepleAI e le sue funzionalità; migliorare e personalizzare la tua esperienza; comunicare con te riguardo aggiornamenti e novità del servizio; garantire la sicurezza e prevenire abusi; adempiere a obblighi legali."
+        },
+        "legalBasis": {
+          "title": "5. Base Giuridica",
+          "content": "Il trattamento dei tuoi dati si basa su: Esecuzione del contratto (fornitura del servizio); Consenso (per comunicazioni marketing opzionali); Legittimo interesse (miglioramento del servizio, sicurezza); Obbligo legale (conformità normativa)."
+        },
+        "dataSharing": {
+          "title": "6. Condivisione dei Dati",
+          "content": "Condividiamo i tuoi dati solo con: fornitori di servizi AI per l'elaborazione delle query (in forma anonimizzata); fornitori di hosting e infrastruttura; autorità competenti se richiesto dalla legge. Non vendiamo mai i tuoi dati personali a terzi."
+        },
+        "retention": {
+          "title": "7. Conservazione dei Dati",
+          "content": "Conserviamo i tuoi dati per il tempo necessario a fornirti il servizio. I dati dell'account vengono conservati fino alla cancellazione dell'account. I log di utilizzo vengono conservati per 12 mesi. I PDF caricati vengono elaborati ed eliminati entro 30 giorni dall'elaborazione."
+        },
+        "userRights": {
+          "title": "8. I Tuoi Diritti",
+          "content": "Ai sensi del GDPR, hai diritto di: accedere ai tuoi dati personali; rettificare dati inesatti; cancellare i tuoi dati (diritto all'oblio); limitare il trattamento; portabilità dei dati; opporti al trattamento; revocare il consenso in qualsiasi momento. Per esercitare questi diritti, contatta: privacy@meepleai.com"
+        },
+        "cookies": {
+          "title": "9. Cookie e Tecnologie Simili",
+          "content": "Utilizziamo cookie tecnici essenziali per il funzionamento del servizio e cookie analitici (con il tuo consenso) per migliorare l'esperienza utente. Puoi gestire le tue preferenze sui cookie dalle impostazioni del browser o dal banner dei cookie."
+        },
+        "security": {
+          "title": "10. Sicurezza dei Dati",
+          "content": "Implementiamo misure di sicurezza tecniche e organizzative appropriate per proteggere i tuoi dati, tra cui: crittografia dei dati in transito e a riposo; controlli di accesso rigorosi; monitoraggio continuo della sicurezza; backup regolari."
+        },
+        "transfers": {
+          "title": "11. Trasferimenti Internazionali",
+          "content": "I tuoi dati potrebbero essere trasferiti e elaborati in paesi al di fuori dello Spazio Economico Europeo. In tal caso, garantiamo che vengano applicate salvaguardie appropriate, come le Clausole Contrattuali Standard approvate dalla Commissione Europea."
+        },
+        "changes": {
+          "title": "12. Modifiche all'Informativa",
+          "content": "Potremmo aggiornare questa Informativa sulla Privacy periodicamente. Ti notificheremo eventuali modifiche significative via email o tramite un avviso sul servizio. Ti invitiamo a consultare regolarmente questa pagina per rimanere informato."
+        },
+        "contact": {
+          "title": "13. Contatti e Reclami",
+          "content": "Per domande sulla privacy o per esercitare i tuoi diritti, contatta: privacy@meepleai.com. Hai inoltre il diritto di presentare un reclamo all'Autorità Garante per la Protezione dei Dati Personali se ritieni che il trattamento dei tuoi dati violi il GDPR."
+        }
+      }
+    },
+    "cookies": {
+      "title": "Cookie Policy",
+      "description": "Come utilizziamo i cookie e tecnologie simili",
+      "sections": {
+        "whatAreCookies": {
+          "title": "1. Cosa sono i Cookie",
+          "content": "I cookie sono piccoli file di testo che vengono memorizzati sul tuo dispositivo quando visiti un sito web. Servono a ricordare le tue preferenze, migliorare la tua esperienza di navigazione e fornirci informazioni su come utilizzi il nostro servizio."
+        },
+        "typesOfCookies": {
+          "title": "2. Tipi di Cookie che Utilizziamo",
+          "content": "Utilizziamo diverse categorie di cookie: Cookie Tecnici (essenziali per il funzionamento del sito), Cookie di Preferenza (ricordano le tue scelte come lingua e tema), Cookie Analitici (ci aiutano a capire come usi il servizio), Cookie di Sessione (temporanei, eliminati alla chiusura del browser)."
+        },
+        "essentialCookies": {
+          "title": "3. Cookie Essenziali",
+          "content": "Questi cookie sono necessari per il funzionamento del sito e non possono essere disattivati. Includono cookie per l'autenticazione, la sicurezza e il mantenimento della sessione utente. Senza questi cookie, il servizio non può funzionare correttamente."
+        },
+        "analyticsCookies": {
+          "title": "4. Cookie Analitici",
+          "content": "Con il tuo consenso, utilizziamo cookie analitici per raccogliere informazioni anonime su come utilizzi MeepleAI. Questi dati ci aiutano a migliorare il servizio e a identificare eventuali problemi tecnici."
+        },
+        "thirdPartyCookies": {
+          "title": "5. Cookie di Terze Parti",
+          "content": "Alcuni cookie possono essere impostati da servizi di terze parti che utilizziamo, come provider di autenticazione OAuth (Google, Discord, GitHub). Questi cookie sono soggetti alle rispettive privacy policy dei provider."
+        },
+        "manageCookies": {
+          "title": "6. Come Gestire i Cookie",
+          "content": "Puoi gestire le tue preferenze sui cookie in diversi modi: tramite il banner dei cookie che appare alla prima visita, dalle impostazioni del tuo browser, o dalle impostazioni del tuo account MeepleAI. Nota che disabilitare alcuni cookie potrebbe influire sulla funzionalità del servizio."
+        },
+        "browserSettings": {
+          "title": "7. Impostazioni del Browser",
+          "content": "La maggior parte dei browser ti permette di controllare i cookie attraverso le impostazioni. Puoi bloccare tutti i cookie, accettare solo alcuni tipi, o ricevere una notifica quando un sito vuole impostare un cookie. Consulta la guida del tuo browser per istruzioni specifiche."
+        },
+        "updates": {
+          "title": "8. Aggiornamenti alla Cookie Policy",
+          "content": "Potremmo aggiornare questa Cookie Policy periodicamente per riflettere cambiamenti nelle nostre pratiche o per altri motivi operativi, legali o normativi. Ti invitiamo a consultare regolarmente questa pagina."
+        },
+        "contact": {
+          "title": "9. Contatti",
+          "content": "Per domande sulla nostra Cookie Policy, contattaci all'indirizzo: privacy@meepleai.com"
+        }
+      }
+    }
+  },
+  "pages": {
+    "about": {
+      "title": "Chi Siamo",
+      "subtitle": "La storia di MeepleAI",
+      "description": "Scopri la missione e il team dietro MeepleAI",
+      "mission": {
+        "title": "La Nostra Missione",
+        "content": "MeepleAI nasce dalla passione per i giochi da tavolo e dalla frustrazione di dover interrompere le partite per cercare chiarimenti sulle regole. La nostra missione è rendere ogni partita più fluida, divertente e senza discussioni."
+      },
+      "story": {
+        "title": "La Nostra Storia",
+        "content": "Tutto è iniziato durante una serata di giochi tra amici, quando l'ennesima discussione su una regola ambigua ha rovinato il divertimento. Da quel momento è nata l'idea: perché non creare un assistente AI che possa rispondere istantaneamente a qualsiasi dubbio sulle regole?"
+      },
+      "values": {
+        "title": "I Nostri Valori",
+        "accuracy": {
+          "title": "Precisione",
+          "content": "Ogni risposta è basata sui regolamenti ufficiali con citazione della fonte"
+        },
+        "accessibility": {
+          "title": "Accessibilità",
+          "content": "Regole complesse spiegate in modo semplice e comprensibile"
+        },
+        "community": {
+          "title": "Community",
+          "content": "Un catalogo condiviso costruito insieme agli appassionati"
+        },
+        "innovation": {
+          "title": "Innovazione",
+          "content": "Tecnologia AI all'avanguardia al servizio del divertimento"
+        }
+      },
+      "team": {
+        "title": "Il Team",
+        "content": "MeepleAI è sviluppato da un team di appassionati di giochi da tavolo e tecnologia, uniti dalla voglia di migliorare l'esperienza di gioco per tutti."
+      }
+    },
+    "howItWorks": {
+      "title": "Come Funziona",
+      "subtitle": "Tre semplici passaggi per non litigare più sulle regole",
+      "description": "Scopri come MeepleAI può trasformare le tue serate di gioco",
+      "steps": {
+        "upload": {
+          "title": "1. Carica il Regolamento",
+          "content": "Carica il PDF del regolamento del tuo gioco da tavolo. Il nostro sistema lo analizza e lo indicizza utilizzando tecnologie avanzate di elaborazione del linguaggio naturale."
+        },
+        "ask": {
+          "title": "2. Fai una Domanda",
+          "content": "Scrivi la tua domanda in linguaggio naturale, come faresti con un amico esperto. Ad esempio: 'Posso muovere il cavaliere dopo aver lanciato i dadi?' oppure 'Come funziona il commercio tra giocatori?'"
+        },
+        "answer": {
+          "title": "3. Ottieni la Risposta",
+          "content": "L'AI analizza il regolamento e ti fornisce una risposta precisa, sempre con il riferimento alla pagina e sezione del manuale originale, così puoi verificare tu stesso."
+        }
+      },
+      "features": {
+        "title": "Caratteristiche Principali",
+        "rag": {
+          "title": "Ricerca Semantica RAG",
+          "content": "Tecnologia avanzata che comprende il significato delle tue domande, non solo le parole chiave"
+        },
+        "multilingual": {
+          "title": "Supporto Multilingua",
+          "content": "Carica regolamenti in qualsiasi lingua e fai domande nella tua lingua preferita"
+        },
+        "citations": {
+          "title": "Citazioni Precise",
+          "content": "Ogni risposta include il riferimento esatto alla fonte nel regolamento"
+        },
+        "library": {
+          "title": "Libreria Personale",
+          "content": "Gestisci la tua collezione di giochi e accedi rapidamente ai regolamenti"
+        }
+      },
+      "cta": {
+        "title": "Pronto a Iniziare?",
+        "content": "Registrati gratuitamente e scopri quanto può essere semplice capire le regole"
+      }
+    },
+    "blog": {
+      "title": "Blog",
+      "subtitle": "Novità, guide e approfondimenti",
+      "description": "Resta aggiornato sulle ultime novità di MeepleAI e del mondo dei giochi da tavolo",
+      "noPosts": "Nessun articolo disponibile al momento. Torna presto per nuovi contenuti!",
+      "readMore": "Leggi di più",
+      "categories": {
+        "news": "Novità",
+        "guides": "Guide",
+        "tips": "Consigli",
+        "updates": "Aggiornamenti"
+      },
+      "comingSoon": {
+        "title": "Coming Soon",
+        "content": "Il blog di MeepleAI è in arrivo! Presto troverai qui guide, consigli strategici, recensioni di giochi e aggiornamenti sulle nuove funzionalità."
+      }
+    },
+    "contact": {
+      "title": "Contattaci",
+      "subtitle": "Siamo qui per aiutarti",
+      "description": "Hai domande, suggerimenti o feedback? Scrivici!",
+      "form": {
+        "name": "Nome",
+        "namePlaceholder": "Il tuo nome",
+        "email": "Email",
+        "emailPlaceholder": "la.tua@email.com",
+        "subject": "Oggetto",
+        "subjectPlaceholder": "Di cosa vuoi parlarci?",
+        "message": "Messaggio",
+        "messagePlaceholder": "Scrivi il tuo messaggio...",
+        "submit": "Invia Messaggio",
+        "sending": "Invio in corso...",
+        "success": "Messaggio inviato con successo! Ti risponderemo il prima possibile.",
+        "error": "Si è verificato un errore. Riprova più tardi."
+      },
+      "info": {
+        "title": "Altre modalità di contatto",
+        "email": {
+          "title": "Email",
+          "value": "support@meepleai.com"
+        },
+        "social": {
+          "title": "Social",
+          "content": "Seguici sui social per aggiornamenti e novità"
+        },
+        "response": {
+          "title": "Tempi di Risposta",
+          "content": "Rispondiamo solitamente entro 24-48 ore lavorative"
+        }
+      },
+      "subjects": {
+        "general": "Domanda generale",
+        "support": "Supporto tecnico",
+        "feedback": "Feedback e suggerimenti",
+        "bug": "Segnalazione bug",
+        "partnership": "Partnership e collaborazioni",
+        "other": "Altro"
+      }
+    },
+    "faq": {
+      "title": "Domande Frequenti",
+      "subtitle": "Trova risposte alle domande più comuni",
+      "description": "Tutto quello che devi sapere su MeepleAI",
+      "categories": {
+        "general": {
+          "title": "Generale",
+          "questions": {
+            "whatIs": {
+              "question": "Cos'è MeepleAI?",
+              "answer": "MeepleAI è un assistente basato su intelligenza artificiale che ti aiuta a comprendere le regole dei giochi da tavolo. Puoi caricare i PDF dei regolamenti e fare domande in linguaggio naturale, ricevendo risposte precise con citazione della fonte."
+            },
+            "free": {
+              "question": "MeepleAI è gratuito?",
+              "answer": "MeepleAI offre un piano gratuito con funzionalità base, incluso un numero limitato di query giornaliere. Per funzionalità avanzate e query illimitate, sono disponibili piani premium."
+            },
+            "languages": {
+              "question": "Quali lingue sono supportate?",
+              "answer": "Puoi caricare regolamenti in qualsiasi lingua e fare domande in italiano o inglese. L'interfaccia è disponibile in italiano e inglese."
+            }
+          }
+        },
+        "usage": {
+          "title": "Utilizzo",
+          "questions": {
+            "howToUpload": {
+              "question": "Come carico un regolamento?",
+              "answer": "Dalla sezione 'Carica' puoi trascinare o selezionare un file PDF del regolamento. Il sistema lo elaborerà automaticamente e sarà disponibile per le tue domande in pochi minuti."
+            },
+            "accuracy": {
+              "question": "Quanto sono accurate le risposte?",
+              "answer": "Le risposte sono generate analizzando il regolamento ufficiale e includono sempre il riferimento alla fonte. Tuttavia, consigliamo sempre di verificare con il regolamento originale per decisioni importanti durante le partite."
+            },
+            "limits": {
+              "question": "Ci sono limiti alle domande?",
+              "answer": "Il piano gratuito ha un limite giornaliero di query. I piani premium offrono query illimitate e funzionalità aggiuntive."
+            }
+          }
+        },
+        "technical": {
+          "title": "Tecnico",
+          "questions": {
+            "pdfFormat": {
+              "question": "Quali formati PDF sono supportati?",
+              "answer": "Supportiamo PDF con testo selezionabile (non scansioni di immagini). Per risultati ottimali, usa PDF di alta qualità con testo nativo."
+            },
+            "dataPrivacy": {
+              "question": "I miei dati sono al sicuro?",
+              "answer": "Sì, la sicurezza dei tuoi dati è la nostra priorità. I PDF caricati vengono elaborati e non condivisi con altri utenti. Consulta la nostra Privacy Policy per maggiori dettagli."
+            },
+            "offline": {
+              "question": "Posso usare MeepleAI offline?",
+              "answer": "MeepleAI richiede una connessione internet per funzionare, poiché l'elaborazione avviene sui nostri server cloud."
+            }
+          }
+        },
+        "account": {
+          "title": "Account",
+          "questions": {
+            "deleteAccount": {
+              "question": "Come cancello il mio account?",
+              "answer": "Puoi richiedere la cancellazione del tuo account dalle Impostazioni > Avanzate > Elimina Account, oppure contattando il supporto."
+            },
+            "changeEmail": {
+              "question": "Posso cambiare la mia email?",
+              "answer": "Al momento il cambio email non è supportato direttamente. Contatta il supporto per assistenza."
+            },
+            "twoFactor": {
+              "question": "Come attivo l'autenticazione a due fattori?",
+              "answer": "Vai in Impostazioni > Privacy e Sicurezza > Autenticazione a due fattori e segui le istruzioni per configurare la 2FA con un'app authenticator."
+            }
+          }
+        }
+      },
+      "stillHaveQuestions": {
+        "title": "Hai ancora domande?",
+        "content": "Non hai trovato quello che cercavi? Contattaci e saremo felici di aiutarti.",
+        "cta": "Contattaci"
+      }
+    }
   }
 }

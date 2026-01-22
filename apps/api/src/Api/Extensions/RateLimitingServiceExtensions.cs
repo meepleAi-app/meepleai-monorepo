@@ -16,9 +16,32 @@ namespace Api.Extensions;
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
-    public static IServiceCollection AddRateLimitingServices(this IServiceCollection services)
+    public static IServiceCollection AddRateLimitingServices(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
+
+        // Issue #2705: Allow disabling rate limiting for integration tests
+        var rateLimitingEnabled = configuration.GetValue("RateLimiting:Enabled", true);
+        if (!rateLimitingEnabled)
+        {
+            // Register a permissive rate limiter that allows all requests
+            services.AddRateLimiter(options =>
+            {
+                options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(_ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("SharedGamesAdmin", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("SharedGamesPublic", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("FaqUpvote", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+            });
+
+            return services;
+        }
 
         services.AddRateLimiter(options =>
         {
@@ -119,31 +142,87 @@ internal static class RateLimitingServiceExtensions
     /// <summary>
     /// Gets the client IP address from the HttpContext.
     /// Checks X-Forwarded-For header first (for proxied requests), then RemoteIpAddress.
+    /// Defensive implementation with full null checks to prevent rate limiter crashes.
     /// </summary>
-    private static string GetClientIpAddress(HttpContext httpContext)
+    private static string GetClientIpAddress(HttpContext? httpContext)
     {
-        // Check X-Forwarded-For header (Traefik proxy sets this)
-        var forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(forwardedFor))
+        const string fallback = "unknown";
+
+        if (httpContext is null)
         {
-            // Take first IP if multiple (client IP)
-            var firstIp = forwardedFor.Split(',')[0].Trim();
-            return firstIp;
+            return fallback;
         }
 
-        // Fallback to RemoteIpAddress
-        return httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        try
+        {
+            // Check X-Forwarded-For header (Traefik proxy sets this)
+            var request = httpContext.Request;
+            if (request is not null)
+            {
+                var forwardedFor = request.Headers["X-Forwarded-For"].FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(forwardedFor))
+                {
+                    // Take first IP if multiple (client IP)
+                    var firstIp = forwardedFor.Split(',')[0].Trim();
+                    if (!string.IsNullOrWhiteSpace(firstIp))
+                    {
+                        return firstIp;
+                    }
+                }
+            }
+
+            // Fallback to RemoteIpAddress with full null check
+            var connection = httpContext.Connection;
+            if (connection is not null)
+            {
+                var remoteIp = connection.RemoteIpAddress;
+                if (remoteIp is not null)
+                {
+                    return remoteIp.ToString();
+                }
+            }
+
+            return fallback;
+        }
+        catch
+        {
+            // Defensive: never let rate limiter partition key throw
+            return fallback;
+        }
     }
 
     /// <summary>
     /// Gets the user ID from the HttpContext User claims.
     /// Returns IP address as fallback for unauthenticated requests.
+    /// Defensive implementation with full null checks to prevent rate limiter crashes.
     /// </summary>
-    private static string GetUserId(HttpContext httpContext)
+    private static string GetUserId(HttpContext? httpContext)
     {
-        var userId = httpContext.User?.FindFirst("sub")?.Value
-            ?? httpContext.User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+        if (httpContext is null)
+        {
+            return "unknown";
+        }
 
-        return userId ?? GetClientIpAddress(httpContext);
+        try
+        {
+            var user = httpContext.User;
+            if (user is not null)
+            {
+                var userId = user.FindFirst("sub")?.Value
+                    ?? user.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+
+                if (!string.IsNullOrWhiteSpace(userId))
+                {
+                    return userId;
+                }
+            }
+
+            return GetClientIpAddress(httpContext);
+        }
+        catch
+        {
+            // Defensive: never let rate limiter partition key throw
+            return GetClientIpAddress(httpContext);
+        }
     }
 }

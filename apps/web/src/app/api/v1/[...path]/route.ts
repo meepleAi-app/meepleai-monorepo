@@ -72,10 +72,34 @@ async function proxyRequest(request: NextRequest, method: string) {
       statusText: response.statusText,
     });
 
-    // Copy response headers (especially Set-Cookie)
+    // Copy response headers with special handling for Set-Cookie
+    // Issue #2778: headers.get('set-cookie') doesn't handle multiple cookies correctly
+    // Fix: Use getSetCookie() which returns an array of all Set-Cookie headers
+    // This is critical for login which sets both meepleai_session and meepleai_user_role cookies
+    const setCookies = response.headers.getSetCookie();
+    if (setCookies.length > 0) {
+      // Debug logging for auth troubleshooting
+      // eslint-disable-next-line no-console
+      console.log(`[API Proxy] Set-Cookie headers received: ${setCookies.length} cookie(s)`);
+      // Append each Set-Cookie header separately (required by HTTP spec)
+      for (const cookie of setCookies) {
+        nextResponse.headers.append('set-cookie', cookie);
+      }
+    }
+
+    // Copy other response headers (excluding set-cookie which was already handled)
     response.headers.forEach((value, key) => {
-      nextResponse.headers.set(key, value);
+      const lowerKey = key.toLowerCase();
+      if (lowerKey !== 'set-cookie') {
+        nextResponse.headers.set(key, value);
+      }
     });
+
+    // Debug: Log response status for auth endpoints
+    if (apiPath.includes('/auth/')) {
+      // eslint-disable-next-line no-console
+      console.log(`[API Proxy] Auth response: ${response.status} ${response.statusText}, Set-Cookie: ${setCookies.length > 0 ? `${setCookies.length} cookie(s)` : 'absent'}`);
+    }
 
     // Disable Next.js compression to prevent ERR_CONTENT_DECODING_FAILED
     nextResponse.headers.set('x-no-compression', '1');

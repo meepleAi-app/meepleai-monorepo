@@ -44,10 +44,13 @@ public class RedisBackgroundTaskOrchestratorTests
         var taskId = "test-task-1";
         var taskName = "Test Task";
         var taskExecuted = false;
+        // Issue #2710: Use TaskCompletionSource for reliable synchronization instead of Task.Delay
+        var taskCompletedTcs = new TaskCompletionSource<bool>();
         Func<CancellationToken, Task> taskFactory = async ct =>
         {
             await Task.Delay(TestConstants.Timing.TinyDelay, ct);
             taskExecuted = true;
+            taskCompletedTcs.TrySetResult(true);
         };
 
         // Setup permissive mock for any StringSetAsync call (accepts any overload)
@@ -61,10 +64,13 @@ public class RedisBackgroundTaskOrchestratorTests
         // Act
         await _orchestrator.ScheduleAsync(taskId, taskName, taskFactory, TestCancellationToken);
 
-        // Give task time to execute
-        await Task.Delay(TestConstants.Timing.SmallDelay, TestCancellationToken);
+        // Issue #2710: Wait for task completion with timeout instead of fixed delay
+        var completedInTime = await Task.WhenAny(
+            taskCompletedTcs.Task,
+            Task.Delay(TestConstants.Timing.ShortTimeout, TestCancellationToken)) == taskCompletedTcs.Task;
 
         // Assert
+        Assert.True(completedInTime, "Task should complete within timeout");
         Assert.True(taskExecuted);
         // Note: Removed strict Redis call verification due to Moq expression tree limitations
         // with StackExchange.Redis 2.10+ optional parameters. The key behavior (task execution) is verified above.

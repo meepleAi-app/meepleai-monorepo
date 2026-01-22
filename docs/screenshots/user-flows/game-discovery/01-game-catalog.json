@@ -1,0 +1,37 @@
+{
+  "screenshot": {
+    "id": "user-game-discovery-01",
+    "filename": "01-game-catalog.png",
+    "flow": "game-discovery",
+    "role": "user",
+    "step": 1,
+    "totalSteps": 1,
+    "title": "Game Catalog",
+    "description": "Browse the game catalog with search and filter options"
+  },
+  "capture": {
+    "timestamp": "2026-01-20T14:41:50.200Z",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "browser": "chromium",
+    "fullPage": true
+  },
+  "interaction": {
+    "previousAction": null,
+    "nextAction": "Browse or search games",
+    "highlightedElements": [
+      {
+        "selector": "input[type=\"search\"], [data-testid=\"search-input\"]",
+        "type": "box",
+        "label": "Search"
+      }
+    ]
+  },
+  "navigation": {
+    "url": "http://localhost:3000/games",
+    "previousStep": null,
+    "nextStep": null
+  }
+}

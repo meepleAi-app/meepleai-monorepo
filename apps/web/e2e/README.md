@@ -4,6 +4,8 @@
 **Coverage**: 58% → Target 80%+ by 2025-11-30
 **Framework**: Playwright + TypeScript + Page Object Model
 
+**📚 Best Practices Guide**: See [docs/05-testing/playwright-best-practices.md](../../../docs/05-testing/playwright-best-practices.md) for comprehensive Playwright patterns, configuration, and examples (Issue #2919).
+
 ---
 
 ## Quick Start

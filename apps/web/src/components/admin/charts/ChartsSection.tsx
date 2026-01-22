@@ -28,8 +28,10 @@ import { AIUsageDonut, AiUsageStats } from './AIUsageDonut';
  * - RAG requests → Embedding + Completion calls
  * - Chat messages → Completion calls
  * - PDF processing → OCR + Embedding calls
+ *
+ * @export For unit testing the calculation logic
  */
-function calculateAiUsageBreakdown(metrics: DashboardMetrics | null): AiUsageStats[] {
+export function calculateAiUsageBreakdown(metrics: DashboardMetrics | null): AiUsageStats[] {
   if (!metrics) {
     return [];
   }

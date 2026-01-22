@@ -10,7 +10,7 @@
  * @see https://nextjs.org/docs/app/building-your-application/routing/layouts-and-pages
  */
 
-import { Quicksand } from 'next/font/google';
+import { Quicksand, Nunito } from 'next/font/google';
 
 import { HyperDXProvider } from '@/components/HyperDXProvider';
 
@@ -25,6 +25,13 @@ const quicksand = Quicksand({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-quicksand',
+  display: 'swap',
+});
+
+const nunito = Nunito({
+  subsets: ['latin'],
+  weight: ['300', '400', '600', '700'],
+  variable: '--font-nunito',
   display: 'swap',
 });
 
@@ -49,7 +56,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="it" suppressHydrationWarning>
-      <body className={quicksand.variable}>
+      <body className={`${quicksand.variable} ${nunito.variable}`}>
         <HyperDXProvider>
           <AppProviders>{children}</AppProviders>
         </HyperDXProvider>

@@ -21,3 +21,4 @@ export * from './sharedGamesClient'; // ISSUE-2372
 export * from './libraryClient'; // User library
 export * from './shareRequestsClient'; // ISSUE-2743
 export * from './adminShareRequestsClient'; // ISSUE-2745
+export * from './gameContributorsClient'; // ISSUE-2746

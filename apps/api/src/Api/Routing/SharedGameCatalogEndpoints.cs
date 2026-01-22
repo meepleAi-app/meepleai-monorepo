@@ -11,6 +11,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserShareRequ
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetAllBadges;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserBadges;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetBadgeLeaderboard;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetMyActiveReviews;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ToggleBadgeDisplay;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
@@ -459,6 +460,38 @@ internal static class SharedGameCatalogEndpoints
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status409Conflict);
+
+        // Start review - acquire lock
+        group.MapPost("/admin/share-requests/{id:guid}/start-review", HandleStartReview)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("StartReview")
+            .WithSummary("Start review on share request (Admin only)")
+            .WithDescription("Acquires an exclusive review lock for the admin. Only one admin can review a request at a time. Lock expires after 30 minutes by default.")
+            .Produces<StartReviewResponse>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        // Release review - free lock without decision
+        group.MapPost("/admin/share-requests/{id:guid}/release", HandleReleaseReview)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("ReleaseReview")
+            .WithSummary("Release review lock (Admin only)")
+            .WithDescription("Manually releases the review lock without making a decision. Returns the request to its previous state (Pending or ChangesRequested). Only the reviewing admin can release their own lock.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Get my active reviews
+        group.MapGet("/admin/share-requests/my-reviews", HandleGetMyActiveReviews)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("GetMyActiveReviews")
+            .WithSummary("Get my active reviews (Admin only)")
+            .WithDescription("Returns all share requests currently being reviewed by the authenticated admin with lock status and time remaining.")
+            .Produces<IReadOnlyCollection<ActiveReviewDto>>()
+            .Produces(StatusCodes.Status401Unauthorized);
     }
 
     // ========================================
@@ -1702,6 +1735,94 @@ internal static class SharedGameCatalogEndpoints
             // Invalid state transition
             throw new ConflictException(ex.Message);
         }
+    }
+
+    private static async Task<IResult> HandleStartReview(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract admin ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var adminId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new StartReviewCommand(id, adminId);
+
+        try
+        {
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (ShareRequestAlreadyInReviewException ex)
+        {
+            // Another admin has the lock
+            return Results.Conflict(new ProblemDetails
+            {
+                Title = "Request Already In Review",
+                Detail = ex.Message,
+                Status = StatusCodes.Status409Conflict,
+                Extensions = { ["reviewingAdminId"] = ex.CurrentReviewerAdminId }
+            });
+        }
+        catch (InvalidShareRequestStateException ex)
+        {
+            // Invalid state for review
+            throw new ConflictException(ex.Message);
+        }
+    }
+
+    private static async Task<IResult> HandleReleaseReview(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract admin ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var adminId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new ReleaseReviewCommand(id, adminId);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (ShareRequestReviewerMismatchException)
+        {
+            // Not the reviewing admin
+            return Results.Forbid();
+        }
+    }
+
+    private static async Task<IResult> HandleGetMyActiveReviews(
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract admin ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var adminId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var query = new GetMyActiveReviewsQuery(adminId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     // ========================================

@@ -1,5 +1,5 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.SharedKernel.Application.Interfaces;
-using MediatR;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 
@@ -9,4 +9,4 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// </summary>
 internal sealed record StartReviewCommand(
     Guid ShareRequestId,
-    Guid ReviewingAdminId) : ICommand<Unit>;
+    Guid ReviewingAdminId) : ICommand<StartReviewResponse>;

@@ -197,6 +197,28 @@ namespace Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "badges",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    code = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    icon_url = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    tier = table.Column<int>(type: "integer", nullable: false),
+                    category = table.Column<int>(type: "integer", nullable: false),
+                    is_active = table.Column<bool>(type: "boolean", nullable: false),
+                    display_order = table.Column<int>(type: "integer", nullable: false),
+                    requirement = table.Column<string>(type: "jsonb", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    modified_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_badges", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "cache_stats",
                 columns: table => new
                 {
@@ -313,6 +335,24 @@ namespace Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_prompt_evaluation_results", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "share_request_limit_configs",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    tier = table.Column<int>(type: "integer", nullable: false),
+                    max_pending_requests = table.Column<int>(type: "integer", nullable: false),
+                    max_requests_per_month = table.Column<int>(type: "integer", nullable: false),
+                    cooldown_after_rejection_seconds = table.Column<long>(type: "bigint", nullable: false),
+                    is_active = table.Column<bool>(type: "boolean", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_share_request_limit_configs", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -449,6 +489,52 @@ namespace Api.Migrations
                         name: "FK_admin_report_executions_admin_reports_report_id",
                         column: x => x.report_id,
                         principalTable: "admin_reports",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "user_badges",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    badge_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    earned_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    triggering_share_request_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    is_displayed = table.Column<bool>(type: "boolean", nullable: false),
+                    revoked_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    revocation_reason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_user_badges", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_user_badges_badges_badge_id",
+                        column: x => x.badge_id,
+                        principalTable: "badges",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "contributors",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    shared_game_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    is_primary_contributor = table.Column<bool>(type: "boolean", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    modified_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_contributors", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_contributors_shared_games_shared_game_id",
+                        column: x => x.shared_game_id,
+                        principalTable: "shared_games",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -613,6 +699,46 @@ namespace Api.Migrations
                         principalTable: "shared_games",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "share_requests",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    source_game_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    target_shared_game_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    status = table.Column<int>(type: "integer", nullable: false),
+                    status_before_review = table.Column<int>(type: "integer", nullable: true),
+                    contribution_type = table.Column<int>(type: "integer", nullable: false),
+                    user_notes = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    admin_feedback = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    reviewing_admin_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    review_started_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    review_lock_expires_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    resolved_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    modified_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: false),
+                    modified_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_share_requests", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_share_requests_shared_games_source_game_id",
+                        column: x => x.source_game_id,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_share_requests_shared_games_target_shared_game_id",
+                        column: x => x.target_shared_game_id,
+                        principalTable: "shared_games",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1070,6 +1196,38 @@ namespace Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "user_rate_limit_overrides",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    max_pending_requests = table.Column<int>(type: "integer", nullable: true),
+                    max_requests_per_month = table.Column<int>(type: "integer", nullable: true),
+                    cooldown_after_rejection_seconds = table.Column<long>(type: "bigint", nullable: true),
+                    expires_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    reason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    created_by_admin_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_user_rate_limit_overrides", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_user_rate_limit_overrides_users_created_by_admin_id",
+                        column: x => x.created_by_admin_id,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_user_rate_limit_overrides_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "user_sessions",
                 columns: table => new
                 {
@@ -1091,6 +1249,32 @@ namespace Api.Migrations
                         column: x => x.UserId,
                         principalTable: "users",
                         principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "contribution_records",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    contributor_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    type = table.Column<int>(type: "integer", nullable: false),
+                    description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
+                    version = table.Column<int>(type: "integer", nullable: false),
+                    contributed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    share_request_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    document_ids = table.Column<string>(type: "jsonb", nullable: true),
+                    includes_game_data = table.Column<bool>(type: "boolean", nullable: false),
+                    includes_metadata = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_contribution_records", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_contribution_records_contributors_contributor_id",
+                        column: x => x.contributor_id,
+                        principalTable: "contributors",
+                        principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -1330,6 +1514,29 @@ namespace Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "share_request_documents",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    share_request_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    document_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    file_name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    content_type = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    file_size = table.Column<long>(type: "bigint", nullable: false),
+                    attached_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_share_request_documents", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_share_request_documents_share_requests_share_request_id",
+                        column: x => x.share_request_id,
+                        principalTable: "share_requests",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "api_key_usage_logs",
                 columns: table => new
                 {
@@ -1540,7 +1747,10 @@ namespace Api.Migrations
                     CollectionId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
                     DocumentType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false, defaultValue: "base"),
                     SortOrder = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    IsPublic = table.Column<bool>(type: "boolean", nullable: false)
+                    IsPublic = table.Column<bool>(type: "boolean", nullable: false),
+                    SharedGameId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ContributorId = table.Column<Guid>(type: "uuid", nullable: true),
+                    SourceDocumentId = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -2011,6 +2221,32 @@ namespace Api.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "ix_badges_category",
+                table: "badges",
+                column: "category");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_badges_code_unique",
+                table: "badges",
+                column: "code",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_badges_display_order",
+                table: "badges",
+                column: "display_order");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_badges_is_active",
+                table: "badges",
+                column: "is_active");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_badges_tier",
+                table: "badges",
+                column: "tier");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_cache_stats_game_id",
                 table: "cache_stats",
                 column: "game_id");
@@ -2112,6 +2348,38 @@ namespace Api.Migrations
                 name: "IX_chunked_upload_sessions_UserId_Status",
                 table: "chunked_upload_sessions",
                 columns: new[] { "UserId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_contribution_records_contributor_id",
+                table: "contribution_records",
+                column: "contributor_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_contribution_records_contributor_version",
+                table: "contribution_records",
+                columns: new[] { "contributor_id", "version" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_contribution_records_share_request_id",
+                table: "contribution_records",
+                column: "share_request_id",
+                filter: "share_request_id IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_contributors_shared_game_id",
+                table: "contributors",
+                column: "shared_game_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_contributors_user_id",
+                table: "contributors",
+                column: "user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_contributors_user_shared_game_unique",
+                table: "contributors",
+                columns: new[] { "user_id", "shared_game_id" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_document_collections_CreatedByUserId_CreatedAt",
@@ -2590,6 +2858,71 @@ namespace Api.Migrations
                 column: "thread_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_share_request_documents_document_id",
+                table: "share_request_documents",
+                column: "document_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_share_request_documents_request_document",
+                table: "share_request_documents",
+                columns: new[] { "share_request_id", "document_id" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_share_request_documents_share_request_id",
+                table: "share_request_documents",
+                column: "share_request_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_share_request_limit_configs_is_active",
+                table: "share_request_limit_configs",
+                column: "is_active");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_share_request_limit_configs_tier_unique_active",
+                table: "share_request_limit_configs",
+                column: "tier",
+                unique: true,
+                filter: "is_active = true");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_share_requests_review_lock_expires_at",
+                table: "share_requests",
+                column: "review_lock_expires_at",
+                filter: "review_lock_expires_at IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_share_requests_reviewing_admin_id",
+                table: "share_requests",
+                column: "reviewing_admin_id",
+                filter: "reviewing_admin_id IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_share_requests_source_game_id",
+                table: "share_requests",
+                column: "source_game_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_share_requests_status",
+                table: "share_requests",
+                column: "status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_share_requests_target_shared_game_id",
+                table: "share_requests",
+                column: "target_shared_game_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_share_requests_user_id",
+                table: "share_requests",
+                column: "user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_share_requests_user_source_status",
+                table: "share_requests",
+                columns: new[] { "user_id", "source_game_id", "status" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_shared_game_categories_shared_game_id",
                 table: "shared_game_categories",
                 column: "shared_game_id");
@@ -2765,6 +3098,34 @@ namespace Api.Migrations
                 filter: "\"IsUsed\" = FALSE");
 
             migrationBuilder.CreateIndex(
+                name: "ix_user_badges_badge_id",
+                table: "user_badges",
+                column: "badge_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_badges_revoked_at",
+                table: "user_badges",
+                column: "revoked_at",
+                filter: "revoked_at IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_badges_triggering_share_request_id",
+                table: "user_badges",
+                column: "triggering_share_request_id",
+                filter: "triggering_share_request_id IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_badges_user_badge_unique",
+                table: "user_badges",
+                columns: new[] { "user_id", "badge_id" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_badges_user_id",
+                table: "user_badges",
+                column: "user_id");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_user_library_entries_GameId",
                 table: "user_library_entries",
                 column: "GameId");
@@ -2790,6 +3151,24 @@ namespace Api.Migrations
                 table: "user_library_entries",
                 columns: new[] { "UserId", "GameId" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_rate_limit_overrides_created_by_admin_id",
+                table: "user_rate_limit_overrides",
+                column: "created_by_admin_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_rate_limit_overrides_expires_at",
+                table: "user_rate_limit_overrides",
+                column: "expires_at",
+                filter: "expires_at IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_user_rate_limit_overrides_user_id_active",
+                table: "user_rate_limit_overrides",
+                column: "user_id",
+                unique: true,
+                filter: "expires_at IS NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_user_sessions_TokenHash",
@@ -2912,6 +3291,9 @@ namespace Api.Migrations
                 name: "chunked_upload_sessions");
 
             migrationBuilder.DropTable(
+                name: "contribution_records");
+
+            migrationBuilder.DropTable(
                 name: "game_errata");
 
             migrationBuilder.DropTable(
@@ -2963,6 +3345,12 @@ namespace Api.Migrations
                 name: "share_links");
 
             migrationBuilder.DropTable(
+                name: "share_request_documents");
+
+            migrationBuilder.DropTable(
+                name: "share_request_limit_configs");
+
+            migrationBuilder.DropTable(
                 name: "shared_game_categories");
 
             migrationBuilder.DropTable(
@@ -2996,7 +3384,13 @@ namespace Api.Migrations
                 name: "user_backup_codes");
 
             migrationBuilder.DropTable(
+                name: "user_badges");
+
+            migrationBuilder.DropTable(
                 name: "user_library_entries");
+
+            migrationBuilder.DropTable(
+                name: "user_rate_limit_overrides");
 
             migrationBuilder.DropTable(
                 name: "user_sessions");
@@ -3020,6 +3414,9 @@ namespace Api.Migrations
                 name: "chats");
 
             migrationBuilder.DropTable(
+                name: "contributors");
+
+            migrationBuilder.DropTable(
                 name: "game_session_states");
 
             migrationBuilder.DropTable(
@@ -3032,6 +3429,9 @@ namespace Api.Migrations
                 name: "ChatThreads");
 
             migrationBuilder.DropTable(
+                name: "share_requests");
+
+            migrationBuilder.DropTable(
                 name: "game_categories");
 
             migrationBuilder.DropTable(
@@ -3042,6 +3442,9 @@ namespace Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "game_publishers");
+
+            migrationBuilder.DropTable(
+                name: "badges");
 
             migrationBuilder.DropTable(
                 name: "pdf_documents");

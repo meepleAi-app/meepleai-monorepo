@@ -52,4 +52,15 @@ internal interface IEmailService
         string feedback,
         Guid shareRequestId,
         CancellationToken ct = default);
+
+    // ISSUE-2740: Admin share request digest email
+    Task SendAdminShareRequestDigestEmailAsync(
+        string toEmail,
+        string toName,
+        int totalPending,
+        int oldestPendingDays,
+        int createdToday,
+        Dictionary<string, int> pendingByType,
+        string reviewQueueUrl,
+        CancellationToken ct = default);
 }

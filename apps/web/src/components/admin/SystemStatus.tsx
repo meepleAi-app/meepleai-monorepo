@@ -186,33 +186,61 @@ export function SystemStatus({
           </div>
         </div>
 
-        {/* Service List */}
-        <div className="space-y-2" role="list" aria-label="Service status list">
-          {services.map(service => (
-            <div
-              key={service.name}
-              className="flex items-center justify-between py-1.5"
-              role="listitem"
-              data-testid={`service-status-${service.name.toLowerCase().replace(/\s+/g, '-')}`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-700">{service.name}</span>
-                {service.latency !== undefined && (
-                  <span className="text-xs text-gray-400">({service.latency}ms)</span>
+        {/* Service List - Now as individual cards with border-left indicators (Issue #2849) */}
+        <div className="space-y-3" role="list" aria-label="Service status list">
+          {services.map(service => {
+            const borderLeftClass = service.status === 'healthy' 
+              ? 'border-l-green-500'
+              : service.status === 'degraded'
+              ? 'border-l-yellow-500'
+              : service.status === 'unhealthy'
+              ? 'border-l-red-500'
+              : 'border-l-gray-400';
+
+            const bgClass = service.status === 'degraded'
+              ? 'bg-yellow-50 dark:bg-yellow-500/10'
+              : service.status === 'unhealthy'
+              ? 'bg-red-50 dark:bg-red-500/10'
+              : 'bg-white dark:bg-stone-900';
+
+            return (
+              <div
+                key={service.name}
+                className={cn(
+                  'flex items-center justify-between p-4 rounded-xl border-l-4 border border-meeple-border',
+                  'hover-card hover-shadow-meeple cursor-pointer',
+                  borderLeftClass,
+                  bgClass
                 )}
+                role="listitem"
+                data-testid={`service-status-${service.name.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={cn(
+                      'h-3 w-3 rounded-full animate-pulse-meeple',
+                      serviceStatusColors[service.status]
+                    )}
+                    title={`${service.name}: ${service.status}`}
+                    aria-label={`${service.name} is ${service.status}`}
+                  />
+                  <div>
+                    <div className="text-sm font-bold font-heading text-gray-900 dark:text-white">
+                      {service.name}
+                    </div>
+                    {service.latency !== undefined && (
+                      <div className="text-xs text-gray-500 font-semibold">
+                        {service.latency}ms response time
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-xs text-gray-400">
+                  {service.message || '10s ago'}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                {service.message && (
-                  <span className="text-xs text-gray-500">{service.message}</span>
-                )}
-                <div
-                  className={cn('h-2.5 w-2.5 rounded-full', serviceStatusColors[service.status])}
-                  title={`${service.name}: ${service.status}`}
-                  aria-label={`${service.name} is ${service.status}`}
-                />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

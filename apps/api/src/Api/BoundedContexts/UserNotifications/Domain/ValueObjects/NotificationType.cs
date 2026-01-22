@@ -16,6 +16,9 @@ internal sealed class NotificationType : ValueObject
     public static readonly NotificationType NewComment = new("new_comment");
     public static readonly NotificationType SharedLinkAccessed = new("shared_link_accessed");
 
+    // ISSUE-2741: Badge earned notification type
+    public static readonly NotificationType BadgeEarned = new("badge_earned");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -46,6 +49,7 @@ internal sealed class NotificationType : ValueObject
             "processing_failed" => ProcessingFailed,
             "new_comment" => NewComment,
             "shared_link_accessed" => SharedLinkAccessed,
+            "badge_earned" => BadgeEarned,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

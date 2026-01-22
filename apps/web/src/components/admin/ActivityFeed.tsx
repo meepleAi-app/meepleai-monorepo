@@ -79,8 +79,29 @@ export function ActivityFeed({
                 const severity = event.severity || 'Info';
                 const relativeTime = formatRelativeTimestamp(event.timestamp);
 
+                // Background and border for warning/error items (Issue #2849)
+                const itemBgClass = severity === 'Warning'
+                  ? 'bg-yellow-50 dark:bg-yellow-500/10'
+                  : severity === 'Error' || severity === 'Critical'
+                  ? 'bg-red-50 dark:bg-red-500/10'
+                  : '';
+
+                const borderLeftClass = severity === 'Warning'
+                  ? 'border-l-4 border-l-yellow-500'
+                  : severity === 'Error' || severity === 'Critical'
+                  ? 'border-l-4 border-l-red-500'
+                  : 'border-l-4 border-l-transparent';
+
                 return (
-                  <li key={event.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                  <li
+                    key={event.id}
+                    className={cn(
+                      'px-6 py-4 transition-all rounded-lg',
+                      'hover:bg-meeple-light-orange/30',
+                      borderLeftClass,
+                      itemBgClass
+                    )}
+                  >
                     <div className="flex items-start gap-4">
                       <div
                         className={cn(

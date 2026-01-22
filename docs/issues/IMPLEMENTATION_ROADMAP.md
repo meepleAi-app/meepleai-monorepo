@@ -3,47 +3,134 @@
 ## Executive Summary
 
 **Total Epics**: 7 (1 existing, 6 new)
-**Total Issues Estimated**: ~60 issues
-**Timeline**: 10-14 settimane (2-3 developers)
-**Priority Focus**: **Testing Admin Dashboard** (già implementato, serve testing completo)
+**Total Issues**: ~75 issues (43 created ✅, 19 to create ❌, 13 infra/quality)
+**Timeline**: 11-15 settimane (2-3 developers) - includes Phase 0 prep week
+**Priority Focus**: **Phase 0 (Prep) + Admin Dashboard Testing** (CRITICAL blockers identified)
+
+### 🚨 Critical Updates (2026-01-22)
+**Gap Analysis Completed**: See [GAP_ANALYSIS_REPORT.md](./GAP_ANALYSIS_REPORT.md) for detailed findings.
+
+**Issues Status**:
+- ✅ **43 issues created** for Epics 2-7 (User Dashboard through Editor Dashboard)
+- ❌ **19 issues MISSING** for Phase 0+1 (Admin Testing + Infrastructure)
+- 📋 Full list in [MISSING_ISSUES_TO_CREATE.md](./MISSING_ISSUES_TO_CREATE.md)
+
+**Key Findings**:
+1. 🔴 **Admin Dashboard Testing**: 0/19 issues exist (Phase 1 BLOCKED)
+2. 🔴 **Test Infrastructure**: 2/7 issues exist (All phases impacted)
+3. 🟡 **Shared Catalog Clarification**: 2 complementary workflows identified
+
+---
+
+## 🔧 Phase 0: PREPARATION WEEK (Week 0) 🚨 BLOCKING
+
+### Objective: Create Missing Issues & Setup Foundation
+**Status**: ❌ **REQUIRED BEFORE PHASE 1 CAN START**
+**Timeline**: 1 week
+**Priority**: 🔴 CRITICAL - BLOCKING
+
+### Issues to Create
+**See detailed specifications in**: [MISSING_ISSUES_TO_CREATE.md](./MISSING_ISSUES_TO_CREATE.md)
+
+#### 🔴 CRITICAL: Admin Dashboard Testing (8 issues)
+1. Backend Unit Tests - Admin Dashboard
+2. Backend Integration Tests - Admin Dashboard
+3. Frontend Component Tests - Admin Dashboard
+4. Frontend Integration Tests - Admin Dashboard
+5. E2E Tests - Admin Dashboard User Journeys
+6. Visual Regression Tests - Admin Dashboard
+7. Performance Testing - Lighthouse
+8. Load Testing - 30s Polling Simulation
+
+#### 🔴 CRITICAL: Test Infrastructure (5 issues)
+9. Playwright Configuration & Best Practices
+10. Testcontainers Optimization
+11. CI/CD Test Pipeline for All Epics
+12. Test Infrastructure Documentation
+13. Visual Regression Setup - Clarify/Expand #2852
+
+#### 🟡 HIGH: Component Library (3 issues)
+14. Storybook Setup & Foundation
+15. Extract Reusable Components from Admin Dashboard
+16. Design System Documentation (Figma → Storybook)
+
+#### 🟢 MEDIUM: Performance & Quality (3 issues)
+17. Performance Testing Infrastructure (Lighthouse CI)
+18. Load Testing Setup (k6)
+19. Accessibility Audit & WCAG 2.1 AA Compliance
+
+### Deliverables (Week 0)
+- ✅ All 19 issues created on GitHub
+- ✅ Issues linked to appropriate Epics
+- ✅ Sprint 1 (Week 1-2) ready with assigned issues
+- ✅ Roadmap updated with clarifications
+
+### Effort Estimate
+- **Issue Creation**: 4-6 hours (detailed specs from MISSING_ISSUES doc)
+- **Roadmap Updates**: 2 hours
+- **Team Alignment**: 2 hours (review & planning)
+- **Total**: ~8-10 hours (1-2 days)
+
+### Why Critical
+**Phase 1 (Admin Dashboard Testing) CANNOT START** without these issues:
+- Issue references #2841-2843 in original roadmap are INCORRECT (they're for Game Detail Epic #2823, not Admin Dashboard)
+- Test infrastructure incomplete (only 2/7 issues exist)
+- 19 BLOCKING issues must be created first
 
 ---
 
 ## 🎯 Phase 1: TESTING ADMIN DASHBOARD (Week 1-2) ⭐ PRIORITY
 
 ### Epic: Admin Dashboard Testing
-**Status**: Dashboard implementato (Epic #2783 CLOSED), testing parziale
+**Status**: Dashboard implementato (Epic #2783 CLOSED), testing NON ESISTE
+**Prerequisites**: Phase 0 complete (19 issues created)
 
 **Obiettivo**: Raggiungere 90%+ test coverage su Admin Dashboard
 
-### Issues da Creare/Completare
+### 🚨 CORRECTION: Issue References
+**Original roadmap ERROR**: References to #2841-2843 as "Admin Dashboard testing" were INCORRECT.
+- ❌ **#2841**: Backend tests for **Game Detail Epic #2823** (NOT Admin Dashboard)
+- ❌ **#2842**: Frontend tests for **Game Detail Epic #2823** (NOT Admin Dashboard)
+- ❌ **#2843**: E2E tests for **Game Detail Epic #2823** (NOT Admin Dashboard)
 
-**Backend Testing** (già esistente #2841):
-- [ ] Unit tests per GetAdminMetricsQueryHandler
-- [ ] Unit tests per GetServiceHealthQueryHandler
-- [ ] Integration tests con Testcontainers
-- [ ] Test caching behavior (HybridCache)
-- [ ] Coverage target: 90%+
+**Reality**: ❌ **NO ADMIN DASHBOARD TESTING ISSUES EXIST**
 
-**Frontend Testing** (già esistente #2842):
-- [ ] Component tests: MetricCard, ServiceHealthCard, ActivityFeed
-- [ ] Integration tests: Dashboard data fetching
-- [ ] Snapshot tests per visual regression
-- [ ] Accessibility tests (a11y audit)
-- [ ] Coverage target: 85%+
+### Issues to Implement (Created in Phase 0)
 
-**E2E Testing** (già esistente #2843):
-- [ ] Admin login → dashboard load
-- [ ] Metric card drill-down navigation
-- [ ] Service health click → details
-- [ ] Activity feed filtering (All vs Errors)
-- [ ] Quick action buttons workflows
-- [ ] Real-time updates (30s polling simulation)
+**Backend Testing** (2 issues from Phase 0):
+- [ ] Backend Unit Tests - Admin Dashboard
+  - Unit tests per GetAdminMetricsQueryHandler
+  - Unit tests per GetServiceHealthQueryHandler
+  - Coverage target: 90%+
+- [ ] Backend Integration Tests - Admin Dashboard
+  - Integration tests con Testcontainers
+  - Test caching behavior (HybridCache)
+  - Coverage target: 85%+
 
-**Nuove Issue da Creare**:
-1. **Visual Regression Testing** (Playwright screenshots)
-2. **Performance Testing** (Lighthouse score 90+)
-3. **Load Testing** (simulate 30s polling with 100 concurrent admins)
+**Frontend Testing** (2 issues from Phase 0):
+- [ ] Frontend Component Tests - Admin Dashboard
+  - Component tests: MetricCard, ServiceHealthCard, ActivityFeed
+  - Snapshot tests per visual regression
+  - Accessibility tests (a11y audit)
+  - Coverage target: 85%+
+- [ ] Frontend Integration Tests - Admin Dashboard
+  - Integration tests: Dashboard data fetching
+  - TanStack Query + MSW mocks
+  - Real-time polling (30s) simulation
+
+**E2E Testing** (1 issue from Phase 0):
+- [ ] E2E Tests - Admin Dashboard User Journeys
+  - Admin login → dashboard load
+  - Metric card drill-down navigation
+  - Service health click → details
+  - Activity feed filtering (All vs Errors)
+  - Quick action buttons workflows
+  - Real-time updates verification
+
+**Visual & Performance** (3 issues from Phase 0):
+- [ ] Visual Regression Tests - Admin Dashboard
+- [ ] Performance Testing - Lighthouse (score 90+)
+- [ ] Load Testing - 30s Polling (100 concurrent admins)
 
 **Deliverables**:
 - ✅ 90%+ backend coverage
@@ -114,24 +201,55 @@
 ## 🌍 Phase 4: SHARED CATALOG (Week 9-10)
 
 ### Epic: Shared Catalog (#NEW)
-**Issues**: 7 totali (check existing #2743-2752)
-**Timeline**: 2 settimane
+**Issues**: 7 new + 10 existing = 17 totali
+**Timeline**: 2 settimane (may extend to 3-4 weeks if both workflows in scope)
 **Priority**: HIGH
 
+### 🔄 CLARIFICATION: Two Complementary Workflows
+
+**Workflow A: BROWSE Catalog & ADD to Library** (NEW issues #2871-2877)
+**Description**: Users browse shared catalog and add games to personal library
+**Status**: ✅ 7 issues created
+
 **Backend** (2 issues):
-1. GetSharedCatalogQuery (advanced filters) - **Check if exists**
-2. AddToLibraryCommand - **May exist**
+1. #2871: GetSharedCatalogQuery (advanced filters)
+2. #2872: AddToLibraryCommand
 
 **Frontend** (4 issues):
-3. Advanced filter panel
-4. Catalog game cards with community stats
-5. Add to Library overlay + optimistic UI
-6. Pagination component
+3. #2873: Advanced filter panel
+4. #2874: Catalog game cards with community stats
+5. #2875: Add to Library overlay + optimistic UI
+6. #2876: Pagination component
 
 **Testing** (1 issue):
-7. Catalog E2E tests
+7. #2877: E2E tests - Browse and Add to Library
 
-**Note**: Review existing issues #2743-2752 before creating duplicates
+---
+
+**Workflow B: SHARE from Library & ADMIN REVIEW** (EXISTING issues #2743-2752)
+**Description**: Users share games FROM personal library TO catalog, with admin approval workflow
+**Status**: ✅ 10 issues exist (related to Epic #2718)
+
+**Features Covered**:
+- #2743: UI Condivisione da Libreria (share FROM library)
+- #2744: Dashboard Contributi Utente (contributor stats)
+- #2745: Admin Review Interface (approval/rejection)
+- #2746: Contributor Display su SharedGame (attribution)
+- #2747: Badge Display Components (gamification)
+- #2748: Admin Review Lock UI (prevent concurrent edits)
+- #2749: Rate Limit Feedback UI (spam prevention)
+- #2750: Admin Rate Limit Config Panel (admin controls)
+- #2751: Integration Tests - Full Share Flow
+- #2752: Documentation - API e User Guide
+
+### Scope Decision Needed
+**Question**: Are BOTH workflows (A + B) in scope for this Epic, or only Workflow A?
+- **If Both**: Timeline extends to 3-4 weeks, requires coordination between #2871-2877 and #2743-2752
+- **If Only A**: Timeline stays 2 weeks, Workflow B deferred or handled separately
+
+**Recommendation**: Implement sequentially:
+1. **Week 9-10**: Workflow A (Browse & Add) - Priority for user experience
+2. **Week 11-12**: Workflow B (Share & Review) - Community contribution features
 
 ---
 
@@ -201,20 +319,29 @@
 
 ---
 
-## 📊 Summary Timeline
+## 📊 Summary Timeline (UPDATED)
 
-| Phase | Epic | Duration | Priority | Issues | Parallel? |
-|-------|------|----------|----------|--------|-----------|
-| 1 | **Admin Dashboard Testing** | 2 weeks | ⭐ CRITICAL | 3-5 | - |
-| 2 | User Dashboard | 2-3 weeks | HIGH | 9 | - |
-| 3 | Personal Library | 2-3 weeks | HIGH | 8 | ✅ Week 2-3 |
-| 4 | Shared Catalog | 2 weeks | HIGH | 7 | ✅ Week 3-4 |
-| 5 | Profile & Settings | 1-2 weeks | MEDIUM | 6 | ✅ Week 4-5 |
-| 6 | User Management | 2 weeks | MEDIUM | 7 | ✅ Week 5-6 |
-| 7 | Editor Dashboard | 1-2 weeks | MEDIUM | 6 | ✅ Week 6 |
-| - | **Game Detail** (existing) | 3-4 weeks | HIGH | 20 | Epic #2823 |
+| Phase | Epic | Duration | Priority | Issues | Status |
+|-------|------|----------|----------|--------|--------|
+| **0** | **Prep Week** | 1 week | 🔴 **BLOCKING** | 19 to create | ❌ Required |
+| **1** | **Admin Dashboard Testing** | 2 weeks | ⭐ CRITICAL | 8 (Phase 0) | ⏳ Blocked by Phase 0 |
+| 1 | **Test Infrastructure** | 2 weeks | 🔴 CRITICAL | 5 (Phase 0) | ⏳ Blocked by Phase 0 |
+| 1 | **Component Library** | 2 weeks | 🟡 HIGH | 3 (Phase 0) | ⏳ Parallel with testing |
+| 2 | User Dashboard | 2-3 weeks | HIGH | 9 (#2854-2862) | ✅ Issues created |
+| 3 | Personal Library | 2-3 weeks | HIGH | 8 (#2863-2870) | ✅ Issues created |
+| 4A | Shared Catalog - Browse | 2 weeks | HIGH | 7 (#2871-2877) | ✅ Issues created |
+| 4B | Shared Catalog - Share | 2-3 weeks | HIGH | 10 (#2743-2752) | ✅ Issues exist |
+| 5 | Profile & Settings | 1-2 weeks | MEDIUM | 6 (#2878-2883) | ✅ Issues created |
+| 6 | User Management | 2 weeks | MEDIUM | 7 (#2884-2891) | ✅ Issues created |
+| 7 | Editor Dashboard | 1-2 weeks | MEDIUM | 6 (#2892-2897) | ✅ Issues created |
+| - | **Game Detail** (existing) | 3-4 weeks | HIGH | 20 (#2824-2843) | ✅ Epic #2823 |
 
-**Total**: 10-14 settimane sequenziale, **6-8 settimane con parallelizzazione**
+**Total**: 11-15 settimane sequenziale (includes Phase 0), **7-9 settimane con parallelizzazione**
+
+### Timeline Notes
+- **Phase 0 is NEW and BLOCKING**: Must complete before Phase 1 can start
+- **Phase 1 has 3 parallel streams**: Admin Testing + Infrastructure + Component Library
+- **Shared Catalog split**: Workflow A (Browse) vs Workflow B (Share) can be sequential or parallel
 
 ---
 
@@ -412,21 +539,31 @@ Week 7-8: Profile + Admin Tools (parallel, lower priority)
 
 ---
 
-## 🔄 Epic Status Matrix
+## 🔄 Epic Status Matrix (UPDATED)
 
-| Epic | Status | Issues | Backend | Frontend | Testing | Priority |
-|------|--------|--------|---------|----------|---------|----------|
-| **Admin Dashboard** | ✅ Implemented | 3 (test only) | ✅ Done | ✅ Done | 🔴 In Progress | ⭐ CRITICAL |
-| **Game Detail** | 📝 Issues Created | 20 (#2824-2843) | ⏳ Pending | ⏳ Pending | ⏳ Pending | ⭐ HIGH |
-| **User Dashboard** | 📝 Epic Ready | 9 (to create) | ⏳ Pending | ⏳ Pending | ⏳ Pending | ⭐ HIGH |
-| **Personal Library** | 📝 Epic Ready | 8 (to create) | ⏳ Pending | ⏳ Pending | ⏳ Pending | ⭐ HIGH |
-| **Shared Catalog** | 📝 Epic Ready | 7 (check existing) | ⏳ Partial | ⏳ Pending | ⏳ Pending | ⭐ HIGH |
-| **Profile/Settings** | 📝 Epic Ready | 6 (to create) | ⏳ Pending | ⏳ Pending | ⏳ Pending | 🟡 MEDIUM |
-| **User Management** | 📝 Epic Ready | 7 (to create) | ⏳ Pending | ⏳ Pending | ⏳ Pending | 🟡 MEDIUM |
-| **Editor Dashboard** | 📝 Epic Ready | 6 (check existing) | ⏳ Partial | ⏳ Pending | ⏳ Pending | 🟡 MEDIUM |
+| Epic | Status | Issues Created | GitHub # | Backend | Frontend | Testing | Priority |
+|------|--------|----------------|----------|---------|----------|---------|----------|
+| **Prep Week** | ❌ **BLOCKING** | 0/19 | Phase 0 | ❌ N/A | ❌ N/A | ❌ Missing | 🔴 CRITICAL |
+| **Admin Testing** | ❌ Blocked | 0/8 | Phase 0 | ⏳ Pending | ⏳ Pending | ❌ Missing | ⭐ CRITICAL |
+| **Test Infra** | ⚠️ Partial | 2/7 | #2760, #2852 | ⏳ Partial | ⏳ Partial | ⚠️ Incomplete | 🔴 CRITICAL |
+| **Component Lib** | ❌ Missing | 0/3 | Phase 0 | ⏳ N/A | ⏳ Pending | ⏳ Pending | 🟡 HIGH |
+| **Game Detail** | ✅ Ready | 20/20 | #2824-2843 | ⏳ Pending | ⏳ Pending | ⏳ Pending | ⭐ HIGH |
+| **User Dashboard** | ✅ Ready | 9/9 | #2854-2862 | ⏳ Pending | ⏳ Pending | ⏳ Pending | ⭐ HIGH |
+| **Personal Library** | ✅ Ready | 8/8 | #2863-2870 | ⏳ Pending | ⏳ Pending | ⏳ Pending | ⭐ HIGH |
+| **Catalog - Browse** | ✅ Ready | 7/7 | #2871-2877 | ⏳ Pending | ⏳ Pending | ⏳ Pending | ⭐ HIGH |
+| **Catalog - Share** | ✅ Ready | 10/10 | #2743-2752 | ⏳ Partial | ⏳ Partial | ⏳ Pending | ⭐ HIGH |
+| **Profile/Settings** | ✅ Ready | 6/6 | #2878-2883 | ⏳ Pending | ⏳ Pending | ⏳ Pending | 🟡 MEDIUM |
+| **User Management** | ✅ Ready | 7/7 | #2884-2891 | ⏳ Pending | ⏳ Pending | ⏳ Pending | 🟡 MEDIUM |
+| **Editor Dashboard** | ✅ Ready | 6/6 | #2892-2897 | ⏳ Pending | ⏳ Pending | ⏳ Pending | 🟡 MEDIUM |
+| **Admin Dashboard** | ✅ Implemented | N/A | Epic #2783 | ✅ Done | ✅ Done | ❌ Missing tests | - |
 
 **Legend**:
-- ✅ Done | 🔴 In Progress | ⏳ Pending | 📝 Epic Ready
+- ✅ Ready/Done | ⚠️ Partial | ❌ Missing/Blocked | ⏳ Pending
+
+**Summary**:
+- **Issues Created**: 76/95 (80% coverage)
+- **CRITICAL Blockers**: Phase 0 (19 issues) + Test Infra (5 missing)
+- **Ready for Implementation**: Epics 2-7 (43 issues created ✅)
 
 ---
 
@@ -481,32 +618,70 @@ docs/issues/
 
 ---
 
-## ✅ Checklist: Immediate Actions
+## ✅ Checklist: Immediate Actions (UPDATED)
 
-### This Week
-- [ ] Review Admin Dashboard testing issues (#2841-2843)
-- [ ] Create additional testing issues (visual regression, performance, load)
-- [ ] Setup Playwright visual regression (baseline screenshots)
-- [ ] Start backend unit tests for Admin Dashboard
-- [ ] Start frontend component tests for Admin Dashboard
+### 🚨 Phase 0 - This Week (CRITICAL)
+- [ ] **Review Gap Analysis**: Read [GAP_ANALYSIS_REPORT.md](./GAP_ANALYSIS_REPORT.md)
+- [ ] **Review Missing Issues**: Read [MISSING_ISSUES_TO_CREATE.md](./MISSING_ISSUES_TO_CREATE.md)
+- [ ] **Create 19 GitHub Issues** (detailed specs in MISSING_ISSUES doc):
+  - [ ] 8 Admin Dashboard Testing issues (backend, frontend, E2E, visual, perf, load)
+  - [ ] 5 Test Infrastructure issues (Playwright, Testcontainers, CI/CD, docs, visual regression)
+  - [ ] 3 Component Library issues (Storybook, extraction, design system)
+  - [ ] 3 Performance & Quality issues (Lighthouse CI, k6, a11y audit)
+- [ ] **Link Issues to Epics** on GitHub
+- [ ] **Update Sprint 1 Milestone** with Phase 0 + Phase 1 issues
+- [ ] **Team Alignment Meeting** (review roadmap updates, assign Phase 1 work)
 
-### Next Week
-- [ ] Complete Admin Dashboard E2E tests
-- [ ] Performance audit with Lighthouse
-- [ ] Generate test coverage report
-- [ ] Create GitHub issues for User Dashboard (from Epic)
-- [ ] Plan Sprint 3-4 implementation
+**Estimated Time**: 8-10 hours (1-2 days)
 
-### Week 3
+### Week 1-2 (Phase 1 - After Phase 0 Complete)
+- [ ] **Parallel Stream A** (QA Engineer): Admin Dashboard testing implementation
+- [ ] **Parallel Stream B** (DevOps): Test infrastructure setup
+- [ ] **Parallel Stream C** (Frontend Dev): Storybook + component library
+- [ ] Daily standups to track progress
+- [ ] Mid-sprint review (end of Week 1)
+- [ ] Sprint retrospective (end of Week 2)
+
+### Week 3 (Phase 2 Start)
 - [ ] Begin User Dashboard backend implementation
-- [ ] Setup component library with Storybook
-- [ ] Extract reusable components from mockups
+- [ ] User Dashboard frontend components
+- [ ] Start Personal Library planning (parallel)
 
 ---
 
-**Priority**: **START WITH ADMIN DASHBOARD TESTING** (Week 1-2)
+## 📚 Related Documentation
 
-Vuoi che:
-1. Creo le GitHub issues per Admin Dashboard testing (visual regression, performance)?
-2. Creo tutte le issue per gli altri Epic (User Dashboard, Library, etc.)?
-3. Inizio implementazione test suite per Admin Dashboard?
+**This Roadmap**: `docs/issues/IMPLEMENTATION_ROADMAP.md` (this file)
+
+**Gap Analysis**: [GAP_ANALYSIS_REPORT.md](./GAP_ANALYSIS_REPORT.md)
+- Detailed findings on missing issues
+- Coverage analysis (60% complete, 40% missing)
+- Epic-by-epic breakdown
+- Critical findings and recommendations
+
+**Missing Issues**: [MISSING_ISSUES_TO_CREATE.md](./MISSING_ISSUES_TO_CREATE.md)
+- 19 detailed issue specifications
+- Copy-paste ready for GitHub issue creation
+- Organized by priority (Critical → Medium)
+- Includes acceptance criteria and complexity estimates
+
+**Epic Documents**: `docs/issues/epic-*.md`
+- User Dashboard, Personal Library, Shared Catalog
+- Profile & Settings, User Management, Editor Dashboard
+- Game Detail Page (existing)
+
+---
+
+**Priority**: **START WITH PHASE 0** (Create 19 Missing Issues)
+
+**Next Actions**:
+1. ✅ Gap analysis complete → Review documents above
+2. ❌ Create 19 GitHub issues from MISSING_ISSUES_TO_CREATE.md
+3. ❌ Update Sprint 1 milestone with new issues
+4. ❌ Begin Phase 1 implementation (Admin Testing + Infrastructure)
+
+---
+
+**Last Updated**: 2026-01-22
+**Gap Analysis**: COMPLETED
+**Status**: Phase 0 required before Phase 1 can start

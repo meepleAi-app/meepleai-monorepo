@@ -104,11 +104,11 @@ function NavLink({
     <Link
       href={item.href}
       className={cn(
-        'flex items-center gap-3 rounded-md transition-colors',
-        collapsed ? 'justify-center px-2 py-2' : 'px-3 py-2',
+        'flex items-center gap-3 rounded-[0.625rem] transition-all duration-200 font-semibold text-[0.9375rem]',
+        collapsed ? 'justify-center px-2 py-2' : 'px-5 py-[0.625rem]',
         isActive
-          ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300'
-          : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
+          ? 'bg-[#8b5cf6] text-white'
+          : 'text-[#666] hover:bg-[#fef3e2] hover:text-meeple-orange dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
       )}
       aria-current={isActive ? 'page' : undefined}
       data-testid={`admin-nav-link-${item.href.replace(/^\/admin\/?/, '') || 'dashboard'}`}
@@ -116,7 +116,7 @@ function NavLink({
       <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
       {!collapsed && (
         <>
-          <span className="flex-1 text-sm font-medium">{item.label}</span>
+          <span className="flex-1">{item.label}</span>
           {badge && badge.count > 0 && (
             <Badge variant={badge.variant ?? 'secondary'} className="ml-auto text-xs">
               {badge.count > 99 ? '99+' : badge.count}

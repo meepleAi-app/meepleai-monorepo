@@ -127,6 +127,8 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 // Disable health checks for external services in tests
                 ["HealthChecks:Qdrant:Enabled"] = "false",
                 ["HealthChecks:Redis:Enabled"] = "false",
+                // Issue #2705: Disable rate limiting for integration tests to prevent 429 errors
+                ["RateLimiting:Enabled"] = "false",
                 // Configure Redis/Qdrant URLs to dummy values (services are mocked)
                 ["REDIS_URL"] = "localhost:6379",
                 ["QDRANT_URL"] = "http://localhost:6333",

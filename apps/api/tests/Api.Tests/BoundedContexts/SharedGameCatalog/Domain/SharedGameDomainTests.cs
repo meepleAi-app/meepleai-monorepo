@@ -337,9 +337,8 @@ public class SharedGameDomainTests
     {
         // Arrange
         var game = CreateValidGame();
-#pragma warning disable CS0618 // Using obsolete method for test setup
-        game.Publish(TestUserId); // Move to Published
-#pragma warning restore CS0618
+        game.SubmitForApproval(TestUserId);
+        game.ApprovePublication(TestUserId); // Move to Published
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() =>

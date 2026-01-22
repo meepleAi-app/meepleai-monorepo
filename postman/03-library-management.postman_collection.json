@@ -1,0 +1,500 @@
+{
+  "info": {
+    "_postman_id": "library-management-collection-003",
+    "name": "03 - Library Management Flows",
+    "description": "MeepleAI User Library API endpoints for managing personal game collections with tier-based quotas.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "gameId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "libraryGameId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Library Overview",
+      "item": [
+        {
+          "name": "Get My Library",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.items && jsonData.items.length > 0) {",
+                  "        pm.collectionVariables.set('libraryGameId', jsonData.items[0].id);",
+                  "    }",
+                  "    pm.test('Has items array', function() {",
+                  "        pm.expect(jsonData).to.have.property('items');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get user's personal game library with pagination"
+          }
+        },
+        {
+          "name": "Get Library with Sorting",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library?sortBy=addedAt&sortOrder=desc&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library"],
+              "query": [
+                {
+                  "key": "sortBy",
+                  "value": "addedAt",
+                  "description": "Options: addedAt, name, lastPlayed"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get library sorted by specific field"
+          }
+        },
+        {
+          "name": "Get Library Quota",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/quota",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "quota"]
+            },
+            "description": "Get current quota usage and limits based on user tier"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Library CRUD",
+      "item": [
+        {
+          "name": "Add Game to Library",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.id) {",
+                  "        pm.collectionVariables.set('libraryGameId', jsonData.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Got this for birthday\",\n  \"tags\": [\"favorites\", \"family-nights\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/games/{{gameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "games", "{{gameId}}"]
+            },
+            "description": "Add a shared game to user's personal library"
+          }
+        },
+        {
+          "name": "Add Game - Quota Exceeded (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/games/{{gameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "games", "{{gameId}}"]
+            },
+            "description": "Test adding game when quota is exceeded - should return 403 Forbidden"
+          }
+        },
+        {
+          "name": "Get Library Game Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/games/{{libraryGameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "games", "{{libraryGameId}}"]
+            },
+            "description": "Get specific library entry with user notes and tags"
+          }
+        },
+        {
+          "name": "Update Library Entry",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Updated notes - great with kids!\",\n  \"tags\": [\"favorites\", \"family-nights\", \"kids\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/games/{{libraryGameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "games", "{{libraryGameId}}"]
+            },
+            "description": "Update notes and tags for a library entry"
+          }
+        },
+        {
+          "name": "Remove Game from Library",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/games/{{libraryGameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "games", "{{libraryGameId}}"]
+            },
+            "description": "Remove a game from user's library"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Custom PDF Upload",
+      "item": [
+        {
+          "name": "Upload Custom PDF",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/rulebook.pdf"
+                },
+                {
+                  "key": "documentType",
+                  "value": "rulebook",
+                  "type": "text"
+                },
+                {
+                  "key": "language",
+                  "value": "en",
+                  "type": "text"
+                },
+                {
+                  "key": "version",
+                  "value": "1.0",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/games/{{libraryGameId}}/pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "games", "{{libraryGameId}}", "pdf"]
+            },
+            "description": "Upload custom PDF for a library game (tier-limited)"
+          }
+        },
+        {
+          "name": "Get Custom PDFs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/games/{{libraryGameId}}/pdfs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "games", "{{libraryGameId}}", "pdfs"]
+            },
+            "description": "Get list of custom PDFs uploaded for a library game"
+          }
+        },
+        {
+          "name": "Delete Custom PDF",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/games/{{libraryGameId}}/pdf/:pdfId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "games", "{{libraryGameId}}", "pdf", ":pdfId"],
+              "variable": [
+                {
+                  "key": "pdfId",
+                  "value": "pdf-uuid"
+                }
+              ]
+            },
+            "description": "Delete a custom PDF from library game"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wishlist",
+      "item": [
+        {
+          "name": "Get Wishlist",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/wishlist?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "wishlist"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get user's game wishlist"
+          }
+        },
+        {
+          "name": "Add to Wishlist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": 1,\n  \"notes\": \"Want this for next game night\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/wishlist/{{gameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "wishlist", "{{gameId}}"]
+            },
+            "description": "Add a game to wishlist"
+          }
+        },
+        {
+          "name": "Remove from Wishlist",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/wishlist/{{gameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "wishlist", "{{gameId}}"]
+            },
+            "description": "Remove a game from wishlist"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Play History",
+      "item": [
+        {
+          "name": "Get Play History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/play-history?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "play-history"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get user's game play history"
+          }
+        },
+        {
+          "name": "Log Play Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playedAt\": \"2026-01-19T20:00:00Z\",\n  \"duration\": 90,\n  \"players\": 4,\n  \"notes\": \"Close game, won by 2 points!\",\n  \"winner\": \"Player 1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/library/games/{{libraryGameId}}/plays",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "library", "games", "{{libraryGameId}}", "plays"]
+            },
+            "description": "Log a play session for a library game"
+          }
+        }
+      ]
+    }
+  ]
+}

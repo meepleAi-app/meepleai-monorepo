@@ -1,0 +1,555 @@
+{
+  "info": {
+    "_postman_id": "game-discovery-collection-002",
+    "name": "02 - Game Discovery Flows",
+    "description": "MeepleAI Game Catalog API endpoints for browsing, searching, filtering, and viewing game details.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "gameId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Catalog Browsing",
+      "item": [
+        {
+          "name": "Get All Games (Paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.items && jsonData.items.length > 0) {",
+                  "        pm.collectionVariables.set('gameId', jsonData.items[0].id);",
+                  "    }",
+                  "    pm.test('Has items array', function() {",
+                  "        pm.expect(jsonData).to.have.property('items');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get paginated list of all published games"
+          }
+        },
+        {
+          "name": "Get Games with Sorting",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games?sortBy=name&sortOrder=asc&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games"],
+              "query": [
+                {
+                  "key": "sortBy",
+                  "value": "name",
+                  "description": "Options: name, rating, complexity, playerCount, playTime, createdAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "asc",
+                  "description": "Options: asc, desc"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get games sorted by specific field"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Search Games by Query",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games?search=catan&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "catan"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Full-text search across game names and descriptions"
+          }
+        },
+        {
+          "name": "Search with Autocomplete",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games/autocomplete?q=cat&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games", "autocomplete"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "cat"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get autocomplete suggestions while typing"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Filters",
+      "item": [
+        {
+          "name": "Filter by Player Count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games?minPlayers=2&maxPlayers=4&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games"],
+              "query": [
+                {
+                  "key": "minPlayers",
+                  "value": "2"
+                },
+                {
+                  "key": "maxPlayers",
+                  "value": "4"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Filter games supporting 2-4 players"
+          }
+        },
+        {
+          "name": "Filter by Play Time",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games?minPlayTime=30&maxPlayTime=90&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games"],
+              "query": [
+                {
+                  "key": "minPlayTime",
+                  "value": "30"
+                },
+                {
+                  "key": "maxPlayTime",
+                  "value": "90"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Filter games by play time range (minutes)"
+          }
+        },
+        {
+          "name": "Filter by Complexity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games?minComplexity=2&maxComplexity=3.5&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games"],
+              "query": [
+                {
+                  "key": "minComplexity",
+                  "value": "2"
+                },
+                {
+                  "key": "maxComplexity",
+                  "value": "3.5"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Filter games by BGG complexity weight (1-5 scale)"
+          }
+        },
+        {
+          "name": "Filter by Category",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games?categories=strategy,family&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games"],
+              "query": [
+                {
+                  "key": "categories",
+                  "value": "strategy,family"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Filter games by categories (comma-separated)"
+          }
+        },
+        {
+          "name": "Filter by Mechanic",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games?mechanics=worker-placement,deck-building&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games"],
+              "query": [
+                {
+                  "key": "mechanics",
+                  "value": "worker-placement,deck-building"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Filter games by mechanics (comma-separated)"
+          }
+        },
+        {
+          "name": "Combined Filters",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games?search=strategy&minPlayers=2&maxPlayers=4&minPlayTime=30&maxPlayTime=120&categories=strategy&sortBy=rating&sortOrder=desc&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "strategy"
+                },
+                {
+                  "key": "minPlayers",
+                  "value": "2"
+                },
+                {
+                  "key": "maxPlayers",
+                  "value": "4"
+                },
+                {
+                  "key": "minPlayTime",
+                  "value": "30"
+                },
+                {
+                  "key": "maxPlayTime",
+                  "value": "120"
+                },
+                {
+                  "key": "categories",
+                  "value": "strategy"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "rating"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Apply multiple filters simultaneously"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Filter Options",
+      "item": [
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games", "categories"]
+            },
+            "description": "Get all available game categories"
+          }
+        },
+        {
+          "name": "Get Mechanics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games/mechanics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games", "mechanics"]
+            },
+            "description": "Get all available game mechanics"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Game Details",
+      "item": [
+        {
+          "name": "Get Game by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games/{{gameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games", "{{gameId}}"]
+            },
+            "description": "Get full game details including rules, specs, and AI content"
+          }
+        },
+        {
+          "name": "Get Game Quick Questions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games/{{gameId}}/quick-questions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games", "{{gameId}}", "quick-questions"]
+            },
+            "description": "Get pre-generated quick questions for a game"
+          }
+        },
+        {
+          "name": "Get Game FAQ",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games/{{gameId}}/faq",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games", "{{gameId}}", "faq"]
+            },
+            "description": "Get FAQ entries for a game"
+          }
+        },
+        {
+          "name": "Get Game Errata",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games/{{gameId}}/errata",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games", "{{gameId}}", "errata"]
+            },
+            "description": "Get errata/corrections for a game"
+          }
+        },
+        {
+          "name": "Get Game - Not Found (404)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/shared-games/00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "shared-games", "00000000-0000-0000-0000-000000000000"]
+            },
+            "description": "Test getting non-existent game - should return 404"
+          }
+        }
+      ]
+    }
+  ]
+}

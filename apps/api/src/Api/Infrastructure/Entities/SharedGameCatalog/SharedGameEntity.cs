@@ -40,4 +40,10 @@ public class SharedGameEntity
     public ICollection<GameErrataEntity> Erratas { get; set; } = new List<GameErrataEntity>();
     public ICollection<SharedGameDocumentEntity> Documents { get; set; } = new List<SharedGameDocumentEntity>();
     public ICollection<QuickQuestionEntity> QuickQuestions { get; set; } = new List<QuickQuestionEntity>();
+
+    /// <summary>
+    /// Contributors who have contributed to this game.
+    /// Issue #2726: Application - Query per Dashboard Utente
+    /// </summary>
+    public ICollection<ContributorEntity> Contributors { get; set; } = new List<ContributorEntity>();
 }

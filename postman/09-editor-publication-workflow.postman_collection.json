@@ -1,0 +1,228 @@
+{
+  "info": {
+    "_postman_id": "editor-publication-collection-009",
+    "name": "09 - Editor: Publication Workflow",
+    "description": "MeepleAI Editor API endpoints for submitting games for publication and tracking approval status.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "gameId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Submit for Approval",
+      "item": [
+        {
+          "name": "Submit Game for Approval",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/submit-for-approval",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "submit-for-approval"]
+            },
+            "description": "Submit a game for publication approval. Requires: name, description (50+ chars), cover image, at least one processed PDF."
+          }
+        },
+        {
+          "name": "Submit - Validation Error (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/submit-for-approval",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "submit-for-approval"]
+            },
+            "description": "Test submission with incomplete game - should return 400 with validation errors"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Publication Status",
+      "item": [
+        {
+          "name": "Get My Submissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games?status=pending_approval&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending_approval"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List games pending approval"
+          }
+        },
+        {
+          "name": "Get Rejected Submissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games?status=rejected&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "rejected"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List rejected games with rejection reasons"
+          }
+        },
+        {
+          "name": "Get Published Games",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games?status=published&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "published"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List published games"
+          }
+        },
+        {
+          "name": "Get Submission Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "status"]
+            },
+            "description": "Get detailed submission status including queue position"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resubmission",
+      "item": [
+        {
+          "name": "Get Rejection Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/rejection",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "rejection"]
+            },
+            "description": "Get rejection reason and details for a rejected game"
+          }
+        },
+        {
+          "name": "Resubmit After Fixes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/submit-for-approval",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "submit-for-approval"]
+            },
+            "description": "Resubmit a previously rejected game after fixing issues"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -41,6 +41,8 @@ export * from './testing.schemas';
 export * from './share-links.schemas';
 
 // Shared Game Catalog schemas (Issue #2372)
+// BggGameDetailsSchema and BggGameDetails are re-exported from games.schemas in shared-games.schemas
+// TypeScript handles the re-export correctly, so we can use export *
 export * from './shared-games.schemas';
 
 // User Library schemas

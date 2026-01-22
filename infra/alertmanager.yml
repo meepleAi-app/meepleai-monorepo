@@ -1,15 +1,21 @@
 # OPS-07: Alertmanager Configuration
 # Multi-channel alerting for MeepleAI with API webhook integration
+#
+# Environment variables loaded from:
+# - infra/secrets/email.secret: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL
+# - infra/secrets/monitoring.secret: SLACK_WEBHOOK_URL
+# - infra/env/alertmanager.env: SMTP_FROM, ALERT_EMAIL_TO, SECURITY_ALERT_EMAIL_TO
 
 global:
   # Time to wait before sending notifications about resolved alerts
   resolve_timeout: 5m
 
   # SMTP configuration for email notifications
-  smtp_smarthost: 'smtp.gmail.com:587'
-  smtp_from: '${SMTP_FROM}'
-  smtp_auth_username: '${SMTP_USERNAME}'
-  smtp_auth_password: '${GMAIL_APP_PASSWORD}'
+  # Credentials loaded from infra/secrets/email.secret via env_file
+  smtp_smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+  smtp_from: '${SMTP_FROM_EMAIL}'
+  smtp_auth_username: '${SMTP_USER}'
+  smtp_auth_password: '${SMTP_PASSWORD}'
   smtp_require_tls: true
 
   # Slack webhook URL (configure via environment variable)
@@ -93,7 +99,7 @@ receivers:
   # Critical alerts - Email notifications enabled
   - name: 'critical-alerts'
     email_configs:
-      - to: 'badsworm@gmail.com'
+      - to: '${ALERT_EMAIL_TO}'
         headers:
           Subject: '🚨 [CRITICAL] {{ .GroupLabels.alertname }} - MeepleAI'
         html: |
@@ -126,7 +132,7 @@ receivers:
   # Warning alerts - Email notifications enabled
   - name: 'warning-alerts'
     email_configs:
-      - to: 'badsworm@gmail.com'
+      - to: '${ALERT_EMAIL_TO}'
         headers:
           Subject: '⚠️ [WARNING] {{ .GroupLabels.alertname }} - MeepleAI'
         html: |
@@ -156,7 +162,7 @@ receivers:
   # SEC-08: 2FA Security alerts - Email + Slack notifications
   - name: '2fa-security-alerts'
     email_configs:
-      - to: 'security@meepleai.dev,badsworm@gmail.com'
+      - to: '${SECURITY_ALERT_EMAIL_TO}'
         headers:
           Subject: '🔐 [{{ .GroupLabels.severity | toUpper }}] 2FA Security Alert - {{ .GroupLabels.alertname }}'
         html: |

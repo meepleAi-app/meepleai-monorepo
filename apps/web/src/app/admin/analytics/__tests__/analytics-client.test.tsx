@@ -84,13 +84,15 @@ vi.mock('@/lib/api', async importOriginal => {
   };
 });
 
-// Mock fetch for export functionality
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
 // Mock URL.createObjectURL and revokeObjectURL
-global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
-global.URL.revokeObjectURL = vi.fn();
+vi.stubGlobal('URL', {
+  ...URL,
+  createObjectURL: vi.fn(() => 'blob:mock-url'),
+  revokeObjectURL: vi.fn(),
+});
+
+// Mock fetch - will be set up in beforeEach
+let mockFetch: ReturnType<typeof vi.fn>;
 
 const mockAnalyticsData = {
   metrics: {
@@ -137,7 +139,9 @@ describe('AdminPageClient (Analytics)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    mockFetch.mockReset();
+    // Create fresh mock for each test
+    mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
   });
 
   afterEach(() => {
@@ -450,13 +454,11 @@ describe('AdminPageClient (Analytics)', () => {
       await user.click(exportButton);
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/v1/admin/analytics/export'),
-          expect.objectContaining({
-            method: 'POST',
-            body: expect.stringContaining('"format":"csv"'),
-          })
-        );
+        expect(mockFetch).toHaveBeenCalled();
+        const [url, options] = mockFetch.mock.calls[0];
+        expect(url).toContain('/api/v1/admin/analytics/export');
+        expect(options.method).toBe('POST');
+        expect(options.body).toContain('"format":"csv"');
       });
     });
 
@@ -477,13 +479,11 @@ describe('AdminPageClient (Analytics)', () => {
       await user.click(exportButton);
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/v1/admin/analytics/export'),
-          expect.objectContaining({
-            method: 'POST',
-            body: expect.stringContaining('"format":"json"'),
-          })
-        );
+        expect(mockFetch).toHaveBeenCalled();
+        const [url, options] = mockFetch.mock.calls[0];
+        expect(url).toContain('/api/v1/admin/analytics/export');
+        expect(options.method).toBe('POST');
+        expect(options.body).toContain('"format":"json"');
       });
     });
 

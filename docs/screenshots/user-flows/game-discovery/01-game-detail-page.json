@@ -1,0 +1,37 @@
+{
+  "screenshot": {
+    "id": "user-game-discovery-01",
+    "filename": "01-game-detail-page.png",
+    "flow": "game-discovery",
+    "role": "user",
+    "step": 1,
+    "totalSteps": 1,
+    "title": "Game Detail Page",
+    "description": "Detailed view of a game with all information"
+  },
+  "capture": {
+    "timestamp": "2026-01-20T14:41:57.639Z",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "browser": "chromium",
+    "fullPage": true
+  },
+  "interaction": {
+    "previousAction": null,
+    "nextAction": "Explore game details",
+    "highlightedElements": [
+      {
+        "selector": "h1, [data-testid=\"game-title\"]",
+        "type": "box",
+        "label": "Game Title"
+      }
+    ]
+  },
+  "navigation": {
+    "url": "http://localhost:3000/games/game-1",
+    "previousStep": null,
+    "nextStep": null
+  }
+}

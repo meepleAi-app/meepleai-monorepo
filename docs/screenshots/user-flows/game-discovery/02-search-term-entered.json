@@ -1,0 +1,42 @@
+{
+  "screenshot": {
+    "id": "user-game-discovery-02",
+    "filename": "02-search-term-entered.png",
+    "flow": "game-discovery",
+    "role": "user",
+    "step": 2,
+    "totalSteps": 2,
+    "title": "Search Term Entered",
+    "description": "User types game name to search BGG database"
+  },
+  "capture": {
+    "timestamp": "2026-01-20T14:41:52.799Z",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "browser": "chromium",
+    "fullPage": true
+  },
+  "interaction": {
+    "previousAction": "Enter search term",
+    "nextAction": "Click search",
+    "highlightedElements": [
+      {
+        "selector": "input[placeholder*=\"Cerca\"], input[placeholder*=\"Search\"]",
+        "type": "box",
+        "label": "Search Term"
+      },
+      {
+        "selector": "button:has-text(\"Cerca\"), button:has-text(\"Search\")",
+        "type": "box",
+        "label": "Search Button"
+      }
+    ]
+  },
+  "navigation": {
+    "url": "http://localhost:3000/games/add",
+    "previousStep": "01-add-game-bgg-search.png",
+    "nextStep": null
+  }
+}

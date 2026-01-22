@@ -229,12 +229,24 @@ internal static class ObservabilityServiceExtensions
     {
         // S1075: Default URLs extracted to const
 #pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback values
-        const string DefaultRedisConnectionString = "localhost:6379";
         const string DefaultQdrantUrl = "http://localhost:6333";
         const string DefaultN8nUrl = "http://n8n:5678";
 #pragma warning restore S1075
 
-        var healthCheckRedisConnectionString = configuration["REDIS_URL"] ?? DefaultRedisConnectionString;
+        // Issue #2152: Build Redis connection string with password (same as InfrastructureServiceExtensions)
+        var redisHost = Environment.GetEnvironmentVariable("REDIS_HOST")
+            ?? configuration["REDIS_HOST"]
+            ?? "localhost";
+        var redisPort = Environment.GetEnvironmentVariable("REDIS_PORT")
+            ?? configuration["REDIS_PORT"]
+            ?? "6379";
+        var redisPassword = SecretsHelper.GetSecretOrValue(configuration, "REDIS_PASSWORD", logger: null, required: false)
+            ?? Environment.GetEnvironmentVariable("REDIS_PASSWORD");
+
+        var healthCheckRedisConnectionString = string.IsNullOrWhiteSpace(redisPassword)
+            ? $"{redisHost}:{redisPort}"
+            : $"{redisHost}:{redisPort},password={redisPassword}";
+
         var healthCheckQdrantUrl = configuration["QDRANT_URL"] ?? DefaultQdrantUrl;
         var n8nUrl = configuration["N8N_URL"] ?? DefaultN8nUrl;
 

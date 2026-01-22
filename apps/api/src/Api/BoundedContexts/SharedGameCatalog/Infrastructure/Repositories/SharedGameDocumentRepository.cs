@@ -196,6 +196,14 @@ internal sealed class SharedGameDocumentRepository : ISharedGameDocumentReposito
             .ConfigureAwait(false);
     }
 
+    public async Task<int> CountByUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.SharedGameDocuments
+            .AsNoTracking()
+            .CountAsync(d => d.CreatedBy == userId, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     // Mapping methods
 
     private static SharedGameDocument MapToDomain(SharedGameDocumentEntity entity)

@@ -24,7 +24,7 @@ public class OpenRouterHealthCheck : IHealthCheck
     {
         try
         {
-            var client = _httpClientFactory.CreateClient("openrouter");
+            var client = _httpClientFactory.CreateClient("OpenRouter");
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(5));
 

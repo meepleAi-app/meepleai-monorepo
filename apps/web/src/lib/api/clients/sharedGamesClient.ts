@@ -17,6 +17,9 @@ import {
   CreatedResponseSchema,
   DeleteRequestAcceptedSchema,
   SharedGameDocumentSchema,
+  BulkImportResultSchema,
+  BggSearchResultSchema,
+  BggDuplicateCheckResultSchema,
   type SharedGameDetail,
   type PagedSharedGames,
   type GameCategory,
@@ -37,6 +40,11 @@ import {
   type SharedGameDocument,
   type SharedGameDocumentTypeNumeric,
   type AddDocumentRequest,
+  type BulkGameImportDto,
+  type BulkImportResult,
+  type BggSearchResult,
+  type BggDuplicateCheckResult,
+  type UpdateFromBggRequest,
 } from '../schemas/shared-games.schemas';
 
 export interface CreateSharedGamesClientParams {
@@ -211,6 +219,24 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      */
     async delete(id: string): Promise<void> {
       await httpClient.delete(`/api/v1/admin/shared-games/${id}`);
+    },
+
+    /**
+     * Bulk import games from JSON (ADMIN ONLY)
+     *
+     * Batch import multiple games in a single request.
+     * More efficient than individual create calls.
+     * Max 100 games per request.
+     *
+     * @param games - Array of game data to import
+     * @returns Import result with success/failure counts and imported game IDs
+     */
+    async bulkImport(games: BulkGameImportDto[]): Promise<BulkImportResult> {
+      return httpClient.post<BulkImportResult>(
+        '/api/v1/admin/shared-games/bulk-import',
+        { games },
+        BulkImportResultSchema
+      );
     },
 
     // ========== Approval Workflow Endpoints (Issue #2514) ==========
@@ -496,6 +522,82 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      */
     async removeDocument(gameId: string, documentId: string): Promise<void> {
       await httpClient.delete(`/api/v1/admin/shared-games/${gameId}/documents/${documentId}`);
+    },
+
+    // ========== BGG Import Flow (Admin Add from BGG) ==========
+
+    /**
+     * Search BoardGameGeek for games (ADMIN/EDITOR)
+     *
+     * Used for autocomplete in the add-from-BGG flow.
+     *
+     * @param query - Search query (game name)
+     * @param exact - Whether to search for exact match only
+     * @returns List of BGG search results
+     */
+    async searchBgg(query: string, exact = false): Promise<BggSearchResult[]> {
+      const queryParams = new URLSearchParams();
+      queryParams.set('query', query);
+      if (exact) queryParams.set('exact', 'true');
+
+      const result = await httpClient.get(
+        `/api/v1/admin/shared-games/bgg/search?${queryParams.toString()}`,
+        z.array(BggSearchResultSchema)
+      );
+      return result ?? [];
+    },
+
+    /**
+     * Check if a game with given BGG ID already exists (ADMIN/EDITOR)
+     *
+     * Returns both existing game data and fresh BGG data for diff comparison.
+     * Used to detect duplicates before import and propose updates.
+     *
+     * @param bggId - BoardGameGeek game ID
+     * @returns Duplicate check result with existing and BGG data
+     */
+    async checkBggDuplicate(bggId: number): Promise<BggDuplicateCheckResult> {
+      const result = await httpClient.get(
+        `/api/v1/admin/shared-games/bgg/check-duplicate/${bggId}`,
+        BggDuplicateCheckResultSchema
+      );
+      return result ?? { isDuplicate: false, existingGameId: null, existingGame: null, bggData: null };
+    },
+
+    /**
+     * Import a new game from BoardGameGeek (ADMIN/EDITOR)
+     *
+     * Creates a new SharedGame in Draft status with data from BGG.
+     *
+     * @param bggId - BoardGameGeek game ID
+     * @returns Created game ID
+     */
+    async importFromBgg(bggId: number): Promise<string> {
+      const result = await httpClient.post<CreatedResponse>(
+        '/api/v1/admin/shared-games/import-bgg',
+        { bggId },
+        CreatedResponseSchema
+      );
+      return result.id;
+    },
+
+    /**
+     * Update existing game from BGG data (ADMIN/EDITOR)
+     *
+     * Updates an existing game with fresh data from BGG.
+     * Supports selective field updates via fieldsToUpdate parameter.
+     *
+     * @param gameId - Existing game UUID
+     * @param request - BGG ID and optional fields to update
+     * @returns Updated game ID
+     */
+    async updateFromBgg(gameId: string, request: UpdateFromBggRequest): Promise<string> {
+      const result = await httpClient.put<string>(
+        `/api/v1/admin/shared-games/${gameId}/update-from-bgg`,
+        request,
+        z.string().uuid()
+      );
+      return result;
     },
   };
 }

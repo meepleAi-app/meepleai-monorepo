@@ -198,7 +198,7 @@ jobs:
         working-directory: apps/web
         run: pnpm test:e2e:shard${{ matrix.shard }}
         env:
-          PLAYWRIGHT_SKIP_WEB_SERVER: '1'
+          # Let Playwright manage the Next.js server (uses next start in CI)
           FORCE_PRODUCTION_SERVER: 'true'
 
       # ===== Cleanup =====
@@ -472,7 +472,7 @@ jobs:
         working-directory: apps/web
         run: pnpm test:e2e --project=${{ matrix.project }}
         env:
-          PLAYWRIGHT_SKIP_WEB_SERVER: '1'
+          # Let Playwright manage the Next.js server (uses next start in CI)
           FORCE_PRODUCTION_SERVER: 'true'
 
       # ===== Cleanup =====

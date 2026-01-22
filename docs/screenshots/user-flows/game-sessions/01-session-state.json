@@ -1,0 +1,31 @@
+{
+  "screenshot": {
+    "id": "user-game-sessions-01",
+    "filename": "01-session-state.png",
+    "flow": "game-sessions",
+    "role": "user",
+    "step": 1,
+    "totalSteps": 1,
+    "title": "Session State",
+    "description": "Current game state ready for updates"
+  },
+  "capture": {
+    "timestamp": "2026-01-20T14:42:06.427Z",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "browser": "chromium",
+    "fullPage": true
+  },
+  "interaction": {
+    "previousAction": null,
+    "nextAction": "Update player state",
+    "highlightedElements": []
+  },
+  "navigation": {
+    "url": "http://localhost:3000/sessions/session-1",
+    "previousStep": null,
+    "nextStep": null
+  }
+}

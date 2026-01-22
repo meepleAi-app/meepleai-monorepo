@@ -6,6 +6,35 @@ process.env.NODE_ENV = 'test';
 import '@testing-library/jest-dom/vitest';
 import { toHaveNoViolations } from 'jest-axe';
 
+// MSW Server Setup for API mocking (Issue #2760)
+// CRITICAL: server.listen() must be called at module level, BEFORE any test imports
+// that might instantiate HttpClient/api singletons. This ensures MSW patches global.fetch
+// before any code captures a reference to it.
+import { server } from './src/__tests__/mocks/server';
+
+// Start MSW server IMMEDIATELY at setup file load (not in beforeAll)
+// This ensures fetch is patched before any test module imports api/HttpClient
+server.listen({
+  onUnhandledRequest: 'bypass', // Don't fail on unhandled requests (allows real API calls in integration tests)
+});
+
+// CRITICAL: Ensure window.fetch points to the MSW-patched globalThis.fetch
+// In jsdom, HttpClient uses fetch.bind(window). We need window.fetch to be the patched version.
+// MSW patches globalThis.fetch, but window might have its own fetch reference.
+if (typeof window !== 'undefined' && typeof globalThis.fetch !== 'undefined') {
+  (window as any).fetch = globalThis.fetch;
+}
+
+// Reset handlers after each test to ensure test isolation
+afterEach(() => {
+  server.resetHandlers();
+});
+
+// Close server after all tests
+afterAll(() => {
+  server.close();
+});
+
 // Extend Vitest matchers with jest-axe for accessibility testing
 expect.extend(toHaveNoViolations);
 

@@ -2,8 +2,22 @@ using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameContributors;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetPendingShareRequests;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetShareRequestDetails;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserContributions;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserContributionStats;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserShareRequests;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetAllBadges;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserBadges;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetBadgeLeaderboard;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetMyActiveReviews;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ToggleBadgeDisplay;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Extensions;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +34,10 @@ internal static class SharedGameCatalogEndpoints
     {
         MapPublicEndpoints(group);
         MapAdminEndpoints(group);
+        MapAdminShareRequestEndpoints(group);
+        MapUserShareRequestEndpoints(group);
+        MapContributorEndpoints(group);
+        MapBadgeEndpoints(group);
 
         return group;
     }
@@ -95,6 +113,15 @@ internal static class SharedGameCatalogEndpoints
 #pragma warning disable MA0051 // Method is too long - endpoint registration methods are inherently long
     private static void MapAdminEndpoints(RouteGroupBuilder group)
     {
+        // Get all shared games for admin management (Issue #2773)
+        group.MapGet("/admin/shared-games", HandleListAllGames)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("ListAllSharedGames")
+            .WithSummary("Get all shared games (Admin/Editor)")
+            .WithDescription("Returns all shared games with optional status filter for admin management.")
+            .Produces<PagedResult<SharedGameDto>>();
+
         // Create new shared game
         group.MapPost("/admin/shared-games", HandleCreateGame)
             .RequireAuthorization("AdminOrEditorPolicy")
@@ -111,15 +138,6 @@ internal static class SharedGameCatalogEndpoints
             .RequireRateLimiting("SharedGamesAdmin")
             .WithName("UpdateSharedGame")
             .WithSummary("Update shared game (Admin/Editor)")
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces(StatusCodes.Status404NotFound);
-
-        // Publish game (Draft → Published) [DEPRECATED - use approval workflow]
-        group.MapPost("/admin/shared-games/{id:guid}/publish", HandlePublishGame)
-            .RequireAuthorization("AdminOrEditorPolicy")
-            .WithName("PublishSharedGame")
-            .WithSummary("[DEPRECATED] Publish shared game directly (Admin/Editor)")
-            .WithDescription("Legacy endpoint. Use submit-for-approval workflow instead. Issue #2514")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
@@ -171,6 +189,34 @@ internal static class SharedGameCatalogEndpoints
             .WithName("ImportGameFromBgg")
             .WithSummary("Import game from BoardGameGeek (Admin/Editor)")
             .Produces<Guid>(StatusCodes.Status201Created);
+
+        // BGG Search - searches BoardGameGeek for games (autocomplete)
+        group.MapGet("/admin/shared-games/bgg/search", HandleBggSearch)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("SearchBggGames")
+            .WithSummary("Search BoardGameGeek for games (Admin/Editor)")
+            .WithDescription("Search BGG API for board games by name. Used for autocomplete in add-from-BGG flow.")
+            .Produces<List<BggSearchResultDto>>();
+
+        // BGG Duplicate Check - check if game exists and return diff data
+        group.MapGet("/admin/shared-games/bgg/check-duplicate/{bggId:int}", HandleCheckBggDuplicate)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("CheckBggDuplicate")
+            .WithSummary("Check if BGG game already exists (Admin/Editor)")
+            .WithDescription("Checks if a game with given BGG ID exists. Returns both existing game data and fresh BGG data for diff comparison.")
+            .Produces<BggDuplicateCheckResult>();
+
+        // Update existing game from BGG with selective field updates
+        group.MapPut("/admin/shared-games/{id:guid}/update-from-bgg", HandleUpdateFromBgg)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("UpdateGameFromBgg")
+            .WithSummary("Update existing game from BGG data (Admin/Editor)")
+            .WithDescription("Updates an existing game with fresh data from BGG. Supports selective field updates via fieldsToUpdate parameter.")
+            .Produces<Guid>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);
 
         // Bulk import games
         group.MapPost("/admin/shared-games/bulk-import", HandleBulkImport)
@@ -350,6 +396,105 @@ internal static class SharedGameCatalogEndpoints
     }
 
     // ========================================
+    // ADMIN SHARE REQUEST ENDPOINTS (Admin only)
+    // Issue #2734
+    // ========================================
+
+    private static void MapAdminShareRequestEndpoints(RouteGroupBuilder group)
+    {
+        // List pending share requests for admin dashboard
+        group.MapGet("/admin/share-requests", HandleGetPendingShareRequests)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("GetPendingShareRequests")
+            .WithSummary("List pending share requests (Admin only)")
+            .WithDescription("Returns paginated share requests for admin review with filtering by status and contribution type. Supports full-text search on game title and user notes.")
+            .Produces<PagedResult<AdminShareRequestDto>>()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // Get share request details for admin review
+        group.MapGet("/admin/share-requests/{id:guid}", HandleGetShareRequestForReview)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("GetShareRequestForReview")
+            .WithSummary("Get share request details for review (Admin only)")
+            .WithDescription("Returns detailed information about a share request including game data, contributor profile, attached documents, review history, and lock status.")
+            .Produces<ShareRequestDetailsDto>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // Approve share request
+        group.MapPost("/admin/share-requests/{id:guid}/approve", HandleApproveShareRequest)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("ApproveShareRequest")
+            .WithSummary("Approve share request (Admin only)")
+            .WithDescription("Approves a share request and publishes the game to the shared catalog. Admin must have active review lock on the request. Optionally allows title/description modifications and document selection.")
+            .Produces<ApproveShareRequestResponse>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        // Reject share request
+        group.MapPost("/admin/share-requests/{id:guid}/reject", HandleRejectShareRequest)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("RejectShareRequest")
+            .WithSummary("Reject share request (Admin only)")
+            .WithDescription("Rejects a share request with a required reason. Admin must have active review lock on the request. Notifies the user via email.")
+            .Produces<RejectShareRequestResponse>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        // Request changes to share request
+        group.MapPost("/admin/share-requests/{id:guid}/request-changes", HandleRequestShareRequestChanges)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("RequestShareRequestChanges")
+            .WithSummary("Request changes to share request (Admin only)")
+            .WithDescription("Requests changes to a share request with detailed feedback. Admin must have active review lock on the request. Transitions request to ChangesRequested status and notifies the user.")
+            .Produces<RequestShareRequestChangesResponse>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        // Start review - acquire lock
+        group.MapPost("/admin/share-requests/{id:guid}/start-review", HandleStartReview)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("StartReview")
+            .WithSummary("Start review on share request (Admin only)")
+            .WithDescription("Acquires an exclusive review lock for the admin. Only one admin can review a request at a time. Lock expires after 30 minutes by default.")
+            .Produces<StartReviewResponse>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        // Release review - free lock without decision
+        group.MapPost("/admin/share-requests/{id:guid}/release", HandleReleaseReview)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("ReleaseReview")
+            .WithSummary("Release review lock (Admin only)")
+            .WithDescription("Manually releases the review lock without making a decision. Returns the request to its previous state (Pending or ChangesRequested). Only the reviewing admin can release their own lock.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Get my active reviews
+        group.MapGet("/admin/share-requests/my-reviews", HandleGetMyActiveReviews)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("GetMyActiveReviews")
+            .WithSummary("Get my active reviews (Admin only)")
+            .WithDescription("Returns all share requests currently being reviewed by the authenticated admin with lock status and time remaining.")
+            .Produces<IReadOnlyCollection<ActiveReviewDto>>()
+            .Produces(StatusCodes.Status401Unauthorized);
+    }
+
+    // ========================================
     // PUBLIC HANDLERS
     // ========================================
 
@@ -459,6 +604,17 @@ internal static class SharedGameCatalogEndpoints
     // ADMIN HANDLERS
     // ========================================
 
+    private static async Task<IResult> HandleListAllGames(
+        IMediator mediator,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var query = new GetAllSharedGamesQuery(null, pageNumber, pageSize);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     private static async Task<IResult> HandleCreateGame(
         CreateSharedGameRequest request,
         IMediator mediator,
@@ -520,28 +676,6 @@ internal static class SharedGameCatalogEndpoints
             request.ThumbnailUrl,
             request.Rules,
             session!.User!.Id);
-
-        try
-        {
-            await mediator.Send(command, ct).ConfigureAwait(false);
-            return Results.NoContent();
-        }
-        catch (InvalidOperationException)
-        {
-            return Results.NotFound();
-        }
-    }
-
-    private static async Task<IResult> HandlePublishGame(
-        Guid id,
-        IMediator mediator,
-        HttpContext context,
-        CancellationToken ct)
-    {
-        var (authorized, session, error) = context.RequireAdminOrEditorSession();
-        if (!authorized) return error!;
-
-        var command = new PublishSharedGameCommand(id, session!.User!.Id);
 
         try
         {
@@ -658,16 +792,22 @@ internal static class SharedGameCatalogEndpoints
         }
     }
 
-#pragma warning disable S1172 // Unused method parameters - HttpContext required by ASP.NET routing
     private static async Task<IResult> HandleImportFromBgg(
         ImportFromBggRequest request,
         IMediator mediator,
-        HttpContext _,
+        HttpContext context,
         CancellationToken ct)
     {
-        // Policies already verified Admin/Editor role - no additional check needed
+        // Policies already verified Admin/Editor role - extract userId from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        var command = new ImportGameFromBggCommand(request.BggId);
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new ImportGameFromBggCommand(request.BggId, userId);
         var gameId = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Created($"/api/v1/shared-games/{gameId}", gameId);
     }
@@ -675,16 +815,82 @@ internal static class SharedGameCatalogEndpoints
     private static async Task<IResult> HandleBulkImport(
         BulkImportRequest request,
         IMediator mediator,
-        HttpContext _,
+        HttpContext context,
         CancellationToken ct)
     {
-        // Policies already verified Admin role - no additional check needed
+        // Policies already verified Admin role - extract userId from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-        var command = new BulkImportGamesCommand(request.Games);
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new BulkImportGamesCommand(request.Games, userId);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
-#pragma warning restore S1172
+
+    private static async Task<IResult> HandleBggSearch(
+        IMediator mediator,
+        [FromQuery] string query,
+        [FromQuery] bool exact = false,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return Results.BadRequest(new { error = "Search query is required" });
+        }
+
+        try
+        {
+            var searchQuery = new SearchBggGamesQuery(query, exact);
+            var results = await mediator.Send(searchQuery, ct).ConfigureAwait(false);
+            return Results.Ok(results);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Rate limit"))
+        {
+            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+        }
+    }
+
+    private static async Task<IResult> HandleCheckBggDuplicate(
+        int bggId,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new CheckBggDuplicateQuery(bggId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleUpdateFromBgg(
+        Guid id,
+        [FromBody] UpdateFromBggRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var command = new UpdateSharedGameFromBggCommand(
+            id,
+            request.BggId,
+            session!.User!.Id,
+            request.FieldsToUpdate);
+
+        try
+        {
+            var gameId = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(gameId);
+        }
+        catch (InvalidOperationException)
+        {
+            return Results.NotFound();
+        }
+    }
 
     private static async Task<IResult> HandleDeleteGame(
         Guid id,
@@ -1142,6 +1348,695 @@ internal static class SharedGameCatalogEndpoints
         }
     }
 #pragma warning restore S1172
+
+    // ========================================
+    // USER SHARE REQUEST ENDPOINTS (Protected)
+    // Issue #2733
+    // ========================================
+
+    private static void MapUserShareRequestEndpoints(RouteGroupBuilder group)
+    {
+        // Create share request
+        group.MapPost("/share-requests", HandleCreateShareRequest)
+            .RequireAuthorization()
+            .RequireRateLimiting("ShareRequestCreation")
+            .WithName("CreateShareRequest")
+            .WithSummary("Create a new share request")
+            .WithDescription("Submit a game from user library to the shared catalog for community review.")
+            .Produces<CreateShareRequestResponse>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status429TooManyRequests);
+
+        // List user's share requests
+        group.MapGet("/share-requests", HandleGetUserShareRequests)
+            .RequireAuthorization()
+            .RequireRateLimiting("ShareRequestQuery")
+            .WithName("GetUserShareRequests")
+            .WithSummary("Get user's share requests")
+            .WithDescription("Returns all share requests created by the authenticated user with pagination and status filtering.")
+            .Produces<PagedResult<UserShareRequestDto>>();
+
+        // Get share request details
+        group.MapGet("/share-requests/{id:guid}", HandleGetShareRequestDetails)
+            .RequireAuthorization()
+            .RequireRateLimiting("ShareRequestQuery")
+            .WithName("GetShareRequestDetails")
+            .WithSummary("Get share request details")
+            .WithDescription("Returns detailed information about a specific share request. User can only access their own requests.")
+            .Produces<ShareRequestDetailsDto>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // Update share request documents
+        group.MapPut("/share-requests/{id:guid}/documents", HandleUpdateShareRequestDocuments)
+            .RequireAuthorization()
+            .RequireRateLimiting("ShareRequestUpdate")
+            .WithName("UpdateShareRequestDocuments")
+            .WithSummary("Update attached documents")
+            .WithDescription("Update the list of documents attached to a pending share request. User can only update their own requests.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // Withdraw share request
+        group.MapDelete("/share-requests/{id:guid}", HandleWithdrawShareRequest)
+            .RequireAuthorization()
+            .RequireRateLimiting("ShareRequestUpdate")
+            .WithName("WithdrawShareRequest")
+            .WithSummary("Withdraw a share request")
+            .WithDescription("Withdraw a pending share request. Only pending requests can be withdrawn. User can only withdraw their own requests.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    // ========================================
+    // USER SHARE REQUEST HANDLERS
+    // ========================================
+
+    private static async Task<IResult> HandleCreateShareRequest(
+        CreateShareRequestRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract user ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new CreateShareRequestCommand(
+            userId,
+            request.SourceGameId,
+            request.Notes,
+            request.AttachedDocumentIds ?? new List<Guid>());
+
+        var response = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        return Results.Created(
+            $"/api/v1/share-requests/{response.ShareRequestId}",
+            response);
+    }
+
+    private static async Task<IResult> HandleGetUserShareRequests(
+        [FromQuery] ShareRequestStatus? status,
+        [FromQuery] int pageNumber,
+        [FromQuery] int pageSize,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract user ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var query = new GetUserShareRequestsQuery(
+            userId,
+            status,
+            pageNumber > 0 ? pageNumber : 1,
+            pageSize > 0 ? pageSize : 20);
+
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetShareRequestDetails(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract user ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var query = new GetShareRequestDetailsQuery(id, userId);
+
+        try
+        {
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (InvalidOperationException)
+        {
+            // Request not found or user doesn't own it
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleUpdateShareRequestDocuments(
+        Guid id,
+        UpdateShareRequestDocumentsRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract user ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new UpdateShareRequestDocumentsCommand(
+            id,
+            userId,
+            request.DocumentIds ?? new List<Guid>());
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            // Request not found, user doesn't own it, or invalid state
+            return Results.NotFound();
+        }
+    }
+
+    private static async Task<IResult> HandleWithdrawShareRequest(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract user ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new WithdrawShareRequestCommand(id, userId);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (InvalidOperationException)
+        {
+            // Request not found, user doesn't own it, or can't be withdrawn (not pending)
+            return Results.NotFound();
+        }
+    }
+
+    // ========================================
+    // ADMIN SHARE REQUEST HANDLERS
+    // Issue #2734
+    // ========================================
+
+    private static async Task<IResult> HandleGetPendingShareRequests(
+        [FromQuery] ShareRequestStatus? status,
+        [FromQuery] ContributionType? type,
+        [FromQuery] string? search,
+        [FromQuery] ShareRequestSortField sortBy,
+        [FromQuery] SortDirection sortDirection,
+        [FromQuery] int pageNumber,
+        [FromQuery] int pageSize,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetPendingShareRequestsQuery(
+            status,
+            type,
+            search,
+            sortBy,
+            sortDirection,
+            pageNumber > 0 ? pageNumber : 1,
+            pageSize > 0 && pageSize <= 100 ? pageSize : 20);
+
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetShareRequestForReview(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract admin ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var adminId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var query = new GetShareRequestDetailsQuery(id, adminId);
+
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return result is not null ? Results.Ok(result) : Results.NotFound();
+    }
+
+    private static async Task<IResult> HandleApproveShareRequest(
+        Guid id,
+        ApproveShareRequestRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract admin ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var adminId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new ApproveShareRequestCommand(
+            id,
+            adminId,
+            request.TargetSharedGameId,
+            request.AdminNotes);
+
+        try
+        {
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (ShareRequestReviewerMismatchException ex)
+        {
+            // Another admin has the lock
+            throw new ConflictException(ex.Message);
+        }
+        catch (ShareRequestLockExpiredException ex)
+        {
+            // Lock expired
+            throw new ConflictException(ex.Message);
+        }
+        catch (InvalidShareRequestStateException ex)
+        {
+            // Invalid state transition
+            throw new ConflictException(ex.Message);
+        }
+    }
+
+    private static async Task<IResult> HandleRejectShareRequest(
+        Guid id,
+        RejectShareRequestRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract admin ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var adminId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new RejectShareRequestCommand(id, adminId, request.Reason);
+
+        try
+        {
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (ShareRequestReviewerMismatchException ex)
+        {
+            // Another admin has the lock
+            throw new ConflictException(ex.Message);
+        }
+        catch (ShareRequestLockExpiredException ex)
+        {
+            // Lock expired
+            throw new ConflictException(ex.Message);
+        }
+        catch (InvalidShareRequestStateException ex)
+        {
+            // Invalid state transition
+            throw new ConflictException(ex.Message);
+        }
+    }
+
+    private static async Task<IResult> HandleRequestShareRequestChanges(
+        Guid id,
+        RequestShareRequestChangesRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract admin ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var adminId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new RequestShareRequestChangesCommand(id, adminId, request.Feedback);
+
+        try
+        {
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (ShareRequestReviewerMismatchException ex)
+        {
+            // Another admin has the lock
+            throw new ConflictException(ex.Message);
+        }
+        catch (ShareRequestLockExpiredException ex)
+        {
+            // Lock expired
+            throw new ConflictException(ex.Message);
+        }
+        catch (InvalidShareRequestStateException ex)
+        {
+            // Invalid state transition
+            throw new ConflictException(ex.Message);
+        }
+    }
+
+    private static async Task<IResult> HandleStartReview(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract admin ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var adminId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new StartReviewCommand(id, adminId);
+
+        try
+        {
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (ShareRequestAlreadyInReviewException ex)
+        {
+            // Another admin has the lock
+            return Results.Conflict(new ProblemDetails
+            {
+                Title = "Request Already In Review",
+                Detail = ex.Message,
+                Status = StatusCodes.Status409Conflict,
+                Extensions = { ["reviewingAdminId"] = ex.CurrentReviewerAdminId }
+            });
+        }
+        catch (InvalidShareRequestStateException ex)
+        {
+            // Invalid state for review
+            throw new ConflictException(ex.Message);
+        }
+    }
+
+    private static async Task<IResult> HandleReleaseReview(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract admin ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var adminId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new ReleaseReviewCommand(id, adminId);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (ShareRequestReviewerMismatchException)
+        {
+            // Not the reviewing admin
+            return Results.Forbid();
+        }
+    }
+
+    private static async Task<IResult> HandleGetMyActiveReviews(
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract admin ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var adminId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var query = new GetMyActiveReviewsQuery(adminId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    // ========================================
+    // CONTRIBUTOR ENDPOINTS
+    // Issue #2735
+    // ========================================
+
+    private static void MapContributorEndpoints(RouteGroupBuilder group)
+    {
+        // Public: Get contributors for a shared game
+        group.MapGet("/shared-games/{id:guid}/contributors", HandleGetGameContributors)
+            .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
+            .WithName("GetGameContributors")
+            .WithSummary("Get contributors for a shared game")
+            .WithDescription("Returns all contributors who have contributed to a shared game, including their contribution count and top badges.")
+            .Produces<List<GameContributorDto>>()
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Public: Get user's contributions (paginated)
+        group.MapGet("/users/{id:guid}/contributions", HandleGetUserContributions)
+            .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
+            .WithName("GetUserContributions")
+            .WithSummary("Get user's contributions")
+            .WithDescription("Returns paginated list of contributions made by a specific user to shared games.")
+            .Produces<PagedResult<UserContributionDto>>();
+
+        // Private: Get my contribution stats
+        group.MapGet("/users/me/contribution-stats", HandleGetMyContributionStats)
+            .RequireAuthorization()
+            .RequireRateLimiting("UserDashboard")
+            .WithName("GetMyContributionStats")
+            .WithSummary("Get my contribution statistics")
+            .WithDescription("Returns detailed contribution statistics for the authenticated user, including badges, rate limits, and approval rate.")
+            .Produces<UserContributionStatsDto>();
+    }
+
+    // ========================================
+    // CONTRIBUTOR HANDLERS
+    // ========================================
+
+    private static async Task<IResult> HandleGetGameContributors(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetGameContributorsQuery(id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetUserContributions(
+        Guid id,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        IMediator mediator = default!,
+        CancellationToken ct = default)
+    {
+        var query = new GetUserContributionsQuery(
+            id,
+            pageNumber,
+            pageSize);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetMyContributionStats(
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract user ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var query = new GetUserContributionStatsQuery(userId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    // ========================================
+    // BADGE ENDPOINTS (Issue #2736)
+    // ========================================
+
+    private static void MapBadgeEndpoints(RouteGroupBuilder group)
+    {
+        // Public: Get all badge definitions
+        group.MapGet("/badges", HandleGetAllBadges)
+            .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
+            .WithName("GetAllBadges")
+            .WithSummary("Get all badge definitions")
+            .WithDescription("Returns all available badge types with requirement descriptions. Results are cached for 24 hours.")
+            .Produces<List<BadgeDefinitionDto>>();
+
+        // Public: Get user's badges (excludes hidden)
+        group.MapGet("/users/{id:guid}/badges", HandleGetUserBadges)
+            .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
+            .WithName("GetUserBadges")
+            .WithSummary("Get user's badges")
+            .WithDescription("Returns all visible badges earned by a specific user. Hidden badges are excluded.")
+            .Produces<List<UserBadgeDto>>();
+
+        // Private: Get my badges (includes hidden)
+        group.MapGet("/users/me/badges", HandleGetMyBadges)
+            .RequireAuthorization()
+            .RequireRateLimiting("UserDashboard")
+            .WithName("GetMyBadges")
+            .WithSummary("Get my badges")
+            .WithDescription("Returns all badges earned by the authenticated user, including hidden badges.")
+            .Produces<List<UserBadgeDto>>();
+
+        // Public: Get badge leaderboard
+        group.MapGet("/badges/leaderboard", HandleGetLeaderboard)
+            .AllowAnonymous()
+            .RequireRateLimiting("SharedGamesPublic")
+            .WithName("GetBadgeLeaderboard")
+            .WithSummary("Get badge leaderboard")
+            .WithDescription("Returns top contributors with badge counts, highest tier, and top 3 badges. Supports period filtering (Week, Month, AllTime). Results are cached for 1 hour.")
+            .Produces<List<LeaderboardEntryDto>>();
+
+        // Private: Toggle badge visibility
+        group.MapPut("/users/me/badges/{id:guid}/display", HandleToggleBadgeDisplay)
+            .RequireAuthorization()
+            .RequireRateLimiting("UserDashboard")
+            .WithName("ToggleBadgeDisplay")
+            .WithSummary("Toggle badge visibility")
+            .WithDescription("Toggle whether a badge is displayed on your public profile.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+    }
+
+    // ========================================
+    // BADGE HANDLERS (Issue #2736)
+    // ========================================
+
+    private static async Task<IResult> HandleGetAllBadges(
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetAllBadgesQuery();
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetUserBadges(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetUserBadgesQuery(id, IncludeHidden: false);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetMyBadges(
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract user ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var query = new GetUserBadgesQuery(userId, IncludeHidden: true);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetLeaderboard(
+        [FromQuery] LeaderboardPeriod period,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        IMediator mediator = default!,
+        CancellationToken ct = default)
+    {
+        var query = new GetBadgeLeaderboardQuery(period, pageNumber, pageSize);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleToggleBadgeDisplay(
+        Guid id,
+        ToggleBadgeDisplayRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract user ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new ToggleBadgeDisplayCommand(id, userId, request.IsDisplayed);
+
+        await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.NoContent();
+    }
 }
 
 // ========================================
@@ -1187,6 +2082,14 @@ internal record UpdateSharedGameRequest(
 /// Request DTO for importing a game from BoardGameGeek.
 /// </summary>
 internal record ImportFromBggRequest(int BggId);
+
+/// <summary>
+/// Request DTO for updating an existing game from BoardGameGeek data.
+/// Issue: Admin Add Shared Game from BGG flow - "Propose Update" functionality
+/// </summary>
+/// <param name="BggId">BoardGameGeek game ID to fetch fresh data from</param>
+/// <param name="FieldsToUpdate">List of field names to update. If null/empty, updates all fields.</param>
+internal record UpdateFromBggRequest(int BggId, List<string>? FieldsToUpdate);
 
 /// <summary>
 /// Request DTO for bulk importing games.
@@ -1265,3 +2168,48 @@ internal record UpdateStateTemplateRequest(
     string? Name,
     string SchemaJson,
     string Version);
+
+/// <summary>
+/// Request DTO for creating a share request.
+/// Issue #2733
+/// </summary>
+internal record CreateShareRequestRequest(
+    Guid SourceGameId,
+    string? Notes,
+    List<Guid>? AttachedDocumentIds);
+
+/// <summary>
+/// Request DTO for updating share request documents.
+/// Issue #2733
+/// </summary>
+internal record UpdateShareRequestDocumentsRequest(
+    List<Guid>? DocumentIds);
+
+/// <summary>
+/// Request DTO for approving a share request with optional modifications.
+/// Issue #2734
+/// </summary>
+internal record ApproveShareRequestRequest(
+    Guid? TargetSharedGameId,
+    string? AdminNotes);
+
+/// <summary>
+/// Request DTO for rejecting a share request.
+/// Issue #2734
+/// </summary>
+internal record RejectShareRequestRequest(
+    string Reason);
+
+/// <summary>
+/// Request DTO for requesting changes to a share request.
+/// Issue #2734
+/// </summary>
+internal record RequestShareRequestChangesRequest(
+    string Feedback);
+
+/// <summary>
+/// Request DTO for toggling badge display visibility.
+/// Issue #2736
+/// </summary>
+internal record ToggleBadgeDisplayRequest(
+    bool IsDisplayed);

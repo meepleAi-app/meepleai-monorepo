@@ -30,4 +30,39 @@ internal class NoOpEmailService : IEmailService
         string errorMessage,
         CancellationToken ct = default)
         => Task.CompletedTask;
+
+    public Task SendShareRequestCreatedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        string contributionType,
+        Guid shareRequestId,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendShareRequestApprovedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        Guid sharedGameId,
+        Guid userId,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendShareRequestRejectedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        string reason,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendShareRequestChangesRequestedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        string feedback,
+        Guid shareRequestId,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
 }

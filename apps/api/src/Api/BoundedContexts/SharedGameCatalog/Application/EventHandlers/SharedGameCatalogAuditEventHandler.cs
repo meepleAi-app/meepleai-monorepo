@@ -11,10 +11,9 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.EventHandlers;
 /// Event handlers for SharedGameCatalog domain events.
 /// Automatically creates audit log entries via DomainEventHandlerBase.
 ///
-/// Events Handled (8 total):
+/// Events Handled (7 total):
 /// - SharedGameCreatedEvent (game creation)
 /// - SharedGameUpdatedEvent (game updates)
-/// - SharedGamePublishedEvent (game publishing workflow)
 /// - SharedGameArchivedEvent (game archiving)
 /// - SharedGameDeletedEvent (permanent deletion)
 /// - SharedGameDeleteRequestedEvent (delete request workflow)
@@ -70,28 +69,6 @@ internal sealed class SharedGameUpdatedEventHandler : DomainEventHandlerBase<Sha
         => domainEvent.ModifiedBy;
 
     protected override Dictionary<string, object?>? GetAuditMetadata(SharedGameUpdatedEvent domainEvent)
-        => new(StringComparer.Ordinal)
-        {
-            ["GameId"] = domainEvent.GameId,
-        };
-}
-
-internal sealed class SharedGamePublishedEventHandler : DomainEventHandlerBase<SharedGamePublishedEvent>
-{
-    public SharedGamePublishedEventHandler(
-        MeepleAiDbContext dbContext,
-        ILogger<SharedGamePublishedEventHandler> logger)
-        : base(dbContext, logger)
-    {
-    }
-
-    protected override Task HandleEventAsync(SharedGamePublishedEvent domainEvent, CancellationToken cancellationToken)
-        => Task.CompletedTask;
-
-    protected override Guid? GetUserId(SharedGamePublishedEvent domainEvent)
-        => domainEvent.PublishedBy;
-
-    protected override Dictionary<string, object?>? GetAuditMetadata(SharedGamePublishedEvent domainEvent)
         => new(StringComparer.Ordinal)
         {
             ["GameId"] = domainEvent.GameId,

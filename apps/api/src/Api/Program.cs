@@ -265,7 +265,8 @@ builder.Services.AddAuthenticationServices(builder.Configuration);
 builder.Services.AddObservabilityServices(builder.Configuration, builder.Environment);
 
 // ISSUE #2424: Rate limiting for API protection
-builder.Services.AddRateLimitingServices();
+// Issue #2705: Pass configuration to allow disabling in integration tests
+builder.Services.AddRateLimitingServices(builder.Configuration);
 
 // Configure JSON serialization for ASP.NET Core Minimal APIs
 // Accept camelCase from frontend (JavaScript convention) while backend uses PascalCase (C# convention)
@@ -316,16 +317,19 @@ builder.Services.AddCors(options =>
         }
 
         // Issue #1448: Whitelist specific headers instead of AllowAnyHeader() for security
+        // Issue #2755: Add W3C Trace Context headers (traceparent, tracestate) for OpenTelemetry
         policy
             .WithHeaders(
                 "Content-Type",
                 "Authorization",
-                "X-Correlation-ID"
+                "X-Correlation-ID",
+                "traceparent",  // W3C Trace Context propagation
+                "tracestate"    // W3C Trace Context state
             )
             .AllowAnyMethod()
             .AllowCredentials()
             // Issue #1563 (P0-3): Expose trace headers for frontend correlation
-            .WithExposedHeaders("X-Trace-Id", "X-Span-Id");
+            .WithExposedHeaders("X-Trace-Id", "X-Span-Id", "traceparent", "tracestate");
     });
 });
 
@@ -377,6 +381,10 @@ using (var scope = app.Services.CreateScope())
                 var bggService = scope.ServiceProvider.GetRequiredService<IBggApiService>();
                 await Api.Infrastructure.Seeders.SharedGameSeeder.SeedSharedGamesAsync(
                     db, bggService, adminUser.Id, app.Logger).ConfigureAwait(false);
+
+                // Seed predefined badges (ISSUE-2731)
+                await Api.Infrastructure.Seeders.BadgeSeeder.SeedBadgesAsync(
+                    db, app.Logger).ConfigureAwait(false);
             }
         }
     }
@@ -467,6 +475,7 @@ v1Api.MapRuleSpecEndpoints();
 
 // Issue #1439: Split AdminEndpoints into focused endpoint files
 v1Api.MapConfigurationEndpoints();     // System configuration CRUD & operations
+v1Api.MapRateLimitAdminEndpoints();    // Issue #2738: Rate limit admin management
 // v1Api.MapAiModelEndpoints();        // Issue #2580: REMOVED - Replaced by MapAiModelAdminEndpoints (Issue #2567)
 v1Api.MapGameLibraryConfigEndpoints(); // Issue #2444: Game library tier limits config
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics

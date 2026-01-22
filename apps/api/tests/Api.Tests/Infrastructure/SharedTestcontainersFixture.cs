@@ -114,16 +114,18 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                         await _postgresContainer.StartAsync();
 
                         var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
-                        // Issue #2577: Optimized connection string for long-running test suites  
+                        // Issue #2577: Optimized connection string for long-running test suites
+                        // Issue #2902: Reduced MaxPoolSize from 50 to 5 to prevent connection exhaustion
+                        // With 94+ test classes, 94 × 50 = 4700 potential connections > max_connections=500
                         // - Pooling=true: Prevents TCP connection accumulation (was causing timeouts after 22 minutes)
-                        // - MinPoolSize=2: Keep connections alive to avoid cold start penalties
-                        // - MaxPoolSize=50: Handle burst of parallel tests
+                        // - MinPoolSize=1: Minimal warm connections per database (94 DBs × 1 = 94 baseline)
+                        // - MaxPoolSize=5: Conservative pool per test class (94 × 5 = 470 < 500 max_connections)
                         // - Timeout=30: Increased from 10s to handle connection establishment under load
                         // - CommandTimeout=60: Prevent query timeout for long-running test operations
                         // - KeepAlive=10: More frequent keep-alive to prevent idle connection closure (was 30s)
-                        // - ConnectionIdleLifetime=60: Recycle idle connections to prevent stale state
-                        // - ConnectionPruningInterval=10: Clean up dead connections proactively
-                        PostgresConnectionString = $"Host=localhost;Port={postgresPort};Database=test_shared;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=10;Pooling=true;MinPoolSize=2;MaxPoolSize=50;Timeout=30;CommandTimeout=60;ConnectionIdleLifetime=60;ConnectionPruningInterval=10;";
+                        // - ConnectionIdleLifetime=30: Faster recycling to free connections for other test classes
+                        // - ConnectionPruningInterval=5: More aggressive cleanup for large test suites
+                        PostgresConnectionString = $"Host=localhost;Port={postgresPort};Database=test_shared;Username=postgres;Password=postgres;Ssl Mode=Disable;Trust Server Certificate=true;KeepAlive=10;Pooling=true;MinPoolSize=1;MaxPoolSize=5;Timeout=30;CommandTimeout=60;ConnectionIdleLifetime=30;ConnectionPruningInterval=5;";
 
                         // Issue #2031: Wait for PostgreSQL to accept connections with retry
                         // Issue #2474: Increased timeout from 5s to 10s for better stability
@@ -274,6 +276,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     /// <summary>
     /// Creates a new isolated database for a test class.
     /// Call this in your test class's InitializeAsync method.
+    /// Issue #2706: Added retry logic to handle 57P01 connection termination errors in parallel tests.
     /// </summary>
     /// <param name="databaseName">Unique database name (e.g., "test_auth_{guid}")</param>
     /// <returns>Connection string for the isolated database</returns>
@@ -288,45 +291,63 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
             throw new ArgumentException("Database name must contain only alphanumeric characters and underscores", nameof(databaseName));
         }
 
-        try
+        // Issue #2706: Retry logic for handling 57P01 errors in parallel test execution
+        const int maxRetries = 3;
+        var retryDelays = new[] { TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1) };
+
+        for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            // Create database
-            var builder = new NpgsqlConnectionStringBuilder(PostgresConnectionString)
+            try
             {
-                Database = "postgres" // Connect to default db to create new one
-            };
+                // Create database
+                var builder = new NpgsqlConnectionStringBuilder(PostgresConnectionString)
+                {
+                    Database = "postgres" // Connect to default db to create new one
+                };
 
-            await using var connection = new NpgsqlConnection(builder.ConnectionString);
-            await connection.OpenAsync();
+                await using var connection = new NpgsqlConnection(builder.ConnectionString);
+                await connection.OpenAsync();
 
-            await using var cmd = connection.CreateCommand();
+                await using var cmd = connection.CreateCommand();
 #pragma warning disable CA2100 // SQL injection safe: databaseName validated with regex ^[a-zA-Z0-9_]+$
-            cmd.CommandText = $"DROP DATABASE IF EXISTS \"{databaseName}\"; CREATE DATABASE \"{databaseName}\";";
+                cmd.CommandText = $"DROP DATABASE IF EXISTS \"{databaseName}\"; CREATE DATABASE \"{databaseName}\";";
 #pragma warning restore CA2100
-            await cmd.ExecuteNonQueryAsync();
+                await cmd.ExecuteNonQueryAsync();
 
-            // Return connection string for new database
-            builder.Database = databaseName;
+                // Return connection string for new database
+                builder.Database = databaseName;
 
-            // Issue #2577: Log successful database creation with timing
-            var duration = (DateTime.UtcNow - startTime).TotalSeconds;
-            Console.WriteLine($"✅ Database '{databaseName}' created in {duration:F2}s");
+                // Issue #2577: Log successful database creation with timing
+                var duration = (DateTime.UtcNow - startTime).TotalSeconds;
+                Console.WriteLine($"✅ Database '{databaseName}' created in {duration:F2}s");
 
-            return builder.ConnectionString;
+                return builder.ConnectionString;
+            }
+            catch (NpgsqlException ex) when (ex.SqlState == "57P01" && attempt < maxRetries - 1)
+            {
+                // Issue #2706: Handle 57P01 "terminating connection due to administrator command"
+                // This happens when another test's cleanup terminates our connection during parallel execution
+                Console.WriteLine($"⚠️ Database creation attempt {attempt + 1}/{maxRetries} hit 57P01, retrying...");
+                await Task.Delay(retryDelays[attempt]);
+            }
+            catch (Exception ex)
+            {
+                // Issue #2577: Log connection failures with detailed context
+                var duration = (DateTime.UtcNow - startTime).TotalSeconds;
+                Console.WriteLine($"❌ Database creation failed after {duration:F2}s: {ex.Message}");
+                Console.WriteLine($"   Connection string (sanitized): {new NpgsqlConnectionStringBuilder(PostgresConnectionString) { Password = "[REDACTED]" }}");
+                throw;
+            }
         }
-        catch (Exception ex)
-        {
-            // Issue #2577: Log connection failures with detailed context
-            var duration = (DateTime.UtcNow - startTime).TotalSeconds;
-            Console.WriteLine($"❌ Database creation failed after {duration:F2}s: {ex.Message}");
-            Console.WriteLine($"   Connection string (sanitized): {new NpgsqlConnectionStringBuilder(PostgresConnectionString) { Password = "[REDACTED]" }}");
-            throw;
-        }
+
+        // Should never reach here, but compiler needs a return
+        throw new InvalidOperationException($"Failed to create database '{databaseName}' after {maxRetries} attempts");
     }
 
     /// <summary>
     /// Cleans up an isolated database after test class completion.
     /// Call this in your test class's DisposeAsync method.
+    /// Issue #2706: Added retry logic to handle 57P01 connection termination errors in parallel tests.
     /// </summary>
     /// <param name="databaseName">Database name to drop</param>
     public async Task DropIsolatedDatabaseAsync(string databaseName)
@@ -340,43 +361,66 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
             throw new ArgumentException("Database name must contain only alphanumeric characters and underscores", nameof(databaseName));
         }
 
-        try
+        // Issue #2706: Retry logic for handling 57P01 errors in parallel test execution
+        const int maxRetries = 3;
+        var retryDelays = new[] { TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1) };
+
+        for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            var builder = new NpgsqlConnectionStringBuilder(PostgresConnectionString)
+            try
             {
-                Database = "postgres"
-            };
+                var builder = new NpgsqlConnectionStringBuilder(PostgresConnectionString)
+                {
+                    Database = "postgres"
+                };
 
-            await using var connection = new NpgsqlConnection(builder.ConnectionString);
-            await connection.OpenAsync();
+                await using var connection = new NpgsqlConnection(builder.ConnectionString);
+                await connection.OpenAsync();
 
-            // Terminate active connections first
-            await using var terminateCmd = connection.CreateCommand();
+                // Terminate active connections first
+                await using var terminateCmd = connection.CreateCommand();
 #pragma warning disable CA2100 // SQL injection safe: databaseName validated with regex ^[a-zA-Z0-9_]+$
-            terminateCmd.CommandText = $@"
-                SELECT pg_terminate_backend(pid)
-                FROM pg_stat_activity
-                WHERE datname = '{databaseName}' AND pid <> pg_backend_pid();";
+                terminateCmd.CommandText = $@"
+                    SELECT pg_terminate_backend(pid)
+                    FROM pg_stat_activity
+                    WHERE datname = '{databaseName}' AND pid <> pg_backend_pid();";
 #pragma warning restore CA2100
-            var terminatedCount = await terminateCmd.ExecuteNonQueryAsync();
+                var terminatedCount = await terminateCmd.ExecuteNonQueryAsync();
 
-            // Drop database
-            await using var dropCmd = connection.CreateCommand();
+                // Issue #2706: Brief delay to allow terminated connections to fully close
+                // This prevents race conditions where drop runs before connections are fully terminated
+                if (terminatedCount > 0)
+                {
+                    await Task.Delay(50);
+                }
+
+                // Drop database
+                await using var dropCmd = connection.CreateCommand();
 #pragma warning disable CA2100 // SQL injection safe: databaseName validated with regex ^[a-zA-Z0-9_]+$
-            dropCmd.CommandText = $"DROP DATABASE IF EXISTS \"{databaseName}\";";
+                dropCmd.CommandText = $"DROP DATABASE IF EXISTS \"{databaseName}\";";
 #pragma warning restore CA2100
-            await dropCmd.ExecuteNonQueryAsync();
+                await dropCmd.ExecuteNonQueryAsync();
 
-            // Issue #2577: Log successful cleanup with timing
-            var duration = (DateTime.UtcNow - startTime).TotalSeconds;
-            Console.WriteLine($"🧹 Database '{databaseName}' dropped in {duration:F2}s ({terminatedCount} connections terminated)");
-        }
-        catch (Exception ex)
-        {
-            // Issue #2577: Log cleanup failures (non-fatal, suppress)
-            var duration = (DateTime.UtcNow - startTime).TotalSeconds;
-            Console.WriteLine($"⚠️ Database cleanup warning after {duration:F2}s: {ex.Message}");
-            // Don't throw - cleanup failures are non-fatal
+                // Issue #2577: Log successful cleanup with timing
+                var duration = (DateTime.UtcNow - startTime).TotalSeconds;
+                Console.WriteLine($"🧹 Database '{databaseName}' dropped in {duration:F2}s ({terminatedCount} connections terminated)");
+                return; // Success, exit retry loop
+            }
+            catch (NpgsqlException ex) when (ex.SqlState == "57P01" && attempt < maxRetries - 1)
+            {
+                // Issue #2706: Handle 57P01 "terminating connection due to administrator command"
+                // This happens when another test's cleanup terminates our connection during parallel execution
+                Console.WriteLine($"⚠️ Database cleanup attempt {attempt + 1}/{maxRetries} hit 57P01, retrying...");
+                await Task.Delay(retryDelays[attempt]);
+            }
+            catch (Exception ex)
+            {
+                // Issue #2577: Log cleanup failures (non-fatal, suppress)
+                var duration = (DateTime.UtcNow - startTime).TotalSeconds;
+                Console.WriteLine($"⚠️ Database cleanup warning after {duration:F2}s: {ex.Message}");
+                // Don't throw - cleanup failures are non-fatal
+                return;
+            }
         }
     }
 

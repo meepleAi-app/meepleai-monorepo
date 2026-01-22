@@ -2,12 +2,17 @@
  * MSW handlers index
  *
  * Exports all request handlers for MSW server
+ *
+ * Issue #2760: Extended with library, shared-games, and catalog handlers
  */
 
 import { authHandlers } from './auth.handlers';
 import { gamesHandlers } from './games.handlers';
 import { chatHandlers } from './chat.handlers';
 import { documentsHandlers } from './documents.handlers';
+import { libraryHandlers } from './library.handlers';
+import { sharedGamesHandlers } from './shared-games.handlers';
+import { catalogHandlers } from './catalog.handlers';
 
 /**
  * All MSW request handlers
@@ -21,6 +26,9 @@ export const handlers = [
   ...gamesHandlers,
   ...chatHandlers,
   ...documentsHandlers,
+  ...libraryHandlers,
+  ...sharedGamesHandlers,
+  ...catalogHandlers,
 ];
 
 // Re-export individual handler groups for selective use
@@ -28,3 +36,13 @@ export { authHandlers } from './auth.handlers';
 export { gamesHandlers, resetGamesState } from './games.handlers';
 export { chatHandlers, resetChatState, createSSEStream } from './chat.handlers';
 export { documentsHandlers, resetDocumentsState } from './documents.handlers';
+export { libraryHandlers, resetLibraryState, addLibraryItem } from './library.handlers';
+export { sharedGamesHandlers, resetSharedGamesState, addSharedGame } from './shared-games.handlers';
+export {
+  catalogHandlers,
+  mockCategories,
+  mockMechanics,
+  mockComplexityRanges,
+  mockPlayerCounts,
+  mockPlayingTimeRanges,
+} from './catalog.handlers';

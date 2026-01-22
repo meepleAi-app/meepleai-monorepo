@@ -39,6 +39,7 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IShareRequestRepository, ShareRequestRepository>(); // Issue #2724: CreateShareRequest
         services.AddScoped<IBadgeRepository, BadgeRepository>(); // Issue #2731: Badge gamification system
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>(); // Issue #2731: User badge awards
+        services.AddScoped<IContributorRepository, ContributorRepository>(); // Issue #2735: Contributor stats endpoints
 
         // Register domain services
         services.AddScoped<DocumentVersioningService>(); // Issue #2391 Sprint 1

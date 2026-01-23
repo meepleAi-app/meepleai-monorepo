@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { PendingApprovalsWidget } from './PendingApprovalsWidget';
-import { fn } from '@storybook/test';
 
 const meta: Meta<typeof PendingApprovalsWidget> = {
   title: 'Admin/PendingApprovalsWidget',

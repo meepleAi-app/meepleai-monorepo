@@ -21,7 +21,7 @@ import { BasePage } from './pages/base/BasePage';
 import { authenticateViaAPI } from './fixtures/auth';
 import { mockApiSuccess, mockApiError } from './helpers/mocks';
 import { setViewport, isMobileViewport } from './helpers/responsive-utils';
-import { assertSuccessToast, assertErrorMessage } from './helpers/assertions';
+import { assertSuccessToast } from './helpers/assertions';
 
 /**
  * Example: Simple Page Object extending BasePage

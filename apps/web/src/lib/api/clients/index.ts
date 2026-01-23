@@ -23,3 +23,4 @@ export * from './shareRequestsClient'; // ISSUE-2743
 export * from './adminShareRequestsClient'; // ISSUE-2745
 export * from './gameContributorsClient'; // ISSUE-2746
 export * from './badgesClient'; // ISSUE-2747
+export * from './rateLimitsClient'; // ISSUE-2750

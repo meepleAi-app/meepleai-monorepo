@@ -34,6 +34,7 @@ export function Step3NotesAndConfirm({
         <Label htmlFor="notes">Notes for Reviewer (Optional)</Label>
         <Textarea
           id="notes"
+          data-testid="wizard-notes-textarea"
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           placeholder="Any additional context about your contribution...&#10;&#10;Examples:&#10;- This is the second edition with updated rules&#10;- Includes custom player aids I created&#10;- PDF is in English, original game is Italian"
@@ -49,6 +50,7 @@ export function Step3NotesAndConfirm({
               'font-medium',
               remaining < 50 ? 'text-destructive' : 'text-muted-foreground'
             )}
+            data-testid="wizard-notes-remaining"
           >
             {remaining} characters remaining
           </span>
@@ -56,7 +58,7 @@ export function Step3NotesAndConfirm({
       </div>
 
       {/* Summary Box */}
-      <div className="rounded-lg border bg-muted/50 p-4">
+      <div className="rounded-lg border bg-muted/50 p-4" data-testid="wizard-summary">
         <h4 className="mb-3 font-semibold">Summary</h4>
         <ul className="space-y-2 text-sm">
           <li className="flex items-start gap-2">

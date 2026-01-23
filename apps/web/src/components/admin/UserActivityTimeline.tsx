@@ -55,13 +55,13 @@ function Pagination({
   const PAGE_SIZES = [10, 20, 50];
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+    <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 dark:border-border/30">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <span>Mostra:</span>
         <select
           value={pageSize}
           onChange={e => onPageSizeChange(Number(e.target.value))}
-          className="border border-gray-300 rounded px-2 py-1 text-sm"
+          className="border border-border/50 dark:border-border/70 rounded px-2 py-1 text-sm"
           aria-label="Items per page"
         >
           {PAGE_SIZES.map(size => (
@@ -174,7 +174,7 @@ export function UserActivityTimeline({
 
         {/* Filters Panel */}
         {showFiltersPanel && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="mt-4 pt-4 border-t border-border/50 dark:border-border/30">
             <UserActivityFilters
               filters={filters}
               onFiltersChange={setFilters}

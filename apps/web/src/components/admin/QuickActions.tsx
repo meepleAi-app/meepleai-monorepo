@@ -232,7 +232,7 @@ export function QuickActions({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900">{action.label}</span>
+                    <span className="text-sm font-medium text-foreground">{action.label}</span>
                     {badgeCount !== undefined && (
                       <Badge
                         className={cn(
@@ -245,7 +245,7 @@ export function QuickActions({
                     )}
                   </div>
                   {action.description && (
-                    <p className="text-xs text-gray-500 truncate">{action.description}</p>
+                    <p className="text-xs text-muted-foreground truncate">{action.description}</p>
                   )}
                 </div>
               </Link>

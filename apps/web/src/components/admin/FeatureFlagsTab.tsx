@@ -162,8 +162,8 @@ export default function FeatureFlagsTab({
 
               {/* Version Info */}
               {flag.version > 1 && (
-                <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                <div className="mt-2 pt-2 border-t border-border/50 dark:border-border/30">
+                  <p className="text-xs text-muted-foreground">
                     Version {flag.version} • Updated {new Date(flag.updatedAt).toLocaleDateString()}
                   </p>
                 </div>

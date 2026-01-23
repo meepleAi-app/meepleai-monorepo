@@ -2,7 +2,7 @@
  * UserActivityTimeline Component - Issue #911
  *
  * Displays user activity audit log timeline with filtering capabilities.
- * Reuses ActivityFeed component for consistent UI.
+ * Reuses ActivityTimeline component for consistent UI.
  *
  * Features:
  * - Fetches user activity from backend (admin or own profile)
@@ -15,7 +15,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 import { Loader2, RefreshCw, Filter, X } from 'lucide-react';
 
-import { ActivityFeed, type ActivityEvent } from '@/components/admin/ActivityFeed';
+import { ActivityTimeline, type ActivityEvent } from '@/components/admin/ActivityTimeline';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import {
@@ -276,7 +276,7 @@ export function UserActivityTimeline({
       )}
 
       {/* Activity Feed */}
-      <ActivityFeed
+      <ActivityTimeline
         events={events}
         maxEvents={maxEvents}
         viewAllHref={viewAllHref}

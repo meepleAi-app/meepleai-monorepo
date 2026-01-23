@@ -102,12 +102,15 @@ export function TierConfigEditDialog({
               id="maxPending"
               type="number"
               value={formData.maxPendingRequests}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  maxPendingRequests: parseInt(e.target.value),
-                }))
-              }
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                if (!isNaN(value)) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    maxPendingRequests: value,
+                  }));
+                }
+              }}
               min="1"
               disabled={isLoading}
             />
@@ -127,12 +130,15 @@ export function TierConfigEditDialog({
               id="maxMonthly"
               type="number"
               value={formData.maxRequestsPerMonth}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  maxRequestsPerMonth: parseInt(e.target.value),
-                }))
-              }
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                if (!isNaN(value)) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    maxRequestsPerMonth: value,
+                  }));
+                }
+              }}
               min="1"
               disabled={isLoading}
             />
@@ -149,12 +155,15 @@ export function TierConfigEditDialog({
               id="cooldown"
               type="number"
               value={formData.cooldownDays}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  cooldownDays: parseInt(e.target.value),
-                }))
-              }
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                if (!isNaN(value)) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    cooldownDays: value,
+                  }));
+                }
+              }}
               min="0"
               disabled={isLoading}
             />

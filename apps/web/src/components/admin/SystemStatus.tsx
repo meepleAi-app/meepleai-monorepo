@@ -75,11 +75,11 @@ const statusConfig = {
   unknown: {
     icon: ActivityIcon,
     label: 'Status Unknown',
-    bgColor: 'bg-gray-50',
-    borderColor: 'border-gray-200',
-    textColor: 'text-gray-700',
-    iconColor: 'text-gray-500',
-    dotColor: 'bg-gray-500',
+    bgColor: 'bg-muted/50',
+    borderColor: 'border-border/50',
+    textColor: 'text-foreground',
+    iconColor: 'text-muted-foreground',
+    dotColor: 'bg-muted-foreground',
   },
 };
 
@@ -87,7 +87,7 @@ const serviceStatusColors = {
   healthy: 'bg-green-500',
   degraded: 'bg-yellow-500',
   unhealthy: 'bg-red-500',
-  unknown: 'bg-gray-400',
+  unknown: 'bg-muted-foreground',
 };
 
 /**
@@ -179,7 +179,7 @@ export function SystemStatus({
           <div className="flex-1">
             <p className={cn('font-medium', config.textColor)}>{config.label}</p>
             {lastUpdate && (
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Last checked: {lastUpdate.toLocaleTimeString('it-IT')}
               </p>
             )}
@@ -195,13 +195,13 @@ export function SystemStatus({
               ? 'border-l-yellow-500'
               : service.status === 'unhealthy'
               ? 'border-l-red-500'
-              : 'border-l-gray-400';
+              : 'border-l-border';
 
             const bgClass = service.status === 'degraded'
               ? 'bg-yellow-50 dark:bg-yellow-500/10'
               : service.status === 'unhealthy'
               ? 'bg-red-50 dark:bg-red-500/10'
-              : 'bg-white dark:bg-stone-900';
+              : 'bg-card';
 
             return (
               <div
@@ -225,17 +225,17 @@ export function SystemStatus({
                     aria-label={`${service.name} is ${service.status}`}
                   />
                   <div>
-                    <div className="text-sm font-bold font-heading text-gray-900 dark:text-white">
+                    <div className="text-sm font-bold font-heading text-foreground">
                       {service.name}
                     </div>
                     {service.latency !== undefined && (
-                      <div className="text-xs text-gray-500 font-semibold">
+                      <div className="text-xs text-muted-foreground font-semibold">
                         {service.latency}ms response time
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-muted-foreground/70">
                   {service.message || '10s ago'}
                 </div>
               </div>

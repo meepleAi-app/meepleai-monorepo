@@ -161,12 +161,12 @@ export function GrafanaEmbed({
                 <AlertDescription>{dashboard.description[locale]}</AlertDescription>
               </Alert>
 
-              <div className="relative aspect-video bg-gray-100 dark:bg-gray-900 rounded-lg overflow-hidden border">
+              <div className="relative aspect-video bg-muted dark:bg-card rounded-lg overflow-hidden border border-border/50 dark:border-border/30">
                 {isLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-10">
+                  <div className="absolute inset-0 flex items-center justify-center bg-card z-10">
                     <div className="text-center space-y-4">
                       <Skeleton className="h-64 w-full" />
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         {locale === 'it' ? 'Caricamento dashboard...' : 'Loading dashboard...'}
                       </p>
                     </div>
@@ -174,16 +174,16 @@ export function GrafanaEmbed({
                 )}
 
                 {hasError ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted/50 dark:bg-card">
                     <div className="text-center space-y-4 p-6">
                       <AlertCircle className="h-16 w-16 text-red-500 mx-auto" />
                       <div>
-                        <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                        <p className="text-lg font-medium text-foreground mb-2">
                           {locale === 'it'
                             ? 'Errore caricamento dashboard'
                             : 'Error loading dashboard'}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        <p className="text-sm text-muted-foreground mb-4">
                           {locale === 'it'
                             ? 'Verifica che Grafana sia in esecuzione'
                             : 'Check that Grafana is running'}

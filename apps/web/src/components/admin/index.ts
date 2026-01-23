@@ -16,7 +16,7 @@ export { ActivityFeed, type ActivityFeedProps, type ActivityEvent } from './Acti
 
 // Issue #2787: Activity Timeline with new design system
 export { ActivityTimeline, type ActivityTimelineProps } from './ActivityTimeline';
-export type { ActivityEvent } from './utils/activityUtils';
+// ActivityEvent exported from ActivityFeed (line 15) - centralized in utils/activityUtils
 
 // Issue #881: Modular admin layout components
 export {

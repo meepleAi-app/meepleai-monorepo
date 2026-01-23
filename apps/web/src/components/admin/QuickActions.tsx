@@ -21,8 +21,6 @@ import {
   UsersIcon,
   AlertTriangleIcon,
   SettingsIcon,
-  MessageSquareIcon,
-  DatabaseIcon,
   ZapIcon,
   CheckIcon,
   TrashIcon,

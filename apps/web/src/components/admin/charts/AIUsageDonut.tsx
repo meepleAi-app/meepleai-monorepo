@@ -112,11 +112,11 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps): JSX.Elemen
 
           {/* Center text - Issue #2850: MeepleAI styling */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-            <p className="text-sm text-[#666] dark:text-gray-400">Total Calls</p>
+            <p className="text-sm text-muted-foreground">Total Calls</p>
             <p className="font-['Quicksand',sans-serif] text-xl font-bold text-foreground">
               {totalCalls.toLocaleString()}
             </p>
-            <p className="text-xs text-[#999] dark:text-gray-500">Estimated</p>
+            <p className="text-xs text-muted-foreground/70">Estimated</p>
           </div>
         </div>
       </Suspense>

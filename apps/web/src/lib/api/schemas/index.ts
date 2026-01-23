@@ -65,3 +65,6 @@ export * from './ai-models.schemas';
 
 // Badge & Gamification schemas (Issue #2747)
 export * from './badges.schemas';
+
+// Rate Limit Configuration schemas (Issue #2750)
+export * from './rate-limits.schemas';

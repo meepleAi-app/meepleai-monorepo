@@ -92,3 +92,15 @@ export {
   getTierOrder,
   getTierClass,
 } from './badges';
+
+// Rate Limit Configuration Types (Issue #2750)
+export type {
+  UserTier,
+  CooldownDuration,
+  RateLimitConfigDto,
+  RateLimitOverrideDto,
+  UpdateTierConfigRequest,
+  CreateOverrideRequest,
+  RateLimitConfigListDto,
+  RateLimitOverrideListDto,
+} from '@/lib/api/schemas/rate-limits.schemas';

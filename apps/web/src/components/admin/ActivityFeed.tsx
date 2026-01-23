@@ -1,6 +1,15 @@
 /* eslint-disable security/detect-object-injection -- Safe style/icon map Record access */
 /**
+ * @deprecated Use ActivityTimeline instead (Issue #2803)
+ *
  * ActivityFeed Component - Issue #884
+ *
+ * This component has been replaced by ActivityTimeline (Issue #2787).
+ * ActivityTimeline provides enhanced UI with category-based colored icons
+ * and improved design system integration.
+ *
+ * Migration: Replace all ActivityFeed imports with ActivityTimeline.
+ * The interfaces are identical, so it's a drop-in replacement.
  *
  * Timeline for recent system activity events with severity indicators.
  * Features:

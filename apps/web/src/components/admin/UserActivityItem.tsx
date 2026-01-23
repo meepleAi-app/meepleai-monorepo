@@ -136,9 +136,9 @@ export function UserActivityItem({
                   )}
                   {event.metadata && (
                     <div className="flex gap-2">
-                      <dt className="font-medium text-gray-600 min-w-[80px]">Metadata:</dt>
+                      <dt className="font-medium text-muted-foreground min-w-[80px]">Metadata:</dt>
                       <dd className="flex-1">
-                        <pre className="text-gray-900 bg-gray-100 p-2 rounded text-[11px] overflow-x-auto">
+                        <pre className="text-foreground bg-muted dark:bg-muted/50 p-2 rounded text-[11px] overflow-x-auto">
                           {JSON.stringify(event.metadata, null, 2)}
                         </pre>
                       </dd>

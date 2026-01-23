@@ -59,7 +59,7 @@ export function AuthLayout({
 }: AuthLayoutProps) {
   return (
     <div
-      className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900"
+      className="min-h-screen flex flex-col bg-background"
       data-testid={testId}
     >
       {/* Minimal Header */}
@@ -68,7 +68,7 @@ export function AuthLayout({
           {/* Logo - Links to home */}
           <Link
             href="/"
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg"
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-accent focus:ring-offset-2 rounded-lg"
             aria-label="MeepleAI Home"
           >
             <MeepleLogo variant="full" size="md" />
@@ -78,7 +78,7 @@ export function AuthLayout({
           {showBackLink && (
             <Link
               href="/"
-              className="text-sm text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+              className="text-sm text-muted-foreground hover:text-primary dark:hover:text-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-accent focus:ring-offset-2 rounded px-2 py-1"
               aria-label="Back to home"
             >
               ← Back to Home
@@ -94,20 +94,20 @@ export function AuthLayout({
           {(title || subtitle) && (
             <div className="text-center mb-8 space-y-2">
               {title && (
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">{title}</h1>
+                <h1 className="text-3xl font-bold text-foreground">{title}</h1>
               )}
-              {subtitle && <p className="text-sm text-slate-600 dark:text-slate-400">{subtitle}</p>}
+              {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
             </div>
           )}
 
           {/* Auth Content Card */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-6 sm:p-8">
+          <div className="bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none rounded-lg border border-border/50 dark:border-border/30 shadow-lg dark:shadow-2xl dark:shadow-black/20 p-6 sm:p-8">
             {children}
           </div>
 
           {/* Security Notice */}
           <div className="mt-6 text-center">
-            <p className="text-xs text-slate-500 dark:text-slate-500 flex items-center justify-center gap-2">
+            <p className="text-xs text-muted-foreground flex items-center justify-center gap-2">
               <span className="text-green-500" role="img" aria-label="Security indicator">
                 🔒
               </span>
@@ -118,21 +118,21 @@ export function AuthLayout({
       </main>
 
       {/* Minimal Footer */}
-      <footer className="w-full py-6 px-4 sm:px-6 lg:px-8 border-t border-slate-200 dark:border-slate-800">
+      <footer className="w-full py-6 px-4 sm:px-6 lg:px-8 border-t border-border/50 dark:border-border/30">
         <div className="max-w-7xl mx-auto">
           <nav className="flex justify-center items-center gap-6" aria-label="Footer navigation">
             <Link
               href="/privacy"
-              className="text-sm text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+              className="text-sm text-muted-foreground hover:text-primary dark:hover:text-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-accent focus:ring-offset-2 rounded px-2 py-1"
             >
               Privacy Policy
             </Link>
-            <span className="text-slate-400 dark:text-slate-600" aria-hidden="true">
+            <span className="text-muted-foreground/50" aria-hidden="true">
               •
             </span>
             <Link
               href="/terms"
-              className="text-sm text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded px-2 py-1"
+              className="text-sm text-muted-foreground hover:text-primary dark:hover:text-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-accent focus:ring-offset-2 rounded px-2 py-1"
             >
               Terms of Service
             </Link>
@@ -140,7 +140,7 @@ export function AuthLayout({
 
           {/* Copyright */}
           <div className="mt-4 text-center">
-            <p className="text-xs text-slate-500 dark:text-slate-600">
+            <p className="text-xs text-muted-foreground">
               © {new Date().getFullYear()} MeepleAI. All rights reserved.
             </p>
           </div>

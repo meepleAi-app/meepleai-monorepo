@@ -84,7 +84,15 @@ export function BottomNav() {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 h-[72px] bg-card border-t border-border shadow-lg z-50"
+      className={cn(
+        'md:hidden fixed bottom-0 left-0 right-0 h-[72px] z-50',
+        // Light mode: Glass morphism bottom bar
+        'bg-background/95 backdrop-blur-[16px] backdrop-saturate-[180%]',
+        // Dark mode: Solid professional
+        'dark:bg-card dark:backdrop-blur-none',
+        'border-t border-border/50 dark:border-border/30',
+        'shadow-lg dark:shadow-2xl dark:shadow-black/20'
+      )}
       aria-label="Primary mobile navigation"
     >
       <div className="flex justify-around items-center h-full px-4">
@@ -101,10 +109,10 @@ export function BottomNav() {
                 'flex flex-col items-center justify-center gap-1',
                 'min-w-[44px] min-h-[44px]', // Touch target WCAG 2.1 AA
                 'transition-colors duration-200',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:focus-visible:ring-accent focus-visible:ring-offset-2 rounded-md',
                 active
-                  ? 'text-primary font-semibold' // Active: Orange (#F97316)
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'text-primary dark:text-primary/90 font-semibold' // Active: Orange
+                  : 'text-muted-foreground hover:text-foreground dark:hover:text-foreground/90'
               )}
             >
               <Icon className="w-6 h-6" aria-hidden="true" />

@@ -25,9 +25,9 @@ export const FollowUpQuestions: FC<FollowUpQuestionsProps> = ({
     <div
       role="region"
       aria-label="Suggested follow-up questions"
-      className="mt-3 pt-3 border-t border-gray-200"
+      className="mt-3 pt-3 border-t border-border/50 dark:border-border/30"
     >
-      <div className="text-xs font-medium mb-2 text-slate-600">Domande suggerite:</div>
+      <div className="text-xs font-medium mb-2 text-muted-foreground">Domande suggerite:</div>
       <div className="flex flex-wrap gap-2">
         {questions.map(question => (
           <button
@@ -37,8 +37,8 @@ export const FollowUpQuestions: FC<FollowUpQuestionsProps> = ({
             aria-label={`Ask follow-up question: ${question}`}
             className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap max-w-full overflow-hidden text-ellipsis transition-all duration-200 ${
               disabled
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-white text-blue-600 border border-gray-200 hover:bg-blue-50 hover:border-blue-600 cursor-pointer'
+                ? 'bg-muted text-muted-foreground/50 cursor-not-allowed'
+                : 'bg-card/90 backdrop-blur-[8px] dark:bg-card dark:backdrop-blur-none text-blue-600 dark:text-blue-400 border border-border/50 dark:border-border/70 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:border-blue-600 cursor-pointer'
             }`}
           >
             {question}

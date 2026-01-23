@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Dark Mode Professional</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: #1a1a1a;
+            color: #e8e4d8;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Dark texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(210, 105, 30, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(251, 191, 36, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: rgba(45, 45, 45, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(210, 105, 30, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .top-bar-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+
+        .logo-icon {
+            color: #d2691e;
+            font-size: 1.875rem;
+            filter: drop-shadow(0 0 8px rgba(210, 105, 30, 0.5));
+        }
+
+        .nav {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            font-size: 0.9375rem;
+            color: #999;
+            text-decoration: none;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.625rem;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, #d2691e, #b85a19);
+            color: white;
+            box-shadow: 0 4px 12px rgba(210, 105, 30, 0.4);
+        }
+
+        .nav-link:hover:not(.active) {
+            background: rgba(210, 105, 30, 0.15);
+            color: #fbbf24;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn-orange {
+            background: linear-gradient(135deg, #d2691e, #b85a19);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.75rem;
+            border-radius: 0.75rem;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(210, 105, 30, 0.3);
+        }
+
+        .btn-orange:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(210, 105, 30, 0.5);
+        }
+
+        .btn-green {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.75rem;
+            border-radius: 0.75rem;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+        }
+
+        .btn-green:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(22, 163, 74, 0.5);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Page Header */
+        .page-header {
+            margin-bottom: 3rem;
+        }
+
+        .page-title {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fbbf24;
+            margin-bottom: 0.75rem;
+            text-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+        }
+
+        .page-subtitle {
+            font-size: 1.125rem;
+            color: #999;
+            font-weight: 400;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            margin-top: 1.75rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(22, 163, 74, 0.15);
+            border: 1px solid rgba(22, 163, 74, 0.3);
+            border-radius: 2rem;
+            font-size: 0.9375rem;
+            color: #4ade80;
+            font-weight: 700;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .update-time {
+            font-size: 0.9375rem;
+            color: #666;
+            font-weight: 400;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .metric-card {
+            background: #2d2d2d;
+            border: 1px solid rgba(210, 105, 30, 0.2);
+            border-radius: 1rem;
+            padding: 2rem;
+            transition: all 0.3s;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(210, 105, 30, 0.3);
+            border-color: #d2691e;
+            background: #3a3a3a;
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-label {
+            font-size: 0.9375rem;
+            color: #999;
+            font-weight: 600;
+        }
+
+        .metric-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(210, 105, 30, 0.15);
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            border: 1px solid rgba(210, 105, 30, 0.3);
+        }
+
+        .metric-value {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #fbbf24;
+            line-height: 1;
+            margin-bottom: 0.75rem;
+            text-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+        }
+
+        .metric-trend {
+            font-size: 0.9375rem;
+            font-weight: 700;
+        }
+
+        .metric-trend.positive {
+            color: #4ade80;
+        }
+
+        .metric-trend.negative {
+            color: #f87171;
+        }
+
+        .metric-trend.neutral {
+            color: #666;
+        }
+
+        /* Section */
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.75rem;
+        }
+
+        .section-title {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 0.625rem;
+        }
+
+        .filter-btn {
+            padding: 0.625rem 1.25rem;
+            background: #2d2d2d;
+            border: 1px solid rgba(210, 105, 30, 0.2);
+            border-radius: 0.625rem;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #999;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, #d2691e, #b85a19);
+            color: white;
+            border-color: #d2691e;
+            box-shadow: 0 4px 12px rgba(210, 105, 30, 0.4);
+        }
+
+        .filter-btn:hover:not(.active) {
+            border-color: #d2691e;
+            color: #fbbf24;
+            background: rgba(210, 105, 30, 0.15);
+        }
+
+        /* Service Health Grid */
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .service-card {
+            background: #2d2d2d;
+            border: 1px solid rgba(210, 105, 30, 0.2);
+            border-radius: 1rem;
+            padding: 1.75rem;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .service-card.healthy {
+            border-left: 4px solid #4ade80;
+        }
+
+        .service-card.degraded {
+            border-left: 4px solid #fbbf24;
+            background: rgba(251, 191, 36, 0.05);
+        }
+
+        .service-card.down {
+            border-left: 4px solid #f87171;
+            background: rgba(248, 113, 113, 0.05);
+        }
+
+        .service-card:hover {
+            box-shadow: 0 6px 20px rgba(210, 105, 30, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+        }
+
+        .service-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .service-dot.healthy {
+            background: #4ade80;
+            box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+        }
+
+        .service-dot.degraded {
+            background: #fbbf24;
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+        }
+
+        .service-dot.down {
+            background: #f87171;
+            animation: pulse 1.5s infinite;
+            box-shadow: 0 0 8px rgba(248, 113, 113, 0.6);
+        }
+
+        .service-status-text {
+            font-size: 0.875rem;
+            font-weight: 700;
+        }
+
+        .service-status-text.healthy {
+            color: #4ade80;
+        }
+
+        .service-status-text.degraded {
+            color: #fbbf24;
+        }
+
+        .service-status-text.down {
+            color: #f87171;
+        }
+
+        .service-time {
+            font-size: 0.8125rem;
+            color: #666;
+        }
+
+        .service-name {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #e8e4d8;
+            margin-bottom: 0.5rem;
+        }
+
+        .service-response {
+            font-size: 0.9375rem;
+            font-weight: 700;
+        }
+
+        .service-response.healthy {
+            color: #4ade80;
+        }
+
+        .service-response.degraded {
+            color: #fbbf24;
+        }
+
+        .service-response.down {
+            color: #f87171;
+        }
+
+        /* Two Column Layout */
+        .two-col {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Activity Feed */
+        .activity-feed {
+            background: #2d2d2d;
+            border: 1px solid rgba(210, 105, 30, 0.2);
+            border-radius: 1rem;
+            padding: 1.75rem;
+            max-height: 600px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .activity-item {
+            padding: 1.25rem;
+            border-radius: 0.625rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .activity-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .activity-item:hover {
+            background: #3a3a3a;
+            border-color: rgba(210, 105, 30, 0.3);
+        }
+
+        .activity-item.warning {
+            background: rgba(251, 191, 36, 0.1);
+            border-left: 3px solid #fbbf24;
+        }
+
+        .activity-item.error {
+            background: rgba(248, 113, 113, 0.1);
+            border-left: 3px solid #f87171;
+        }
+
+        .activity-content {
+            display: flex;
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .activity-icon {
+            font-size: 1.375rem;
+            flex-shrink: 0;
+        }
+
+        .activity-details {
+            flex: 1;
+        }
+
+        .activity-message {
+            font-size: 0.9375rem;
+            color: #e8e4d8;
+            margin-bottom: 0.375rem;
+            font-weight: 500;
+        }
+
+        .activity-time {
+            font-size: 0.8125rem;
+            color: #666;
+            font-weight: 400;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            background: #2d2d2d;
+            border: 1px solid rgba(210, 105, 30, 0.2);
+            border-radius: 1rem;
+            padding: 1.75rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .quick-action-btn {
+            width: 100%;
+            padding: 1.375rem 1.5rem;
+            margin-bottom: 0.875rem;
+            border: 1px solid rgba(210, 105, 30, 0.2);
+            border-radius: 0.75rem;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: #3a3a3a;
+            color: #e8e4d8;
+        }
+
+        .quick-action-btn:last-child {
+            margin-bottom: 0;
+        }
+
+        .quick-action-btn.primary {
+            background: linear-gradient(135deg, #d2691e, #b85a19);
+            color: white;
+            border-color: #d2691e;
+            box-shadow: 0 4px 12px rgba(210, 105, 30, 0.3);
+        }
+
+        .quick-action-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(210, 105, 30, 0.5);
+        }
+
+        .quick-action-btn.success {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: white;
+            border-color: #16a34a;
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+        }
+
+        .quick-action-btn.success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(22, 163, 74, 0.5);
+        }
+
+        .quick-action-btn.danger {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+            border-color: #dc2626;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        }
+
+        .quick-action-btn.danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5);
+        }
+
+        .quick-action-btn:not(.primary):not(.success):not(.danger):hover {
+            background: #4a4a4a;
+            border-color: #d2691e;
+            transform: translateY(-2px);
+        }
+
+        .action-icon {
+            font-size: 1.5rem;
+        }
+
+        .action-content {
+            flex: 1;
+            text-align: left;
+        }
+
+        .badge {
+            background: rgba(210, 105, 30, 0.2);
+            color: #fbbf24;
+            padding: 0.375rem 0.875rem;
+            border-radius: 2rem;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            border: 1px solid rgba(210, 105, 30, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-inner">
+            <div class="logo">
+                <span class="logo-icon">🎲</span>
+                <span>MeepleAI</span>
+            </div>
+            <nav class="nav">
+                <a href="#" class="nav-link active">Dashboard</a>
+                <a href="#" class="nav-link">Utenti</a>
+                <a href="#" class="nav-link">Giochi</a>
+                <a href="#" class="nav-link">Analytics</a>
+                <a href="#" class="nav-link">Impostazioni</a>
+            </nav>
+            <div class="user-section">
+                <button class="btn-green">System</button>
+                <button class="btn-orange">Admin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container -->
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1 class="page-title">Dashboard Admin</h1>
+            <p class="page-subtitle">Monitoraggio sistema e statistiche in tempo reale</p>
+            <div class="header-actions">
+                <div class="status-badge">
+                    <div class="status-dot"></div>
+                    <span>Sistema Operativo</span>
+                </div>
+                <span class="update-time">Ultimo aggiornamento: pochi secondi fa</span>
+            </div>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Utenti Totali</div>
+                    <div class="metric-icon">👥</div>
+                </div>
+                <div class="metric-value">2,847</div>
+                <div class="metric-trend positive">↗ +12% questa settimana</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Utenti Attivi (24h)</div>
+                    <div class="metric-icon">✅</div>
+                </div>
+                <div class="metric-value">1,234</div>
+                <div class="metric-trend positive">↗ +8%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Nuovi Utenti (7gg)</div>
+                    <div class="metric-icon">🆕</div>
+                </div>
+                <div class="metric-value">156</div>
+                <div class="metric-trend positive">↗ +24%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Admin/Editor</div>
+                    <div class="metric-icon">⚙️</div>
+                </div>
+                <div class="metric-value">24</div>
+                <div class="metric-trend neutral">—</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Giochi Totali</div>
+                    <div class="metric-icon">🎲</div>
+                </div>
+                <div class="metric-value">8,492</div>
+                <div class="metric-trend positive">↗ +3%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Librerie Utente</div>
+                    <div class="metric-icon">📚</div>
+                </div>
+                <div class="metric-value">12,456</div>
+                <div class="metric-trend positive">↗ +15%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Sessioni Attive</div>
+                    <div class="metric-icon">🎮</div>
+                </div>
+                <div class="metric-value">89</div>
+                <div class="metric-trend negative">↘ -5%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Approvazioni Pending</div>
+                    <div class="metric-icon">⏳</div>
+                </div>
+                <div class="metric-value">7</div>
+                <div class="metric-trend neutral">In attesa</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">API Calls (24h)</div>
+                    <div class="metric-icon">📡</div>
+                </div>
+                <div class="metric-value">847K</div>
+                <div class="metric-trend positive">↗ +18%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">AI Requests (24h)</div>
+                    <div class="metric-icon">🤖</div>
+                </div>
+                <div class="metric-value">45K</div>
+                <div class="metric-trend positive">↗ +22%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Storage Usato</div>
+                    <div class="metric-icon">💾</div>
+                </div>
+                <div class="metric-value">234 GB</div>
+                <div class="metric-trend neutral">+2%</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Cache Hit Rate</div>
+                    <div class="metric-icon">⚡</div>
+                </div>
+                <div class="metric-value">94%</div>
+                <div class="metric-trend positive">↗ +1%</div>
+            </div>
+        </div>
+
+        <!-- Service Health -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">Stato Servizi</h2>
+            </div>
+            <div class="service-grid">
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-status">
+                            <div class="service-dot healthy"></div>
+                            <span class="service-status-text healthy">Operativo</span>
+                        </div>
+                        <div class="service-time">10s fa</div>
+                    </div>
+                    <div class="service-name">PostgreSQL</div>
+                    <div class="service-response healthy">5ms tempo risposta</div>
+                </div>
+
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-status">
+                            <div class="service-dot healthy"></div>
+                            <span class="service-status-text healthy">Operativo</span>
+                        </div>
+                        <div class="service-time">10s fa</div>
+                    </div>
+                    <div class="service-name">Redis</div>
+                    <div class="service-response healthy">2ms tempo risposta</div>
+                </div>
+
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-status">
+                            <div class="service-dot healthy"></div>
+                            <span class="service-status-text healthy">Operativo</span>
+                        </div>
+                        <div class="service-time">10s fa</div>
+                    </div>
+                    <div class="service-name">Qdrant</div>
+                    <div class="service-response healthy">45ms tempo risposta</div>
+                </div>
+
+                <div class="service-card degraded">
+                    <div class="service-header">
+                        <div class="service-status">
+                            <div class="service-dot degraded"></div>
+                            <span class="service-status-text degraded">Rallentato</span>
+                        </div>
+                        <div class="service-time">15s fa</div>
+                    </div>
+                    <div class="service-name">OpenRouter</div>
+                    <div class="service-response degraded">850ms tempo risposta</div>
+                </div>
+
+                <div class="service-card healthy">
+                    <div class="service-header">
+                        <div class="service-status">
+                            <div class="service-dot healthy"></div>
+                            <span class="service-status-text healthy">Operativo</span>
+                        </div>
+                        <div class="service-time">10s fa</div>
+                    </div>
+                    <div class="service-name">Embedding Service</div>
+                    <div class="service-response healthy">120ms tempo risposta</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Feed + Quick Actions -->
+        <div class="two-col">
+            <div>
+                <div class="section-header">
+                    <h2 class="section-title">Attività Recenti</h2>
+                    <div class="section-actions">
+                        <button class="filter-btn active">Tutte</button>
+                        <button class="filter-btn">Solo Errori</button>
+                    </div>
+                </div>
+                <div class="activity-feed">
+                    <div class="activity-item">
+                        <div class="activity-content">
+                            <div class="activity-icon">👤</div>
+                            <div class="activity-details">
+                                <div class="activity-message">Nuovo utente registrato: mario.rossi@email.com</div>
+                                <div class="activity-time">2 minuti fa</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-content">
+                            <div class="activity-icon">🎲</div>
+                            <div class="activity-details">
+                                <div class="activity-message">Gioco approvato: Wingspan (Stonemaier Games)</div>
+                                <div class="activity-time">5 minuti fa</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-item warning">
+                        <div class="activity-content">
+                            <div class="activity-icon">⚠️</div>
+                            <div class="activity-details">
+                                <div class="activity-message">Timeout API OpenRouter su modello claude-3.5-sonnet</div>
+                                <div class="activity-time">8 minuti fa</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="activity-content">
+                            <div class="activity-icon">🎮</div>
+                            <div class="activity-details">
+                                <div class="activity-message">Sessione completata: Catan (4 giocatori, 90min)</div>
+                                <div class="activity-time">12 minuti fa</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="activity-item error">
+                        <div class="activity-content">
+                            <div class="activity-icon">❌</div>
+                            <div class="activity-details">
+                                <div class="activity-message">Errore creazione collezione Qdrant: game-rules-12345</div>
+                                <div class="activity-time">32 minuti fa</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="section-header">
+                    <h2 class="section-title">Azioni Rapide</h2>
+                </div>
+                <div class="quick-actions">
+                    <button class="quick-action-btn primary">
+                        <span class="action-icon">👤</span>
+                        <span class="action-content">Crea Utente</span>
+                    </button>
+                    <button class="quick-action-btn success">
+                        <span class="action-icon">✅</span>
+                        <span class="action-content">Approva Giochi</span>
+                        <span class="badge">7</span>
+                    </button>
+                    <button class="quick-action-btn danger">
+                        <span class="action-icon">⚠️</span>
+                        <span class="action-content">Log Errori</span>
+                    </button>
+                    <button class="quick-action-btn">
+                        <span class="action-icon">⚙️</span>
+                        <span class="action-content">Configurazione Sistema</span>
+                    </button>
+                    <button class="quick-action-btn">
+                        <span class="action-icon">📊</span>
+                        <span class="action-content">Esporta Dati</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

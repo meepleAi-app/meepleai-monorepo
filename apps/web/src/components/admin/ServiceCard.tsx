@@ -112,7 +112,7 @@ export function ServiceCard({
   if (loading) {
     return (
       <Card
-        className={cn('border-gray-200 dark:border-gray-700', className)}
+        className={cn('border-border/50 dark:border-border/30', className)}
         data-testid="service-card-loading"
       >
         <CardContent className="p-6">
@@ -196,8 +196,8 @@ export function ServiceCard({
 
               {/* Error Message */}
               {errorMessage && status !== 'Healthy' && (
-                <div className="mt-2 p-2 bg-white/60 dark:bg-gray-800/60 rounded border border-gray-200 dark:border-gray-700">
-                  <p className="text-xs text-gray-700 dark:text-gray-300 break-words">
+                <div className="mt-2 p-2 bg-card/60 backdrop-blur-[8px] dark:bg-card/60 dark:backdrop-blur-none rounded border border-border/50 dark:border-border/30">
+                  <p className="text-xs text-foreground break-words">
                     <span className="font-medium">{i18n.labels.errorMessage}:</span> {errorMessage}
                   </p>
                 </div>

@@ -262,6 +262,135 @@ public sealed class ShareRequestTests
 
     #endregion
 
+    #region Lock Expiration Tests - Issue #2729
+
+    [Fact]
+    public void ExpireLock_FromInReview_ReturnsToPreviousState()
+    {
+        // Arrange
+        var request = CreateRequestInReviewState();
+        request.ClearDomainEvents();
+
+        // Act
+        request.ExpireLock();
+
+        // Assert
+        request.Status.Should().Be(ShareRequestStatus.Pending);
+        request.ReviewingAdminId.Should().BeNull();
+        request.ReviewStartedAt.Should().BeNull();
+        request.ReviewLockExpiresAt.Should().BeNull();
+        request.DomainEvents.Should().ContainSingle();
+        request.DomainEvents.First().Should().BeOfType<ShareRequestLockExpiredEvent>();
+    }
+
+    [Fact]
+    public void ExpireLock_FromInReviewAfterChangesRequested_ReturnsToChangesRequested()
+    {
+        // Arrange
+        var request = CreateRequestInChangesRequestedState();
+        request.StartReview(_adminId); // ChangesRequested → InReview
+        request.ClearDomainEvents();
+
+        // Act
+        request.ExpireLock();
+
+        // Assert
+        request.Status.Should().Be(ShareRequestStatus.ChangesRequested);
+        request.ReviewingAdminId.Should().BeNull();
+        request.DomainEvents.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void ExpireLock_NotInReview_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var request = ShareRequest.Create(_userId, _sourceGameId, ContributionType.NewGame);
+
+        // Act & Assert
+        var action = () => request.ExpireLock();
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Pending*");
+    }
+
+    [Fact]
+    public void ExtendReviewLock_InReview_ExtendsExpiration()
+    {
+        // Arrange
+        var request = CreateRequestInReviewState();
+        var initialExpiration = request.ReviewLockExpiresAt;
+        request.ClearDomainEvents();
+
+        // Act
+        request.ExtendReviewLock(_adminId, 15); // Extend by 15 minutes
+
+        // Assert
+        request.Status.Should().Be(ShareRequestStatus.InReview);
+        request.ReviewLockExpiresAt.Should().NotBeNull();
+        request.ReviewLockExpiresAt.Should().BeAfter(initialExpiration!.Value);
+        request.ReviewLockExpiresAt.Should().BeCloseTo(
+            initialExpiration.Value.AddMinutes(15),
+            TimeSpan.FromSeconds(1));
+        request.DomainEvents.Should().ContainSingle();
+        request.DomainEvents.First().Should().BeOfType<ShareRequestLockExtendedEvent>();
+    }
+
+    [Fact]
+    public void ExtendReviewLock_NotInReview_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var request = ShareRequest.Create(_userId, _sourceGameId, ContributionType.NewGame);
+
+        // Act & Assert
+        var action = () => request.ExtendReviewLock(_adminId, 15);
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Pending*");
+    }
+
+    [Fact]
+    public void IsLockExpired_WithExpiredLock_ReturnsTrue()
+    {
+        // Arrange
+        var request = ShareRequest.Create(_userId, _sourceGameId, ContributionType.NewGame);
+        request.StartReview(_adminId, lockDurationMinutes: -10); // Start with expired lock (negative duration)
+
+        // Act
+        var isExpired = request.IsLockExpired();
+
+        // Assert
+        isExpired.Should().BeTrue();
+        request.ReviewLockExpiresAt.Should().BeBefore(DateTime.UtcNow);
+    }
+
+    [Fact]
+    public void IsLockExpired_WithActiveLock_ReturnsFalse()
+    {
+        // Arrange
+        var request = CreateRequestInReviewState(); // Default 30 minute lock
+
+        // Act
+        var isExpired = request.IsLockExpired();
+
+        // Assert
+        isExpired.Should().BeFalse();
+        request.ReviewLockExpiresAt.Should().BeAfter(DateTime.UtcNow);
+    }
+
+    [Fact]
+    public void IsLockExpired_WithNoLock_ReturnsFalse()
+    {
+        // Arrange
+        var request = ShareRequest.Create(_userId, _sourceGameId, ContributionType.NewGame);
+
+        // Act
+        var isExpired = request.IsLockExpired();
+
+        // Assert
+        isExpired.Should().BeFalse();
+        request.ReviewLockExpiresAt.Should().BeNull();
+    }
+
+    #endregion
+
     #region Approve Tests
 
     [Fact]

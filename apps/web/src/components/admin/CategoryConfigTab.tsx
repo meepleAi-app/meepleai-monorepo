@@ -116,10 +116,10 @@ export default function CategoryConfigTab({
   if (categoryConfigs.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-600 dark:text-slate-400 text-lg mb-2">
+        <p className="text-muted-foreground text-lg mb-2">
           No {category} configurations found
         </p>
-        <p className="text-slate-500 dark:text-slate-500 text-sm">
+        <p className="text-muted-foreground/70 text-sm">
           Configurations will appear here once added to the database.
         </p>
       </div>
@@ -128,7 +128,7 @@ export default function CategoryConfigTab({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">{title}</h2>
+      <h2 className="text-xl font-semibold text-foreground mb-4">{title}</h2>
 
       {/* Configuration List */}
       <div className="space-y-3">
@@ -139,13 +139,13 @@ export default function CategoryConfigTab({
           return (
             <div
               key={config.id}
-              className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+              className="bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none rounded-lg border border-border/50 dark:border-border/30 p-4 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
             >
               <div className="flex items-start justify-between gap-4">
                 {/* Config Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-medium text-slate-900 dark:text-white truncate">
+                    <h3 className="font-medium text-foreground truncate">
                       {config.key}
                     </h3>
                     <span
@@ -194,7 +194,7 @@ export default function CategoryConfigTab({
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 mt-2">
-                      <code className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white rounded-lg text-sm font-mono">
+                      <code className="flex-1 px-3 py-2 bg-muted dark:bg-muted/50 text-foreground rounded-lg text-sm font-mono">
                         {config.value}
                       </code>
                       <Button
@@ -242,7 +242,7 @@ export default function CategoryConfigTab({
       </div>
 
       {/* Category-specific help */}
-      <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700 mt-6">
+      <div className="bg-muted/50 dark:bg-card rounded-lg p-4 border border-border/50 dark:border-border/30 mt-6">
         <h4 className="font-medium text-slate-900 dark:text-white mb-2">
           💡 {category} Configuration Guide
         </h4>

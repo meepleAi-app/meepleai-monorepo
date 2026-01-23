@@ -62,3 +62,6 @@ export * from './agent-config.schemas';
 
 // AI Models Management schemas (Issue #2521)
 export * from './ai-models.schemas';
+
+// Badge & Gamification schemas (Issue #2747)
+export * from './badges.schemas';

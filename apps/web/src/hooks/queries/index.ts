@@ -126,6 +126,14 @@ export {
 // Game Contributors queries (Issue #2746)
 export { useGameContributors, gameContributorsKeys } from './useGameContributors';
 
+// Badge & Gamification queries and mutations (Issue #2747)
+export {
+  useMyBadges,
+  useLeaderboard,
+  useToggleBadgeDisplay,
+  badgeKeys,
+} from './useBadges';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

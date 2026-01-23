@@ -239,4 +239,71 @@ test.describe('Admin Dashboard Polling - Issue #888', () => {
       await expect(page.getByRole('heading', { name: 'System Status' })).toBeVisible();
     }
   });
+
+  /**
+   * Journey 6: Real-time updates (30s polling verification) - Issue #2915
+   *
+   * Tests real-time polling behavior with visual verification:
+   * 1. Load dashboard with initial metrics
+   * 2. Capture initial state screenshot
+   * 3. Wait 30 seconds for auto-refresh
+   * 4. Verify polling API call occurred
+   * 5. Verify UI updated with new data
+   * 6. Capture post-update screenshot
+   */
+  test('Journey 6: real-time polling updates with visual verification', async ({
+    adminPage: page,
+  }) => {
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+
+    // 1. Navigate to dashboard
+    await page.goto('/admin');
+    await page.waitForLoadState('networkidle');
+
+    // 2. Verify initial load
+    await expect(page.getByRole('heading', { name: 'Dashboard Overview' })).toBeVisible({
+      timeout: 10000,
+    });
+
+    // 3. Wait for initial analytics API call
+    await page.waitForResponse(
+      response => response.url().startsWith(`${apiBase}/api/v1/admin/analytics`),
+      { timeout: 5000 }
+    );
+
+    // 4. Capture initial state screenshot
+    await expect(page).toHaveScreenshot('polling-before-update.png');
+
+    // 5. Record timestamp before waiting
+    const timestampBefore = await page.getByText(/Last updated:/).textContent();
+
+    // 6. Wait for 30s polling refresh
+    console.log('⏳ Waiting 30 seconds for auto-refresh polling...');
+
+    // Setup listener for second API call
+    const secondCallPromise = page.waitForResponse(
+      response => response.url().startsWith(`${apiBase}/api/v1/admin/analytics`),
+      { timeout: 35000 }
+    );
+
+    // Wait for the polling to trigger
+    await secondCallPromise;
+    console.log('✅ Polling API call detected after 30s');
+
+    // 7. Wait for UI to update after polling
+    await page.waitForTimeout(1000);
+
+    // 8. Verify timestamp changed (indicates UI refresh)
+    const timestampAfter = await page.getByText(/Last updated:/).textContent();
+    expect(timestampAfter).not.toBe(timestampBefore);
+
+    // 9. Verify metrics still visible after update
+    await expect(page.getByText('Total Users')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Recent Activity' })).toBeVisible();
+
+    // 10. Capture post-update screenshot for visual regression
+    await expect(page).toHaveScreenshot('polling-after-update.png');
+
+    console.log('✅ Journey 6 complete: Real-time polling verified');
+  });
 });

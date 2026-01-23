@@ -117,7 +117,7 @@ export function ReviewActionButtons({
   if (!lockStatus.isLocked) {
     return (
       <>
-        <Button className="w-full" onClick={handleStartReview} disabled={isStarting}>
+        <Button className="w-full" onClick={handleStartReview} disabled={isStarting} data-testid="start-review-button">
           {isStarting ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -149,6 +149,7 @@ export function ReviewActionButtons({
           className="w-full"
           onClick={handleReleaseReview}
           disabled={isReleasing}
+          data-testid="release-review-button"
         >
           {isReleasing ? (
             <>
@@ -168,7 +169,7 @@ export function ReviewActionButtons({
 
   // Locked by another admin - show info message
   return (
-    <div className="p-3 rounded-lg bg-muted text-sm">
+    <div className="p-3 rounded-lg bg-muted text-sm" data-testid="locked-by-other-message">
       <p className="font-medium">Currently being reviewed by:</p>
       <p className="text-muted-foreground mt-1">{lockStatus.lockedByAdminName}</p>
     </div>

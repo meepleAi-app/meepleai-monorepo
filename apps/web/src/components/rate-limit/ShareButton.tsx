@@ -133,6 +133,7 @@ export function ShareButton({
       disabled={isDisabled}
       className={className}
       aria-label="Share with Community"
+      data-testid="share-game-button"
     >
       <Share2 className="mr-2 h-4 w-4" />
       Share with Community

@@ -88,7 +88,7 @@ export function ActivityTimeline({
                   >
                     <div className="flex items-start gap-4">
                       <div
-                        className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${colorClass} bg-gray-50`}
+                        className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${colorClass} bg-muted/50 dark:bg-muted/30`}
                         aria-label={`${activityType} activity`}
                       >
                         <Icon className="h-5 w-5" aria-hidden="true" />

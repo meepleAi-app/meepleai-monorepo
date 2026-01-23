@@ -288,7 +288,7 @@ export function AdminSidebar({
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-60 p-0" data-testid="admin-sidebar-mobile">
-        <SheetTitle className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <SheetTitle className="px-4 py-3 border-b border-border/50 dark:border-border/30">
           Admin Menu
         </SheetTitle>
         <SheetDescription className="sr-only">Navigation menu</SheetDescription>
@@ -305,7 +305,7 @@ export function AdminSidebar({
       <>
         <aside
           className={cn(
-            'hidden lg:flex lg:flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 lg:w-60',
+            'hidden lg:flex lg:flex-col border-r border-border/50 dark:border-border/30 bg-sidebar/95 backdrop-blur-[12px] dark:bg-sidebar dark:backdrop-blur-none lg:w-60',
             className
           )}
         >
@@ -323,7 +323,7 @@ export function AdminSidebar({
                           'flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm font-medium',
                           isActive
                             ? 'bg-indigo-100 text-indigo-700'
-                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                         )}
                         aria-current={isActive ? 'page' : undefined}
                       >

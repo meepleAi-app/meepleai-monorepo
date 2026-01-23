@@ -47,13 +47,14 @@ export function ApproveButton({ onApprove, disabled, isPending }: ApproveButtonP
         className="w-full"
         onClick={() => setIsOpen(true)}
         disabled={disabled || isPending}
+        data-testid="approve-button"
       >
         <CheckCircle className="w-4 h-4 mr-2" />
         Approve & Publish
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
+        <DialogContent data-testid="approve-dialog">
           <DialogHeader>
             <DialogTitle>Approve Share Request</DialogTitle>
             <DialogDescription>
@@ -66,6 +67,7 @@ export function ApproveButton({ onApprove, disabled, isPending }: ApproveButtonP
             <Label htmlFor="admin-notes">Admin Notes (Optional)</Label>
             <Textarea
               id="admin-notes"
+              data-testid="approve-notes-textarea"
               placeholder="Internal notes for other admins (not visible to contributor)..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -81,7 +83,7 @@ export function ApproveButton({ onApprove, disabled, isPending }: ApproveButtonP
             <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isPending}>
               Cancel
             </Button>
-            <Button onClick={handleApprove} disabled={isPending}>
+            <Button onClick={handleApprove} disabled={isPending} data-testid="confirm-approve-button">
               {isPending ? 'Approving...' : 'Approve & Publish'}
             </Button>
           </DialogFooter>

@@ -223,8 +223,8 @@ public static class TestcontainersConfiguration
     /// <returns>Validation result with any warnings or errors</returns>
     public static (bool IsValid, string[] Warnings, string[] Errors) Validate()
     {
-        var warnings = new List<string>();
-        var errors = new List<string>();
+        var warnings = new List&lt;string&gt;();
+        var errors = new List&lt;string&gt;();
 
         // Validate connection pool settings
         if (ConnectionPoolMaxSize * 100 > PostgresMaxConnections) // Assuming ~100 test classes max

@@ -2,8 +2,12 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserBadges;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
 using FluentAssertions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -20,6 +24,10 @@ public sealed class GetUserBadgesQueryHandlerTests
     {
         _options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(warnings =>
+            {
+                warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning);
+            })
             .Options;
 
         _logger = new Mock<ILogger<GetUserBadgesQueryHandler>>();
@@ -29,7 +37,11 @@ public sealed class GetUserBadgesQueryHandlerTests
     public async Task Handle_WithDisplayedBadges_ReturnsOnlyDisplayed()
     {
         // Arrange
-        await using var context = new MeepleAiDbContext(_options);
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector.Setup(e => e.GetAndClearEvents())
+            .Returns(new List<IDomainEvent>().AsReadOnly());
+        await using var context = new MeepleAiDbContext(_options, mockMediator.Object, mockEventCollector.Object);
         var badge = CreateBadgeEntity("FIRST_CONTRIBUTION");
         var userBadge1 = CreateUserBadgeEntity(_userId, badge.Id, isDisplayed: true);
         var userBadge2 = CreateUserBadgeEntity(_userId, Guid.NewGuid(), isDisplayed: false);
@@ -53,7 +65,11 @@ public sealed class GetUserBadgesQueryHandlerTests
     public async Task Handle_WithIncludeHidden_ReturnsAllBadges()
     {
         // Arrange
-        await using var context = new MeepleAiDbContext(_options);
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector.Setup(e => e.GetAndClearEvents())
+            .Returns(new List<IDomainEvent>().AsReadOnly());
+        await using var context = new MeepleAiDbContext(_options, mockMediator.Object, mockEventCollector.Object);
         var badge = CreateBadgeEntity("FIRST_CONTRIBUTION");
         var userBadge1 = CreateUserBadgeEntity(_userId, badge.Id, isDisplayed: true);
         var userBadge2 = CreateUserBadgeEntity(_userId, badge.Id, isDisplayed: false);
@@ -76,7 +92,11 @@ public sealed class GetUserBadgesQueryHandlerTests
     public async Task Handle_WithRevokedBadges_ExcludesRevoked()
     {
         // Arrange
-        await using var context = new MeepleAiDbContext(_options);
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector.Setup(e => e.GetAndClearEvents())
+            .Returns(new List<IDomainEvent>().AsReadOnly());
+        await using var context = new MeepleAiDbContext(_options, mockMediator.Object, mockEventCollector.Object);
         var badge = CreateBadgeEntity("FIRST_CONTRIBUTION");
         var userBadge1 = CreateUserBadgeEntity(_userId, badge.Id, isDisplayed: true);
         var userBadge2 = CreateUserBadgeEntity(_userId, badge.Id, isDisplayed: true, revokedAt: DateTime.UtcNow);

@@ -1,6 +1,9 @@
 /**
- * Badge Components - Barrel Export
- * Issue #2746: Frontend - Contributor Display su SharedGame
+ * Badge Components Index (Issue #2747)
+ *
+ * Centralized export for badge components
  */
 
-export { BadgeIcon } from './BadgeIcon';
+export { BadgeGrid, type BadgeGridProps } from './BadgeGrid';
+export { LeaderboardTable, type LeaderboardTableProps } from './LeaderboardTable';
+export { UserBadges, type UserBadgesProps } from './UserBadges';

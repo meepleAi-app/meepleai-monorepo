@@ -38,6 +38,7 @@ import {
   createShareRequestsClient,
   createAdminShareRequestsClient,
   createGameContributorsClient,
+  createBadgesClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -56,6 +57,7 @@ import {
   type ShareRequestsClient,
   type AdminShareRequestsClient,
   type GameContributorsClient,
+  type BadgesClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -192,6 +194,9 @@ export interface ApiClient {
   /** Game Contributors (Issue #2746) */
   gameContributors: GameContributorsClient;
 
+  /** Badge & Gamification System (Issue #2747) */
+  badges: BadgesClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -260,6 +265,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     shareRequests: createShareRequestsClient({ httpClient }), // ISSUE-2743
     adminShareRequests: createAdminShareRequestsClient(httpClient), // ISSUE-2745
     gameContributors: createGameContributorsClient({ httpClient }), // ISSUE-2746
+    badges: createBadgesClient({ httpClient }), // ISSUE-2747
     delete: (path: string) => httpClient.delete(path),
   };
 

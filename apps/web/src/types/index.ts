@@ -76,3 +76,19 @@ export type {
 } from './api-key-filters';
 
 export { AVAILABLE_SCOPES, AVAILABLE_STATUSES } from './api-key-filters';
+
+// Badge & Gamification Types (Issue #2747)
+export type {
+  UserBadgeDto,
+  BadgeNotificationData,
+  LeaderboardEntryDto,
+  LeaderboardPeriod,
+} from './badges';
+
+export {
+  BadgeTier,
+  getTierIcon,
+  getCelebratoryTitle,
+  getTierOrder,
+  getTierClass,
+} from './badges';

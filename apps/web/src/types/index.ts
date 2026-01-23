@@ -103,4 +103,4 @@ export type {
   CreateOverrideRequest,
   RateLimitConfigListDto,
   RateLimitOverrideListDto,
-} from './rate-limits';
+} from '@/lib/api/schemas/rate-limits.schemas';

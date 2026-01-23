@@ -96,7 +96,7 @@ export function KPICard({
   return (
     <div
       className={cn(
-        'group relative overflow-hidden rounded-xl border border-meeple-border bg-white p-5',
+        'group relative overflow-hidden rounded-xl border border-border/50 dark:border-border/30 bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none p-5',
         'hover-card hover-shadow-meeple',
         'dark:border-stone-800 dark:bg-stone-900',
         className

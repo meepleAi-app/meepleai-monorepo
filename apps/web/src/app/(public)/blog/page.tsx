@@ -35,12 +35,12 @@ export default function BlogPage() {
   const { t, locale } = useTranslation();
 
   return (
-    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 py-8 px-4">
+    <div className="min-h-dvh bg-background py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
           <h1
-            className="text-3xl font-bold text-slate-900 dark:text-white"
+            className="text-3xl font-bold text-foreground"
             data-testid="blog-heading"
           >
             {t('pages.blog.title')}
@@ -54,7 +54,7 @@ export default function BlogPage() {
         <Card className="mb-8 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-800">
           <CardContent className="pt-6 text-center py-12">
             <div className="text-6xl mb-4">🚀</div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+            <h2 className="text-2xl font-bold text-foreground mb-2">
               {t('pages.blog.comingSoon.title')}
             </h2>
             <p className="text-slate-600 dark:text-slate-400 mb-6 max-w-md mx-auto">
@@ -68,14 +68,14 @@ export default function BlogPage() {
 
         {/* Categories Preview */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white text-center mb-6">
+          <h2 className="text-xl font-semibold text-foreground text-center mb-6">
             {locale === 'it' ? 'Categorie in arrivo' : 'Coming Categories'}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {CATEGORY_KEYS.map((key) => (
               <Card
                 key={key}
-                className="bg-white dark:bg-slate-800 opacity-60 hover:opacity-100 transition-opacity cursor-not-allowed"
+                className="bg-card opacity-60 hover:opacity-100 transition-opacity cursor-not-allowed"
               >
                 <CardHeader className="pb-2 text-center">
                   <span className="text-3xl">{CATEGORY_ICONS[key]}</span>
@@ -87,9 +87,9 @@ export default function BlogPage() {
         </div>
 
         {/* Newsletter Teaser */}
-        <Card className="bg-slate-100 dark:bg-slate-800">
+        <Card className="bg-muted dark:bg-card">
           <CardContent className="pt-6 text-center">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               {locale === 'it' ? 'Resta aggiornato' : 'Stay Updated'}
             </h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">

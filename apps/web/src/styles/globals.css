@@ -365,43 +365,43 @@
 }
 
 .dark {
-  /* Base theme tokens - Dark mode (Opzione A adapted) */
-  --background: 30 8% 12%;          /* Dark warm brown */
-  --foreground: 30 5% 95%;          /* Light warm beige */
+  /* Base theme tokens - Dark Professional (Issue #2965) */
+  --background: 0 0% 10%;           /* #1a1a1a - Neutral dark gray */
+  --foreground: 30 25% 90%;         /* #e8e4d8 - Warm beige text */
 
-  /* shadcn/ui semantic tokens - Dark mode */
-  --card: 30 10% 15%;               /* Slightly lighter dark card */
-  --card-foreground: 30 5% 95%;
-  --popover: 30 10% 15%;
-  --popover-foreground: 30 5% 95%;
-  --primary: 25 95% 60%;            /* Lighter orange for visibility */
-  --primary-foreground: 30 8% 10%;
-  --secondary: 142 76% 45%;         /* Lighter green for visibility */
-  --secondary-foreground: 30 8% 10%;
-  --muted: 30 8% 20%;
-  --muted-foreground: 30 5% 65%;
-  --accent: 271 91% 70%;            /* Lighter purple for visibility */
-  --accent-foreground: 30 8% 10%;
-  --destructive: 0 62.8% 30.6%;
+  /* shadcn/ui semantic tokens - Dark Professional */
+  --card: 0 0% 18%;                 /* #2d2d2d - Neutral medium gray */
+  --card-foreground: 30 25% 90%;
+  --popover: 0 0% 18%;
+  --popover-foreground: 30 25% 90%;
+  --primary: 25 95% 60%;            /* #d2691e lighter - Orange for visibility */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 142 76% 45%;         /* Green for visibility */
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 20%;                /* Neutral muted background */
+  --muted-foreground: 0 0% 60%;     /* #999999 - Neutral muted text */
+  --accent: 45 93% 56%;             /* #fbbf24 - Amber for visibility */
+  --accent-foreground: 0 0% 10%;
+  --destructive: 0 72% 51%;         /* Red for errors */
   --destructive-foreground: 0 0% 98%;
-  --border: 30 8% 25%;
-  --input: 30 8% 25%;
-  --ring: 25 95% 60%;
+  --border: 0 0% 25%;               /* Neutral border */
+  --input: 0 0% 25%;                /* Neutral input border */
+  --ring: 45 93% 56%;               /* Amber for focus ring */
   --chart-1: 25 95% 60%;            /* Orange (lighter) */
   --chart-2: 142 76% 50%;           /* Green (lighter) */
   --chart-3: 271 91% 70%;           /* Purple (lighter) */
-  --chart-4: 45 93% 55%;            /* Gold/Yellow (lighter) */
+  --chart-4: 45 93% 56%;            /* Amber (lighter) */
   --chart-5: 0 72% 60%;             /* Red (lighter) */
 
-  /* Sidebar tokens - Dark mode */
-  --sidebar: 30 10% 18%;
-  --sidebar-foreground: 30 5% 85%;
+  /* Sidebar tokens - Dark Professional */
+  --sidebar: 0 0% 15%;              /* Neutral dark sidebar */
+  --sidebar-foreground: 30 25% 90%;
   --sidebar-primary: 25 95% 60%;
-  --sidebar-primary-foreground: 30 8% 10%;
-  --sidebar-accent: 30 8% 22%;
-  --sidebar-accent-foreground: 30 5% 90%;
-  --sidebar-border: 30 8% 25%;
-  --sidebar-ring: 25 95% 60%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 22%;
+  --sidebar-accent-foreground: 30 25% 90%;
+  --sidebar-border: 0 0% 25%;
+  --sidebar-ring: 45 93% 56%;       /* Amber for focus */
 
   --color-primary-200: hsl(25 92% 70%);
   --color-primary-300: hsl(25 92% 62%);
@@ -413,23 +413,23 @@
   --color-secondary-600: hsl(142 76% 38%);
   --color-blue: hsl(221 83% 65%);
   --color-green: hsl(142 76% 50%);
-  --color-yellow: hsl(45 93% 55%);
+  --color-yellow: hsl(45 93% 56%);  /* Amber accent */
   --color-red: hsl(0 72% 60%);
-  --color-neutral-300: hsl(30 8% 26%);
-  --color-neutral-400: hsl(30 8% 34%);
-  --color-neutral-600: hsl(30 8% 46%);
+  --color-neutral-300: hsl(0 0% 26%);  /* Neutral gray */
+  --color-neutral-400: hsl(0 0% 34%);
+  --color-neutral-600: hsl(0 0% 46%);
 
-  --bg-primary: hsl(var(--background));
-  --bg-secondary: hsl(30 8% 20%);
-  --bg-tertiary: hsl(30 8% 24%);
-  --bg-elevated: hsl(var(--card));
+  --bg-primary: hsl(var(--background));       /* #1a1a1a */
+  --bg-secondary: hsl(0 0% 15%);              /* Slightly lighter than bg */
+  --bg-tertiary: hsl(0 0% 20%);               /* Lighter variant */
+  --bg-elevated: hsl(var(--card));            /* #2d2d2d */
 
   --border-primary: hsl(var(--border));
-  --border-secondary: hsl(30 8% 30%);
+  --border-secondary: hsl(0 0% 30%);          /* Lighter border variant */
 
-  --text-primary: hsl(var(--foreground));
-  --text-secondary: hsl(30 5% 70%);
-  --text-tertiary: hsl(30 5% 60%);
+  --text-primary: hsl(var(--foreground));     /* #e8e4d8 */
+  --text-secondary: hsl(0 0% 60%);            /* #999999 - Muted text */
+  --text-tertiary: hsl(0 0% 50%);             /* Dimmer text */
   --text-inverse: hsl(var(--primary-foreground));
 
   --font-display: var(--font-quicksand, var(--font-sans));

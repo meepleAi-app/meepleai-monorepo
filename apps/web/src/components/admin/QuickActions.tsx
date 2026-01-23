@@ -18,7 +18,6 @@
  */
 
 import {
-  FileUpIcon,
   UsersIcon,
   AlertTriangleIcon,
   SettingsIcon,

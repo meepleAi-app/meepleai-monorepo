@@ -2,6 +2,7 @@ using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.Handlers;
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
+using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using FluentAssertions;
@@ -28,7 +29,7 @@ public sealed class UpdateAiModelPriorityCommandHandlerTests
     {
         // Arrange
         var modelId = Guid.NewGuid();
-        var existingModel = AiModelConfiguration.Create("gpt-4o-mini", "GPT-4o Mini", "OpenRouter", 5);
+        var existingModel = AiModelConfiguration.Create("gpt-4o-mini", "GPT-4o Mini", "OpenRouter", 5, ModelSettings.Default);
         var command = new UpdateAiModelPriorityCommand(modelId, NewPriority: 1);
 
         _repositoryMock.Setup(r => r.GetByIdAsync(modelId, default))

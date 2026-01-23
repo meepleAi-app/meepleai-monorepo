@@ -72,8 +72,8 @@ export default function FeatureFlagsTab({
   if (featureFlags.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-600 dark:text-slate-400 text-lg mb-2">No feature flags found</p>
-        <p className="text-slate-500 dark:text-slate-500 text-sm">
+        <p className="text-muted-foreground text-lg mb-2">No feature flags found</p>
+        <p className="text-muted-foreground/70 text-sm">
           Feature flags will appear here once configured in the database.
         </p>
       </div>
@@ -115,19 +115,19 @@ export default function FeatureFlagsTab({
           return (
             <div
               key={flag.id}
-              className={`bg-white dark:bg-slate-800 rounded-lg p-5 border-2 transition-all ${
+              className={`bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none rounded-lg p-5 border-2 transition-all ${
                 isEnabled
                   ? 'border-green-500 dark:border-green-400'
-                  : 'border-slate-200 dark:border-slate-700'
+                  : 'border-border/50 dark:border-border/30'
               }`}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
-                  <h4 className="font-semibold text-slate-900 dark:text-white mb-1">
+                  <h4 className="font-semibold text-foreground mb-1">
                     {flag.key.replace('Features:', '')}
                   </h4>
                   {flag.description && (
-                    <p className="text-sm text-slate-600 dark:text-slate-400">{flag.description}</p>
+                    <p className="text-sm text-muted-foreground">{flag.description}</p>
                   )}
                 </div>
 
@@ -142,7 +142,7 @@ export default function FeatureFlagsTab({
               </div>
 
               {/* Metadata */}
-              <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span
                   className={`flex items-center gap-1 ${isEnabled ? 'text-green-600 dark:text-green-400 font-medium' : ''}`}
                 >
@@ -174,9 +174,9 @@ export default function FeatureFlagsTab({
       </div>
 
       {/* Help Text */}
-      <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
-        <h4 className="font-medium text-slate-900 dark:text-white mb-2">💡 Feature Flags Guide</h4>
-        <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+      <div className="bg-muted/50 dark:bg-card rounded-lg p-4 border border-border/50 dark:border-border/30">
+        <h4 className="font-medium text-foreground mb-2">💡 Feature Flags Guide</h4>
+        <ul className="text-sm text-muted-foreground space-y-1">
           <li>• Toggle features on/off without code deployment</li>
           <li>• Features marked with ⚠️ require server restart to take effect</li>
           <li>• Critical features will ask for confirmation before disabling</li>

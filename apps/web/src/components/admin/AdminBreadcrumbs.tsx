@@ -105,19 +105,19 @@ export function AdminBreadcrumbs({ items, showHomeIcon = true, className }: Admi
 
   return (
     <nav aria-label="Breadcrumb" className={cn('flex items-center', className)}>
-      <ol className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+      <ol className="flex items-center gap-1 text-sm text-muted-foreground">
         {breadcrumbs.map((item, index) => (
           <li key={item.label + index} className="flex items-center gap-1">
             {index > 0 && (
               <ChevronRightIcon
-                className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500"
+                className="h-4 w-4 shrink-0 text-muted-foreground/70"
                 aria-hidden="true"
               />
             )}
             {item.href ? (
               <Link
                 href={item.href}
-                className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                className="flex items-center gap-1 hover:text-foreground transition-colors"
               >
                 {index === 0 && showHomeIcon && (
                   <>
@@ -142,7 +142,7 @@ export function AdminBreadcrumbs({ items, showHomeIcon = true, className }: Admi
               </Link>
             ) : (
               <span
-                className="flex items-center gap-1 font-medium text-gray-900 dark:text-white"
+                className="flex items-center gap-1 font-medium text-foreground"
                 aria-current="page"
               >
                 {index === 0 && showHomeIcon && (

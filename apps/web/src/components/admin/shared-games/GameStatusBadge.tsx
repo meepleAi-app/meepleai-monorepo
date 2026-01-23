@@ -48,7 +48,7 @@ export function GameStatusBadge({ status, size = 'default' }: GameStatusBadgePro
       return (
         <Badge
           variant="outline"
-          className={`bg-gray-50 text-gray-700 border-gray-200 ${badgeClass}`}
+          className={`bg-muted text-muted-foreground border-border/50 dark:border-border/70 ${badgeClass}`}
         >
           <Archive className={iconClass} />
           Archiviato
@@ -89,7 +89,7 @@ export function getStatusColorClass(status: number): string {
     case 1:
       return 'text-green-700 bg-green-50';
     case 2:
-      return 'text-gray-700 bg-gray-50';
+      return 'text-muted-foreground bg-muted';
     default:
       return 'text-muted-foreground bg-muted';
   }

@@ -62,7 +62,7 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps): JSX.Elemen
   return (
     // Issue #2850: MeepleAI warm card styling
     <div className="rounded-2xl border border-border/50 dark:border-border/30 bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none p-6 shadow-sm dark:shadow-md">
-      <h3 className="mb-4 font-['Quicksand',sans-serif] text-lg font-bold text-[#2d2d2d] dark:text-gray-100">
+      <h3 className="mb-4 font-['Quicksand',sans-serif] text-lg font-bold text-foreground">
         AI Usage by Category
       </h3>
 
@@ -113,7 +113,7 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps): JSX.Elemen
           {/* Center text - Issue #2850: MeepleAI styling */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
             <p className="text-sm text-[#666] dark:text-gray-400">Total Calls</p>
-            <p className="font-['Quicksand',sans-serif] text-xl font-bold text-[#2d2d2d] dark:text-gray-100">
+            <p className="font-['Quicksand',sans-serif] text-xl font-bold text-foreground">
               {totalCalls.toLocaleString()}
             </p>
             <p className="text-xs text-[#999] dark:text-gray-500">Estimated</p>

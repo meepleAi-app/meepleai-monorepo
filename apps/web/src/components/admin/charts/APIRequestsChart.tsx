@@ -67,7 +67,7 @@ export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps): JS
   return (
     // Issue #2850: MeepleAI warm card styling
     <div className="rounded-2xl border border-border/50 dark:border-border/30 bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none p-6 shadow-sm dark:shadow-md">
-      <h3 className="mb-4 font-['Quicksand',sans-serif] text-lg font-bold text-[#2d2d2d] dark:text-gray-100">
+      <h3 className="mb-4 font-['Quicksand',sans-serif] text-lg font-bold text-foreground">
         API Requests (Last 7 Days)
       </h3>
 
@@ -120,7 +120,7 @@ export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps): JS
       <div className="mt-4 flex items-center justify-between border-t border-[#e8e4d8] pt-4 dark:border-gray-700">
         <div>
           <p className="text-sm text-[#666] dark:text-gray-400">Total Requests</p>
-          <p className="font-['Quicksand',sans-serif] text-2xl font-bold text-[#2d2d2d] dark:text-gray-100">
+          <p className="font-['Quicksand',sans-serif] text-2xl font-bold text-foreground">
             {total.toLocaleString()}
           </p>
         </div>

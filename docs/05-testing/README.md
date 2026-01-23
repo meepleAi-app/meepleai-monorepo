@@ -1011,14 +1011,14 @@ export const handlers = [
   http.post('/api/v1/auth/login', async ({ request }) => {
     const body = await request.json() as { email: string; password: string };
 
-    if (body.email === 'test@example.com' && body.password === 'TestPassword123!') {
+    if (body.email === '[TEST_EMAIL]' && body.password === '[REDACTED]') {
       return HttpResponse.json({
         id: '550e8400-e29b-41d4-a716-446655440000',
-        email: 'test@example.com',
+        email: '[TEST_EMAIL]',
         role: 'user',
       }, {
         headers: {
-          'Set-Cookie': '.AspNetCore.Identity.Application=mock-cookie; Path=/; HttpOnly',
+          'Set-Cookie': '.AspNetCore.Identity.Application=[REDACTED]; Path=/; HttpOnly',
         },
       });
     }
@@ -1319,239 +1319,33 @@ http.get('/api/v1/games', async ({ request }) => {
 
 ## Page Object Model (E2E)
 
-### Overview
-
 **Page Object Model (POM)** encapsulates page structure and interactions into reusable classes, improving E2E test maintainability.
 
-**Benefits**:
-- ✅ Single source of truth for selectors
-- ✅ Reusable interaction patterns
-- ✅ Easier refactoring when UI changes
-- ✅ Type-safe with TypeScript
+For comprehensive POM implementation patterns, see:
+- **[Playwright Best Practices Guide](./playwright-best-practices.md#page-object-model-pom)** - Complete POM patterns with abstract BasePage, Admin/Login/Dashboard examples, component objects, and advanced patterns
 
-### Pattern Structure
-
-**Base Page** (`e2e/pages/BasePage.ts`):
+**Quick Example**:
 ```typescript
-import { Page, Locator } from '@playwright/test';
-
-export class BasePage {
-  protected readonly page: Page;
-
-  constructor(page: Page) {
-    this.page = page;
-  }
-
-  async navigate(path: string) {
-    await this.page.goto(path);
-  }
-
-  async waitForUrl(urlPattern: string | RegExp) {
-    await this.page.waitForURL(urlPattern);
-  }
-
-  protected getByTestId(testId: string): Locator {
-    return this.page.locator(`[data-testid="${testId}"]`);
-  }
-}
-```
-
-**Login Page** (`e2e/pages/LoginPage.ts`):
-```typescript
-import { Page, Locator, expect } from '@playwright/test';
-import { BasePage } from './BasePage';
-
-export class LoginPage extends BasePage {
-  // Selectors
-  readonly emailInput: Locator;
-  readonly passwordInput: Locator;
-  readonly submitButton: Locator;
-  readonly errorMessage: Locator;
-
-  constructor(page: Page) {
-    super(page);
-    this.emailInput = page.locator('input[name="email"]');
-    this.passwordInput = page.locator('input[name="password"]');
-    this.submitButton = page.locator('button[type="submit"]');
-    this.errorMessage = page.locator('[data-testid="error-message"]');
-  }
-
-  // Actions
-  async goto() {
-    await this.navigate('/auth/login');
-  }
-
-  async login(email: string, password: string) {
-    await this.emailInput.fill(email);
-    await this.passwordInput.fill(password);
-    await this.submitButton.click();
-  }
-
-  async expectLoginSuccess() {
-    await expect(this.page).toHaveURL('/dashboard');
-  }
-
-  async expectLoginError(message: string) {
-    await expect(this.errorMessage).toContainText(message);
-  }
-}
-```
-
-**Dashboard Page** (`e2e/pages/DashboardPage.ts`):
-```typescript
-import { Page, Locator, expect } from '@playwright/test';
-import { BasePage } from './BasePage';
-
-export class DashboardPage extends BasePage {
-  readonly welcomeMessage: Locator;
-  readonly gamesList: Locator;
-  readonly logoutButton: Locator;
-
-  constructor(page: Page) {
-    super(page);
-    this.welcomeMessage = page.locator('h1');
-    this.gamesList = this.getByTestId('games-list');
-    this.logoutButton = page.locator('button[aria-label="Logout"]');
-  }
-
-  async expectWelcomeMessage(username: string) {
-    await expect(this.welcomeMessage).toContainText(`Welcome, ${username}`);
-  }
-
-  async expectGamesLoaded() {
-    await expect(this.gamesList).toBeVisible();
-    const gameCards = this.gamesList.locator('[data-testid="game-card"]');
-    await expect(gameCards).toHaveCountGreaterThan(0);
-  }
-
-  async logout() {
-    await this.logoutButton.click();
-  }
-}
-```
-
-### Usage in Tests
-
-**Login Flow Test** (`e2e/auth/login.spec.ts`):
-```typescript
-import { test, expect } from '@playwright/test';
+// See playwright-best-practices.md for full implementation
 import { LoginPage } from '../pages/LoginPage';
-import { DashboardPage } from '../pages/DashboardPage';
 
-test.describe('User Login', () => {
-  test('successful login redirects to dashboard', async ({ page }) => {
-    const loginPage = new LoginPage(page);
-    const dashboardPage = new DashboardPage(page);
-
-    await loginPage.goto();
-    await loginPage.login('test@example.com', 'TestPassword123!');
-    await loginPage.expectLoginSuccess();
-    await dashboardPage.expectWelcomeMessage('Test User');
-    await dashboardPage.expectGamesLoaded();
-  });
-
-  test('invalid credentials show error', async ({ page }) => {
-    const loginPage = new LoginPage(page);
-
-    await loginPage.goto();
-    await loginPage.login('invalid@example.com', 'WrongPassword');
-    await loginPage.expectLoginError('Invalid email or password');
-  });
-});
-```
-
-**Complex Multi-Page Flow** (`e2e/games/add-to-library.spec.ts`):
-```typescript
-import { test } from '@playwright/test';
-import { LoginPage } from '../pages/LoginPage';
-import { DashboardPage } from '../pages/DashboardPage';
-import { GameDetailsPage } from '../pages/GameDetailsPage';
-import { LibraryPage } from '../pages/LibraryPage';
-
-test('user can add game to library', async ({ page }) => {
-  // 1. Login
+test('user login', async ({ page }) => {
   const loginPage = new LoginPage(page);
   await loginPage.goto();
-  await loginPage.login('test@example.com', 'TestPassword123!');
-
-  // 2. Navigate to game
-  const dashboardPage = new DashboardPage(page);
-  await dashboardPage.expectGamesLoaded();
-  await dashboardPage.clickGame('Catan');
-
-  // 3. Add to library
-  const gameDetailsPage = new GameDetailsPage(page);
-  await gameDetailsPage.expectGameTitle('Catan');
-  await gameDetailsPage.addToLibrary();
-  await gameDetailsPage.expectAddedToLibrary();
-
-  // 4. Verify in library
-  const libraryPage = new LibraryPage(page);
-  await libraryPage.goto();
-  await libraryPage.expectGameInLibrary('Catan');
+  await loginPage.login('[TEST_EMAIL]', '[REDACTED]');
+  await loginPage.expectLoginSuccess();
 });
 ```
 
-### Best Practices
+**Key Benefits**:
+- ✅ Single source of truth for selectors
+- ✅ Reusable interaction patterns
+- ✅ Type-safe with TypeScript
+- ✅ Easier UI refactoring
 
-**DO ✅**:
-- One page object per logical page/component
-- Group selectors at the top of the class
-- Methods represent user actions (not implementation)
-- Return page objects for chaining
-- Use `data-testid` for stable selectors
-- Include assertions in page objects (expectX methods)
-
-**DON'T ❌**:
-- Don't use CSS selectors tied to implementation
-- Don't put test logic in page objects
-- Don't share state between page objects
-- Don't create god objects (split complex pages)
-
-### Advanced Patterns
-
-**Component Objects** (for reusable UI components):
-```typescript
-export class NavigationComponent {
-  private readonly page: Page;
-  readonly homeLink: Locator;
-  readonly gamesLink: Locator;
-  readonly libraryLink: Locator;
-
-  constructor(page: Page) {
-    this.page = page;
-    this.homeLink = page.locator('nav a[href="/"]');
-    this.gamesLink = page.locator('nav a[href="/games"]');
-    this.libraryLink = page.locator('nav a[href="/library"]');
-  }
-
-  async navigateTo(section: 'home' | 'games' | 'library') {
-    const links = {
-      home: this.homeLink,
-      games: this.gamesLink,
-      library: this.libraryLink,
-    };
-    await links[section].click();
-  }
-}
-```
-
-**Using Component Objects in Pages**:
-```typescript
-export class DashboardPage extends BasePage {
-  readonly navigation: NavigationComponent;
-
-  constructor(page: Page) {
-    super(page);
-    this.navigation = new NavigationComponent(page);
-  }
-}
-```
-
-### Resources
-
-- [Playwright Page Object Model Guide](https://playwright.dev/docs/pom)
-- [Testing Best Practices](https://playwright.dev/docs/best-practices)
+**Resources**:
+- [Playwright Best Practices (Project Guide)](./playwright-best-practices.md)
+- [Playwright Official POM Guide](https://playwright.dev/docs/pom)
 
 ---
 

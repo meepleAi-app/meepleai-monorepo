@@ -67,12 +67,12 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 py-8 px-4">
+    <div className="min-h-dvh bg-background py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
           <h1
-            className="text-3xl font-bold text-slate-900 dark:text-white"
+            className="text-3xl font-bold text-foreground"
             data-testid="contact-heading"
           >
             {t('pages.contact.title')}
@@ -108,7 +108,7 @@ export default function ContactPage() {
                     onChange={handleChange}
                     required
                     placeholder={t('pages.contact.form.namePlaceholder')}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-border/50 dark:border-border/30 rounded-md bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none text-foreground placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
@@ -128,7 +128,7 @@ export default function ContactPage() {
                     onChange={handleChange}
                     required
                     placeholder={t('pages.contact.form.emailPlaceholder')}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-border/50 dark:border-border/30 rounded-md bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none text-foreground placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
@@ -146,7 +146,7 @@ export default function ContactPage() {
                     value={formData.subject}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-border/50 dark:border-border/30 rounded-md bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">{t('pages.contact.form.subjectPlaceholder')}</option>
                     {SUBJECT_KEYS.map((key) => (
@@ -173,7 +173,7 @@ export default function ContactPage() {
                     required
                     rows={5}
                     placeholder={t('pages.contact.form.messagePlaceholder')}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full px-3 py-2 border border-border/50 dark:border-border/30 rounded-md bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none text-foreground placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   />
                 </div>
 
@@ -226,7 +226,7 @@ export default function ContactPage() {
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                     {t('pages.contact.info.response')}
                   </p>
-                  <p className="text-slate-900 dark:text-white">
+                  <p className="text-foreground">
                     {t('pages.contact.info.responseValue')}
                   </p>
                 </div>

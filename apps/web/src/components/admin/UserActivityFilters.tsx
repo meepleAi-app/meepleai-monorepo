@@ -135,7 +135,7 @@ export function UserActivityFilters({
                 <span className="text-xs">Escluso: {sev}</span>
                 <button
                   onClick={() => toggleSeverity(sev)}
-                  className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                  className="ml-1 hover:bg-muted dark:hover:bg-muted/70 rounded-full p-0.5"
                   aria-label={`Includi severity ${sev}`}
                 >
                   <XIcon className="h-3 w-3" aria-hidden="true" />

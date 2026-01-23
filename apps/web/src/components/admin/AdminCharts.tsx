@@ -24,7 +24,7 @@ const ENDPOINT_COLORS: Record<string, string> = {
 const _COLORS = ['#1a73e8', '#f9ab00', '#a142f4', '#34a853', '#ea4335'];
 
 const ChartSkeleton = () => (
-  <div className="h-[300px] w-full animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+  <div className="h-[300px] w-full animate-pulse rounded-lg bg-muted dark:bg-card" />
 );
 
 export function buildEndpointData(endpointCounts: Record<string, number>) {

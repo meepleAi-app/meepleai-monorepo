@@ -156,12 +156,16 @@ export function CreateOverrideDialog({ open, onClose, onSuccess }: CreateOverrid
                   type="number"
                   placeholder="Leave empty for default"
                   value={formData.maxPendingRequests ?? ''}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      maxPendingRequests: e.target.value ? parseInt(e.target.value) : undefined,
-                    }))
-                  }
+                  onChange={(e) => {
+                    if (!e.target.value) {
+                      setFormData((prev) => ({ ...prev, maxPendingRequests: undefined }));
+                    } else {
+                      const value = Number(e.target.value);
+                      if (!isNaN(value)) {
+                        setFormData((prev) => ({ ...prev, maxPendingRequests: value }));
+                      }
+                    }
+                  }}
                   min="1"
                   disabled={loading}
                 />
@@ -179,12 +183,16 @@ export function CreateOverrideDialog({ open, onClose, onSuccess }: CreateOverrid
                   type="number"
                   placeholder="Leave empty for default"
                   value={formData.maxRequestsPerMonth ?? ''}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      maxRequestsPerMonth: e.target.value ? parseInt(e.target.value) : undefined,
-                    }))
-                  }
+                  onChange={(e) => {
+                    if (!e.target.value) {
+                      setFormData((prev) => ({ ...prev, maxRequestsPerMonth: undefined }));
+                    } else {
+                      const value = Number(e.target.value);
+                      if (!isNaN(value)) {
+                        setFormData((prev) => ({ ...prev, maxRequestsPerMonth: value }));
+                      }
+                    }
+                  }}
                   min="1"
                   disabled={loading}
                 />
@@ -202,12 +210,16 @@ export function CreateOverrideDialog({ open, onClose, onSuccess }: CreateOverrid
                   type="number"
                   placeholder="Leave empty for default"
                   value={formData.cooldownDays ?? ''}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      cooldownDays: e.target.value ? parseInt(e.target.value) : undefined,
-                    }))
-                  }
+                  onChange={(e) => {
+                    if (!e.target.value) {
+                      setFormData((prev) => ({ ...prev, cooldownDays: undefined }));
+                    } else {
+                      const value = Number(e.target.value);
+                      if (!isNaN(value)) {
+                        setFormData((prev) => ({ ...prev, cooldownDays: value }));
+                      }
+                    }
+                  }}
                   min="0"
                   disabled={loading}
                 />

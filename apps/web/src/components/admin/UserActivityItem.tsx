@@ -59,7 +59,7 @@ export function UserActivityItem({
   const hasMetadata = event.metadata && Object.keys(event.metadata).length > 0;
 
   return (
-    <li className="px-6 py-4 hover:bg-gray-50 transition-colors">
+    <li className="px-6 py-4 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors">
       <div className="flex items-start gap-4">
         {/* Icon */}
         <div
@@ -76,8 +76,8 @@ export function UserActivityItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900">{event.description}</p>
-              <div className="mt-1 flex items-center gap-4 text-xs text-gray-500">
+              <p className="text-sm font-medium text-foreground">{event.description}</p>
+              <div className="mt-1 flex items-center gap-4 text-xs text-muted-foreground">
                 <time
                   dateTime={event.timestamp}
                   title={new Date(event.timestamp).toLocaleString('it-IT')}
@@ -96,7 +96,7 @@ export function UserActivityItem({
             {hasMetadata && (
               <button
                 onClick={handleToggle}
-                className="flex-shrink-0 p-1 rounded hover:bg-gray-200 transition-colors"
+                className="flex-shrink-0 p-1 rounded hover:bg-muted dark:hover:bg-muted/70 transition-colors"
                 aria-expanded={expanded}
                 aria-label={expanded ? 'Nascondi dettagli' : 'Mostra dettagli'}
                 title={expanded ? 'Nascondi dettagli' : 'Mostra dettagli'}

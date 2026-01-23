@@ -7,7 +7,15 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
     <div
       ref={ref}
       className={cn(
-        'rounded-2xl border border-border bg-card/90 text-card-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+        'rounded-2xl border border-border/50',
+        // Light mode: Glass morphism with backdrop blur
+        'bg-card/90 backdrop-blur-[12px] backdrop-saturate-[180%]',
+        // Dark mode: Solid professional (no blur for performance)
+        'dark:bg-card dark:backdrop-blur-none',
+        'text-card-foreground shadow-sm',
+        'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+        // Dark mode enhanced shadow
+        'dark:hover:shadow-lg dark:hover:shadow-black/20',
         className
       )}
       {...props}

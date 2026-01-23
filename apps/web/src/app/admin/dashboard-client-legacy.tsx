@@ -26,7 +26,7 @@ import {
   DatabaseIcon,
 } from 'lucide-react';
 
-import { ActivityFeed } from '@/components/admin/ActivityFeed';
+import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { DashboardHeader } from '@/components/admin/DashboardHeader';
 import { KPICardsGrid, buildKPICards } from '@/components/admin/KPICardsGrid';
@@ -353,7 +353,7 @@ export function DashboardClient() {
         <ChartsSection />
 
         {/* Activity Feed - Issue #2787: Real events */}
-        {events.length > 0 && <ActivityFeed events={events} />}
+        {events.length > 0 && <ActivityTimeline events={events} />}
       </div>
     </AdminLayout>
   );

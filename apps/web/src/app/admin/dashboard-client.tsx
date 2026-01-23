@@ -9,7 +9,7 @@
  * - QuickActionsPanel with dynamic badges (Issue #2788)
  * - MetricsGrid with 16 detailed metrics (Issue #2792)
  * - ChartsSection with API/AI usage (Issue #2790, #2792)
- * - ActivityFeed with recent events (Issue #2787)
+ * - ActivityTimeline with recent events (Issue #2787)
  * - PendingApprovalsWidget with real approvals (Issue #2789)
  *
  * Architecture:
@@ -32,7 +32,7 @@ import {
   DatabaseIcon,
 } from 'lucide-react';
 
-import { ActivityFeed } from '@/components/admin/ActivityFeed';
+import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { DashboardHeader } from '@/components/admin/DashboardHeader';
 import { KPICardsGrid, buildKPICards } from '@/components/admin/KPICardsGrid';
@@ -363,7 +363,7 @@ export function DashboardClient() {
         <ChartsSection />
 
         {/* Activity Feed - Issue #2787: Real events */}
-        {events.length > 0 && <ActivityFeed events={events} />}
+        {events.length > 0 && <ActivityTimeline events={events} />}
       </div>
     </AdminLayout>
   );

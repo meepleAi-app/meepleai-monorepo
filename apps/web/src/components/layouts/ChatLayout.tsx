@@ -104,7 +104,7 @@ export function ChatLayout({
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-80 p-0">
-        <SheetTitle className="px-4 py-3 border-b border-[#dadce0]">MeepleAI Chat</SheetTitle>
+        <SheetTitle className="px-4 py-3 border-b border-border/50 dark:border-border/30">MeepleAI Chat</SheetTitle>
         <SheetDescription className="sr-only">Chat navigation menu</SheetDescription>
         <div className="h-full overflow-y-auto">
           <TooltipProvider>{sidebarContent}</TooltipProvider>
@@ -117,7 +117,7 @@ export function ChatLayout({
   const sidebarWidth = !mounted ? 'md:w-80' : collapsed ? 'md:w-0' : 'md:w-80';
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <ChatHeader
         game={game}
@@ -136,7 +136,7 @@ export function ChatLayout({
         {/* Sidebar - Desktop only (mobile uses Sheet) */}
         <aside
           className={cn(
-            'hidden md:flex bg-[#f8f9fa] border-r border-[#dadce0] flex-col overflow-hidden transition-[width,min-width] duration-300 ease-in-out',
+            'hidden md:flex bg-sidebar/95 backdrop-blur-[12px] dark:bg-sidebar dark:backdrop-blur-none border-r border-border/50 dark:border-border/30 flex-col overflow-hidden transition-[width,min-width] duration-300 ease-in-out',
             sidebarWidth,
             collapsed ? 'min-w-0' : 'min-w-[320px]'
           )}
@@ -151,8 +151,8 @@ export function ChatLayout({
             onClick={() => handleCollapsedChange(true)}
             className={cn(
               'hidden md:block absolute left-[308px] top-[4.5rem] z-30',
-              'w-10 h-10 rounded-full bg-white border border-[#dadce0]',
-              'hover:bg-gray-50 transition-colors',
+              'w-10 h-10 rounded-full bg-card border border-border/50 dark:border-border/70',
+              'hover:bg-muted dark:hover:bg-muted/70 transition-colors',
               'focus:outline-none focus:ring-2 focus:ring-[#1a73e8]',
               'flex items-center justify-center text-sm'
             )}
@@ -168,8 +168,8 @@ export function ChatLayout({
             onClick={() => handleCollapsedChange(false)}
             className={cn(
               'hidden md:block absolute left-4 top-[4.5rem] z-30',
-              'w-10 h-10 rounded-full bg-white border border-[#dadce0]',
-              'hover:bg-gray-50 transition-colors',
+              'w-10 h-10 rounded-full bg-card border border-border/50 dark:border-border/70',
+              'hover:bg-muted dark:hover:bg-muted/70 transition-colors',
               'focus:outline-none focus:ring-2 focus:ring-[#1a73e8]',
               'flex items-center justify-center text-sm'
             )}

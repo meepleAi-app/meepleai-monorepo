@@ -107,8 +107,8 @@ function NavLink({
         'flex items-center gap-3 rounded-[0.625rem] transition-all duration-200 font-semibold text-[0.9375rem]',
         collapsed ? 'justify-center px-2 py-2' : 'px-5 py-[0.625rem]',
         isActive
-          ? 'bg-[#8b5cf6] text-white'
-          : 'text-[#666] hover:bg-[#fef3e2] hover:text-meeple-orange dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
+          ? 'bg-accent text-accent-foreground dark:bg-accent/90'
+          : 'text-muted-foreground hover:bg-accent/10 dark:hover:bg-accent/20 hover:text-accent-foreground'
       )}
       aria-current={isActive ? 'page' : undefined}
       data-testid={`admin-nav-link-${item.href.replace(/^\/admin\/?/, '') || 'dashboard'}`}
@@ -221,7 +221,7 @@ export function AdminSidebar({
           );
         })}
       </ul>
-      <div className="text-xs text-gray-500 dark:text-gray-400">
+      <div className="text-xs text-muted-foreground">
         {navWithBadges
           .filter(item => item.badge && item.badge.count > 0)
           .map(item => (
@@ -237,7 +237,12 @@ export function AdminSidebar({
   const desktopSidebar = (
     <aside
       className={cn(
-        'hidden lg:flex lg:flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-300',
+        'hidden lg:flex lg:flex-col transition-all duration-300',
+        // Light mode: Glass morphism sidebar
+        'bg-sidebar/95 backdrop-blur-[12px]',
+        // Dark mode: Solid sidebar
+        'dark:bg-sidebar dark:backdrop-blur-none',
+        'border-r border-border/50 dark:border-border/30',
         collapsed ? 'lg:w-16' : 'lg:w-60',
         className
       )}

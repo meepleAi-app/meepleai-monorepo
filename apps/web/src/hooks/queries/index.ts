@@ -99,6 +99,41 @@ export {
   sessionsKeys,
 } from './useActiveSessions';
 
+// Share Requests queries and mutations (Issue #2743)
+export {
+  useShareRequests,
+  useShareRequest,
+  useRateLimitStatus,
+  useCreateShareRequest,
+  shareRequestsKeys,
+} from './useShareRequests';
+
+export { useCanShareGame, type CanShareGameResult } from './useCanShareGame';
+
+// Admin Share Requests queries and mutations (Issue #2745)
+export {
+  useAdminShareRequests,
+  useShareRequestDetails,
+  useMyReviews,
+  useStartReview,
+  useReleaseReview,
+  useApproveRequest,
+  useRejectRequest,
+  useRequestChanges,
+  adminShareRequestsKeys,
+} from './useAdminShareRequests';
+
+// Game Contributors queries (Issue #2746)
+export { useGameContributors, gameContributorsKeys } from './useGameContributors';
+
+// Badge & Gamification queries and mutations (Issue #2747)
+export {
+  useMyBadges,
+  useLeaderboard,
+  useToggleBadgeDisplay,
+  badgeKeys,
+} from './useBadges';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

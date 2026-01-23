@@ -20,7 +20,7 @@
 
 import { useTransition } from 'react';
 
-import { Home, Gamepad2, MessageSquare, Settings, LogOut } from 'lucide-react';
+import { Home, Gamepad2, MessageSquare, Settings, LogOut, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -152,6 +152,17 @@ export function TopNav() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              {user?.role === 'admin' && (
+                <>
+                  <DropdownMenuItem asChild data-testid="admin-panel-menu-item">
+                    <Link href="/admin" className="flex items-center gap-2">
+                      <Shield className="w-4 h-4" />
+                      Admin Panel
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem asChild data-testid="settings-menu-item">
                 <Link href="/settings" className="flex items-center gap-2">
                   <Settings className="w-4 h-4" />

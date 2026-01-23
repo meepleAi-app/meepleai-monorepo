@@ -30,6 +30,11 @@ internal sealed class NotificationType : ValueObject
     // ISSUE-2741: Badge earned notification type
     public static readonly NotificationType BadgeEarned = new("badge_earned");
 
+    // ISSUE-2742: Rate limit warning notification types
+    public static readonly NotificationType RateLimitApproaching = new("rate_limit_approaching");
+    public static readonly NotificationType RateLimitReached = new("rate_limit_reached");
+    public static readonly NotificationType CooldownEnded = new("cooldown_ended");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -68,6 +73,9 @@ internal sealed class NotificationType : ValueObject
             "admin_stale_share_requests" => AdminStaleShareRequests,
             "admin_review_lock_expiring" => AdminReviewLockExpiring,
             "badge_earned" => BadgeEarned,
+            "rate_limit_approaching" => RateLimitApproaching,
+            "rate_limit_reached" => RateLimitReached,
+            "cooldown_ended" => CooldownEnded,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

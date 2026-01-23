@@ -213,7 +213,7 @@ export function GrafanaEmbed({
                 )}
               </div>
 
-              <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex justify-between items-center text-xs text-muted-foreground">
                 <span>
                   {locale === 'it' ? 'Auto-aggiornamento: ' : 'Auto-refresh: '}
                   {autoRefresh}

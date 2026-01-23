@@ -169,7 +169,7 @@ export default function CategoryConfigTab({
                   </div>
 
                   {config.description && (
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                    <p className="text-sm text-muted-foreground mb-2">
                       {config.description}
                     </p>
                   )}
@@ -208,7 +208,7 @@ export default function CategoryConfigTab({
                   )}
 
                   {/* Metadata */}
-                  <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
                     <span>v{config.version}</span>
                     <span>•</span>
                     <span>Updated {new Date(config.updatedAt).toLocaleDateString()}</span>
@@ -243,7 +243,7 @@ export default function CategoryConfigTab({
 
       {/* Category-specific help */}
       <div className="bg-muted/50 dark:bg-card rounded-lg p-4 border border-border/50 dark:border-border/30 mt-6">
-        <h4 className="font-medium text-slate-900 dark:text-white mb-2">
+        <h4 className="font-medium text-foreground mb-2">
           💡 {category} Configuration Guide
         </h4>
         <CategoryHelpText category={category} />
@@ -256,7 +256,7 @@ function CategoryHelpText({ category }: { category: string }) {
   switch (category) {
     case 'RateLimiting':
       return (
-        <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+        <ul className="text-sm text-muted-foreground space-y-1">
           <li>• Configure request limits per minute for different roles</li>
           <li>• Burst size controls temporary spike allowance</li>
           <li>• Changes require server restart to take effect</li>
@@ -264,7 +264,7 @@ function CategoryHelpText({ category }: { category: string }) {
       );
     case 'AiLlm':
       return (
-        <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+        <ul className="text-sm text-muted-foreground space-y-1">
           <li>• Temperature (0.0-1.0): Lower = more focused, Higher = more creative</li>
           <li>• Max Tokens (1-32000): Maximum response length</li>
           <li>• Model selection: Different models for different use cases</li>
@@ -272,7 +272,7 @@ function CategoryHelpText({ category }: { category: string }) {
       );
     case 'Rag':
       return (
-        <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+        <ul className="text-sm text-muted-foreground space-y-1">
           <li>• TopK: Number of vector search results to retrieve</li>
           <li>• MinScore (0.0-1.0): Minimum similarity score threshold</li>
           <li>• ⚠️ Changing ChunkSize or VectorDimensions requires re-indexing all documents</li>

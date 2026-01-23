@@ -102,9 +102,9 @@ export function UserActivityItem({
                 title={expanded ? 'Nascondi dettagli' : 'Mostra dettagli'}
               >
                 {expanded ? (
-                  <ChevronUpIcon className="h-5 w-5 text-gray-600" aria-hidden="true" />
+                  <ChevronUpIcon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 ) : (
-                  <ChevronDownIcon className="h-5 w-5 text-gray-600" aria-hidden="true" />
+                  <ChevronDownIcon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 )}
               </button>
             )}
@@ -112,26 +112,26 @@ export function UserActivityItem({
 
           {/* Expanded Metadata */}
           {expanded && hasMetadata && (
-            <div className="mt-3 pt-3 border-t border-gray-200">
+            <div className="mt-3 pt-3 border-t border-border/50 dark:border-border/30">
               <div className="text-xs">
-                <p className="font-semibold text-gray-700 mb-2">Dettagli:</p>
+                <p className="font-semibold text-foreground mb-2">Dettagli:</p>
                 <dl className="space-y-1">
                   {event.userId && (
                     <div className="flex gap-2">
-                      <dt className="font-medium text-gray-600 min-w-[80px]">User ID:</dt>
-                      <dd className="text-gray-900 break-all">{event.userId}</dd>
+                      <dt className="font-medium text-muted-foreground min-w-[80px]">User ID:</dt>
+                      <dd className="text-foreground break-all">{event.userId}</dd>
                     </div>
                   )}
                   {event.entityId && (
                     <div className="flex gap-2">
-                      <dt className="font-medium text-gray-600 min-w-[80px]">Entity ID:</dt>
-                      <dd className="text-gray-900 break-all">{event.entityId}</dd>
+                      <dt className="font-medium text-muted-foreground min-w-[80px]">Entity ID:</dt>
+                      <dd className="text-foreground break-all">{event.entityId}</dd>
                     </div>
                   )}
                   {event.entityType && (
                     <div className="flex gap-2">
-                      <dt className="font-medium text-gray-600 min-w-[80px]">Entity Type:</dt>
-                      <dd className="text-gray-900">{event.entityType}</dd>
+                      <dt className="font-medium text-muted-foreground min-w-[80px]">Entity Type:</dt>
+                      <dd className="text-foreground">{event.entityType}</dd>
                     </div>
                   )}
                   {event.metadata && (

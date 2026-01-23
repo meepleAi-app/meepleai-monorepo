@@ -13,7 +13,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Users,
   Gamepad2,
@@ -127,35 +127,6 @@ const mockPendingApprovals: PendingApproval[] = [
 ];
 
 // ============================================================================
-// Utility Components
-// ============================================================================
-
-function MeepleDecoration({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 32" className={className} fill="currentColor">
-      <path d="M12 0C7.5 0 4 3 4 7c0 2.5 1.5 4.5 3.5 5.5L6 32h12l-1.5-19.5C18.5 11.5 20 9.5 20 7c0-4-3.5-7-8-7z" />
-    </svg>
-  );
-}
-
-function DicePattern({ className }: { className?: string }) {
-  return (
-    <div className={`absolute opacity-[0.03] pointer-events-none ${className}`}>
-      <svg width="60" height="60" viewBox="0 0 60 60" fill="currentColor">
-        <circle cx="10" cy="10" r="3" />
-        <circle cx="30" cy="10" r="3" />
-        <circle cx="50" cy="10" r="3" />
-        <circle cx="10" cy="30" r="3" />
-        <circle cx="30" cy="30" r="3" />
-        <circle cx="50" cy="30" r="3" />
-        <circle cx="10" cy="50" r="3" />
-        <circle cx="30" cy="50" r="3" />
-        <circle cx="50" cy="50" r="3" />
-      </svg>
-    </div>
-  );
-}
-
 // ============================================================================
 // Sub-Components
 // ============================================================================

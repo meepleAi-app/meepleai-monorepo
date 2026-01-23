@@ -143,12 +143,12 @@ export function ChatContent() {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-white">
+    <div className="flex-1 flex flex-col bg-background">
       {/* Mobile Sidebar (from origin/main) */}
       <MobileSidebar open={mobileMenuOpen} onOpenChange={setMobileMenuOpen} />
 
       {/* Header (Issue #858: Thread-based) */}
-      <div className="p-4 border-b border-[#dadce0] flex justify-between items-center bg-white">
+      <div className="p-4 border-b border-border/50 dark:border-border/30 flex justify-between items-center bg-background/95 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <button
             onClick={handleToggleSidebar}

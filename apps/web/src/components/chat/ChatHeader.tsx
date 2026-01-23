@@ -123,7 +123,7 @@ export function ChatHeader({
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 border-b border-[#dadce0] bg-white dark:bg-gray-900',
+        'sticky top-0 z-40 border-b border-border/50 dark:border-border/30 bg-background/95 backdrop-blur-[16px] backdrop-saturate-[180%] dark:bg-card dark:backdrop-blur-none',
         className
       )}
       aria-label="Chat header with game selection and thread actions"

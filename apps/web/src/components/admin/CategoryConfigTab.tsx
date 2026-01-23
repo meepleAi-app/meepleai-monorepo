@@ -280,7 +280,7 @@ function CategoryHelpText({ category }: { category: string }) {
       );
     default:
       return (
-        <p className="text-sm text-slate-600 dark:text-slate-400">
+        <p className="text-sm text-muted-foreground">
           Modify configuration values and save changes. Check if restart is required.
         </p>
       );

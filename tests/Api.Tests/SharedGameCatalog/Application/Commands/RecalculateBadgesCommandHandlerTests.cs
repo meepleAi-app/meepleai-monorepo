@@ -126,8 +126,8 @@ public sealed class RecalculateBadgesCommandHandlerTests
 
     private static Badge CreateBadge(string code, BadgeTier tier)
     {
-        var requirement = BadgeRequirement.FirstContribution();
-        return Badge.Create(code, $"{code} Badge", "Test description", tier, BadgeCategory.Contribution, null, 1, requirement);
+        var requirement = BadgeRequirement.ForFirstContribution();
+        return Badge.Create(code, $"{code} Badge", "Test description", tier, BadgeCategory.Contribution, requirement, null, 1);
     }
 
     private static UserBadge CreateUserBadge(Guid userId, Guid badgeId, string badgeCode)

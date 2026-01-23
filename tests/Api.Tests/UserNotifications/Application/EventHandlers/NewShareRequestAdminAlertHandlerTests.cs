@@ -45,8 +45,7 @@ public class NewShareRequestAdminAlertHandlerTests
             shareRequestId,
             userId,
             Guid.NewGuid(),
-            ContributionType.NewGame,
-            DateTime.UtcNow);
+            ContributionType.NewGame);
 
         // Note: This is a simplified test. Full integration test required with real DbContext.
         // For unit testing, we would need to mock DbSet<UserEntity> which is complex.

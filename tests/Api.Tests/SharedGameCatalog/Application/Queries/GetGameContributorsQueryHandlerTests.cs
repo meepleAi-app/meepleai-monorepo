@@ -4,9 +4,14 @@ using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
 using FluentAssertions;
 using FluentValidation.TestHelper;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.SharedGameCatalog.Application.Queries;
@@ -62,12 +67,20 @@ public sealed class ContributorRepositoryTests : IAsyncLifetime
     {
         _options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(warnings =>
+            {
+                warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning);
+            })
             .Options;
     }
 
     public async Task InitializeAsync()
     {
-        _context = new MeepleAiDbContext(_options);
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector.Setup(e => e.GetAndClearEvents())
+            .Returns(new List<IDomainEvent>().AsReadOnly());
+        _context = new MeepleAiDbContext(_options, mockMediator.Object, mockEventCollector.Object);
         await SeedTestDataAsync();
     }
 

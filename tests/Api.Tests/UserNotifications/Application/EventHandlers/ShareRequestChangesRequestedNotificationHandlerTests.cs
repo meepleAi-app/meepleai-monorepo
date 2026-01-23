@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
@@ -16,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using System.Collections.ObjectModel;
+using Email = Api.BoundedContexts.Authentication.Domain.ValueObjects.Email;
 
 namespace Api.Tests.UserNotifications.Application.EventHandlers;
 
@@ -58,7 +60,7 @@ public sealed class ShareRequestChangesRequestedNotificationHandlerTests
     public async Task Handle_CreatesInfoNotificationWithFeedbackAndSendsEmail()
     {
         // Arrange
-        var user = User.Create("test@example.com", "testuser", "Test User");
+        var user = new User(Guid.NewGuid(), new Email("test@example.com"), "Test User", PasswordHash.Create("TestPassword123!"), Role.User);
         var shareRequest = ShareRequest.Create(
             _userId,
             Guid.NewGuid(),
@@ -138,7 +140,7 @@ public sealed class ShareRequestChangesRequestedNotificationHandlerTests
     public async Task Handle_WhenEmailFails_ContinuesSuccessfully()
     {
         // Arrange
-        var user = User.Create("test@example.com", "testuser", "Test User");
+        var user = new User(Guid.NewGuid(), new Email("test@example.com"), "Test User", PasswordHash.Create("TestPassword123!"), Role.User);
         var shareRequest = ShareRequest.Create(
             _userId,
             Guid.NewGuid(),

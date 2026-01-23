@@ -88,10 +88,12 @@ export function AdminHeader({
     <header
       className={cn(
         'sticky top-0 z-50',
-        'bg-white/95 dark:bg-gray-900/95',
-        'backdrop-blur-[10px]',
-        'border-b border-[#e8e4d8] dark:border-gray-700',
-        'shadow-[0_1px_3px_rgba(139,90,60,0.08)]',
+        // Light mode: Glass morphism header
+        'bg-background/95 backdrop-blur-[16px] backdrop-saturate-[180%]',
+        // Dark mode: Solid professional header
+        'dark:bg-card dark:backdrop-blur-none',
+        'border-b border-border/50 dark:border-border/30',
+        'shadow-sm dark:shadow-md',
         className
       )}
       data-testid="admin-header"
@@ -106,7 +108,7 @@ export function AdminHeader({
             🎲
           </span>
           <h1
-            className="text-[1.375rem] font-heading font-bold text-[#2d2d2d] dark:text-white"
+            className="text-[1.375rem] font-heading font-bold text-foreground"
             data-testid="admin-header-title"
           >
             {title}

@@ -35,7 +35,7 @@ type APIRequestsChartProps = {
 };
 
 const ChartSkeleton = () => (
-  <div className="h-[300px] w-full animate-pulse rounded-2xl bg-[#fef3e2] dark:bg-slate-800" />
+  <div className="h-[300px] w-full animate-pulse rounded-2xl bg-muted/50 dark:bg-card" />
 );
 
 function calculateTrend(data: ApiRequestByDay[]): { total: number; trend: number } {
@@ -66,7 +66,7 @@ export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps): JS
 
   return (
     // Issue #2850: MeepleAI warm card styling
-    <div className="rounded-2xl border border-[#e8e4d8] bg-white p-6 shadow-[0_1px_3px_rgba(139,90,60,0.05)] dark:border-gray-700 dark:bg-gray-800">
+    <div className="rounded-2xl border border-border/50 dark:border-border/30 bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none p-6 shadow-sm dark:shadow-md">
       <h3 className="mb-4 font-['Quicksand',sans-serif] text-lg font-bold text-[#2d2d2d] dark:text-gray-100">
         API Requests (Last 7 Days)
       </h3>

@@ -23,7 +23,7 @@ type AIUsageDonutProps = {
 };
 
 const ChartSkeleton = () => (
-  <div className="h-[300px] w-full animate-pulse rounded-2xl bg-[#fef3e2] dark:bg-slate-800" />
+  <div className="h-[300px] w-full animate-pulse rounded-2xl bg-muted/50 dark:bg-card" />
 );
 
 // Issue #2850: MeepleAI color palette for categories
@@ -44,7 +44,7 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps): JSX.Elemen
   }
 
   if (data.length === 0) {
-    return <div className="p-12 text-center text-[#666] dark:text-gray-400">No AI usage data available</div>;
+    return <div className="p-12 text-center text-muted-foreground">No AI usage data available</div>;
   }
 
   const totalCalls = data.reduce((sum, item) => sum + item.count, 0);
@@ -61,7 +61,7 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps): JSX.Elemen
 
   return (
     // Issue #2850: MeepleAI warm card styling
-    <div className="rounded-2xl border border-[#e8e4d8] bg-white p-6 shadow-[0_1px_3px_rgba(139,90,60,0.05)] dark:border-gray-700 dark:bg-gray-800">
+    <div className="rounded-2xl border border-border/50 dark:border-border/30 bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none p-6 shadow-sm dark:shadow-md">
       <h3 className="mb-4 font-['Quicksand',sans-serif] text-lg font-bold text-[#2d2d2d] dark:text-gray-100">
         AI Usage by Category
       </h3>

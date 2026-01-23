@@ -56,7 +56,7 @@ function Pagination({
 
   return (
     <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-      <div className="flex items-center gap-2 text-sm text-gray-600">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <span>Mostra:</span>
         <select
           value={pageSize}
@@ -83,7 +83,7 @@ function Pagination({
         >
           Precedente
         </Button>
-        <span className="text-sm text-gray-600">
+        <span className="text-sm text-muted-foreground">
           Pagina {currentPage} di {totalPages}
         </span>
         <Button
@@ -187,8 +187,8 @@ export function UserActivityTimeline({
       <CardContent className="p-0">
         {/* Empty State */}
         {filteredEvents.length === 0 && (
-          <div className="p-8 text-center text-gray-500">
-            <ActivityIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" aria-hidden="true" />
+          <div className="p-8 text-center text-muted-foreground">
+            <ActivityIcon className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" aria-hidden="true" />
             <p className="font-medium">Nessuna attività trovata</p>
             <p className="text-sm mt-1">
               {events.length > 0
@@ -233,7 +233,7 @@ export function UserActivityTimeline({
 
         {/* Results Summary */}
         {filteredEvents.length > 0 && (
-          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-600">
+          <div className="px-6 py-3 bg-muted/50 dark:bg-card border-t border-border/50 dark:border-border/30 text-xs text-muted-foreground">
             Visualizzati {startIndex + 1}-{Math.min(endIndex, filteredEvents.length)} di{' '}
             {filteredEvents.length} {filteredEvents.length === 1 ? 'evento' : 'eventi'}
             {filteredEvents.length < events.length && (

@@ -9,6 +9,7 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 
 import { BadgeTier, getTierIcon, getTierOrder, type UserBadgeDto } from '@/types/badges';
 import { cn } from '@/lib/utils';
@@ -129,24 +130,37 @@ interface BadgeItemProps {
 
 function BadgeItem({ badge, onClick }: BadgeItemProps): JSX.Element {
   const tierGradient = getTierGradient(badge.tier);
+  const tierGlow = getTierGlow(badge.tier);
 
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
       disabled={!onClick}
+      whileHover={onClick ? { scale: 1.05, y: -2 } : undefined}
+      whileTap={onClick ? { scale: 0.95 } : undefined}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       className={cn(
         'group relative flex flex-col items-center gap-2 rounded-lg border bg-card p-4 text-center transition-all',
         onClick && 'hover:border-primary hover:shadow-md cursor-pointer',
         !onClick && 'cursor-default'
       )}
     >
-      {/* Badge Icon */}
-      <div
-        className={cn(
-          'relative h-16 w-16 rounded-full p-1',
-          tierGradient
-        )}
+      {/* Badge Icon with Glow */}
+      <motion.div
+        className={cn('relative h-16 w-16 rounded-full p-1', tierGradient)}
+        animate={{
+          boxShadow: [
+            `0 0 0px ${tierGlow}`,
+            `0 0 20px ${tierGlow}`,
+            `0 0 0px ${tierGlow}`,
+          ],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
       >
         <div className="flex h-full w-full items-center justify-center rounded-full bg-background">
           {badge.iconUrl ? (
@@ -159,7 +173,7 @@ function BadgeItem({ badge, onClick }: BadgeItemProps): JSX.Element {
             <span className="text-2xl">{getTierIcon(badge.tier)}</span>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Hidden indicator */}
       {!badge.isDisplayed && (
@@ -184,7 +198,7 @@ function BadgeItem({ badge, onClick }: BadgeItemProps): JSX.Element {
       <p className="text-foreground line-clamp-2 text-xs font-medium">
         {badge.name}
       </p>
-    </button>
+    </motion.button>
   );
 }
 
@@ -200,6 +214,20 @@ function getTierGradient(tier: BadgeTier): string {
     [BadgeTier.Bronze]: 'bg-gradient-to-br from-amber-600 to-amber-800',
   };
   return gradients[tier];
+}
+
+/**
+ * Helper: Get tier glow color for animations
+ */
+function getTierGlow(tier: BadgeTier): string {
+  const glows: Record<BadgeTier, string> = {
+    [BadgeTier.Diamond]: 'rgba(6, 182, 212, 0.6)', // cyan-500
+    [BadgeTier.Platinum]: 'rgba(203, 213, 225, 0.6)', // slate-300
+    [BadgeTier.Gold]: 'rgba(250, 204, 21, 0.6)', // yellow-400
+    [BadgeTier.Silver]: 'rgba(209, 213, 219, 0.5)', // gray-300
+    [BadgeTier.Bronze]: 'rgba(217, 119, 6, 0.5)', // amber-600
+  };
+  return glows[tier];
 }
 
 BadgeGrid.displayName = 'BadgeGrid';

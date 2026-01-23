@@ -11,12 +11,14 @@
 import React from 'react';
 import Link from 'next/link';
 
-import { useMyBadges } from '@/hooks/queries';
+import { useMyBadges, useToggleBadgeDisplay } from '@/hooks/queries';
 import { BadgeGrid } from './BadgeGrid';
+import { BadgeDetailSheet } from './BadgeDetailSheet';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/primitives/card';
 import { Button } from '@/components/ui/primitives/button';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { cn } from '@/lib/utils';
+import type { UserBadgeDto } from '@/types/badges';
 
 export interface UserBadgesProps {
   /** Optional CSS class */
@@ -44,6 +46,8 @@ export function UserBadges({
 }: UserBadgesProps): JSX.Element {
   const { data: badges, isLoading } = useMyBadges();
   const { mutate: toggleDisplay } = useToggleBadgeDisplay();
+
+  const [selectedBadge, setSelectedBadge] = React.useState<UserBadgeDto | null>(null);
 
   const displayedBadges = badges?.slice(0, maxDisplay) ?? [];
   const hasMore = (badges?.length ?? 0) > maxDisplay;
@@ -107,8 +111,19 @@ export function UserBadges({
             </p>
           </div>
         ) : (
-          <BadgeGrid badges={displayedBadges} showHidden={false} />
+          <BadgeGrid
+            badges={displayedBadges}
+            showHidden={false}
+            onBadgeClick={(badge) => setSelectedBadge(badge)}
+          />
         )}
+
+        {/* Badge Detail Sheet */}
+        <BadgeDetailSheet
+          badge={selectedBadge}
+          onClose={() => setSelectedBadge(null)}
+          onToggleDisplay={(id, isDisplayed) => toggleDisplay({ badgeId: id, isDisplayed })}
+        />
       </CardContent>
     </Card>
   );

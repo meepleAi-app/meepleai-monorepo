@@ -12,7 +12,7 @@
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 import { variants } from '@/lib/animations/variants';
 import type { DashboardMetrics } from '@/lib/api';

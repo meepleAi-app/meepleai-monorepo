@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/forms/button';
+import { Button } from '@/components/ui/primitives/button';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Check, X, Eye, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';

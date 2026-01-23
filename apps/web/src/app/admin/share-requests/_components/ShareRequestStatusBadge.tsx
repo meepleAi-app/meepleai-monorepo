@@ -27,7 +27,7 @@ export function ShareRequestStatusBadge({ status, className }: ShareRequestStatu
   const config = getStatusConfig(status);
 
   return (
-    <Badge variant="outline" className={`${config.className} ${className ?? ''}`}>
+    <Badge variant="outline" className={`${config.className} ${className ?? ''}`} data-testid="status-badge" data-status={status}>
       <config.icon className="mr-1 h-3 w-3" />
       {config.label}
     </Badge>

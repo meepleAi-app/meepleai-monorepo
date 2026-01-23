@@ -100,20 +100,20 @@ export function ShareGameWizard({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px]" data-testid="share-game-wizard">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2" data-testid="wizard-title">
             <Share2 className="h-5 w-5" />
             Share &quot;{game.gameTitle}&quot; with the Community
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription data-testid="wizard-step-indicator">
             Step {step} of {TOTAL_STEPS}
           </DialogDescription>
         </DialogHeader>
 
         {/* Progress Indicator */}
         <div className="mb-4">
-          <Progress value={progressPercentage} className="h-2" />
+          <Progress value={progressPercentage} className="h-2" data-testid="wizard-progress" />
           <div className="mt-2 flex justify-between text-xs text-muted-foreground">
             <span className={cn(step === 1 && 'font-semibold text-foreground')}>
               1. Preview
@@ -128,7 +128,7 @@ export function ShareGameWizard({
         </div>
 
         {/* Step Content */}
-        <div className="min-h-[300px] py-4">
+        <div className="min-h-[300px] py-4" data-testid={`wizard-step-${step}`}>
           {step === 1 && <Step1GamePreview game={game} existingInCatalog={existingInCatalog} />}
 
           {step === 2 && (
@@ -152,24 +152,24 @@ export function ShareGameWizard({
 
         {/* Navigation Footer */}
         <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="outline" onClick={onClose} disabled={isPending}>
+          <Button variant="outline" onClick={onClose} disabled={isPending} data-testid="wizard-cancel">
             Cancel
           </Button>
 
           {step > 1 && (
-            <Button variant="ghost" onClick={handleBack} disabled={isPending}>
+            <Button variant="ghost" onClick={handleBack} disabled={isPending} data-testid="wizard-back">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
           )}
 
           {step < TOTAL_STEPS ? (
-            <Button onClick={handleNext} disabled={isPending}>
+            <Button onClick={handleNext} disabled={isPending} data-testid="wizard-next">
               Continue
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={isPending}>
+            <Button onClick={handleSubmit} disabled={isPending} data-testid="wizard-submit">
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

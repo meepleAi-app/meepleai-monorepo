@@ -58,7 +58,7 @@ export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps): JS
   }
 
   if (data.length === 0) {
-    return <div className="p-12 text-center text-[#666] dark:text-gray-400">No API request data available</div>;
+    return <div className="p-12 text-center text-muted-foreground">No API request data available</div>;
   }
 
   const { total, trend } = calculateTrend(data);
@@ -117,9 +117,9 @@ export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps): JS
       </Suspense>
 
       {/* Footer with stats - Issue #2850: MeepleAI styling */}
-      <div className="mt-4 flex items-center justify-between border-t border-[#e8e4d8] pt-4 dark:border-gray-700">
+      <div className="mt-4 flex items-center justify-between border-t border-border/50 dark:border-border/30 pt-4">
         <div>
-          <p className="text-sm text-[#666] dark:text-gray-400">Total Requests</p>
+          <p className="text-sm text-muted-foreground">Total Requests</p>
           <p className="font-['Quicksand',sans-serif] text-2xl font-bold text-foreground">
             {total.toLocaleString()}
           </p>
@@ -132,7 +132,7 @@ export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps): JS
             <TrendingDown className="h-5 w-5" style={{ color: MEEPLE_COLORS.danger }} />
           )}
           <div>
-            <p className="text-sm text-[#666] dark:text-gray-400">vs last week</p>
+            <p className="text-sm text-muted-foreground">vs last week</p>
             <p className={`text-lg font-bold ${isPositiveTrend ? 'text-[#16a34a]' : 'text-[#dc2626]'}`}>
               {isPositiveTrend ? '+' : ''}{trend.toFixed(1)}%
             </p>

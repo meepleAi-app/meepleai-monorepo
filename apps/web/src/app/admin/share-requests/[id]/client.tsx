@@ -6,8 +6,6 @@ import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 import { useAuthUser } from '@/hooks/auth/useAuthUser';
 import {
   useShareRequestDetails,
-  useStartReview,
-  useReleaseReview,
   useApproveRequest,
   useRejectRequest,
   useRequestChanges,
@@ -15,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Unlock, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { ShareRequestStatusBadge } from '../_components/ShareRequestStatusBadge';
 import { LockStatusBadge } from '../_components/LockStatusBadge';
 import { ContributorProfile } from '../_components/ContributorProfile';
@@ -24,6 +22,8 @@ import { GameEditableFields } from '../_components/GameEditableFields';
 import { ApproveButton } from '../_components/ReviewActions/ApproveButton';
 import { RejectButton } from '../_components/ReviewActions/RejectButton';
 import { RequestChangesButton } from '../_components/ReviewActions/RequestChangesButton';
+import { MyActiveReviewsButton } from '../_components/MyActiveReviewsButton';
+import { ReviewActionButtons } from '../_components/ReviewActionButtons';
 
 /**
  * Admin Share Request Review Detail Page - Client Component
@@ -34,8 +34,12 @@ import { RequestChangesButton } from '../_components/ReviewActions/RequestChange
  * - Document preview and selection
  * - Review lock management
  * - Action buttons (approve, reject, request changes)
+ * - Review lock timer with expiring warning (Issue #2748)
+ * - Conflict dialog for 409 errors (Issue #2748)
+ * - Keyboard shortcuts (Escape to release) (Issue #2748)
  *
  * Issue #2745: Frontend - Admin Review Interface
+ * Issue #2748: Frontend - Admin Review Lock UI
  */
 
 interface AdminShareRequestDetailClientProps {
@@ -49,9 +53,7 @@ export function AdminShareRequestDetailClient({ id }: AdminShareRequestDetailCli
   // Fetch request details
   const { data: request, isLoading } = useShareRequestDetails(id);
 
-  // Mutations
-  const { mutate: startReview, isPending: isStarting } = useStartReview();
-  const { mutate: releaseReview, isPending: isReleasing } = useReleaseReview();
+  // Mutations (start/release moved to ReviewActionButtons)
   const { mutate: approve, isPending: isApproving } = useApproveRequest();
   const { mutate: reject, isPending: isRejecting } = useRejectRequest();
   const { mutate: requestChanges, isPending: isRequestingChanges } = useRequestChanges();
@@ -72,22 +74,9 @@ export function AdminShareRequestDetailClient({ id }: AdminShareRequestDetailCli
 
   // Derived state
   const canTakeAction = request?.lockStatus.isLockedByCurrentAdmin ?? false;
-  const isLocked = request?.lockStatus.isLocked ?? false;
-  const isPending = isStarting || isReleasing || isApproving || isRejecting || isRequestingChanges;
+  const isPending = isApproving || isRejecting || isRequestingChanges;
 
-  // Handlers
-  const handleStartReview = () => {
-    startReview({ shareRequestId: id });
-  };
-
-  const handleReleaseReview = () => {
-    releaseReview(
-      { shareRequestId: id },
-      {
-        onSuccess: () => router.push('/admin/share-requests'),
-      }
-    );
-  };
+  // Handlers (start/release moved to ReviewActionButtons)
 
   const handleApprove = (adminNotes: string) => {
     approve({
@@ -136,10 +125,14 @@ export function AdminShareRequestDetailClient({ id }: AdminShareRequestDetailCli
             {/* Header */}
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <Button variant="ghost" size="sm" onClick={() => router.push('/admin/share-requests')}>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Queue
-                </Button>
+                <div className="flex items-center gap-3">
+                  <Button variant="ghost" size="sm" onClick={() => router.push('/admin/share-requests')}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Queue
+                  </Button>
+                  {/* My Active Reviews Button (Issue #2748) */}
+                  <MyActiveReviewsButton />
+                </div>
                 <div>
                   <h1 className="text-3xl font-bold">{request.sourceGame.title}</h1>
                   <p className="text-muted-foreground">
@@ -249,35 +242,16 @@ export function AdminShareRequestDetailClient({ id }: AdminShareRequestDetailCli
                     <CardTitle>Review Actions</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {/* Start/Release Review */}
-                    {!isLocked && (
-                      <Button
-                        className="w-full"
-                        onClick={handleStartReview}
-                        disabled={isPending}
-                      >
-                        <Lock className="w-4 h-4 mr-2" />
-                        Start Review
-                      </Button>
-                    )}
+                    {/* Review Lock Management (Issue #2748) */}
+                    <ReviewActionButtons
+                      shareRequestId={id}
+                      lockStatus={request.lockStatus}
+                    />
 
+                    {/* Approval Actions (only when locked by current admin) */}
                     {canTakeAction && (
                       <>
-                        {/* Release Lock */}
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={handleReleaseReview}
-                          disabled={isPending}
-                        >
-                          <Unlock className="w-4 h-4 mr-2" />
-                          Release Lock
-                        </Button>
-
-                        {/* Divider */}
                         <div className="border-t pt-3" />
-
-                        {/* Action Buttons */}
                         <ApproveButton onApprove={handleApprove} isPending={isPending} />
                         <RequestChangesButton
                           onRequestChanges={handleRequestChanges}
@@ -285,17 +259,6 @@ export function AdminShareRequestDetailClient({ id }: AdminShareRequestDetailCli
                         />
                         <RejectButton onReject={handleReject} isPending={isPending} />
                       </>
-                    )}
-
-                    {/* Locked by Another Admin */}
-                    {isLocked && !canTakeAction && (
-                      <div className="p-3 rounded-lg bg-muted text-sm">
-                        <p className="font-medium">Locked by Another Admin</p>
-                        <p className="text-muted-foreground mt-1">
-                          {request.lockStatus.lockedByAdminName} is currently reviewing this
-                          request.
-                        </p>
-                      </div>
                     )}
                   </CardContent>
                 </Card>

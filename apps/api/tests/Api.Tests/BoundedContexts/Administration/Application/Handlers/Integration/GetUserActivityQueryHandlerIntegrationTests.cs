@@ -302,6 +302,7 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
     {
         var activityTypes = new[] { "Login", "Logout", "PasswordChange", "ProfileUpdate" };
         var resources = new[] { "User", "Session", "Profile" };
+#pragma warning disable CA5394 // Random is acceptable for test data generation, not cryptographic purposes
         var random = new Random(userId.GetHashCode());
 
         for (int i = 0; i < activityCount; i++)
@@ -321,6 +322,7 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
 
             await _dbContext.AuditLogs.AddAsync(auditLog);
         }
+#pragma warning restore CA5394
 
         await _dbContext.SaveChangesAsync();
     }

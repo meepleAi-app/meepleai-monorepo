@@ -244,8 +244,8 @@ export function PendingApprovalsWidget({
       <CardContent>
         {games.length === 0 ? (
           // Empty State
-          <div className="py-8 text-center text-gray-500" data-testid="empty-state">
-            <Clock className="h-10 w-10 mx-auto mb-2 text-gray-300" aria-hidden="true" />
+          <div className="py-8 text-center text-muted-foreground" data-testid="empty-state">
+            <Clock className="h-10 w-10 mx-auto mb-2 text-muted-foreground/50" aria-hidden="true" />
             <p className="text-sm">Nessun gioco in attesa di approvazione</p>
           </div>
         ) : (
@@ -259,7 +259,7 @@ export function PendingApprovalsWidget({
                   key={game.id}
                   role="listitem"
                   className={cn(
-                    'p-3 border border-gray-200 rounded-lg',
+                    'p-3 border border-border/50 dark:border-border/30 rounded-lg',
                     'transition-all duration-200',
                     'hover:border-amber-300 hover:bg-amber-50/30',
                     isProcessing && 'opacity-50 pointer-events-none'
@@ -269,12 +269,12 @@ export function PendingApprovalsWidget({
                   {/* Game Info */}
                   <div className="mb-2">
                     <h4
-                      className="font-medium text-sm text-gray-900 truncate"
+                      className="font-medium text-sm text-foreground truncate"
                       title={game.title}
                     >
                       {game.title}
                     </h4>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {formatRelativeTime(game.createdAt)}
                     </p>
                   </div>
@@ -315,9 +315,9 @@ export function PendingApprovalsWidget({
                       href={`/admin/shared-games/${game.id}`}
                       className={cn(
                         'inline-flex items-center justify-center',
-                        'h-8 px-3 rounded-md border border-gray-300',
-                        'text-sm text-gray-700',
-                        'hover:bg-gray-50 hover:border-gray-400',
+                        'h-8 px-3 rounded-md border border-border/50 dark:border-border/70',
+                        'text-sm text-foreground',
+                        'hover:bg-muted/50 dark:hover:bg-muted/30 hover:border-border',
                         'transition-colors'
                       )}
                       data-testid={`preview-btn-${game.id}`}

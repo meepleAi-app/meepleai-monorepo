@@ -18,12 +18,9 @@
  */
 
 import {
-  FileUpIcon,
   UsersIcon,
   AlertTriangleIcon,
   SettingsIcon,
-  MessageSquareIcon,
-  DatabaseIcon,
   ZapIcon,
   CheckIcon,
   TrashIcon,

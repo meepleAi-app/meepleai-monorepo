@@ -13,6 +13,7 @@
  */
 
 import AxeBuilder from '@axe-core/playwright';
+import { playAudit } from 'playwright-lighthouse';
 
 import { test as base, expect, Page } from './fixtures/chromatic';
 import { AdminHelper } from './pages';
@@ -116,31 +117,86 @@ test.describe('Admin Dashboard Performance + Accessibility (Issue #889)', () => 
       ).toBeLessThan(2500);
     });
 
-    test('should have Lighthouse score >90', async ({ adminPage: page }) => {
-      // This is a placeholder - actual Lighthouse integration would require playwright-lighthouse
-      // For now, we verify the page loads and meets basic performance criteria
-      const startTime = Date.now();
+    test('should have Lighthouse score ≥90 for all admin pages', async ({ adminPage: page }) => {
+      // Issue #2917: Lighthouse CI integration for Admin Dashboard
+      const adminPages = [
+        { url: '/admin', name: 'Dashboard' },
+        { url: '/admin/analytics', name: 'Analytics' },
+        { url: '/admin/users', name: 'Users' },
+        { url: '/admin/prompts', name: 'Prompts' },
+      ];
 
-      await page.goto('/admin');
-      await page.waitForLoadState('networkidle');
+      for (const adminPage of adminPages) {
+        console.log(`\n🔦 Running Lighthouse audit on ${adminPage.name} (${adminPage.url})...`);
 
-      const loadTime = Date.now() - startTime;
+        await page.goto(adminPage.url);
+        await page.waitForLoadState('networkidle');
 
-      // Proxy check: fast load time indicates good Lighthouse performance score
-      expect(loadTime, 'Load time indicates good Lighthouse performance').toBeLessThan(1500);
+        // Run Lighthouse audit
+        const { lhr } = await playAudit({
+          page,
+          thresholds: {
+            performance: 90,
+            accessibility: 90,
+            'best-practices': 90,
+            seo: 90,
+          },
+          reports: {
+            formats: {
+              html: true,
+            },
+            directory: 'lighthouse-reports',
+            name: `admin-${adminPage.name.toLowerCase()}-${Date.now()}`,
+          },
+        });
 
-      // Verify no console errors (impacts Lighthouse score)
-      const consoleErrors: string[] = [];
-      page.on('console', msg => {
-        if (msg.type() === 'error') {
-          consoleErrors.push(msg.text());
-        }
-      });
+        // Validate Lighthouse scores (Issue #2917 DoD)
+        const performanceScore = lhr.categories.performance.score * 100;
+        const accessibilityScore = lhr.categories.accessibility.score * 100;
+        const bestPracticesScore = lhr.categories['best-practices'].score * 100;
+        const seoScore = lhr.categories.seo.score * 100;
 
-      await page.reload();
-      await page.waitForLoadState('networkidle');
+        expect(
+          performanceScore,
+          `${adminPage.name}: Performance score ${performanceScore}% should be ≥90%`
+        ).toBeGreaterThanOrEqual(90);
 
-      expect(consoleErrors.length, 'No console errors that impact Lighthouse score').toBe(0);
+        expect(
+          accessibilityScore,
+          `${adminPage.name}: Accessibility score ${accessibilityScore}% should be ≥90%`
+        ).toBeGreaterThanOrEqual(90);
+
+        expect(
+          bestPracticesScore,
+          `${adminPage.name}: Best Practices score ${bestPracticesScore}% should be ≥90%`
+        ).toBeGreaterThanOrEqual(90);
+
+        expect(
+          seoScore,
+          `${adminPage.name}: SEO score ${seoScore}% should be ≥90%`
+        ).toBeGreaterThanOrEqual(90);
+
+        // Validate Core Web Vitals (Issue #2917 DoD)
+        const fcp = lhr.audits['first-contentful-paint'].numericValue;
+        const lcp = lhr.audits['largest-contentful-paint'].numericValue;
+        const cls = lhr.audits['cumulative-layout-shift'].numericValue;
+        const tbt = lhr.audits['total-blocking-time'].numericValue;
+
+        expect(fcp, `${adminPage.name}: FCP ${fcp}ms should be <1800ms`).toBeLessThan(1800);
+        expect(lcp, `${adminPage.name}: LCP ${lcp}ms should be <2500ms`).toBeLessThan(2500);
+        expect(cls, `${adminPage.name}: CLS ${cls} should be <0.1`).toBeLessThan(0.1);
+        expect(tbt, `${adminPage.name}: TBT ${tbt}ms should be <300ms`).toBeLessThan(300);
+
+        console.log(`✅ ${adminPage.name} Lighthouse audit passed:
+  - Performance: ${performanceScore}%
+  - Accessibility: ${accessibilityScore}%
+  - Best Practices: ${bestPracticesScore}%
+  - SEO: ${seoScore}%
+  - FCP: ${fcp}ms
+  - LCP: ${lcp}ms
+  - CLS: ${cls}
+  - TBT: ${tbt}ms`);
+      }
     });
   });
 

@@ -321,8 +321,8 @@ function StatsCard({
 
 // Filter Sidebar Component
 function FilterSidebar({
-  filters,
-  onChange,
+  filters: _filters,
+  onChange: _onChange,
 }: {
   filters: FilterState;
   onChange: (filters: FilterState) => void;
@@ -479,18 +479,3 @@ function GameCardFlip({ game, viewMode }: { game: GameCardData; viewMode: 'grid'
   );
 }
 
-// CSS for 3D transform (add to global CSS or use inline style tag)
-const flipStyles = `
-  .perspective-1000 {
-    perspective: 1000px;
-  }
-  .preserve-3d {
-    transform-style: preserve-3d;
-  }
-  .backface-hidden {
-    backface-visibility: hidden;
-  }
-  .rotate-y-180 {
-    transform: rotateY(180deg);
-  }
-`;

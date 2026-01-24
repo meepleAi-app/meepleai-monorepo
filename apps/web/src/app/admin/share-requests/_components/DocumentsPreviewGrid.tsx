@@ -1,4 +1,4 @@
-import { Checkbox } from '@/components/ui/checkbox';
+import { Checkbox } from '@/components/ui';
 import { FileText, FileImage, File as FileIcon } from 'lucide-react';
 import type { DocumentPreviewDto } from '@/lib/api/schemas/admin-share-requests.schemas';
 

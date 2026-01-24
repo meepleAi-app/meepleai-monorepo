@@ -14,7 +14,7 @@ import { useLeaderboard } from '@/hooks/queries';
 import { useCurrentUser } from '@/hooks/queries';
 import { LeaderboardPeriod, getTierIcon, type LeaderboardEntryDto } from '@/types/badges';
 import { cn } from '@/lib/utils';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/primitives/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 
 export interface LeaderboardTableProps {

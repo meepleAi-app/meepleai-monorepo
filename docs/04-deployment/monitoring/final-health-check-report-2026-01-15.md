@@ -81,7 +81,7 @@
 
 ### Test Command
 ```bash
-./scripts/test-oauth-health.sh
+./scripts/testing/test-oauth-health.sh
 ```
 
 ### Results
@@ -190,17 +190,17 @@ load_secret "bgg-api-token" "BGG_API_TOKEN"
 ## Validation Scripts Created
 
 ### 1. test-oauth-health.sh
-**Location**: `scripts/test-oauth-health.sh`
+**Location**: `scripts/testing/test-oauth-health.sh`
 
 **Purpose**: Test OAuth configuration via health check API
 
 **Usage**:
 ```bash
 # Basic test
-./scripts/test-oauth-health.sh
+./scripts/testing/test-oauth-health.sh
 
 # Verbose output with full JSON
-./scripts/test-oauth-health.sh --verbose
+./scripts/testing/test-oauth-health.sh --verbose
 ```
 
 **Output**:
@@ -327,7 +327,7 @@ Valid OAuth Providers: 3 / 3
 python scripts/validate-oauth-secrets.py
 
 # Test OAuth via API health check
-./scripts/test-oauth-health.sh
+./scripts/testing/test-oauth-health.sh
 
 # Get detailed JSON response
 curl -s http://localhost:8080/health/config | jq .
@@ -346,7 +346,7 @@ curl "http://localhost:8080/api/v1/auth/oauth/github/authorize?redirectUrl=http:
 ## Files Created/Modified
 
 ### Created
-1. `scripts/test-oauth-health.sh` - OAuth health check test script
+1. `scripts/testing/test-oauth-health.sh` - OAuth health check test script
 2. `scripts/validate-oauth-secrets.py` - OAuth secret validation script
 3. `scripts/generate-env-from-secrets.sh` - .env generation from secrets
 4. `apps/api/src/Api/.env.example` - Environment variable template

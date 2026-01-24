@@ -369,7 +369,7 @@ docker compose restart api
 
 **Test Command**:
 ```bash
-./scripts/test-oauth-health.sh
+./scripts/testing/test-oauth-health.sh
 ```
 
 **Results**:

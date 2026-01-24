@@ -12,7 +12,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 import { getTierIcon, type UserBadgeDto } from '@/types/badges';
-import { cn } from '@/lib/utils';
+// import { cn } from '@/lib/utils'; // Unused - removed for lint
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Switch } from '@/components/ui/forms/switch';

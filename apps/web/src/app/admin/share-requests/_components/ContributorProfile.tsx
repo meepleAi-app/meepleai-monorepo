@@ -1,5 +1,5 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { formatDistanceToNow } from 'date-fns';
 import { Award, Calendar, CheckCircle, TrendingUp } from 'lucide-react';
 import type { ContributorProfileDto } from '@/lib/api/schemas/admin-share-requests.schemas';

@@ -12,8 +12,8 @@
 import { use } from 'react';
 import { useSharedGame } from '@/hooks/queries';
 import { ContributorsSection } from '@/components/shared-games/ContributorsSection';
-import { Skeleton } from '@/components/ui/primitives/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/primitives/alert';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { AlertCircle } from 'lucide-react';
 
 interface SharedGamePageProps {

@@ -255,12 +255,12 @@ export function useStatefulStreaming(
   options: StatefulStreamingOptions = {}
 ): [StatefulStreamingState, StatefulStreamingControls] {
   const {
-    onStateChange,
-    onData,
-    onComplete,
-    onError,
-    onPause,
-    onResume,
+    onStateChange: _onStateChange,
+    onData: _onData,
+    onComplete: _onComplete,
+    onError: _onError,
+    onPause: _onPause,
+    onResume: _onResume,
     initialMetadata = {},
   } = options;
 

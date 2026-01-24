@@ -67,4 +67,12 @@ public interface IUserBadgeRepository
         Guid userId,
         int count,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves all distinct user IDs who have earned at least one badge.
+    /// Used for batch badge recalculation operations.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>List of distinct user IDs.</returns>
+    Task<List<Guid>> GetAllDistinctUserIdsAsync(CancellationToken cancellationToken = default);
 }

@@ -26,7 +26,7 @@ import { Search, Filter, Plus, Grid3x3, List, TrendingUp, Star, Gamepad2 } from 
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/forms/input';
+import { Input } from '@/components/ui/primitives/input';
 import { Badge } from '@/components/ui/data-display/badge';
 import { cn } from '@/lib/utils/cn';
 

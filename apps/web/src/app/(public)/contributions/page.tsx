@@ -19,7 +19,7 @@
 
 import { useState, useMemo } from 'react';
 
-import { AlertCircle, FileText, Trophy, TrendingUp } from 'lucide-react';
+import { AlertCircle, FileText, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 
 import { ShareRequestCard } from '@/components/contributions/ShareRequestCard';

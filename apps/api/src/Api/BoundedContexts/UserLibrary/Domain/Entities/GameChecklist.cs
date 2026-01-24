@@ -21,7 +21,7 @@ internal sealed class GameChecklist : Entity<Guid>
     /// <summary>
     /// Display order of this step in the checklist (lower = earlier).
     /// </summary>
-    public int Order { get; private set; }
+    public int DisplayOrder { get; private set; }
 
     /// <summary>
     /// Whether this step is currently checked/completed.
@@ -59,14 +59,14 @@ internal sealed class GameChecklist : Entity<Guid>
     /// <param name="id">Unique identifier</param>
     /// <param name="userLibraryEntryId">The library entry this checklist belongs to</param>
     /// <param name="description">Step description</param>
-    /// <param name="order">Display order</param>
+    /// <param name="displayOrder">Display order</param>
     /// <param name="additionalInfo">Optional details</param>
     /// <exception cref="ArgumentException">Thrown when invalid values are provided</exception>
     private GameChecklist(
         Guid id,
         Guid userLibraryEntryId,
         string description,
-        int order,
+        int displayOrder,
         string? additionalInfo) : base(id)
     {
         if (userLibraryEntryId == Guid.Empty)
@@ -75,12 +75,12 @@ internal sealed class GameChecklist : Entity<Guid>
         if (string.IsNullOrWhiteSpace(description))
             throw new ArgumentException("Description cannot be empty", nameof(description));
 
-        if (order < 0)
-            throw new ArgumentException("Order cannot be negative", nameof(order));
+        if (displayOrder < 0)
+            throw new ArgumentException("DisplayOrder cannot be negative", nameof(displayOrder));
 
         UserLibraryEntryId = userLibraryEntryId;
         Description = description.Trim();
-        Order = order;
+        DisplayOrder = displayOrder;
         AdditionalInfo = additionalInfo?.Trim();
         IsCompleted = false;
         CreatedAt = DateTime.UtcNow;
@@ -91,20 +91,20 @@ internal sealed class GameChecklist : Entity<Guid>
     /// </summary>
     /// <param name="userLibraryEntryId">The library entry this checklist belongs to</param>
     /// <param name="description">Step description</param>
-    /// <param name="order">Display order (0-based)</param>
+    /// <param name="displayOrder">Display order (0-based)</param>
     /// <param name="additionalInfo">Optional additional details</param>
     /// <returns>New GameChecklist instance</returns>
     public static GameChecklist Create(
         Guid userLibraryEntryId,
         string description,
-        int order,
+        int displayOrder,
         string? additionalInfo = null)
     {
         return new GameChecklist(
             id: Guid.NewGuid(),
             userLibraryEntryId: userLibraryEntryId,
             description: description,
-            order: order,
+            displayOrder: displayOrder,
             additionalInfo: additionalInfo);
     }
 
@@ -155,15 +155,15 @@ internal sealed class GameChecklist : Entity<Guid>
     }
 
     /// <summary>
-    /// Updates the order of this step.
+    /// Updates the display order of this step.
     /// </summary>
-    /// <param name="order">New order value</param>
-    public void UpdateOrder(int order)
+    /// <param name="displayOrder">New display order value</param>
+    public void UpdateOrder(int displayOrder)
     {
-        if (order < 0)
-            throw new ArgumentException("Order cannot be negative", nameof(order));
+        if (displayOrder < 0)
+            throw new ArgumentException("DisplayOrder cannot be negative", nameof(displayOrder));
 
-        Order = order;
+        DisplayOrder = displayOrder;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -187,23 +187,23 @@ internal sealed class GameChecklist : Entity<Guid>
     }
 
     /// <summary>
-    /// Moves this item up in the order (decreases order by 1).
+    /// Moves this item up in the order (decreases display order by 1).
     /// </summary>
     public void MoveUp()
     {
-        if (Order > 0)
+        if (DisplayOrder > 0)
         {
-            Order--;
+            DisplayOrder--;
             UpdatedAt = DateTime.UtcNow;
         }
     }
 
     /// <summary>
-    /// Moves this item down in the order (increases order by 1).
+    /// Moves this item down in the order (increases display order by 1).
     /// </summary>
     public void MoveDown()
     {
-        Order++;
+        DisplayOrder++;
         UpdatedAt = DateTime.UtcNow;
     }
 }

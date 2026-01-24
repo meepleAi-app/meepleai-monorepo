@@ -12,7 +12,7 @@ public sealed class GameFaq : Entity<Guid>
     private Guid _sharedGameId;
     private readonly string _question = string.Empty;
     private readonly string _answer = string.Empty;
-    private int _order;
+    private int _displayOrder;
     private int _upvoteCount;
     private readonly DateTime _createdAt;
     private DateTime? _updatedAt;
@@ -40,7 +40,7 @@ public sealed class GameFaq : Entity<Guid>
     /// <summary>
     /// Gets the display order of this FAQ.
     /// </summary>
-    public int Order => _order;
+    public int DisplayOrder => _displayOrder;
 
     /// <summary>
     /// Gets the number of upvotes for this FAQ.
@@ -72,7 +72,7 @@ public sealed class GameFaq : Entity<Guid>
         Guid sharedGameId,
         string question,
         string answer,
-        int order,
+        int displayOrder,
         int upvoteCount,
         DateTime createdAt,
         DateTime? updatedAt) : base(id)
@@ -81,7 +81,7 @@ public sealed class GameFaq : Entity<Guid>
         _sharedGameId = sharedGameId;
         _question = question;
         _answer = answer;
-        _order = order;
+        _displayOrder = displayOrder;
         _upvoteCount = upvoteCount;
         _createdAt = createdAt;
         _updatedAt = updatedAt;
@@ -94,7 +94,7 @@ public sealed class GameFaq : Entity<Guid>
         Guid sharedGameId,
         string question,
         string answer,
-        int order)
+        int displayOrder)
     {
         if (sharedGameId == Guid.Empty)
             throw new ArgumentException("SharedGameId cannot be empty", nameof(sharedGameId));
@@ -108,29 +108,29 @@ public sealed class GameFaq : Entity<Guid>
         if (string.IsNullOrWhiteSpace(answer))
             throw new ArgumentException("Answer is required", nameof(answer));
 
-        if (order < 0)
-            throw new ArgumentException("Order cannot be negative", nameof(order));
+        if (displayOrder < 0)
+            throw new ArgumentException("DisplayOrder cannot be negative", nameof(displayOrder));
 
         return new GameFaq(
             Guid.NewGuid(),
             sharedGameId,
             question,
             answer,
-            order,
+            displayOrder,
             upvoteCount: 0,
             DateTime.UtcNow,
             updatedAt: null);
     }
 
     /// <summary>
-    /// Updates the FAQ order.
+    /// Updates the FAQ display order.
     /// </summary>
-    public void UpdateOrder(int newOrder)
+    public void UpdateDisplayOrder(int newDisplayOrder)
     {
-        if (newOrder < 0)
-            throw new ArgumentException("Order cannot be negative", nameof(newOrder));
+        if (newDisplayOrder < 0)
+            throw new ArgumentException("DisplayOrder cannot be negative", nameof(newDisplayOrder));
 
-        _order = newOrder;
+        _displayOrder = newDisplayOrder;
         _updatedAt = DateTime.UtcNow;
     }
 

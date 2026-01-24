@@ -9,11 +9,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Api.Infrastructure.Data.Migrations
+namespace Api.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260124020237_AddUserGameStateAndSessionTracking")]
-    partial class AddUserGameStateAndSessionTracking
+    [Migration("20260124132454_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -2597,11 +2597,11 @@ namespace Api.Infrastructure.Data.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("NOW()");
 
-                    b.Property<int>("Order")
+                    b.Property<int>("DisplayOrder")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0)
-                        .HasColumnName("order");
+                        .HasColumnName("display_order");
 
                     b.Property<string>("Question")
                         .IsRequired()
@@ -2628,8 +2628,8 @@ namespace Api.Infrastructure.Data.Migrations
                     b.HasIndex("SharedGameId")
                         .HasDatabaseName("ix_game_faqs_shared_game_id");
 
-                    b.HasIndex("SharedGameId", "Order")
-                        .HasDatabaseName("ix_game_faqs_order");
+                    b.HasIndex("SharedGameId", "DisplayOrder")
+                        .HasDatabaseName("ix_game_faqs_display_order");
 
                     b.ToTable("game_faqs", (string)null);
                 });
@@ -3999,13 +3999,13 @@ namespace Api.Infrastructure.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("IsCompleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
-
-                    b.Property<int>("Order")
-                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -4018,12 +4018,12 @@ namespace Api.Infrastructure.Data.Migrations
                     b.HasIndex("UserLibraryEntryId")
                         .HasDatabaseName("ix_game_checklists_user_library_entry_id");
 
-                    b.HasIndex("UserLibraryEntryId", "Order")
-                        .HasDatabaseName("ix_game_checklists_entry_order");
+                    b.HasIndex("UserLibraryEntryId", "DisplayOrder")
+                        .HasDatabaseName("ix_game_checklists_entry_display_order");
 
                     b.ToTable("game_checklists", null, t =>
                         {
-                            t.HasCheckConstraint("chk_game_checklists_order", "\"order\" >= 0");
+                            t.HasCheckConstraint("chk_game_checklists_display_order", "\"display_order\" >= 0");
                         });
                 });
 

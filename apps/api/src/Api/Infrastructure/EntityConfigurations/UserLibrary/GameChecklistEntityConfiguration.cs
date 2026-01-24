@@ -28,7 +28,7 @@ internal class GameChecklistEntityConfiguration : IEntityTypeConfiguration<UserG
             .IsRequired()
             .HasMaxLength(500);
 
-        builder.Property(e => e.Order)
+        builder.Property(e => e.DisplayOrder)
             .IsRequired();
 
         builder.Property(e => e.IsCompleted)
@@ -51,14 +51,14 @@ internal class GameChecklistEntityConfiguration : IEntityTypeConfiguration<UserG
             .HasDatabaseName("ix_game_checklists_user_library_entry_id");
 
         // Composite index for ordered checklist queries
-        builder.HasIndex(e => new { e.UserLibraryEntryId, e.Order })
-            .HasDatabaseName("ix_game_checklists_entry_order");
+        builder.HasIndex(e => new { e.UserLibraryEntryId, e.DisplayOrder })
+            .HasDatabaseName("ix_game_checklists_entry_display_order");
 
         // Check constraints for domain validation
         builder.ToTable(t =>
         {
-            t.HasCheckConstraint("chk_game_checklists_order",
-                "\"order\" >= 0");
+            t.HasCheckConstraint("chk_game_checklists_display_order",
+                "\"display_order\" >= 0");
         });
     }
 }

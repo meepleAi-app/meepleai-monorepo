@@ -357,12 +357,12 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     /// <returns>The created GameChecklist item</returns>
     public GameChecklist AddChecklistItem(string description, string? additionalInfo = null)
     {
-        var nextOrder = _checklist.Count > 0 ? _checklist.Max(c => c.Order) + 1 : 0;
+        var nextOrder = _checklist.Count > 0 ? _checklist.Max(c => c.DisplayOrder) + 1 : 0;
 
         var item = GameChecklist.Create(
             userLibraryEntryId: Id,
             description: description,
-            order: nextOrder,
+            displayOrder: nextOrder,
             additionalInfo: additionalInfo);
 
         _checklist.Add(item);
@@ -384,7 +384,7 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
         _checklist.Remove(item);
 
         // Reorder remaining items
-        var orderedItems = _checklist.OrderBy(c => c.Order).ToList();
+        var orderedItems = _checklist.OrderBy(c => c.DisplayOrder).ToList();
         for (int i = 0; i < orderedItems.Count; i++)
         {
             orderedItems[i].UpdateOrder(i);
@@ -421,8 +421,8 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
         => _checklist.Count > 0 && _checklist.All(c => c.IsCompleted);
 
     /// <summary>
-    /// Gets the checklist items ordered by their Order property.
+    /// Gets the checklist items ordered by their DisplayOrder property.
     /// </summary>
     public IReadOnlyList<GameChecklist> GetOrderedChecklist()
-        => _checklist.OrderBy(c => c.Order).ToList().AsReadOnly();
+        => _checklist.OrderBy(c => c.DisplayOrder).ToList().AsReadOnly();
 }

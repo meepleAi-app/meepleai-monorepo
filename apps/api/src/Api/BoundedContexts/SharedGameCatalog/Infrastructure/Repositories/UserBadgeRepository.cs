@@ -120,6 +120,17 @@ internal sealed class UserBadgeRepository : IUserBadgeRepository
         return entities.Select(MapToDomain).ToList();
     }
 
+    public async Task<List<Guid>> GetAllDistinctUserIdsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<UserBadgeEntity>()
+            .AsNoTracking()
+            .Where(e => e.RevokedAt == null)
+            .Select(e => e.UserId)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     #region Mapping Methods
 
     private static UserBadge MapToDomain(UserBadgeEntity entity)

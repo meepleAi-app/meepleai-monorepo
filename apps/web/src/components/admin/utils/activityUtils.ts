@@ -6,7 +6,7 @@
  */
 
 import { formatDistanceToNow } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { enUS, it } from 'date-fns/locale';
 
 /**
  * Activity event data structure shared across all activity components.
@@ -103,25 +103,30 @@ export function getActivityType(eventType: string): ActivityType {
 }
 
 /**
- * Formats a timestamp as a relative time string in Italian.
+ * Formats a timestamp as a relative time string with locale support.
  * Falls back to ISO string if parsing fails.
  *
  * @param timestamp - ISO 8601 timestamp string
- * @returns Relative time string in Italian (e.g., "5 minuti fa")
+ * @param locale - UI locale for formatting ('en' | 'it')
+ * @returns Relative time string in the specified locale
  *
  * @example
  * ```ts
- * formatRelativeTimestamp('2025-12-11T10:00:00Z')
+ * formatRelativeTimestamp('2025-12-11T10:00:00Z', 'en')
+ * // Returns: "2 hours ago"
+ *
+ * formatRelativeTimestamp('2025-12-11T10:00:00Z', 'it')
  * // Returns: "2 ore fa"
  * ```
  */
-export function formatRelativeTimestamp(timestamp: string): string {
+export function formatRelativeTimestamp(timestamp: string, locale: 'en' | 'it' = 'en'): string {
   try {
     const date = new Date(timestamp);
     if (isNaN(date.getTime())) {
       return timestamp;
     }
-    return formatDistanceToNow(date, { addSuffix: true, locale: it });
+    const dateFnsLocale = locale === 'it' ? it : enUS;
+    return formatDistanceToNow(date, { addSuffix: true, locale: dateFnsLocale });
   } catch {
     return timestamp;
   }

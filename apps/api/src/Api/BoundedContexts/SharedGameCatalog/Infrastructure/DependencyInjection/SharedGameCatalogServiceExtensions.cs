@@ -67,6 +67,7 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
         // Issue #2729: Quartz.NET job registration for review lock auto-release
+        // Issue #2807: Quartz.NET job registration for top contributor badge assignment
         // Note: Quartz scheduler is configured globally in Administration context.
         // Only register job definition here - do NOT call AddQuartzHostedService (would duplicate).
         services.AddQuartz(q =>
@@ -84,6 +85,18 @@ internal static class SharedGameCatalogServiceExtensions
                     .WithIntervalInMinutes(5)
                     .RepeatForever())
                 .WithDescription("Runs every 5 minutes to auto-release expired review locks"));
+
+            // Register top contributor badge job (Issue #2807)
+            q.AddJob<TopContributorBadgeJob>(opts => opts
+                .WithIdentity("top-contributor-badge-job", "shared-game-catalog")
+                .StoreDurably(true));
+
+            // Trigger: Run monthly on the 1st day at midnight UTC
+            q.AddTrigger(opts => opts
+                .ForJob("top-contributor-badge-job", "shared-game-catalog")
+                .WithIdentity("top-contributor-badge-trigger", "shared-game-catalog")
+                .WithCronSchedule("0 0 1 * * ?")
+                .WithDescription("Runs monthly on the 1st day at midnight UTC to assign TOP_CONTRIBUTOR badge to top 10 contributors"));
         });
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs

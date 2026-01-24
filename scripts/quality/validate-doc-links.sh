@@ -1,5 +1,11 @@
 #!/bin/bash
-
+#
+# ⚠️  DEPRECATED: This bash script is deprecated.
+# ✅  USE: scripts/quality/validate-doc-links.ps1 (PowerShell)
+#
+# PowerShell version works on Windows, Linux, and macOS with PowerShell Core.
+# See scripts/MIGRATION.md for migration guide.
+#
 # Documentation Link Validator
 # Tests all markdown links in INDEX.md and README.md
 

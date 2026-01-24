@@ -199,7 +199,7 @@ export default function SessionDetailsPage() {
   if (!id) {
     return (
       <div className="container mx-auto py-8 px-4">
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden p-8">
+        <div className="bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none rounded-xl border border-border/50 dark:border-border/30 shadow-lg overflow-hidden p-8">
           <h1 className="text-2xl font-bold mb-4">Invalid Session ID</h1>
           <p className="text-muted-foreground mb-4">No session ID provided.</p>
           <Button onClick={() => router.push('/sessions')}>Back to Sessions</Button>

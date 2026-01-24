@@ -62,7 +62,7 @@ import { getErrorMessage } from '@/lib/utils/errorHandler';
 const OAUTH_PROVIDERS = [
   { id: 'google', name: 'Google', color: 'bg-blue-600 hover:bg-blue-700' },
   { id: 'discord', name: 'Discord', color: 'bg-indigo-600 hover:bg-indigo-700' },
-  { id: 'github', name: 'GitHub', color: 'bg-slate-800 hover:bg-slate-900' },
+  { id: 'github', name: 'GitHub', color: 'bg-card hover:bg-muted' },
 ];
 
 interface OAuthAccount {
@@ -623,19 +623,19 @@ export default function SettingsPage() {
 
   if (loading && !profile) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-dvh flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 py-8 px-4">
+    <div className="min-h-dvh bg-background py-8 px-4">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1
-            className="text-3xl font-bold text-slate-900 dark:text-white"
+            className="text-3xl font-bold text-foreground"
             data-testid="settings-heading"
           >
             Settings
@@ -964,14 +964,14 @@ export default function SettingsPage() {
                               Scan this QR code with your authenticator app (Google Authenticator,
                               Authy, etc.)
                             </p>
-                            <div className="flex justify-center bg-white p-4 rounded border">
+                            <div className="flex justify-center bg-card p-4 rounded border border-border/50 dark:border-border/30">
                               <QRCodeSVG value={setup.qrCodeUrl} size={256} />
                             </div>
                             <details className="text-sm">
                               <summary className="cursor-pointer text-slate-600 hover:text-slate-900">
                                 Can't scan? Enter manually
                               </summary>
-                              <div className="mt-2 p-3 bg-slate-100 dark:bg-slate-800 rounded">
+                              <div className="mt-2 p-3 bg-muted dark:bg-card rounded">
                                 <code className="text-xs font-mono">{setup.secret}</code>
                               </div>
                             </details>
@@ -990,7 +990,7 @@ export default function SettingsPage() {
                                 {setup.backupCodes?.map((code: string, i: number) => (
                                   <div
                                     key={i}
-                                    className="bg-white px-3 py-2 rounded font-mono text-sm text-center text-black"
+                                    className="bg-card px-3 py-2 rounded font-mono text-sm text-center text-foreground"
                                   >
                                     {code}
                                   </div>
@@ -1078,13 +1078,13 @@ export default function SettingsPage() {
                       className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-muted dark:bg-muted/70 flex items-center justify-center">
                           <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                             {provider.name[0]}
                           </span>
                         </div>
                         <div>
-                          <div className="font-medium text-slate-900 dark:text-white">
+                          <div className="font-medium text-foreground">
                             {provider.name}
                           </div>
                           <div className="text-sm text-slate-500 dark:text-slate-400">
@@ -1214,7 +1214,7 @@ export default function SettingsPage() {
                         >
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-2">
-                              <div className="font-medium text-slate-900 dark:text-white">
+                              <div className="font-medium text-foreground">
                                 {getDeviceInfo(session.userAgent)}
                               </div>
                               {isCurrent && (
@@ -1246,7 +1246,7 @@ export default function SettingsPage() {
                                   <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
                                     Show user agent
                                   </summary>
-                                  <div className="mt-1 p-2 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono break-all">
+                                  <div className="mt-1 p-2 bg-muted dark:bg-card rounded text-xs font-mono break-all">
                                     {session.userAgent}
                                   </div>
                                 </details>

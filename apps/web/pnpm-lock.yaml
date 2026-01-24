@@ -21598,3 +21598,4 @@ snapshots:
       immer: 11.0.1
       react: 19.2.1
       use-sync-external-store: 1.6.0(react@19.2.1)
+# Lockfile regenerated to fix CI cache issue (Issue #2759)

@@ -9,7 +9,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 // TODO(#2759): Re-enable confetti after fixing pnpm-lock.yaml
 // import Confetti from 'react-confetti';

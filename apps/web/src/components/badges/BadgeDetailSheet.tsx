@@ -160,8 +160,9 @@ export function BadgeDetailSheet({
 
 /**
  * Helper: Get confetti configuration based on tier
+ * TODO(#2759): Re-enable after fixing react-confetti
  */
-function getConfettiConfig(tier: BadgeTier) {
+/* function getConfettiConfig(tier: BadgeTier) {
   const configs = {
     [BadgeTier.Diamond]: {
       elementCount: 200,
@@ -185,12 +186,13 @@ function getConfettiConfig(tier: BadgeTier) {
     },
   };
   return configs[tier];
-}
+} */
 
 /**
  * Helper: Get tier glow color
+ * TODO(#2759): Re-enable after fixing react-confetti
  */
-function getTierGlow(tier: string): string {
+/* function getTierGlow(tier: string): string {
   const glows: Record<string, string> = {
     Diamond: 'rgba(6, 182, 212, 0.8)',
     Platinum: 'rgba(203, 213, 225, 0.6)',
@@ -199,6 +201,6 @@ function getTierGlow(tier: string): string {
     Bronze: 'rgba(217, 119, 6, 0.6)',
   };
   return glows[tier] || 'rgba(0, 0, 0, 0.3)';
-}
+} */
 
 BadgeDetailSheet.displayName = 'BadgeDetailSheet';

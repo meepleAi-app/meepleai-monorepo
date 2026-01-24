@@ -1,5 +1,11 @@
 #!/bin/bash
-
+#
+# ⚠️  DEPRECATED: This bash script is deprecated.
+# ✅  USE: scripts/testing/test-oauth-health.ps1 (PowerShell)
+#
+# PowerShell version works on Windows, Linux, and macOS with PowerShell Core.
+# See scripts/MIGRATION.md for migration guide.
+#
 # Test OAuth Configuration via Health Check API
 # Validates that all OAuth providers are correctly configured
 

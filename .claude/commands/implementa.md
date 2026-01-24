@@ -56,8 +56,8 @@ Workflow completo di implementazione issue con:
 
 1. **Crea PR** verso branch padre
 2. **Esegui code review** automatica (`/code-review:code-review`)
-3. **Risolvi problemi** con confidence score >= 75
-4. **Ripeti code review** finché tutti i problemi >= 75 sono risolti
+3. **Risolvi problemi** con confidence score >= 70
+4. **Ripeti code review** finché tutti i problemi >= 70 sono risolti
 5. **Aggiorna issue** checkbox su GitHub via `mcp__MCP_DOCKER__issue_write`
 
 ### Phase 7: Chiusura
@@ -107,12 +107,7 @@ Phase 5: Validazione ✅
 Phase 6: PR e Code Review ✅
   - PR created: <url>
   - Code review: X issues found
-  - Issues resolved (score >= 75): Y/Z
-Phase 7: Chiusura ✅
-Phase 6: PR e Code Review ✅
-  - PR created: <url>
-  - Code review: X issues found
-  - Issues resolved (score > 75): Y/Z
+  - Issues resolved (score >= 70): Y/Z
 Phase 7: Chiusura ✅
 
 Issue #<N> completata e chiusa.
@@ -135,15 +130,15 @@ Esegui `/sc:implement --uc Issue $ARGUMENTS` con il seguente workflow:
 7. **Valida**: Esegui tests, verifica no warning
 8. **Crea PR**: Usa `gh pr create` con summary
 9. **Code review**: Esegui `/code-review:code-review` sulla PR
-10. **Risolvi problemi**: Fix automatico di tutti i problemi con confidence score >= 75
-11. **Ripeti code review**: Continua finché non ci sono più problemi con score >= 75
+10. **Risolvi problemi**: Fix automatico di tutti i problemi con confidence score >= 70
+11. **Ripeti code review**: Continua finché non ci sono più problemi con score >= 70
 12. **Aggiorna issue checkbox**: Via `mcp__MCP_DOCKER__issue_write` aggiorna task completati
 13. **Chiudi issue**: Stato `closed`, reason `completed`
 14. **Merge**: Al branch padre
 15. **Cleanup**: Elimina branch locale (`git branch -D`), prune remotes (`git remote prune origin`)
 16. **Code review**: Esegui `/code-review:code-review` sulla PR
-17. **Risolvi problemi**: Fix automatico di tutti i problemi con confidence score > 75
-18. **Ripeti code review**: Continua finché non ci sono più problemi con score > 75
+17. **Risolvi problemi**: Fix automatico di tutti i problemi con confidence score > 70
+18. **Ripeti code review**: Continua finché non ci sono più problemi con score > 70
 19. **Aggiorna issue checkbox**: Via `mcp__MCP_DOCKER__issue_write` aggiorna task completati
 20. **Chiudi issue**: Stato `closed`, reason `completed`
 21. **Merge**: Al branch padre
@@ -157,4 +152,4 @@ Esegui `/sc:implement --uc Issue $ARGUMENTS` con il seguente workflow:
 - Non interrompere workflow, pianifica prima
 - Non aspettare CI (alpha)
 - No nuovi warning
-- Code review: risolvi SOLO problemi con score >= 75 (ignora score < 75)
+- Code review: risolvi SOLO problemi con score >= 70 (ignora score < 70)

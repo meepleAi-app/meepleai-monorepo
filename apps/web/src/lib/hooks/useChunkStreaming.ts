@@ -180,9 +180,9 @@ export function useChunkStreaming(
   const {
     maxReconnectAttempts = 3,
     autoReconnect = false,
-    onChunk,
-    onComplete,
-    onError,
+    onChunk: _onChunk,
+    onComplete: _onComplete,
+    onError: _onError,
     onConnect,
   } = options;
 

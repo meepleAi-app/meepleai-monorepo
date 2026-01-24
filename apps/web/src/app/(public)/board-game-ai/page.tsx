@@ -70,7 +70,7 @@ export default function BoardGameAI() {
   };
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-white">
+    <div className="min-h-dvh bg-background text-white">
       {/* Header */}
       <header className="sticky top-0 glass z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
@@ -304,7 +304,7 @@ export default function BoardGameAI() {
         </section>
 
         {/* How It Works Section */}
-        <section ref={howItWorksRef} className="py-20 px-6 bg-slate-950">
+        <section ref={howItWorksRef} className="py-20 px-6 bg-background">
           <div className="max-w-6xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -370,7 +370,7 @@ export default function BoardGameAI() {
               onClick={handleGetStarted}
               isLoading={loading}
               loadingText="Loading..."
-              className="text-lg bg-white text-primary hover:bg-slate-100"
+              className="text-lg bg-card text-primary hover:bg-muted"
               data-testid="cta-get-started"
             >
               {authUser ? 'Ask Your First Question' : 'Get Started Free'}
@@ -383,7 +383,7 @@ export default function BoardGameAI() {
       </main>
 
       {/* Footer */}
-      <footer className="py-16 px-6 bg-slate-950 border-t border-white/10">
+      <footer className="py-16 px-6 bg-background border-t border-white/10">
         <div className="max-w-6xl mx-auto grid md:grid-cols-4 gap-12 mb-12">
           <div className="space-y-4">
             <div className="flex items-center gap-3">

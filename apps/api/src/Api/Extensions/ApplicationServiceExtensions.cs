@@ -222,6 +222,9 @@ internal static class ApplicationServiceExtensions
         // ADMIN-02: Analytics dashboard service (still used by handlers as infrastructure)
         services.AddScoped<IAdminStatsService, AdminStatsService>();
 
+        // Issue #2854: User dashboard service for aggregated dashboard data
+        services.AddScoped<IUserDashboardService, UserDashboardService>();
+
         return services;
     }
 

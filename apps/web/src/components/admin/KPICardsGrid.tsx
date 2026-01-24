@@ -1,12 +1,13 @@
 /**
- * KPICardsGrid Component - Issue #2785
+ * KPICardsGrid Component - Issue #2785 (Updated for Issue #2792)
  *
  * Grid layout for KPI cards with responsive columns:
  * - Mobile: 1 column
  * - Tablet: 2 columns
  * - Desktop: 4 columns
  *
- * Includes helper function to map DashboardMetrics to KPICardData.
+ * Updated to calculate real trends from DashboardStats time series data.
+ * No longer uses mock data - fully integrated with useDashboardData hook.
  *
  * Part of Epic #2783 - Admin Dashboard Redesign
  */
@@ -36,11 +37,11 @@ export interface KPICardsGridProps {
 export interface BuildKPICardsOptions {
   /** Number of games pending approval */
   pendingGamesCount?: number;
-  /** User trend percentage (vs last period) */
-  userTrendPercent?: number;
-  /** Games trend count (new this week) */
-  gamesTrendCount?: number;
-  /** Estimated AI cost in EUR */
+  /** User trend data from DashboardStats */
+  userTrendData?: Array<{ date: string; value: number }>;
+  /** Session trend data from DashboardStats */
+  sessionTrendData?: Array<{ date: string; value: number }>;
+  /** Estimated AI cost in EUR (calculated if not provided) */
   estimatedAiCostEur?: number;
 }
 
@@ -51,7 +52,7 @@ export interface BuildKPICardsOptions {
 /**
  * Calculate trend percentage from time series data
  *
- * @param trendData Array of {date, value} points
+ * @param trendData Array of {date, value} points from TimeSeriesDataPoint
  * @param periodDays Number of days to compare (default: 7)
  * @returns Percentage change or undefined if insufficient data
  */
@@ -99,16 +100,18 @@ export function estimateAiCost(totalTokens: number): number {
 }
 
 /**
- * Build KPI cards array from dashboard metrics
+ * Build KPI cards array from dashboard metrics with real trend calculation
  *
  * Maps DashboardMetrics to the 4 main KPI cards:
- * 1. Utenti Totali - with trend %
- * 2. Sessioni Attive - real-time
+ * 1. Utenti Totali - with calculated monthly trend
+ * 2. Sessioni Attive - real-time with weekly trend
  * 3. Giochi in Catalogo - with pending badge
  * 4. Richieste AI Oggi - with cost estimate
  *
+ * Updated for Issue #2792 - Uses calculateTrendPercent for real trend data
+ *
  * @param metrics Dashboard metrics from API
- * @param options Additional options for trends and badges
+ * @param options Additional options including trend data arrays
  * @returns Array of KPICardData
  */
 export function buildKPICards(
@@ -117,8 +120,8 @@ export function buildKPICards(
 ): KPICardData[] {
   const {
     pendingGamesCount = 0,
-    userTrendPercent,
-    gamesTrendCount,
+    userTrendData,
+    sessionTrendData,
     estimatedAiCostEur,
   } = options;
 
@@ -149,6 +152,10 @@ export function buildKPICards(
     ];
   }
 
+  // Calculate trends from time series data
+  const userTrendPercent = userTrendData ? calculateTrendPercent(userTrendData, 30) : undefined;
+  const sessionTrendPercent = sessionTrendData ? calculateTrendPercent(sessionTrendData, 7) : undefined;
+
   // Calculate AI cost if not provided
   const aiCost = estimatedAiCostEur ?? estimateAiCost(metrics.totalTokensUsed);
 
@@ -163,14 +170,14 @@ export function buildKPICards(
     {
       title: 'Sessioni Attive',
       value: metrics.activeSessions.toLocaleString('it-IT'),
+      trend: sessionTrendPercent,
+      trendLabel: sessionTrendPercent !== undefined ? 'vs settimana scorsa' : undefined,
       icon: <Activity className="h-5 w-5" />,
       subtitle: 'in tempo reale',
     },
     {
       title: 'Giochi in Catalogo',
       value: metrics.totalGames.toLocaleString('it-IT'),
-      trend: gamesTrendCount,
-      trendLabel: gamesTrendCount !== undefined ? 'nuovi questa settimana' : undefined,
       icon: <Gamepad2 className="h-5 w-5" />,
       badge: pendingGamesCount > 0 ? `${pendingGamesCount} in attesa` : undefined,
       badgeVariant: pendingGamesCount > 0 ? 'warning' : undefined,
@@ -192,7 +199,7 @@ export function KPICardsGrid({
   cards,
   className,
   'data-testid': testId,
-}: KPICardsGridProps) {
+}: KPICardsGridProps): JSX.Element {
   return (
     <div
       className={cn(

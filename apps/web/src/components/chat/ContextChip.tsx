@@ -144,7 +144,7 @@ function SourceBadge({ source }: SourceBadgeProps) {
       case 'Wiki':
         return 'bg-green-100 text-green-700 border-green-300';
       default:
-        return 'bg-gray-100 text-gray-700 border-gray-300';
+        return 'bg-muted text-muted-foreground border-border/50 dark:border-border/70';
     }
   };
 

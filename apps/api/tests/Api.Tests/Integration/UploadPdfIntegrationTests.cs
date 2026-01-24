@@ -127,7 +127,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         {
             try
             {
-                await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+                await _dbContext.Database.MigrateAsync(TestCancellationToken);
                 break;
             }
             catch (NpgsqlException) when (attempt < 2)
@@ -751,7 +751,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         // Use real PostgreSQL DbContext
         var testDbContext = failureServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await testDbContext.Database.EnsureCreatedAsync();
+        await testDbContext.Database.MigrateAsync();
         await CleanDatabaseAsync(testDbContext);
 
         // Seed test data in PostgreSQL
@@ -809,7 +809,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var constraintServiceProvider = services.BuildServiceProvider();
         var testDbContext = constraintServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await testDbContext.Database.EnsureCreatedAsync();
+        await testDbContext.Database.MigrateAsync();
         await CleanDatabaseAsync(testDbContext);
 
         // Seed user but NOT game - this will cause FK constraint violation
@@ -867,7 +867,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var connectionServiceProvider = services.BuildServiceProvider();
         using var seedScope = connectionServiceProvider.CreateScope();
         var testDbContext = seedScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await testDbContext.Database.EnsureCreatedAsync();
+        await testDbContext.Database.MigrateAsync();
         await CleanDatabaseAsync(testDbContext);
 
         var testUser = await SeedUserInContextAsync(testDbContext);
@@ -932,7 +932,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var contextA = providerA.GetRequiredService<MeepleAiDbContext>();
         var contextB = providerB.GetRequiredService<MeepleAiDbContext>();
 
-        await contextA.Database.EnsureCreatedAsync(TestCancellationToken);
+        await contextA.Database.MigrateAsync(TestCancellationToken);
         await CleanDatabaseAsync(contextA);
 
         var testUser = await SeedUserInContextAsync(contextA);
@@ -1037,7 +1037,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var permissionServiceProvider = services.BuildServiceProvider();
 
         var testDbContext = permissionServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await testDbContext.Database.EnsureCreatedAsync();
+        await testDbContext.Database.MigrateAsync();
         await CleanDatabaseAsync(testDbContext);
 
         var testUser = await SeedUserInContextAsync(testDbContext);
@@ -1185,6 +1185,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         // Use the correct DbContext from the custom service provider
         var testDbContext = cacheServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        // FIX: Use EnsureCreatedAsync for InMemoryDatabase (MigrateAsync only works with relational providers)
         await testDbContext.Database.EnsureCreatedAsync();
 
         // Seed test data in the custom DbContext
@@ -1239,6 +1240,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         // Use the correct DbContext from the custom service provider
         var testDbContext = backgroundServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        // FIX: Use EnsureCreatedAsync for InMemoryDatabase (MigrateAsync only works with relational providers)
         await testDbContext.Database.EnsureCreatedAsync();
 
         // Seed test data in the custom DbContext

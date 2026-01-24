@@ -155,15 +155,15 @@ public sealed class BadgeEvaluationOnApprovalHandlerTests
 
     private static Badge CreateBadge(string code, BadgeTier tier)
     {
-        var requirement = BadgeRequirement.FirstContribution();
+        var requirement = BadgeRequirement.ForFirstContribution();
         return Badge.Create(
             code,
             $"{code} Badge",
             "Test badge description",
             tier,
             BadgeCategory.Contribution,
+            requirement,
             null,
-            1,
-            requirement);
+            1);
     }
 }

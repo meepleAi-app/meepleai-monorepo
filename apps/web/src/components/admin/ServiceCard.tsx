@@ -43,27 +43,30 @@ export interface ServiceCardProps {
 const stateConfig = {
   Healthy: {
     icon: CheckCircleIcon,
-    bgColor: 'bg-green-50/50',
-    borderColor: 'border-green-200',
-    badgeBg: 'bg-green-100',
-    badgeText: 'text-green-700',
-    iconColor: 'text-green-600',
+    bgColor: 'bg-green-50/50 dark:bg-green-950/30',
+    borderColor: 'border-green-200 dark:border-green-800',
+    badgeBg: 'bg-green-100 dark:bg-green-900/50',
+    badgeText: 'text-green-700 dark:text-green-300',
+    iconColor: 'text-green-600 dark:text-green-400',
+    dotColor: 'bg-green-500',
   },
   Degraded: {
     icon: AlertTriangleIcon,
-    bgColor: 'bg-yellow-50/50',
-    borderColor: 'border-yellow-200',
-    badgeBg: 'bg-yellow-100',
-    badgeText: 'text-yellow-700',
-    iconColor: 'text-yellow-600',
+    bgColor: 'bg-yellow-50/50 dark:bg-amber-950/30',
+    borderColor: 'border-yellow-200 dark:border-amber-800',
+    badgeBg: 'bg-yellow-100 dark:bg-amber-900/50',
+    badgeText: 'text-yellow-700 dark:text-amber-300',
+    iconColor: 'text-yellow-600 dark:text-amber-400',
+    dotColor: 'bg-amber-500',
   },
   Unhealthy: {
     icon: XCircleIcon,
-    bgColor: 'bg-red-50/50',
-    borderColor: 'border-red-200',
-    badgeBg: 'bg-red-100',
-    badgeText: 'text-red-700',
-    iconColor: 'text-red-600',
+    bgColor: 'bg-red-50/50 dark:bg-red-950/30',
+    borderColor: 'border-red-200 dark:border-red-800',
+    badgeBg: 'bg-red-100 dark:bg-red-900/50',
+    badgeText: 'text-red-700 dark:text-red-300',
+    iconColor: 'text-red-600 dark:text-red-400',
+    dotColor: 'bg-red-500',
   },
 } as const;
 
@@ -108,7 +111,10 @@ export function ServiceCard({
 
   if (loading) {
     return (
-      <Card className={cn('border-gray-200', className)} data-testid="service-card-loading">
+      <Card
+        className={cn('border-border/50 dark:border-border/30', className)}
+        data-testid="service-card-loading"
+      >
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
             <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
@@ -142,9 +148,23 @@ export function ServiceCard({
 
           {/* Service Info */}
           <div className="flex-1 min-w-0">
-            {/* Service Name + Badge */}
+            {/* Service Name + Pulsating Dot + Badge */}
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-sm font-semibold text-gray-900 truncate">{displayName}</h3>
+              <h3 className="text-sm font-semibold text-foreground truncate">
+                {displayName}
+              </h3>
+              {/* Pulsating Status Dot - Issue #2786 */}
+              <span className="relative flex h-3 w-3" aria-hidden="true">
+                <span
+                  className={cn(
+                    'absolute inline-flex h-full w-full animate-ping rounded-full opacity-75',
+                    config.dotColor
+                  )}
+                />
+                <span
+                  className={cn('relative inline-flex h-3 w-3 rounded-full', config.dotColor)}
+                />
+              </span>
               <span
                 className={cn(
                   'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
@@ -158,10 +178,10 @@ export function ServiceCard({
             </div>
 
             {/* Metrics */}
-            <div className="space-y-1 text-xs text-gray-600">
+            <div className="space-y-1 text-xs text-muted-foreground">
               {responseTimeMs !== undefined && (
                 <div className="flex items-center gap-1.5">
-                  <ActivityIcon className="h-3 w-3 text-gray-400" aria-hidden="true" />
+                  <ActivityIcon className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />
                   <span>
                     {i18n.labels.responseTime}: {formatResponseTime(responseTimeMs, locale)}
                   </span>
@@ -169,15 +189,15 @@ export function ServiceCard({
               )}
 
               {lastCheck && (
-                <div className="text-gray-500">
+                <div className="text-muted-foreground">
                   {i18n.labels.lastCheck}: {formatTimestamp(lastCheck, locale)}
                 </div>
               )}
 
               {/* Error Message */}
               {errorMessage && status !== 'Healthy' && (
-                <div className="mt-2 p-2 bg-white/60 rounded border border-gray-200">
-                  <p className="text-xs text-gray-700 break-words">
+                <div className="mt-2 p-2 bg-card/60 backdrop-blur-[8px] dark:bg-card/60 dark:backdrop-blur-none rounded border border-border/50 dark:border-border/30">
+                  <p className="text-xs text-foreground break-words">
                     <span className="font-medium">{i18n.labels.errorMessage}:</span> {errorMessage}
                   </p>
                 </div>

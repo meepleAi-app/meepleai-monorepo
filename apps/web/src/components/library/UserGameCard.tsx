@@ -15,7 +15,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { MessageCircle, Settings, Upload, Edit2, Trash2, Library } from 'lucide-react';
+import { MessageCircle, Settings, Upload, Edit2, Trash2, Library, Share2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -26,6 +26,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { useAgentConfig } from '@/hooks/queries';
+import { useCanShareGame } from '@/hooks/queries/useCanShareGame';
 import type { UserLibraryEntry } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +36,8 @@ interface UserGameCardProps {
   onUploadPdf: (gameId: string, gameTitle: string) => void;
   onEditNotes: (gameId: string, gameTitle: string, currentNotes?: string | null) => void;
   onRemove: (gameId: string, gameTitle: string) => void;
+  /** Share game with community (Issue #2743) */
+  onShare?: (gameId: string, gameTitle: string) => void;
   /** Selection mode props (Issue #2613) */
   selectionMode?: boolean;
   isSelected?: boolean;
@@ -75,6 +78,7 @@ export function UserGameCard({
   onUploadPdf,
   onEditNotes,
   onRemove,
+  onShare,
   selectionMode = false,
   isSelected = false,
   onSelect,
@@ -82,6 +86,9 @@ export function UserGameCard({
 }: UserGameCardProps) {
   // Fetch agent configuration status
   const { data: agentConfig } = useAgentConfig(game.gameId, true);
+
+  // Check if game can be shared (Issue #2743)
+  const { canShare, reason: shareBlockReason } = useCanShareGame(game.gameId);
 
   // Agent status
   const agentConfigured = agentConfig !== null;
@@ -265,6 +272,21 @@ export function UserGameCard({
               <Trash2 className="h-3 w-3" />
             </Button>
           </div>
+
+          {/* Share with Community Button (Issue #2743) */}
+          {onShare && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => onShare(game.gameId, game.gameTitle)}
+              disabled={!canShare}
+              title={shareBlockReason || 'Share this game with the community'}
+            >
+              <Share2 className="mr-2 h-3 w-3" />
+              {canShare ? 'Share with Community' : shareBlockReason || 'Cannot Share'}
+            </Button>
+          )}
         </div>
 
         {/* Added Date */}

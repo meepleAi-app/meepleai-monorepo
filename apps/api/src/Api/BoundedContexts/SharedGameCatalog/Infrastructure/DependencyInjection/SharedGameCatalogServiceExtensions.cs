@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
+using Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.BackgroundAnalysis;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -8,6 +9,7 @@ using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Quartz;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
 
@@ -58,8 +60,31 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IRulebookMerger, LlmRulebookMerger>();
         services.AddScoped<IBackgroundRulebookAnalysisOrchestrator, BackgroundRulebookAnalysisOrchestrator>();
 
+        // Issue #2729: Review lock configuration service with caching (Singleton for cache sharing)
+        services.AddSingleton<IReviewLockConfigService, ReviewLockConfigService>();
+
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
+
+        // Issue #2729: Quartz.NET job registration for review lock auto-release
+        // Note: Quartz scheduler is configured globally in Administration context.
+        // Only register job definition here - do NOT call AddQuartzHostedService (would duplicate).
+        services.AddQuartz(q =>
+        {
+            // Register auto-release expired reviews job
+            q.AddJob<AutoReleaseExpiredReviewsJob>(opts => opts
+                .WithIdentity("auto-release-expired-reviews-job", "shared-game-catalog")
+                .StoreDurably(true));
+
+            // Trigger: Run every 5 minutes
+            q.AddTrigger(opts => opts
+                .ForJob("auto-release-expired-reviews-job", "shared-game-catalog")
+                .WithIdentity("auto-release-expired-reviews-trigger", "shared-game-catalog")
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInMinutes(5)
+                    .RepeatForever())
+                .WithDescription("Runs every 5 minutes to auto-release expired review locks"));
+        });
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

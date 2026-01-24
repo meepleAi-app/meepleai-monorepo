@@ -12,6 +12,9 @@
 | **Staging** | https://staging.meepleai.com | Pre-production testing |
 | **Production** | https://app.meepleai.com | Live production |
 
+**📚 Related Guides**:
+- **[GitHub Alternatives & Cost Optimization](github-alternatives-cost-optimization.md)** - Zero-cost CI/CD strategies, self-hosted runners, Oracle Always Free setup
+
 ---
 
 ## Architecture Overview

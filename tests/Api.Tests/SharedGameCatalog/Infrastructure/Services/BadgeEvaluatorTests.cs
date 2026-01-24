@@ -33,7 +33,7 @@ public sealed class BadgeEvaluatorTests
     public async Task CheckBadgeRequirementAsync_FirstContribution_WhenCountIsOne_ReturnsTrue()
     {
         // Arrange
-        var requirement = BadgeRequirement.FirstContribution();
+        var requirement = BadgeRequirement.ForFirstContribution();
         _shareRequestRepo.Setup(r => r.CountApprovedByUserAsync(_userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
@@ -48,7 +48,7 @@ public sealed class BadgeEvaluatorTests
     public async Task CheckBadgeRequirementAsync_FirstContribution_WhenCountIsGreaterThanOne_ReturnsFalse()
     {
         // Arrange
-        var requirement = BadgeRequirement.FirstContribution();
+        var requirement = BadgeRequirement.ForFirstContribution();
         _shareRequestRepo.Setup(r => r.CountApprovedByUserAsync(_userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(5);
 
@@ -63,7 +63,7 @@ public sealed class BadgeEvaluatorTests
     public async Task CheckBadgeRequirementAsync_ContributionCount_WhenMeetsMinimum_ReturnsTrue()
     {
         // Arrange
-        var requirement = BadgeRequirement.ContributionCount(10);
+        var requirement = BadgeRequirement.ForContributionCount(10);
         _shareRequestRepo.Setup(r => r.CountApprovedByUserAsync(_userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(15);
 
@@ -78,7 +78,7 @@ public sealed class BadgeEvaluatorTests
     public async Task CheckBadgeRequirementAsync_DocumentCount_WhenMeetsMinimum_ReturnsTrue()
     {
         // Arrange
-        var requirement = BadgeRequirement.DocumentCount(10);
+        var requirement = BadgeRequirement.ForDocumentCount(10);
         _documentRepo.Setup(r => r.CountByUserAsync(_userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(15);
 
@@ -93,7 +93,7 @@ public sealed class BadgeEvaluatorTests
     public async Task CheckBadgeRequirementAsync_DocumentCount_WhenBelowMinimum_ReturnsFalse()
     {
         // Arrange
-        var requirement = BadgeRequirement.DocumentCount(10);
+        var requirement = BadgeRequirement.ForDocumentCount(10);
         _documentRepo.Setup(r => r.CountByUserAsync(_userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(5);
 
@@ -108,8 +108,8 @@ public sealed class BadgeEvaluatorTests
     public async Task EvaluateEligibleBadgesAsync_ReturnsOnlyEligibleBadges()
     {
         // Arrange
-        var badge1 = CreateBadge("FIRST_CONTRIBUTION", BadgeRequirement.FirstContribution());
-        var badge2 = CreateBadge("CONTRIBUTOR_10", BadgeRequirement.ContributionCount(10));
+        var badge1 = CreateBadge("FIRST_CONTRIBUTION", BadgeRequirement.ForFirstContribution());
+        var badge2 = CreateBadge("CONTRIBUTOR_10", BadgeRequirement.ForContributionCount(10));
         var allBadges = new List<Badge> { badge1, badge2 };
 
         _badgeRepo.Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()))
@@ -133,8 +133,8 @@ public sealed class BadgeEvaluatorTests
             "Test description",
             BadgeTier.Bronze,
             BadgeCategory.Contribution,
+            requirement,
             null,
-            1,
-            requirement);
+            1);
     }
 }

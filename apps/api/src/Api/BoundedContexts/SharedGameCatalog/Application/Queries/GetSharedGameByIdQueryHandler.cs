@@ -65,10 +65,10 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             rulesDto = new GameRulesDto(game.Rules.Content, game.Rules.Language);
         }
 
-        // Map FAQs (ordered by Order property)
+        // Map FAQs (ordered by DisplayOrder property)
         var faqDtos = game.Faqs
-            .OrderBy(f => f.Order)
-            .Select(f => new GameFaqDto(f.Id, f.SharedGameId, f.Question, f.Answer, f.Order, f.UpvoteCount, f.CreatedAt, f.UpdatedAt))
+            .OrderBy(f => f.DisplayOrder)
+            .Select(f => new GameFaqDto(f.Id, f.SharedGameId, f.Question, f.Answer, f.DisplayOrder, f.UpvoteCount, f.CreatedAt, f.UpdatedAt))
             .ToList();
 
         // Map Errata (ordered by PublishedDate descending)

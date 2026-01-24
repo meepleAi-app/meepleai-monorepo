@@ -50,12 +50,12 @@ export default function PrivacyPage() {
   const lastUpdated = new Date('2026-01-21');
 
   return (
-    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 py-8 px-4">
+    <div className="min-h-dvh bg-background py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1
-            className="text-3xl font-bold text-slate-900 dark:text-white"
+            className="text-3xl font-bold text-foreground"
             data-testid="privacy-heading"
           >
             {t('legal.privacy.title')}
@@ -106,9 +106,9 @@ export default function PrivacyPage() {
               key={sectionKey}
               value={sectionKey}
               id={sectionKey}
-              className="border rounded-lg px-4 bg-white dark:bg-slate-800"
+              className="border rounded-lg px-4 bg-card"
             >
-              <AccordionTrigger className="text-left font-semibold text-slate-900 dark:text-white hover:no-underline">
+              <AccordionTrigger className="text-left font-semibold text-foreground hover:no-underline">
                 {t(`legal.privacy.sections.${sectionKey}.title`)}
               </AccordionTrigger>
               <AccordionContent className="text-slate-600 dark:text-slate-300 leading-relaxed">

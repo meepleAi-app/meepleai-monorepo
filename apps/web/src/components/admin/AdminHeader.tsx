@@ -87,19 +87,28 @@ export function AdminHeader({
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900',
+        'sticky top-0 z-50',
+        // Light mode: Glass morphism header
+        'bg-background/95 backdrop-blur-[16px] backdrop-saturate-[180%]',
+        // Dark mode: Solid professional header
+        'dark:bg-card dark:backdrop-blur-none',
+        'border-b border-border/50 dark:border-border/30',
+        'shadow-sm dark:shadow-md',
         className
       )}
       data-testid="admin-header"
     >
-      <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
+      <div className="flex h-14 items-center gap-4 px-4 sm:px-6 lg:px-8 max-w-[1400px] mx-auto">
         {/* Mobile menu trigger */}
         {mobileMenuTrigger && <div className="lg:hidden">{mobileMenuTrigger}</div>}
 
-        {/* Title */}
+        {/* Logo with dice icon */}
         <div className="flex items-center gap-3">
+          <span className="text-[1.875rem] text-meeple-orange" aria-hidden="true">
+            🎲
+          </span>
           <h1
-            className="text-lg font-semibold text-gray-900 dark:text-white"
+            className="text-[1.375rem] font-heading font-bold text-foreground"
             data-testid="admin-header-title"
           >
             {title}
@@ -112,17 +121,29 @@ export function AdminHeader({
         {/* Actions */}
         {actions && <div className="flex items-center gap-2">{actions}</div>}
 
-        {/* Back to Home */}
+        {/* System Button */}
         <Button
-          variant="ghost"
           size="sm"
           asChild
-          className="hidden sm:flex"
-          data-testid="admin-header-home-btn"
+          className="hidden sm:flex bg-[#16a34a] hover:bg-[#15803d] text-white font-heading font-bold rounded-xl px-7 py-3 transition-all"
+          data-testid="admin-header-system-btn"
         >
           <Link href="/" className="flex items-center gap-2">
             <HomeIcon className="h-4 w-4" />
-            <span>Home</span>
+            <span>System</span>
+          </Link>
+        </Button>
+
+        {/* Admin Button */}
+        <Button
+          size="sm"
+          asChild
+          className="hidden sm:flex bg-meeple-orange hover:bg-[#b85a19] text-white font-heading font-bold rounded-xl px-7 py-3 transition-all hover:translate-y-[-1px] hover:shadow-[0_4px_12px_rgba(210,105,30,0.3)]"
+          data-testid="admin-header-admin-btn"
+        >
+          <Link href="/admin" className="flex items-center gap-2">
+            <SettingsIcon className="h-4 w-4" />
+            <span>Admin</span>
           </Link>
         </Button>
 

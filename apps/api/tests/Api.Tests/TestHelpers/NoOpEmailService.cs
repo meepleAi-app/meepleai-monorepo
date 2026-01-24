@@ -65,4 +65,51 @@ internal class NoOpEmailService : IEmailService
         Guid shareRequestId,
         CancellationToken ct = default)
         => Task.CompletedTask;
+
+    public Task SendAdminShareRequestDigestEmailAsync(
+        string toEmail,
+        string toName,
+        int totalPending,
+        int oldestPendingDays,
+        int createdToday,
+        Dictionary<string, int> pendingByType,
+        string reviewQueueUrl,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendBadgeEarnedEmailAsync(
+        string toEmail,
+        string userName,
+        string badgeName,
+        string badgeDescription,
+        string? badgeIconUrl,
+        string badgeTier,
+        string badgeTierColor,
+        string profileUrl,
+        string shareText,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendMilestoneBadgeEarnedEmailAsync(
+        string toEmail,
+        string userName,
+        string badgeName,
+        string badgeDescription,
+        string? badgeIconUrl,
+        string badgeTier,
+        string milestoneMessage,
+        int totalContributions,
+        string profileUrl,
+        string leaderboardUrl,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendCooldownEndedEmailAsync(
+        string toEmail,
+        string userName,
+        int remainingMonthly,
+        int remainingPending,
+        string libraryUrl,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
 }

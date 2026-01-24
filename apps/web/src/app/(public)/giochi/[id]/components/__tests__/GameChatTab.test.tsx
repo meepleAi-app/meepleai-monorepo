@@ -111,7 +111,7 @@ describe('GameChatTab', () => {
         category: 0,
         displayOrder: 1,
         isGenerated: true,
-        createdAt: new Date().toISOString(),
+        createdAt: '2024-01-01T00:00:00Z',
         isActive: true,
       },
       {
@@ -122,7 +122,7 @@ describe('GameChatTab', () => {
         category: 1,
         displayOrder: 2,
         isGenerated: true,
-        createdAt: new Date().toISOString(),
+        createdAt: '2024-01-01T00:00:00Z',
         isActive: true,
       },
     ];

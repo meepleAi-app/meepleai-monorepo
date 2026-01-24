@@ -35,6 +35,11 @@ import {
   createNotificationsClient,
   createSharedGamesClient,
   createLibraryClient,
+  createShareRequestsClient,
+  createAdminShareRequestsClient,
+  createGameContributorsClient,
+  createBadgesClient,
+  createRateLimitsClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -50,6 +55,11 @@ import {
   type NotificationsClient,
   type SharedGamesClient,
   type LibraryClient,
+  type ShareRequestsClient,
+  type AdminShareRequestsClient,
+  type GameContributorsClient,
+  type BadgesClient,
+  type RateLimitsClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -177,6 +187,21 @@ export interface ApiClient {
   /** User Game Library */
   library: LibraryClient;
 
+  /** Share Requests (Issue #2743) */
+  shareRequests: ShareRequestsClient;
+
+  /** Admin Share Requests Review (Issue #2745) */
+  adminShareRequests: AdminShareRequestsClient;
+
+  /** Game Contributors (Issue #2746) */
+  gameContributors: GameContributorsClient;
+
+  /** Badge & Gamification System (Issue #2747) */
+  badges: BadgesClient;
+
+  /** Rate Limit Configuration (Issue #2750) */
+  rateLimits: RateLimitsClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -242,6 +267,11 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     notifications: createNotificationsClient({ httpClient }), // ISSUE-2053
     sharedGames: createSharedGamesClient({ httpClient }), // ISSUE-2372
     library: createLibraryClient({ httpClient }), // User library
+    shareRequests: createShareRequestsClient({ httpClient }), // ISSUE-2743
+    adminShareRequests: createAdminShareRequestsClient(httpClient), // ISSUE-2745
+    gameContributors: createGameContributorsClient({ httpClient }), // ISSUE-2746
+    badges: createBadgesClient({ httpClient }), // ISSUE-2747
+    rateLimits: createRateLimitsClient({ httpClient }), // ISSUE-2750
     delete: (path: string) => httpClient.delete(path),
   };
 

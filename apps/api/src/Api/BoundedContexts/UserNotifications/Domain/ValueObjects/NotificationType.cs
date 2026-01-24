@@ -22,6 +22,22 @@ internal sealed class NotificationType : ValueObject
     public static readonly NotificationType ShareRequestRejected = new("share_request_rejected");
     public static readonly NotificationType ShareRequestChangesRequested = new("share_request_changes_requested");
 
+    // ISSUE-2740: Admin notification types for share request management
+    public static readonly NotificationType AdminNewShareRequest = new("admin_new_share_request");
+    public static readonly NotificationType AdminStaleShareRequests = new("admin_stale_share_requests");
+    public static readonly NotificationType AdminReviewLockExpiring = new("admin_review_lock_expiring");
+
+    // ISSUE-2741: Badge earned notification type
+    public static readonly NotificationType BadgeEarned = new("badge_earned");
+
+    // ISSUE-2742: Rate limit warning notification types
+    public static readonly NotificationType RateLimitApproaching = new("rate_limit_approaching");
+    public static readonly NotificationType RateLimitReached = new("rate_limit_reached");
+    public static readonly NotificationType CooldownEnded = new("cooldown_ended");
+
+    // ISSUE-2830: Loan reminder notification type
+    public static readonly NotificationType LoanReminder = new("loan_reminder");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -56,6 +72,14 @@ internal sealed class NotificationType : ValueObject
             "share_request_approved" => ShareRequestApproved,
             "share_request_rejected" => ShareRequestRejected,
             "share_request_changes_requested" => ShareRequestChangesRequested,
+            "admin_new_share_request" => AdminNewShareRequest,
+            "admin_stale_share_requests" => AdminStaleShareRequests,
+            "admin_review_lock_expiring" => AdminReviewLockExpiring,
+            "badge_earned" => BadgeEarned,
+            "rate_limit_approaching" => RateLimitApproaching,
+            "rate_limit_reached" => RateLimitReached,
+            "cooldown_ended" => CooldownEnded,
+            "loan_reminder" => LoanReminder,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

@@ -195,7 +195,8 @@ public class EdgeCaseTests : IAsyncLifetime
             HttpStatusCode.BadRequest,
             HttpStatusCode.Unauthorized,
             HttpStatusCode.NotFound,
-            HttpStatusCode.InternalServerError);
+            HttpStatusCode.InternalServerError,
+            HttpStatusCode.TooManyRequests); // Rate limiting may trigger during parallel execution
 
         // Frontend SDK should handle file upload with progress tracking
     }
@@ -268,7 +269,8 @@ public class EdgeCaseTests : IAsyncLifetime
             HttpStatusCode.UnsupportedMediaType,
             HttpStatusCode.Unauthorized,
             HttpStatusCode.NotFound,
-            HttpStatusCode.InternalServerError);
+            HttpStatusCode.InternalServerError,
+            HttpStatusCode.TooManyRequests); // Rate limiting may trigger during parallel execution
 
         // Frontend SDK should validate file type before upload
     }

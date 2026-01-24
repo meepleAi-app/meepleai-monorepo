@@ -1,0 +1,1351 @@
+openapi: 3.1.0
+info:
+  title: MeepleAI Share Requests API
+  version: 1.0.0
+  description: |
+    API per la gestione delle richieste di condivisione giochi dalla libreria personale
+    al catalogo condiviso della community MeepleAI.
+
+    ## Panoramica
+
+    Il sistema di condivisione permette agli utenti di contribuire giochi dalla loro
+    libreria personale al catalogo condiviso della community, con un workflow di
+    approvazione amministrativa che garantisce la qualità dei contenuti.
+
+    ## Flusso di Condivisione
+
+    1. **Utente** crea una richiesta con `POST /api/v1/share-requests`
+    2. **Sistema** valida e applica rate limiting basato sul tier utente
+    3. **Admin** visualizza richieste pendenti via `GET /api/v1/admin/share-requests`
+    4. **Admin** acquisisce lock esclusivo con `POST /api/v1/admin/share-requests/{id}/start-review`
+    5. **Admin** approva, rifiuta, o richiede modifiche
+    6. **Sistema** crea gioco condiviso, assegna badge, e notifica l'utente
+
+    ## Autenticazione
+
+    Gli endpoint richiedono autenticazione tramite session cookie (`meepleai_session`).
+
+    - **User endpoints** (`/share-requests`): Richiedono ruolo `user` o superiore
+    - **Admin endpoints** (`/admin/share-requests`): Richiedono ruolo `admin`
+    - **Public endpoints** (`/badges/leaderboard`, `/shared-games/{id}/contributors`): Nessuna autenticazione
+
+    ## Rate Limiting
+
+    | Tier     | Richieste/Mese | Reset       |
+    |----------|----------------|-------------|
+    | Free     | 3              | Primo del mese |
+    | Premium  | 10             | Primo del mese |
+    | Pro      | Unlimited      | N/A         |
+
+    Gli admin possono configurare override temporanei per utenti specifici.
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Development server
+  - url: https://api.meepleai.com/api/v1
+    description: Production server
+
+tags:
+  - name: Share Requests (User)
+    description: Endpoints per creazione e gestione delle proprie richieste
+  - name: Share Requests (Admin)
+    description: Endpoints per revisione e approvazione amministrativa
+  - name: Contributors
+    description: Endpoints per statistiche contributori e leaderboard
+  - name: Badges
+    description: Endpoints per badge e riconoscimenti
+
+paths:
+  # ========================================
+  # USER SHARE REQUEST ENDPOINTS
+  # ========================================
+
+  /share-requests:
+    post:
+      summary: Crea nuova richiesta di condivisione
+      description: |
+        Permette a un utente autenticato di creare una richiesta di condivisione
+        per un gioco dalla propria libreria personale.
+
+        **Rate Limiting**: Basato sul tier utente (Free: 3/mese, Premium: 10/mese, Pro: unlimited)
+
+        **Validazioni**:
+        - SourceGameId deve esistere nella libreria dell'utente
+        - L'utente non deve aver superato il rate limit
+        - Se forniti, i documenti devono essere validi e accessibili
+      tags:
+        - Share Requests (User)
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShareRequestDto'
+            examples:
+              basic:
+                summary: Richiesta base senza documenti
+                value:
+                  sourceGameId: "550e8400-e29b-41d4-a716-446655440000"
+                  notes: "Ottimo gioco di strategia che merita di essere nel catalogo!"
+              withDocuments:
+                summary: Richiesta con documenti allegati
+                value:
+                  sourceGameId: "550e8400-e29b-41d4-a716-446655440000"
+                  notes: "Gioco complesso, allego il regolamento tradotto"
+                  attachedDocumentIds:
+                    - "660e8400-e29b-41d4-a716-446655440001"
+                    - "660e8400-e29b-41d4-a716-446655440002"
+      responses:
+        '201':
+          description: Richiesta creata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateShareRequestResponse'
+        '400':
+          description: Dati non validi o sourceGameId non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '429':
+          description: Rate limit superato per il tier utente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    get:
+      summary: Lista richieste dell'utente corrente
+      description: |
+        Restituisce tutte le richieste di condivisione create dall'utente autenticato,
+        con supporto per paginazione e filtro per stato.
+      tags:
+        - Share Requests (User)
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          description: Filtra per stato della richiesta
+          schema:
+            type: string
+            enum: [Pending, InReview, ChangesRequested, Approved, Rejected, Withdrawn]
+      responses:
+        '200':
+          description: Lista paginata delle richieste
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedUserShareRequestsResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /share-requests/{id}:
+    get:
+      summary: Dettagli di una richiesta specifica
+      description: |
+        Restituisce i dettagli completi di una richiesta di condivisione.
+        L'utente può accedere solo alle proprie richieste.
+      tags:
+        - Share Requests (User)
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID della richiesta di condivisione
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dettagli della richiesta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareRequestDetailsDto'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '403':
+          description: L'utente non può accedere a questa richiesta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    delete:
+      summary: Ritira una richiesta di condivisione
+      description: |
+        Permette all'utente di ritirare una propria richiesta in stato Pending o ChangesRequested.
+        Le richieste in revisione o già risolte non possono essere ritirate.
+      tags:
+        - Share Requests (User)
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Richiesta ritirata con successo
+        '400':
+          description: La richiesta non può essere ritirata (stato non valido)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '403':
+          description: L'utente non può ritirare questa richiesta
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /share-requests/{id}/documents:
+    put:
+      summary: Aggiorna documenti allegati
+      description: |
+        Aggiorna la lista di documenti allegati a una richiesta in stato Pending o ChangesRequested.
+        Sostituisce completamente la lista precedente.
+      tags:
+        - Share Requests (User)
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDocumentsDto'
+      responses:
+        '204':
+          description: Documenti aggiornati con successo
+        '400':
+          description: Dati non validi o stato richiesta non permette modifiche
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '403':
+          description: L'utente non può modificare questa richiesta
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ========================================
+  # ADMIN SHARE REQUEST ENDPOINTS
+  # ========================================
+
+  /admin/share-requests:
+    get:
+      summary: Lista richieste pendenti (Admin)
+      description: |
+        Restituisce tutte le richieste di condivisione per la dashboard admin.
+        Supporta filtri per stato, tipo di contribuzione, e ricerca full-text.
+      tags:
+        - Share Requests (Admin)
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          description: Filtra per stato
+          schema:
+            type: string
+            enum: [Pending, InReview, ChangesRequested, All]
+            default: Pending
+        - name: contributionType
+          in: query
+          description: Filtra per tipo di contribuzione
+          schema:
+            type: string
+            enum: [NewGame, AdditionalContent]
+        - name: search
+          in: query
+          description: Ricerca full-text su titolo gioco e note utente
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista paginata delle richieste
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAdminShareRequestsResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/share-requests/{id}:
+    get:
+      summary: Dettagli richiesta per revisione (Admin)
+      description: |
+        Restituisce informazioni dettagliate per la revisione amministrativa,
+        inclusi dati del gioco, profilo contributore, documenti, storico revisioni,
+        e stato del lock.
+      tags:
+        - Share Requests (Admin)
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dettagli completi della richiesta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareRequestDetailsDto'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/share-requests/{id}/start-review:
+    post:
+      summary: Inizia revisione (Admin)
+      description: |
+        Acquisisce un lock esclusivo per la revisione della richiesta.
+        Solo un admin alla volta può revisionare una richiesta.
+
+        **Lock timeout**: 30 minuti (configurabile)
+
+        **Conflitti**: Restituisce 409 se la richiesta è già in revisione da altro admin.
+      tags:
+        - Share Requests (Admin)
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lock acquisito, revisione iniziata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartReviewResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Richiesta già in revisione da altro admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/share-requests/{id}/release:
+    post:
+      summary: Rilascia lock di revisione (Admin)
+      description: |
+        Rilascia manualmente il lock di revisione senza prendere una decisione.
+        La richiesta torna allo stato precedente (Pending o ChangesRequested).
+
+        **Autorizzazione**: Solo l'admin che detiene il lock può rilasciarlo.
+      tags:
+        - Share Requests (Admin)
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Lock rilasciato con successo
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '403':
+          description: L'admin non detiene il lock o non può rilasciarlo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /admin/share-requests/{id}/approve:
+    post:
+      summary: Approva richiesta di condivisione (Admin)
+      description: |
+        Approva una richiesta di condivisione e pubblica il gioco nel catalogo condiviso.
+
+        **Requisiti**:
+        - L'admin deve avere un lock attivo sulla richiesta
+        - La richiesta deve essere in stato InReview
+
+        **Azioni del sistema**:
+        - Crea gioco nel catalogo condiviso (SharedGame)
+        - Assegna badge al contributore
+        - Invia notifica email all'utente
+        - Rilascia il lock di revisione
+
+        L'admin può opzionalmente modificare titolo/descrizione e selezionare documenti da pubblicare.
+      tags:
+        - Share Requests (Admin)
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveShareRequestDto'
+            examples:
+              basic:
+                summary: Approvazione base senza modifiche
+                value:
+                  adminNotes: "Ottima richiesta, approvata senza modifiche"
+              withModifications:
+                summary: Approvazione con modifiche al contenuto
+                value:
+                  adminNotes: "Approvata con correzioni al titolo"
+                  titleOverride: "I Coloni di Catan - Edizione Italiana"
+                  selectedDocumentIds:
+                    - "660e8400-e29b-41d4-a716-446655440001"
+      responses:
+        '200':
+          description: Richiesta approvata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApproveShareRequestResponse'
+        '400':
+          description: Dati non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Conflitto - admin non detiene lock o stato non valido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/share-requests/{id}/reject:
+    post:
+      summary: Rifiuta richiesta di condivisione (Admin)
+      description: |
+        Rifiuta una richiesta di condivisione con motivazione obbligatoria.
+
+        **Requisiti**:
+        - L'admin deve avere un lock attivo sulla richiesta
+        - La richiesta deve essere in stato InReview
+
+        **Azioni del sistema**:
+        - Cambia stato a Rejected
+        - Invia notifica email all'utente con la motivazione
+        - Rilascia il lock di revisione
+      tags:
+        - Share Requests (Admin)
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectShareRequestDto'
+            example:
+              reason: "Il gioco è già presente nel catalogo con ID #12345"
+              adminNotes: "Verifica prima se il gioco esiste già usando la ricerca"
+      responses:
+        '200':
+          description: Richiesta rifiutata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RejectShareRequestResponse'
+        '400':
+          description: Reason mancante o non valido
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Admin non detiene lock o stato non valido
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/share-requests/{id}/request-changes:
+    post:
+      summary: Richiedi modifiche all'utente (Admin)
+      description: |
+        Richiede modifiche all'utente con feedback dettagliato.
+        La richiesta torna allo stato ChangesRequested e l'utente può modificare e reinviare.
+
+        **Requisiti**:
+        - L'admin deve avere un lock attivo sulla richiesta
+        - La richiesta deve essere in stato InReview
+      tags:
+        - Share Requests (Admin)
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestChangesDto'
+            example:
+              feedback: |
+                La descrizione è troppo breve. Per favore aggiungi:
+                - Panoramica delle meccaniche principali
+                - Target audience consigliato
+                - Perché questo gioco merita di essere nel catalogo
+              adminNotes: "Buona richiesta, necessita solo più dettagli"
+      responses:
+        '200':
+          description: Modifiche richieste con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestChangesResponse'
+        '400':
+          description: Feedback mancante o non valido
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Admin non detiene lock o stato non valido
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/share-requests/my-reviews:
+    get:
+      summary: Le mie revisioni attive (Admin)
+      description: |
+        Restituisce tutte le richieste attualmente in revisione dall'admin autenticato
+        (quelle per cui l'admin detiene un lock attivo).
+      tags:
+        - Share Requests (Admin)
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Lista delle revisioni attive
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminShareRequestDto'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  # ========================================
+  # CONTRIBUTOR ENDPOINTS
+  # ========================================
+
+  /shared-games/{id}/contributors:
+    get:
+      summary: Lista contributori di un gioco
+      description: |
+        Restituisce tutti i contributori che hanno contribuito a un gioco condiviso,
+        con il numero di contributi e i badge principali.
+      tags:
+        - Contributors
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del gioco condiviso
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista contributori del gioco
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GameContributorDto'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /users/{id}/contributions:
+    get:
+      summary: Contributi di un utente
+      description: |
+        Restituisce la lista paginata di tutti i contributi approvati di un utente specifico.
+      tags:
+        - Contributors
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID utente
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Lista paginata contributi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedUserContributionsResponse'
+
+  /users/me/contribution-stats:
+    get:
+      summary: Statistiche contributore autenticato
+      description: |
+        Restituisce statistiche dettagliate dei contributi dell'utente autenticato,
+        inclusi badge, rate limits, e tasso di approvazione.
+      tags:
+        - Contributors
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Statistiche contributore
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserContributionStatsDto'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ========================================
+  # BADGE ENDPOINTS
+  # ========================================
+
+  /badges/leaderboard:
+    get:
+      summary: Classifica contributori
+      description: |
+        Restituisce i top contributori ordinati per badge count e tier.
+        Supporta filtro per periodo (settimana, mese, tutto il tempo).
+
+        **Caching**: I risultati sono cached per 1 ora.
+      tags:
+        - Badges
+      parameters:
+        - name: limit
+          in: query
+          description: Numero massimo di risultati
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: period
+          in: query
+          description: Periodo di riferimento per la classifica
+          schema:
+            type: string
+            enum: [Week, Month, AllTime]
+            default: AllTime
+      responses:
+        '200':
+          description: Classifica contributori
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntryDto'
+
+# ========================================
+# COMPONENTS
+# ========================================
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: meepleai_session
+      description: Session cookie ottenuto dopo login
+
+  parameters:
+    PageNumber:
+      name: page
+      in: query
+      description: Numero di pagina (1-indexed)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    PageSize:
+      name: pageSize
+      in: query
+      description: Numero di risultati per pagina
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  schemas:
+    # ========================================
+    # REQUEST SCHEMAS
+    # ========================================
+
+    CreateShareRequestDto:
+      type: object
+      required:
+        - sourceGameId
+      properties:
+        sourceGameId:
+          type: string
+          format: uuid
+          description: ID del gioco dalla libreria personale dell'utente
+        notes:
+          type: string
+          maxLength: 2000
+          description: Note opzionali dell'utente sul perché condividere il gioco
+        attachedDocumentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Lista opzionale di ID documenti da allegare (es. regolamenti PDF)
+          maxItems: 10
+
+    UpdateDocumentsDto:
+      type: object
+      required:
+        - documentIds
+      properties:
+        documentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Nuova lista completa di documenti (sostituisce la precedente)
+          maxItems: 10
+
+    ApproveShareRequestDto:
+      type: object
+      required:
+        - adminNotes
+      properties:
+        adminNotes:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Note amministrative sull'approvazione
+        titleOverride:
+          type: string
+          maxLength: 200
+          description: Titolo modificato dall'admin (opzionale)
+        descriptionOverride:
+          type: string
+          maxLength: 5000
+          description: Descrizione modificata dall'admin (opzionale)
+        selectedDocumentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Sottinsieme di documenti da pubblicare (opzionale, default tutti)
+
+    RejectShareRequestDto:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 20
+          maxLength: 2000
+          description: Motivazione obbligatoria del rifiuto
+        adminNotes:
+          type: string
+          maxLength: 2000
+          description: Note amministrative aggiuntive (opzionali)
+
+    RequestChangesDto:
+      type: object
+      required:
+        - feedback
+      properties:
+        feedback:
+          type: string
+          minLength: 20
+          maxLength: 2000
+          description: Feedback dettagliato su cosa deve essere modificato
+        adminNotes:
+          type: string
+          maxLength: 2000
+          description: Note amministrative interne (opzionali)
+
+    # ========================================
+    # RESPONSE SCHEMAS
+    # ========================================
+
+    CreateShareRequestResponse:
+      type: object
+      properties:
+        shareRequestId:
+          type: string
+          format: uuid
+          description: ID della richiesta creata
+        status:
+          type: string
+          enum: [Pending]
+          description: Stato iniziale (sempre Pending)
+        contributionType:
+          type: string
+          enum: [NewGame, AdditionalContent]
+          description: Tipo di contribuzione (determinato automaticamente)
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp di creazione
+
+    ApproveShareRequestResponse:
+      type: object
+      properties:
+        shareRequestId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [Approved]
+        targetSharedGameId:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID del gioco condiviso creato o aggiornato
+        resolvedAt:
+          type: string
+          format: date-time
+
+    RejectShareRequestResponse:
+      type: object
+      properties:
+        shareRequestId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [Rejected]
+        resolvedAt:
+          type: string
+          format: date-time
+
+    RequestChangesResponse:
+      type: object
+      properties:
+        shareRequestId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [ChangesRequested]
+        feedback:
+          type: string
+          description: Il feedback richiesto
+
+    StartReviewResponse:
+      type: object
+      properties:
+        shareRequestId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [InReview]
+        lockExpiresAt:
+          type: string
+          format: date-time
+          description: Quando il lock scadrà automaticamente
+
+    ShareRequestDetailsDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sourceGameId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        userName:
+          type: string
+          description: Display name del contributore
+        status:
+          type: string
+          enum: [Pending, InReview, ChangesRequested, Approved, Rejected, Withdrawn]
+        contributionType:
+          type: string
+          enum: [NewGame, AdditionalContent]
+        userNotes:
+          type: string
+          nullable: true
+        adminFeedback:
+          type: string
+          nullable: true
+          description: Feedback admin se ChangesRequested
+        adminNotes:
+          type: string
+          nullable: true
+          description: Note interne admin
+        reviewedBy:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID admin che sta revisionando (se InReview)
+        reviewerName:
+          type: string
+          nullable: true
+        lockExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Scadenza lock revisione (se InReview)
+        attachedDocuments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentDto'
+        gameData:
+          $ref: '#/components/schemas/SourceGameDataDto'
+          description: Dati del gioco sorgente dalla user library
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    UserShareRequestDto:
+      type: object
+      description: Richiesta nella vista utente (lista)
+      properties:
+        id:
+          type: string
+          format: uuid
+        gameTitle:
+          type: string
+        status:
+          type: string
+          enum: [Pending, InReview, ChangesRequested, Approved, Rejected, Withdrawn]
+        contributionType:
+          type: string
+          enum: [NewGame, AdditionalContent]
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        adminFeedback:
+          type: string
+          nullable: true
+          description: Visibile solo se ChangesRequested
+
+    AdminShareRequestDto:
+      type: object
+      description: Richiesta nella vista admin (lista)
+      properties:
+        id:
+          type: string
+          format: uuid
+        gameTitle:
+          type: string
+        userName:
+          type: string
+        status:
+          type: string
+        contributionType:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        isLockedByMe:
+          type: boolean
+          description: Se l'admin corrente detiene il lock
+        lockExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    GameContributorDto:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        userName:
+          type: string
+        contributionCount:
+          type: integer
+          description: Numero di contributi a questo gioco
+        topBadges:
+          type: array
+          items:
+            $ref: '#/components/schemas/BadgeDto'
+          description: Top 3 badge del contributore
+          maxItems: 3
+
+    UserContributionStatsDto:
+      type: object
+      properties:
+        totalApproved:
+          type: integer
+        totalRejected:
+          type: integer
+        totalPending:
+          type: integer
+        approvalRate:
+          type: number
+          format: double
+          description: Percentuale approvazioni (0-100)
+        badges:
+          type: array
+          items:
+            $ref: '#/components/schemas/BadgeDto'
+        rateLimit:
+          $ref: '#/components/schemas/RateLimitInfoDto'
+
+    LeaderboardEntryDto:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        userName:
+          type: string
+        approvedCount:
+          type: integer
+          description: Numero totale di contributi approvati
+        badgeCount:
+          type: integer
+          description: Numero totale di badge ottenuti
+        highestTier:
+          type: string
+          enum: [Bronze, Silver, Gold, Diamond, Elite, Premium]
+        topBadges:
+          type: array
+          items:
+            $ref: '#/components/schemas/BadgeDto'
+          maxItems: 3
+
+    BadgeDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        tier:
+          type: string
+          enum: [Bronze, Silver, Gold, Diamond, Elite, Premium]
+        iconUrl:
+          type: string
+          nullable: true
+        earnedAt:
+          type: string
+          format: date-time
+        isDisplayed:
+          type: boolean
+          description: Se il badge è visibile sul profilo pubblico
+
+    DocumentDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        contentType:
+          type: string
+        sizeBytes:
+          type: integer
+        uploadedAt:
+          type: string
+          format: date-time
+
+    SourceGameDataDto:
+      type: object
+      description: Dati del gioco sorgente dalla user library
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        bggId:
+          type: integer
+          nullable: true
+        yearPublished:
+          type: integer
+          nullable: true
+        minPlayers:
+          type: integer
+        maxPlayers:
+          type: integer
+        minPlaytime:
+          type: integer
+        maxPlaytime:
+          type: integer
+        complexity:
+          type: number
+          format: double
+          nullable: true
+
+    RateLimitInfoDto:
+      type: object
+      properties:
+        limit:
+          type: integer
+          description: Limite mensile per il tier utente
+        used:
+          type: integer
+          description: Richieste usate nel periodo corrente
+        remaining:
+          type: integer
+          description: Richieste rimanenti
+        resetsAt:
+          type: string
+          format: date-time
+          description: Quando il contatore verrà azzerato
+        hasOverride:
+          type: boolean
+          description: Se c'è un override amministrativo attivo
+
+    PagedUserShareRequestsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserShareRequestDto'
+        totalCount:
+          type: integer
+        pageNumber:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+    PagedAdminShareRequestsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminShareRequestDto'
+        totalCount:
+          type: integer
+        pageNumber:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+    PagedUserContributionsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserContributionDto'
+        totalCount:
+          type: integer
+        pageNumber:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+    UserContributionDto:
+      type: object
+      properties:
+        sharedGameId:
+          type: string
+          format: uuid
+        gameTitle:
+          type: string
+        contributionType:
+          type: string
+          enum: [NewGame, AdditionalContent]
+        approvedAt:
+          type: string
+          format: date-time
+        badgesEarned:
+          type: array
+          items:
+            type: string
+          description: Badge IDs ottenuti grazie a questo contributo
+
+    # ========================================
+    # ERROR SCHEMAS
+    # ========================================
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Messaggio di errore
+        details:
+          type: object
+          nullable: true
+          description: Dettagli aggiuntivi
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Validation failed"
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Mappa di field name -> errori di validazione
+          example:
+            notes: ["Notes cannot exceed 2000 characters"]
+            sourceGameId: ["Source game not found in user library"]
+
+    RateLimitErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Rate limit exceeded"
+        limit:
+          type: integer
+          description: Limite mensile del tier
+          example: 3
+        used:
+          type: integer
+          description: Richieste già usate
+          example: 3
+        resetsAt:
+          type: string
+          format: date-time
+          description: Quando il limite viene resettato
+
+    ConflictErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Request is already in review"
+        conflictType:
+          type: string
+          enum: [ReviewLockActive, InvalidStateTransition]
+        details:
+          type: object
+          nullable: true
+          description: Dettagli specifici del conflitto
+
+  responses:
+    UnauthorizedError:
+      description: Autenticazione richiesta
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Authentication required"
+
+    ForbiddenError:
+      description: Permessi insufficienti
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Insufficient permissions. Admin role required."
+
+    NotFoundError:
+      description: Risorsa non trovata
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Share request not found"

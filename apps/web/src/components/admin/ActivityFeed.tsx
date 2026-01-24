@@ -1,6 +1,15 @@
 /* eslint-disable security/detect-object-injection -- Safe style/icon map Record access */
 /**
+ * @deprecated Use ActivityTimeline instead (Issue #2803)
+ *
  * ActivityFeed Component - Issue #884
+ *
+ * This component has been replaced by ActivityTimeline (Issue #2787).
+ * ActivityTimeline provides enhanced UI with category-based colored icons
+ * and improved design system integration.
+ *
+ * Migration: Replace all ActivityFeed imports with ActivityTimeline.
+ * The interfaces are identical, so it's a drop-in replacement.
  *
  * Timeline for recent system activity events with severity indicators.
  * Features:
@@ -79,8 +88,29 @@ export function ActivityFeed({
                 const severity = event.severity || 'Info';
                 const relativeTime = formatRelativeTimestamp(event.timestamp);
 
+                // Background and border for warning/error items (Issue #2849)
+                const itemBgClass = severity === 'Warning'
+                  ? 'bg-yellow-50 dark:bg-yellow-500/10'
+                  : severity === 'Error' || severity === 'Critical'
+                  ? 'bg-red-50 dark:bg-red-500/10'
+                  : '';
+
+                const borderLeftClass = severity === 'Warning'
+                  ? 'border-l-4 border-l-yellow-500'
+                  : severity === 'Error' || severity === 'Critical'
+                  ? 'border-l-4 border-l-red-500'
+                  : 'border-l-4 border-l-transparent';
+
                 return (
-                  <li key={event.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                  <li
+                    key={event.id}
+                    className={cn(
+                      'px-6 py-4 transition-all rounded-lg',
+                      'hover:bg-meeple-light-orange/30',
+                      borderLeftClass,
+                      itemBgClass
+                    )}
+                  >
                     <div className="flex items-start gap-4">
                       <div
                         className={cn(

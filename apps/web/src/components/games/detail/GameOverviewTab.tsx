@@ -177,7 +177,7 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
                 {/* BGG Ratings */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {bggDetails.averageRating && (
-                    <div className="flex flex-col items-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                    <div className="flex flex-col items-center p-4 bg-muted dark:bg-card rounded-lg">
                       <Star className="h-5 w-5 text-yellow-500 mb-2" />
                       <div className="text-2xl font-bold">
                         {bggDetails.averageRating.toFixed(2)}
@@ -187,7 +187,7 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
                   )}
 
                   {bggDetails.averageWeight && (
-                    <div className="flex flex-col items-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                    <div className="flex flex-col items-center p-4 bg-muted dark:bg-card rounded-lg">
                       <TrendingUp className="h-5 w-5 text-muted-foreground mb-2" />
                       <div className="text-2xl font-bold">
                         {bggDetails.averageWeight.toFixed(2)}
@@ -197,7 +197,7 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
                   )}
 
                   {bggDetails.usersRated && (
-                    <div className="flex flex-col items-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                    <div className="flex flex-col items-center p-4 bg-muted dark:bg-card rounded-lg">
                       <Users className="h-5 w-5 text-muted-foreground mb-2" />
                       <div className="text-2xl font-bold">
                         {bggDetails.usersRated.toLocaleString()}
@@ -207,7 +207,7 @@ export function GameOverviewTab({ game }: GameOverviewTabProps) {
                   )}
 
                   {bggDetails.minAge && (
-                    <div className="flex flex-col items-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                    <div className="flex flex-col items-center p-4 bg-muted dark:bg-card rounded-lg">
                       <Users className="h-5 w-5 text-muted-foreground mb-2" />
                       <div className="text-2xl font-bold">{bggDetails.minAge}+</div>
                       <div className="text-xs text-muted-foreground">Minimum Age</div>

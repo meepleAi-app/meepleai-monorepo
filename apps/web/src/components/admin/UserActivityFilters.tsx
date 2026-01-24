@@ -113,7 +113,7 @@ export function UserActivityFilters({
       {/* Active Filters Chips */}
       {hasActiveFilters && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Filtri attivi:</span>
+          <span className="text-sm font-medium text-foreground">Filtri attivi:</span>
           {Array.from(filters.eventTypes).length < availableEventTypes.length &&
             availableEventTypes
               .filter(type => !filters.eventTypes.has(type))
@@ -122,7 +122,7 @@ export function UserActivityFilters({
                   <span className="text-xs">Escluso: {eventTypeLabels[type] || type}</span>
                   <button
                     onClick={() => toggleEventType(type)}
-                    className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                    className="ml-1 hover:bg-muted dark:hover:bg-muted/70 rounded-full p-0.5"
                     aria-label={`Includi ${eventTypeLabels[type] || type}`}
                   >
                     <XIcon className="h-3 w-3" aria-hidden="true" />
@@ -135,7 +135,7 @@ export function UserActivityFilters({
                 <span className="text-xs">Escluso: {sev}</span>
                 <button
                   onClick={() => toggleSeverity(sev)}
-                  className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                  className="ml-1 hover:bg-muted dark:hover:bg-muted/70 rounded-full p-0.5"
                   aria-label={`Includi severity ${sev}`}
                 >
                   <XIcon className="h-3 w-3" aria-hidden="true" />
@@ -236,8 +236,8 @@ export function UserActivityFilters({
 
       {/* Summary */}
       {hasActiveFilters && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <p className="text-xs text-gray-600">
+        <div className="mt-4 pt-4 border-t border-border/50 dark:border-border/30">
+          <p className="text-xs text-muted-foreground">
             {activeFilterCount} {activeFilterCount === 1 ? 'filtro attivo' : 'filtri attivi'}
           </p>
         </div>

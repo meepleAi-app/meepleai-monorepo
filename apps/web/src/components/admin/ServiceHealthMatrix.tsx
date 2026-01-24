@@ -100,14 +100,16 @@ export function ServiceHealthMatrix({
     return (
       <div
         className={cn(
-          'flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-50',
+          'flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-border/50 dark:border-border/30 rounded-lg bg-muted/50 dark:bg-card',
           className
         )}
         data-testid="service-health-matrix-empty"
       >
-        <AlertCircle className="h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
-        <p className="text-lg font-medium text-gray-900 mb-1">{i18n.labels.noData}</p>
-        <p className="text-sm text-gray-500">
+        <AlertCircle className="h-12 w-12 text-muted-foreground/50 mb-4" aria-hidden="true" />
+        <p className="text-lg font-medium text-foreground mb-1">
+          {i18n.labels.noData}
+        </p>
+        <p className="text-sm text-muted-foreground">
           {locale === 'it'
             ? 'Nessun servizio disponibile al momento.'
             : 'No services available at the moment.'}

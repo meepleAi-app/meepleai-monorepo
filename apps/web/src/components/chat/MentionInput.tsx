@@ -336,7 +336,7 @@ export function MentionInput({
           id="mention-dropdown"
           ref={dropdownRef}
           role="listbox"
-          className="fixed z-[1000] bg-white border border-gray-400 rounded shadow-lg max-h-[200px] overflow-y-auto min-w-[250px] max-w-[400px]"
+          className="fixed z-[1000] bg-popover/95 backdrop-blur-[16px] dark:bg-popover dark:backdrop-blur-none border border-border/50 dark:border-border/70 rounded shadow-lg dark:shadow-xl dark:shadow-black/30 max-h-[200px] overflow-y-auto min-w-[250px] max-w-[400px]"
           style={{
             top: dropdownPosition.top,
             left: dropdownPosition.left,

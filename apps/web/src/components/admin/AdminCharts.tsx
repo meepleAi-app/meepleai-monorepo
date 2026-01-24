@@ -24,7 +24,7 @@ const ENDPOINT_COLORS: Record<string, string> = {
 const _COLORS = ['#1a73e8', '#f9ab00', '#a142f4', '#34a853', '#ea4335'];
 
 const ChartSkeleton = () => (
-  <div className="h-[300px] w-full animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+  <div className="h-[300px] w-full animate-pulse rounded-lg bg-muted dark:bg-card" />
 );
 
 export function buildEndpointData(endpointCounts: Record<string, number>) {
@@ -108,7 +108,7 @@ export function EndpointDistributionChart({ endpointCounts }: EndpointChartProps
   const data = buildEndpointData(endpointCounts);
 
   if (data.length === 0) {
-    return <div className="p-12 text-center text-gray-500">No endpoint data available</div>;
+    return <div className="p-12 text-center text-muted-foreground">No endpoint data available</div>;
   }
 
   return (
@@ -138,7 +138,7 @@ export function EndpointDistributionChart({ endpointCounts }: EndpointChartProps
 
 export function LatencyDistributionChart({ requests }: LatencyChartProps) {
   if (requests.length === 0) {
-    return <div className="p-12 text-center text-gray-500">No latency data available</div>;
+    return <div className="p-12 text-center text-muted-foreground">No latency data available</div>;
   }
 
   const binCounts = buildLatencyBins(requests);
@@ -161,7 +161,7 @@ export function LatencyDistributionChart({ requests }: LatencyChartProps) {
 
 export function RequestsTimeSeriesChart({ requests }: TimeSeriesChartProps) {
   if (requests.length === 0) {
-    return <div className="p-12 text-center text-gray-500">No time series data available</div>;
+    return <div className="p-12 text-center text-muted-foreground">No time series data available</div>;
   }
 
   const data = buildTimeSeries(requests);
@@ -200,7 +200,7 @@ export function FeedbackChart({ feedbackCounts }: FeedbackChartProps) {
   const data = buildFeedbackData(feedbackCounts);
 
   if (data.length === 0 || data.every(d => d.value === 0)) {
-    return <div className="p-12 text-center text-gray-500">No feedback data available</div>;
+    return <div className="p-12 text-center text-muted-foreground">No feedback data available</div>;
   }
 
   return (

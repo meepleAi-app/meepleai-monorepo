@@ -72,7 +72,7 @@ export function MessageInput() {
   }));
 
   return (
-    <div className="p-4 border-t border-[#dadce0] bg-white flex flex-col gap-3">
+    <div className="p-4 border-t border-border/50 dark:border-border/30 bg-background/95 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none flex flex-col gap-3">
       {/* Issue #2051: Document Source Selector */}
       {documents.length > 0 && (
         <DocumentSourceSelector

@@ -20,7 +20,7 @@
 
 import { useTransition } from 'react';
 
-import { Home, Gamepad2, MessageSquare, Settings, LogOut } from 'lucide-react';
+import { Home, Gamepad2, MessageSquare, Settings, LogOut, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -37,6 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/navigation/dropdown-menu';
+import { ThemeToggle } from '../ui/navigation/ThemeToggle';
 import { Button } from '../ui/primitives/button';
 
 interface NavItem {
@@ -100,7 +101,15 @@ export function TopNav() {
 
   return (
     <nav
-      className="hidden md:flex fixed top-0 left-0 right-0 h-16 bg-card border-b border-border shadow-sm z-50"
+      className={cn(
+        'hidden md:flex fixed top-0 left-0 right-0 h-16 z-50',
+        // Light mode: Glass morphism navigation
+        'bg-background/95 backdrop-blur-[16px] backdrop-saturate-[180%]',
+        // Dark mode: Solid professional
+        'dark:bg-card dark:backdrop-blur-none',
+        'border-b border-border/50 dark:border-border/30',
+        'shadow-sm dark:shadow-md'
+      )}
       aria-label="Primary desktop navigation"
     >
       <div className="container mx-auto flex items-center justify-between h-full px-4">
@@ -123,10 +132,10 @@ export function TopNav() {
                 className={cn(
                   'flex items-center gap-2 px-4 py-2 rounded-lg',
                   'transition-colors duration-200',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:focus-visible:ring-accent focus-visible:ring-offset-2',
                   active
-                    ? 'bg-primary/10 text-primary font-semibold'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    ? 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary/90 font-semibold'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-muted/70'
                 )}
               >
                 <Icon className="w-5 h-5" aria-hidden="true" />
@@ -152,12 +161,27 @@ export function TopNav() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              {user?.role === 'admin' && (
+                <>
+                  <DropdownMenuItem asChild data-testid="admin-panel-menu-item">
+                    <Link href="/admin" className="flex items-center gap-2">
+                      <Shield className="w-4 h-4" />
+                      Admin Panel
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem asChild data-testid="settings-menu-item">
                 <Link href="/settings" className="flex items-center gap-2">
                   <Settings className="w-4 h-4" />
                   Impostazioni
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5">
+                <ThemeToggle showLabel size="sm" className="w-full justify-start" />
+              </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={handleLogout}

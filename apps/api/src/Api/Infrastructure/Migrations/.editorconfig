@@ -1,0 +1,6 @@
+# Disable analyzers for generated migration files
+[*.cs]
+dotnet_analyzer_diagnostic.severity = none
+dotnet_diagnostic.MA0005.severity = none
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.CA1825.severity = none

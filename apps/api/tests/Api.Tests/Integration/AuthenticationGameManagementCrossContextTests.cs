@@ -88,7 +88,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         {
             try
             {
-                await DbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+                await DbContext.Database.MigrateAsync(TestCancellationToken);
                 break;
             }
             catch (Exception ex) when ((ex is NpgsqlException or InvalidOperationException) && attempt < 2)

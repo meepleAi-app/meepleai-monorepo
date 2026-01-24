@@ -38,6 +38,42 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
         builder.Property(e => e.IsFavorite)
             .HasDefaultValue(false);
 
+        // Game state properties
+        builder.Property(e => e.CurrentState)
+            .IsRequired()
+            .HasDefaultValue(0); // Nuovo = 0
+
+        builder.Property(e => e.StateChangedAt)
+            .IsRequired(false);
+
+        builder.Property(e => e.StateNotes)
+            .HasMaxLength(500)
+            .IsRequired(false);
+
+        // Game statistics properties
+        builder.Property(e => e.TimesPlayed)
+            .IsRequired()
+            .HasDefaultValue(0);
+
+        builder.Property(e => e.LastPlayed)
+            .IsRequired(false);
+
+        builder.Property(e => e.WinRate)
+            .HasColumnType("decimal(5,2)")
+            .IsRequired(false);
+
+        builder.Property(e => e.AvgDuration)
+            .IsRequired(false);
+
+        builder.Property(e => e.CompetitiveSessions)
+            .IsRequired()
+            .HasDefaultValue(0);
+
+        // Optimistic concurrency control
+        builder.Property(e => e.RowVersion)
+            .IsRowVersion()
+            .IsConcurrencyToken();
+
         // Custom agent configuration (JSONB column for PostgreSQL)
         builder.Property(e => e.CustomAgentConfigJson)
             .HasColumnType("jsonb")
@@ -74,5 +110,26 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
             .WithMany()
             .HasForeignKey(e => e.GameId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Child entity collections
+        builder.HasMany(e => e.Sessions)
+            .WithOne(s => s.UserLibraryEntry)
+            .HasForeignKey(s => s.UserLibraryEntryId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(e => e.Checklist)
+            .WithOne(c => c.UserLibraryEntry)
+            .HasForeignKey(c => c.UserLibraryEntryId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Indexes for new query scenarios
+        builder.HasIndex(e => e.CurrentState)
+            .HasDatabaseName("IX_UserLibraryEntries_CurrentState");
+
+        builder.HasIndex(e => new { e.UserId, e.CurrentState })
+            .HasDatabaseName("IX_UserLibraryEntries_UserId_CurrentState");
+
+        builder.HasIndex(e => e.LastPlayed)
+            .HasDatabaseName("IX_UserLibraryEntries_LastPlayed");
     }
 }

@@ -77,7 +77,7 @@ public sealed class LoginWithApiKeyCommandHandlerIntegrationTests : IAsyncLifeti
         {
             try
             {
-                await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+                await _dbContext.Database.MigrateAsync(TestCancellationToken);
                 break;
             }
             catch (NpgsqlException) when (attempt < 2)
@@ -109,9 +109,22 @@ public sealed class LoginWithApiKeyCommandHandlerIntegrationTests : IAsyncLifeti
         }
     }
 
+    /// <summary>
+    /// Clears database state to ensure test isolation.
+    /// </summary>
+    private async Task CleanDatabaseStateAsync()
+    {
+        _dbContext!.ApiKeys.RemoveRange(_dbContext.ApiKeys);
+        _dbContext.Users.RemoveRange(_dbContext.Users);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+    }
+
     [Fact(Timeout = 30000)]
     public async Task Handle_WithValidApiKey_ReturnsUserProfile()
     {
+        // FIX: Clear database state to prevent interference from previous tests
+        await CleanDatabaseStateAsync();
+
         // Arrange
         var userId = Guid.NewGuid();
         var user = CreateTestUser(userId, "test@example.com");
@@ -139,6 +152,9 @@ public sealed class LoginWithApiKeyCommandHandlerIntegrationTests : IAsyncLifeti
     [Fact(Timeout = 30000)]
     public async Task Handle_WithInvalidApiKey_ThrowsDomainException()
     {
+        // FIX: Clear database state to prevent interference from previous tests
+        await CleanDatabaseStateAsync();
+
         // Arrange
         var command = new LoginWithApiKeyCommand("mpl_invalid_key_12345678901234567890");
 
@@ -151,6 +167,9 @@ public sealed class LoginWithApiKeyCommandHandlerIntegrationTests : IAsyncLifeti
     [Fact(Timeout = 30000)]
     public async Task Handle_WithExpiredApiKey_ThrowsDomainException()
     {
+        // FIX: Clear database state to prevent interference from previous tests
+        await CleanDatabaseStateAsync();
+
         // Arrange
         var userId = Guid.NewGuid();
         var user = CreateTestUser(userId, "expired@test.com");
@@ -172,6 +191,9 @@ public sealed class LoginWithApiKeyCommandHandlerIntegrationTests : IAsyncLifeti
     [Fact(Timeout = 30000)]
     public async Task Handle_WithRevokedApiKey_ThrowsDomainException()
     {
+        // FIX: Clear database state to prevent interference from previous tests
+        await CleanDatabaseStateAsync();
+
         // Arrange
         var userId = Guid.NewGuid();
         var user = CreateTestUser(userId, "revoked@test.com");
@@ -194,7 +216,7 @@ public sealed class LoginWithApiKeyCommandHandlerIntegrationTests : IAsyncLifeti
     [Fact(Timeout = 30000)]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
-        // Act & Assert
+        // Act & Assert (no database cleanup needed for null check)
         var act = async () => await _handler!.Handle(null!, TestCancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }

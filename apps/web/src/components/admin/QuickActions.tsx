@@ -63,21 +63,21 @@ export interface QuickActionsProps {
 }
 
 const variantStyles = {
-  default: 'hover:bg-gray-50 hover:border-gray-300',
-  primary: 'hover:bg-blue-50 hover:border-blue-300',
-  warning: 'hover:bg-yellow-50 hover:border-yellow-300',
-  danger: 'hover:bg-red-50 hover:border-red-300',
+  default: 'hover:bg-muted/50 hover:border-border',
+  primary: 'hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-500/10',
+  warning: 'hover:bg-yellow-50 hover:border-yellow-300 dark:hover:bg-yellow-500/10',
+  danger: 'hover:bg-red-50 hover:border-red-300 dark:hover:bg-red-500/10',
 };
 
 const iconVariantStyles = {
-  default: 'text-gray-600 bg-gray-100',
-  primary: 'text-blue-600 bg-blue-100',
-  warning: 'text-yellow-600 bg-yellow-100',
-  danger: 'text-red-600 bg-red-100',
+  default: 'text-muted-foreground bg-muted',
+  primary: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-500/20',
+  warning: 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-500/20',
+  danger: 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-500/20',
 };
 
 const badgeVariantStyles = {
-  default: 'bg-gray-500',
+  default: 'bg-muted-foreground',
   primary: 'bg-blue-500',
   warning: 'bg-yellow-500',
   danger: 'bg-red-500',
@@ -232,7 +232,7 @@ export function QuickActions({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900">{action.label}</span>
+                    <span className="text-sm font-medium text-foreground">{action.label}</span>
                     {badgeCount !== undefined && (
                       <Badge
                         className={cn(
@@ -245,7 +245,7 @@ export function QuickActions({
                     )}
                   </div>
                   {action.description && (
-                    <p className="text-xs text-gray-500 truncate">{action.description}</p>
+                    <p className="text-xs text-muted-foreground truncate">{action.description}</p>
                   )}
                 </div>
               </Link>

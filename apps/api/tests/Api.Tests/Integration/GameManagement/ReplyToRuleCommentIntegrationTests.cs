@@ -164,7 +164,7 @@ public sealed class ReplyToRuleCommentIntegrationTests : IAsyncLifetime
         {
             try
             {
-                await context.Database.EnsureCreatedAsync(TestCancellationToken);
+                await context.Database.MigrateAsync(TestCancellationToken);
                 return;
             }
             catch (Npgsql.NpgsqlException) when (attempt < maxAttempts)

@@ -150,12 +150,61 @@ Consider adding Windows-friendly aliases:
 }
 ```
 
+
+## Issue 2: Test Failures Block Coverage Generation
+
+### Problem Discovered
+**Date**: 2026-01-23 (During EPIC #2759 validation)
+
+When test suite has failures, Vitest may not generate the `coverage/` directory, blocking coverage analysis.
+
+### Symptoms
+- Test suite completes with failures
+- No `coverage/` directory created
+- `coverage-summary.json` missing
+- Cannot verify coverage metrics
+
+### Root Cause
+Vitest's default behavior stops coverage generation when test failures exceed certain thresholds or critical tests fail.
+
+### Solution
+
+**Option 1: Fix Tests First (Recommended)**
+```bash
+# Identify failing tests
+node node_modules/vitest/vitest.mjs run --reporter=verbose | grep "FAIL"
+
+# Run specific failing test
+node node_modules/vitest/vitest.mjs run src/path/to/failing.test.tsx
+
+# Fix issues, then run coverage
+node node_modules/vitest/vitest.mjs run --coverage
+```
+
+**Option 2: Generate Coverage Despite Failures (Analysis Only)**
+```bash
+# This may work but is not guaranteed
+node node_modules/vitest/vitest.mjs run --coverage --passWithNoTests
+
+# Alternative: Check CI coverage reports
+# Coverage is always generated in CI, check GitHub Actions artifacts
+```
+
+### Prevention
+1. **Run tests before coverage**: Ensure test suite passes before generating coverage
+2. **Fix failures incrementally**: Address test failures as they occur
+3. **Use CI coverage**: Rely on CI-generated coverage reports for source of truth
+4. **Monitor test health**: Track failing tests in issue tracker
+
+
 ## Lessons Learned
 
 1. **Platform Testing**: Always test CLI tools on Windows, macOS, and Linux
 2. **Direct Execution**: For critical tools, provide direct `node` execution paths as fallback
 3. **Early Detection**: Run local tests before pushing to ensure dev environment parity
 4. **Documentation**: Document platform-specific issues immediately when discovered
+5. **Test Health First**: Fix failing tests before attempting coverage analysis
+6. **CI as Source of Truth**: When local coverage fails, use CI reports for metrics
 
 ## References
 

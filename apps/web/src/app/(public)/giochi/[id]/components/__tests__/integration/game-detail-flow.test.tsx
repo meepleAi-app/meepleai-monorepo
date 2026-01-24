@@ -55,8 +55,8 @@ const mockFAQs: GameFAQ[] = [
     answer: 'Integration test answer.',
     upvotes: 10,
     gameId: 'game-integration-123',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
   },
 ];
 

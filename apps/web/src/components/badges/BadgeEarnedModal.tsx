@@ -11,7 +11,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Confetti from 'react-confetti';
+// TODO(#2759): Re-enable confetti after fixing pnpm-lock.yaml
+// import Confetti from 'react-confetti';
 
 import { BadgeTier, getCelebratoryTitle, getTierIcon, type BadgeNotificationData } from '@/types/badges';
 import { cn } from '@/lib/utils';
@@ -77,7 +78,8 @@ export function BadgeEarnedModal({
   return (
     <>
       {/* Confetti Effect */}
-      {showConfetti && (
+      {/* TODO(#2759): Re-enable confetti after fixing pnpm-lock.yaml */}
+      {/* {showConfetti && (
         <Confetti
           width={windowSize.width}
           height={windowSize.height}
@@ -86,7 +88,7 @@ export function BadgeEarnedModal({
           gravity={0.3}
           colors={confettiConfig.colors}
         />
-      )}
+      )} */}
 
       {/* Modal */}
       <Dialog open={!!badge} onOpenChange={(open) => !open && onClose()}>

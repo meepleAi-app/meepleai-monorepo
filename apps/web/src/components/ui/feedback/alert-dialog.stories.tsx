@@ -128,7 +128,7 @@ export const Warning: Story = {
  * Error variant with red icon.
  * Use for error messages and critical alerts.
  */
-export const Error: Story = {
+export const ErrorState: Story = {
   args: {
     open: true,
     onOpenChange: () => {},

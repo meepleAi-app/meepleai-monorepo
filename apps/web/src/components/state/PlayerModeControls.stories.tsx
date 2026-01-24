@@ -272,7 +272,7 @@ export const CompleteExample: Story = {
  *
  * Note: This story demonstrates error UI. Actual errors occur on backend failure.
  */
-export const Error: Story = {
+export const ErrorState: Story = {
   args: {
     query: 'This will trigger an error',
   },

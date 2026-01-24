@@ -38,7 +38,7 @@ export function AdminAuthGuard({
   loading,
   user,
   loadingMessage = 'Authenticating...',
-  backgroundClass = 'min-h-dvh bg-gray-50 p-8',
+  backgroundClass = 'min-h-dvh bg-background p-8',
 }: AdminAuthGuardProps) {
   if (loading) {
     return (
@@ -47,7 +47,7 @@ export function AdminAuthGuard({
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-              <p className="text-gray-600">{loadingMessage}</p>
+              <p className="text-muted-foreground">{loadingMessage}</p>
             </div>
           </div>
         </div>

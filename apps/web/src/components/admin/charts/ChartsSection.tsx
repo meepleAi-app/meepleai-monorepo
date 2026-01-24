@@ -83,7 +83,7 @@ export function ChartsSection({ className }: ChartsSectionProps): JSX.Element {
   return (
     <section className={`mb-12 ${className ?? ''}`}>
       {/* Issue #2850: MeepleAI section title styling */}
-      <h2 className="mb-7 font-['Quicksand',sans-serif] text-[1.75rem] font-bold text-[#2d2d2d] dark:text-gray-100">
+      <h2 className="mb-7 font-['Quicksand',sans-serif] text-[1.75rem] font-bold text-foreground">
         Analytics
       </h2>
 

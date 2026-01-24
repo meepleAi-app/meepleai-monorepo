@@ -35,7 +35,7 @@ type APIRequestsChartProps = {
 };
 
 const ChartSkeleton = () => (
-  <div className="h-[300px] w-full animate-pulse rounded-2xl bg-[#fef3e2] dark:bg-slate-800" />
+  <div className="h-[300px] w-full animate-pulse rounded-2xl bg-muted/50 dark:bg-card" />
 );
 
 function calculateTrend(data: ApiRequestByDay[]): { total: number; trend: number } {
@@ -58,7 +58,7 @@ export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps): JS
   }
 
   if (data.length === 0) {
-    return <div className="p-12 text-center text-[#666] dark:text-gray-400">No API request data available</div>;
+    return <div className="p-12 text-center text-muted-foreground">No API request data available</div>;
   }
 
   const { total, trend } = calculateTrend(data);
@@ -66,8 +66,8 @@ export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps): JS
 
   return (
     // Issue #2850: MeepleAI warm card styling
-    <div className="rounded-2xl border border-[#e8e4d8] bg-white p-6 shadow-[0_1px_3px_rgba(139,90,60,0.05)] dark:border-gray-700 dark:bg-gray-800">
-      <h3 className="mb-4 font-['Quicksand',sans-serif] text-lg font-bold text-[#2d2d2d] dark:text-gray-100">
+    <div className="rounded-2xl border border-border/50 dark:border-border/30 bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none p-6 shadow-sm dark:shadow-md">
+      <h3 className="mb-4 font-['Quicksand',sans-serif] text-lg font-bold text-foreground">
         API Requests (Last 7 Days)
       </h3>
 
@@ -117,10 +117,10 @@ export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps): JS
       </Suspense>
 
       {/* Footer with stats - Issue #2850: MeepleAI styling */}
-      <div className="mt-4 flex items-center justify-between border-t border-[#e8e4d8] pt-4 dark:border-gray-700">
+      <div className="mt-4 flex items-center justify-between border-t border-border/50 dark:border-border/30 pt-4">
         <div>
-          <p className="text-sm text-[#666] dark:text-gray-400">Total Requests</p>
-          <p className="font-['Quicksand',sans-serif] text-2xl font-bold text-[#2d2d2d] dark:text-gray-100">
+          <p className="text-sm text-muted-foreground">Total Requests</p>
+          <p className="font-['Quicksand',sans-serif] text-2xl font-bold text-foreground">
             {total.toLocaleString()}
           </p>
         </div>
@@ -132,7 +132,7 @@ export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps): JS
             <TrendingDown className="h-5 w-5" style={{ color: MEEPLE_COLORS.danger }} />
           )}
           <div>
-            <p className="text-sm text-[#666] dark:text-gray-400">vs last week</p>
+            <p className="text-sm text-muted-foreground">vs last week</p>
             <p className={`text-lg font-bold ${isPositiveTrend ? 'text-[#16a34a]' : 'text-[#dc2626]'}`}>
               {isPositiveTrend ? '+' : ''}{trend.toFixed(1)}%
             </p>

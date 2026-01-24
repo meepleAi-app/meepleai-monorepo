@@ -62,6 +62,51 @@ public class UserLibraryEntryEntity
     /// </summary>
     public string? CustomPdfOriginalFileName { get; set; }
 
+    /// <summary>
+    /// Current state of the game (stored as integer enum).
+    /// </summary>
+    public int CurrentState { get; set; }
+
+    /// <summary>
+    /// When the current state was last changed.
+    /// </summary>
+    public DateTime? StateChangedAt { get; set; }
+
+    /// <summary>
+    /// Optional notes about the current state.
+    /// </summary>
+    public string? StateNotes { get; set; }
+
+    /// <summary>
+    /// Total number of times played.
+    /// </summary>
+    public int TimesPlayed { get; set; }
+
+    /// <summary>
+    /// Last time the game was played.
+    /// </summary>
+    public DateTime? LastPlayed { get; set; }
+
+    /// <summary>
+    /// Win rate percentage (0-100).
+    /// </summary>
+    public decimal? WinRate { get; set; }
+
+    /// <summary>
+    /// Average duration in minutes.
+    /// </summary>
+    public int? AvgDuration { get; set; }
+
+    /// <summary>
+    /// Number of competitive sessions (for win rate calculation).
+    /// </summary>
+    public int CompetitiveSessions { get; set; }
+
+    /// <summary>
+    /// Optimistic concurrency control.
+    /// </summary>
+    public byte[]? RowVersion { get; set; }
+
     // Navigation properties
     public UserEntity? User { get; set; }
 
@@ -69,4 +114,14 @@ public class UserLibraryEntryEntity
     /// Navigation property to SharedGameEntity (from SharedGameCatalog).
     /// </summary>
     public SharedGameEntity? SharedGame { get; set; }
+
+    /// <summary>
+    /// Collection of recorded game sessions.
+    /// </summary>
+    public ICollection<UserGameSessionEntity> Sessions { get; set; } = new List<UserGameSessionEntity>();
+
+    /// <summary>
+    /// Collection of setup checklist items.
+    /// </summary>
+    public ICollection<UserGameChecklistEntity> Checklist { get; set; } = new List<UserGameChecklistEntity>();
 }

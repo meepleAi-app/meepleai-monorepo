@@ -11,7 +11,7 @@
 
 import { useState, useEffect, ReactNode } from 'react';
 
-import { ThemeProvider } from 'next-themes';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 import { QueryProvider } from '@/app/QueryProvider';
 import { AccessibleSkipLink } from '@/components/accessible';
@@ -139,7 +139,7 @@ function AppContent({ children }: { children: ReactNode }) {
 export function AppProviders({ children }: AppProvidersProps) {
   return (
     <IntlProvider>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ThemeProvider>
         <QueryProvider>
           <AuthProvider>
             <ErrorBoundary componentName="App" showDetails={process.env.NODE_ENV === 'development'}>

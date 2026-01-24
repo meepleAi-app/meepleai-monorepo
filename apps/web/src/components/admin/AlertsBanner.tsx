@@ -109,8 +109,8 @@ export function AlertsBanner({
       className={cn(
         'group relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:shadow-lg',
         hasIssues
-          ? 'border-amber-200 bg-white dark:border-amber-800 dark:bg-stone-900'
-          : 'border-green-200 bg-white dark:border-green-800 dark:bg-stone-900',
+          ? 'border-amber-200 bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none dark:border-amber-800'
+          : 'border-green-200 bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none dark:border-green-800',
         className
       )}
     >

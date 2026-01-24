@@ -117,7 +117,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         _mediator = _serviceProvider.GetRequiredService<IMediator>();
 
         // Run migrations
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        await _dbContext.Database.MigrateAsync(TestCancellationToken);
         _output("Database migrations completed");
     }
 

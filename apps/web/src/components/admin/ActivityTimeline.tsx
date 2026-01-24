@@ -66,8 +66,8 @@ export function ActivityTimeline({
       </CardHeader>
       <CardContent className="p-0">
         {displayEvents.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <ActivityIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" aria-hidden="true" />
+          <div className="p-8 text-center text-muted-foreground">
+            <ActivityIcon className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" aria-hidden="true" />
             <p>Nessuna attività recente</p>
           </div>
         ) : (
@@ -84,18 +84,18 @@ export function ActivityTimeline({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05, duration: 0.3 }}
-                    className="px-6 py-4 hover:bg-stone-50 transition-colors"
+                    className="px-6 py-4 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors"
                   >
                     <div className="flex items-start gap-4">
                       <div
-                        className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${colorClass} bg-gray-50`}
+                        className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${colorClass} bg-muted/50 dark:bg-muted/30`}
                         aria-label={`${activityType} activity`}
                       >
                         <Icon className="h-5 w-5" aria-hidden="true" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">{event.description}</p>
-                        <div className="mt-1 flex items-center gap-4 text-xs text-gray-500">
+                        <p className="text-sm font-medium text-foreground">{event.description}</p>
+                        <div className="mt-1 flex items-center gap-4 text-xs text-muted-foreground">
                           <time
                             dateTime={event.timestamp}
                             title={new Date(event.timestamp).toLocaleString('it-IT')}

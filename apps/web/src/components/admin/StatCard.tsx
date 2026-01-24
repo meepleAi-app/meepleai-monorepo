@@ -41,10 +41,10 @@ export interface StatCardProps {
 
 // Issue #2850: MeepleAI Design System variant styles
 const variantStyles = {
-  default: 'border-[#e8e4d8] bg-white',
-  success: 'border-green-200 bg-green-50/50',
-  warning: 'border-yellow-200 bg-yellow-50/50',
-  danger: 'border-red-200 bg-red-50/50',
+  default: 'border-border/50 dark:border-border/30 bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none',
+  success: 'border-green-200 bg-green-50/50 dark:bg-green-500/10',
+  warning: 'border-yellow-200 bg-yellow-50/50 dark:bg-yellow-500/10',
+  danger: 'border-red-200 bg-red-50/50 dark:bg-red-500/10',
 };
 
 // Issue #2850: MeepleAI trend colors

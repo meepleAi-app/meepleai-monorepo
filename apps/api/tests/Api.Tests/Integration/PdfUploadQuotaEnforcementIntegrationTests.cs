@@ -61,7 +61,8 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         // Issue #2031: Use SharedTestcontainersFixture for both PostgreSQL AND Redis to prevent Docker hijack
-        _databaseName = "test_quota";
+        // FIX: Use unique database name to prevent conflicts in parallel execution
+        _databaseName = $"test_quota_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         // Use SharedTestcontainersFixture Redis (no separate container needed!)
@@ -80,6 +81,11 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         // Register Redis
         _redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
         services.AddSingleton<IConnectionMultiplexer>(_redis);
+
+        // FIX: Clear Redis state before each test to prevent interference
+        // from previous tests (quota counts persist in Redis across test runs)
+        var db = _redis.GetDatabase();
+        await db.ExecuteAsync("FLUSHDB");
 
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
@@ -106,11 +112,25 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
         _quotaService = _serviceProvider.GetRequiredService<IPdfUploadQuotaService>();
 
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        await _dbContext.Database.MigrateAsync(TestCancellationToken);
     }
 
     public async ValueTask DisposeAsync()
     {
+        // FIX: Clear Redis state BEFORE disposing to prevent interference with next tests
+        if (_redis != null)
+        {
+            try
+            {
+                var db = _redis.GetDatabase();
+                await db.ExecuteAsync("FLUSHDB");
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
+        }
+
         if (_dbContext != null)
             await _dbContext.DisposeAsync();
         if (_redis != null)
@@ -165,6 +185,16 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         await _quotaService!.IncrementUploadCountAsync(userId, TestCancellationToken);
     }
 
+    /// <summary>
+    /// Clears all Redis state to ensure test isolation.
+    /// MUST be called at the start of each test to prevent interference from previous tests.
+    /// </summary>
+    private async Task CleanRedisStateAsync()
+    {
+        var db = _redis!.GetDatabase();
+        await db.ExecuteAsync("FLUSHDB");
+    }
+
     private static string GetWeekKey(DateTime date)
     {
         // ISO 8601 week: yyyy-Www (e.g., 2025-W47)
@@ -193,6 +223,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 30000)] // 30s for Testcontainers integration tests
     public async Task FreeTier_FiveUploadsInDay_SixthUploadDenied()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Create free tier user
         var user = await CreateUserAsync(UserTier.Free);
 
@@ -227,6 +260,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task FreeTier_TwentyUploadsInWeek_TwentyFirstUploadDenied()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Create free tier user
         var user = await CreateUserAsync(UserTier.Free);
 
@@ -255,6 +291,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task NormalTier_TwentyUploadsInDay_AllAllowed()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Create normal tier user
         var user = await CreateUserAsync(UserTier.Normal);
 
@@ -289,6 +328,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task NormalTier_HundredUploadsInWeek_AllAllowed()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Create normal tier user
         var user = await CreateUserAsync(UserTier.Normal);
 
@@ -320,6 +362,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task PremiumTier_HundredUploadsInDay_AllAllowed()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Create premium tier user
         var user = await CreateUserAsync(UserTier.Premium);
 
@@ -350,6 +395,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task AdminUser_UnlimitedUploads_NoQuotaCheck()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Create admin user (tier doesn't matter for admin)
         var user = await CreateUserAsync(UserTier.Free, AuthRole.Admin);
 
@@ -381,6 +429,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task EditorUser_UnlimitedUploads_NoQuotaCheck()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Create editor user
         var user = await CreateUserAsync(UserTier.Normal, AuthRole.Editor);
 
@@ -409,6 +460,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task UserUpgrade_FreeToPremium_QuotaLimitIncreases()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Create free tier user and upload 5 PDFs (at limit)
         var user = await CreateUserAsync(UserTier.Free);
 
@@ -443,6 +497,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task UserDowngrade_PremiumToFree_QuotaLimitDecreases()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Create premium tier user and upload 10 PDFs
         var user = await CreateUserAsync(UserTier.Premium);
 
@@ -476,6 +533,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task MultipleUsers_QuotaTrackedIndependently()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Create 3 users with different tiers
         var user1 = await CreateUserAsync(UserTier.Free);
         var user2 = await CreateUserAsync(UserTier.Normal);
@@ -510,6 +570,9 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task QuotaTracking_PersistsInRedis_AcrossServiceInstances()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Create user and upload 3 PDFs with first service instance
         var user = await CreateUserAsync(UserTier.Free);
 

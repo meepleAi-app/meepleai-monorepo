@@ -112,7 +112,7 @@ export function ServiceCard({
   if (loading) {
     return (
       <Card
-        className={cn('border-gray-200 dark:border-gray-700', className)}
+        className={cn('border-border/50 dark:border-border/30', className)}
         data-testid="service-card-loading"
       >
         <CardContent className="p-6">
@@ -150,7 +150,7 @@ export function ServiceCard({
           <div className="flex-1 min-w-0">
             {/* Service Name + Pulsating Dot + Badge */}
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+              <h3 className="text-sm font-semibold text-foreground truncate">
                 {displayName}
               </h3>
               {/* Pulsating Status Dot - Issue #2786 */}
@@ -178,10 +178,10 @@ export function ServiceCard({
             </div>
 
             {/* Metrics */}
-            <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+            <div className="space-y-1 text-xs text-muted-foreground">
               {responseTimeMs !== undefined && (
                 <div className="flex items-center gap-1.5">
-                  <ActivityIcon className="h-3 w-3 text-gray-400 dark:text-gray-500" aria-hidden="true" />
+                  <ActivityIcon className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />
                   <span>
                     {i18n.labels.responseTime}: {formatResponseTime(responseTimeMs, locale)}
                   </span>
@@ -189,15 +189,15 @@ export function ServiceCard({
               )}
 
               {lastCheck && (
-                <div className="text-gray-500 dark:text-gray-400">
+                <div className="text-muted-foreground">
                   {i18n.labels.lastCheck}: {formatTimestamp(lastCheck, locale)}
                 </div>
               )}
 
               {/* Error Message */}
               {errorMessage && status !== 'Healthy' && (
-                <div className="mt-2 p-2 bg-white/60 dark:bg-gray-800/60 rounded border border-gray-200 dark:border-gray-700">
-                  <p className="text-xs text-gray-700 dark:text-gray-300 break-words">
+                <div className="mt-2 p-2 bg-card/60 backdrop-blur-[8px] dark:bg-card/60 dark:backdrop-blur-none rounded border border-border/50 dark:border-border/30">
+                  <p className="text-xs text-foreground break-words">
                     <span className="font-medium">{i18n.labels.errorMessage}:</span> {errorMessage}
                   </p>
                 </div>

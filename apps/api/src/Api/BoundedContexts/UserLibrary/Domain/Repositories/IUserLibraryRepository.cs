@@ -1,4 +1,5 @@
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
+using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -76,5 +77,30 @@ internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
     /// <returns>Tuple of oldest and newest dates (null if library is empty)</returns>
     Task<(DateTime? Oldest, DateTime? Newest)> GetLibraryDateRangeAsync(
         Guid userId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a user's game with full statistics and gameplay data.
+    /// Includes Sessions and Checklist navigation properties.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="gameId">The game ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Library entry with full stats, or null if not found</returns>
+    Task<UserLibraryEntry?> GetUserGameWithStatsAsync(
+        Guid userId,
+        Guid gameId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all games for a user with optional state filter.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="state">Optional game state filter</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of user games</returns>
+    Task<IReadOnlyList<UserLibraryEntry>> GetUserGamesAsync(
+        Guid userId,
+        GameStateType? state = null,
         CancellationToken cancellationToken = default);
 }

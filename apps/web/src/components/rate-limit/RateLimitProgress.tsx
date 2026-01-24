@@ -64,7 +64,7 @@ export function RateLimitProgress({
   label,
   resetAt,
   className,
-}: RateLimitProgressProps): JSX.Element {
+}: RateLimitProgressProps){
   const percentage = max > 0 ? (current / max) * 100 : 0;
   const isWarning = percentage >= 80 && percentage < 100;
   const isLimit = percentage >= 100;

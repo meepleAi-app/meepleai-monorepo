@@ -47,7 +47,7 @@ export function ReviewActionButtons({
   lockStatus,
   onAction,
   enableKeyboardShortcut = true,
-}: ReviewActionButtonsProps): JSX.Element {
+}: ReviewActionButtonsProps){
   const router = useRouter();
   const { mutate: startReview, isPending: isStarting } = useStartReview();
   const { mutate: releaseReview, isPending: isReleasing } = useReleaseReview();

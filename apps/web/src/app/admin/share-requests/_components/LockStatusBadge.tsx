@@ -22,7 +22,7 @@ interface LockStatusBadgeProps {
   className?: string;
 }
 
-export function LockStatusBadge({ lockStatus, className }: LockStatusBadgeProps): JSX.Element {
+export function LockStatusBadge({ lockStatus, className }: LockStatusBadgeProps){
   if (!lockStatus.isLocked) {
     return (
       <Badge variant="outline" className={`border-green-300 bg-green-50 text-green-700 ${className ?? ''}`}>

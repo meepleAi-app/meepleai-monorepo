@@ -30,7 +30,7 @@ export function DocumentsPreviewGrid({
   onSelectionChange,
   selectable = false,
   className,
-}: DocumentsPreviewGridProps): JSX.Element {
+}: DocumentsPreviewGridProps){
   const handleToggle = (documentId: string) => {
     if (!onSelectionChange) return;
 

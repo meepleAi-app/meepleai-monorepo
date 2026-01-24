@@ -43,7 +43,7 @@ export function UserBadges({
   className,
   showViewAll = true,
   maxDisplay = 12,
-}: UserBadgesProps): JSX.Element {
+}: UserBadgesProps){
   const { data: badges, isLoading } = useMyBadges();
   const { mutate: toggleDisplay } = useToggleBadgeDisplay();
 

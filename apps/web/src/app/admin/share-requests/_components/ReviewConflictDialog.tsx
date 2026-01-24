@@ -38,7 +38,7 @@ export function ReviewConflictDialog({
   open,
   onClose,
   conflictDetails,
-}: ReviewConflictDialogProps): JSX.Element {
+}: ReviewConflictDialogProps){
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>

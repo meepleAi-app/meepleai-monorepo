@@ -199,7 +199,7 @@ export function KPICardsGrid({
   cards,
   className,
   'data-testid': testId,
-}: KPICardsGridProps): JSX.Element {
+}: KPICardsGridProps){
   return (
     <div
       className={cn(

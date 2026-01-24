@@ -43,7 +43,7 @@ export function ActivityTimeline({
   maxEvents = 10,
   viewAllHref = '/admin/audit',
   showViewAll = true,
-}: ActivityTimelineProps): JSX.Element {
+}: ActivityTimelineProps){
   return (
     <ActivityFeed
       events={events}

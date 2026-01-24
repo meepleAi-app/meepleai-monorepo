@@ -30,7 +30,7 @@ interface ShareRequestsTableRowProps {
   onReview: (id: string) => void;
 }
 
-export function ShareRequestsTableRow({ request, onReview }: ShareRequestsTableRowProps): JSX.Element {
+export function ShareRequestsTableRow({ request, onReview }: ShareRequestsTableRowProps){
   const waitingTime = Date.now() - new Date(request.createdAt).getTime();
   const waitingDays = Math.floor(waitingTime / (1000 * 60 * 60 * 24));
   const isWaitingLong = waitingDays > 7;

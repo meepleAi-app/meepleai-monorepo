@@ -33,7 +33,7 @@ interface RejectButtonProps {
   isPending?: boolean;
 }
 
-export function RejectButton({ onReject, disabled, isPending }: RejectButtonProps): JSX.Element {
+export function RejectButton({ onReject, disabled, isPending }: RejectButtonProps){
   const [isOpen, setIsOpen] = useState(false);
   const [reason, setReason] = useState('');
 

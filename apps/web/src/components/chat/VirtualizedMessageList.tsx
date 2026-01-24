@@ -256,7 +256,7 @@ function StreamingMessageRow({ content, stateMessage }: StreamingMessageRowProps
   if (!content && stateMessage) {
     return (
       <div className="mb-4 flex justify-start">
-        <div className="max-w-[70%] px-4 py-2 rounded-lg bg-gray-100 text-gray-600 text-sm italic">
+        <div className="max-w-[70%] px-4 py-2 rounded-lg bg-muted dark:bg-muted/50 text-muted-foreground text-sm italic">
           {stateMessage}
         </div>
       </div>

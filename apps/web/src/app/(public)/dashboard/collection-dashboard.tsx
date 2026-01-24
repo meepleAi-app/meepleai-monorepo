@@ -95,7 +95,7 @@ export function CollectionDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-50 via-amber-50/30 to-emerald-50/20">
       {/* Header con profilo e navigazione */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-stone-200/50 shadow-sm">
+      <header className="sticky top-0 z-50 backdrop-blur-[16px] backdrop-saturate-[180%] bg-background/95 dark:bg-card dark:backdrop-blur-none border-b border-border/50 dark:border-border/30 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             {/* Logo / Brand */}
@@ -303,7 +303,7 @@ function StatsCard({
       )}
     >
       {/* Decorative gradient orb */}
-      <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-white/20 blur-2xl" />
+      <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-background/20 blur-2xl" />
 
       <div className="relative space-y-2">
         <div className="flex items-center justify-between">
@@ -328,7 +328,7 @@ function FilterSidebar({
   onChange: (filters: FilterState) => void;
 }) {
   return (
-    <div className="bg-white rounded-2xl border-2 border-stone-200/50 p-6 space-y-6 shadow-lg sticky top-24">
+    <div className="bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none rounded-2xl border border-border/50 dark:border-border/30 p-6 space-y-6 shadow-lg sticky top-24">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-playfair font-bold text-stone-900">Filtri</h2>
         <Button variant="ghost" size="sm" className="text-xs text-amber-600 hover:text-amber-700">
@@ -396,7 +396,7 @@ function GameCardFlip({ game, viewMode }: { game: GameCardData; viewMode: 'grid'
   if (viewMode === 'list') {
     // List view - no flip, horizontal layout
     return (
-      <div className="bg-white rounded-xl border-2 border-stone-200/50 p-4 hover:shadow-lg transition-shadow duration-300 flex gap-4">
+      <div className="bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none rounded-xl border border-border/50 dark:border-border/30 p-4 hover:shadow-lg transition-shadow duration-300 flex gap-4">
         <img src={game.coverUrl} alt={game.title} className="w-24 h-32 object-cover rounded-lg" />
         <div className="flex-1">
           <h3 className="font-playfair font-bold text-lg text-stone-900">{game.title}</h3>

@@ -176,9 +176,9 @@ export default function BoardGameAskClient() {
   const selectedGame = games.find(g => g.id === selectedGameId);
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-white">
+    <div className="min-h-dvh bg-background text-white">
       {/* Header */}
-      <header className="sticky top-0 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 z-50">
+      <header className="sticky top-0 bg-card/95 backdrop-blur-[16px] dark:backdrop-blur-none backdrop-blur-sm border-b border-border/30 z-50">
         <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link
             href="/board-game-ai"
@@ -256,7 +256,7 @@ export default function BoardGameAskClient() {
                 className="resize-none"
               />
               <p className="text-xs text-slate-400">
-                Press <kbd className="px-1.5 py-0.5 bg-slate-800 rounded">Ctrl+Enter</kbd> to submit
+                Press <kbd className="px-1.5 py-0.5 bg-card rounded">Ctrl+Enter</kbd> to submit
               </p>
             </div>
 
@@ -328,7 +328,7 @@ export default function BoardGameAskClient() {
                             <h4 className="text-sm font-semibold mb-2">📖 Sources:</h4>
                             <div className="space-y-2">
                               {message.citations.map((citation, citIndex) => (
-                                <Card key={citIndex} className="p-3 bg-slate-800/50">
+                                <Card key={citIndex} className="p-3 bg-card/50">
                                   <p className="text-sm text-slate-300">
                                     Document: {citation.documentId}
                                     <span className="ml-2 text-slate-400">

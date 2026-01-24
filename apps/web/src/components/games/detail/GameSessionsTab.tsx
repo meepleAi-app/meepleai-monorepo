@@ -80,25 +80,25 @@ export function GameSessionsTab({ game: _game, sessions = [] }: GameSessionsTabP
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex flex-col items-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
+            <div className="flex flex-col items-center p-4 bg-muted dark:bg-card rounded-lg">
               <PlayCircle className="h-5 w-5 text-muted-foreground mb-2" />
               <div className="text-2xl font-bold">{totalSessions}</div>
               <div className="text-xs text-muted-foreground">Total Sessions</div>
             </div>
 
-            <div className="flex flex-col items-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
+            <div className="flex flex-col items-center p-4 bg-muted dark:bg-card rounded-lg">
               <Trophy className="h-5 w-5 text-green-500 mb-2" />
               <div className="text-2xl font-bold">{completedCount}</div>
               <div className="text-xs text-muted-foreground">Completed</div>
             </div>
 
-            <div className="flex flex-col items-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
+            <div className="flex flex-col items-center p-4 bg-muted dark:bg-card rounded-lg">
               <Clock className="h-5 w-5 text-blue-500 mb-2" />
               <div className="text-2xl font-bold">{activeSessions.length}</div>
               <div className="text-xs text-muted-foreground">Active</div>
             </div>
 
-            <div className="flex flex-col items-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
+            <div className="flex flex-col items-center p-4 bg-muted dark:bg-card rounded-lg">
               <Clock className="h-5 w-5 text-muted-foreground mb-2" />
               <div className="text-2xl font-bold">
                 {averageDuration > 0 ? formatDuration(averageDuration) : '—'}
@@ -131,7 +131,7 @@ export function GameSessionsTab({ game: _game, sessions = [] }: GameSessionsTabP
               {activeSessions.map(session => (
                 <div
                   key={session.id}
-                  className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  className="p-4 border border-border/50 dark:border-border/30 rounded-lg hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -197,7 +197,7 @@ export function GameSessionsTab({ game: _game, sessions = [] }: GameSessionsTabP
               {completedSessions.slice(0, 10).map(session => (
                 <div
                   key={session.id}
-                  className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
+                  className="p-4 border border-border/50 dark:border-border/30 rounded-lg"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">

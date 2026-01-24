@@ -36,12 +36,12 @@ export default function AboutPage() {
   const { t, locale } = useTranslation();
 
   return (
-    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 py-8 px-4">
+    <div className="min-h-dvh bg-background py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
           <h1
-            className="text-3xl font-bold text-slate-900 dark:text-white"
+            className="text-3xl font-bold text-foreground"
             data-testid="about-heading"
           >
             {t('pages.about.title')}
@@ -85,12 +85,12 @@ export default function AboutPage() {
 
         {/* Values Section */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white text-center mb-6">
+          <h2 className="text-2xl font-bold text-foreground text-center mb-6">
             {t('pages.about.values.title')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {VALUE_KEYS.map((key) => (
-              <Card key={key} className="bg-white dark:bg-slate-800">
+              <Card key={key} className="bg-card">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <span className="text-2xl">{VALUE_ICONS[key]}</span>

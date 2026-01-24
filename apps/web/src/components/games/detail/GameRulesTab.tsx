@@ -102,7 +102,7 @@ export function GameRulesTab({ game: _game, documents = [] }: GameRulesTabProps)
                     {completedDocuments.map(doc => (
                       <div
                         key={doc.id}
-                        className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                        className="flex items-center justify-between p-4 border border-border/50 dark:border-border/30 rounded-lg hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors"
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           {getStatusIcon(doc.processingStatus)}
@@ -144,7 +144,7 @@ export function GameRulesTab({ game: _game, documents = [] }: GameRulesTabProps)
                     {processingDocuments.map(doc => (
                       <div
                         key={doc.id}
-                        className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-blue-50 dark:bg-blue-900/10"
+                        className="flex items-center justify-between p-4 border border-border/50 dark:border-border/30 rounded-lg bg-blue-50 dark:bg-blue-900/10"
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           {getStatusIcon(doc.processingStatus)}

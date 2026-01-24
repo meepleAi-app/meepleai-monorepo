@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 
 import { GameDetailClient } from '../game-detail-client';
@@ -56,8 +56,8 @@ const mockFAQs: GameFAQ[] = [
     answer: 'Test answer with proper semantics.',
     upvotes: 5,
     gameId: 'game-a11y-123',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
   },
 ];
 
@@ -207,7 +207,9 @@ describe('Accessibility Compliance (WCAG 2.1 AA)', () => {
       );
 
       // Wait for content to load
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await waitFor(() => {
+        expect(container.querySelector('[data-testid="faq-tab"]')).toBeInTheDocument();
+      });
 
       const results = await axe(container);
       expect(results).toHaveNoViolations();
@@ -219,7 +221,9 @@ describe('Accessibility Compliance (WCAG 2.1 AA)', () => {
       );
 
       // Wait for FAQs to load
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await waitFor(() => {
+        expect(getAllByRole('button').length).toBeGreaterThan(0);
+      });
 
       const buttons = getAllByRole('button');
       buttons.forEach((button) => {
@@ -228,12 +232,14 @@ describe('Accessibility Compliance (WCAG 2.1 AA)', () => {
     });
 
     it('should have proper ARIA attributes for accordion', async () => {
-      const { container } = render(
+      const { container, getAllByRole } = render(
         <GameFAQTab gameId="game-a11y-123" gameTitle="A11y Game" />
       );
 
       // Wait for FAQs to load
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await waitFor(() => {
+        expect(getAllByRole('button').length).toBeGreaterThan(0);
+      });
 
       // Accordion should have proper ARIA
       const ariaElements = container.querySelectorAll(
@@ -248,7 +254,9 @@ describe('Accessibility Compliance (WCAG 2.1 AA)', () => {
       );
 
       // Wait for FAQs to load
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await waitFor(() => {
+        expect(getAllByRole('button').length).toBeGreaterThan(0);
+      });
 
       const upvoteButtons = getAllByRole('button', { name: /thumbs-up/i });
       upvoteButtons.forEach((button) => {
@@ -265,7 +273,9 @@ describe('Accessibility Compliance (WCAG 2.1 AA)', () => {
       );
 
       // Wait for quick questions to load
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await waitFor(() => {
+        expect(container.querySelector('[data-testid]')).toBeInTheDocument();
+      });
 
       const results = await axe(container);
       expect(results).toHaveNoViolations();
@@ -277,7 +287,9 @@ describe('Accessibility Compliance (WCAG 2.1 AA)', () => {
       );
 
       // Wait for quick questions to load
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await waitFor(() => {
+        expect(container.querySelector('[data-testid]')).toBeInTheDocument();
+      });
 
       const chips = container.querySelectorAll('button, [role="button"]');
       chips.forEach((chip) => {
@@ -291,7 +303,9 @@ describe('Accessibility Compliance (WCAG 2.1 AA)', () => {
       );
 
       // Wait for content to load
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await waitFor(() => {
+        expect(container.querySelector('[data-testid="faq-tab"]')).toBeInTheDocument();
+      });
 
       const buttons = getAllByRole('button');
       buttons.forEach((button) => {

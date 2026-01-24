@@ -27,8 +27,8 @@ const mockFAQs: GameFAQ[] = [
     answer: 'The game supports 2-4 players.',
     upvotes: 5,
     gameId: 'game-123',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
   },
   {
     id: 'faq-2',
@@ -36,8 +36,8 @@ const mockFAQs: GameFAQ[] = [
     answer: 'Average playtime is 45-60 minutes.',
     upvotes: 3,
     gameId: 'game-123',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
   },
   {
     id: 'faq-3',
@@ -45,8 +45,8 @@ const mockFAQs: GameFAQ[] = [
     answer: 'Recommended for ages 10+.',
     upvotes: 8,
     gameId: 'game-123',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
   },
 ];
 

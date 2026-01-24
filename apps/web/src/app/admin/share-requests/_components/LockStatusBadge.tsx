@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui';
 import { Lock, LockOpen, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { LockStatusDto } from '@/lib/api/schemas/admin-share-requests.schemas';

@@ -39,7 +39,7 @@ export function useMyBadges(): UseQueryResult<UserBadgeDto[], Error> {
   return useQuery({
     queryKey: badgeKeys.myBadges(),
     queryFn: async (): Promise<UserBadgeDto[]> => {
-      return api.badges.getMyBadges();
+      return api.badges.getMyBadges() as Promise<UserBadgeDto[]>;
     },
     staleTime: 5 * 60 * 1000, // Badges don't change frequently (5min)
     refetchOnWindowFocus: true, // Refetch when user returns to tab
@@ -65,7 +65,7 @@ export function useLeaderboard(
   return useQuery({
     queryKey: badgeKeys.leaderboard(period),
     queryFn: async (): Promise<LeaderboardEntryDto[]> => {
-      return api.badges.getLeaderboard(period);
+      return api.badges.getLeaderboard(period) as Promise<LeaderboardEntryDto[]>;
     },
     enabled,
     staleTime: 2 * 60 * 1000, // Leaderboard changes more frequently (2min)

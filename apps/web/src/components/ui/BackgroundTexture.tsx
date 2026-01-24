@@ -45,7 +45,7 @@ export function BackgroundTexture({
   opacity = 0.6,
   enabled = true,
   intensity = 'normal',
-}: BackgroundTextureProps): JSX.Element | null {
+}: BackgroundTextureProps) {
   if (!enabled) {
     return null;
   }

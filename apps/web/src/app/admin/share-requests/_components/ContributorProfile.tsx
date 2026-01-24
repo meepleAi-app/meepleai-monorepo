@@ -22,7 +22,7 @@ interface ContributorProfileProps {
   className?: string;
 }
 
-export function ContributorProfile({ contributor, className }: ContributorProfileProps): JSX.Element {
+export function ContributorProfile({ contributor, className }: ContributorProfileProps){
   const approvalRatePercentage = Math.round(contributor.approvalRate * 100);
 
   return (

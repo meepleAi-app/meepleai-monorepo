@@ -26,7 +26,7 @@ import { formatDistanceToNow } from 'date-fns';
  * Issue #2748: Frontend - Admin Review Lock UI
  */
 
-export function MyActiveReviewsButton(): JSX.Element {
+export function MyActiveReviewsButton(){
   const router = useRouter();
   const { data: activeReviews, isLoading } = useMyReviews();
   const [open, setOpen] = useState(false);
@@ -116,7 +116,7 @@ interface ActiveReviewItemProps {
   onClick: () => void;
 }
 
-function ActiveReviewItem({ review, onClick }: ActiveReviewItemProps): JSX.Element {
+function ActiveReviewItem({ review, onClick }: ActiveReviewItemProps){
   const timeRemaining = new Date(review.reviewLockExpiresAt).getTime() - Date.now();
   const isExpiringSoon = timeRemaining < 5 * 60 * 1000; // 5 minutes
 

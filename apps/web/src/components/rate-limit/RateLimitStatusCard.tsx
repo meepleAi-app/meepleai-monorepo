@@ -81,7 +81,7 @@ function getBlockReason(status: {
  * <RateLimitStatusCard />
  * ```
  */
-export function RateLimitStatusCard(): JSX.Element | null {
+export function RateLimitStatusCard() {
   const { data: status, isLoading } = useRateLimitStatus();
 
   if (isLoading) {

@@ -74,7 +74,7 @@ function getUsagePercentage(current: number, max: number): number {
  * <RateLimitWarningBanner />
  * ```
  */
-export function RateLimitWarningBanner(): JSX.Element | null {
+export function RateLimitWarningBanner() {
   const { data: status } = useRateLimitStatus();
   const [dismissed, setDismissed] = useState(false);
 

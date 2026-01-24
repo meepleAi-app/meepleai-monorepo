@@ -164,7 +164,7 @@ public sealed class GetGameFaqsQueryHandlerTests : IAsyncLifetime
             SharedGameId = _draftGameId,
             Question = "Draft question?",
             Answer = "Draft answer",
-            Order = 0,
+            DisplayOrder = 0,
             UpvoteCount = 0,
             CreatedAt = DateTime.UtcNow
         };

@@ -183,7 +183,7 @@ export function useChunkStreaming(
     onChunk: _onChunk,
     onComplete: _onComplete,
     onError: _onError,
-    onConnect,
+    onConnect: _onConnect,
   } = options;
 
   const [state, setState] = useState<ChunkStreamingState>(INITIAL_STATE);

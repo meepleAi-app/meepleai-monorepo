@@ -112,7 +112,7 @@ function getTooltipContent(
  * ```
  */
 export function ShareButton({
-  gameId,
+  gameId: _gameId,
   onShare,
   existingPendingRequest = false,
   className,

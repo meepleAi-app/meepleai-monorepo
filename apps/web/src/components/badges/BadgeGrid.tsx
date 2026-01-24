@@ -11,7 +11,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-import { BadgeTier, getTierIcon, getTierOrder, type UserBadgeDto } from '@/types/badges';
+import { BadgeTier, getTierIcon, type UserBadgeDto } from '@/types/badges';
 import { cn } from '@/lib/utils';
 
 export interface BadgeGridProps {

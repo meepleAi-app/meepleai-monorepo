@@ -47,33 +47,33 @@ export function BadgeEarnedModal({
   onClose,
   onShare,
 }: BadgeEarnedModalProps): JSX.Element {
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  // TODO(#2759): Re-enable confetti state after fixing react-confetti in pnpm-lock.yaml
+  // const [showConfetti, setShowConfetti] = useState(false);
+  // const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
-  // Track window size for confetti
-  useEffect(() => {
-    const updateSize = () => {
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-    };
+  // TODO(#2759): Re-enable confetti size tracking
+  // useEffect(() => {
+  //   const updateSize = () => {
+  //     setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+  //   };
+  //   updateSize();
+  //   window.addEventListener('resize', updateSize);
+  //   return () => window.removeEventListener('resize', updateSize);
+  // }, []);
 
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
-  }, []);
-
-  // Trigger confetti on badge earn
-  useEffect(() => {
-    if (badge) {
-      setShowConfetti(true);
-      // Stop confetti after 5 seconds
-      const timer = setTimeout(() => setShowConfetti(false), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [badge]);
+  // TODO(#2759): Re-enable confetti trigger
+  // useEffect(() => {
+  //   if (badge) {
+  //     setShowConfetti(true);
+  //     const timer = setTimeout(() => setShowConfetti(false), 5000);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [badge]);
 
   if (!badge) return <></>;
 
-  const confettiConfig = getConfettiConfig(badge.tier);
+  // TODO(#2759): Re-enable confetti config
+  // const confettiConfig = getConfettiConfig(badge.tier);
 
   return (
     <>

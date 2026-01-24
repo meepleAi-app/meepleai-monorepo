@@ -22,9 +22,12 @@ internal partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateR
 
     private const int MaxCommentLength = 2000;
 
-    // FIX MA0023: Add ExplicitCapture to prevent capturing unneeded groups
-    [GeneratedRegex(@"@(\w{1,50})", RegexOptions.Compiled | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 100)]
+    // FIX: Removed ExplicitCapture - it prevented Groups[1] capture which we need
+    // MA0023 suppressed: we DO need the captured group
+#pragma warning disable MA0023 // Add RegexOptions.ExplicitCapture
+    [GeneratedRegex(@"@(\w{1,50})", RegexOptions.Compiled, matchTimeoutMilliseconds: 100)]
     private static partial Regex MentionRegex();
+#pragma warning restore MA0023
 
     public CreateRuleCommentCommandHandler(
         MeepleAiDbContext dbContext,
@@ -83,6 +86,7 @@ internal partial class CreateRuleCommentCommandHandler : IRequestHandler<CreateR
             var matches = MentionRegex().Matches(text);
             var mentionedUsernames = matches
                 .Select(m => m.Groups[1].Value.ToLowerInvariant())
+                .Where(m => !string.IsNullOrWhiteSpace(m))  // FIX: Filter empty mentions
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
 

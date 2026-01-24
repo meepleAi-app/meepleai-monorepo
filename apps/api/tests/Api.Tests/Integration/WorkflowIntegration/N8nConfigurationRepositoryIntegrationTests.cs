@@ -91,7 +91,7 @@ public sealed class N8nConfigurationRepositoryIntegrationTests : IAsyncLifetime
         {
             try
             {
-                await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+                await _dbContext.Database.MigrateAsync(TestCancellationToken);
                 break;
             }
             catch (NpgsqlException) when (attempt < 2)

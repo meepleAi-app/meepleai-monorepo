@@ -112,7 +112,7 @@ type Story = StoryObj<typeof meta>;
 // Basic States
 export const Default: Story = {};
 
-export const Error: Story = {
+export const ErrorState: Story = {
   parameters: {
     docs: {
       description: {

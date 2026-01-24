@@ -166,7 +166,7 @@ export const Loading: Story = {
  * Error state when data fetch fails.
  * Shows error message and retry option.
  */
-export const Error: Story = {
+export const ErrorState: Story = {
   parameters: {
     mockData: [
       {

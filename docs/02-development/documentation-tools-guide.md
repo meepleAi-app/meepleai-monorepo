@@ -52,7 +52,7 @@ app.MapPost("/api/v1/games", async (CreateGameCommand cmd, IMediator mediator) =
 
 **Status**: ✅ Disponibile
 
-**Location**: `scripts/validate-doc-links.sh`
+**Location**: `scripts/quality/validate-doc-links.sh`
 
 **Usage**:
 ```bash
@@ -77,7 +77,7 @@ cd scripts
 ```yaml
 # Add to .github/workflows/docs.yml
 - name: Validate Documentation Links
-  run: bash scripts/validate-doc-links.sh
+  run: bash scripts/quality/validate-doc-links.sh
 ```
 
 ---

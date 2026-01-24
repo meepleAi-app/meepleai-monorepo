@@ -10,7 +10,7 @@ public class GameFaqEntity
     public Guid SharedGameId { get; set; }
     public string Question { get; set; } = string.Empty;
     public string Answer { get; set; } = string.Empty;
-    public int Order { get; set; }
+    public int DisplayOrder { get; set; }
     public int UpvoteCount { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

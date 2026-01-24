@@ -9,6 +9,7 @@
  * - Breadcrumb navigation
  * - Mobile responsive with Sheet drawer
  * - Dark mode support
+ * - MeepleAI background texture (Issue #2847)
  */
 
 'use client';
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/navigation/sheet';
 import { TooltipProvider } from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
+import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
 import { cn } from '@/lib/utils';
 
 import { AdminBreadcrumbs, type BreadcrumbItem } from './AdminBreadcrumbs';
@@ -87,7 +89,7 @@ export function AdminLayout({
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-60 p-0">
-        <SheetTitle className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <SheetTitle className="px-4 py-3 border-b border-border/50 dark:border-border/30">
           Admin Menu
         </SheetTitle>
         <SheetDescription className="sr-only">Navigation menu</SheetDescription>
@@ -106,7 +108,7 @@ export function AdminLayout({
   const badgeSummary =
     badges && Object.keys(badges).length > 0 ? (
       <span
-        className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
+        className="flex items-center gap-2 text-xs text-muted-foreground"
         data-testid="badge-summary"
       >
         {Object.entries(badges).map(([key, badge]) => (
@@ -118,7 +120,10 @@ export function AdminLayout({
     ) : null;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background relative">
+      {/* Background Texture Overlay - Issue #2847 */}
+      <BackgroundTexture opacity={0.6} intensity="normal" />
+
       {/* Header */}
       <AdminHeader
         user={user}

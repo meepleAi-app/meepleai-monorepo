@@ -1393,9 +1393,22 @@ export const allHandlers = [
 
 ---
 
+## Troubleshooting
+
+### Windows: Tests Hang with No Output
+
+If running `pnpm test` produces no output on Windows, use direct node execution:
+
+```bash
+node node_modules/vitest/vitest.mjs run --coverage
+```
+
+See [Windows Vitest Troubleshooting Guide](./windows-vitest-troubleshooting.md) for details.
+
 ## Related Documentation
 
 - [E2E Test Guide](./e2e/E2E_TEST_GUIDE.md)
 - [Playwright Best Practices](./e2e/e2e-selector-best-practices.md)
 - [Backend Testing](./backend/testcontainers-best-practices.md)
 - [Week 4 Component Plan](./frontend/week4-frontend-component-test-plan.md)
+- [Windows Troubleshooting](./windows-vitest-troubleshooting.md)

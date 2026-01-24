@@ -14,6 +14,8 @@ public sealed class ShareRequest : AggregateRoot<Guid>
 {
     /// <summary>
     /// Default lock duration for review in minutes.
+    /// Issue #2729: This constant serves as a fallback. Actual duration is configured via
+    /// SystemConfiguration key "ReviewLock:DefaultDurationMinutes".
     /// </summary>
     public const int DefaultLockDurationMinutes = 30;
 

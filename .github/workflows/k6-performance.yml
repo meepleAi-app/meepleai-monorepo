@@ -12,10 +12,20 @@ on:
     # Run nightly at 2 AM UTC (only on main branch)
     - cron: '0 2 * * *'
 
+  pull_request:
+    # ISSUE-2918: Run smoke test on PRs affecting admin endpoints or k6 tests
+    paths:
+      - 'apps/api/src/Api/Routing/*AdminEndpoints.cs'
+      - 'apps/api/src/Api/Routing/LlmAnalyticsEndpoints.cs'
+      - 'apps/api/src/Api/Routing/ReportingEndpoints.cs'
+      - 'apps/api/src/Api/BoundedContexts/Administration/**'
+      - 'tests/k6/**'
+      - '.github/workflows/k6-performance.yml'
+
   workflow_dispatch:
     inputs:
       test_type:
-        description: 'Test type (smoke recommended, load/stress/spike may fail without external services)'
+        description: 'Test type (smoke recommended for quick validation, load/stress for comprehensive testing)'
         required: false
         default: 'smoke'
         type: choice
@@ -23,7 +33,6 @@ on:
           - smoke
           - load
           - stress
-          - spike
 
 # Explicit permissions (Least Privilege Principle - Issue #1455)
 # https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
@@ -244,11 +253,19 @@ jobs:
         working-directory: tests/k6
         timeout-minutes: 15
         run: |
-          # Use smoke test for scheduled runs, load for manual runs (Issue #1599)
-          if [ "${{ github.event_name }}" == "schedule" ]; then
+          # ISSUE-2918: Determine test type based on event
+          # - PR: smoke (quick validation)
+          # - Schedule: smoke (nightly monitoring)
+          # - Manual: user-specified or load
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
             TEST_TYPE="smoke"
+            echo "🔍 PR detected - running smoke test for quick validation"
+          elif [ "${{ github.event_name }}" == "schedule" ]; then
+            TEST_TYPE="smoke"
+            echo "⏰ Scheduled run - running smoke test for monitoring"
           else
             TEST_TYPE="${{ github.event.inputs.test_type || 'load' }}"
+            echo "🚀 Manual run - running ${TEST_TYPE} test"
           fi
 
           echo "Running K6 tests with TEST_TYPE=${TEST_TYPE}"
@@ -256,8 +273,8 @@ jobs:
           # Create reports directory
           mkdir -p reports
 
-          # Run tests (scheduled or manual)
-          k6 run --env TEST_TYPE=${TEST_TYPE} scenarios/all.js
+          # Run admin polling scenario (ISSUE-2918)
+          k6 run --env TEST_TYPE=${TEST_TYPE} scenarios/admin-polling.js
         env:
           API_BASE_URL: ${{ env.API_BASE_URL }}
           # Test user credentials - create programmatically in test setup

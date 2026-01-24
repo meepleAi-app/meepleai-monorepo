@@ -200,7 +200,7 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
         _unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
 
         // Run migrations
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        await _dbContext.Database.MigrateAsync(TestCancellationToken);
         _output("✅ Database migrations completed");
     }
 

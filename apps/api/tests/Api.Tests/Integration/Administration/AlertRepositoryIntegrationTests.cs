@@ -80,7 +80,7 @@ public sealed class AlertRepositoryIntegrationTests : IAsyncLifetime
         {
             try
             {
-                await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+                await _dbContext.Database.MigrateAsync(TestCancellationToken);
                 break;
             }
             catch (NpgsqlException) when (attempt < 2)

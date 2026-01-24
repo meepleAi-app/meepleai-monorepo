@@ -225,6 +225,30 @@
     --breakpoint-2xl: 1536px;
 
     /* ============================================================================
+     * MEEPLEAI BRAND COLORS
+     * Official brand palette for admin dashboard and branded components
+     * Source: docs/design-proposals/meepleai-style/admin-dashboard-v2.html
+     * ============================================================================ */
+    --color-meeple-orange: 25 85% 45%;         /* #d2691e - Primary orange */
+    --color-meeple-purple: 262 83% 62%;        /* #8b5cf6 - Purple accent */
+    --color-meeple-warm-bg: 30 25% 97%;        /* #f8f6f0 - Warm background */
+    --color-meeple-dark: 0 0% 18%;             /* #2d2d2d - Dark text */
+    --color-meeple-border: 30 12% 90%;         /* #e8e4d8 - Border color */
+    --color-meeple-light-orange: 30 100% 94%;  /* #fef3e2 - Light orange highlight */
+
+    /* MeepleAI semantic mappings for admin components */
+    --meeple-primary: var(--color-meeple-orange);
+    --meeple-accent: var(--color-meeple-purple);
+    --meeple-surface: var(--color-meeple-warm-bg);
+    --meeple-text: var(--color-meeple-dark);
+    --meeple-border: var(--color-meeple-border);
+    --meeple-highlight: var(--color-meeple-light-orange);
+
+    /* Font family tokens for MeepleAI branding */
+    --font-heading: var(--font-quicksand);     /* Headings: Quicksand bold */
+    --font-body: var(--font-nunito);           /* Body: Nunito regular */
+
+    /* ============================================================================
      * SEMANTIC COLORS (Game-specific)
      * Extended palette for game badges and categorization
      * ============================================================================ */

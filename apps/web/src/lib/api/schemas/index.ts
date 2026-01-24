@@ -48,8 +48,23 @@ export * from './shared-games.schemas';
 // User Library schemas
 export * from './library.schemas';
 
+// Share Requests schemas (Issue #2743)
+export * from './share-requests.schemas';
+
+// Admin Share Requests schemas (Issue #2745)
+export * from './admin-share-requests.schemas';
+
+// Game Contributors schemas (Issue #2746)
+export * from './game-contributors.schemas';
+
 // Agent Configuration schemas (Issue #2518)
 export * from './agent-config.schemas';
 
 // AI Models Management schemas (Issue #2521)
 export * from './ai-models.schemas';
+
+// Badge & Gamification schemas (Issue #2747)
+export * from './badges.schemas';
+
+// Rate Limit Configuration schemas (Issue #2750)
+export * from './rate-limits.schemas';

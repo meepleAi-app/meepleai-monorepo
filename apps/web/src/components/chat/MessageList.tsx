@@ -41,7 +41,7 @@ export function MessageList({ onCitationClick }: MessageListProps) {
   // Loading state
   if (loading.messages) {
     return (
-      <div role="region" aria-label="Chat messages" className="flex-1 overflow-y-auto p-6 bg-white">
+      <div role="region" aria-label="Chat messages" className="flex-1 overflow-y-auto p-6 bg-background">
         <div role="status" aria-live="polite" className="text-center">
           <div className="mb-3 text-sm text-[#64748b]">Caricamento messaggi...</div>
           <SkeletonLoader variant="message" count={3} ariaLabel="Caricamento messaggi" />
@@ -53,7 +53,7 @@ export function MessageList({ onCitationClick }: MessageListProps) {
   // Empty state
   if (messages.length === 0) {
     return (
-      <div role="region" aria-label="Chat messages" className="flex-1 overflow-y-auto p-6 bg-white">
+      <div role="region" aria-label="Chat messages" className="flex-1 overflow-y-auto p-6 bg-background">
         <div className="text-center p-12 text-[#64748b]">
           <p className="text-base mb-2">Nessun messaggio ancora.</p>
           <p className="text-sm">
@@ -77,7 +77,7 @@ export function MessageList({ onCitationClick }: MessageListProps) {
 
   // Messages list with virtualization (Issue #1840)
   return (
-    <div role="region" aria-label="Chat messages" className="flex-1 overflow-y-auto p-6 bg-white">
+    <div role="region" aria-label="Chat messages" className="flex-1 overflow-y-auto p-6 bg-background">
       <VirtualizedMessageList
         messages={messages}
         streamingMessage={streamingMessage}

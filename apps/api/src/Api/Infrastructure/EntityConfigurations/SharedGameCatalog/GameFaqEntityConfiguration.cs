@@ -15,13 +15,13 @@ internal class GameFaqEntityConfiguration : IEntityTypeConfiguration<GameFaqEnti
         builder.Property(e => e.SharedGameId).HasColumnName("shared_game_id").IsRequired();
         builder.Property(e => e.Question).HasColumnName("question").IsRequired().HasMaxLength(500);
         builder.Property(e => e.Answer).HasColumnName("answer").IsRequired().HasColumnType("text");
-        builder.Property(e => e.Order).HasColumnName("order").IsRequired().HasDefaultValue(0);
+        builder.Property(e => e.DisplayOrder).HasColumnName("display_order").IsRequired().HasDefaultValue(0);
         builder.Property(e => e.UpvoteCount).HasColumnName("upvote_count").IsRequired().HasDefaultValue(0);
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired().HasDefaultValueSql("NOW()");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
         builder.HasIndex(e => e.SharedGameId).HasDatabaseName("ix_game_faqs_shared_game_id");
-        builder.HasIndex(e => new { e.SharedGameId, e.Order }).HasDatabaseName("ix_game_faqs_order");
+        builder.HasIndex(e => new { e.SharedGameId, e.DisplayOrder }).HasDatabaseName("ix_game_faqs_display_order");
 
         // One-to-many with SharedGame
         builder.HasOne(f => f.SharedGame)

@@ -43,6 +43,13 @@ internal static class UserLibraryEndpoints
         MapRevokeLibraryShareLinkEndpoint(group);
         MapGetSharedLibraryEndpoint(group);
 
+        // Game detail endpoints (Epic #2823)
+        MapGetGameDetailEndpoint(group);
+        MapGetGameChecklistEndpoint(group);
+        MapUpdateGameStateEndpoint(group);
+        MapRecordGameSessionEndpoint(group);
+        MapSendLoanReminderEndpoint(group);
+
         return group;
     }
 
@@ -679,6 +686,200 @@ internal static class UserLibraryEndpoints
         .WithOpenApi();
     }
 
+
+    private static void MapGetGameDetailEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/games/{gameId:guid}", async (
+            Guid gameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetGameDetailQuery(userId, gameId);
+
+            try
+            {
+                var result = await mediator.Send(query, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<GameDetailDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Library", "Games")
+        .WithSummary("Get game detail")
+        .WithDescription("Returns complete game detail with stats, sessions, and checklist for game in user's library.")
+        .WithOpenApi();
+    }
+
+    private static void MapGetGameChecklistEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/games/{gameId:guid}/checklist", async (
+            Guid gameId,
+            [FromQuery] bool includeWizard,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new GetGameChecklistQuery(gameId, includeWizard);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .AllowAnonymous()
+        .Produces<ChecklistDto>(200)
+        .WithTags("Library", "Games", "Public")
+        .WithSummary("Get game checklist")
+        .WithDescription("Returns setup checklist for a game with optional wizard steps. Public endpoint.")
+        .WithOpenApi();
+    }
+
+    private static void MapUpdateGameStateEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPut("/library/games/{gameId:guid}/state", async (
+            Guid gameId,
+            [FromBody] UpdateGameStateRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new UpdateGameStateCommand(userId, gameId, request.NewState, request.StateNotes);
+
+            try
+            {
+                await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.NoContent();
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (ConflictException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces(204)
+        .Produces(401)
+        .Produces(404)
+        .Produces(409)
+        .WithTags("Library", "Games")
+        .WithSummary("Update game state")
+        .WithDescription("Updates game state (Nuovo/InPrestito/Wishlist/Owned). Returns 409 for invalid transitions.")
+        .WithOpenApi();
+    }
+
+    private static void MapRecordGameSessionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/library/games/{gameId:guid}/sessions", async (
+            Guid gameId,
+            [FromBody] RecordGameSessionRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new RecordGameSessionCommand(
+                userId,
+                gameId,
+                request.PlayedAt,
+                request.DurationMinutes,
+                request.DidWin,
+                request.Players,
+                request.Notes);
+
+            try
+            {
+                var sessionId = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Created($"/api/v1/library/games/{gameId}/sessions/{sessionId}", new { sessionId });
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<object>(201)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Library", "Games", "Sessions")
+        .WithSummary("Record game session")
+        .WithDescription("Records a new gameplay session with automatic stats updates.")
+        .WithOpenApi();
+    }
+
+
+    private static void MapSendLoanReminderEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/library/games/{gameId:guid}/remind-loan", async (
+            Guid gameId,
+            [FromBody] SendLoanReminderRequest? request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new SendLoanReminderCommand(userId, gameId, request?.CustomMessage);
+
+            try
+            {
+                await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.NoContent();
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (ConflictException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces(204)
+        .Produces(401)
+        .Produces(404)
+        .Produces(409)
+        .WithTags("Library", "Games", "Notifications")
+        .WithSummary("Send loan reminder")
+        .WithDescription("Sends notification reminder about loaned game. Rate limited to 1 per 24h. Game must be in InPrestito state.")
+        .WithOpenApi();
+    }
+
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)
     {
         userId = Guid.Empty;
@@ -739,4 +940,30 @@ public record UpdateLibraryShareRequest(
     string? PrivacyLevel = null,
     bool? IncludeNotes = null,
     DateTime? ExpiresAt = null
+);
+
+/// <summary>
+/// Request body for updating game state.
+/// </summary>
+public record UpdateGameStateRequest(
+    string NewState,
+    string? StateNotes = null
+);
+
+/// <summary>
+/// Request body for recording game session.
+/// </summary>
+public record RecordGameSessionRequest(
+    DateTime PlayedAt,
+    int DurationMinutes,
+    bool? DidWin = null,
+    string? Players = null,
+    string? Notes = null
+);
+
+/// <summary>
+/// Request body for sending loan reminder.
+/// </summary>
+public record SendLoanReminderRequest(
+    string? CustomMessage = null
 );

@@ -72,6 +72,8 @@ public sealed record AdminShareRequestDto(
     Guid? ReviewingAdminId,
     string? ReviewingAdminName,
     DateTime? ReviewStartedAt,
+    DateTime? ReviewLockExpiresAt,  // Added for issue #2737
+    bool CanStartReview,  // Added for issue #2737
 
     // For additional content
     Guid? TargetSharedGameId,

@@ -45,12 +45,12 @@ export default function HowItWorksPage() {
   const { t, locale } = useTranslation();
 
   return (
-    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 py-8 px-4">
+    <div className="min-h-dvh bg-background py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
           <h1
-            className="text-3xl font-bold text-slate-900 dark:text-white"
+            className="text-3xl font-bold text-foreground"
             data-testid="how-it-works-heading"
           >
             {t('pages.howItWorks.title')}
@@ -92,12 +92,12 @@ export default function HowItWorksPage() {
 
         {/* Features Section */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white text-center mb-6">
+          <h2 className="text-2xl font-bold text-foreground text-center mb-6">
             {t('pages.howItWorks.features.title')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {FEATURE_KEYS.map((key) => (
-              <Card key={key} className="bg-white dark:bg-slate-800">
+              <Card key={key} className="bg-card">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <span className="text-2xl">{FEATURE_ICONS[key]}</span>
@@ -117,7 +117,7 @@ export default function HowItWorksPage() {
         {/* CTA Section */}
         <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
           <CardContent className="pt-6 text-center">
-            <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+            <h3 className="text-xl font-semibold text-foreground mb-2">
               {locale === 'it' ? 'Pronto a iniziare?' : 'Ready to get started?'}
             </h3>
             <p className="text-slate-600 dark:text-slate-400 mb-4">

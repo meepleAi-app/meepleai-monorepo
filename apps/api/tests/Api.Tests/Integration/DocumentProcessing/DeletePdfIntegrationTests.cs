@@ -524,7 +524,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         {
             try
             {
-                await context.Database.EnsureCreatedAsync(TestCancellationToken);
+                await context.Database.MigrateAsync(TestCancellationToken);
                 return;
             }
             catch (NpgsqlException) when (attempt < maxAttempts)

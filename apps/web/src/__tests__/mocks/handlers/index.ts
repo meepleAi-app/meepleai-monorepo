@@ -4,6 +4,7 @@
  * Exports all request handlers for MSW server
  *
  * Issue #2760: Extended with library, shared-games, and catalog handlers
+ * Issue #2914: Extended with admin dashboard handlers
  */
 
 import { authHandlers } from './auth.handlers';
@@ -13,6 +14,8 @@ import { documentsHandlers } from './documents.handlers';
 import { libraryHandlers } from './library.handlers';
 import { sharedGamesHandlers } from './shared-games.handlers';
 import { catalogHandlers } from './catalog.handlers';
+import { adminHandlers } from './admin.handlers';
+import { adminShareRequestsHandlers } from './admin-share-requests.handlers';
 
 /**
  * All MSW request handlers
@@ -29,6 +32,8 @@ export const handlers = [
   ...libraryHandlers,
   ...sharedGamesHandlers,
   ...catalogHandlers,
+  ...adminHandlers,
+  ...adminShareRequestsHandlers,
 ];
 
 // Re-export individual handler groups for selective use
@@ -46,3 +51,18 @@ export {
   mockPlayerCounts,
   mockPlayingTimeRanges,
 } from './catalog.handlers';
+export {
+  adminHandlers,
+  setAdminApiFailures,
+  setAdminNetworkLatency,
+  updateDashboardStats,
+  updateRecentActivity,
+  updateInfrastructureDetails,
+  resetAdminState,
+} from './admin.handlers';
+export {
+  adminShareRequestsHandlers,
+  resetAdminShareRequestsState,
+  addMockShareRequest,
+  mockShareRequests,
+} from './admin-share-requests.handlers';

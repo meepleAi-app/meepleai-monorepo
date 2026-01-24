@@ -467,7 +467,7 @@ internal static class SharedGameCatalogEndpoints
             .RequireRateLimiting("ShareRequestAdmin")
             .WithName("StartReview")
             .WithSummary("Start review on share request (Admin only)")
-            .WithDescription("Acquires an exclusive review lock for the admin. Only one admin can review a request at a time. Lock expires after 30 minutes by default.")
+            .WithDescription("Acquires an exclusive review lock for the admin. Only one admin can review a request at a time. Lock duration is configurable via SystemConfiguration key 'ReviewLock:DefaultDurationMinutes' (default: 30 minutes).")
             .Produces<StartReviewResponse>()
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status409Conflict);

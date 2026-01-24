@@ -143,7 +143,7 @@ export function RatingBadge({ rating, size = 'default' }: RatingBadgeProps) {
   } else if (rating >= 6) {
     colorClass = 'bg-yellow-50 text-yellow-700 border-yellow-200';
   } else {
-    colorClass = 'bg-gray-50 text-gray-700 border-gray-200';
+    colorClass = 'bg-muted text-muted-foreground border-border/50 dark:border-border/70';
   }
 
   return (

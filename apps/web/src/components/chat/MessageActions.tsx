@@ -86,7 +86,7 @@ export const MessageActions = React.memo(function MessageActions({
             'h-auto px-2 py-1 text-xs gap-1',
             message.feedback === FEEDBACK_OUTCOMES.HELPFUL
               ? 'bg-green-600 text-white hover:bg-green-700'
-              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              : 'bg-muted text-muted-foreground hover:bg-muted/70 dark:hover:bg-muted/50'
           )}
         >
           <span>👍</span>
@@ -102,7 +102,7 @@ export const MessageActions = React.memo(function MessageActions({
             'h-auto px-2 py-1 text-xs gap-1',
             message.feedback === FEEDBACK_OUTCOMES.NOT_HELPFUL
               ? 'bg-red-600 text-white hover:bg-red-700'
-              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              : 'bg-muted text-muted-foreground hover:bg-muted/70 dark:hover:bg-muted/50'
           )}
         >
           <span>👎</span>

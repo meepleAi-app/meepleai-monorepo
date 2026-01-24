@@ -141,4 +141,68 @@ public interface IShareRequestRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The rejection date/time if any rejected requests exist; otherwise null.</returns>
     Task<DateTime?> GetLastRejectionDateAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    // ===== Admin Dashboard Support Methods (Issue #2740) =====
+
+    /// <summary>
+    /// Counts all pending share requests across all users.
+    /// Used for admin dashboard badge display.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Total count of pending requests.</returns>
+    Task<int> CountPendingAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts all in-review share requests across all users.
+    /// Used for admin dashboard badge display.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Total count of in-review requests.</returns>
+    Task<int> CountInReviewAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets pending share requests older than the specified threshold.
+    /// Used for stale request warning job.
+    /// </summary>
+    /// <param name="threshold">DateTime threshold for staleness check.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Collection of stale pending requests.</returns>
+    Task<IReadOnlyCollection<ShareRequest>> GetPendingOlderThanAsync(
+        DateTime threshold,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets aggregated statistics for pending share requests.
+    /// Used for daily admin digest email.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Aggregated pending request statistics.</returns>
+    Task<PendingShareRequestStats> GetPendingStatsAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Statistics for pending share requests.
+/// Used in admin digest emails and dashboard.
+/// </summary>
+public record PendingShareRequestStats
+{
+    /// <summary>
+    /// Total number of pending requests.
+    /// </summary>
+    public int TotalPending { get; init; }
+
+    /// <summary>
+    /// Number of requests created today (UTC).
+    /// </summary>
+    public int CreatedToday { get; init; }
+
+    /// <summary>
+    /// Age of the oldest pending request.
+    /// </summary>
+    public TimeSpan OldestPendingAge { get; init; }
+
+    /// <summary>
+    /// Breakdown of pending requests by contribution type.
+    /// </summary>
+    public Dictionary<string, int> ByType { get; init; } = new(StringComparer.Ordinal);
 }

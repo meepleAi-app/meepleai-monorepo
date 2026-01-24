@@ -43,12 +43,12 @@ export default function FaqPage() {
   const { t, locale } = useTranslation();
 
   return (
-    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 py-8 px-4">
+    <div className="min-h-dvh bg-background py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
           <h1
-            className="text-3xl font-bold text-slate-900 dark:text-white"
+            className="text-3xl font-bold text-foreground"
             data-testid="faq-heading"
           >
             {t('pages.faq.title')}
@@ -62,7 +62,7 @@ export default function FaqPage() {
         <div className="space-y-8">
           {CATEGORY_KEYS.map((categoryKey) => (
             <Card key={categoryKey} className="overflow-hidden">
-              <CardHeader className="bg-slate-100 dark:bg-slate-800">
+              <CardHeader className="bg-muted dark:bg-card">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <span className="text-xl">{CATEGORY_ICONS[categoryKey]}</span>
                   {t(`pages.faq.categories.${categoryKey}.title`)}
@@ -76,7 +76,7 @@ export default function FaqPage() {
                       value={`${categoryKey}-${questionKey}`}
                       className="border-b last:border-b-0 px-6"
                     >
-                      <AccordionTrigger className="text-left font-medium text-slate-900 dark:text-white hover:no-underline py-4">
+                      <AccordionTrigger className="text-left font-medium text-foreground hover:no-underline py-4">
                         {t(`pages.faq.categories.${categoryKey}.questions.${questionKey}.question`)}
                       </AccordionTrigger>
                       <AccordionContent className="text-slate-600 dark:text-slate-300 pb-4">
@@ -95,7 +95,7 @@ export default function FaqPage() {
         {/* Still have questions? */}
         <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
           <CardContent className="pt-6 text-center">
-            <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+            <h3 className="text-xl font-semibold text-foreground mb-2">
               {locale === 'it' ? 'Non hai trovato la risposta?' : "Didn't find your answer?"}
             </h3>
             <p className="text-slate-600 dark:text-slate-400 mb-4">

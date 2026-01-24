@@ -52,4 +52,50 @@ internal interface IEmailService
         string feedback,
         Guid shareRequestId,
         CancellationToken ct = default);
+
+    // ISSUE-2740: Admin share request digest email
+    Task SendAdminShareRequestDigestEmailAsync(
+        string toEmail,
+        string toName,
+        int totalPending,
+        int oldestPendingDays,
+        int createdToday,
+        Dictionary<string, int> pendingByType,
+        string reviewQueueUrl,
+        CancellationToken ct = default);
+
+    // ISSUE-2741: Badge earned emails
+    Task SendBadgeEarnedEmailAsync(
+        string toEmail,
+        string userName,
+        string badgeName,
+        string badgeDescription,
+        string? badgeIconUrl,
+        string badgeTier,
+        string badgeTierColor,
+        string profileUrl,
+        string shareText,
+        CancellationToken ct = default);
+
+    Task SendMilestoneBadgeEarnedEmailAsync(
+        string toEmail,
+        string userName,
+        string badgeName,
+        string badgeDescription,
+        string? badgeIconUrl,
+        string badgeTier,
+        string milestoneMessage,
+        int totalContributions,
+        string profileUrl,
+        string leaderboardUrl,
+        CancellationToken ct = default);
+
+    // ISSUE-2742: Rate limit cooldown email
+    Task SendCooldownEndedEmailAsync(
+        string toEmail,
+        string userName,
+        int remainingMonthly,
+        int remainingPending,
+        string libraryUrl,
+        CancellationToken ct = default);
 }

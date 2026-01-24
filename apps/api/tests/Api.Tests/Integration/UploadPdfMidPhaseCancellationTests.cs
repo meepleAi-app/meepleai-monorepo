@@ -90,6 +90,10 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         _redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
         services.AddSingleton<IConnectionMultiplexer>(_redis);
 
+        // FIX: Clear Redis state before each test to prevent interference
+        var db = _redis.GetDatabase();
+        await db.ExecuteAsync("FLUSHDB");
+
         // Register repositories and domain services
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
@@ -113,7 +117,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await _dbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        await _dbContext.Database.MigrateAsync(TestCancellationToken);
         await SeedTestDataAsync();
     }
 
@@ -133,6 +137,21 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         }
 
         if (_dbContext != null) await _dbContext.DisposeAsync();
+
+        // FIX: Clear Redis state before disposing to prevent interference with next tests
+        if (_redis != null)
+        {
+            try
+            {
+                var db = _redis.GetDatabase();
+                await db.ExecuteAsync("FLUSHDB");
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
+        }
+
         _redis?.Dispose();
 
         if (_serviceProvider is IAsyncDisposable asyncDisposable)
@@ -154,6 +173,16 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         }
 
         // Issue #2031: No separate Redis container to dispose (using SharedTestcontainersFixture)
+    }
+
+    /// <summary>
+    /// Clears all Redis state to ensure test isolation.
+    /// MUST be called at the start of each test to prevent interference from previous tests.
+    /// </summary>
+    private async Task CleanRedisStateAsync()
+    {
+        var db = _redis!.GetDatabase();
+        await db.ExecuteAsync("FLUSHDB");
     }
 
     private void RegisterDefaultMockServices(IServiceCollection services)
@@ -249,6 +278,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WhenCancelledMidDatabaseOperation_RollsBackCompletely()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
@@ -289,6 +321,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WhenCancelledMidBlobWrite_CleansUpPartialData()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Override blob storage with mid-write cancellation mock using SharedTestcontainersFixture
 
         var services = new ServiceCollection();
@@ -318,7 +353,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
         var midWriteProvider = services.BuildServiceProvider();
         var testDbContext = midWriteProvider.GetRequiredService<MeepleAiDbContext>();
-        await testDbContext.Database.EnsureCreatedAsync(TestCancellationToken);
+        await testDbContext.Database.MigrateAsync(TestCancellationToken);
         await PdfUploadTestHelpers.CleanDatabaseAsync(testDbContext);
 
         var testUser = await PdfUploadTestHelpers.SeedTestUserAsync(testDbContext);
@@ -355,6 +390,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WhenCancelledMidTextExtraction_ReleasesResources()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Mock extractor that delays during processing
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
@@ -379,6 +417,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
         var midExtractionProvider = services.BuildServiceProvider();
         var testDbContext = midExtractionProvider.GetRequiredService<MeepleAiDbContext>();
+        // FIX: Use EnsureCreatedAsync for InMemoryDatabase (MigrateAsync only works with relational providers)
         await testDbContext.Database.EnsureCreatedAsync(TestCancellationToken);
 
         var testUser = await PdfUploadTestHelpers.SeedTestUserAsync(testDbContext);
@@ -413,6 +452,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WhenCancelledMidEmbeddingBatch_StopsGracefully()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
@@ -453,6 +495,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WhenCancelledMidVectorStore_MaintainsConsistency()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
@@ -492,6 +537,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 30000)]
     public async Task UploadPdf_WhenCancelledAtRandomStage_AlwaysCleansUp()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
@@ -551,6 +599,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 60000)]
     public async Task UploadPdf_WhenCancelledAtMultipleStages_MaintainsDatabaseConsistency()
     {
+        // FIX: Clear Redis state to prevent interference from previous tests
+        await CleanRedisStateAsync();
+
         // Arrange - Test cancellation at 5 different stages
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
         var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);

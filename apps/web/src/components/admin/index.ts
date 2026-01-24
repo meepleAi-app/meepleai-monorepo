@@ -13,9 +13,12 @@ export { AdminLayout, type AdminLayoutProps } from './AdminLayout';
 export { StatCard, type StatCardProps } from './StatCard';
 export { MetricsGrid, type MetricsGridProps } from './MetricsGrid';
 
-// Issue #2787: Activity Timeline with new design system (replaced ActivityFeed)
+// Issue #2803: Unified Activity Feed/Timeline component
+// ActivityFeed is the primary component with configurable icon modes and i18n
+export { ActivityFeed, type ActivityFeedProps } from './ActivityFeed';
+// ActivityTimeline is a re-export alias for backward compatibility
 export { ActivityTimeline, type ActivityTimelineProps } from './ActivityTimeline';
-// ActivityEvent type is centralized in utils/activityUtils and re-exported from ActivityTimeline
+// ActivityEvent type is centralized in utils/activityUtils
 export type { ActivityEvent } from './utils/activityUtils';
 
 // Issue #881: Modular admin layout components

@@ -1,10 +1,10 @@
-# MeepleAI Implementation Roadmap - 81 Open Issues
+# MeepleAI Implementation Roadmap - 68 Open Issues
 
-**Generated**: 2026-01-23
+**Generated**: 2026-01-24
 **Priority**: Site-Wide Dual-Theme Design System (#2965)
-**Total Issues**: 81 open
+**Total Issues**: 68 open (13 closed since last update)
 **Strategy**: Parallel execution on `main-dev` (backend/infra/admin) + `frontend-dev` (public/user features)
-**Duration**: ~60 working days with parallelization
+**Duration**: ~55 working days with parallelization
 
 ---
 
@@ -21,16 +21,13 @@
 - **#2931, #2926**: Design System Documentation (duplicates)
 - **#2803**: Consolidate ActivityTimeline and ActivityFeed components
 
-### Backend Features - main-dev (31 issues)
-**Editor Dashboard** (2): #2892, #2893
-**User Management** (3): #2884, #2885, #2886
-**Profile/Settings** (3): #2878, #2879, #2880
-**Shared Catalog** (2): #2871, #2872
-**Personal Library** (3): #2863, #2864, #2865
-**User Dashboard** (2): #2855, #2856
+### Backend Features - main-dev (19 issues)
+**Editor Dashboard** (1): #2893
+**User Management** (1): #2886
 **Game Detail Page** (8): #2824-#2831
 **Infrastructure** (4): #2809, #2807, #2703, #2737
 **Testing** (4): #2841, #2928, #2927, #2843
+**Quality** (1): #2852
 
 ### Frontend Features - frontend-dev (34 issues)
 **Editor Dashboard** (4): #2894, #2895, #2896, #2897
@@ -146,36 +143,15 @@ git merge feature/issue-2965-site-wide-redesign (from frontend-dev)
 
 **Parallel Backend Features** (starting after Wave 3):
 
-**Editor Dashboard** (2 issues, 2 days):
-- #2892: GetPendingApprovalsQuery with Priority Sorting
+**Editor Dashboard** (1 issue, 1 day):
 - #2893: BulkApproveGamesCommand and BulkRejectGamesCommand
 
-**User Management** (3 issues, 2 days):
-- #2884: GetUsersQuery with Search and Filters
-- #2885: UpdateUserRoleCommand
+**User Management** (1 issue, 0.5 days):
 - #2886: SuspendUserCommand and UnsuspendUserCommand
-
-**Profile/Settings** (3 issues, 2 days):
-- #2878: UpdateUserProfileCommand
-- #2879: ChangePasswordCommand
-- #2880: Enable/Disable 2FA Commands
-
-**Shared Catalog** (2 issues, 1.5 days):
-- #2871: GetSharedCatalogQuery with Advanced Filters
-- #2872: AddToLibraryCommand
-
-**Personal Library** (3 issues, 2 days):
-- #2863: GetUserLibraryQuery with Filters and Sort
-- #2864: UpdateGameNotesCommand
-- #2865: RemoveFromLibraryCommand (Soft Delete)
-
-**User Dashboard** (2 issues, 1.5 days):
-- #2855: GetLibraryQuotaQuery - User Library Usage
-- #2856: GetActiveSessionsQuery - Currently Playing Games
 
 **Deliverables**:
 - [ ] All admin pages themed
-- [ ] 15 backend commands/queries complete
+- [ ] 2 backend commands complete
 - [ ] Admin tests passing
 - [ ] API endpoints registered
 
@@ -559,38 +535,38 @@ git merge feature/issue-2823-game-detail (from frontend-dev)
 | Phase | Duration | Start | End | Issues |
 |-------|----------|-------|-----|--------|
 | **Phase 0**: Foundation | 4 days | Day 1 | Day 4 | 7 |
-| **Phase 1**: Design System | 18 days | Day 5 | Day 22 | 1 epic + 46 features |
-| **Phase 2**: Game Detail Epic | 15 days | Day 23 | Day 37 | 1 epic (17 issues) |
-| **Phase 3**: Infrastructure & Quality | 12 days | Day 38 | Day 49 | 10 |
-| **Phase 4**: Remaining Features | 11 days | Day 50 | Day 60 | 6 |
-| **TOTAL** | **60 days** | 2026-01-23 | **2026-04-08** | **81 issues** |
+| **Phase 1**: Design System | 16 days | Day 5 | Day 20 | 1 epic + 36 features |
+| **Phase 2**: Game Detail Epic | 15 days | Day 21 | Day 35 | 1 epic (17 issues) |
+| **Phase 3**: Infrastructure & Quality | 12 days | Day 36 | Day 47 | 10 |
+| **Phase 4**: Remaining Features | 8 days | Day 48 | Day 55 | 4 |
+| **TOTAL** | **55 days** | 2026-01-24 | **2026-03-31** | **68 issues** |
 
 ---
 
 ## 🔄 Synchronization Points
 
-**SYNC 1** (Day 11): After Wave 3 - Foundation Complete
+**SYNC 1** (Day 9): After Wave 3 - Foundation Complete
 - Test: Theme toggle works globally
 - Test: All primitives dual-themed
 - Decision: Proceed to parallel feature development
 
-**SYNC 2** (Day 22): After Wave 7 - Features Complete
+**SYNC 2** (Day 20): After Wave 7 - Features Complete
 - Test: Full site-wide theming
 - Test: No visual regressions
 - Decision: Proceed to polish & testing
 
-**SYNC 3** (Day 37): After Game Detail Epic
+**SYNC 3** (Day 35): After Game Detail Epic
 - Test: Full game detail workflow
 - Test: Backend + frontend integration
 - Decision: Proceed to infrastructure
 
-**SYNC 4** (Day 49): Before Final Features
+**SYNC 4** (Day 47): Before Final Features
 - Test: All infrastructure deployed
 - Test: Quality metrics met
 - Decision: Final feature implementation
 
-**SYNC 5** (Day 60): Production Ready
-- Test: All 81 issues complete
+**SYNC 5** (Day 55): Production Ready
+- Test: All 68 issues complete
 - Test: E2E suite 100% passing
 - Decision: Deploy to production
 
@@ -599,7 +575,7 @@ git merge feature/issue-2823-game-detail (from frontend-dev)
 ## 🎯 Success Criteria
 
 ### Functional
-- [ ] All 81 issues resolved
+- [ ] All 68 issues resolved
 - [ ] Theme toggle works on 75+ pages
 - [ ] All features integrated and tested
 - [ ] No critical bugs
@@ -676,13 +652,13 @@ feature/issue-XXXX-description
 **GitHub Project Board**: https://github.com/DegrassiAaron/meepleai-monorepo/projects/X
 
 **Columns**:
-- 📋 Backlog (81 issues)
+- 📋 Backlog (68 issues)
 - 🏗️ Foundation (Phase 0)
 - 🎨 Design System (Phase 1)
 - 📖 Game Detail (Phase 2)
 - 🔧 Infrastructure (Phase 3)
 - ✨ Final Features (Phase 4)
-- ✅ Done
+- ✅ Done (13 completed)
 
 **Weekly Checkpoints**:
 - Monday: Review progress, adjust priorities
@@ -712,5 +688,6 @@ feature/issue-XXXX-description
 ---
 
 **Created by**: PM Agent
-**Last Updated**: 2026-01-23
+**Last Updated**: 2026-01-24
 **Next Review**: Weekly checkpoints
+**Completed Issues**: 13 (2892, 2884-2885, 2878-2880, 2871-2872, 2863-2865, 2855-2856)

@@ -77,7 +77,7 @@ export function DocumentPicker({
   maxSelections,
   pageSize = DEFAULT_PAGE_SIZE,
   className,
-}: DocumentPickerProps): React.JSX.Element {
+}: DocumentPickerProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -268,7 +268,7 @@ function DocumentListItem({
   isSelected,
   onToggle,
   disabled = false,
-}: DocumentListItemProps): React.JSX.Element {
+}: DocumentListItemProps) {
   return (
     <HoverCard openDelay={300}>
       <HoverCardTrigger asChild>

@@ -84,7 +84,7 @@ export function SelectedDocuments({
   isLoading = false,
   disabled = false,
   className,
-}: SelectedDocumentsProps): React.JSX.Element {
+}: SelectedDocumentsProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   // DnD sensors configuration
@@ -304,7 +304,7 @@ function SortableDocumentItem({
   index,
   onRemove,
   disabled = false,
-}: SortableDocumentItemProps): React.JSX.Element {
+}: SortableDocumentItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: document.id,
     disabled,
@@ -346,7 +346,7 @@ function DocumentItemContent({
   disabled = false,
   isDragging = false,
   dragHandleProps,
-}: DocumentItemContentProps): React.JSX.Element {
+}: DocumentItemContentProps) {
   const typeColor = DOCUMENT_TYPE_COLORS[document.documentType] ?? '';
 
   return (

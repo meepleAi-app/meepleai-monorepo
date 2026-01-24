@@ -33,7 +33,7 @@ import type {
  * Issue #2745: Frontend - Admin Review Interface
  */
 
-export function AdminShareRequestsClient(): JSX.Element {
+export function AdminShareRequestsClient(){
   const router = useRouter();
   const { user, loading: authLoading } = useAuthUser();
 

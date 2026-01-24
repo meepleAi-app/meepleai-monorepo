@@ -56,7 +56,7 @@ export function AlertsBanner({
   healthyServices,
   totalServices,
   className,
-}: AlertsBannerProps): JSX.Element | null {
+}: AlertsBannerProps) {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
 

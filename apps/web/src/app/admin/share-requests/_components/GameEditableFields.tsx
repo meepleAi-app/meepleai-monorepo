@@ -30,7 +30,7 @@ export function GameEditableFields({
   onTitleChange,
   onDescriptionChange,
   disabled = false,
-}: GameEditableFieldsProps): JSX.Element {
+}: GameEditableFieldsProps){
   return (
     <Card>
       <CardHeader>

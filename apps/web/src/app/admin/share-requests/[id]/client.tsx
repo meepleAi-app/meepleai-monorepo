@@ -46,7 +46,7 @@ interface AdminShareRequestDetailClientProps {
   id: string;
 }
 
-export function AdminShareRequestDetailClient({ id }: AdminShareRequestDetailClientProps): JSX.Element {
+export function AdminShareRequestDetailClient({ id }: AdminShareRequestDetailClientProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthUser();
 

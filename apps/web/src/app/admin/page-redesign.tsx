@@ -32,6 +32,7 @@ import {
   Trash2,
   UserCog,
   ShieldCheck,
+  TrendingUp,
   Eye,
   Sparkles,
   Bot,

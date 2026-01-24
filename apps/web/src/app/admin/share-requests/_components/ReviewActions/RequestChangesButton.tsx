@@ -37,7 +37,7 @@ export function RequestChangesButton({
   onRequestChanges,
   disabled,
   isPending,
-}: RequestChangesButtonProps): JSX.Element {
+}: RequestChangesButtonProps){
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
 

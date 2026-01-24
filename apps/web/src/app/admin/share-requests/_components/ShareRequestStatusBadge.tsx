@@ -23,7 +23,7 @@ interface ShareRequestStatusBadgeProps {
   className?: string;
 }
 
-export function ShareRequestStatusBadge({ status, className }: ShareRequestStatusBadgeProps): JSX.Element {
+export function ShareRequestStatusBadge({ status, className }: ShareRequestStatusBadgeProps){
   const config = getStatusConfig(status);
 
   return (

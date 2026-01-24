@@ -28,7 +28,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Badge } from '@/components/ui/data-display/badge';
-import { cn } from '@/lib/utils/cn';
+import { cn } from '@/lib/utils';
 
 // Types
 interface CollectionStats {

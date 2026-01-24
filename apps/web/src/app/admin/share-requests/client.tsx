@@ -7,7 +7,7 @@ import { useAuthUser } from '@/hooks/auth/useAuthUser';
 import { useAdminShareRequests } from '@/hooks/queries';
 import { ShareRequestFilters } from './_components/ShareRequestFilters';
 import { ShareRequestsTable } from './_components/ShareRequestsTable';
-import { Button } from '@/components/ui/button';
+import { Card, Button, Badge, Dialog, Input, Label, Checkbox, Avatar } from '@/components/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type {
   ShareRequestStatus,

@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMyReviews } from '@/hooks/queries';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/navigation/sheet';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { FileText, Loader2 } from 'lucide-react';

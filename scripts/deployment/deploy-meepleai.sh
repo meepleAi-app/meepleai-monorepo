@@ -3,6 +3,14 @@
 # MeepleAI Production Deployment Script
 # =============================================================================
 #
+# ⚠️  DEPRECATED: This bash script is deprecated.
+# ✅  USE: scripts/deployment/deploy-meepleai.ps1 (PowerShell)
+#
+# PowerShell version works on Windows, Linux, and macOS with PowerShell Core.
+# See scripts/MIGRATION.md for migration guide.
+#
+# =============================================================================
+#
 # Deploys MeepleAI to production at meepleai.io
 #
 # Usage:

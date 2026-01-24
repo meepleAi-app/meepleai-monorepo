@@ -1,5 +1,11 @@
 #!/bin/bash
-
+#
+# ⚠️  DEPRECATED: This bash script is deprecated.
+# ✅  USE: scripts/testing/test-services.ps1 (PowerShell)
+#
+# PowerShell version works on Windows, Linux, and macOS with PowerShell Core.
+# See scripts/MIGRATION.md for migration guide.
+#
 # MeepleAI Services Health Check Script
 # Tests all Docker services and reports their status
 

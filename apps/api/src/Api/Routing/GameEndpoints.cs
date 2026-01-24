@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application;
 using Api.BoundedContexts.GameManagement.Application.Commands;
@@ -850,9 +851,20 @@ internal static class GameEndpoints
         if (state == null)
             return Results.NotFound();
 
+        // Parse JSON with error handling
+        JsonDocument parsedState;
+        try
+        {
+            parsedState = JsonDocument.Parse(request.NewState);
+        }
+        catch (JsonException ex)
+        {
+            return Results.BadRequest(new { error = "Invalid JSON in NewState", details = ex.Message });
+        }
+
         var command = new UpdateGameStateCommand(
             SessionStateId: state.Id,
-            NewState: request.NewState
+            NewState: parsedState
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);

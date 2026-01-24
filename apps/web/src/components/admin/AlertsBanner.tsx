@@ -14,7 +14,7 @@ import { AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
-import { variants } from '@/lib/animations/variants';
+import { VARIANTS } from '@/lib/animations/variants';
 import type { DashboardMetrics } from '@/lib/api';
 
 interface AlertsBannerProps {
@@ -98,7 +98,7 @@ export function AlertsBanner({
   const motionProps = shouldReduceMotion
     ? {}
     : {
-        variants: variants.fadeIn,
+        variants: VARIANTS.fadeIn,
         initial: 'initial',
         animate: 'animate',
       };
@@ -189,19 +189,19 @@ export function AlertsBanner({
 
         {/* Text content */}
         <motion.div
-          variants={shouldReduceMotion ? undefined : variants.staggerContainer}
+          variants={shouldReduceMotion ? undefined : VARIANTS.staggerContainer}
           initial={shouldReduceMotion ? undefined : 'initial'}
           animate={shouldReduceMotion ? undefined : 'animate'}
           className="flex-1"
         >
           <motion.p
-            variants={shouldReduceMotion ? undefined : variants.fadeIn}
+            variants={shouldReduceMotion ? undefined : VARIANTS.fadeIn}
             className="font-semibold text-lg text-stone-900 dark:text-white"
           >
             {primaryMessage}
           </motion.p>
           <motion.p
-            variants={shouldReduceMotion ? undefined : variants.fadeIn}
+            variants={shouldReduceMotion ? undefined : VARIANTS.fadeIn}
             className="text-sm text-stone-600 dark:text-stone-400"
           >
             {secondaryMessage}
@@ -209,7 +209,7 @@ export function AlertsBanner({
         </motion.div>
 
         {/* Navigation button */}
-        <motion.div variants={shouldReduceMotion ? undefined : variants.scaleIn}>
+        <motion.div variants={shouldReduceMotion ? undefined : VARIANTS.scaleIn}>
           <Button
             onClick={() => router.push('/admin/alerts')}
             variant={hasIssues ? 'outline' : 'default'}

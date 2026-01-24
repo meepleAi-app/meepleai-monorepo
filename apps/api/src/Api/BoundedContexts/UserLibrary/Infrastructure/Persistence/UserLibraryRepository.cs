@@ -149,6 +149,44 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         return (dates.Min(), dates.Max());
     }
 
+    public async Task<UserLibraryEntry?> GetUserGameWithStatsAsync(
+        Guid userId,
+        Guid gameId,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .Include(e => e.Sessions.OrderByDescending(s => s.PlayedAt))
+            .Include(e => e.Checklist.OrderBy(c => c.Order))
+            .FirstOrDefaultAsync(e => e.UserId == userId && e.GameId == gameId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity != null ? MapToDomainWithNavigations(entity) : null;
+    }
+
+    public async Task<IReadOnlyList<UserLibraryEntry>> GetUserGamesAsync(
+        Guid userId,
+        GameStateType? state = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .Include(e => e.SharedGame)
+            .Where(e => e.UserId == userId);
+
+        if (state.HasValue)
+        {
+            query = query.Where(e => e.CurrentState == (int)state.Value);
+        }
+
+        var entities = await query
+            .OrderByDescending(e => e.AddedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task AddAsync(UserLibraryEntry entry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
@@ -224,6 +262,32 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             entry.MarkAsFavorite();
         }
 
+        // Reconstruct GameState from database
+        var stateType = (GameStateType)entity.CurrentState;
+        var gameState = stateType switch
+        {
+            GameStateType.Nuovo => GameState.Nuovo(entity.StateNotes),
+            GameStateType.InPrestito => GameState.InPrestito(entity.StateNotes),
+            GameStateType.Wishlist => GameState.Wishlist(entity.StateNotes),
+            GameStateType.Owned => GameState.Owned(entity.StateNotes),
+            _ => GameState.Nuovo()
+        };
+
+        // Override CurrentState using reflection
+        var currentStateProp = typeof(UserLibraryEntry).GetProperty("CurrentState");
+        currentStateProp?.SetValue(entry, gameState);
+
+        // Reconstruct GameStats from database
+        var gameStats = GameStats.Create(
+            timesPlayed: entity.TimesPlayed,
+            lastPlayed: entity.LastPlayed,
+            winRate: entity.WinRate,
+            avgDuration: entity.AvgDuration,
+            competitiveSessions: entity.CompetitiveSessions);
+
+        var statsProp = typeof(UserLibraryEntry).GetProperty("Stats");
+        statsProp?.SetValue(entry, gameStats);
+
         // Deserialize custom agent configuration from JSONB
         if (!string.IsNullOrWhiteSpace(entity.CustomAgentConfigJson))
         {
@@ -279,6 +343,75 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     }
 
     /// <summary>
+    /// Maps persistence entity to domain entity with navigation properties (Sessions, Checklist).
+    /// </summary>
+    private UserLibraryEntry MapToDomainWithNavigations(UserLibraryEntryEntity entity)
+    {
+        // Start with base mapping
+        var entry = MapToDomain(entity);
+
+        // Map Sessions
+        if (entity.Sessions != null && entity.Sessions.Count > 0)
+        {
+            foreach (var sessionEntity in entity.Sessions)
+            {
+                var session = GameSession.Create(
+                    userLibraryEntryId: entry.Id,
+                    playedAt: sessionEntity.PlayedAt,
+                    durationMinutes: sessionEntity.DurationMinutes,
+                    didWin: sessionEntity.DidWin,
+                    players: sessionEntity.Players,
+                    notes: sessionEntity.Notes);
+
+                // Use reflection to set the Id from database
+                var idProp = typeof(GameSession).BaseType?.GetProperty("Id");
+                idProp?.SetValue(session, sessionEntity.Id);
+
+                // Add to private collection using reflection
+#pragma warning disable S3011 // Reflection needed for domain reconstruction
+                var sessionsField = typeof(UserLibraryEntry).GetField("_sessions",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var sessionsList = sessionsField?.GetValue(entry) as IList<GameSession>;
+                sessionsList?.Add(session);
+#pragma warning restore S3011
+            }
+        }
+
+        // Map Checklist
+        if (entity.Checklist != null && entity.Checklist.Count > 0)
+        {
+            foreach (var checklistEntity in entity.Checklist.OrderBy(c => c.Order))
+            {
+                var item = GameChecklist.Create(
+                    userLibraryEntryId: entry.Id,
+                    description: checklistEntity.Description,
+                    order: checklistEntity.Order,
+                    additionalInfo: checklistEntity.AdditionalInfo);
+
+                // Set Id and completion state using reflection
+                var idProp = typeof(GameChecklist).BaseType?.GetProperty("Id");
+                idProp?.SetValue(item, checklistEntity.Id);
+
+                var completedProp = typeof(GameChecklist).GetProperty("IsCompleted");
+                if (checklistEntity.IsCompleted && completedProp != null)
+                {
+                    item.MarkAsCompleted();
+                }
+
+                // Add to private collection using reflection
+#pragma warning disable S3011 // Reflection needed for domain reconstruction
+                var checklistField = typeof(UserLibraryEntry).GetField("_checklist",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var checklistList = checklistField?.GetValue(entry) as IList<GameChecklist>;
+                checklistList?.Add(item);
+#pragma warning restore S3011
+            }
+        }
+
+        return entry;
+    }
+
+    /// <summary>
     /// Internal DTO for JSON serialization of AgentConfiguration.
     /// </summary>
     private sealed record AgentConfigJson(
@@ -312,7 +445,14 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             agentConfigJson = JsonSerializer.Serialize(configDto);
         }
 
-        return new UserLibraryEntryEntity
+        // Access CompetitiveSessions via reflection (private property)
+#pragma warning disable S3011 // Reflection needed for persistence mapping
+        var competitiveSessionsProp = typeof(GameStats).GetProperty("CompetitiveSessions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var competitiveSessions = (int)(competitiveSessionsProp?.GetValue(domainEntity.Stats) ?? 0);
+#pragma warning restore S3011
+
+        var persistenceEntity = new UserLibraryEntryEntity
         {
             Id = domainEntity.Id,
             UserId = domainEntity.UserId,
@@ -324,7 +464,54 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             CustomPdfUrl = domainEntity.CustomPdfMetadata?.Url,
             CustomPdfUploadedAt = domainEntity.CustomPdfMetadata?.UploadedAt,
             CustomPdfFileSizeBytes = domainEntity.CustomPdfMetadata?.FileSizeBytes,
-            CustomPdfOriginalFileName = domainEntity.CustomPdfMetadata?.OriginalFileName
+            CustomPdfOriginalFileName = domainEntity.CustomPdfMetadata?.OriginalFileName,
+            
+            // Game state
+            CurrentState = (int)domainEntity.CurrentState.Value,
+            StateChangedAt = domainEntity.CurrentState.ChangedAt,
+            StateNotes = domainEntity.CurrentState.StateNotes,
+            
+            // Game statistics
+            TimesPlayed = domainEntity.Stats.TimesPlayed,
+            LastPlayed = domainEntity.Stats.LastPlayed,
+            WinRate = domainEntity.Stats.WinRate,
+            AvgDuration = domainEntity.Stats.AvgDuration,
+            CompetitiveSessions = competitiveSessions
         };
+
+        // Map Sessions to persistence entities
+        foreach (var session in domainEntity.Sessions)
+        {
+            persistenceEntity.Sessions.Add(new UserGameSessionEntity
+            {
+                Id = session.Id,
+                UserLibraryEntryId = domainEntity.Id,
+                PlayedAt = session.PlayedAt,
+                DurationMinutes = session.DurationMinutes,
+                DidWin = session.DidWin,
+                Players = session.Players,
+                Notes = session.Notes,
+                CreatedAt = session.CreatedAt,
+                UpdatedAt = session.UpdatedAt
+            });
+        }
+
+        // Map Checklist to persistence entities
+        foreach (var item in domainEntity.Checklist)
+        {
+            persistenceEntity.Checklist.Add(new UserGameChecklistEntity
+            {
+                Id = item.Id,
+                UserLibraryEntryId = domainEntity.Id,
+                Description = item.Description,
+                Order = item.Order,
+                IsCompleted = item.IsCompleted,
+                AdditionalInfo = item.AdditionalInfo,
+                CreatedAt = item.CreatedAt,
+                UpdatedAt = item.UpdatedAt
+            });
+        }
+
+        return persistenceEntity;
     }
 }

@@ -238,7 +238,7 @@ Open http://localhost:8025 in browser to see all sent emails.
 
 ## Health Check Summary Script
 
-**Save as**: `scripts/test-services.sh`
+**Save as**: `scripts/testing/test-services.sh`
 
 ```bash
 #!/bin/bash
@@ -293,8 +293,8 @@ echo "200 = OK | 404 = Not Found | 000 = Service Down"
 **Usage**:
 
 ```bash
-chmod +x scripts/test-services.sh
-./scripts/test-services.sh
+chmod +x scripts/testing/test-services.sh
+./scripts/testing/test-services.sh
 ```
 
 ---
@@ -311,7 +311,7 @@ chmod +x scripts/test-services.sh
 - [ ] **Search Games**: `GET /api/v1/shared-games?search=catan`
 - [ ] **Add to Library**: `POST /api/v1/user-library` (with JWT)
 - [ ] **Check Alerts**: Open http://localhost:9093
-- [ ] **Run Health Script**: `./scripts/test-services.sh`
+- [ ] **Run Health Script**: `./scripts/testing/test-services.sh`
 
 ---
 

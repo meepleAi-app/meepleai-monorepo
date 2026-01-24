@@ -1,6 +1,5 @@
 import type { HttpClient } from '../core/httpClient';
 import {
-  type AdminShareRequestDto,
   type ShareRequestDetailsDto,
   type PaginatedAdminShareRequestsResponse,
   type GetAdminShareRequestsParams,

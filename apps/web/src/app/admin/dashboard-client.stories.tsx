@@ -141,7 +141,7 @@ export const Loading: Story = {
 /**
  * Error state
  */
-export const Error: Story = {
+export const ErrorState: Story = {
   parameters: {
     mockData: [
       {
@@ -352,17 +352,8 @@ export const AccessibilityFocusStates: Story = {
     ...Default.parameters,
     chromatic: {
       viewports: [1024],
-      modes: {
-        'keyboard-focus': {
-          // Simulate keyboard navigation focus
-          actions: [
-            {
-              type: 'tab',
-              count: 3,
-            },
-          ],
-        },
-      },
+      // Note: modes removed - Chromatic doesn't support viewports + modes together
+      // Keyboard focus testing handled by E2E tests instead
     },
   },
 };

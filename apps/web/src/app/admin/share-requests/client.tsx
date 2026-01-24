@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
-import { useAuthUser } from '@/hooks/auth/useAuthUser';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { useAdminShareRequests } from '@/hooks/queries';
 import { ShareRequestFilters } from './_components/ShareRequestFilters';
 import { ShareRequestsTable } from './_components/ShareRequestsTable';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type {
   ShareRequestStatus,

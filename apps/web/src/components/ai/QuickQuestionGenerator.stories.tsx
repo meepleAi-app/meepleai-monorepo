@@ -254,7 +254,7 @@ export const HighConfidenceResult: Story = {
 /**
  * General API error
  */
-export const Error: Story = {
+export const ErrorState: Story = {
   args: {
     initialPrompt: 'Generate a question that will fail',
     onGenerate: mockErrorHandler,

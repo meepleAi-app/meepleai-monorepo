@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStartReview, useReleaseReview } from '@/hooks/queries';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { Lock, Unlock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ReviewLockTimer } from './ReviewLockTimer';

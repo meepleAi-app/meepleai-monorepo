@@ -156,7 +156,7 @@ export const NoAccess: Story = {
  * Error variant.
  * For error states with recovery action.
  */
-export const Error: Story = {
+export const ErrorState: Story = {
   args: {
     title: 'Something went wrong',
     description: 'We encountered an error while loading this content. Please try again.',

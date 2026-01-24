@@ -5,7 +5,10 @@
 
 set -e
 
-DOCS_DIR="D:/Repositories/meepleai-monorepo-dev/docs"
+# Dynamic path resolution (works from any directory)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+DOCS_DIR="$PROJECT_ROOT/docs"
 ERRORS=0
 
 echo "🔍 Validating documentation links..."

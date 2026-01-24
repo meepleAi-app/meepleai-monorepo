@@ -1,0 +1,48 @@
+name: Chromatic Visual Regression
+
+on:
+  push:
+    branches:
+      - main
+      - frontend-dev
+  pull_request:
+    branches:
+      - main
+      - frontend-dev
+
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: apps/web
+
+      - name: Build Storybook
+        run: pnpm build-storybook
+        working-directory: apps/web
+
+      - name: Run Chromatic
+        uses: chromaui/action@latest
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          workingDir: apps/web
+          buildScriptName: build-storybook
+          onlyChanged: true
+          exitZeroOnChanges: true
+          autoAcceptChanges: main

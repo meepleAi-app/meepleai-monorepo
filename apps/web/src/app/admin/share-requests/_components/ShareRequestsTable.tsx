@@ -1,11 +1,10 @@
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/components/ui/data-display/table';
 import { ShareRequestsTableRow } from './ShareRequestsTableRow';
 import type { AdminShareRequestDto } from '@/lib/api/schemas/admin-share-requests.schemas';
 

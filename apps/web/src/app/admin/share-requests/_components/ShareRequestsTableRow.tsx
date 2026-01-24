@@ -1,7 +1,7 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { TableCell, TableRow } from '@/components/ui/data-display/table';
 import { formatDistanceToNow } from 'date-fns';
 import { FileText, Eye } from 'lucide-react';
 import { ShareRequestStatusBadge } from './ShareRequestStatusBadge';

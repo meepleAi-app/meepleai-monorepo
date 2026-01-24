@@ -139,7 +139,7 @@ export const Loading: Story = {
  * Error state when PDF list fails to load.
  * Shows error message to user.
  */
-export const Error: Story = {
+export const ErrorState: Story = {
   args: {
     pdfs: [],
     error: 'Failed to load PDF list. Please try again.',

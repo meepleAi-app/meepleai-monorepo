@@ -3,16 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
-import { useAuthUser } from '@/hooks/auth/useAuthUser';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import {
   useShareRequestDetails,
   useApproveRequest,
   useRejectRequest,
   useRequestChanges,
 } from '@/hooks/queries';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { ArrowLeft } from 'lucide-react';
 import { ShareRequestStatusBadge } from '../_components/ShareRequestStatusBadge';
 import { LockStatusBadge } from '../_components/LockStatusBadge';

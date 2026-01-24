@@ -62,7 +62,7 @@ public sealed class CreateGameWithBggIntegrationTests : IAsyncLifetime
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
-        await _dbContext.Database.EnsureCreatedAsync();
+        await _dbContext.Database.MigrateAsync();
 
         // Seed user (though CreateGameCommandHandler doesn't strictly check permissions, endpoints do)
         _testUser = new UserEntity

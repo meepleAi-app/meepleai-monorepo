@@ -162,6 +162,10 @@ internal sealed class GetPendingShareRequestsQueryHandler : IRequestHandler<GetP
             ? admin
             : null;
 
+        // Calculate if the lock can be started (not locked OR lock expired)
+        var isLockExpired = request.ReviewLockExpiresAt.HasValue && request.ReviewLockExpiresAt.Value <= DateTime.UtcNow;
+        var canStartReview = !request.ReviewingAdminId.HasValue || isLockExpired;
+
         return new AdminShareRequestDto(
             Id: request.Id,
             Status: (ShareRequestStatus)request.Status,
@@ -189,6 +193,8 @@ internal sealed class GetPendingShareRequestsQueryHandler : IRequestHandler<GetP
             ReviewingAdminId: request.ReviewingAdminId,
             ReviewingAdminName: adminUser?.DisplayName ?? adminUser?.Email,
             ReviewStartedAt: request.ReviewStartedAt,
+            ReviewLockExpiresAt: request.ReviewLockExpiresAt,
+            CanStartReview: canStartReview,
 
             // For additional content
             TargetSharedGameId: request.TargetSharedGameId,

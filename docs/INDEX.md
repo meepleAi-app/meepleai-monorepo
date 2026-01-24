@@ -83,6 +83,13 @@
 - CI/CD Pipeline
 - Disaster Recovery
 
+**Cost Optimization**:
+- **[GitHub Alternatives & Cost Optimization](04-deployment/github-alternatives-cost-optimization.md)** ⭐ NEW
+  - GitHub Free tier limits analysis (2026 pricing)
+  - Zero-cost alternatives: self-hosted runners, GitLab, Forgejo
+  - Oracle Always Free setup guide
+  - Decision matrix and implementation roadmap
+
 ### 05. Testing Documentation ⭐ NEW
 
 **[Testing Guide](05-testing/README.md)** - Comprehensive testing strategy

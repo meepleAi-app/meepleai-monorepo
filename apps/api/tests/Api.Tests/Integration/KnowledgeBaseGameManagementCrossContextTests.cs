@@ -387,7 +387,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         {
             try
             {
-                await context.Database.EnsureCreatedAsync(TestCancellationToken);
+                await context.Database.MigrateAsync(TestCancellationToken);
                 return;
             }
             catch (NpgsqlException) when (attempt < maxAttempts)

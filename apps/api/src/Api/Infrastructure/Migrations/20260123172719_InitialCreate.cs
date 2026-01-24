@@ -4,7 +4,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Api.Migrations
+namespace Api.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -2413,7 +2413,7 @@ namespace Api.Migrations
                 name: "ix_game_errata_published_date",
                 table: "game_errata",
                 column: "published_date",
-                descending: Array.Empty<bool>());
+                descending: new bool[0]);
 
             migrationBuilder.CreateIndex(
                 name: "ix_game_errata_shared_game_id",

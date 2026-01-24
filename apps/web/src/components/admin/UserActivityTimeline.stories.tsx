@@ -17,10 +17,8 @@ const meta = {
     layout: 'padded',
     chromatic: {
       viewports: [375, 768, 1024],
-      modes: {
-        light: {},
-        dark: {},
-      },
+      // Note: modes removed - Chromatic doesn't support viewports + modes together
+      // Theme testing (light/dark) handled by global decorator instead
     },
   },
   tags: ['autodocs'],

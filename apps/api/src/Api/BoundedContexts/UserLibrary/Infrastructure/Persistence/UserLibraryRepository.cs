@@ -157,7 +157,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         var entity = await DbContext.UserLibraryEntries
             .AsNoTracking()
             .Include(e => e.Sessions.OrderByDescending(s => s.PlayedAt))
-            .Include(e => e.Checklist.OrderBy(c => c.Order))
+            .Include(e => e.Checklist.OrderBy(c => c.DisplayOrder))
             .FirstOrDefaultAsync(e => e.UserId == userId && e.GameId == gameId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -380,12 +380,12 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         // Map Checklist
         if (entity.Checklist != null && entity.Checklist.Count > 0)
         {
-            foreach (var checklistEntity in entity.Checklist.OrderBy(c => c.Order))
+            foreach (var checklistEntity in entity.Checklist.OrderBy(c => c.DisplayOrder))
             {
                 var item = GameChecklist.Create(
                     userLibraryEntryId: entry.Id,
                     description: checklistEntity.Description,
-                    order: checklistEntity.Order,
+                    displayOrder: checklistEntity.DisplayOrder,
                     additionalInfo: checklistEntity.AdditionalInfo);
 
                 // Set Id and completion state using reflection
@@ -504,7 +504,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
                 Id = item.Id,
                 UserLibraryEntryId = domainEntity.Id,
                 Description = item.Description,
-                Order = item.Order,
+                DisplayOrder = item.DisplayOrder,
                 IsCompleted = item.IsCompleted,
                 AdditionalInfo = item.AdditionalInfo,
                 CreatedAt = item.CreatedAt,

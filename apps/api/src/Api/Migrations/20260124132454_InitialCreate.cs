@@ -4,7 +4,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Api.Infrastructure.Migrations
+namespace Api.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -569,7 +569,7 @@ namespace Api.Infrastructure.Migrations
                     shared_game_id = table.Column<Guid>(type: "uuid", nullable: false),
                     question = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     answer = table.Column<string>(type: "text", nullable: false),
-                    order = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    display_order = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     upvote_count = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
@@ -1176,7 +1176,16 @@ namespace Api.Infrastructure.Migrations
                     CustomPdfUrl = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
                     CustomPdfUploadedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CustomPdfFileSizeBytes = table.Column<long>(type: "bigint", nullable: true),
-                    CustomPdfOriginalFileName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true)
+                    CustomPdfOriginalFileName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    CurrentState = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    StateChangedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    StateNotes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    TimesPlayed = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    LastPlayed = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    WinRate = table.Column<decimal>(type: "numeric(5,2)", nullable: true),
+                    AvgDuration = table.Column<int>(type: "integer", nullable: true),
+                    CompetitiveSessions = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    RowVersion = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1593,6 +1602,57 @@ namespace Api.Infrastructure.Migrations
                         principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "game_checklists",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserLibraryEntryId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    DisplayOrder = table.Column<int>(type: "integer", nullable: false),
+                    IsCompleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    AdditionalInfo = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_game_checklists", x => x.Id);
+                    table.CheckConstraint("chk_game_checklists_display_order", "\"display_order\" >= 0");
+                    table.ForeignKey(
+                        name: "FK_game_checklists_user_library_entries_UserLibraryEntryId",
+                        column: x => x.UserLibraryEntryId,
+                        principalTable: "user_library_entries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "game_sessions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserLibraryEntryId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PlayedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DurationMinutes = table.Column<int>(type: "integer", nullable: false),
+                    DidWin = table.Column<bool>(type: "boolean", nullable: true),
+                    Players = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Notes = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_game_sessions", x => x.Id);
+                    table.CheckConstraint("chk_game_sessions_duration", "duration_minutes > 0");
+                    table.ForeignKey(
+                        name: "FK_game_sessions_user_library_entries_UserLibraryEntryId",
+                        column: x => x.UserLibraryEntryId,
+                        principalTable: "user_library_entries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -2404,6 +2464,16 @@ namespace Api.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "ix_game_checklists_entry_display_order",
+                table: "game_checklists",
+                columns: new[] { "UserLibraryEntryId", "DisplayOrder" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_game_checklists_user_library_entry_id",
+                table: "game_checklists",
+                column: "UserLibraryEntryId");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_game_designers_name",
                 table: "game_designers",
                 column: "name",
@@ -2413,7 +2483,7 @@ namespace Api.Infrastructure.Migrations
                 name: "ix_game_errata_published_date",
                 table: "game_errata",
                 column: "published_date",
-                descending: new bool[0]);
+                descending: Array.Empty<bool>());
 
             migrationBuilder.CreateIndex(
                 name: "ix_game_errata_shared_game_id",
@@ -2421,9 +2491,9 @@ namespace Api.Infrastructure.Migrations
                 column: "shared_game_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_game_faqs_order",
+                name: "ix_game_faqs_display_order",
                 table: "game_faqs",
-                columns: new[] { "shared_game_id", "order" });
+                columns: new[] { "shared_game_id", "display_order" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_game_faqs_shared_game_id",
@@ -2463,6 +2533,21 @@ namespace Api.Infrastructure.Migrations
                 name: "ix_game_session_states_template_id",
                 table: "game_session_states",
                 column: "template_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_game_sessions_entry_played",
+                table: "game_sessions",
+                columns: new[] { "UserLibraryEntryId", "PlayedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_game_sessions_played_at",
+                table: "game_sessions",
+                column: "PlayedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_game_sessions_user_library_entry_id",
+                table: "game_sessions",
+                column: "UserLibraryEntryId");
 
             migrationBuilder.CreateIndex(
                 name: "ix_game_state_snapshots_created_at",
@@ -3136,15 +3221,30 @@ namespace Api.Infrastructure.Migrations
                 column: "AddedAt");
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserLibraryEntries_CurrentState",
+                table: "user_library_entries",
+                column: "CurrentState");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserLibraryEntries_CustomAgentConfigJson",
                 table: "user_library_entries",
                 column: "CustomAgentConfigJson")
                 .Annotation("Npgsql:IndexMethod", "gin");
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserLibraryEntries_LastPlayed",
+                table: "user_library_entries",
+                column: "LastPlayed");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserLibraryEntries_UserId",
                 table: "user_library_entries",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserLibraryEntries_UserId_CurrentState",
+                table: "user_library_entries",
+                columns: new[] { "UserId", "CurrentState" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserLibraryEntries_UserId_GameId",
@@ -3294,10 +3394,16 @@ namespace Api.Infrastructure.Migrations
                 name: "contribution_records");
 
             migrationBuilder.DropTable(
+                name: "game_checklists");
+
+            migrationBuilder.DropTable(
                 name: "game_errata");
 
             migrationBuilder.DropTable(
                 name: "game_faqs");
+
+            migrationBuilder.DropTable(
+                name: "game_sessions");
 
             migrationBuilder.DropTable(
                 name: "game_state_snapshots");
@@ -3387,9 +3493,6 @@ namespace Api.Infrastructure.Migrations
                 name: "user_badges");
 
             migrationBuilder.DropTable(
-                name: "user_library_entries");
-
-            migrationBuilder.DropTable(
                 name: "user_rate_limit_overrides");
 
             migrationBuilder.DropTable(
@@ -3415,6 +3518,9 @@ namespace Api.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "contributors");
+
+            migrationBuilder.DropTable(
+                name: "user_library_entries");
 
             migrationBuilder.DropTable(
                 name: "game_session_states");

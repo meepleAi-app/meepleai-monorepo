@@ -91,7 +91,7 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     .Select(c => new GameChecklistItemDto(
                         Id: c.Id,
                         Description: c.Description,
-                        Order: c.Order,
+                        Order: c.DisplayOrder,
                         IsCompleted: c.IsCompleted,
                         AdditionalInfo: c.AdditionalInfo
                     ))

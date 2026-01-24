@@ -20,7 +20,7 @@ public class UserGameChecklistEntity
     /// <summary>
     /// Display order of this step in the checklist.
     /// </summary>
-    public int Order { get; set; }
+    public int DisplayOrder { get; set; }
 
     /// <summary>
     /// Whether this step is currently checked/completed.

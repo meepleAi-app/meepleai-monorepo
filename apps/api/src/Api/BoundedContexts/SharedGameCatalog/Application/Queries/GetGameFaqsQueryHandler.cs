@@ -55,11 +55,11 @@ internal sealed class GetGameFaqsQueryHandler
             .CountAsync(f => f.SharedGameId == query.GameId, cancellationToken)
             .ConfigureAwait(false);
 
-        // Get paginated FAQs ordered by Order then by UpvoteCount (descending)
+        // Get paginated FAQs ordered by DisplayOrder then by UpvoteCount (descending)
         var faqs = await _context.GameFaqs
             .AsNoTracking()
             .Where(f => f.SharedGameId == query.GameId)
-            .OrderBy(f => f.Order)
+            .OrderBy(f => f.DisplayOrder)
             .ThenByDescending(f => f.UpvoteCount)
             .Skip(query.Offset)
             .Take(query.Limit)
@@ -79,7 +79,7 @@ internal sealed class GetGameFaqsQueryHandler
                 f.SharedGameId,
                 f.Question,
                 f.Answer,
-                f.Order,
+                f.DisplayOrder,
                 f.UpvoteCount,
                 f.CreatedAt,
                 f.UpdatedAt))

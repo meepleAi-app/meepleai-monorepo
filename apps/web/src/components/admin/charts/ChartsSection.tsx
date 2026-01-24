@@ -63,7 +63,7 @@ export interface ChartsSectionProps {
   className?: string;
 }
 
-export function ChartsSection({ className }: ChartsSectionProps): JSX.Element {
+export function ChartsSection({ className }: ChartsSectionProps){
   // Use consolidated dashboard data hook (Issue #2792)
   const { trends, metrics, isLoading } = useDashboardData();
 

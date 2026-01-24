@@ -31,7 +31,7 @@ interface ApproveButtonProps {
   isPending?: boolean;
 }
 
-export function ApproveButton({ onApprove, disabled, isPending }: ApproveButtonProps): JSX.Element {
+export function ApproveButton({ onApprove, disabled, isPending }: ApproveButtonProps){
   const [isOpen, setIsOpen] = useState(false);
   const [notes, setNotes] = useState('');
 

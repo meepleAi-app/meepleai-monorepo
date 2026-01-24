@@ -52,7 +52,7 @@ function calculateTrend(data: ApiRequestByDay[]): { total: number; trend: number
   return { total, trend };
 }
 
-export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps): JSX.Element {
+export function APIRequestsChart({ data, isLoading }: APIRequestsChartProps){
   if (isLoading) {
     return <ChartSkeleton />;
   }

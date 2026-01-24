@@ -122,7 +122,7 @@ export function createAdminShareRequestsClient(httpClient: HttpClient): AdminSha
   const baseUrl = '/api/v1/admin/share-requests';
 
   return {
-    async getAll(params = {}): Promise<PaginatedAdminShareRequestsResponse> {
+    async getAll(params: Partial<GetAdminShareRequestsParams> = {}): Promise<PaginatedAdminShareRequestsResponse> {
       const queryParams = new URLSearchParams();
 
       if (params.page) queryParams.set('page', params.page.toString());

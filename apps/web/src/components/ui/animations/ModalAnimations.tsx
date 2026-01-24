@@ -96,7 +96,7 @@ export const drawerVariants = (side: 'left' | 'right' | 'top' | 'bottom' = 'righ
         ease: 'easeIn',
       },
     },
-  };
+  } as Variants;
 };
 
 /**

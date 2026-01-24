@@ -27,7 +27,7 @@ export interface ReviewLockTimerProps {
   className?: string;
 }
 
-export function ReviewLockTimer({ expiresAt, onExpired, className }: ReviewLockTimerProps): JSX.Element {
+export function ReviewLockTimer({ expiresAt, onExpired, className }: ReviewLockTimerProps){
   const [timeRemaining, setTimeRemaining] = useState(0);
 
   useEffect(() => {

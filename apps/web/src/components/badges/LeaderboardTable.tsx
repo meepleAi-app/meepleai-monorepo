@@ -36,7 +36,7 @@ export interface LeaderboardTableProps {
 export function LeaderboardTable({
   period = 'AllTime',
   className,
-}: LeaderboardTableProps): JSX.Element {
+}: LeaderboardTableProps){
   const [selectedPeriod, setSelectedPeriod] = useState<LeaderboardPeriod>(period);
 
   const { data: leaderboard, isLoading } = useLeaderboard(selectedPeriod);
@@ -126,7 +126,7 @@ interface LeaderboardRowProps {
   isCurrentUser: boolean;
 }
 
-function LeaderboardRow({ entry, position, isCurrentUser }: LeaderboardRowProps): JSX.Element {
+function LeaderboardRow({ entry, position, isCurrentUser }: LeaderboardRowProps){
   const positionIcon = getPositionIcon(position);
 
   return (

@@ -45,7 +45,7 @@ export function BadgeGrid({
   showHidden = false,
   onBadgeClick,
   className,
-}: BadgeGridProps): JSX.Element {
+}: BadgeGridProps){
   // Filter visible badges
   const visibleBadges = showHidden ? badges : badges.filter((b) => b.isDisplayed);
 
@@ -128,7 +128,7 @@ interface BadgeItemProps {
   onClick?: () => void;
 }
 
-function BadgeItem({ badge, onClick }: BadgeItemProps): JSX.Element {
+function BadgeItem({ badge, onClick }: BadgeItemProps){
   const tierGradient = getTierGradient(badge.tier);
   const tierGlow = getTierGlow(badge.tier);
 

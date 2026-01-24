@@ -38,7 +38,7 @@ function getCategoryColor(category: string): string {
   return CATEGORY_COLORS[category] ?? CATEGORY_COLORS['Default'];
 }
 
-export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps): JSX.Element {
+export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps){
   if (isLoading) {
     return <ChartSkeleton />;
   }
@@ -78,7 +78,7 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps): JSX.Elemen
                 outerRadius={100}
                 dataKey="percentage"
                 nameKey="category"
-                label={({ name, percentage }) => `${name} ${percentage}%`}
+                label={({ name, value }) => `${name} ${value}%`}
               >
                 {chartData.map((entry, index) => (
                   <Cell
@@ -96,8 +96,8 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps): JSX.Elemen
                   borderRadius: '0.75rem',
                   boxShadow: '0 4px 12px rgba(139, 90, 60, 0.1)',
                 }}
-                formatter={(value: number, name: string, props: { payload: AiUsageStats & { percentage: number } }) => [
-                  `${props.payload.count.toLocaleString()} calls (${value}%)`,
+                formatter={(value: any, name: any, props: any) => [
+                  `${props?.payload?.count?.toLocaleString() ?? value} calls (${value}%)`,
                   name
                 ]}
               />

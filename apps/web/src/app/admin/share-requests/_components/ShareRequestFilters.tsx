@@ -51,7 +51,7 @@ export function ShareRequestFilters({
   onContributionTypeChange,
   onSortByChange,
   onSortDirectionChange,
-}: ShareRequestFiltersProps): JSX.Element {
+}: ShareRequestFiltersProps){
   return (
     <div className="space-y-4">
       {/* Search */}

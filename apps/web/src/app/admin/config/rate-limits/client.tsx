@@ -1,13 +1,16 @@
 'use client';
 
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
+import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { TierConfigSection } from './_components/TierConfigSection/TierConfigSection';
 import { UserOverridesSection } from './_components/UserOverridesSection/UserOverridesSection';
 
 export function RateLimitConfigClient() {
+  const { user, loading: authLoading } = useAuthUser();
+
   return (
-    <AdminAuthGuard>
+    <AdminAuthGuard loading={authLoading} user={user}>
       <div className="container mx-auto py-8 space-y-8">
         <Card>
           <CardHeader>

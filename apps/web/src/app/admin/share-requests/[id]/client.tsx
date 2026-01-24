@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
-import { useAuthUser } from '@/hooks/auth/useAuthUser';
+import { useAuthUser } from '@/hooks/useAuthUser';
 import {
   useShareRequestDetails,
   useApproveRequest,

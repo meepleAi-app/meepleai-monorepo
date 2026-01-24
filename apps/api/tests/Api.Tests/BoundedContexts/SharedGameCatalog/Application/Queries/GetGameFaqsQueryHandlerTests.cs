@@ -130,7 +130,7 @@ public sealed class GetGameFaqsQueryHandlerTests : IAsyncLifetime
                 SharedGameId = _publishedGameId,
                 Question = "First question?",
                 Answer = "First answer",
-                Order = 0,
+                DisplayOrder =0,
                 UpvoteCount = 5,
                 CreatedAt = DateTime.UtcNow
             },
@@ -140,7 +140,7 @@ public sealed class GetGameFaqsQueryHandlerTests : IAsyncLifetime
                 SharedGameId = _publishedGameId,
                 Question = "Second question?",
                 Answer = "Second answer",
-                Order = 1,
+                DisplayOrder =1,
                 UpvoteCount = 10,
                 CreatedAt = DateTime.UtcNow
             },
@@ -150,7 +150,7 @@ public sealed class GetGameFaqsQueryHandlerTests : IAsyncLifetime
                 SharedGameId = _publishedGameId,
                 Question = "Third question?",
                 Answer = "Third answer",
-                Order = 2,
+                DisplayOrder =2,
                 UpvoteCount = 3,
                 CreatedAt = DateTime.UtcNow
             }
@@ -164,7 +164,7 @@ public sealed class GetGameFaqsQueryHandlerTests : IAsyncLifetime
             SharedGameId = _draftGameId,
             Question = "Draft question?",
             Answer = "Draft answer",
-            Order = 0,
+            DisplayOrder = 0,
             UpvoteCount = 0,
             CreatedAt = DateTime.UtcNow
         };

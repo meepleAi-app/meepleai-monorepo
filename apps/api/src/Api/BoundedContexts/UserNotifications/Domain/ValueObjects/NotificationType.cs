@@ -35,6 +35,9 @@ internal sealed class NotificationType : ValueObject
     public static readonly NotificationType RateLimitReached = new("rate_limit_reached");
     public static readonly NotificationType CooldownEnded = new("cooldown_ended");
 
+    // ISSUE-2830: Loan reminder notification type
+    public static readonly NotificationType LoanReminder = new("loan_reminder");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -76,6 +79,7 @@ internal sealed class NotificationType : ValueObject
             "rate_limit_approaching" => RateLimitApproaching,
             "rate_limit_reached" => RateLimitReached,
             "cooldown_ended" => CooldownEnded,
+            "loan_reminder" => LoanReminder,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

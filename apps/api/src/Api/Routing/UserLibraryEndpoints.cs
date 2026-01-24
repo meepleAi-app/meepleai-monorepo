@@ -48,6 +48,7 @@ internal static class UserLibraryEndpoints
         MapGetGameChecklistEndpoint(group);
         MapUpdateGameStateEndpoint(group);
         MapRecordGameSessionEndpoint(group);
+        MapSendLoanReminderEndpoint(group);
 
         return group;
     }
@@ -834,6 +835,51 @@ internal static class UserLibraryEndpoints
         .WithOpenApi();
     }
 
+
+    private static void MapSendLoanReminderEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/library/games/{gameId:guid}/remind-loan", async (
+            Guid gameId,
+            [FromBody] SendLoanReminderRequest? request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new SendLoanReminderCommand(userId, gameId, request?.CustomMessage);
+
+            try
+            {
+                await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.NoContent();
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (ConflictException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces(204)
+        .Produces(401)
+        .Produces(404)
+        .Produces(409)
+        .WithTags("Library", "Games", "Notifications")
+        .WithSummary("Send loan reminder")
+        .WithDescription("Sends notification reminder about loaned game. Rate limited to 1 per 24h. Game must be in InPrestito state.")
+        .WithOpenApi();
+    }
+
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)
     {
         userId = Guid.Empty;
@@ -913,4 +959,11 @@ public record RecordGameSessionRequest(
     bool? DidWin = null,
     string? Players = null,
     string? Notes = null
+);
+
+/// <summary>
+/// Request body for sending loan reminder.
+/// </summary>
+public record SendLoanReminderRequest(
+    string? CustomMessage = null
 );

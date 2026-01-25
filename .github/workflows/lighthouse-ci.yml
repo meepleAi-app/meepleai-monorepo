@@ -63,7 +63,7 @@ jobs:
           node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
-          frozen-lockfile: 'false'
+          frozen-lockfile: 'true'
 
       - name: Setup Test Environment
         run: cp .env.test.example .env.test
@@ -112,7 +112,7 @@ jobs:
           node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
-          frozen-lockfile: 'false'
+          frozen-lockfile: 'true'
 
       - name: Setup Playwright browsers
         uses: ./.github/actions/setup-playwright
@@ -179,7 +179,7 @@ jobs:
           node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
-          frozen-lockfile: 'false'
+          frozen-lockfile: 'true'
 
       - name: Download Next.js Build
         uses: actions/download-artifact@v6

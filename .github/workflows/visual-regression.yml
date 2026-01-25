@@ -61,7 +61,7 @@ jobs:
           node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
-          frozen-lockfile: 'false'
+          frozen-lockfile: 'true'
 
       - name: Setup Playwright
         uses: ./.github/actions/setup-playwright
@@ -122,7 +122,7 @@ jobs:
           node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
-          frozen-lockfile: 'false'
+          frozen-lockfile: 'true'
 
       - name: Build Storybook
         run: pnpm build-storybook

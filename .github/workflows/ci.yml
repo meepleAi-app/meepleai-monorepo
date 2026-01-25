@@ -63,7 +63,7 @@ jobs:
           node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
-          frozen-lockfile: 'false'
+          frozen-lockfile: 'true'
 
       # Stage 1: Lint + TypeCheck (fail fast)
       - name: Lint
@@ -282,7 +282,7 @@ jobs:
         uses: ./.github/actions/setup-frontend
         with:
           working-directory: apps/web
-          frozen-lockfile: 'false'
+          frozen-lockfile: 'true'
 
       - name: Setup Playwright
         uses: ./.github/actions/setup-playwright

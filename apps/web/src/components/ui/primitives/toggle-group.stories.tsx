@@ -212,11 +212,11 @@ export const Disabled: Story = {
   ),
 };
 
+/* DISABLED - Interactive stories removed
 /**
  * Text alignment toolbar.
  * Common use case for rich text editors.
  */
-*/
 
 /**
  * Formatting toolbar.
@@ -248,6 +248,7 @@ export const ListStyleSelector: Story = {
   },
 };
 
+/* DISABLED - Interactive stories removed
 /**
  * View mode selector.
  * Toggle between different view modes.

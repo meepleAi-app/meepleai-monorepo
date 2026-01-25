@@ -20,6 +20,7 @@ export function UserOverridesSection() {
 
   useEffect(() => {
     loadOverrides();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadOverrides = async () => {

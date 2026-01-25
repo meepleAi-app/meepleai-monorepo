@@ -11,8 +11,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// TODO(#2759): Re-enable confetti after fixing pnpm-lock.yaml
-// import Confetti from 'react-confetti';
+import Confetti from 'react-confetti';
 
 import { BadgeTier, getCelebratoryTitle, getTierIcon, type BadgeNotificationData } from '@/types/badges';
 import { cn } from '@/lib/utils';
@@ -61,39 +60,36 @@ export function BadgeEarnedModal({
   onClose,
   onShare,
 }: BadgeEarnedModalProps){
-  // TODO(#2759): Re-enable confetti state after fixing react-confetti in pnpm-lock.yaml
-  // const [showConfetti, setShowConfetti] = useState(false);
-  // const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
-  // TODO(#2759): Re-enable confetti size tracking
-  // useEffect(() => {
-  //   const updateSize = () => {
-  //     setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-  //   };
-  //   updateSize();
-  //   window.addEventListener('resize', updateSize);
-  //   return () => window.removeEventListener('resize', updateSize);
-  // }, []);
+  // Track window size for confetti
+  useEffect(() => {
+    const updateSize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
 
-  // TODO(#2759): Re-enable confetti trigger
-  // useEffect(() => {
-  //   if (badge) {
-  //     setShowConfetti(true);
-  //     const timer = setTimeout(() => setShowConfetti(false), 5000);
-  //     return () => clearTimeout(timer);
-  //   }
-  // }, [badge]);
+  // Trigger confetti on badge earn
+  useEffect(() => {
+    if (badge) {
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [badge]);
 
   if (!badge) return <></>;
 
-  // TODO(#2759): Re-enable confetti config
-  // const confettiConfig = getConfettiConfig(badge.tier);
+  const confettiConfig = getConfettiConfig(badge.tier);
 
   return (
     <>
       {/* Confetti Effect */}
-      {/* TODO(#2759): Re-enable confetti after fixing pnpm-lock.yaml */}
-      {/* {showConfetti && (
+      {showConfetti && (
         <Confetti
           width={windowSize.width}
           height={windowSize.height}
@@ -102,7 +98,7 @@ export function BadgeEarnedModal({
           gravity={0.3}
           colors={confettiConfig.colors}
         />
-      )} */}
+      )}
 
       {/* Modal */}
       <Dialog open={!!badge} onOpenChange={(open) => !open && onClose()}>
@@ -218,9 +214,8 @@ export function BadgeEarnedModal({
 
 /**
  * Helper: Get confetti configuration based on tier
- * TODO(#2759): Re-enable after fixing react-confetti in pnpm-lock.yaml
  */
-/* function getConfettiConfig(tier: BadgeTier) {
+function getConfettiConfig(tier: BadgeTier) {
   const configs = {
     [BadgeTier.Diamond]: {
       elementCount: 200,
@@ -244,7 +239,7 @@ export function BadgeEarnedModal({
     },
   };
   return configs[tier];
-} */
+}
 
 /**
  * Helper: Get tier gradient (reused from BadgeGrid)
@@ -262,9 +257,8 @@ function getTierGradient(tier: BadgeTier): string {
 
 /**
  * Helper: Get tier glow color
- * TODO(#2759): Re-enable after fixing react-confetti in pnpm-lock.yaml
  */
-/* function getTierGlow(tier: BadgeTier): string {
+function getTierGlow(tier: BadgeTier): string {
   const glows: Record<BadgeTier, string> = {
     [BadgeTier.Diamond]: 'rgba(6, 182, 212, 0.6)',
     [BadgeTier.Platinum]: 'rgba(203, 213, 225, 0.6)',
@@ -273,6 +267,6 @@ function getTierGradient(tier: BadgeTier): string {
     [BadgeTier.Bronze]: 'rgba(217, 119, 6, 0.5)',
   };
   return glows[tier];
-} */
+}
 
 BadgeEarnedModal.displayName = 'BadgeEarnedModal';

@@ -20,6 +20,7 @@ export function TierConfigSection() {
 
   useEffect(() => {
     loadConfigs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadConfigs = async () => {

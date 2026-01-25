@@ -37,6 +37,22 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
             .Returns(Array.Empty<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
     }
 
+    /// <summary>
+    /// Helper to create expired override for testing (bypasses domain validation).
+    /// </summary>
+    private static UserRateLimitOverride CreateExpiredOverride(Guid userId, Guid adminId, string reason, DateTime pastExpiration)
+    {
+        // Create with future date to pass validation
+        var userOverride = UserRateLimitOverride.Create(userId, adminId, reason, DateTime.UtcNow.AddDays(1));
+
+        // Use reflection to set past expiration (test-only)
+        var expiresAtField = typeof(UserRateLimitOverride).GetField("_expiresAt",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        expiresAtField!.SetValue(userOverride, pastExpiration);
+
+        return userOverride;
+    }
+
     public async Task InitializeAsync()
     {
         _dbContext = new MeepleAiDbContext(_options, _mockMediator.Object, _mockEventCollector.Object);
@@ -161,7 +177,7 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var adminId = Guid.NewGuid();
 
-        var expiredOverride = UserRateLimitOverride.Create(
+        var expiredOverride = CreateExpiredOverride(
             userId, adminId, "Expired", DateTime.UtcNow.AddDays(-1)); // Expired
         expiredOverride.UpdateLimits(20, 100, null);
 
@@ -225,7 +241,7 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var adminId = Guid.NewGuid();
 
-        var expiredOverride = UserRateLimitOverride.Create(
+        var expiredOverride = CreateExpiredOverride(
             userId, adminId, "Expired", DateTime.UtcNow.AddDays(-1));
         expiredOverride.UpdateLimits(20, 100, null);
 
@@ -253,7 +269,7 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
             Guid.NewGuid(), adminId, "Permanent", null); // null = never expires
         activeOverride2.UpdateLimits(30, 150, null);
 
-        var expiredOverride = UserRateLimitOverride.Create(
+        var expiredOverride = CreateExpiredOverride(
             Guid.NewGuid(), adminId, "Expired", DateTime.UtcNow.AddDays(-5));
         expiredOverride.UpdateLimits(10, 50, null);
 
@@ -282,7 +298,7 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
             Guid.NewGuid(), adminId, "Active", DateTime.UtcNow.AddMonths(1));
         activeOverride.UpdateLimits(20, 100, null);
 
-        var expiredOverride = UserRateLimitOverride.Create(
+        var expiredOverride = CreateExpiredOverride(
             Guid.NewGuid(), adminId, "Expired", DateTime.UtcNow.AddDays(-5));
         expiredOverride.UpdateLimits(10, 50, null);
 
@@ -310,7 +326,7 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
             userId, adminId, "Override 1", DateTime.UtcNow.AddMonths(1));
         override1.UpdateLimits(20, 100, null);
 
-        var override2 = UserRateLimitOverride.Create(
+        var override2 = CreateExpiredOverride(
             userId, adminId, "Override 2 (expired)", DateTime.UtcNow.AddDays(-5));
         override2.UpdateLimits(30, 150, null);
 
@@ -346,6 +362,7 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
 
         await _repository.AddAsync(userOverride);
         await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear(); // Clear tracking before update
 
         // Act - Update via domain methods
         userOverride.UpdateLimits(50, 200, TimeSpan.FromHours(6));
@@ -377,6 +394,7 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
 
         await _repository.AddAsync(userOverride);
         await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear(); // Clear tracking before delete
 
         // Act
         await _repository.DeleteAsync(userOverride);

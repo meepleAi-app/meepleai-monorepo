@@ -242,6 +242,7 @@ public sealed class RateLimitConfigRepositoryTests : IAsyncLifetime
 
         await _repository.AddAsync(config);
         await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear(); // Clear tracking before update
 
         // Act - Update the config
         config.Update(
@@ -269,6 +270,7 @@ public sealed class RateLimitConfigRepositoryTests : IAsyncLifetime
 
         await _repository.AddAsync(config);
         await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear(); // Clear tracking before delete
 
         // Act
         await _repository.DeleteAsync(config);

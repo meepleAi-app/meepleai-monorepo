@@ -5,23 +5,33 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
 namespace Api.Tests.SharedGameCatalog.Application.EventHandlers;
 
-public sealed class BadgeEvaluationOnApprovalHandlerTests
+/// <summary>
+/// Integration tests for BadgeEvaluationOnApprovalHandler with in-memory database.
+/// ISSUE-3005: Fixed DbContext mocking issues by using InMemoryDatabase.
+/// </summary>
+public sealed class BadgeEvaluationOnApprovalHandlerTests : IAsyncLifetime
 {
+    private readonly DbContextOptions<MeepleAiDbContext> _options;
     private readonly Mock<IBadgeEvaluator> _badgeEvaluator;
     private readonly Mock<IUserBadgeRepository> _userBadgeRepo;
     private readonly Mock<IShareRequestRepository> _shareRequestRepo;
     private readonly Mock<IUnitOfWork> _unitOfWork;
-    private readonly Mock<MeepleAiDbContext> _dbContext;
+    private readonly Mock<IMediator> _mockMediator;
+    private readonly Mock<IDomainEventCollector> _mockEventCollector;
     private readonly Mock<ILogger<BadgeEvaluationOnApprovalHandler>> _logger;
-    private readonly BadgeEvaluationOnApprovalHandler _sut;
+    private MeepleAiDbContext _dbContext = null!;
+    private BadgeEvaluationOnApprovalHandler _sut = null!;
 
     private readonly Guid _shareRequestId = Guid.NewGuid();
     private readonly Guid _adminId = Guid.NewGuid();
@@ -30,20 +40,37 @@ public sealed class BadgeEvaluationOnApprovalHandlerTests
 
     public BadgeEvaluationOnApprovalHandlerTests()
     {
+        _options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase($"BadgeEvaluationTest_{Guid.NewGuid()}")
+            .Options;
+
         _badgeEvaluator = new Mock<IBadgeEvaluator>();
         _userBadgeRepo = new Mock<IUserBadgeRepository>();
         _shareRequestRepo = new Mock<IShareRequestRepository>();
         _unitOfWork = new Mock<IUnitOfWork>();
-        _dbContext = new Mock<MeepleAiDbContext>();
+        _mockMediator = new Mock<IMediator>();
+        _mockEventCollector = new Mock<IDomainEventCollector>();
+        _mockEventCollector.Setup(x => x.GetAndClearEvents())
+            .Returns(Array.Empty<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
         _logger = new Mock<ILogger<BadgeEvaluationOnApprovalHandler>>();
+    }
 
+    public async Task InitializeAsync()
+    {
+        _dbContext = new MeepleAiDbContext(_options, _mockMediator.Object, _mockEventCollector.Object);
         _sut = new BadgeEvaluationOnApprovalHandler(
-            _dbContext.Object,
+            _dbContext,
             _badgeEvaluator.Object,
             _userBadgeRepo.Object,
             _shareRequestRepo.Object,
             _unitOfWork.Object,
             _logger.Object);
+        await Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await _dbContext.DisposeAsync();
     }
 
     [Fact]

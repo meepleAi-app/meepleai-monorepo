@@ -12,7 +12,10 @@ using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Services;
+using Api.SharedKernel.Application.Services;
 using FluentAssertions;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -21,16 +24,23 @@ using Email = Api.BoundedContexts.Authentication.Domain.ValueObjects.Email;
 
 namespace Api.Tests.UserNotifications.Application.EventHandlers;
 
-public sealed class ShareRequestApprovedNotificationHandlerTests
+/// <summary>
+/// Integration tests for ShareRequestApprovedNotificationHandler with in-memory database.
+/// ISSUE-3005: Fixed DbContext mocking issues by using InMemoryDatabase.
+/// </summary>
+public sealed class ShareRequestApprovedNotificationHandlerTests : IAsyncLifetime
 {
+    private readonly DbContextOptions<MeepleAiDbContext> _options;
     private readonly Mock<INotificationRepository> _notificationRepo;
     private readonly Mock<IUserRepository> _userRepo;
     private readonly Mock<IShareRequestRepository> _shareRequestRepo;
     private readonly Mock<ISharedGameRepository> _sharedGameRepo;
     private readonly Mock<IEmailService> _emailService;
-    private readonly Mock<MeepleAiDbContext> _dbContext;
+    private readonly Mock<IMediator> _mockMediator;
+    private readonly Mock<IDomainEventCollector> _mockEventCollector;
     private readonly Mock<ILogger<ShareRequestApprovedNotificationHandler>> _logger;
-    private readonly ShareRequestApprovedNotificationHandler _sut;
+    private MeepleAiDbContext _dbContext = null!;
+    private ShareRequestApprovedNotificationHandler _sut = null!;
 
     private readonly Guid _shareRequestId = Guid.NewGuid();
     private readonly Guid _userId = Guid.NewGuid();
@@ -39,22 +49,39 @@ public sealed class ShareRequestApprovedNotificationHandlerTests
 
     public ShareRequestApprovedNotificationHandlerTests()
     {
+        _options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase($"ShareRequestApprovedTest_{Guid.NewGuid()}")
+            .Options;
+
         _notificationRepo = new Mock<INotificationRepository>();
         _userRepo = new Mock<IUserRepository>();
         _shareRequestRepo = new Mock<IShareRequestRepository>();
         _sharedGameRepo = new Mock<ISharedGameRepository>();
         _emailService = new Mock<IEmailService>();
-        _dbContext = new Mock<MeepleAiDbContext>();
+        _mockMediator = new Mock<IMediator>();
+        _mockEventCollector = new Mock<IDomainEventCollector>();
+        _mockEventCollector.Setup(x => x.GetAndClearEvents())
+            .Returns(Array.Empty<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
         _logger = new Mock<ILogger<ShareRequestApprovedNotificationHandler>>();
+    }
 
+    public async Task InitializeAsync()
+    {
+        _dbContext = new MeepleAiDbContext(_options, _mockMediator.Object, _mockEventCollector.Object);
         _sut = new ShareRequestApprovedNotificationHandler(
-            _dbContext.Object,
+            _dbContext,
             _notificationRepo.Object,
             _userRepo.Object,
             _shareRequestRepo.Object,
             _sharedGameRepo.Object,
             _emailService.Object,
             _logger.Object);
+        await Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await _dbContext.DisposeAsync();
     }
 
     [Fact]

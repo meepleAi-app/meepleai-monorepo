@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
@@ -207,7 +208,7 @@ public sealed class ShareRequestTests
         // Act & Assert
         // When already InReview, the status check fails first with "InReview status" message
         var action = () => request.StartReview(anotherAdmin);
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<InvalidShareRequestStateException>()
             .WithMessage("*InReview*");
     }
 
@@ -222,7 +223,7 @@ public sealed class ShareRequestTests
 
         // Act & Assert
         var action = () => request.StartReview(_adminId);
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<InvalidShareRequestStateException>()
             .WithMessage($"*{terminalStatus}*");
     }
 
@@ -256,7 +257,7 @@ public sealed class ShareRequestTests
 
         // Act & Assert
         var action = () => request.ReleaseReview();
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<InvalidShareRequestStateException>()
             .WithMessage("*Pending*");
     }
 
@@ -270,6 +271,11 @@ public sealed class ShareRequestTests
         // Arrange
         var request = CreateRequestInReviewState();
         request.ClearDomainEvents();
+
+        // Set lock expiration to past using reflection (test-only)
+        var lockExpiresProp = typeof(ShareRequest).GetField("_reviewLockExpiresAt",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        lockExpiresProp!.SetValue(request, DateTime.UtcNow.AddMinutes(-1));
 
         // Act
         request.ExpireLock();
@@ -291,6 +297,11 @@ public sealed class ShareRequestTests
         request.StartReview(_adminId); // ChangesRequested → InReview
         request.ClearDomainEvents();
 
+        // Set lock expiration to past using reflection (test-only)
+        var lockExpiresProp = typeof(ShareRequest).GetField("_reviewLockExpiresAt",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        lockExpiresProp!.SetValue(request, DateTime.UtcNow.AddMinutes(-1));
+
         // Act
         request.ExpireLock();
 
@@ -308,7 +319,7 @@ public sealed class ShareRequestTests
 
         // Act & Assert
         var action = () => request.ExpireLock();
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<InvalidShareRequestStateException>()
             .WithMessage("*Pending*");
     }
 
@@ -342,7 +353,7 @@ public sealed class ShareRequestTests
 
         // Act & Assert
         var action = () => request.ExtendReviewLock(_adminId, 15);
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<InvalidShareRequestStateException>()
             .WithMessage("*Pending*");
     }
 
@@ -434,7 +445,7 @@ public sealed class ShareRequestTests
 
         // Act & Assert
         var action = () => request.Approve(_adminId);
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<InvalidShareRequestStateException>()
             .WithMessage("*Pending*");
     }
 
@@ -447,7 +458,7 @@ public sealed class ShareRequestTests
 
         // Act & Assert
         var action = () => request.Approve(differentAdmin);
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ShareRequestReviewerMismatchException>()
             .WithMessage("*reviewing admin*");
     }
 
@@ -532,7 +543,7 @@ public sealed class ShareRequestTests
 
         // Act & Assert
         var action = () => request.Reject(differentAdmin, "reason");
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ShareRequestReviewerMismatchException>()
             .WithMessage("*reviewing admin*");
     }
 
@@ -580,7 +591,7 @@ public sealed class ShareRequestTests
 
         // Act & Assert
         var action = () => request.RequestChanges(differentAdmin, "feedback");
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ShareRequestReviewerMismatchException>()
             .WithMessage("*reviewing admin*");
     }
 
@@ -613,7 +624,7 @@ public sealed class ShareRequestTests
 
         // Act & Assert
         var action = () => request.Resubmit();
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<InvalidShareRequestStateException>()
             .WithMessage("*Pending*");
     }
 
@@ -675,7 +686,7 @@ public sealed class ShareRequestTests
 
         // Act & Assert
         var action = () => request.Withdraw();
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<InvalidShareRequestStateException>()
             .WithMessage($"*{terminalStatus}*");
     }
 
@@ -687,7 +698,7 @@ public sealed class ShareRequestTests
 
         // Act & Assert
         var action = () => request.Withdraw();
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<InvalidShareRequestStateException>()
             .WithMessage("*InReview*");
     }
 
@@ -736,7 +747,7 @@ public sealed class ShareRequestTests
 
         // Act & Assert
         var action = () => request.AttachDocument(Guid.NewGuid(), "test.pdf", "application/pdf", 1024);
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<InvalidShareRequestStateException>()
             .WithMessage("*InReview*");
     }
 

@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { useMyBadges, useToggleBadgeDisplay } from '@/hooks/queries';
 import { BadgeGrid } from './BadgeGrid';
 import { BadgeDetailSheet } from './BadgeDetailSheet';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/primitives/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { cn } from '@/lib/utils';
@@ -43,7 +43,7 @@ export function UserBadges({
   className,
   showViewAll = true,
   maxDisplay = 12,
-}: UserBadgesProps): JSX.Element {
+}: UserBadgesProps){
   const { data: badges, isLoading } = useMyBadges();
   const { mutate: toggleDisplay } = useToggleBadgeDisplay();
 

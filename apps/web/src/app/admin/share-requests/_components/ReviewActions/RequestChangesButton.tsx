@@ -1,6 +1,5 @@
-"use client";
 import { useState } from 'react';
-import { Button } from '@/components/ui/primitives/button';
+import { Button } from '@/components/ui';
 import {
   Dialog,
   DialogContent,
@@ -8,9 +7,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/overlays/dialog';
-import { Textarea } from '@/components/ui/primitives/textarea';
-import { Label } from '@/components/ui/primitives/label';
+} from '@/components/ui';
+import { Textarea } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -38,7 +37,7 @@ export function RequestChangesButton({
   onRequestChanges,
   disabled,
   isPending,
-}: RequestChangesButtonProps): JSX.Element {
+}: RequestChangesButtonProps){
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
 

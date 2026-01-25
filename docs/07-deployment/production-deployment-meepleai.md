@@ -260,10 +260,10 @@ nano /opt/meepleai/infra/traefik/traefik.prod.yml
 cd /opt/meepleai
 
 # Make deploy script executable
-chmod +x scripts/deploy-meepleai.sh
+chmod +x scripts/deployment/deploy-meepleai.sh
 
 # Start deployment
-./scripts/deploy-meepleai.sh up
+./scripts/deployment/deploy-meepleai.sh up
 ```
 
 ### 3. Alternative: Manual Deployment
@@ -336,7 +336,7 @@ curl -X POST https://api.meepleai.io/api/v1/auth/register \
 crontab -e
 
 # Add daily backup at 3 AM
-0 3 * * * /opt/meepleai/scripts/deploy-meepleai.sh backup >> /var/log/meepleai-backup.log 2>&1
+0 3 * * * /opt/meepleai/scripts/deployment/deploy-meepleai.sh backup >> /var/log/meepleai-backup.log 2>&1
 ```
 
 ---
@@ -347,18 +347,18 @@ crontab -e
 
 ```bash
 # All services
-./scripts/deploy-meepleai.sh logs
+./scripts/deployment/deploy-meepleai.sh logs
 
 # Specific service
-./scripts/deploy-meepleai.sh logs api
-./scripts/deploy-meepleai.sh logs web
-./scripts/deploy-meepleai.sh logs traefik
+./scripts/deployment/deploy-meepleai.sh logs api
+./scripts/deployment/deploy-meepleai.sh logs web
+./scripts/deployment/deploy-meepleai.sh logs traefik
 ```
 
 ### Restart Services
 
 ```bash
-./scripts/deploy-meepleai.sh restart
+./scripts/deployment/deploy-meepleai.sh restart
 ```
 
 ### Update Application
@@ -370,13 +370,13 @@ cd /opt/meepleai
 git pull origin main
 
 # Update and restart
-./scripts/deploy-meepleai.sh update
+./scripts/deployment/deploy-meepleai.sh update
 ```
 
 ### Manual Database Backup
 
 ```bash
-./scripts/deploy-meepleai.sh backup
+./scripts/deployment/deploy-meepleai.sh backup
 ```
 
 ### Certificate Renewal
@@ -445,13 +445,13 @@ free -h
 
 ```bash
 # Stop all services
-./scripts/deploy-meepleai.sh down
+./scripts/deployment/deploy-meepleai.sh down
 
 # Remove volumes (WARNING: data loss!)
 docker volume rm $(docker volume ls -q | grep meepleai)
 
 # Restart
-./scripts/deploy-meepleai.sh up
+./scripts/deployment/deploy-meepleai.sh up
 ```
 
 ---
@@ -482,22 +482,22 @@ docker volume rm $(docker volume ls -q | grep meepleai)
 
 ```bash
 # Start
-./scripts/deploy-meepleai.sh up
+./scripts/deployment/deploy-meepleai.sh up
 
 # Stop
-./scripts/deploy-meepleai.sh down
+./scripts/deployment/deploy-meepleai.sh down
 
 # Logs
-./scripts/deploy-meepleai.sh logs
+./scripts/deployment/deploy-meepleai.sh logs
 
 # Status
-./scripts/deploy-meepleai.sh status
+./scripts/deployment/deploy-meepleai.sh status
 
 # Backup
-./scripts/deploy-meepleai.sh backup
+./scripts/deployment/deploy-meepleai.sh backup
 
 # Update
-./scripts/deploy-meepleai.sh update
+./scripts/deployment/deploy-meepleai.sh update
 ```
 
 ---

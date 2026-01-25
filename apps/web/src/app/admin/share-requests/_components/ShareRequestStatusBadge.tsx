@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/data-display/badge';
+import { Badge } from '@/components/ui';
 import { FileText, Eye, AlertCircle, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
 import type { ShareRequestStatus } from '@/lib/api/schemas/share-requests.schemas';
 
@@ -23,7 +23,7 @@ interface ShareRequestStatusBadgeProps {
   className?: string;
 }
 
-export function ShareRequestStatusBadge({ status, className }: ShareRequestStatusBadgeProps): JSX.Element {
+export function ShareRequestStatusBadge({ status, className }: ShareRequestStatusBadgeProps){
   const config = getStatusConfig(status);
 
   return (

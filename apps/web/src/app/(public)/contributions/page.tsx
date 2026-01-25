@@ -19,7 +19,7 @@
 
 import { useState, useMemo } from 'react';
 
-import { AlertCircle, FileText, Trophy, TrendingUp } from 'lucide-react';
+import { AlertCircle, FileText, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 
 import { ShareRequestCard } from '@/components/contributions/ShareRequestCard';
@@ -29,10 +29,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/al
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useShareRequests } from '@/hooks/queries/useShareRequests';
-import type {
-  GetUserShareRequestsParams,
-  ShareRequestStatus,
-} from '@/lib/api/schemas/share-requests.schemas';
+import type { GetUserShareRequestsParams } from '@/lib/api/clients/shareRequestsClient';
+import type { ShareRequestStatus } from '@/lib/api/schemas/share-requests.schemas';
 
 export default function ContributionsPage() {
   // Filter and pagination state

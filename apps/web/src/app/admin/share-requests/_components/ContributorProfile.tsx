@@ -1,5 +1,5 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/data-display/avatar';
-import { Badge } from '@/components/ui/data-display/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { formatDistanceToNow } from 'date-fns';
 import { Award, Calendar, CheckCircle, TrendingUp } from 'lucide-react';
 import type { ContributorProfileDto } from '@/lib/api/schemas/admin-share-requests.schemas';
@@ -22,7 +22,7 @@ interface ContributorProfileProps {
   className?: string;
 }
 
-export function ContributorProfile({ contributor, className }: ContributorProfileProps): JSX.Element {
+export function ContributorProfile({ contributor, className }: ContributorProfileProps){
   const approvalRatePercentage = Math.round(contributor.approvalRate * 100);
 
   return (

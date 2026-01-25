@@ -6,21 +6,18 @@
  * Milestone: 5 - Gamification
  */
 
+'use client';
+
 import React from 'react';
 
 import { BadgeGrid } from '@/components/badges';
 import { LeaderboardTable } from '@/components/badges';
 import { useMyBadges } from '@/hooks/queries';
 
-export const metadata = {
-  title: 'My Badges | MeepleAI',
-  description: 'View all your earned badges and contributor leaderboard',
-};
-
 /**
  * Badges page with full grid and leaderboard
  */
-export default function BadgesPage(): JSX.Element {
+export default function BadgesPage(){
   return (
     <div className="container mx-auto py-8">
       <div className="mb-8">
@@ -48,7 +45,7 @@ export default function BadgesPage(): JSX.Element {
 /**
  * Client component for badges section
  */
-function BadgesSection(): JSX.Element {
+function BadgesSection(){
   'use client';
 
   const { data: badges, isLoading } = useMyBadges();

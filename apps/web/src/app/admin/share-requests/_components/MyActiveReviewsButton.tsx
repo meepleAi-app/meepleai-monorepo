@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMyReviews } from '@/hooks/queries';
-import { Button } from '@/components/ui/primitives/button';
-import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/navigation/sheet';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { FileText, Loader2 } from 'lucide-react';
@@ -26,7 +26,7 @@ import { formatDistanceToNow } from 'date-fns';
  * Issue #2748: Frontend - Admin Review Lock UI
  */
 
-export function MyActiveReviewsButton(): JSX.Element {
+export function MyActiveReviewsButton(){
   const router = useRouter();
   const { data: activeReviews, isLoading } = useMyReviews();
   const [open, setOpen] = useState(false);
@@ -116,7 +116,7 @@ interface ActiveReviewItemProps {
   onClick: () => void;
 }
 
-function ActiveReviewItem({ review, onClick }: ActiveReviewItemProps): JSX.Element {
+function ActiveReviewItem({ review, onClick }: ActiveReviewItemProps){
   const timeRemaining = new Date(review.reviewLockExpiresAt).getTime() - Date.now();
   const isExpiringSoon = timeRemaining < 5 * 60 * 1000; // 5 minutes
 

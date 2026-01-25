@@ -62,7 +62,7 @@ POSTGRES_PASSWORD=REPLACE_WITH_VALUE_FROM_infra_secrets_postgres-password-txt
 #### 3. Hardcoded Passwords in Documentation
 **Locations**:
 - `claudedocs/docker-services-test-urls.md`
-- `scripts/test-services.sh`
+- `scripts/testing/test-services.sh`
 
 **Before**:
 ```bash
@@ -210,7 +210,7 @@ ConnectionStrings__Postgres: "Host=postgres;Database=${POSTGRES_DB:-meepleai};Us
 2. `apps/api/src/Api/.env` - Replaced passwords with placeholders
 
 ### Scripts
-3. `scripts/test-services.sh` - Updated to read from secrets
+3. `scripts/testing/test-services.sh` - Updated to read from secrets
 4. `claudedocs/docker-services-test-urls.md` - Updated examples to use secrets
 
 ### Documentation

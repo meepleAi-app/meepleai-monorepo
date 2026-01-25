@@ -4,7 +4,6 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableCell,
 } from '@/components/ui/data-display/table';
 import { ShareRequestsTableRow } from './ShareRequestsTableRow';
 import type { AdminShareRequestDto } from '@/lib/api/schemas/admin-share-requests.schemas';
@@ -32,7 +31,7 @@ interface ShareRequestsTableProps {
   onReview: (id: string) => void;
 }
 
-export function ShareRequestsTable({ requests, onReview }: ShareRequestsTableProps): JSX.Element {
+export function ShareRequestsTable({ requests, onReview }: ShareRequestsTableProps){
   if (requests.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">

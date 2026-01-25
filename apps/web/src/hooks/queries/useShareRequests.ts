@@ -9,11 +9,11 @@ import { api } from '@/lib/api';
 import type {
   CreateShareRequestCommand,
   CreateShareRequestResponse,
-  GetUserShareRequestsParams,
   PaginatedShareRequestsResponse,
   RateLimitStatusDto,
   UserShareRequestDto,
 } from '@/lib/api';
+import type { GetUserShareRequestsParams } from '@/lib/api/clients/shareRequestsClient';
 
 /**
  * React Query hooks for Share Requests

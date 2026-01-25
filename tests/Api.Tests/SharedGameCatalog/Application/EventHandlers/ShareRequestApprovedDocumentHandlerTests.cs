@@ -5,20 +5,30 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using FluentAssertions;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
 namespace Api.Tests.SharedGameCatalog.Application.EventHandlers;
 
-public sealed class ShareRequestApprovedDocumentHandlerTests
+/// <summary>
+/// Integration tests for ShareRequestApprovedDocumentHandler with in-memory database.
+/// ISSUE-3005: Fixed DbContext mocking issues by using InMemoryDatabase.
+/// </summary>
+public sealed class ShareRequestApprovedDocumentHandlerTests : IAsyncLifetime
 {
+    private readonly DbContextOptions<MeepleAiDbContext> _options;
     private readonly Mock<IShareRequestDocumentService> _documentService;
     private readonly Mock<IShareRequestRepository> _shareRequestRepo;
-    private readonly Mock<MeepleAiDbContext> _dbContext;
+    private readonly Mock<IMediator> _mockMediator;
+    private readonly Mock<IDomainEventCollector> _mockEventCollector;
     private readonly Mock<ILogger<ShareRequestApprovedDocumentHandler>> _logger;
-    private readonly ShareRequestApprovedDocumentHandler _sut;
+    private MeepleAiDbContext _dbContext = null!;
+    private ShareRequestApprovedDocumentHandler _sut = null!;
 
     private readonly Guid _shareRequestId = Guid.NewGuid();
     private readonly Guid _adminId = Guid.NewGuid();
@@ -27,16 +37,33 @@ public sealed class ShareRequestApprovedDocumentHandlerTests
 
     public ShareRequestApprovedDocumentHandlerTests()
     {
+        _options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase($"ShareRequestApprovedDocTest_{Guid.NewGuid()}")
+            .Options;
+
         _documentService = new Mock<IShareRequestDocumentService>();
         _shareRequestRepo = new Mock<IShareRequestRepository>();
-        _dbContext = new Mock<MeepleAiDbContext>();
+        _mockMediator = new Mock<IMediator>();
+        _mockEventCollector = new Mock<IDomainEventCollector>();
+        _mockEventCollector.Setup(x => x.GetAndClearEvents())
+            .Returns(Array.Empty<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
         _logger = new Mock<ILogger<ShareRequestApprovedDocumentHandler>>();
+    }
 
+    public async Task InitializeAsync()
+    {
+        _dbContext = new MeepleAiDbContext(_options, _mockMediator.Object, _mockEventCollector.Object);
         _sut = new ShareRequestApprovedDocumentHandler(
-            _dbContext.Object,
+            _dbContext,
             _documentService.Object,
             _shareRequestRepo.Object,
             _logger.Object);
+        await Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await _dbContext.DisposeAsync();
     }
 
     [Fact]

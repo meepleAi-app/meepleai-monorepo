@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -143,8 +144,20 @@ internal sealed class RecalculateBadgesCommandHandler : IRequestHandler<Recalcul
             foreach (var userBadge in currentBadges.Where(ub => ub.IsActive))
             {
                 // Only revoke if badge is still active AND user no longer qualifies
-                if (allActiveBadges.ContainsKey(userBadge.BadgeId) && !eligibleBadgeIds.Contains(userBadge.BadgeId))
+                if (allActiveBadges.TryGetValue(userBadge.BadgeId, out var badge) && !eligibleBadgeIds.Contains(userBadge.BadgeId))
                 {
+                    // PERMANENT BADGE PROTECTION: Never revoke milestone achievements
+                    // Contribution milestones (FIRST_CONTRIBUTION, CONTRIBUTOR_X) and document milestones
+                    // are permanent once earned. Only revoke time-limited badges (quality streaks, leaderboard).
+                    if (IsPermanentBadge(badge))
+                    {
+                        _logger.LogDebug(
+                            "Skipping revocation of permanent badge {BadgeCode} for user {UserId}",
+                            badge.Code,
+                            userId);
+                        continue;
+                    }
+
                     userBadge.Revoke("No longer meets badge requirements");
                     badgesRevoked++;
 
@@ -166,21 +179,25 @@ internal sealed class RecalculateBadgesCommandHandler : IRequestHandler<Recalcul
         return (badgesAwarded, badgesRevoked);
     }
 
-    private Task<List<Guid>> GetAllDistinctUserIdsAsync(CancellationToken cancellationToken)
+    private static bool IsPermanentBadge(Badge badge)
     {
-        // IMPLEMENTATION NOTE:
-        // This is a stub implementation. In production, you would:
-        // 1. Query IUserRepository.GetAllUserIdsAsync() (if available)
-        // 2. Or query ShareRequestRepository for distinct user IDs
-        // 3. Or use a dedicated IContributorRepository
+        // Permanent badges are milestone achievements that shouldn't be revoked
+        // even if the user's count temporarily drops (e.g., contribution count decrease).
+        // These include:
+        // - Contribution milestones (FirstContribution, ContributionCount)
+        // - Document milestones (DocumentCount)
         //
-        // For now, return empty list to avoid runtime errors
-        // This means recalculate-all-users will process 0 users (safe fallback)
+        // Revocable badges are time-limited or conditional:
+        // - Quality streaks (QualityStreak) - can lose streak
+        // - Leaderboard rankings (TopContributor) - can drop out of top N
+        return badge.Requirement.Type is
+            BadgeRequirementType.FirstContribution or
+            BadgeRequirementType.ContributionCount or
+            BadgeRequirementType.DocumentCount;
+    }
 
-        _logger.LogWarning(
-            "GetAllDistinctUserIdsAsync not fully implemented. " +
-            "Use RecalculateBadgesCommand with specific UserId for targeted recalculation.");
-
-        return Task.FromResult(new List<Guid>());
+    private async Task<List<Guid>> GetAllDistinctUserIdsAsync(CancellationToken cancellationToken)
+    {
+        return await _userBadgeRepository.GetAllDistinctUserIdsAsync(cancellationToken).ConfigureAwait(false);
     }
 }

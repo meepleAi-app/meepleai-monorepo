@@ -45,7 +45,7 @@ export function PendingApprovalsWidget({
   className,
   'data-testid': testId = 'pending-approvals-widget',
   limit = 3,
-}: PendingApprovalsWidgetProps): JSX.Element {
+}: PendingApprovalsWidgetProps){
   // ============================================================================
   // State
   // ============================================================================

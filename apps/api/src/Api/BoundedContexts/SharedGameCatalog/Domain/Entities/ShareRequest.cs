@@ -337,7 +337,7 @@ public sealed class ShareRequest : AggregateRoot<Guid>
         if (_reviewingAdminId != adminId)
             throw new ShareRequestReviewerMismatchException(_id, _reviewingAdminId!.Value, adminId);
 
-        _reviewLockExpiresAt = DateTime.UtcNow.AddMinutes(additionalMinutes);
+        _reviewLockExpiresAt = _reviewLockExpiresAt!.Value.AddMinutes(additionalMinutes);
         _modifiedAt = DateTime.UtcNow;
         _modifiedBy = adminId;
 

@@ -159,7 +159,7 @@ export const Empty: Story = {
   },
 };
 
-export const Error: Story = {
+export const ErrorState: Story = {
   parameters: {
     mockData: {
       '/api/v1/admin/api-keys/stats': {

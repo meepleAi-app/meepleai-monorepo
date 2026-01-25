@@ -12,8 +12,8 @@
 import { use } from 'react';
 import { useSharedGame } from '@/hooks/queries';
 import { ContributorsSection } from '@/components/shared-games/ContributorsSection';
-import { Skeleton } from '@/components/ui/primitives/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/primitives/alert';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { AlertCircle } from 'lucide-react';
 
 interface SharedGamePageProps {
@@ -87,16 +87,16 @@ export default function SharedGamePage({ params }: SharedGamePageProps) {
                   </p>
                 </div>
               )}
-              {game.playingTime && (
+              {game.playingTimeMinutes && (
                 <div>
                   <p className="text-sm text-muted-foreground">Playing Time</p>
-                  <p className="font-medium">{game.playingTime} min</p>
+                  <p className="font-medium">{game.playingTimeMinutes} min</p>
                 </div>
               )}
-              {game.complexity && (
+              {game.complexityRating && (
                 <div>
                   <p className="text-sm text-muted-foreground">Complexity</p>
-                  <p className="font-medium">{game.complexity.toFixed(1)}/5.0</p>
+                  <p className="font-medium">{game.complexityRating.toFixed(1)}/5.0</p>
                 </div>
               )}
             </div>

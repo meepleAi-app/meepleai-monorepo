@@ -53,7 +53,7 @@ export function DiffCodePanel({
   };
 
   const renderLines = () => {
-    const rendered: React.JSX.Element[] = [];
+    const rendered: React.ReactNode[] = [];
     let currentCollapsibleSection: CollapsibleSection | null = null;
 
     lines.forEach((line, index) => {

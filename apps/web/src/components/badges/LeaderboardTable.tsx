@@ -14,7 +14,7 @@ import { useLeaderboard } from '@/hooks/queries';
 import { useCurrentUser } from '@/hooks/queries';
 import { LeaderboardPeriod, getTierIcon, type LeaderboardEntryDto } from '@/types/badges';
 import { cn } from '@/lib/utils';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/primitives/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 
 export interface LeaderboardTableProps {
@@ -36,7 +36,7 @@ export interface LeaderboardTableProps {
 export function LeaderboardTable({
   period = 'AllTime',
   className,
-}: LeaderboardTableProps): JSX.Element {
+}: LeaderboardTableProps){
   const [selectedPeriod, setSelectedPeriod] = useState<LeaderboardPeriod>(period);
 
   const { data: leaderboard, isLoading } = useLeaderboard(selectedPeriod);
@@ -126,7 +126,7 @@ interface LeaderboardRowProps {
   isCurrentUser: boolean;
 }
 
-function LeaderboardRow({ entry, position, isCurrentUser }: LeaderboardRowProps): JSX.Element {
+function LeaderboardRow({ entry, position, isCurrentUser }: LeaderboardRowProps){
   const positionIcon = getPositionIcon(position);
 
   return (

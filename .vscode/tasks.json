@@ -242,6 +242,126 @@
       "problemMatcher": []
     },
 
+    // Infrastructure Tasks (Development)
+    // Default: infra-start → infra-start-dev (recommended)
+    {
+      "label": "infra-start",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-File", "start-dev.ps1"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      }
+    },
+    {
+      "label": "infra-start-minimal",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-File", "start-minimal.ps1"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      }
+    },
+    {
+      "label": "infra-start-dev",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-File", "start-dev.ps1"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      }
+    },
+    {
+      "label": "infra-start-full",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-File", "start-full.ps1"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      }
+    },
+    {
+      "label": "infra-stop",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-File", "stop.ps1"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "infra-status",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "ps"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "infra-logs",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "logs", "-f"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "infra-restart",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "restart"],
+      "options": {
+        "cwd": "${workspaceFolder}/infra"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+
     // Compound Tasks
     {
       "label": "build-all",

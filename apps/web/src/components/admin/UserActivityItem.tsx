@@ -55,7 +55,7 @@ export function UserActivityItem({
 
   const Icon = eventIcons[event.eventType as keyof typeof eventIcons] || ActivityIcon;
   const severity = event.severity || 'Info';
-  const relativeTime = formatRelativeTimestamp(event.timestamp);
+  const relativeTime = formatRelativeTimestamp(event.timestamp, 'it');
   const hasMetadata = event.metadata && Object.keys(event.metadata).length > 0;
 
   return (

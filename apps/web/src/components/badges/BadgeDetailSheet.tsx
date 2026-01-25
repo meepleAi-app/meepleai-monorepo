@@ -11,8 +11,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-import { getTierIcon, type UserBadgeDto } from '@/types/badges';
-import { cn } from '@/lib/utils';
+import { getTierIcon, BadgeTier, type UserBadgeDto } from '@/types/badges';
+// import { cn } from '@/lib/utils'; // Unused - removed for lint
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Switch } from '@/components/ui/forms/switch';
@@ -29,6 +29,49 @@ export interface BadgeDetailSheetProps {
 
   /** Optional share handler */
   onShare?: (badge: UserBadgeDto) => void;
+}
+
+/**
+ * Helper: Get confetti configuration based on tier
+ */
+function getConfettiConfig(tier: BadgeTier) {
+  const configs = {
+    [BadgeTier.Diamond]: {
+      elementCount: 200,
+      colors: ['#06b6d4', '#8b5cf6', '#a855f7', '#3b82f6'],
+    },
+    [BadgeTier.Platinum]: {
+      elementCount: 150,
+      colors: ['#cbd5e1', '#94a3b8', '#64748b'],
+    },
+    [BadgeTier.Gold]: {
+      elementCount: 150,
+      colors: ['#facc15', '#eab308', '#f59e0b'],
+    },
+    [BadgeTier.Silver]: {
+      elementCount: 100,
+      colors: ['#d1d5db', '#9ca3af', '#6b7280'],
+    },
+    [BadgeTier.Bronze]: {
+      elementCount: 100,
+      colors: ['#d97706', '#f59e0b', '#b45309'],
+    },
+  };
+  return configs[tier];
+}
+
+/**
+ * Helper: Get tier glow color
+ */
+function getTierGlow(tier: string): string {
+  const glows: Record<string, string> = {
+    Diamond: 'rgba(6, 182, 212, 0.8)',
+    Platinum: 'rgba(203, 213, 225, 0.6)',
+    Gold: 'rgba(250, 204, 21, 0.7)',
+    Silver: 'rgba(209, 213, 219, 0.5)',
+    Bronze: 'rgba(217, 119, 6, 0.6)',
+  };
+  return glows[tier] || 'rgba(0, 0, 0, 0.3)';
 }
 
 /**
@@ -49,7 +92,7 @@ export function BadgeDetailSheet({
   onClose,
   onToggleDisplay,
   onShare,
-}: BadgeDetailSheetProps): JSX.Element {
+}: BadgeDetailSheetProps){
   if (!badge) return <></>;
 
   const earnedDate = new Date(badge.earnedAt).toLocaleDateString('en-US', {
@@ -156,49 +199,6 @@ export function BadgeDetailSheet({
       </DialogContent>
     </Dialog>
   );
-}
-
-/**
- * Helper: Get confetti configuration based on tier
- */
-function getConfettiConfig(tier: BadgeTier) {
-  const configs = {
-    [BadgeTier.Diamond]: {
-      elementCount: 200,
-      colors: ['#06b6d4', '#8b5cf6', '#a855f7', '#3b82f6'],
-    },
-    [BadgeTier.Platinum]: {
-      elementCount: 150,
-      colors: ['#cbd5e1', '#94a3b8', '#64748b'],
-    },
-    [BadgeTier.Gold]: {
-      elementCount: 150,
-      colors: ['#facc15', '#eab308', '#f59e0b'],
-    },
-    [BadgeTier.Silver]: {
-      elementCount: 100,
-      colors: ['#d1d5db', '#9ca3af', '#6b7280'],
-    },
-    [BadgeTier.Bronze]: {
-      elementCount: 100,
-      colors: ['#d97706', '#f59e0b', '#b45309'],
-    },
-  };
-  return configs[tier];
-}
-
-/**
- * Helper: Get tier glow color
- */
-function getTierGlow(tier: string): string {
-  const glows: Record<string, string> = {
-    Diamond: 'rgba(6, 182, 212, 0.8)',
-    Platinum: 'rgba(203, 213, 225, 0.6)',
-    Gold: 'rgba(250, 204, 21, 0.7)',
-    Silver: 'rgba(209, 213, 219, 0.5)',
-    Bronze: 'rgba(217, 119, 6, 0.6)',
-  };
-  return glows[tier] || 'rgba(0, 0, 0, 0.3)';
 }
 
 BadgeDetailSheet.displayName = 'BadgeDetailSheet';

@@ -1,14 +1,14 @@
 'use client';
-import { jsxDEV } from "react/jsx-dev-runtime";
-import { Button } from '@/components/ui/primitives/button';
+
+import { Button } from '@/components/ui';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
-} from "@/components/ui/overlays/dialog";
+  DialogTitle,
+} from '@/components/ui';
 import { AlertCircle } from 'lucide-react';
 
 /**
@@ -38,7 +38,7 @@ export function ReviewConflictDialog({
   open,
   onClose,
   conflictDetails,
-}: ReviewConflictDialogProps): JSX.Element {
+}: ReviewConflictDialogProps){
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>

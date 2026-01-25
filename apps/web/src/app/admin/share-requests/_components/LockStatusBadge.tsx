@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/data-display/badge';
+import { Badge } from '@/components/ui';
 import { Lock, LockOpen, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { LockStatusDto } from '@/lib/api/schemas/admin-share-requests.schemas';
@@ -22,7 +22,7 @@ interface LockStatusBadgeProps {
   className?: string;
 }
 
-export function LockStatusBadge({ lockStatus, className }: LockStatusBadgeProps): JSX.Element {
+export function LockStatusBadge({ lockStatus, className }: LockStatusBadgeProps){
   if (!lockStatus.isLocked) {
     return (
       <Badge variant="outline" className={`border-green-300 bg-green-50 text-green-700 ${className ?? ''}`}>

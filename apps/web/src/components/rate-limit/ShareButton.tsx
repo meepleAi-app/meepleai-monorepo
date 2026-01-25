@@ -112,11 +112,11 @@ function getTooltipContent(
  * ```
  */
 export function ShareButton({
-  gameId,
+  gameId: _gameId,
   onShare,
   existingPendingRequest = false,
   className,
-}: ShareButtonProps): JSX.Element {
+}: ShareButtonProps){
   const { data: status } = useRateLimitStatus();
 
   // Default to disabled if status not loaded yet (conservative approach)

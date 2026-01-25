@@ -138,6 +138,43 @@
     --ring-offset-color: var(--color-background);
 
     /* ============================================================================
+     * GLASS MORPHISM EFFECTS (Issue #2965 Wave 8)
+     * Glass effects for desktop light mode with mobile fallbacks
+     * ============================================================================ */
+
+    /* Glass blur effects (desktop only, disabled on mobile for performance) */
+    --glass-blur-sm: blur(4px);
+    --glass-blur-md: blur(8px);
+    --glass-blur-lg: blur(12px);
+    --glass-blur-xl: blur(16px);
+
+    /* Glass backgrounds with transparency */
+    --glass-bg-light: rgba(255, 255, 255, 0.7);
+    --glass-bg-light-strong: rgba(255, 255, 255, 0.85);
+    --glass-bg-dark: rgba(0, 0, 0, 0.5);
+    --glass-bg-dark-strong: rgba(0, 0, 0, 0.7);
+
+    /* Glass border colors */
+    --glass-border-light: rgba(255, 255, 255, 0.2);
+    --glass-border-dark: rgba(255, 255, 255, 0.1);
+
+    /* Glass shadows for depth */
+    --glass-shadow-light: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --glass-shadow-dark: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+
+    /* Gradient overlays for glass effect */
+    --glass-gradient-light: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(255, 255, 255, 0.1) 100%
+    );
+    --glass-gradient-dark: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+
+    /* ============================================================================
      * TRANSITIONS & ANIMATIONS
      * ============================================================================ */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -365,6 +402,33 @@
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
     --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.6);
+
+    /* ============================================================================
+     * DARK MODE ENHANCEMENTS (Issue #2965 Wave 8)
+     * Glows, text shadows, and gradients for dark mode
+     * ============================================================================ */
+
+    /* Glow effects for interactive elements */
+    --glow-primary: 0 0 20px hsl(var(--primary) / 0.3);
+    --glow-accent: 0 0 20px hsl(var(--accent) / 0.3);
+    --glow-focus: 0 0 0 3px hsl(var(--ring) / 0.5);
+
+    /* Text shadows for depth */
+    --text-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.8);
+    --text-shadow-md: 0 2px 4px rgb(0 0 0 / 0.8);
+    --text-shadow-lg: 0 4px 8px rgb(0 0 0 / 0.9);
+
+    /* Gradient backgrounds for visual interest */
+    --gradient-dark-subtle: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      transparent 100%
+    );
+    --gradient-dark-strong: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
   }
 }
 
@@ -451,15 +515,196 @@
     }
   }
 
-  /* Glass morphism */
-  .glass-light {
-    background: hsl(var(--background) / 0.8);
-    backdrop-filter: blur(12px);
+  /* ============================================================================
+   * GLASS MORPHISM UTILITIES (Issue #2965 Wave 8)
+   * Desktop glass effects with mobile fallbacks
+   * ============================================================================ */
+
+  /* Glass morphism - Light mode (desktop only) */
+  @media (min-width: 768px) {
+    .glass-card {
+      background: var(--glass-bg-light);
+      backdrop-filter: var(--glass-blur-md);
+      border: 1px solid var(--glass-border-light);
+      box-shadow: var(--glass-shadow-light);
+    }
+
+    .glass-nav {
+      background: var(--glass-bg-light-strong);
+      backdrop-filter: var(--glass-blur-sm);
+      border-bottom: 1px solid var(--glass-border-light);
+      box-shadow: var(--glass-shadow-light);
+    }
+
+    .glass-modal {
+      background: var(--glass-bg-light);
+      backdrop-filter: var(--glass-blur-lg);
+      border: 1px solid var(--glass-border-light);
+      box-shadow: var(--glass-shadow-light);
+    }
+
+    .dark .glass-card,
+    .dark .glass-nav,
+    .dark .glass-modal {
+      background: var(--glass-bg-dark);
+      border-color: var(--glass-border-dark);
+      box-shadow: var(--glass-shadow-dark);
+    }
+
+    .dark .glass-nav {
+      background: var(--glass-bg-dark-strong);
+    }
   }
 
-  .glass-strong {
-    background: hsl(var(--background) / 0.95);
-    backdrop-filter: blur(20px);
+  /* Mobile fallback - Solid backgrounds (no blur for performance) */
+  @media (max-width: 767px) {
+    .glass-card,
+    .glass-nav,
+    .glass-modal {
+      background: hsl(var(--background));
+      backdrop-filter: none;
+      border: 1px solid hsl(var(--border));
+      box-shadow: var(--shadow-md);
+    }
+  }
+
+  /* ============================================================================
+   * DARK MODE ENHANCEMENTS (Issue #2965 Wave 8)
+   * Glows and text shadows for dark mode
+   * ============================================================================ */
+
+  .dark .glow-primary {
+    box-shadow: var(--glow-primary);
+  }
+
+  .dark .glow-accent {
+    box-shadow: var(--glow-accent);
+  }
+
+  .dark .glow-focus:focus-visible {
+    box-shadow: var(--glow-focus);
+  }
+
+  .dark .text-shadow-sm {
+    text-shadow: var(--text-shadow-sm);
+  }
+
+  .dark .text-shadow-md {
+    text-shadow: var(--text-shadow-md);
+  }
+
+  .dark .text-shadow-lg {
+    text-shadow: var(--text-shadow-lg);
+  }
+
+  .dark .gradient-bg-subtle {
+    background-image: var(--gradient-dark-subtle);
+  }
+
+  .dark .gradient-bg-strong {
+    background-image: var(--gradient-dark-strong);
+  }
+
+  /* ============================================================================
+   * GRADIENT TEXT EFFECTS (Issue #2965 Wave 8)
+   * Gradient text for headings and hero elements
+   * ============================================================================ */
+
+  .gradient-text-primary {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--accent)) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .gradient-text-sunset {
+    background: linear-gradient(
+      135deg,
+      #ff6b6b 0%,
+      #feca57 50%,
+      #ee5a6f 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* ============================================================================
+   * FLOATING ORB BACKGROUNDS (Issue #2965 Wave 8)
+   * Decorative orbs for hero sections
+   * ============================================================================ */
+
+  .floating-orbs {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .floating-orbs::before,
+  .floating-orbs::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .floating-orbs::before {
+    width: 400px;
+    height: 400px;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.4), hsl(var(--accent) / 0.4));
+    top: -200px;
+    right: -200px;
+    animation: float-orb-1 20s ease-in-out infinite;
+  }
+
+  .floating-orbs::after {
+    width: 300px;
+    height: 300px;
+    background: linear-gradient(135deg, hsl(var(--accent) / 0.3), hsl(var(--primary) / 0.3));
+    bottom: -150px;
+    left: -150px;
+    animation: float-orb-2 15s ease-in-out infinite;
+  }
+
+  @keyframes float-orb-1 {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+    }
+    50% {
+      transform: translate(100px, -100px) scale(1.1);
+    }
+  }
+
+  @keyframes float-orb-2 {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+    }
+    50% {
+      transform: translate(-80px, 80px) scale(0.9);
+    }
+  }
+
+  /* Disable orb animations on mobile for performance */
+  @media (max-width: 767px) {
+    .floating-orbs::before,
+    .floating-orbs::after {
+      animation: none;
+      opacity: 0.1;
+    }
+  }
+
+  /* Respect prefers-reduced-motion */
+  @media (prefers-reduced-motion: reduce) {
+    .floating-orbs::before,
+    .floating-orbs::after {
+      animation: none;
+    }
   }
 
   /* Gradient overlays */

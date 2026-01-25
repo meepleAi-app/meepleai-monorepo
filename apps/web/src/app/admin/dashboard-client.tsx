@@ -266,8 +266,8 @@ export function DashboardClient() {
 
   // Build KPI cards with real trend calculation (Issue #2792)
   const kpiCards = useMemo(() => buildKPICards(metrics, {
-    userTrendData: trends.user,
-    sessionTrendData: trends.session,
+    userTrendData: trends.user.map(t => ({ date: t.date, value: t.count })),
+    sessionTrendData: trends.session.map(t => ({ date: t.date, value: t.count })),
   }), [metrics, trends.user, trends.session]);
 
   // Build metrics cards for MetricsGrid (16 detailed metrics)
@@ -275,7 +275,7 @@ export function DashboardClient() {
 
   // Calculate healthy services count for AlertsBanner
   const healthyServicesCount = useMemo(() => {
-    return services.filter(s => s.status === 'healthy').length;
+    return services.filter(s => s.state === 'Healthy').length;
   }, [services]);
 
   const handleRefresh = useCallback(async () => {

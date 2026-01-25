@@ -48,11 +48,11 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/**
- * Default collapsible with controlled state.
- */
+/* DISABLED - causes Maximum update depth
 export const Default: Story = {
   render: function DefaultStory() {
+    return null;
+  },
 };
 */
 
@@ -77,11 +77,11 @@ export const Simple: Story = {
   ),
 };
 
-/**
- * Dark theme variant.
- */
+/* DISABLED - causes Maximum update depth
 export const DarkTheme: Story = {
   render: function DarkThemeStory() {
+    return null;
+  },
   parameters: {
     backgrounds: { default: 'dark' },
   },

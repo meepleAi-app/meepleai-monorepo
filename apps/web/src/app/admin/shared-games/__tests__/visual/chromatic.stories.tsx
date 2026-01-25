@@ -9,12 +9,12 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { within, userEvent, expect } from 'storybook/test';
 
-import { SharedGamesCatalogClient } from '../../client';
+import { SharedGamesClient } from '../../client';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 
-const meta: Meta<typeof SharedGamesCatalogClient> = {
+const meta: Meta<typeof SharedGamesClient> = {
   title: 'Admin/SharedGames/CatalogList/Visual Tests',
-  component: SharedGamesCatalogClient,
+  component: SharedGamesClient,
   parameters: {
     layout: 'fullscreen',
     chromatic: {
@@ -34,7 +34,7 @@ const meta: Meta<typeof SharedGamesCatalogClient> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof SharedGamesCatalogClient>;
+type Story = StoryObj<typeof SharedGamesClient>;
 
 // ========== Mock Data ==========
 

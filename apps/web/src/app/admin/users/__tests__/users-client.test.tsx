@@ -72,7 +72,7 @@ describe('Users AdminPageClient', () => {
       </AuthProvider>
     );
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.getByTestId('users-loading')).toBeInTheDocument();
   });
 
   it('renders users table after loading', async () => {
@@ -273,7 +273,7 @@ describe('Users AdminPageClient', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
-      expect(screen.getByText('Edit User')).toBeInTheDocument();
+      expect(screen.getByTestId('user-modal-title')).toHaveTextContent('Edit User');
       expect(screen.getByDisplayValue('user1@example.com')).toBeInTheDocument();
     });
   });

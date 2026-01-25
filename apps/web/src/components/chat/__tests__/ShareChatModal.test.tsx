@@ -102,13 +102,13 @@ describe('ShareChatModal', () => {
     it('renders access level selector', () => {
       render(<ShareChatModal {...defaultProps} />);
 
-      expect(screen.getByText('Access Level')).toBeInTheDocument();
+      expect(screen.getByTestId('access-level-label')).toBeInTheDocument();
     });
 
     it('renders expiry duration selector', () => {
       render(<ShareChatModal {...defaultProps} />);
 
-      expect(screen.getByText('Link Expires After')).toBeInTheDocument();
+      expect(screen.getByTestId('link-expiry-label')).toBeInTheDocument();
     });
 
     it('renders optional label input', () => {

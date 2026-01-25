@@ -53,8 +53,8 @@ describe('AlertsBanner', () => {
         <AlertsBanner criticalCount={0} healthyServices={10} totalServices={10} />
       );
 
-      expect(screen.getByText('Tutti i sistemi operativi')).toBeInTheDocument();
-      expect(screen.getByText('10/10 servizi in salute')).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('Tutti i sistemi operativi');
+      expect(screen.getByTestId('alerts-secondary-message')).toHaveTextContent('10/10 servizi in salute');
       expect(screen.getByRole('button', { name: /Visualizza pannello alert di sistema/i })).toBeInTheDocument();
     });
 
@@ -63,8 +63,8 @@ describe('AlertsBanner', () => {
         <AlertsBanner criticalCount={5} healthyServices={8} totalServices={10} />
       );
 
-      expect(screen.getByText('5 alert critici attivi')).toBeInTheDocument();
-      expect(screen.getByText('8/10 servizi operativi')).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('5 alert critici attivi');
+      expect(screen.getByTestId('alerts-secondary-message')).toHaveTextContent('8/10 servizi operativi');
     });
 
     it('renders button with correct navigation label for issues state', () => {
@@ -81,7 +81,7 @@ describe('AlertsBanner', () => {
         <AlertsBanner criticalCount={1} healthyServices={9} totalServices={10} />
       );
 
-      expect(screen.getByText('1 alert critico attivo')).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('1 alert critico attivo');
     });
 
     it('handles plural alerts message correctly', () => {
@@ -89,7 +89,7 @@ describe('AlertsBanner', () => {
         <AlertsBanner criticalCount={2} healthyServices={8} totalServices={10} />
       );
 
-      expect(screen.getByText('2 alert critici attivi')).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('2 alert critici attivi');
     });
   });
 
@@ -99,7 +99,7 @@ describe('AlertsBanner', () => {
         <AlertsBanner criticalCount={1} healthyServices={10} totalServices={10} />
       );
 
-      expect(screen.getByText(/alert critic/i)).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-primary-message').textContent).toMatch(/alert critic/i);
     });
 
     it('shows issues state when healthy services < total services', () => {
@@ -107,7 +107,7 @@ describe('AlertsBanner', () => {
         <AlertsBanner criticalCount={0} healthyServices={8} totalServices={10} />
       );
 
-      expect(screen.getByText('8/10 servizi operativi')).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-secondary-message')).toHaveTextContent('8/10 servizi operativi');
     });
 
     it('shows healthy state when all conditions met', () => {
@@ -115,7 +115,7 @@ describe('AlertsBanner', () => {
         <AlertsBanner criticalCount={0} healthyServices={10} totalServices={10} />
       );
 
-      expect(screen.getByText('Tutti i sistemi operativi')).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('Tutti i sistemi operativi');
     });
   });
 
@@ -125,8 +125,8 @@ describe('AlertsBanner', () => {
         <AlertsBanner criticalCount={0} healthyServices={0} totalServices={0} />
       );
 
-      expect(screen.getByText('Nessun servizio configurato')).toBeInTheDocument();
-      expect(screen.getByText('Configura i servizi da monitorare')).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('Nessun servizio configurato');
+      expect(screen.getByTestId('alerts-secondary-message')).toHaveTextContent('Configura i servizi da monitorare');
     });
 
     it('handles negative critical count (normalized to 0)', () => {
@@ -134,7 +134,7 @@ describe('AlertsBanner', () => {
         <AlertsBanner criticalCount={-5} healthyServices={10} totalServices={10} />
       );
 
-      expect(screen.getByText('Tutti i sistemi operativi')).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('Tutti i sistemi operativi');
     });
 
     it('handles negative healthy services (normalized to 0)', () => {
@@ -142,7 +142,7 @@ describe('AlertsBanner', () => {
         <AlertsBanner criticalCount={0} healthyServices={-5} totalServices={10} />
       );
 
-      expect(screen.getByText('0/10 servizi operativi')).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-secondary-message')).toHaveTextContent('0/10 servizi operativi');
     });
 
     it('handles healthy services > total services (clamped to total)', () => {
@@ -150,7 +150,7 @@ describe('AlertsBanner', () => {
         <AlertsBanner criticalCount={0} healthyServices={15} totalServices={10} />
       );
 
-      expect(screen.getByText('10/10 servizi in salute')).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-secondary-message')).toHaveTextContent('10/10 servizi in salute');
     });
 
     it('handles negative total services (normalized to 0)', () => {
@@ -158,7 +158,7 @@ describe('AlertsBanner', () => {
         <AlertsBanner criticalCount={0} healthyServices={0} totalServices={-10} />
       );
 
-      expect(screen.getByText('Nessun servizio configurato')).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('Nessun servizio configurato');
     });
   });
 
@@ -307,13 +307,13 @@ describe('AlertsBanner', () => {
         <AlertsBanner criticalCount={0} healthyServices={10} totalServices={10} />
       );
 
-      expect(screen.getByText('Tutti i sistemi operativi')).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('Tutti i sistemi operativi');
 
       rerender(
         <AlertsBanner criticalCount={5} healthyServices={8} totalServices={10} />
       );
 
-      expect(screen.getByText('5 alert critici attivi')).toBeInTheDocument();
+      expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('5 alert critici attivi');
     });
   });
 });

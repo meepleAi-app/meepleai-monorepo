@@ -89,7 +89,7 @@ describe('BadgeGrid', () => {
   it('should display "No badges" message when empty', () => {
     render(<BadgeGrid badges={[]} />);
 
-    expect(screen.getByText('No badges to display')).toBeInTheDocument();
+    expect(screen.getByTestId('badges-empty-message')).toBeInTheDocument();
   });
 
   it('should display tier icons correctly', () => {

@@ -294,10 +294,10 @@ describe('ChatContent - Issue #2308', () => {
     render(<ChatContent />);
 
     // Assert - Placeholder title
-    expect(screen.getByText('Seleziona o crea un thread')).toBeInTheDocument();
+    expect(screen.getByTestId('chat-title')).toHaveTextContent('Seleziona o crea un thread');
 
     // Assert - No game selected message
-    expect(screen.getByText('Nessun gioco selezionato')).toBeInTheDocument();
+    expect(screen.getByTestId('chat-game-name')).toHaveTextContent('Nessun gioco selezionato');
 
     // Assert - No context chip (game not selected)
     expect(screen.queryByTestId('context-chip')).not.toBeInTheDocument();

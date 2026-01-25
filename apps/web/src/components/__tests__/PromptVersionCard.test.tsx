@@ -52,25 +52,25 @@ describe('PromptVersionCard', () => {
       expect(screen.getByText('Version 1')).toBeInTheDocument();
       expect(screen.getByText('user@example.com')).toBeInTheDocument();
       // Date format is locale-dependent, just check it's rendered
-      expect(screen.getByText('Created at:')).toBeInTheDocument();
+      expect(screen.getByTestId('created-at-label')).toBeInTheDocument();
     });
 
     it('should show active badge when version is active', () => {
       render(<PromptVersionCard version={activeVersion} />);
 
-      expect(screen.getByText('Active')).toBeInTheDocument();
+      expect(screen.getByTestId('active-badge')).toBeInTheDocument();
     });
 
     it('should not show active badge when version is inactive', () => {
       render(<PromptVersionCard version={baseVersion} />);
 
-      expect(screen.queryByText('Active')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('active-badge')).not.toBeInTheDocument();
     });
 
     it('should show metadata count when metadata exists', () => {
       render(<PromptVersionCard version={versionWithMetadata} />);
 
-      expect(screen.getByText('Metadata:')).toBeInTheDocument();
+      expect(screen.getByTestId('metadata-label')).toBeInTheDocument();
       expect(screen.getByText('3 field(s)')).toBeInTheDocument();
     });
 
@@ -82,13 +82,13 @@ describe('PromptVersionCard', () => {
 
       render(<PromptVersionCard version={versionWithEmptyMetadata} />);
 
-      expect(screen.queryByText('Metadata:')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('metadata-label')).not.toBeInTheDocument();
     });
 
     it('should not show metadata section when metadata is undefined', () => {
       render(<PromptVersionCard version={baseVersion} />);
 
-      expect(screen.queryByText('Metadata:')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('metadata-label')).not.toBeInTheDocument();
     });
 
     it('should truncate long content', () => {
@@ -123,7 +123,7 @@ describe('PromptVersionCard', () => {
         <PromptVersionCard version={baseVersion} onActivate={mockOnActivate} showActions={true} />
       );
 
-      expect(screen.getByText('Activate')).toBeInTheDocument();
+      expect(screen.getByTestId('activate-button')).toBeInTheDocument();
     });
 
     it('should not show activate button for active versions', () => {
@@ -139,13 +139,13 @@ describe('PromptVersionCard', () => {
         <PromptVersionCard version={baseVersion} onCompare={mockOnCompare} showActions={true} />
       );
 
-      expect(screen.getByText('Compare')).toBeInTheDocument();
+      expect(screen.getByTestId('compare-button')).toBeInTheDocument();
     });
 
     it('should show view button', () => {
       render(<PromptVersionCard version={baseVersion} showActions={true} />);
 
-      expect(screen.getByText('View')).toBeInTheDocument();
+      expect(screen.getByTestId('view-button')).toBeInTheDocument();
     });
 
     it('should hide all action buttons when showActions is false', () => {
@@ -166,7 +166,7 @@ describe('PromptVersionCard', () => {
     it('should default showActions to true', () => {
       render(<PromptVersionCard version={baseVersion} onActivate={mockOnActivate} />);
 
-      expect(screen.getByText('Activate')).toBeInTheDocument();
+      expect(screen.getByTestId('activate-button')).toBeInTheDocument();
     });
   });
 
@@ -178,7 +178,7 @@ describe('PromptVersionCard', () => {
         <PromptVersionCard version={baseVersion} onActivate={mockOnActivate} showActions={true} />
       );
 
-      const activateButton = screen.getByText('Activate');
+      const activateButton = screen.getByTestId('activate-button');
       await user.click(activateButton);
 
       expect(mockOnActivate).toHaveBeenCalledTimes(1);
@@ -191,7 +191,7 @@ describe('PromptVersionCard', () => {
         <PromptVersionCard version={baseVersion} onCompare={mockOnCompare} showActions={true} />
       );
 
-      const compareButton = screen.getByText('Compare');
+      const compareButton = screen.getByTestId('compare-button');
       await user.click(compareButton);
 
       expect(mockOnCompare).toHaveBeenCalledTimes(1);
@@ -200,7 +200,7 @@ describe('PromptVersionCard', () => {
     it('should navigate to version detail page when view button is clicked', () => {
       render(<PromptVersionCard version={baseVersion} showActions={true} />);
 
-      const viewButton = screen.getByText('View');
+      const viewButton = screen.getByTestId('view-button');
       const link = viewButton.closest('a');
 
       expect(link).toHaveAttribute(
@@ -214,14 +214,14 @@ describe('PromptVersionCard', () => {
     it('should display created by information', () => {
       render(<PromptVersionCard version={baseVersion} />);
 
-      expect(screen.getByText('Created by:')).toBeInTheDocument();
+      expect(screen.getByTestId('created-by-label')).toBeInTheDocument();
       expect(screen.getByText('user@example.com')).toBeInTheDocument();
     });
 
     it('should display created at timestamp', () => {
       render(<PromptVersionCard version={baseVersion} />);
 
-      expect(screen.getByText('Created at:')).toBeInTheDocument();
+      expect(screen.getByTestId('created-at-label')).toBeInTheDocument();
       // Date formatting is locale-dependent, just check it exists
       const dateElement = screen.getByText(/Created at:/).nextSibling;
       expect(dateElement).toBeTruthy();
@@ -313,7 +313,7 @@ describe('PromptVersionCard', () => {
     it('should apply correct styles for active badge', () => {
       render(<PromptVersionCard version={activeVersion} />);
 
-      const badge = screen.getByText('Active');
+      const badge = screen.getByTestId('active-badge');
       expect(badge).toHaveClass('bg-green-100');
       expect(badge).toHaveClass('text-green-800');
     });
@@ -323,7 +323,7 @@ describe('PromptVersionCard', () => {
         <PromptVersionCard version={baseVersion} onActivate={mockOnActivate} showActions={true} />
       );
 
-      const activateButton = screen.getByText('Activate');
+      const activateButton = screen.getByTestId('activate-button');
       expect(activateButton).toHaveClass('bg-primary');
       expect(activateButton).toHaveClass('text-primary-foreground');
     });
@@ -333,7 +333,7 @@ describe('PromptVersionCard', () => {
         <PromptVersionCard version={baseVersion} onCompare={mockOnCompare} showActions={true} />
       );
 
-      const compareButton = screen.getByText('Compare');
+      const compareButton = screen.getByTestId('compare-button');
       expect(compareButton).toHaveClass('bg-secondary');
       expect(compareButton).toHaveClass('text-secondary-foreground');
     });
@@ -341,7 +341,7 @@ describe('PromptVersionCard', () => {
     it('should apply correct button styles for view button', () => {
       render(<PromptVersionCard version={baseVersion} showActions={true} />);
 
-      const viewButton = screen.getByText('View');
+      const viewButton = screen.getByTestId('view-button');
       expect(viewButton).toHaveClass('border');
       // Note: View button uses outline variant which has bg-card class
       expect(viewButton).toHaveClass('bg-card');
@@ -388,7 +388,7 @@ describe('PromptVersionCard', () => {
 
       render(<PromptVersionCard version={versionWithComparisonData} />);
 
-      expect(screen.getByText('Metadata:')).toBeInTheDocument();
+      expect(screen.getByTestId('metadata-label')).toBeInTheDocument();
       expect(screen.getByText('3 field(s)')).toBeInTheDocument();
     });
 
@@ -409,15 +409,15 @@ describe('PromptVersionCard', () => {
         <PromptVersionCard version={baseVersion} onActivate={mockOnActivate} showActions={true} />
       );
 
-      expect(screen.getByText('Activate')).toBeInTheDocument();
-      expect(screen.queryByText('Active')).not.toBeInTheDocument();
+      expect(screen.getByTestId('activate-button')).toBeInTheDocument();
+      expect(screen.queryByTestId('active-badge')).not.toBeInTheDocument();
 
       rerender(
         <PromptVersionCard version={activeVersion} onActivate={mockOnActivate} showActions={true} />
       );
 
       expect(screen.queryByText('Activate')).not.toBeInTheDocument();
-      expect(screen.getByText('Active')).toBeInTheDocument();
+      expect(screen.getByTestId('active-badge')).toBeInTheDocument();
     });
 
     it('should maintain button state during async operations', async () => {
@@ -428,7 +428,7 @@ describe('PromptVersionCard', () => {
         <PromptVersionCard version={baseVersion} onActivate={asyncOnActivate} showActions={true} />
       );
 
-      const activateButton = screen.getByText('Activate');
+      const activateButton = screen.getByTestId('activate-button');
       await user.click(activateButton);
 
       expect(asyncOnActivate).toHaveBeenCalled();
@@ -442,7 +442,7 @@ describe('PromptVersionCard', () => {
         <PromptVersionCard version={baseVersion} onCompare={asyncOnCompare} showActions={true} />
       );
 
-      const compareButton = screen.getByText('Compare');
+      const compareButton = screen.getByTestId('compare-button');
 
       // Simulate rapid clicks
       await user.click(compareButton);
@@ -561,7 +561,7 @@ describe('PromptVersionCard', () => {
 
       render(<PromptVersionCard version={versionWithLargeMetadata} />);
 
-      expect(screen.getByText('Metadata:')).toBeInTheDocument();
+      expect(screen.getByTestId('metadata-label')).toBeInTheDocument();
       expect(screen.getByText('100 field(s)')).toBeInTheDocument();
     });
 
@@ -593,7 +593,7 @@ describe('PromptVersionCard', () => {
         <PromptVersionCard version={baseVersion} onActivate={mockOnActivate} showActions={true} />
       );
 
-      const activateButton = screen.getByText('Activate');
+      const activateButton = screen.getByTestId('activate-button');
       await user.click(activateButton);
 
       expect(mockOnActivate).toHaveBeenCalledWith(baseVersion.id);
@@ -606,7 +606,7 @@ describe('PromptVersionCard', () => {
       expect(screen.queryByText('Activate')).not.toBeInTheDocument();
 
       // But should have other buttons
-      expect(screen.getByText('View')).toBeInTheDocument();
+      expect(screen.getByTestId('view-button')).toBeInTheDocument();
     });
 
     it('should display all available actions consistently', () => {
@@ -619,9 +619,9 @@ describe('PromptVersionCard', () => {
         />
       );
 
-      expect(screen.getByText('Activate')).toBeInTheDocument();
-      expect(screen.getByText('Compare')).toBeInTheDocument();
-      expect(screen.getByText('View')).toBeInTheDocument();
+      expect(screen.getByTestId('activate-button')).toBeInTheDocument();
+      expect(screen.getByTestId('compare-button')).toBeInTheDocument();
+      expect(screen.getByTestId('view-button')).toBeInTheDocument();
     });
   });
 });

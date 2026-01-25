@@ -21,19 +21,19 @@ describe('DiffStatistics', () => {
       render(<DiffStatistics statistics={mockStats} />);
 
       expect(screen.getByText('+10')).toBeInTheDocument();
-      expect(screen.getByText('Added')).toBeInTheDocument();
+      expect(screen.getByTestId('added-label')).toBeInTheDocument();
 
       expect(screen.getByText('-5')).toBeInTheDocument();
-      expect(screen.getByText('Deleted')).toBeInTheDocument();
+      expect(screen.getByTestId('deleted-label')).toBeInTheDocument();
 
       expect(screen.getByText('~3')).toBeInTheDocument();
-      expect(screen.getByText('Modified')).toBeInTheDocument();
+      expect(screen.getByTestId('modified-label')).toBeInTheDocument();
 
       expect(screen.getByText('50')).toBeInTheDocument();
-      expect(screen.getByText('Unchanged')).toBeInTheDocument();
+      expect(screen.getByTestId('unchanged-label')).toBeInTheDocument();
 
       expect(screen.getByText('68')).toBeInTheDocument();
-      expect(screen.getByText('Total Lines')).toBeInTheDocument();
+      expect(screen.getByTestId('total-lines-label')).toBeInTheDocument();
     });
 
     it('should have testid for normal mode', () => {
@@ -57,7 +57,7 @@ describe('DiffStatistics', () => {
       render(<DiffStatistics statistics={mockStats} />);
 
       expect(screen.getByText('~3')).toBeInTheDocument();
-      expect(screen.getByText('Modified')).toBeInTheDocument();
+      expect(screen.getByTestId('modified-label')).toBeInTheDocument();
     });
 
     it('should hide modified section when count is 0', () => {
@@ -222,8 +222,8 @@ describe('DiffStatistics', () => {
       render(<DiffStatistics statistics={noModified} />);
 
       expect(screen.queryByText('Modified')).not.toBeInTheDocument();
-      expect(screen.getByText('Added')).toBeInTheDocument();
-      expect(screen.getByText('Deleted')).toBeInTheDocument();
+      expect(screen.getByTestId('added-label')).toBeInTheDocument();
+      expect(screen.getByTestId('deleted-label')).toBeInTheDocument();
     });
   });
 

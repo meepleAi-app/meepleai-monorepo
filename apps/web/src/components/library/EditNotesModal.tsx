@@ -91,7 +91,7 @@ export function EditNotesModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Modifica Note</DialogTitle>
+          <DialogTitle data-testid="modal-title">Modifica Note</DialogTitle>
           <DialogDescription>
             Aggiungi o modifica le tue note personali per <strong>{gameTitle}</strong>.
           </DialogDescription>
@@ -115,6 +115,7 @@ export function EditNotesModal({
               'text-xs text-right',
               charsRemaining < 50 ? 'text-destructive' : 'text-muted-foreground'
             )}
+            data-testid="char-counter"
           >
             {charsRemaining} caratteri rimanenti
           </div>
@@ -128,7 +129,7 @@ export function EditNotesModal({
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Salvataggio...
+                <span data-testid="saving-text">Salvataggio...</span>
               </>
             ) : (
               <>

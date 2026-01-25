@@ -47,6 +47,7 @@ export default function PromptVersionCard({
               <Badge
                 variant="default"
                 className="bg-green-100 text-green-800 hover:bg-green-100/80 border-transparent"
+                data-testid="active-badge"
               >
                 Active
               </Badge>
@@ -55,17 +56,17 @@ export default function PromptVersionCard({
           {showActions && (
             <div className="flex gap-2">
               {!version.isActive && onActivate && (
-                <Button onClick={() => onActivate?.(version.id)} size="sm" variant="default">
+                <Button onClick={() => onActivate?.(version.id)} size="sm" variant="default" data-testid="activate-button">
                   Activate
                 </Button>
               )}
               {onCompare && (
-                <Button onClick={() => onCompare?.(version.id)} size="sm" variant="secondary">
+                <Button onClick={() => onCompare?.(version.id)} size="sm" variant="secondary" data-testid="compare-button">
                   Compare
                 </Button>
               )}
               <Link href={`/admin/prompts/${version.templateId}/versions/${version.id}`}>
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" data-testid="view-button">
                   View
                 </Button>
               </Link>
@@ -77,16 +78,16 @@ export default function PromptVersionCard({
       <CardContent>
         <div className="space-y-2 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <span className="font-medium">Created by:</span>
+            <span className="font-medium" data-testid="created-by-label">Created by:</span>
             <span>{version.createdByEmail}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-medium">Created at:</span>
+            <span className="font-medium" data-testid="created-at-label">Created at:</span>
             <span>{new Date(version.createdAt).toLocaleString()}</span>
           </div>
           {version.metadata && Object.keys(version.metadata).length > 0 && (
             <div className="flex items-start gap-2">
-              <span className="font-medium">Metadata:</span>
+              <span className="font-medium" data-testid="metadata-label">Metadata:</span>
               <Badge variant="secondary" className="text-xs">
                 {Object.keys(version.metadata).length} field(s)
               </Badge>

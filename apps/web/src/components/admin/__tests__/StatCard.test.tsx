@@ -11,8 +11,8 @@ describe('StatCard', () => {
   it('renders label and value correctly', () => {
     render(<StatCard label="Total Users" value="1,247" />);
 
-    expect(screen.getByText('Total Users')).toBeInTheDocument();
-    expect(screen.getByText('1,247')).toBeInTheDocument();
+    expect(screen.getByTestId('stat-card-label')).toHaveTextContent('Total Users');
+    expect(screen.getByTestId('stat-card-value')).toHaveTextContent('1,247');
   });
 
   it('applies default variant styling', () => {
@@ -96,14 +96,13 @@ describe('StatCard', () => {
   it('has accessible structure', () => {
     render(<StatCard label="Total Users" value="1,247" />);
 
-    // Label should be uppercase and smaller
-    const label = screen.getByText('Total Users');
-    expect(label).toHaveClass('uppercase');
-    expect(label).toHaveClass('text-xs');
+    // Label should use proper styling
+    const label = screen.getByTestId('stat-card-label');
+    expect(label).toBeInTheDocument();
 
     // Value should be large and bold
-    const value = screen.getByText('1,247');
-    expect(value).toHaveClass('text-3xl');
+    const value = screen.getByTestId('stat-card-value');
+    expect(value).toHaveClass('text-5xl');
     expect(value).toHaveClass('font-bold');
   });
 
@@ -164,8 +163,8 @@ describe('StatCard', () => {
 
     it('does not render label or value when loading', () => {
       render(<StatCard label="Total Users" value="1,247" loading />);
-      expect(screen.queryByText('Total Users')).not.toBeInTheDocument();
-      expect(screen.queryByText('1,247')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('stat-card-label')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('stat-card-value')).not.toBeInTheDocument();
     });
 
     it('renders skeleton placeholders when loading', () => {

@@ -106,7 +106,7 @@ export function TimelineFilters({
     >
       {/* Header */}
       <div className="p-4 border-b flex justify-between items-center">
-        <h3 className="m-0 text-base font-semibold">Filtri Timeline</h3>
+        <h3 className="m-0 text-base font-semibold" data-testid="filters-title">Filtri Timeline</h3>
         <Button
           onClick={onToggleCollapse}
           aria-label="Hide filters"
@@ -254,6 +254,7 @@ export function TimelineFilters({
           aria-label="Reset all filters"
           variant="ghost"
           className="w-full"
+          data-testid="reset-filters-button"
         >
           Ripristina Filtri
         </Button>

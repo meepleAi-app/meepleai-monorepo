@@ -305,6 +305,7 @@ export function InfrastructureClient() {
               size="sm"
               onClick={handleRefresh}
               disabled={loading || circuitOpen}
+              data-testid="refresh-button"
             >
               <RefreshCwIcon className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               {i18n.labels.refresh}
@@ -314,12 +315,12 @@ export function InfrastructureClient() {
 
         {/* Error Alert */}
         {error && (
-          <Alert variant={circuitOpen ? 'destructive' : 'default'}>
+          <Alert variant={circuitOpen ? 'destructive' : 'default'} data-testid="infrastructure-error">
             <AlertCircleIcon className="h-4 w-4" />
             <AlertDescription className="flex items-center justify-between">
               <span>{error}</span>
               {circuitOpen && (
-                <Button variant="outline" size="sm" onClick={handleResetCircuit}>
+                <Button variant="outline" size="sm" onClick={handleResetCircuit} data-testid="retry-button">
                   {locale === 'it' ? 'Riprova' : 'Retry'}
                 </Button>
               )}
@@ -413,15 +414,15 @@ export function InfrastructureClient() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="metrics-container">
+                <div className="p-4 bg-blue-50 rounded-lg" data-testid="metric-api-requests">
                   <p className="text-sm text-gray-600">{i18n.metrics.apiRequests}</p>
                   <p className="text-2xl font-bold text-blue-700">
                     {data.prometheusMetrics.apiRequestsLast24h.toLocaleString()}
                   </p>
                 </div>
 
-                <div className="p-4 bg-green-50 rounded-lg">
+                <div className="p-4 bg-green-50 rounded-lg" data-testid="metric-avg-latency">
                   <p className="text-sm text-gray-600">{i18n.metrics.avgLatency}</p>
                   <p className="text-2xl font-bold text-green-700">
                     {data.prometheusMetrics.avgLatencyMs.toFixed(1)} ms
@@ -470,6 +471,7 @@ export function InfrastructureClient() {
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         className="pl-10"
+                        data-testid="search-input"
                       />
                     </div>
                   </div>
@@ -521,6 +523,7 @@ export function InfrastructureClient() {
                       size="sm"
                       onClick={() => handleExport('csv')}
                       disabled={!data}
+                      data-testid="export-csv-button"
                     >
                       <DownloadIcon className="h-4 w-4 mr-2" />
                       CSV
@@ -530,6 +533,7 @@ export function InfrastructureClient() {
                       size="sm"
                       onClick={() => handleExport('json')}
                       disabled={!data}
+                      data-testid="export-json-button"
                     >
                       <DownloadIcon className="h-4 w-4 mr-2" />
                       JSON
@@ -547,6 +551,7 @@ export function InfrastructureClient() {
                       checked={autoRefresh}
                       onCheckedChange={setAutoRefresh}
                       disabled={circuitOpen}
+                      data-testid="auto-refresh-switch"
                     />
                     <Label htmlFor="auto-refresh">{i18n.page.autoRefresh}</Label>
                   </div>

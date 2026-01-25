@@ -87,10 +87,10 @@ describe('AdminWizardClient', () => {
   it('renders the wizard header', () => {
     render(<AdminWizardClient />);
 
-    expect(screen.getByText('Admin Game Setup Wizard')).toBeInTheDocument();
-    expect(
-      screen.getByText('Configura un nuovo gioco con regolamento PDF e agente RAG')
-    ).toBeInTheDocument();
+    expect(screen.getByTestId('wizard-title')).toHaveTextContent('Admin Game Setup Wizard');
+    expect(screen.getByTestId('wizard-subtitle')).toHaveTextContent(
+      'Configura un nuovo gioco con regolamento PDF e agente RAG'
+    );
   });
 
   it('renders back to admin link', () => {
@@ -188,10 +188,10 @@ describe('Wizard Step Navigation', () => {
   it('renders step descriptions', () => {
     render(<AdminWizardClient />);
 
-    expect(screen.getByText('Carica regolamento')).toBeInTheDocument();
-    expect(screen.getByText('Nome e immagini')).toBeInTheDocument();
-    expect(screen.getByText('Prepara agente RAG')).toBeInTheDocument();
-    expect(screen.getByText('Testa le regole')).toBeInTheDocument();
+    expect(screen.getByTestId('step-upload-description')).toHaveTextContent('Carica regolamento');
+    expect(screen.getByTestId('step-game-description')).toHaveTextContent('Nome e immagini');
+    expect(screen.getByTestId('step-chat-description')).toHaveTextContent('Prepara agente RAG');
+    expect(screen.getByTestId('step-qa-description')).toHaveTextContent('Testa le regole');
   });
 });
 

@@ -200,7 +200,7 @@ export function UserGameCard({
               Configurato ({modelDisplayName[agentModel]})
             </Badge>
           ) : (
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs" data-testid="agent-status-badge">
               Non configurato
             </Badge>
           )}

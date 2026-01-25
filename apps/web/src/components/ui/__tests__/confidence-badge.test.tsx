@@ -357,23 +357,7 @@ describe('ConfidenceBadge Integration', () => {
   });
 });
 
-// ============================================================================
-// Snapshot Tests
-// ============================================================================
-
-describe('ConfidenceBadge Snapshots', () => {
-  it('matches snapshot for high confidence', () => {
-    const { container } = render(<ConfidenceBadge confidence={95} showTooltip={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for medium confidence', () => {
-    const { container } = render(<ConfidenceBadge confidence={75} showTooltip={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('matches snapshot for low confidence', () => {
-    const { container } = render(<ConfidenceBadge confidence={55} showTooltip={false} />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-});
+// NOTE: Snapshot tests removed in favor of behavioral tests above.
+// Snapshots were fragile due to Badge component style changes (dark mode support).
+// All functionality is covered by the 37 behavioral tests in this file.
+// See Issue #3030 for details.

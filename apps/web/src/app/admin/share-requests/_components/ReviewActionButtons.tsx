@@ -64,7 +64,7 @@ export function ReviewActionButtons({
         onSuccess: () => {
           onAction?.();
         },
-        onError: (error: any) => {
+        onError: (error: Error & { status?: number; data?: { lockedByAdminName?: string; lockedByAdminId?: string } }) => {
           if (error.status === 409) {
             setConflictDetails({
               adminName: error.data?.lockedByAdminName ?? 'Another admin',
@@ -111,6 +111,7 @@ export function ReviewActionButtons({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enableKeyboardShortcut, lockStatus.isLockedByCurrentAdmin, isReleasing]);
 
   // Not locked - show Start Review button

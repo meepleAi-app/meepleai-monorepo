@@ -173,7 +173,7 @@ describe('UserGameCard - Agent Status', () => {
   it('displays "Non configurato" when agent not configured', () => {
     render(<UserGameCard game={mockGameNoAgent} {...mockCallbacks} />);
 
-    expect(screen.getByText('Non configurato')).toBeInTheDocument();
+    expect(screen.getByTestId('agent-status-badge')).toHaveTextContent('Non configurato');
   });
 });
 

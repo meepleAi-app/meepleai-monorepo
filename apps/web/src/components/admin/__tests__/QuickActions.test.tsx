@@ -21,7 +21,7 @@ describe('QuickActions', () => {
 
     it('renders default title', () => {
       render(<QuickActions />);
-      expect(screen.getByText('Quick Actions')).toBeInTheDocument();
+      expect(screen.getByTestId('quick-actions-title')).toHaveTextContent('Quick Actions');
     });
 
     it('renders all default actions', () => {
@@ -82,8 +82,8 @@ describe('QuickActions', () => {
   describe('Custom title', () => {
     it('renders custom title when provided', () => {
       render(<QuickActions title="Admin Actions" />);
-      expect(screen.getByText('Admin Actions')).toBeInTheDocument();
-      expect(screen.queryByText('Quick Actions')).not.toBeInTheDocument();
+      expect(screen.getByTestId('quick-actions-title')).toHaveTextContent('Admin Actions');
+      expect(screen.queryByTestId('quick-actions-title')).toHaveTextContent('Admin Actions');
     });
   });
 

@@ -49,7 +49,7 @@ describe('ApiKeyCreationModal', () => {
       render(<ApiKeyCreationModal {...defaultProps} />);
 
       expect(screen.getByRole('dialog')).toBeInTheDocument();
-      expect(screen.getByText('Create New API Key')).toBeInTheDocument();
+      expect(screen.getByTestId('api-key-modal-title')).toHaveTextContent('Create New API Key');
       expect(
         screen.getByText(/Generate a new API key for programmatic access/)
       ).toBeInTheDocument();
@@ -460,7 +460,7 @@ describe('ApiKeyCreationModal', () => {
 
       await waitFor(() => {
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith('mpl_test_secretkey123');
-        expect(screen.getByText('Copied')).toBeInTheDocument();
+        expect(screen.getByTestId('copied-text')).toBeInTheDocument();
       });
     });
   });

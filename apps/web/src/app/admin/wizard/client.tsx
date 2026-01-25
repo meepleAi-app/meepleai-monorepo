@@ -170,10 +170,10 @@ export function AdminWizardClient() {
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2" data-testid="wizard-title">
                 Admin Game Setup Wizard
               </h1>
-              <p className="text-slate-600 dark:text-slate-400">
+              <p className="text-slate-600 dark:text-slate-400" data-testid="wizard-subtitle">
                 Configura un nuovo gioco con regolamento PDF e agente RAG
               </p>
             </div>
@@ -221,7 +221,7 @@ export function AdminWizardClient() {
                       >
                         {step.label}
                       </span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                      <span className="text-xs text-slate-500 dark:text-slate-400" data-testid={`step-${step.id}-description`}>
                         {step.description}
                       </span>
                     </div>

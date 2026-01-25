@@ -64,7 +64,7 @@ describe('MessageList - Issue #2308', () => {
     render(<MessageList />);
 
     // Assert - Loading indicator
-    expect(screen.getByText('Caricamento messaggi...')).toBeInTheDocument();
+    expect(screen.getByTestId('messages-loading')).toBeInTheDocument();
 
     // Assert - Role status for accessibility
     expect(screen.getByRole('status')).toBeInTheDocument();
@@ -91,7 +91,7 @@ describe('MessageList - Issue #2308', () => {
     render(<MessageList />);
 
     // Assert - Empty state message
-    expect(screen.getByText('Nessun messaggio ancora.')).toBeInTheDocument();
+    expect(screen.getByTestId('messages-empty-title')).toBeInTheDocument();
     expect(
       screen.getByText(/Seleziona una chat esistente o creane una nuova/i)
     ).toBeInTheDocument();
@@ -115,8 +115,8 @@ describe('MessageList - Issue #2308', () => {
     render(<MessageList />);
 
     // Assert - Active chat empty state
-    expect(screen.getByText('Nessun messaggio ancora.')).toBeInTheDocument();
-    expect(screen.getByText('Inizia facendo una domanda!')).toBeInTheDocument();
+    expect(screen.getByTestId('messages-empty-title')).toBeInTheDocument();
+    expect(screen.getByTestId('messages-empty-subtitle')).toHaveTextContent('Inizia facendo una domanda!');
   });
 
   // ============================================================================

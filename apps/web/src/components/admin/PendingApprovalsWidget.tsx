@@ -175,7 +175,7 @@ export function PendingApprovalsWidget({
       <Card className={className} data-testid={testId}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold">In Attesa di Approvazione</CardTitle>
+            <CardTitle className="text-base font-semibold" data-testid="widget-title">In Attesa di Approvazione</CardTitle>
             <Skeleton className="h-5 w-8" />
           </div>
         </CardHeader>
@@ -201,7 +201,7 @@ export function PendingApprovalsWidget({
           <CardTitle className="text-base font-semibold">In Attesa di Approvazione</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="p-4 bg-red-50 text-red-700 rounded-lg text-sm" role="alert">
+          <div className="p-4 bg-red-50 text-red-700 rounded-lg text-sm" role="alert" data-testid="widget-error">
             {error}
           </div>
         </CardContent>
@@ -232,6 +232,7 @@ export function PendingApprovalsWidget({
               <Link
                 href="/admin/shared-games?status=pending"
                 className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+                data-testid="view-all-link"
               >
                 Vedi tutti
               </Link>
@@ -246,7 +247,7 @@ export function PendingApprovalsWidget({
           // Empty State
           <div className="py-8 text-center text-muted-foreground" data-testid="empty-state">
             <Clock className="h-10 w-10 mx-auto mb-2 text-muted-foreground/50" aria-hidden="true" />
-            <p className="text-sm">Nessun gioco in attesa di approvazione</p>
+            <p className="text-sm" data-testid="empty-state-message">Nessun gioco in attesa di approvazione</p>
           </div>
         ) : (
           // Games List

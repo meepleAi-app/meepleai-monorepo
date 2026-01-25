@@ -69,7 +69,7 @@ describe('EditNotesModal - Rendering', () => {
   it('renders modal when isOpen is true', () => {
     render(<EditNotesModal {...defaultProps} />);
 
-    expect(screen.getByText('Modifica Note')).toBeInTheDocument();
+    expect(screen.getByTestId('modal-title')).toHaveTextContent('Modifica Note');
     expect(screen.getByText(/Catan/)).toBeInTheDocument();
   });
 
@@ -96,7 +96,7 @@ describe('EditNotesModal - Rendering', () => {
   it('displays character counter', () => {
     render(<EditNotesModal {...defaultProps} currentNotes="Hello" />);
 
-    expect(screen.getByText('495 caratteri rimanenti')).toBeInTheDocument();
+    expect(screen.getByTestId('char-counter')).toHaveTextContent('495 caratteri rimanenti');
   });
 });
 
@@ -114,21 +114,21 @@ describe('EditNotesModal - Character Counter', () => {
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Test');
 
-    expect(screen.getByText('496 caratteri rimanenti')).toBeInTheDocument();
+    expect(screen.getByTestId('char-counter')).toHaveTextContent('496 caratteri rimanenti');
   });
 
   it('shows warning style when less than 50 characters remaining', () => {
     const longNotes = 'A'.repeat(460);
     render(<EditNotesModal {...defaultProps} currentNotes={longNotes} />);
 
-    const counter = screen.getByText('40 caratteri rimanenti');
+    const counter = screen.getByTestId('char-counter');
     expect(counter).toHaveClass('text-destructive');
   });
 
   it('shows normal style when more than 50 characters remaining', () => {
     render(<EditNotesModal {...defaultProps} currentNotes="Short" />);
 
-    const counter = screen.getByText('495 caratteri rimanenti');
+    const counter = screen.getByTestId('char-counter');
     expect(counter).toHaveClass('text-muted-foreground');
   });
 });
@@ -280,7 +280,7 @@ describe('EditNotesModal - Loading State', () => {
 
     render(<EditNotesModal {...defaultProps} />);
 
-    expect(screen.getByText('Salvataggio...')).toBeInTheDocument();
+    expect(screen.getByTestId('saving-text')).toBeInTheDocument();
   });
 
   it('disables save button when loading', () => {

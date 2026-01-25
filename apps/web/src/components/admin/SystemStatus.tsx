@@ -141,12 +141,12 @@ export function SystemStatus({
   const StatusIcon = config.icon;
 
   return (
-    <Card className={className}>
+    <Card className={cn(className)} data-testid="system-status-card">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <ActivityIcon className="h-5 w-5 text-blue-500" aria-hidden="true" />
-            System Status
+            <span data-testid="system-status-title">System Status</span>
           </CardTitle>
           {onRefresh && (
             <Button
@@ -177,7 +177,7 @@ export function SystemStatus({
         >
           <StatusIcon className={cn('h-6 w-6', config.iconColor)} aria-hidden="true" />
           <div className="flex-1">
-            <p className={cn('font-medium', config.textColor)}>{config.label}</p>
+            <p className={cn('font-medium', config.textColor)} data-testid="system-status-label">{config.label}</p>
             {lastUpdate && (
               <p className="text-xs text-muted-foreground mt-0.5">
                 Last checked: {lastUpdate.toLocaleTimeString('it-IT')}

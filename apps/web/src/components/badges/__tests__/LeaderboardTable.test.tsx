@@ -127,6 +127,6 @@ describe('LeaderboardTable', () => {
 
     renderWithClient(<LeaderboardTable />);
 
-    expect(screen.getByText('No contributors yet')).toBeInTheDocument();
+    expect(screen.getByTestId('leaderboard-empty-message')).toBeInTheDocument();
   });
 });

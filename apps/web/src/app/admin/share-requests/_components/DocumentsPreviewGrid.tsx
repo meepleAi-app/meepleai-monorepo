@@ -1,4 +1,4 @@
-import { Checkbox } from '@/components/ui/checkbox';
+import { Checkbox } from '@/components/ui';
 import { FileText, FileImage, File as FileIcon } from 'lucide-react';
 import type { DocumentPreviewDto } from '@/lib/api/schemas/admin-share-requests.schemas';
 
@@ -30,7 +30,7 @@ export function DocumentsPreviewGrid({
   onSelectionChange,
   selectable = false,
   className,
-}: DocumentsPreviewGridProps): JSX.Element {
+}: DocumentsPreviewGridProps){
   const handleToggle = (documentId: string) => {
     if (!onSelectionChange) return;
 

@@ -1,6 +1,5 @@
-"use client";
 import { useState } from 'react';
-import { Button } from '@/components/ui/primitives/button';
+import { Button } from '@/components/ui';
 import {
   Dialog,
   DialogContent,
@@ -8,9 +7,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/overlays/dialog';
-import { Textarea } from '@/components/ui/primitives/textarea';
-import { Label } from '@/components/ui/primitives/label';
+} from '@/components/ui';
+import { Textarea } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { CheckCircle } from 'lucide-react';
 
 /**
@@ -32,7 +31,7 @@ interface ApproveButtonProps {
   isPending?: boolean;
 }
 
-export function ApproveButton({ onApprove, disabled, isPending }: ApproveButtonProps): JSX.Element {
+export function ApproveButton({ onApprove, disabled, isPending }: ApproveButtonProps){
   const [isOpen, setIsOpen] = useState(false);
   const [notes, setNotes] = useState('');
 

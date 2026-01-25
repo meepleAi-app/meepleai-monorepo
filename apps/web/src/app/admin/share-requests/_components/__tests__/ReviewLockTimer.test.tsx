@@ -11,7 +11,7 @@
  * Target: ≥85% coverage
  */
 
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ReviewLockTimer } from '../ReviewLockTimer';
 
@@ -32,23 +32,16 @@ describe('ReviewLockTimer', () => {
     expect(screen.getByText(/10:00 remaining/)).toBeInTheDocument();
   });
 
-  it.skip('updates countdown every second', async () => {
-    // SKIP: Flaky test - fake timers + waitFor conflict causes timeout
-    // Timer functionality verified by other passing tests
+  it('updates countdown every second', () => {
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000).toISOString(); // 2 minutes from now
     render(<ReviewLockTimer expiresAt={expiresAt} />);
 
     expect(screen.getByText(/2:00 remaining/)).toBeInTheDocument();
 
-    // Advance time by 1 second within act
-    await act(async () => {
-      vi.advanceTimersByTime(1000);
-    });
+    // Advance time by 1 second
+    vi.advanceTimersByTime(1000);
 
-    // Check for updated time (should now show 1:59)
-    await waitFor(() => {
-      expect(screen.getByText(/1:5[89] remaining/)).toBeInTheDocument();
-    });
+    expect(screen.getByText(/1:59 remaining/)).toBeInTheDocument();
   });
 
   it('shows expiring soon warning when < 5 minutes remaining', () => {
@@ -65,22 +58,17 @@ describe('ReviewLockTimer', () => {
     expect(screen.queryByText('Expiring soon')).not.toBeInTheDocument();
   });
 
-  it.skip('calls onExpired callback when timer reaches 0', async () => {
-    // SKIP: Flaky test - fake timers + async callback timing issue
-    // onExpired functionality will be verified in E2E tests
+  it('calls onExpired callback when timer reaches 0', async () => {
     const onExpired = vi.fn();
     const expiresAt = new Date(Date.now() + 2000).toISOString(); // 2 seconds from now
 
     render(<ReviewLockTimer expiresAt={expiresAt} onExpired={onExpired} />);
 
-    // Fast-forward past expiration within act
-    await act(async () => {
-      vi.advanceTimersByTime(3000);
-    });
+    // Fast-forward past expiration
+    vi.advanceTimersByTime(3000);
 
-    // Verify callback was called
     await waitFor(() => {
-      expect(onExpired).toHaveBeenCalled();
+      expect(onExpired).toHaveBeenCalledTimes(1);
     });
   });
 

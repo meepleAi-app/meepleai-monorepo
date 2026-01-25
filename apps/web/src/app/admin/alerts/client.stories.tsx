@@ -244,7 +244,7 @@ export const Loading: Story = {
 /**
  * Error state
  */
-export const Error: Story = {
+export const ErrorState: Story = {
   parameters: {
     msw: {
       handlers: [

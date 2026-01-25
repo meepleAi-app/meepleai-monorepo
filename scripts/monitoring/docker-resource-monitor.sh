@@ -1,5 +1,11 @@
 #!/bin/bash
-
+#
+# ⚠️  DEPRECATED: This bash script is deprecated.
+# ✅  USE: scripts/monitoring/docker-resource-monitor.ps1 (PowerShell)
+#
+# PowerShell version works on Windows, Linux, and macOS with PowerShell Core.
+# See scripts/MIGRATION.md for migration guide.
+#
 # Docker Compose Resource Monitoring Script
 # Purpose: Monitor resource usage of all containers and help identify resource limit issues
 # Usage: ./docker-resource-monitor.sh [options]

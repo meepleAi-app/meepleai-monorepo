@@ -239,7 +239,7 @@ export const Loaded: Story = {
  * Error State
  * Failed to load activity
  */
-export const Error: Story = {
+export const ErrorState: Story = {
   args: {
     userId: 'user-123',
     maxEvents: 50,

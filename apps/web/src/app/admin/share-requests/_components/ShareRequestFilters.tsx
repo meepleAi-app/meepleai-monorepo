@@ -1,11 +1,11 @@
-import { Input } from '@/components/ui/primitives/input';
+import { Input } from '@/components/ui';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/overlays/select';
+} from '@/components/ui';
 import { Search } from 'lucide-react';
 import type {
   ShareRequestStatus,
@@ -51,7 +51,7 @@ export function ShareRequestFilters({
   onContributionTypeChange,
   onSortByChange,
   onSortDirectionChange,
-}: ShareRequestFiltersProps): JSX.Element {
+}: ShareRequestFiltersProps){
   return (
     <div className="space-y-4">
       {/* Search */}

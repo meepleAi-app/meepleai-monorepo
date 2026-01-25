@@ -1,8 +1,8 @@
 'use client';
-import React from "react";
-import { useEffect, useState } from "react";
-import { Clock } from "lucide-react";
-import { Badge } from "@/components/ui/data-display/badge";
+
+import { useEffect, useState } from 'react';
+import { Clock } from 'lucide-react';
+import { Badge } from '@/components/ui';
 
 /**
  * Review Lock Timer Component
@@ -27,7 +27,7 @@ export interface ReviewLockTimerProps {
   className?: string;
 }
 
-export function ReviewLockTimer({ expiresAt, onExpired, className }: ReviewLockTimerProps): JSX.Element {
+export function ReviewLockTimer({ expiresAt, onExpired, className }: ReviewLockTimerProps){
   const [timeRemaining, setTimeRemaining] = useState(0);
 
   useEffect(() => {

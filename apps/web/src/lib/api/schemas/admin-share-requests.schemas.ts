@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { ShareRequestStatusSchema, ContributionTypeSchema } from './share-requests.schemas';
 
+// Re-export types from share-requests.schemas for convenience
+export type { ShareRequestStatus, ContributionType } from './share-requests.schemas';
+
 /**
  * Admin Share Request API Schemas
  * Issue #2745: Frontend - Admin Review Interface

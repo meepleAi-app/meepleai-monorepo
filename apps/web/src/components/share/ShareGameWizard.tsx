@@ -86,7 +86,7 @@ export function ShareGameWizard({
       {
         sourceGameId: game.gameId,
         notes: notes.trim() || null,
-        attachedDocumentIds: selectedDocumentIds.length > 0 ? selectedDocumentIds : undefined,
+        attachedDocumentIds: selectedDocumentIds.length > 0 ? selectedDocumentIds : [],
       },
       {
         onSuccess: (response) => {

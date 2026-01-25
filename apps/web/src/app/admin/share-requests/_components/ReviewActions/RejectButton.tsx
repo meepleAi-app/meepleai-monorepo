@@ -1,6 +1,5 @@
-"use client";
 import { useState } from 'react';
-import { Button } from '@/components/ui/primitives/button';
+import { Button } from '@/components/ui';
 import {
   Dialog,
   DialogContent,
@@ -8,9 +7,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/overlays/dialog';
-import { Textarea } from '@/components/ui/primitives/textarea';
-import { Label } from '@/components/ui/primitives/label';
+} from '@/components/ui';
+import { Textarea } from '@/components/ui';
+import { Label } from '@/components/ui';
 import { XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -34,7 +33,7 @@ interface RejectButtonProps {
   isPending?: boolean;
 }
 
-export function RejectButton({ onReject, disabled, isPending }: RejectButtonProps): JSX.Element {
+export function RejectButton({ onReject, disabled, isPending }: RejectButtonProps){
   const [isOpen, setIsOpen] = useState(false);
   const [reason, setReason] = useState('');
 

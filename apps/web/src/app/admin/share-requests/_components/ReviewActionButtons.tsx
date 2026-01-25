@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStartReview, useReleaseReview } from '@/hooks/queries';
-import { Button } from '@/components/ui/primitives/button';
+import { Button } from '@/components/ui';
 import { Lock, Unlock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ReviewLockTimer } from './ReviewLockTimer';
@@ -47,7 +47,7 @@ export function ReviewActionButtons({
   lockStatus,
   onAction,
   enableKeyboardShortcut = true,
-}: ReviewActionButtonsProps): JSX.Element {
+}: ReviewActionButtonsProps){
   const router = useRouter();
   const { mutate: startReview, isPending: isStarting } = useStartReview();
   const { mutate: releaseReview, isPending: isReleasing } = useReleaseReview();

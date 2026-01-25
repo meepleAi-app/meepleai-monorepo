@@ -11,7 +11,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-import { BadgeTier, getTierIcon, getTierOrder, type UserBadgeDto } from '@/types/badges';
+import { BadgeTier, getTierIcon, type UserBadgeDto } from '@/types/badges';
 import { cn } from '@/lib/utils';
 
 export interface BadgeGridProps {
@@ -45,7 +45,7 @@ export function BadgeGrid({
   showHidden = false,
   onBadgeClick,
   className,
-}: BadgeGridProps): JSX.Element {
+}: BadgeGridProps){
   // Filter visible badges
   const visibleBadges = showHidden ? badges : badges.filter((b) => b.isDisplayed);
 
@@ -128,7 +128,7 @@ interface BadgeItemProps {
   onClick?: () => void;
 }
 
-function BadgeItem({ badge, onClick }: BadgeItemProps): JSX.Element {
+function BadgeItem({ badge, onClick }: BadgeItemProps){
   const tierGradient = getTierGradient(badge.tier);
   const tierGlow = getTierGlow(badge.tier);
 

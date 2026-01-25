@@ -385,6 +385,10 @@ using (var scope = app.Services.CreateScope())
                 // Seed predefined badges (ISSUE-2731)
                 await Api.Infrastructure.Seeders.BadgeSeeder.SeedBadgesAsync(
                     db, app.Logger).ConfigureAwait(false);
+
+                // Seed default rate limit configurations (ISSUE-2809)
+                await Api.Infrastructure.Seeders.RateLimitConfigSeeder.SeedRateLimitConfigsAsync(
+                    db, app.Logger).ConfigureAwait(false);
             }
         }
     }

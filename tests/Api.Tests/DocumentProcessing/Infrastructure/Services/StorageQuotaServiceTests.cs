@@ -25,6 +25,11 @@ public sealed class StorageQuotaServiceTests
         _configuration = new Mock<IConfiguration>();
         _logger = new Mock<ILogger<StorageQuotaService>>();
 
+        // Setup configuration mock for Storage:MaxBytesPerUser
+        var configSection = new Mock<IConfigurationSection>();
+        configSection.Setup(x => x.Value).Returns((1024L * 1024 * 1024).ToString()); // 1 GB
+        _configuration.Setup(x => x.GetSection("Storage:MaxBytesPerUser")).Returns(configSection.Object);
+
         _sut = new StorageQuotaService(_documentRepo.Object, _configuration.Object, _logger.Object);
     }
 

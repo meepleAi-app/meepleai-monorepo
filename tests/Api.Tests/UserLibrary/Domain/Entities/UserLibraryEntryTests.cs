@@ -288,7 +288,7 @@ public sealed class UserLibraryEntryTests
         entry.Checklist.First().Should().Be(item);
         item.Description.Should().Be("Shuffle deck");
         item.AdditionalInfo.Should().Be("Remove jokers first");
-        item.Order.Should().Be(0, "first item has order 0");
+        item.DisplayOrder.Should().Be(0, "first item has order 0");
     }
 
     [Fact]
@@ -304,9 +304,9 @@ public sealed class UserLibraryEntryTests
 
         // Assert
         entry.Checklist.Count.Should().Be(3);
-        item1.Order.Should().Be(0);
-        item2.Order.Should().Be(1);
-        item3.Order.Should().Be(2);
+        item1.DisplayOrder.Should().Be(0);
+        item2.DisplayOrder.Should().Be(1);
+        item3.DisplayOrder.Should().Be(2);
     }
 
     [Fact]
@@ -330,9 +330,9 @@ public sealed class UserLibraryEntryTests
         // Verify reordering
         var ordered = entry.GetOrderedChecklist();
         ordered[0].Should().Be(item1);
-        ordered[0].Order.Should().Be(0);
+        ordered[0].DisplayOrder.Should().Be(0);
         ordered[1].Should().Be(item3);
-        ordered[1].Order.Should().Be(1, "reordered from 2 to 1");
+        ordered[1].DisplayOrder.Should().Be(1, "reordered from 2 to 1");
     }
 
     [Fact]

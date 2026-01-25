@@ -1,7 +1,7 @@
-import { Input } from '@/components/ui/primitives/input';
-import { Textarea } from '@/components/ui/primitives/textarea';
-import { Label } from '@/components/ui/primitives/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Input } from '@/components/ui';
+import { Textarea } from '@/components/ui';
+import { Label } from '@/components/ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 
 /**
  * Game Editable Fields Component
@@ -30,7 +30,7 @@ export function GameEditableFields({
   onTitleChange,
   onDescriptionChange,
   disabled = false,
-}: GameEditableFieldsProps): JSX.Element {
+}: GameEditableFieldsProps){
   return (
     <Card>
       <CardHeader>

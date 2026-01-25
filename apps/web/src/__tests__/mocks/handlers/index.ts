@@ -15,7 +15,6 @@ import { libraryHandlers } from './library.handlers';
 import { sharedGamesHandlers } from './shared-games.handlers';
 import { catalogHandlers } from './catalog.handlers';
 import { adminHandlers } from './admin.handlers';
-import { adminShareRequestsHandlers } from './admin-share-requests.handlers';
 
 /**
  * All MSW request handlers
@@ -33,7 +32,6 @@ export const handlers = [
   ...sharedGamesHandlers,
   ...catalogHandlers,
   ...adminHandlers,
-  ...adminShareRequestsHandlers,
 ];
 
 // Re-export individual handler groups for selective use
@@ -60,9 +58,3 @@ export {
   updateInfrastructureDetails,
   resetAdminState,
 } from './admin.handlers';
-export {
-  adminShareRequestsHandlers,
-  resetAdminShareRequestsState,
-  addMockShareRequest,
-  mockShareRequests,
-} from './admin-share-requests.handlers';

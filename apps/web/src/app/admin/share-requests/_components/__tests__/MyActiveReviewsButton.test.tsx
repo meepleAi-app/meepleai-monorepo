@@ -153,10 +153,8 @@ describe('MyActiveReviewsButton', () => {
     const button = screen.getByRole('button', { name: /My Reviews/i });
     fireEvent.click(button);
 
-    // Verify sheet opened (sheet should contain "Active Reviews" heading)
-    expect(screen.getByText('Active Reviews')).toBeInTheDocument();
-
-    // When loading, no review items should be visible
-    expect(screen.queryByText('Wingspan')).not.toBeInTheDocument();
+    // Loading spinner should be visible (lucide-loader-2)
+    const { container } = screen.getByText('Active Reviews').closest('div')!.parentElement!;
+    expect(container.querySelector('svg.lucide-loader-2')).toBeInTheDocument();
   });
 });

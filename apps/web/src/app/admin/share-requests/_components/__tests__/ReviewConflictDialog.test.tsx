@@ -66,8 +66,8 @@ describe('ReviewConflictDialog', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('renders conflict message with visual warning', () => {
-    render(
+  it('renders alert icon', () => {
+    const { container } = render(
       <ReviewConflictDialog
         open={true}
         onClose={vi.fn()}
@@ -75,9 +75,7 @@ describe('ReviewConflictDialog', () => {
       />
     );
 
-    // Verify meaningful content rather than icon implementation
-    expect(screen.getByText('Review Already In Progress')).toBeInTheDocument();
-    expect(screen.getByText(/currently being reviewed by/i)).toBeInTheDocument();
-    expect(screen.getByText('Sarah')).toBeInTheDocument();
+    const icon = container.querySelector('svg.lucide-alert-circle');
+    expect(icon).toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/data-display/avatar';
-import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { TableCell, TableRow } from '@/components/ui/data-display/table';
 import { formatDistanceToNow } from 'date-fns';
 import { FileText, Eye } from 'lucide-react';
@@ -30,7 +30,7 @@ interface ShareRequestsTableRowProps {
   onReview: (id: string) => void;
 }
 
-export function ShareRequestsTableRow({ request, onReview }: ShareRequestsTableRowProps): JSX.Element {
+export function ShareRequestsTableRow({ request, onReview }: ShareRequestsTableRowProps){
   const waitingTime = Date.now() - new Date(request.createdAt).getTime();
   const waitingDays = Math.floor(waitingTime / (1000 * 60 * 60 * 24));
   const isWaitingLong = waitingDays > 7;

@@ -72,12 +72,10 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
 
         var userOverride = UserRateLimitOverride.Create(
             userId: userId,
-            maxPendingRequests: 20,
-            maxRequestsPerMonth: 100,
-            cooldownAfterRejection: TimeSpan.FromHours(12),
-            expiresAt: DateTime.UtcNow.AddMonths(1),
+            createdByAdminId: adminId,
             reason: "VIP customer",
-            createdByAdminId: adminId);
+            expiresAt: DateTime.UtcNow.AddMonths(1));
+        userOverride.UpdateLimits(20, 100, TimeSpan.FromHours(12));
 
         // Act
         await _repository.AddAsync(userOverride);
@@ -104,8 +102,8 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var adminId = Guid.NewGuid();
 
         var userOverride = UserRateLimitOverride.Create(
-            userId, 20, 100, TimeSpan.FromHours(12),
-            DateTime.UtcNow.AddMonths(1), "VIP", adminId);
+            userId, adminId, "VIP", DateTime.UtcNow.AddMonths(1));
+        userOverride.UpdateLimits(20, 100, TimeSpan.FromHours(12));
 
         await _repository.AddAsync(userOverride);
         await _dbContext.SaveChangesAsync();
@@ -141,9 +139,8 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var adminId = Guid.NewGuid();
 
         var activeOverride = UserRateLimitOverride.Create(
-            userId, 20, 100, null,
-            expiresAt: DateTime.UtcNow.AddMonths(1), // Future expiration
-            reason: "Active", adminId);
+            userId, adminId, "Active", DateTime.UtcNow.AddMonths(1)); // Future expiration
+        activeOverride.UpdateLimits(20, 100, null);
 
         await _repository.AddAsync(activeOverride);
         await _dbContext.SaveChangesAsync();
@@ -165,9 +162,8 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var adminId = Guid.NewGuid();
 
         var expiredOverride = UserRateLimitOverride.Create(
-            userId, 20, 100, null,
-            expiresAt: DateTime.UtcNow.AddDays(-1), // Expired
-            reason: "Expired", adminId);
+            userId, adminId, "Expired", DateTime.UtcNow.AddDays(-1)); // Expired
+        expiredOverride.UpdateLimits(20, 100, null);
 
         await _repository.AddAsync(expiredOverride);
         await _dbContext.SaveChangesAsync();
@@ -187,9 +183,8 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var adminId = Guid.NewGuid();
 
         var permanentOverride = UserRateLimitOverride.Create(
-            userId, 50, 500, null,
-            expiresAt: null, // Never expires
-            reason: "Permanent VIP", adminId);
+            userId, adminId, "Permanent VIP", null); // Never expires
+        permanentOverride.UpdateLimits(50, 500, null);
 
         await _repository.AddAsync(permanentOverride);
         await _dbContext.SaveChangesAsync();
@@ -210,8 +205,8 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var adminId = Guid.NewGuid();
 
         var override1 = UserRateLimitOverride.Create(
-            userId, 20, 100, null,
-            DateTime.UtcNow.AddMonths(1), "Active", adminId);
+            userId, adminId, "Active", DateTime.UtcNow.AddMonths(1));
+        override1.UpdateLimits(20, 100, null);
 
         await _repository.AddAsync(override1);
         await _dbContext.SaveChangesAsync();
@@ -231,8 +226,8 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var adminId = Guid.NewGuid();
 
         var expiredOverride = UserRateLimitOverride.Create(
-            userId, 20, 100, null,
-            DateTime.UtcNow.AddDays(-1), "Expired", adminId);
+            userId, adminId, "Expired", DateTime.UtcNow.AddDays(-1));
+        expiredOverride.UpdateLimits(20, 100, null);
 
         await _repository.AddAsync(expiredOverride);
         await _dbContext.SaveChangesAsync();
@@ -251,16 +246,16 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var adminId = Guid.NewGuid();
 
         var activeOverride1 = UserRateLimitOverride.Create(
-            Guid.NewGuid(), 20, 100, null,
-            DateTime.UtcNow.AddMonths(1), "Active 1", adminId);
+            Guid.NewGuid(), adminId, "Active 1", DateTime.UtcNow.AddMonths(1));
+        activeOverride1.UpdateLimits(20, 100, null);
 
         var activeOverride2 = UserRateLimitOverride.Create(
-            Guid.NewGuid(), 30, 150, null,
-            null, "Permanent", adminId); // null = never expires
+            Guid.NewGuid(), adminId, "Permanent", null); // null = never expires
+        activeOverride2.UpdateLimits(30, 150, null);
 
         var expiredOverride = UserRateLimitOverride.Create(
-            Guid.NewGuid(), 10, 50, null,
-            DateTime.UtcNow.AddDays(-5), "Expired", adminId);
+            Guid.NewGuid(), adminId, "Expired", DateTime.UtcNow.AddDays(-5));
+        expiredOverride.UpdateLimits(10, 50, null);
 
         await _repository.AddAsync(activeOverride1);
         await _repository.AddAsync(activeOverride2);
@@ -284,12 +279,12 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var adminId = Guid.NewGuid();
 
         var activeOverride = UserRateLimitOverride.Create(
-            Guid.NewGuid(), 20, 100, null,
-            DateTime.UtcNow.AddMonths(1), "Active", adminId);
+            Guid.NewGuid(), adminId, "Active", DateTime.UtcNow.AddMonths(1));
+        activeOverride.UpdateLimits(20, 100, null);
 
         var expiredOverride = UserRateLimitOverride.Create(
-            Guid.NewGuid(), 10, 50, null,
-            DateTime.UtcNow.AddDays(-5), "Expired", adminId);
+            Guid.NewGuid(), adminId, "Expired", DateTime.UtcNow.AddDays(-5));
+        expiredOverride.UpdateLimits(10, 50, null);
 
         await _repository.AddAsync(activeOverride);
         await _repository.AddAsync(expiredOverride);
@@ -312,16 +307,16 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var adminId = Guid.NewGuid();
 
         var override1 = UserRateLimitOverride.Create(
-            userId, 20, 100, null,
-            DateTime.UtcNow.AddMonths(1), "Override 1", adminId);
+            userId, adminId, "Override 1", DateTime.UtcNow.AddMonths(1));
+        override1.UpdateLimits(20, 100, null);
 
         var override2 = UserRateLimitOverride.Create(
-            userId, 30, 150, null,
-            DateTime.UtcNow.AddDays(-5), "Override 2 (expired)", adminId);
+            userId, adminId, "Override 2 (expired)", DateTime.UtcNow.AddDays(-5));
+        override2.UpdateLimits(30, 150, null);
 
         var otherUserOverride = UserRateLimitOverride.Create(
-            Guid.NewGuid(), 10, 50, null,
-            DateTime.UtcNow.AddMonths(1), "Other user", adminId);
+            Guid.NewGuid(), adminId, "Other user", DateTime.UtcNow.AddMonths(1));
+        otherUserOverride.UpdateLimits(10, 50, null);
 
         await _repository.AddAsync(override1);
         await _repository.AddAsync(override2);
@@ -346,19 +341,16 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var adminId = Guid.NewGuid();
 
         var userOverride = UserRateLimitOverride.Create(
-            userId, 20, 100, null,
-            DateTime.UtcNow.AddMonths(1), "Original", adminId);
+            userId, adminId, "Original", DateTime.UtcNow.AddMonths(1));
+        userOverride.UpdateLimits(20, 100, null);
 
         await _repository.AddAsync(userOverride);
         await _dbContext.SaveChangesAsync();
 
-        // Act - Update via domain method
-        userOverride.Update(
-            maxPendingRequests: 50,
-            maxRequestsPerMonth: 200,
-            cooldownAfterRejection: TimeSpan.FromHours(6),
-            expiresAt: DateTime.UtcNow.AddMonths(2),
-            reason: "Updated reason");
+        // Act - Update via domain methods
+        userOverride.UpdateLimits(50, 200, TimeSpan.FromHours(6));
+        userOverride.UpdateReason("Updated reason");
+        userOverride.UpdateExpiration(DateTime.UtcNow.AddMonths(2));
 
         await _repository.UpdateAsync(userOverride);
         await _dbContext.SaveChangesAsync();
@@ -380,8 +372,8 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var adminId = Guid.NewGuid();
 
         var userOverride = UserRateLimitOverride.Create(
-            userId, 20, 100, null,
-            DateTime.UtcNow.AddMonths(1), "To be deleted", adminId);
+            userId, adminId, "To be deleted", DateTime.UtcNow.AddMonths(1));
+        userOverride.UpdateLimits(20, 100, null);
 
         await _repository.AddAsync(userOverride);
         await _dbContext.SaveChangesAsync();
@@ -404,8 +396,8 @@ public sealed class UserRateLimitOverrideRepositoryTests : IAsyncLifetime
         var adminId = Guid.NewGuid();
 
         var userOverride = UserRateLimitOverride.Create(
-            userId, 20, 100, null,
-            DateTime.UtcNow.AddMonths(1), "Exists", adminId);
+            userId, adminId, "Exists", DateTime.UtcNow.AddMonths(1));
+        userOverride.UpdateLimits(20, 100, null);
 
         await _repository.AddAsync(userOverride);
         await _dbContext.SaveChangesAsync();

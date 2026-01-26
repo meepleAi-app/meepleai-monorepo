@@ -224,8 +224,9 @@ describe('AuthLayout', () => {
       );
 
       const card = container.querySelector('main > div > div:not(.text-center)');
-      expect(card).toHaveClass('bg-white');
-      expect(card).toHaveClass('dark:bg-slate-800');
+      // Component uses design system tokens with backdrop blur
+      expect(card).toHaveClass('bg-card/90');
+      expect(card).toHaveClass('dark:bg-card');
       expect(card).toHaveClass('rounded-lg');
       expect(card).toHaveClass('shadow-lg');
     });
@@ -237,12 +238,9 @@ describe('AuthLayout', () => {
         </AuthLayout>
       );
 
+      // Component now uses simple bg-background instead of gradient
       const layoutWrapper = container.querySelector('div.min-h-screen');
-      expect(layoutWrapper).toHaveClass('bg-gradient-to-br');
-      expect(layoutWrapper).toHaveClass('from-slate-50');
-      expect(layoutWrapper).toHaveClass('to-slate-100');
-      expect(layoutWrapper).toHaveClass('dark:from-slate-950');
-      expect(layoutWrapper).toHaveClass('dark:to-slate-900');
+      expect(layoutWrapper).toHaveClass('bg-background');
     });
   });
 
@@ -429,9 +427,9 @@ describe('AuthLayout', () => {
         </AuthLayout>
       );
 
+      // Component uses design system bg-background which handles dark mode
       const wrapper = container.querySelector('div.min-h-screen');
-      expect(wrapper).toHaveClass('dark:from-slate-950');
-      expect(wrapper).toHaveClass('dark:to-slate-900');
+      expect(wrapper).toHaveClass('bg-background');
     });
 
     it('applies dark mode classes to card', () => {
@@ -441,8 +439,9 @@ describe('AuthLayout', () => {
         </AuthLayout>
       );
 
+      // Component uses design system tokens
       const card = container.querySelector('main > div > div:not(.text-center)');
-      expect(card).toHaveClass('dark:bg-slate-800');
+      expect(card).toHaveClass('dark:bg-card');
     });
 
     it('applies dark mode classes to text elements', () => {
@@ -452,11 +451,12 @@ describe('AuthLayout', () => {
         </AuthLayout>
       );
 
+      // Component uses design system tokens (text-foreground, text-muted-foreground)
       const title = screen.getByRole('heading', { name: 'Test Title' });
-      expect(title).toHaveClass('dark:text-slate-50');
+      expect(title).toHaveClass('text-foreground');
 
       const subtitle = screen.getByText('Test Subtitle');
-      expect(subtitle).toHaveClass('dark:text-slate-400');
+      expect(subtitle).toHaveClass('text-muted-foreground');
     });
   });
 });

@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ErrorBoundary, useErrorHandler } from '../errors/ErrorBoundary';
@@ -28,18 +29,12 @@ describe('ErrorBoundary', () => {
   const originalError = console.error;
   beforeAll(() => {
     console.error = vi.fn();
-    // Mock fetch for logger (not available in jsdom)
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      } as Response)
-    );
+    // Note: MSW is already configured globally in vitest.setup.tsx
+    // No need to mock fetch here - it would conflict with MSW interceptors
   });
 
   afterAll(() => {
     console.error = originalError;
-    delete (global as any).fetch;
   });
 
   it('should render children when no error', () => {
@@ -257,21 +252,15 @@ describe('useErrorHandler', () => {
 describe('ErrorBoundary - Enhanced Coverage', () => {
   // Suppress console.error for these tests
   const originalError = console.error;
-  const mockLogger = { error: vi.fn() };
 
   beforeAll(() => {
     console.error = vi.fn();
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      } as Response)
-    );
+    // Note: MSW is already configured globally in vitest.setup.tsx
+    // No need to mock fetch here - it would conflict with MSW interceptors
   });
 
   afterAll(() => {
     console.error = originalError;
-    delete (global as any).fetch;
   });
 
   beforeEach(() => {

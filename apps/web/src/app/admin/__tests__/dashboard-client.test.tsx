@@ -27,6 +27,20 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/admin',
 }));
 
+// Mock useAuthUser hook to avoid auth API calls
+vi.mock('@/hooks/useAuthUser', () => ({
+  useAuthUser: () => ({
+    user: {
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      email: 'admin@example.com',
+      displayName: 'Test Admin',
+    },
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+}));
+
 // Mock the API module - use importOriginal to preserve types
 vi.mock('@/lib/api', async importOriginal => {
   const original = await importOriginal<typeof import('@/lib/api')>();
@@ -37,6 +51,7 @@ vi.mock('@/lib/api', async importOriginal => {
       admin: {
         getAnalytics: vi.fn(),
         getRecentActivity: vi.fn(),
+        getInfrastructureDetails: vi.fn(),
       },
     },
   };
@@ -85,6 +100,16 @@ const mockActivityData = {
   generatedAt: new Date().toISOString(),
 };
 
+const mockInfrastructureData = {
+  services: [
+    { name: 'Database', state: 'Healthy', latency: 45 },
+    { name: 'Redis Cache', state: 'Healthy', latency: 12 },
+    { name: 'Vector Store', state: 'Healthy', latency: 78 },
+    { name: 'AI Services', state: 'Healthy', latency: 156 },
+  ],
+  generatedAt: new Date().toISOString(),
+};
+
 function createTestQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -105,6 +130,35 @@ function renderWithQueryClient(ui: ReactNode, queryClient?: QueryClient) {
   return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
+/**
+ * Helper to set up all three dashboard API mocks at once
+ */
+function setupDashboardMocks(overrides?: {
+  analytics?: typeof mockAnalyticsData | null | Error;
+  activity?: typeof mockActivityData | Error;
+  infrastructure?: typeof mockInfrastructureData | null | Error;
+}) {
+  const { analytics = mockAnalyticsData, activity = mockActivityData, infrastructure = mockInfrastructureData } = overrides ?? {};
+
+  if (analytics instanceof Error) {
+    vi.mocked(apiModule.api.admin.getAnalytics).mockRejectedValue(analytics);
+  } else {
+    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(analytics);
+  }
+
+  if (activity instanceof Error) {
+    vi.mocked(apiModule.api.admin.getRecentActivity).mockRejectedValue(activity);
+  } else {
+    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(activity);
+  }
+
+  if (infrastructure instanceof Error) {
+    vi.mocked(apiModule.api.admin.getInfrastructureDetails).mockRejectedValue(infrastructure);
+  } else {
+    vi.mocked(apiModule.api.admin.getInfrastructureDetails).mockResolvedValue(infrastructure);
+  }
+}
+
 describe('DashboardClient', () => {
   let queryClient: QueryClient;
 
@@ -118,10 +172,14 @@ describe('DashboardClient', () => {
   });
 
   it('renders loading state initially', () => {
+    // All three mocks need to never resolve to keep loading state
     vi.mocked(apiModule.api.admin.getAnalytics).mockImplementation(
       () => new Promise(() => {}) // Never resolves
     );
     vi.mocked(apiModule.api.admin.getRecentActivity).mockImplementation(
+      () => new Promise(() => {})
+    );
+    vi.mocked(apiModule.api.admin.getInfrastructureDetails).mockImplementation(
       () => new Promise(() => {})
     );
 
@@ -131,8 +189,7 @@ describe('DashboardClient', () => {
   });
 
   it('fetches analytics and activity data on mount', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -143,8 +200,7 @@ describe('DashboardClient', () => {
   });
 
   it('displays metrics after data loads', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -161,8 +217,7 @@ describe('DashboardClient', () => {
   });
 
   it('displays activity feed after data loads', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -174,10 +229,12 @@ describe('DashboardClient', () => {
 
   it('shows error state when API call fails', async () => {
     // Use 401 error which triggers immediate failure (no retry per hook logic)
-    vi.mocked(apiModule.api.admin.getAnalytics).mockRejectedValue(new Error('401 Unauthorized'));
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockRejectedValue(
-      new Error('401 Unauthorized')
-    );
+    const error = new Error('401 Unauthorized');
+    setupDashboardMocks({
+      analytics: error,
+      activity: error,
+      infrastructure: error,
+    });
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -189,8 +246,12 @@ describe('DashboardClient', () => {
 
   it('shows retry button on error', async () => {
     // Use 403 error which triggers immediate failure (no retry per hook logic)
-    vi.mocked(apiModule.api.admin.getAnalytics).mockRejectedValue(new Error('403 Forbidden'));
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockRejectedValue(new Error('403 Forbidden'));
+    const error = new Error('403 Forbidden');
+    setupDashboardMocks({
+      analytics: error,
+      activity: error,
+      infrastructure: error,
+    });
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -206,20 +267,18 @@ describe('DashboardClient', () => {
   });
 
   it('displays last updated time', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
     await waitFor(() => {
-      // Note: "Last updated" is dynamic timestamp text - regex matching OK for this case
-      expect(screen.getByText(/Last updated:/)).toBeInTheDocument();
+      // Note: SystemStatus component shows "Last checked:" not "Last updated:"
+      expect(screen.getByText(/Last checked:/)).toBeInTheDocument();
     });
   });
 
   it('renders all 16 metrics', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -233,8 +292,7 @@ describe('DashboardClient', () => {
   });
 
   it('formats large numbers with locale', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -261,8 +319,7 @@ describe('DashboardClient', () => {
       },
     };
 
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(criticalData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks({ analytics: criticalData });
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -273,8 +330,7 @@ describe('DashboardClient', () => {
   });
 
   it('shows no data message when metrics are null', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(null);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks({ analytics: null });
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -284,8 +340,7 @@ describe('DashboardClient', () => {
   });
 
   it('renders SystemStatus component', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -295,8 +350,7 @@ describe('DashboardClient', () => {
   });
 
   it('renders QuickActions component', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -311,14 +365,13 @@ describe('DashboardClient', () => {
       events: [],
     };
 
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(emptyActivityData);
+    setupDashboardMocks({ activity: emptyActivityData });
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
+    // Wait for loading to complete by checking for dashboard header
     await waitFor(() => {
-      // Note: "Dashboard Overview" is in DashboardHeader child component
-    expect(screen.getByText('Dashboard Overview')).toBeInTheDocument(); // TODO: Add data-testid to DashboardHeader
+      expect(screen.getByTestId('dashboard-header')).toBeInTheDocument();
     });
 
     // Activity feed should not be rendered when events are empty
@@ -327,8 +380,7 @@ describe('DashboardClient', () => {
 
   describe('Issue #889: Performance (<1s render)', () => {
     it('should render within 1 second', async () => {
-      vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-      vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+      setupDashboardMocks();
 
       const startTime = performance.now();
 
@@ -339,8 +391,8 @@ describe('DashboardClient', () => {
       });
 
       await waitFor(() => {
-        // Note: "Dashboard Overview" is in DashboardHeader child component
-    expect(screen.getByText('Dashboard Overview')).toBeInTheDocument(); // TODO: Add data-testid to DashboardHeader
+        // Check for dashboard header which indicates full render
+        expect(screen.getByTestId('dashboard-header')).toBeInTheDocument();
       });
 
       const renderTime = performance.now() - startTime;

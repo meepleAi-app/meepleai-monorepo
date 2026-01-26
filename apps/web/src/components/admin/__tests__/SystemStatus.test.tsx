@@ -89,8 +89,9 @@ describe('SystemStatus', () => {
 
     it('displays latency when provided', () => {
       render(<SystemStatus services={customServices} />);
-      expect(screen.getByText('(12ms)')).toBeInTheDocument();
-      expect(screen.getByText('(85ms)')).toBeInTheDocument();
+      // Component shows "12ms response time" format
+      expect(screen.getByText('12ms response time')).toBeInTheDocument();
+      expect(screen.getByText('85ms response time')).toBeInTheDocument();
     });
 
     it('displays message when provided', () => {
@@ -101,11 +102,11 @@ describe('SystemStatus', () => {
 
     it('applies correct status indicator colors', () => {
       const { container } = render(<SystemStatus services={customServices} />);
-      // Check for status dot colors
+      // Check for status dot colors - component uses bg-muted-foreground for unknown status
       expect(container.querySelector('.bg-green-500')).toBeInTheDocument();
       expect(container.querySelector('.bg-yellow-500')).toBeInTheDocument();
       expect(container.querySelector('.bg-red-500')).toBeInTheDocument();
-      expect(container.querySelector('.bg-gray-400')).toBeInTheDocument();
+      expect(container.querySelector('.bg-muted-foreground')).toBeInTheDocument();
     });
   });
 

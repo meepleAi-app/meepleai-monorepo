@@ -16,8 +16,25 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { UserGameCard } from '../UserGameCard';
 import type { UserLibraryEntry } from '@/lib/api';
+
+// ============================================================================
+// Test Wrapper
+// ============================================================================
+
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+};
 
 // ============================================================================
 // Mocks
@@ -116,7 +133,7 @@ describe('UserGameCard - Rendering', () => {
   });
 
   it('renders with complete data', () => {
-    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     expect(screen.getByText('Catan')).toBeInTheDocument();
     expect(screen.getByText('Kosmos')).toBeInTheDocument();
@@ -124,7 +141,7 @@ describe('UserGameCard - Rendering', () => {
   });
 
   it('displays cover image when available', () => {
-    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     const image = screen.getByAltText('Catan');
     expect(image).toBeInTheDocument();
@@ -132,7 +149,7 @@ describe('UserGameCard - Rendering', () => {
   });
 
   it('displays fallback icon when no image', () => {
-    const { container } = render(<UserGameCard game={mockGameMinimal} {...mockCallbacks} />);
+    const { container } = render(<UserGameCard game={mockGameMinimal} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     // Check for Library icon (fallback)
     const icon = container.querySelector('svg.lucide-library');
@@ -141,14 +158,14 @@ describe('UserGameCard - Rendering', () => {
 
   it('renders minimal data without errors', () => {
     expect(() => {
-      render(<UserGameCard game={mockGameMinimal} {...mockCallbacks} />);
+      render(<UserGameCard game={mockGameMinimal} {...mockCallbacks} />, { wrapper: createWrapper() });
     }).not.toThrow();
 
     expect(screen.getByText('Unknown Game')).toBeInTheDocument();
   });
 
   it('does not display publisher when null', () => {
-    render(<UserGameCard game={mockGameMinimal} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameMinimal} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     expect(screen.queryByText('Kosmos')).not.toBeInTheDocument();
   });
@@ -164,14 +181,14 @@ describe('UserGameCard - Agent Status', () => {
   });
 
   it('displays configured agent with model name', () => {
-    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     expect(screen.getByText(/Configurato/)).toBeInTheDocument();
     expect(screen.getByText(/Gemini Pro/)).toBeInTheDocument();
   });
 
   it('displays "Non configurato" when agent not configured', () => {
-    render(<UserGameCard game={mockGameNoAgent} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameNoAgent} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     expect(screen.getByTestId('agent-status-badge')).toHaveTextContent('Non configurato');
   });
@@ -187,7 +204,7 @@ describe('UserGameCard - PDF Status', () => {
   });
 
   it('displays PDF status badge', () => {
-    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     expect(screen.getByText('Regolamento Standard')).toBeInTheDocument();
   });
@@ -203,13 +220,13 @@ describe('UserGameCard - Notes', () => {
   });
 
   it('displays notes when available', () => {
-    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     expect(screen.getByText('Classic strategy game for family nights')).toBeInTheDocument();
   });
 
   it('does not display notes section when null', () => {
-    render(<UserGameCard game={mockGameMinimal} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameMinimal} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     expect(screen.queryByText('Classic strategy game for family nights')).not.toBeInTheDocument();
   });
@@ -225,14 +242,14 @@ describe('UserGameCard - Action Buttons', () => {
   });
 
   it('renders Chat link with correct href', () => {
-    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     const chatLink = screen.getByRole('link', { name: /Chatta/i });
     expect(chatLink).toHaveAttribute('href', `/chat?gameId=${mockGameComplete.gameId}`);
   });
 
   it('calls onConfigureAgent when "Gestisci Agente" clicked', () => {
-    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     const button = screen.getByRole('button', { name: /Gestisci Agente/i });
     fireEvent.click(button);
@@ -244,7 +261,7 @@ describe('UserGameCard - Action Buttons', () => {
   });
 
   it('calls onUploadPdf when "Carica PDF" clicked', () => {
-    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     const button = screen.getByRole('button', { name: /Carica PDF/i });
     fireEvent.click(button);
@@ -256,7 +273,7 @@ describe('UserGameCard - Action Buttons', () => {
   });
 
   it('calls onEditNotes when "Note" clicked', () => {
-    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     const button = screen.getByRole('button', { name: /Note/i });
     fireEvent.click(button);
@@ -269,7 +286,7 @@ describe('UserGameCard - Action Buttons', () => {
   });
 
   it('calls onRemove when trash button clicked', () => {
-    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     // Find trash button by destructive styling class
     const buttons = screen.getAllByRole('button');
@@ -295,13 +312,13 @@ describe('UserGameCard - Favorite Toggle', () => {
   });
 
   it('renders FavoriteToggle component', () => {
-    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     expect(screen.getByTestId('favorite-toggle')).toBeInTheDocument();
   });
 
   it('passes correct props to FavoriteToggle', () => {
-    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     const toggle = screen.getByTestId('favorite-toggle');
     expect(toggle).toHaveAttribute('data-favorite', 'true');
@@ -309,7 +326,7 @@ describe('UserGameCard - Favorite Toggle', () => {
   });
 
   it('reflects non-favorite state correctly', () => {
-    render(<UserGameCard game={mockGameMinimal} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameMinimal} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     const toggle = screen.getByTestId('favorite-toggle');
     expect(toggle).toHaveAttribute('data-favorite', 'false');
@@ -326,7 +343,7 @@ describe('UserGameCard - Date Formatting', () => {
   });
 
   it('displays added date in Italian format', () => {
-    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />);
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     expect(screen.getByText(/Aggiunto il/)).toBeInTheDocument();
   });
@@ -350,7 +367,7 @@ describe('UserGameCard - Edge Cases', () => {
     };
 
     expect(() => {
-      render(<UserGameCard game={partialGame} {...mockCallbacks} />);
+      render(<UserGameCard game={partialGame} {...mockCallbacks} />, { wrapper: createWrapper() });
     }).not.toThrow();
   });
 
@@ -360,7 +377,7 @@ describe('UserGameCard - Edge Cases', () => {
       gameTitle: 'Twilight Imperium: Fourth Edition with Prophecy of Kings Expansion',
     };
 
-    render(<UserGameCard game={longTitleGame} {...mockCallbacks} />);
+    render(<UserGameCard game={longTitleGame} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     // Use getAllByText and select the h3 element (not the mocked FavoriteToggle)
     const titleElements = screen.getAllByText(/Twilight Imperium/i);
@@ -374,7 +391,7 @@ describe('UserGameCard - Edge Cases', () => {
       notes: 'A'.repeat(500),
     };
 
-    render(<UserGameCard game={longNotesGame} {...mockCallbacks} />);
+    render(<UserGameCard game={longNotesGame} {...mockCallbacks} />, { wrapper: createWrapper() });
 
     const notesElement = screen.getByText(/A{10,}/);
     expect(notesElement).toHaveClass('line-clamp-2');

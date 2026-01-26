@@ -231,15 +231,17 @@ describe('QuickActions', () => {
         />
       );
       const link = screen.getByTestId('quick-action-default');
-      expect(link).toHaveClass('hover:bg-gray-50');
+      // Component uses design system tokens for hover
+      expect(link).toHaveClass('hover:bg-muted/50');
     });
   });
 
   describe('Links', () => {
     it('renders links with correct href', () => {
       render(<QuickActions />);
-      const uploadLink = screen.getByTestId('quick-action-upload-pdf');
-      expect(uploadLink).toHaveAttribute('href', '/admin/bulk-export');
+      // Default actions use 'approve-games' as first action
+      const approveLink = screen.getByTestId('quick-action-approve-games');
+      expect(approveLink).toHaveAttribute('href', '/admin/games/pending');
     });
 
     it('all actions are links', () => {

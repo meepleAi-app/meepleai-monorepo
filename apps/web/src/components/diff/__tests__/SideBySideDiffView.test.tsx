@@ -4,6 +4,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SideBySideDiffView } from '../SideBySideDiffView';
 import type { ProcessedDiff, CollapsibleSection } from '@/lib/diffProcessor';
 

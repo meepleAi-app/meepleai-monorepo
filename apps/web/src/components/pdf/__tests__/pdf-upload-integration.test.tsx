@@ -49,6 +49,15 @@ function PdfUploadForm() {
   const [progress, setProgress] = React.useState<Record<string, number>>({});
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [abortControllers] = React.useState<Record<string, AbortController>>({});
+  const intervalsRef = React.useRef<NodeJS.Timeout[]>([]);
+
+  // Cleanup intervals on unmount to prevent state updates after unmount
+  React.useEffect(() => {
+    return () => {
+      intervalsRef.current.forEach(clearInterval);
+      intervalsRef.current = [];
+    };
+  }, []);
 
   const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
   const ALLOWED_TYPES = ['application/pdf'];
@@ -91,13 +100,14 @@ function PdfUploadForm() {
         const controller = new AbortController();
         abortControllers[file.name] = controller;
 
-        // Simulate progress
+        // Simulate progress - track interval for cleanup
         const progressInterval = setInterval(() => {
           setProgress(prev => {
             const current = prev[file.name] || 0;
             return { ...prev, [file.name]: Math.min(current + 10, 90) };
           });
         }, 100);
+        intervalsRef.current.push(progressInterval);
 
         await mockApiDocuments.uploadPdf(file, {
           onProgress: (p: number) => {
@@ -107,6 +117,7 @@ function PdfUploadForm() {
         });
 
         clearInterval(progressInterval);
+        intervalsRef.current = intervalsRef.current.filter(i => i !== progressInterval);
         setProgress(prev => ({ ...prev, [file.name]: 100 }));
         mockToastSuccess('Upload successful', `${file.name} uploaded`);
       } catch (error: any) {

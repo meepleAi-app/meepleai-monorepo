@@ -1,67 +1,108 @@
 # Codecov Configuration for MeepleAI
 # https://docs.codecov.com/docs/codecov-yaml
 
+codecov:
+  require_ci_to_pass: true
+  notify:
+    after_n_builds: 2  # Wait for backend + frontend
+    wait_for_ci: true
+
 coverage:
   precision: 2
   round: down
   range: "70...100"
 
   status:
+    # Overall project coverage
     project:
       default:
-        target: 90%               # Project coverage must be >= 90%
-        threshold: 1%             # Allow 1% decrease without failing
-        if_ci_failed: error       # Fail if CI fails
+        target: auto
+        threshold: 0.5%  # Allow 0.5% drop max
+        base: auto
+        if_ci_failed: error
 
+    # Coverage on new code in PR
     patch:
       default:
-        target: 80%               # New code must have >= 80% coverage
-        threshold: 5%             # Allow 5% decrease for patches
-        if_not_found: success     # Don't fail if no patch coverage
-        only_pulls: true          # Only check patches on PRs
+        target: 80%  # New code must have 80%+ coverage
+        threshold: 0%
+        if_ci_failed: error
 
-  ignore:
-    - "apps/api/src/Api/Migrations/**"
-    - "apps/api/src/Api/Program.cs"
-    - "apps/web/.next/**"
-    - "apps/web/coverage/**"
-    - "**/*.g.cs"
-    - "**/obj/**"
-    - "**/bin/**"
+  # Track coverage by bounded context
+  flags:
+    # Backend overall
+    backend:
+      paths:
+        - apps/api/src/Api/BoundedContexts/**
+      target: 90%
+      threshold: 0.5%
+      carryforward: true
+      carryforward_mode: "all"
 
+    # Backend domain layer (highest quality requirement)
+    backend-domain:
+      paths:
+        - apps/api/src/Api/BoundedContexts/**/Domain/**
+      target: 95%
+      threshold: 0.5%
+      carryforward: true
+
+    # Backend application handlers
+    backend-handlers:
+      paths:
+        - apps/api/src/Api/BoundedContexts/**/Application/Handlers/**
+      target: 90%
+      threshold: 0.5%
+      carryforward: true
+
+    # Frontend overall
+    frontend:
+      paths:
+        - apps/web/src/**
+      target: 85%
+      threshold: 0.5%
+      carryforward: true
+      carryforward_mode: "all"
+
+    # Frontend state management
+    frontend-stores:
+      paths:
+        - apps/web/src/store/**
+      target: 70%
+      threshold: 0.5%
+      carryforward: true
+
+    # Frontend React hooks
+    frontend-hooks:
+      paths:
+        - apps/web/src/hooks/**
+      target: 65%
+      threshold: 0.5%
+      carryforward: true
+
+# Files to ignore
+ignore:
+  - "**/*.g.cs"  # Generated files
+  - "**/Migrations/**"
+  - "apps/web/.next/**"
+  - "apps/web/out/**"
+  - "**/*.stories.tsx"
+  - "**/*.d.ts"
+  - "apps/api/src/Api/Program.cs"
+  - "**/obj/**"
+  - "**/bin/**"
+  - "apps/web/coverage/**"
+
+# PR comment configuration
 comment:
-  layout: "reach, diff, flags, files"
+  layout: "header, diff, flags, files, footer"
   behavior: default
-  require_changes: false          # Comment on every PR
-  require_base: no                # Don't require base commit
-  require_head: yes               # Require head commit
-
-flags:
-  backend-unit:
-    paths:
-      - apps/api/src/Api/
-    carryforward: true
-    carryforward_mode: "all"
-
-  backend-integration:
-    paths:
-      - apps/api/src/Api/
-    carryforward: true
-    carryforward_mode: "all"
-
-  frontend-unit:
-    paths:
-      - apps/web/src/
-    carryforward: true
-    carryforward_mode: "all"
-
-  e2e-tests:
-    paths:
-      - apps/web/src/
-    carryforward: false             # E2E doesn't generate coverage in same format
+  require_changes: false
+  require_base: true
+  require_head: true
 
 github_checks:
-  annotations: true                 # Add inline annotations to PRs
+  annotations: true  # Add inline annotations to PRs
 
 parsers:
   gcov:
@@ -70,9 +111,3 @@ parsers:
       loop: yes
       method: no
       macro: no
-
-codecov:
-  require_ci_to_pass: yes
-  notify:
-    after_n_builds: 3               # Wait for backend-unit, backend-integration, frontend-unit
-    wait_for_ci: yes

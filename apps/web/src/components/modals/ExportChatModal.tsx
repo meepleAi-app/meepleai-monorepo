@@ -117,7 +117,7 @@ export function ExportChatModal({ isOpen, onClose, chatId, gameName }: ExportCha
       isOpen={isOpen}
       onClose={handleCancel}
       title="Esporta Chat"
-      titleTestId="export-modal-title"
+      data-testid="export-modal"
       description={`Esporta la conversazione per ${gameName}`}
       size="md"
       closeOnBackdropClick={!isSubmitting}

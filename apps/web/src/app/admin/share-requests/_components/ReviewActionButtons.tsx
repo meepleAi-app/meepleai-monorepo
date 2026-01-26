@@ -64,11 +64,12 @@ export function ReviewActionButtons({
         onSuccess: () => {
           onAction?.();
         },
-        onError: (error: Error & { status?: number; data?: { lockedByAdminName?: string; lockedByAdminId?: string } }) => {
+        onError: (error: Error & { status?: number; data?: unknown }) => {
           if (error.status === 409) {
+            const conflictData = error.data as { lockedByAdminName?: string; lockedByAdminId?: string } | undefined;
             setConflictDetails({
-              adminName: error.data?.lockedByAdminName ?? 'Another admin',
-              adminId: error.data?.lockedByAdminId ?? 'unknown',
+              adminName: conflictData?.lockedByAdminName ?? 'Another admin',
+              adminId: conflictData?.lockedByAdminId ?? 'unknown',
             });
             setShowConflictDialog(true);
           }

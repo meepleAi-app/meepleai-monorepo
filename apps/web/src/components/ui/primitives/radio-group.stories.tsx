@@ -265,8 +265,7 @@ export const NotificationPreferences: Story = {
           </div>
         </RadioGroup>
       </div>
-    );
-  },
+    ),
   parameters: {
     docs: {
       description: {

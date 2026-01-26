@@ -213,16 +213,8 @@ export const Disabled: Story = {
 };
 
 /* DISABLED - Interactive stories removed
-/**
- * Text alignment toolbar.
- * Common use case for rich text editors.
+ * Text alignment toolbar and Formatting toolbar stories
  */
-
-/**
- * Formatting toolbar.
- * Multiple formatting options with multi-select.
- */
-*/
 
 /**
  * List style selector.
@@ -249,11 +241,8 @@ export const ListStyleSelector: Story = {
 };
 
 /* DISABLED - Interactive stories removed
-/**
- * View mode selector.
- * Toggle between different view modes.
+ * View mode selector story
  */
-*/
 
 /**
  * Dark theme variant.

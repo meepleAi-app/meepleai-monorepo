@@ -91,7 +91,6 @@ export const Scale: Story = {
   ),
 };
 
-/**
+/* DISABLED - Interactive story removed
  * Interactive demo with transitions.
  */
-*/

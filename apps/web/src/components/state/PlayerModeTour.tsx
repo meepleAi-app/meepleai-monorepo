@@ -14,7 +14,15 @@
 
 import { useCallback, useState, useEffect } from 'react';
 
-import Joyride, { Step, CallBackProps, STATUS, EVENTS } from 'react-joyride';
+// TEMPORARILY DISABLED: react-joyride incompatible with React 19
+// import Joyride, { Step, CallBackProps, STATUS, EVENTS } from 'react-joyride';
+
+// Temporary types until react-joyride is updated
+type Step = any;
+type CallBackProps = any;
+const STATUS = { FINISHED: 'finished', SKIPPED: 'skipped' };
+const EVENTS = { TOUR_END: 'tour:end' };
+const Joyride = () => null;
 
 // ========== Tour Steps ==========
 

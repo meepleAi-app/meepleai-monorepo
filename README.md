@@ -4,6 +4,8 @@ AI-powered board game assistant with RAG, multi-agent architecture, and living d
 
 [![CI](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/ci.yml/badge.svg)](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo/graph/badge.svg)](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo)
+[![Backend Coverage](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo/branch/main/graph/badge.svg?flag=backend)](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo?flag=backend)
+[![Frontend Coverage](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo/branch/main/graph/badge.svg?flag=frontend)](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo?flag=frontend)
 
 ## Coverage
 

@@ -84,12 +84,45 @@ Each flow document contains:
 - [System Configuration](./admin-role/03-system-configuration.md)
 - [Monitoring](./admin-role/04-monitoring.md)
 
+## Testing & Gap Analysis
+
+### Test Coverage Documentation
+- **[COMPLETE-TEST-FLOWS.md](./COMPLETE-TEST-FLOWS.md)** - Comprehensive list of all 105 user flows for E2E testing
+- **[Gap Analysis](./gap-analysis.md)** - Implementation status and missing features
+
+### Test Flow Categories
+
+| Category | Existing | Missing | Total | Coverage |
+|----------|----------|---------|-------|----------|
+| Authentication | 8 | 6 | 14 | 57% |
+| Game Discovery | 5 | 3 | 8 | 63% |
+| Library Management | 6 | 4 | 10 | 60% |
+| AI Chat & RAG | 7 | 5 | 12 | 58% |
+| Game Sessions | 6 | 5 | 11 | 55% |
+| Editor Flows | 8 | 4 | 12 | 67% |
+| Admin Flows | 10 | 8 | 18 | 56% |
+| Error & Edge Cases | 5 | 15 | 20 | 25% |
+| **TOTAL** | **55** | **50** | **105** | **52%** |
+
+### Priority Flows (P0)
+
+Must be tested before any release:
+
+1. **AUTH-09**: Email Verification
+2. **AUTH-10**: Account Lockout
+3. **LIB-07**: Session Quota Display
+4. **SESS-07**: Session Limits Enforcement
+5. **ADM-11**: Session Limits Configuration
+6. **ERR-06**: Rate Limiting (429)
+7. **ERR-14**: Quota Exceeded Actions
+
 ## Related Documentation
 
 - [Product Specification](../01-architecture/overview/product-specification.md)
 - [API Reference](../03-api/README.md)
-- [Bounded Contexts](../07-bounded-contexts/)
+- [Bounded Contexts](../09-bounded-contexts/)
+- [E2E Test Guide](../05-testing/e2e/E2E_TEST_GUIDE.md)
 
 ---
 
-*Last Updated: 2026-01-19*
+*Last Updated: 2026-01-26*

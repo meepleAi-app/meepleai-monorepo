@@ -343,8 +343,8 @@ describe('PromptVersionCard', () => {
 
       const viewButton = screen.getByTestId('view-button');
       expect(viewButton).toHaveClass('border');
-      // Note: View button uses outline variant which has bg-card class
-      expect(viewButton).toHaveClass('bg-card');
+      // Note: View button uses outline variant which has bg-card/90 class (with opacity modifier)
+      expect(viewButton).toHaveClass('bg-card/90');
     });
   });
 

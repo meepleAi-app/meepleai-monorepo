@@ -397,13 +397,15 @@ describe('TopNav', () => {
     it('should use card background color', () => {
       const { container } = render(<TopNav />);
       const nav = container.querySelector('nav');
-      expect(nav).toHaveClass('bg-card');
+      // Component uses glass morphism with bg-background/95 in light mode
+      expect(nav).toHaveClass('bg-background/95');
     });
 
     it('should have border-bottom with border color', () => {
       const { container } = render(<TopNav />);
       const nav = container.querySelector('nav');
-      expect(nav).toHaveClass('border-b', 'border-border');
+      // Component uses border-border/50 for lighter border
+      expect(nav).toHaveClass('border-b', 'border-border/50');
     });
 
     it('should have shadow-sm for subtle elevation', () => {

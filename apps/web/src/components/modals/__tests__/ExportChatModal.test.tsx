@@ -334,7 +334,8 @@ describe('ExportChatModal', () => {
     it('has accessible modal title', () => {
       render(<ExportChatModal {...defaultProps} />);
 
-      expect(screen.getByTestId('export-modal-title')).toHaveTextContent('Esporta Chat');
+      // Dialog title is rendered by AccessibleModal without testid
+      expect(screen.getByRole('heading', { name: 'Esporta Chat' })).toBeInTheDocument();
     });
 
     it('has accessible form labels', () => {

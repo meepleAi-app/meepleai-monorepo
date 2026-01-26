@@ -83,8 +83,16 @@ describe('LeaderboardTable', () => {
   it('should highlight current user', () => {
     renderWithClient(<LeaderboardTable />);
 
-    const bobRow = screen.getByText('Bob').closest('div')!;
-    expect(bobRow).toHaveClass('border-primary');
+    // The border-primary class is on the row container, which is 4 div levels up from the name text
+    // Row structure: div[border-primary] > div[min-w-0] > div[flex] > span[name]
+    const bobName = screen.getByText('Bob');
+    // Find the ancestor with border-primary class
+    let element = bobName.parentElement;
+    while (element && !element.className.includes('border-primary')) {
+      element = element.parentElement;
+    }
+    expect(element).not.toBeNull();
+    expect(element).toHaveClass('border-primary');
     expect(screen.getByText('(You)')).toBeInTheDocument();
   });
 

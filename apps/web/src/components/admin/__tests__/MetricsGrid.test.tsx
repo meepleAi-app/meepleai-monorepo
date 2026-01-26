@@ -119,10 +119,10 @@ describe('MetricsGrid', () => {
       render(<MetricsGrid metrics={mockMetrics} />);
       const grid = screen.getByTestId('metrics-grid');
 
-      expect(grid).toHaveClass('grid-cols-1'); // Mobile
-      expect(grid).toHaveClass('md:grid-cols-2'); // Tablet
-      expect(grid).toHaveClass('lg:grid-cols-3'); // Desktop
-      expect(grid).toHaveClass('xl:grid-cols-4'); // Large desktop
+      // Issue #2850: Responsive grid 2→3→4 columns
+      expect(grid).toHaveClass('grid-cols-2'); // Mobile (2 columns)
+      expect(grid).toHaveClass('md:grid-cols-3'); // Tablet (3 columns)
+      expect(grid).toHaveClass('xl:grid-cols-4'); // Large desktop (4 columns)
     });
 
     it('applies custom className', () => {

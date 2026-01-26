@@ -209,7 +209,8 @@ describe('ActivityTimeline', () => {
     it('applies hover effect classes to list items', () => {
       const { container } = render(<ActivityTimeline events={[mockEvents[0]]} />);
       const listItem = container.querySelector('li');
-      expect(listItem).toHaveClass('hover:bg-stone-50');
+      // ActivityFeed uses hover:bg-muted/50 for category icon mode
+      expect(listItem).toHaveClass('hover:bg-muted/50');
     });
   });
 });

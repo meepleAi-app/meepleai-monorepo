@@ -102,7 +102,8 @@ describe('ShareChatModal', () => {
     it('renders access level selector', () => {
       render(<ShareChatModal {...defaultProps} />);
 
-      expect(screen.getByTestId('access-level-label')).toBeInTheDocument();
+      // Form view has label text "Access Level" without testid
+      expect(screen.getByText('Access Level')).toBeInTheDocument();
     });
 
     it('renders expiry duration selector', () => {

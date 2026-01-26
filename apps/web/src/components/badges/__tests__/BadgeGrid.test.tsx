@@ -43,8 +43,10 @@ describe('BadgeGrid', () => {
   it('should render badges grouped by tier', () => {
     render(<BadgeGrid badges={mockBadges} />);
 
+    // Only visible badges are shown (isDisplayed: true)
+    // Silver badge has isDisplayed: false, so not shown by default
     expect(screen.getByText(/Gold Badges/i)).toBeInTheDocument();
-    expect(screen.getByText(/Silver Badges/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Silver Badges/i)).not.toBeInTheDocument(); // Hidden by default
     expect(screen.getByText(/Bronze Badges/i)).toBeInTheDocument();
   });
 
@@ -93,10 +95,11 @@ describe('BadgeGrid', () => {
   });
 
   it('should display tier icons correctly', () => {
-    render(<BadgeGrid badges={mockBadges} />);
+    // Use showHidden to show all tiers including Silver
+    render(<BadgeGrid badges={mockBadges} showHidden />);
 
     expect(screen.getByText(/🥇/)).toBeInTheDocument(); // Gold
-    expect(screen.getByText(/🥈/)).toBeInTheDocument(); // Silver
+    expect(screen.getByText(/🥈/)).toBeInTheDocument(); // Silver (visible with showHidden)
     expect(screen.getByText(/🥉/)).toBeInTheDocument(); // Bronze
   });
 

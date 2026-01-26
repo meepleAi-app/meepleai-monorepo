@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AlertsBanner } from '../AlertsBanner';
 import * as nextNavigation from 'next/navigation';
 import * as framerMotion from 'framer-motion';
+import type { DashboardMetrics } from '@/lib/api';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -32,6 +33,29 @@ vi.mock('framer-motion', async () => {
   };
 });
 
+/**
+ * Creates mock DashboardMetrics with configurable activeAlerts
+ */
+const createMockMetrics = (overrides: Partial<DashboardMetrics> = {}): DashboardMetrics => ({
+  totalUsers: 100,
+  activeSessions: 10,
+  apiRequestsToday: 1000,
+  totalPdfDocuments: 50,
+  totalChatMessages: 500,
+  averageConfidenceScore: 0.85,
+  totalRagRequests: 200,
+  totalTokensUsed: 100000,
+  totalGames: 25,
+  apiRequests7d: 5000,
+  apiRequests30d: 20000,
+  averageLatency24h: 150,
+  averageLatency7d: 160,
+  errorRate24h: 0,
+  activeAlerts: 0,
+  resolvedAlerts: 5,
+  ...overrides,
+});
+
 describe('AlertsBanner', () => {
   const mockPush = vi.fn();
 
@@ -50,7 +74,7 @@ describe('AlertsBanner', () => {
   describe('Rendering', () => {
     it('renders all healthy state correctly', () => {
       render(
-        <AlertsBanner criticalCount={0} healthyServices={10} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics()} healthyServices={10} totalServices={10} />
       );
 
       expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('Tutti i sistemi operativi');
@@ -60,7 +84,7 @@ describe('AlertsBanner', () => {
 
     it('renders has issues state correctly', () => {
       render(
-        <AlertsBanner criticalCount={5} healthyServices={8} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics({ activeAlerts: 5 })} healthyServices={8} totalServices={10} />
       );
 
       expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('5 alert critici attivi');
@@ -69,7 +93,7 @@ describe('AlertsBanner', () => {
 
     it('renders button with correct navigation label for issues state', () => {
       render(
-        <AlertsBanner criticalCount={3} healthyServices={7} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics({ activeAlerts: 3 })} healthyServices={7} totalServices={10} />
       );
 
       const button = screen.getByRole('button', { name: /Visualizza pannello alert di sistema \(3 critici attivi\)/i });
@@ -78,7 +102,7 @@ describe('AlertsBanner', () => {
 
     it('handles singular alert message correctly', () => {
       render(
-        <AlertsBanner criticalCount={1} healthyServices={9} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics({ activeAlerts: 1 })} healthyServices={9} totalServices={10} />
       );
 
       expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('1 alert critico attivo');
@@ -86,7 +110,7 @@ describe('AlertsBanner', () => {
 
     it('handles plural alerts message correctly', () => {
       render(
-        <AlertsBanner criticalCount={2} healthyServices={8} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics({ activeAlerts: 2 })} healthyServices={8} totalServices={10} />
       );
 
       expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('2 alert critici attivi');
@@ -96,7 +120,7 @@ describe('AlertsBanner', () => {
   describe('State Logic', () => {
     it('shows issues state when critical count > 0', () => {
       render(
-        <AlertsBanner criticalCount={1} healthyServices={10} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics({ activeAlerts: 1 })} healthyServices={10} totalServices={10} />
       );
 
       expect(screen.getByTestId('alerts-primary-message').textContent).toMatch(/alert critic/i);
@@ -104,7 +128,7 @@ describe('AlertsBanner', () => {
 
     it('shows issues state when healthy services < total services', () => {
       render(
-        <AlertsBanner criticalCount={0} healthyServices={8} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics()} healthyServices={8} totalServices={10} />
       );
 
       expect(screen.getByTestId('alerts-secondary-message')).toHaveTextContent('8/10 servizi operativi');
@@ -112,26 +136,34 @@ describe('AlertsBanner', () => {
 
     it('shows healthy state when all conditions met', () => {
       render(
-        <AlertsBanner criticalCount={0} healthyServices={10} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics()} healthyServices={10} totalServices={10} />
       );
 
       expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('Tutti i sistemi operativi');
+    });
+
+    it('shows issues state when error rate is high', () => {
+      render(
+        <AlertsBanner metrics={createMockMetrics({ errorRate24h: 0.15 })} healthyServices={10} totalServices={10} />
+      );
+
+      expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('Tasso di errore elevato (15.0%)');
     });
   });
 
   describe('Edge Cases', () => {
     it('handles zero services correctly', () => {
       render(
-        <AlertsBanner criticalCount={0} healthyServices={0} totalServices={0} />
+        <AlertsBanner metrics={createMockMetrics()} healthyServices={0} totalServices={0} />
       );
 
       expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('Nessun servizio configurato');
       expect(screen.getByTestId('alerts-secondary-message')).toHaveTextContent('Configura i servizi da monitorare');
     });
 
-    it('handles negative critical count (normalized to 0)', () => {
+    it('handles null metrics (normalized to 0 alerts)', () => {
       render(
-        <AlertsBanner criticalCount={-5} healthyServices={10} totalServices={10} />
+        <AlertsBanner metrics={null} healthyServices={10} totalServices={10} />
       );
 
       expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('Tutti i sistemi operativi');
@@ -139,7 +171,7 @@ describe('AlertsBanner', () => {
 
     it('handles negative healthy services (normalized to 0)', () => {
       render(
-        <AlertsBanner criticalCount={0} healthyServices={-5} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics()} healthyServices={-5} totalServices={10} />
       );
 
       expect(screen.getByTestId('alerts-secondary-message')).toHaveTextContent('0/10 servizi operativi');
@@ -147,7 +179,7 @@ describe('AlertsBanner', () => {
 
     it('handles healthy services > total services (clamped to total)', () => {
       render(
-        <AlertsBanner criticalCount={0} healthyServices={15} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics()} healthyServices={15} totalServices={10} />
       );
 
       expect(screen.getByTestId('alerts-secondary-message')).toHaveTextContent('10/10 servizi in salute');
@@ -155,7 +187,7 @@ describe('AlertsBanner', () => {
 
     it('handles negative total services (normalized to 0)', () => {
       render(
-        <AlertsBanner criticalCount={0} healthyServices={0} totalServices={-10} />
+        <AlertsBanner metrics={createMockMetrics()} healthyServices={0} totalServices={-10} />
       );
 
       expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('Nessun servizio configurato');
@@ -165,7 +197,7 @@ describe('AlertsBanner', () => {
   describe('Styling', () => {
     it('applies has issues styling classes', () => {
       const { container } = render(
-        <AlertsBanner criticalCount={5} healthyServices={8} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics({ activeAlerts: 5 })} healthyServices={8} totalServices={10} />
       );
 
       const banner = container.firstChild as HTMLElement;
@@ -174,7 +206,7 @@ describe('AlertsBanner', () => {
 
     it('applies all healthy styling classes', () => {
       const { container } = render(
-        <AlertsBanner criticalCount={0} healthyServices={10} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics()} healthyServices={10} totalServices={10} />
       );
 
       const banner = container.firstChild as HTMLElement;
@@ -184,7 +216,7 @@ describe('AlertsBanner', () => {
     it('applies custom className prop', () => {
       const { container } = render(
         <AlertsBanner
-          criticalCount={0}
+          metrics={createMockMetrics()}
           healthyServices={10}
           totalServices={10}
           className="custom-class"
@@ -197,12 +229,12 @@ describe('AlertsBanner', () => {
 
     it('includes dark mode classes', () => {
       const { container } = render(
-        <AlertsBanner criticalCount={5} healthyServices={8} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics({ activeAlerts: 5 })} healthyServices={8} totalServices={10} />
       );
 
       const banner = container.firstChild as HTMLElement;
       expect(banner.className).toContain('dark:border-amber-800');
-      expect(banner.className).toContain('dark:bg-stone-900');
+      expect(banner.className).toContain('dark:bg-card');
     });
   });
 
@@ -210,7 +242,7 @@ describe('AlertsBanner', () => {
     it('navigates to /admin/alerts on button click', async () => {
       const user = userEvent.setup();
       render(
-        <AlertsBanner criticalCount={0} healthyServices={10} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics()} healthyServices={10} totalServices={10} />
       );
 
       const button = screen.getByRole('button', { name: /Visualizza pannello alert/i });
@@ -222,7 +254,7 @@ describe('AlertsBanner', () => {
     it('navigates to /admin/alerts from issues state', async () => {
       const user = userEvent.setup();
       render(
-        <AlertsBanner criticalCount={5} healthyServices={8} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics({ activeAlerts: 5 })} healthyServices={8} totalServices={10} />
       );
 
       const button = screen.getByRole('button', { name: /Visualizza pannello alert/i });
@@ -235,7 +267,7 @@ describe('AlertsBanner', () => {
   describe('Accessibility', () => {
     it('includes aria-label for button in healthy state', () => {
       render(
-        <AlertsBanner criticalCount={0} healthyServices={10} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics()} healthyServices={10} totalServices={10} />
       );
 
       const button = screen.getByRole('button', { name: 'Visualizza pannello alert di sistema' });
@@ -244,7 +276,7 @@ describe('AlertsBanner', () => {
 
     it('includes aria-label with critical count in issues state', () => {
       render(
-        <AlertsBanner criticalCount={3} healthyServices={7} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics({ activeAlerts: 3 })} healthyServices={7} totalServices={10} />
       );
 
       const button = screen.getByRole('button', {
@@ -255,7 +287,7 @@ describe('AlertsBanner', () => {
 
     it('marks decorative elements as aria-hidden', () => {
       const { container } = render(
-        <AlertsBanner criticalCount={5} healthyServices={8} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics({ activeAlerts: 5 })} healthyServices={8} totalServices={10} />
       );
 
       const decorativeElements = container.querySelectorAll('[aria-hidden="true"]');
@@ -268,7 +300,7 @@ describe('AlertsBanner', () => {
       vi.mocked(framerMotion.useReducedMotion).mockReturnValue(true);
 
       const { container } = render(
-        <AlertsBanner criticalCount={5} healthyServices={8} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics({ activeAlerts: 5 })} healthyServices={8} totalServices={10} />
       );
 
       // Blur decoration should not render with reduced motion
@@ -280,7 +312,7 @@ describe('AlertsBanner', () => {
       vi.mocked(framerMotion.useReducedMotion).mockReturnValue(true);
 
       const { container } = render(
-        <AlertsBanner criticalCount={5} healthyServices={8} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics({ activeAlerts: 5 })} healthyServices={8} totalServices={10} />
       );
 
       // Pulsating ring should not render with reduced motion
@@ -297,20 +329,20 @@ describe('AlertsBanner', () => {
     it('renders without crashing', () => {
       expect(() => {
         render(
-          <AlertsBanner criticalCount={0} healthyServices={10} totalServices={10} />
+          <AlertsBanner metrics={createMockMetrics()} healthyServices={10} totalServices={10} />
         );
       }).not.toThrow();
     });
 
     it('updates when props change', () => {
       const { rerender } = render(
-        <AlertsBanner criticalCount={0} healthyServices={10} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics()} healthyServices={10} totalServices={10} />
       );
 
       expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('Tutti i sistemi operativi');
 
       rerender(
-        <AlertsBanner criticalCount={5} healthyServices={8} totalServices={10} />
+        <AlertsBanner metrics={createMockMetrics({ activeAlerts: 5 })} healthyServices={8} totalServices={10} />
       );
 
       expect(screen.getByTestId('alerts-primary-message')).toHaveTextContent('5 alert critici attivi');

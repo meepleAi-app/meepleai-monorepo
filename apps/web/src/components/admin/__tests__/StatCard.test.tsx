@@ -17,7 +17,8 @@ describe('StatCard', () => {
 
   it('applies default variant styling', () => {
     const { container } = render(<StatCard label="Test" value="100" variant="default" />);
-    const card = container.querySelector('[class*="border-gray-200"]');
+    // Issue #2850: Component uses design system border tokens
+    const card = container.querySelector('[class*="border-border"]');
     expect(card).toBeInTheDocument();
   });
 
@@ -126,7 +127,8 @@ describe('StatCard', () => {
       const { container } = render(
         <StatCard label="Test" value="100" icon={Users} variant="default" />
       );
-      const iconContainer = container.querySelector('[class*="text-gray-600"]');
+      // Issue #2850: MeepleAI Design System uses #d2691e for default icon
+      const iconContainer = container.querySelector('[class*="text-[#d2691e]"]');
       expect(iconContainer).toBeInTheDocument();
     });
 
@@ -175,14 +177,14 @@ describe('StatCard', () => {
 
     it('renders icon skeleton when icon is provided and loading', () => {
       const { container } = render(<StatCard label="Test" value="100" icon={Users} loading />);
-      // Should have a larger skeleton for the icon
-      const iconSkeleton = container.querySelector('.h-10.w-10');
+      // Issue #2850: Icon skeleton is 48x48 (h-12 w-12)
+      const iconSkeleton = container.querySelector('.h-12.w-12');
       expect(iconSkeleton).toBeInTheDocument();
     });
 
     it('does not render icon skeleton when no icon and loading', () => {
       const { container } = render(<StatCard label="Test" value="100" loading />);
-      const iconSkeleton = container.querySelector('.h-10.w-10');
+      const iconSkeleton = container.querySelector('.h-12.w-12');
       expect(iconSkeleton).not.toBeInTheDocument();
     });
   });
@@ -190,7 +192,8 @@ describe('StatCard', () => {
   describe('Hover effect', () => {
     it('has hover transition classes', () => {
       const { container } = render(<StatCard label="Test" value="100" />);
-      const card = container.querySelector('[class*="hover:shadow-md"]');
+      // Issue #2850: MeepleAI Design System uses custom hover shadow
+      const card = container.querySelector('[class*="hover:-translate-y-"]');
       expect(card).toBeInTheDocument();
     });
 

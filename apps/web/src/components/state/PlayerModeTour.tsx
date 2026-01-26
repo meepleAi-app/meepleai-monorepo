@@ -22,7 +22,8 @@ type Step = any;
 type CallBackProps = any;
 const STATUS = { FINISHED: 'finished', SKIPPED: 'skipped' };
 const EVENTS = { TOUR_END: 'tour:end' };
-const Joyride = () => null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+const Joyride = (_props: any) => null;
 
 // ========== Tour Steps ==========
 

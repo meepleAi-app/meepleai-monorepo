@@ -13,6 +13,10 @@ export default defineConfig({
     hookTimeout: process.env.CI ? 20000 : 10000, // CI: 20s, Local: 10s for stability
     coverage: {
       provider: 'v8',
+      reporter: ['text', 'json', 'json-summary', 'html', 'lcov', 'cobertura'],
+      reportsDirectory: './coverage',
+      all: true,
+      clean: true,
       include: ['src/**/*.{js,jsx,ts,tsx}'],
       exclude: [
         'src/**/*.d.ts',

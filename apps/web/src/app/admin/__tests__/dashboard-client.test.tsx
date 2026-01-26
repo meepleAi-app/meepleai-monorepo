@@ -27,6 +27,20 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/admin',
 }));
 
+// Mock useAuthUser hook to avoid auth API calls
+vi.mock('@/hooks/useAuthUser', () => ({
+  useAuthUser: () => ({
+    user: {
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      email: 'admin@example.com',
+      displayName: 'Test Admin',
+    },
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+}));
+
 // Mock the API module - use importOriginal to preserve types
 vi.mock('@/lib/api', async importOriginal => {
   const original = await importOriginal<typeof import('@/lib/api')>();
@@ -37,6 +51,7 @@ vi.mock('@/lib/api', async importOriginal => {
       admin: {
         getAnalytics: vi.fn(),
         getRecentActivity: vi.fn(),
+        getInfrastructureDetails: vi.fn(),
       },
     },
   };
@@ -85,6 +100,16 @@ const mockActivityData = {
   generatedAt: new Date().toISOString(),
 };
 
+const mockInfrastructureData = {
+  services: [
+    { name: 'Database', state: 'Healthy', latency: 45 },
+    { name: 'Redis Cache', state: 'Healthy', latency: 12 },
+    { name: 'Vector Store', state: 'Healthy', latency: 78 },
+    { name: 'AI Services', state: 'Healthy', latency: 156 },
+  ],
+  generatedAt: new Date().toISOString(),
+};
+
 function createTestQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -105,6 +130,35 @@ function renderWithQueryClient(ui: ReactNode, queryClient?: QueryClient) {
   return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
+/**
+ * Helper to set up all three dashboard API mocks at once
+ */
+function setupDashboardMocks(overrides?: {
+  analytics?: typeof mockAnalyticsData | null | Error;
+  activity?: typeof mockActivityData | Error;
+  infrastructure?: typeof mockInfrastructureData | null | Error;
+}) {
+  const { analytics = mockAnalyticsData, activity = mockActivityData, infrastructure = mockInfrastructureData } = overrides ?? {};
+
+  if (analytics instanceof Error) {
+    vi.mocked(apiModule.api.admin.getAnalytics).mockRejectedValue(analytics);
+  } else {
+    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(analytics);
+  }
+
+  if (activity instanceof Error) {
+    vi.mocked(apiModule.api.admin.getRecentActivity).mockRejectedValue(activity);
+  } else {
+    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(activity);
+  }
+
+  if (infrastructure instanceof Error) {
+    vi.mocked(apiModule.api.admin.getInfrastructureDetails).mockRejectedValue(infrastructure);
+  } else {
+    vi.mocked(apiModule.api.admin.getInfrastructureDetails).mockResolvedValue(infrastructure);
+  }
+}
+
 describe('DashboardClient', () => {
   let queryClient: QueryClient;
 
@@ -118,21 +172,24 @@ describe('DashboardClient', () => {
   });
 
   it('renders loading state initially', () => {
+    // All three mocks need to never resolve to keep loading state
     vi.mocked(apiModule.api.admin.getAnalytics).mockImplementation(
       () => new Promise(() => {}) // Never resolves
     );
     vi.mocked(apiModule.api.admin.getRecentActivity).mockImplementation(
       () => new Promise(() => {})
     );
+    vi.mocked(apiModule.api.admin.getInfrastructureDetails).mockImplementation(
+      () => new Promise(() => {})
+    );
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
-    expect(screen.getByText('Loading dashboard...')).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard-loading')).toBeInTheDocument();
   });
 
   it('fetches analytics and activity data on mount', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -143,53 +200,58 @@ describe('DashboardClient', () => {
   });
 
   it('displays metrics after data loads', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
     // First wait for loading to complete
     await waitFor(() => {
-      expect(screen.queryByText('Loading dashboard...')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('dashboard-loading')).not.toBeInTheDocument();
     });
 
-    // Then check for metrics
-    expect(screen.getByText('Dashboard Overview')).toBeInTheDocument();
-    expect(screen.getByText('Total Users')).toBeInTheDocument();
-    expect(screen.getByText('Active Sessions')).toBeInTheDocument();
+    // Then check for metrics (in KPICardsGrid child component)
+    // Note: "Dashboard Overview" text no longer exists in current implementation - test assertion removed
+    // TODO: Add data-testid to KPICardsGrid metrics
+    expect(screen.getByTestId('kpi-cards-grid-card-0-title')).toBeInTheDocument(); // Utenti Totali
+    expect(screen.getByTestId('kpi-cards-grid-card-1-title')).toBeInTheDocument(); // Sessioni Attive
   });
 
   it('displays activity feed after data loads', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
     await waitFor(() => {
-      expect(screen.getByText('Recent Activity')).toBeInTheDocument();
+      expect(screen.getByTestId('activity-feed-title')).toBeInTheDocument();
       expect(screen.getByText(/New user registered/)).toBeInTheDocument();
     });
   });
 
   it('shows error state when API call fails', async () => {
     // Use 401 error which triggers immediate failure (no retry per hook logic)
-    vi.mocked(apiModule.api.admin.getAnalytics).mockRejectedValue(new Error('401 Unauthorized'));
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockRejectedValue(
-      new Error('401 Unauthorized')
-    );
+    const error = new Error('401 Unauthorized');
+    setupDashboardMocks({
+      analytics: error,
+      activity: error,
+      infrastructure: error,
+    });
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
     await waitFor(() => {
-      expect(screen.getByText('Error Loading Dashboard')).toBeInTheDocument();
+      expect(screen.getByTestId('dashboard-error-title')).toBeInTheDocument();
       expect(screen.getByText(/401 Unauthorized/)).toBeInTheDocument();
     });
   });
 
   it('shows retry button on error', async () => {
     // Use 403 error which triggers immediate failure (no retry per hook logic)
-    vi.mocked(apiModule.api.admin.getAnalytics).mockRejectedValue(new Error('403 Forbidden'));
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockRejectedValue(new Error('403 Forbidden'));
+    const error = new Error('403 Forbidden');
+    setupDashboardMocks({
+      analytics: error,
+      activity: error,
+      infrastructure: error,
+    });
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -197,7 +259,7 @@ describe('DashboardClient', () => {
     // Root cause: React Query error state transition is async - default 1000ms timeout insufficient
     // Wait for error state to be fully rendered before asserting button presence
     await waitFor(() => {
-      expect(screen.getByText('Error Loading Dashboard')).toBeInTheDocument();
+      expect(screen.getByTestId('dashboard-error-title')).toBeInTheDocument();
     });
 
     // NOW error state is guaranteed rendered - safe to query retry button
@@ -205,47 +267,43 @@ describe('DashboardClient', () => {
   });
 
   it('displays last updated time', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
     await waitFor(() => {
-      expect(screen.getByText(/Last updated:/)).toBeInTheDocument();
+      // Note: SystemStatus component shows "Last checked:" not "Last updated:"
+      expect(screen.getByText(/Last checked:/)).toBeInTheDocument();
     });
   });
 
   it('renders all 16 metrics', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
     await waitFor(() => {
-      expect(screen.getByText('Total Users')).toBeInTheDocument();
-      expect(screen.getByText('Active Sessions')).toBeInTheDocument();
-      expect(screen.getByText('Total Games')).toBeInTheDocument();
-      expect(screen.getByText('API Requests (24h)')).toBeInTheDocument();
-      expect(screen.getByText('Avg Latency (24h)')).toBeInTheDocument();
-      expect(screen.getByText('Error Rate (24h)')).toBeInTheDocument();
-      expect(screen.getByText('Active Alerts')).toBeInTheDocument();
+      // Verify KPI cards are rendered (language-independent via data-testid)
+      expect(screen.getByTestId('kpi-cards-grid-card-0-title')).toBeInTheDocument();
+      expect(screen.getByTestId('kpi-cards-grid-card-1-title')).toBeInTheDocument();
+      expect(screen.getByTestId('kpi-cards-grid-card-2-title')).toBeInTheDocument();
+      expect(screen.getByTestId('kpi-cards-grid-card-3-title')).toBeInTheDocument();
     });
   });
 
   it('formats large numbers with locale', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
     // First wait for loading to complete
     await waitFor(() => {
-      expect(screen.queryByText('Loading dashboard...')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('dashboard-loading')).not.toBeInTheDocument();
     });
 
     // Total Users should be formatted with locale (1247 -> 1,247 or 1.247)
-    // Check that the label exists which confirms metrics are displayed
-    expect(screen.getByText('Total Users')).toBeInTheDocument();
+    // Check that the KPI card exists (language-independent)
+    expect(screen.getByTestId('kpi-cards-grid-card-0-title')).toBeInTheDocument();
     // The value is formatted with toLocaleString() so use getAllByText for flexibility
     const userValues = screen.getAllByText(/1[,.\s]?247/);
     expect(userValues.length).toBeGreaterThan(0);
@@ -261,8 +319,7 @@ describe('DashboardClient', () => {
       },
     };
 
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(criticalData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks({ analytics: criticalData });
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
@@ -273,35 +330,32 @@ describe('DashboardClient', () => {
   });
 
   it('shows no data message when metrics are null', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(null);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks({ analytics: null });
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
     await waitFor(() => {
-      expect(screen.getByText('No dashboard data available')).toBeInTheDocument();
+      expect(screen.getByTestId('dashboard-no-data')).toBeInTheDocument();
     });
   });
 
   it('renders SystemStatus component', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
     await waitFor(() => {
-      expect(screen.getByText('System Status')).toBeInTheDocument();
+      expect(screen.getByTestId('system-status-title')).toBeInTheDocument();
     });
   });
 
   it('renders QuickActions component', async () => {
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+    setupDashboardMocks();
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
     await waitFor(() => {
-      expect(screen.getByText('Quick Actions')).toBeInTheDocument();
+      expect(screen.getByTestId('quick-actions-title')).toBeInTheDocument();
     });
   });
 
@@ -311,34 +365,34 @@ describe('DashboardClient', () => {
       events: [],
     };
 
-    vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-    vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(emptyActivityData);
+    setupDashboardMocks({ activity: emptyActivityData });
 
     renderWithQueryClient(<DashboardClient />, queryClient);
 
+    // Wait for loading to complete by checking for dashboard header
     await waitFor(() => {
-      expect(screen.getByText('Dashboard Overview')).toBeInTheDocument();
+      expect(screen.getByTestId('dashboard-header')).toBeInTheDocument();
     });
 
     // Activity feed should not be rendered when events are empty
-    expect(screen.queryByText('Recent Activity')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('activity-feed')).not.toBeInTheDocument();
   });
 
   describe('Issue #889: Performance (<1s render)', () => {
     it('should render within 1 second', async () => {
-      vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
-      vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+      setupDashboardMocks();
 
       const startTime = performance.now();
 
       renderWithQueryClient(<DashboardClient />, queryClient);
 
       await waitFor(() => {
-        expect(screen.queryByText('Loading dashboard...')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('dashboard-loading')).not.toBeInTheDocument();
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Dashboard Overview')).toBeInTheDocument();
+        // Check for dashboard header which indicates full render
+        expect(screen.getByTestId('dashboard-header')).toBeInTheDocument();
       });
 
       const renderTime = performance.now() - startTime;

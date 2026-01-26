@@ -43,7 +43,7 @@ export function MessageList({ onCitationClick }: MessageListProps) {
     return (
       <div role="region" aria-label="Chat messages" className="flex-1 overflow-y-auto p-6 bg-background">
         <div role="status" aria-live="polite" className="text-center">
-          <div className="mb-3 text-sm text-[#64748b]">Caricamento messaggi...</div>
+          <div className="mb-3 text-sm text-[#64748b]" data-testid="messages-loading">Caricamento messaggi...</div>
           <SkeletonLoader variant="message" count={3} ariaLabel="Caricamento messaggi" />
         </div>
       </div>
@@ -54,9 +54,9 @@ export function MessageList({ onCitationClick }: MessageListProps) {
   if (messages.length === 0) {
     return (
       <div role="region" aria-label="Chat messages" className="flex-1 overflow-y-auto p-6 bg-background">
-        <div className="text-center p-12 text-[#64748b]">
-          <p className="text-base mb-2">Nessun messaggio ancora.</p>
-          <p className="text-sm">
+        <div className="text-center p-12 text-[#64748b]" data-testid="messages-empty">
+          <p className="text-base mb-2" data-testid="messages-empty-title">Nessun messaggio ancora.</p>
+          <p className="text-sm" data-testid="messages-empty-subtitle">
             {activeChatId
               ? 'Inizia facendo una domanda!'
               : 'Seleziona una chat esistente o creane una nuova per iniziare.'}

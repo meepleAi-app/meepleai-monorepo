@@ -3,6 +3,13 @@
 // Force NODE_ENV to 'test' to ensure React development build is used in CI
 process.env.NODE_ENV = 'test';
 
+// Issue #3031: Set NEXT_PUBLIC_API_BASE for MSW handlers to work correctly
+// Components that use process.env.NEXT_PUBLIC_API_BASE directly need this set
+// to match the URL patterns used in MSW handlers
+if (!process.env.NEXT_PUBLIC_API_BASE) {
+  process.env.NEXT_PUBLIC_API_BASE = 'http://localhost:8080';
+}
+
 import '@testing-library/jest-dom/vitest';
 import { toHaveNoViolations } from 'jest-axe';
 
@@ -58,6 +65,24 @@ vi.mock('prismjs', () => ({
 // Mock prismjs/components/prism-json
 vi.mock('prismjs/components/prism-json', () => ({}));
 
+// Mock react-pdf to avoid DOMMatrix errors in jsdom (Issue #3031)
+// react-pdf uses pdfjs-dist which requires browser-only APIs
+vi.mock('react-pdf', () => {
+  const React = require('react');
+  return {
+    Document: React.forwardRef(({ children }: any, ref: any) =>
+      React.createElement('div', { ref, 'data-testid': 'pdf-document' }, children)
+    ),
+    Page: React.forwardRef(({ pageNumber }: any, ref: any) =>
+      React.createElement('div', { ref, 'data-testid': 'pdf-page', 'data-page': pageNumber })
+    ),
+    pdfjs: {
+      GlobalWorkerOptions: { workerSrc: '' },
+      version: '4.0.0',
+    },
+  };
+});
+
 // Mock framer-motion to avoid animation issues in tests
 vi.mock('framer-motion', () => {
   const React = require('react');
@@ -78,6 +103,10 @@ vi.mock('framer-motion', () => {
         drag: _drag,
         dragConstraints: _dragConstraints,
         onAnimationComplete: _onAnimationComplete,
+        layout: _layout,
+        layoutId: _layoutId,
+        variants: _variants,
+        custom: _custom,
         style,
         ...rest
       } = props;
@@ -102,6 +131,8 @@ vi.mock('framer-motion', () => {
       h3: makeMockComponent('h3'),
       section: makeMockComponent('section'),
       article: makeMockComponent('article'),
+      li: makeMockComponent('li'),
+      ul: makeMockComponent('ul'),
     },
     // AnimatePresence mock that renders all children immediately
     // This is necessary because jsdom doesn't support requestAnimationFrame

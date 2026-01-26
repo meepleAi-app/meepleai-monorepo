@@ -48,7 +48,8 @@ describe('KPICard', () => {
       render(<KPICard {...baseProps} data-testid="kpi-card" />);
 
       const card = screen.getByTestId('kpi-card');
-      expect(card).toHaveClass('rounded-xl', 'border', 'shadow-sm');
+      // Component uses rounded-xl and border with custom border-border/50
+      expect(card).toHaveClass('rounded-xl', 'border');
     });
   });
 
@@ -204,7 +205,8 @@ describe('KPICard', () => {
       render(<KPICard {...baseProps} data-testid="kpi-card" />);
 
       const card = screen.getByTestId('kpi-card');
-      expect(card).toHaveClass('transition-all', 'hover:border-orange-200', 'hover:shadow-md');
+      // Component uses custom hover classes: hover-card and hover-shadow-meeple
+      expect(card).toHaveClass('hover-card', 'hover-shadow-meeple');
     });
   });
 });

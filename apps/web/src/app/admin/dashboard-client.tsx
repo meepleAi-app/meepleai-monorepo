@@ -289,7 +289,7 @@ export function DashboardClient() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-gray-500">Loading dashboard...</div>
+          <div className="text-lg text-gray-500" data-testid="dashboard-loading">Loading dashboard...</div>
         </div>
       </AdminLayout>
     );
@@ -298,8 +298,8 @@ export function DashboardClient() {
   if (isError && error) {
     return (
       <AdminLayout>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-red-800 mb-2">Error Loading Dashboard</h2>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6" data-testid="dashboard-error">
+          <h2 className="text-lg font-semibold text-red-800 mb-2" data-testid="dashboard-error-title">Error Loading Dashboard</h2>
           <p className="text-red-600">{error.message}</p>
           {retryLimitReached && (
             <p className="text-sm text-red-500 mt-2">
@@ -320,7 +320,7 @@ export function DashboardClient() {
   if (!metrics) {
     return (
       <AdminLayout>
-        <div className="text-center text-gray-500 py-12">No dashboard data available</div>
+        <div className="text-center text-gray-500 py-12" data-testid="dashboard-no-data">No dashboard data available</div>
       </AdminLayout>
     );
   }
@@ -339,7 +339,7 @@ export function DashboardClient() {
         />
 
         {/* KPI Cards Grid with real trends - Issue #2785 + #2792 */}
-        <KPICardsGrid cards={kpiCards} />
+        <KPICardsGrid cards={kpiCards} data-testid="kpi-cards-grid" />
 
         {/* System Status + Quick Actions Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

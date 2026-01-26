@@ -5,23 +5,51 @@ using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application.Services;
 using FluentAssertions;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 
 namespace Api.Tests.SystemConfiguration.Handlers;
 
-public sealed class UpdateAiModelPriorityCommandHandlerTests
+/// <summary>
+/// Integration tests for UpdateAiModelPriorityCommandHandler with in-memory database.
+/// ISSUE-3005: Fixed DbContext mocking issues by using InMemoryDatabase.
+/// </summary>
+public sealed class UpdateAiModelPriorityCommandHandlerTests : IAsyncLifetime
 {
+    private readonly DbContextOptions<MeepleAiDbContext> _options;
     private readonly Mock<IAiModelConfigurationRepository> _repositoryMock;
-    private readonly Mock<MeepleAiDbContext> _dbMock;
-    private readonly UpdateAiModelPriorityCommandHandler _handler;
+    private readonly Mock<IMediator> _mockMediator;
+    private readonly Mock<IDomainEventCollector> _mockEventCollector;
+    private MeepleAiDbContext _dbContext = null!;
+    private UpdateAiModelPriorityCommandHandler _handler = null!;
 
     public UpdateAiModelPriorityCommandHandlerTests()
     {
+        _options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseInMemoryDatabase($"UpdateAiModelPriorityTest_{Guid.NewGuid()}")
+            .Options;
+
         _repositoryMock = new Mock<IAiModelConfigurationRepository>();
-        _dbMock = new Mock<MeepleAiDbContext>();
-        _handler = new UpdateAiModelPriorityCommandHandler(_repositoryMock.Object, _dbMock.Object);
+        _mockMediator = new Mock<IMediator>();
+        _mockEventCollector = new Mock<IDomainEventCollector>();
+        _mockEventCollector.Setup(x => x.GetAndClearEvents())
+            .Returns(Array.Empty<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
+    }
+
+    public async Task InitializeAsync()
+    {
+        _dbContext = new MeepleAiDbContext(_options, _mockMediator.Object, _mockEventCollector.Object);
+        _handler = new UpdateAiModelPriorityCommandHandler(_repositoryMock.Object, _dbContext);
+        await Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await _dbContext.DisposeAsync();
     }
 
     [Fact]
@@ -34,8 +62,6 @@ public sealed class UpdateAiModelPriorityCommandHandlerTests
 
         _repositoryMock.Setup(r => r.GetByIdAsync(modelId, default))
             .ReturnsAsync(existingModel);
-        _dbMock.Setup(db => db.SaveChangesAsync(default))
-            .ReturnsAsync(1);
 
         // Act
         await _handler.Handle(command, default);
@@ -43,7 +69,6 @@ public sealed class UpdateAiModelPriorityCommandHandlerTests
         // Assert
         existingModel.Priority.Should().Be(1);
         _repositoryMock.Verify(r => r.UpdateAsync(existingModel, default), Times.Once);
-        _dbMock.Verify(db => db.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]

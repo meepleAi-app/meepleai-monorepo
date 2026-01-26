@@ -32,7 +32,7 @@ export function AgentSelector() {
   if (loading.agents) {
     return (
       <div className="mb-3">
-        <label className="block mb-1.5 font-medium text-sm">Seleziona Agente:</label>
+        <label className="block mb-1.5 font-medium text-sm" data-testid="agent-selector-label">Seleziona Agente:</label>
         <SkeletonLoader variant="gameSelection" />
       </div>
     );

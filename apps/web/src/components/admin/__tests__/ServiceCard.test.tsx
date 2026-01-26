@@ -22,7 +22,7 @@ describe('ServiceCard', () => {
   it('renders status badge', () => {
     render(<ServiceCard serviceName="redis" status="Healthy" locale="it" />);
 
-    expect(screen.getByText('Sano')).toBeInTheDocument();
+    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Sano');
   });
 
   it('displays response time when provided', () => {
@@ -223,37 +223,37 @@ describe('ServiceCard', () => {
   it('displays Italian status for Healthy state', () => {
     render(<ServiceCard serviceName="postgres" status="Healthy" locale="it" />);
 
-    expect(screen.getByText('Sano')).toBeInTheDocument();
+    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Sano');
   });
 
   it('displays English status for Healthy state', () => {
     render(<ServiceCard serviceName="postgres" status="Healthy" locale="en" />);
 
-    expect(screen.getByText('Healthy')).toBeInTheDocument();
+    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Healthy');
   });
 
   it('displays Italian status for Degraded state', () => {
     render(<ServiceCard serviceName="redis" status="Degraded" locale="it" />);
 
-    expect(screen.getByText('Degradato')).toBeInTheDocument();
+    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Degradato');
   });
 
   it('displays English status for Degraded state', () => {
     render(<ServiceCard serviceName="redis" status="Degraded" locale="en" />);
 
-    expect(screen.getByText('Degraded')).toBeInTheDocument();
+    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Degraded');
   });
 
   it('displays Italian status for Unhealthy state', () => {
     render(<ServiceCard serviceName="qdrant" status="Unhealthy" locale="it" />);
 
-    expect(screen.getByText('Non funzionante')).toBeInTheDocument();
+    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Non funzionante');
   });
 
   it('displays English status for Unhealthy state', () => {
     render(<ServiceCard serviceName="qdrant" status="Unhealthy" locale="en" />);
 
-    expect(screen.getByText('Unhealthy')).toBeInTheDocument();
+    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Unhealthy');
   });
 
   it('formats English timestamp as "Now"', () => {

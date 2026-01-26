@@ -153,8 +153,9 @@ describe('MyActiveReviewsButton', () => {
     const button = screen.getByRole('button', { name: /My Reviews/i });
     fireEvent.click(button);
 
-    // Loading spinner should be visible (lucide-loader-2)
-    const { container } = screen.getByText('Active Reviews').closest('div')!.parentElement!;
-    expect(container.querySelector('svg.lucide-loader-2')).toBeInTheDocument();
+    // Sheet renders in portal, query document body for loader
+    // Loader2 icon has animate-spin class
+    const spinner = document.body.querySelector('.animate-spin');
+    expect(spinner).toBeInTheDocument();
   });
 });

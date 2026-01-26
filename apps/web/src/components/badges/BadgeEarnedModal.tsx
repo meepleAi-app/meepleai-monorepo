@@ -30,20 +30,6 @@ export interface BadgeEarnedModalProps {
 }
 
 /**
- * Helper: Get tier glow color
- */
-function getTierGlow(tier: string): string {
-  const glows: Record<string, string> = {
-    Diamond: 'rgba(6, 182, 212, 0.8)',
-    Platinum: 'rgba(203, 213, 225, 0.6)',
-    Gold: 'rgba(250, 204, 21, 0.7)',
-    Silver: 'rgba(209, 213, 219, 0.5)',
-    Bronze: 'rgba(217, 119, 6, 0.6)',
-  };
-  return glows[tier] || 'rgba(0, 0, 0, 0.3)';
-}
-
-/**
  * Badge Earned Modal with confetti celebration
  *
  * @example

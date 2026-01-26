@@ -42,11 +42,12 @@ describe('ShareRequestFilters', () => {
       />
     );
 
-    const pendingCheckbox = screen.getByLabelText('Pending') as HTMLInputElement;
-    const approvedCheckbox = screen.getByLabelText('Approved') as HTMLInputElement;
+    // Radix UI Checkbox uses data-state="checked" instead of native .checked property
+    const pendingCheckbox = screen.getByRole('checkbox', { name: 'Pending' });
+    const approvedCheckbox = screen.getByRole('checkbox', { name: 'Approved' });
 
-    expect(pendingCheckbox.checked).toBe(true);
-    expect(approvedCheckbox.checked).toBe(true);
+    expect(pendingCheckbox).toHaveAttribute('data-state', 'checked');
+    expect(approvedCheckbox).toHaveAttribute('data-state', 'checked');
   });
 
   it('calls onStatusChange when checkbox is clicked', () => {

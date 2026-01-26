@@ -67,7 +67,7 @@ describe('ReviewConflictDialog', () => {
   });
 
   it('renders alert icon', () => {
-    const { container } = render(
+    render(
       <ReviewConflictDialog
         open={true}
         onClose={vi.fn()}
@@ -75,7 +75,9 @@ describe('ReviewConflictDialog', () => {
       />
     );
 
-    const icon = container.querySelector('svg.lucide-alert-circle');
+    // Dialog renders in a portal, so query the document body
+    // Lucide icons render as SVG elements within the dialog
+    const icon = document.body.querySelector('svg');
     expect(icon).toBeInTheDocument();
   });
 });

@@ -254,8 +254,8 @@ describe('SharedGameSearchFilters', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Trading')).toBeInTheDocument();
-        expect(screen.getByText('Dice Rolling')).toBeInTheDocument();
+        expect(screen.getByText('Worker Placement')).toBeInTheDocument();
+        expect(screen.getByText('Deck Building')).toBeInTheDocument();
       });
     });
   });
@@ -355,9 +355,11 @@ describe('SharedGameSearchFilters', () => {
         />
       );
 
-      // Expand filters
+      // Expand filters - use getAllByRole to find toggle button (first one, not "Cancella filtri")
+      const filterButtons = screen.getAllByRole('button', { name: /Filtri/i });
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
+        // First button is the toggle, second is "Cancella filtri"
+        fireEvent.click(filterButtons[0]);
       });
 
       await waitFor(() => {
@@ -501,10 +503,10 @@ describe('SharedGameSearchFilters', () => {
         />
       );
 
-      // Wait for API to load categories for badge name
+      // Wait for the category badge to appear (shows category name from mock data)
       await waitFor(() => {
-        // Should show badge (but name depends on API response)
-        expect(screen.getByRole('button', { name: /Filtri/i })).toBeInTheDocument();
+        // Should show badge with category name from mock useCategories hook
+        expect(screen.getByText('Strategy')).toBeInTheDocument();
       });
     });
 

@@ -108,8 +108,8 @@ export function LeaderboardTable({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-8">
-            <p className="text-muted-foreground text-sm">No contributors yet</p>
+          <div className="flex flex-col items-center justify-center py-8" data-testid="leaderboard-empty">
+            <p className="text-muted-foreground text-sm" data-testid="leaderboard-empty-message">No contributors yet</p>
           </div>
         )}
       </CardContent>

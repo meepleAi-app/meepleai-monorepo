@@ -302,8 +302,8 @@ describe('TimelineEventItem Component', () => {
         />
       );
 
-      expect(screen.getByText('Messaggio:')).toBeInTheDocument();
-      expect(screen.getByText('Dettagli Tecnici')).toBeInTheDocument();
+      expect(screen.getByTestId('message-label')).toBeInTheDocument();
+      expect(screen.getByTestId('technical-details-label')).toBeInTheDocument();
     });
 
     it('hides expanded details when isExpanded is false', () => {
@@ -317,7 +317,7 @@ describe('TimelineEventItem Component', () => {
         />
       );
 
-      expect(screen.queryByText('Dettagli Tecnici')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('technical-details-label')).not.toBeInTheDocument();
     });
   });
 
@@ -333,7 +333,7 @@ describe('TimelineEventItem Component', () => {
         />
       );
 
-      expect(screen.getByText('Messaggio:')).toBeInTheDocument();
+      expect(screen.getByTestId('message-label')).toBeInTheDocument();
       // "Test message" appears multiple times (header and expanded view), use getAllByText
       expect(screen.getAllByText('Test message').length).toBeGreaterThan(0);
     });
@@ -362,7 +362,7 @@ describe('TimelineEventItem Component', () => {
         />
       );
 
-      expect(screen.getByText('Citazioni (2):')).toBeInTheDocument();
+      expect(screen.getByTestId('citations-label')).toHaveTextContent('Citazioni (2):');
       expect(screen.getByText('Citation text 1')).toBeInTheDocument();
       expect(screen.getByText('Citation text 2')).toBeInTheDocument();
       expect(screen.getByText('doc1.pdf (Pagina 5)')).toBeInTheDocument();
@@ -410,16 +410,16 @@ describe('TimelineEventItem Component', () => {
         />
       );
 
-      expect(screen.getByText('Metriche:')).toBeInTheDocument();
-      expect(screen.getByText('Latenza')).toBeInTheDocument();
+      expect(screen.getByTestId('metrics-label')).toBeInTheDocument();
+      expect(screen.getByTestId('latency-label')).toBeInTheDocument();
       expect(screen.getByText('2.50s')).toBeInTheDocument();
-      expect(screen.getByText('Token Prompt')).toBeInTheDocument();
+      expect(screen.getByTestId('prompt-tokens-label')).toBeInTheDocument();
       expect(screen.getByText('100')).toBeInTheDocument();
-      expect(screen.getByText('Token Completamento')).toBeInTheDocument();
+      expect(screen.getByTestId('completion-tokens-label')).toBeInTheDocument();
       expect(screen.getByText('150')).toBeInTheDocument();
-      expect(screen.getByText('Totale Token')).toBeInTheDocument();
+      expect(screen.getByTestId('total-tokens-label')).toBeInTheDocument();
       expect(screen.getByText('250')).toBeInTheDocument();
-      expect(screen.getByText('Confidenza')).toBeInTheDocument();
+      expect(screen.getByTestId('confidence-label')).toBeInTheDocument();
       expect(screen.getByText('87.0%')).toBeInTheDocument();
     });
 

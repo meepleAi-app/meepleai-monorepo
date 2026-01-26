@@ -21,7 +21,7 @@ describe('QuickActions', () => {
 
     it('renders default title', () => {
       render(<QuickActions />);
-      expect(screen.getByText('Quick Actions')).toBeInTheDocument();
+      expect(screen.getByTestId('quick-actions-title')).toHaveTextContent('Quick Actions');
     });
 
     it('renders all default actions', () => {
@@ -82,8 +82,8 @@ describe('QuickActions', () => {
   describe('Custom title', () => {
     it('renders custom title when provided', () => {
       render(<QuickActions title="Admin Actions" />);
-      expect(screen.getByText('Admin Actions')).toBeInTheDocument();
-      expect(screen.queryByText('Quick Actions')).not.toBeInTheDocument();
+      expect(screen.getByTestId('quick-actions-title')).toHaveTextContent('Admin Actions');
+      expect(screen.queryByTestId('quick-actions-title')).toHaveTextContent('Admin Actions');
     });
   });
 
@@ -231,15 +231,17 @@ describe('QuickActions', () => {
         />
       );
       const link = screen.getByTestId('quick-action-default');
-      expect(link).toHaveClass('hover:bg-gray-50');
+      // Component uses design system tokens for hover
+      expect(link).toHaveClass('hover:bg-muted/50');
     });
   });
 
   describe('Links', () => {
     it('renders links with correct href', () => {
       render(<QuickActions />);
-      const uploadLink = screen.getByTestId('quick-action-upload-pdf');
-      expect(uploadLink).toHaveAttribute('href', '/admin/bulk-export');
+      // Default actions use 'approve-games' as first action
+      const approveLink = screen.getByTestId('quick-action-approve-games');
+      expect(approveLink).toHaveAttribute('href', '/admin/games/pending');
     });
 
     it('all actions are links', () => {

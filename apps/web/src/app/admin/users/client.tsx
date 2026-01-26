@@ -349,7 +349,7 @@ export function AdminPageClient() {
       <AdminAuthGuard loading={authLoading} user={user}>
         <div className="p-8">
           <h1>User Management</h1>
-          <p>Loading...</p>
+          <p data-testid="users-loading">Loading...</p>
         </div>
       </AdminAuthGuard>
     );
@@ -809,7 +809,7 @@ function UserModal({ mode, user, onClose, onCreate, onUpdate }: UserModalProps) 
       aria-labelledby="modal-title"
     >
       <div className="bg-white p-8 rounded-lg max-w-lg w-[90%]" onClick={e => e.stopPropagation()}>
-        <h2 id="modal-title" className="mt-0">
+        <h2 id="modal-title" className="mt-0" data-testid="user-modal-title">
           {mode === 'create' ? 'Create User' : 'Edit User'}
         </h2>
 

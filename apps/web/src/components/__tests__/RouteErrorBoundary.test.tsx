@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouteErrorBoundary } from '../errors/RouteErrorBoundary';
@@ -24,18 +25,12 @@ describe('RouteErrorBoundary', () => {
 
   beforeAll(() => {
     console.error = vi.fn();
-    // Mock fetch for logger (not available in jsdom)
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      } as Response)
-    );
+    // Note: MSW is already configured globally in vitest.setup.tsx
+    // No need to mock fetch here - it would conflict with MSW interceptors
   });
 
   afterAll(() => {
     console.error = originalError;
-    delete (global as any).fetch;
   });
 
   it('renders children when no error occurs', () => {
@@ -134,17 +129,12 @@ describe('RouteErrorBoundary - Enhanced Coverage', () => {
 
   beforeAll(() => {
     console.error = vi.fn();
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      } as Response)
-    );
+    // Note: MSW is already configured globally in vitest.setup.tsx
+    // No need to mock fetch here - it would conflict with MSW interceptors
   });
 
   afterAll(() => {
     console.error = originalError;
-    delete (global as any).fetch;
   });
 
   beforeEach(() => {

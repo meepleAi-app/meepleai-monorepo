@@ -3,6 +3,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.SharedKernel.Application.Services;
 using FluentAssertions;
@@ -181,14 +182,58 @@ public sealed class UserLibraryRepositoryIntegrationTests
             mockEventCollector.Object,
             NullLogger<UserLibraryRepository>.Instance);
 
+        // Seed SharedGame entities (FK requirement)
+        var game1Id = Guid.NewGuid();
+        var game2Id = Guid.NewGuid();
+        var game3Id = Guid.NewGuid();
+
+        await dbContext.SharedGames.AddRangeAsync(
+            new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+            {
+                Id = game1Id,
+                Title = "Test Game 1",
+                YearPublished = 2020,
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                PlayingTimeMinutes = 60,
+                MinAge = 10,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _userId
+            },
+            new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+            {
+                Id = game2Id,
+                Title = "Test Game 2",
+                YearPublished = 2021,
+                MinPlayers = 1,
+                MaxPlayers = 2,
+                PlayingTimeMinutes = 30,
+                MinAge = 8,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _userId
+            },
+            new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+            {
+                Id = game3Id,
+                Title = "Test Game 3",
+                YearPublished = 2022,
+                MinPlayers = 2,
+                MaxPlayers = 6,
+                PlayingTimeMinutes = 90,
+                MinAge = 12,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _userId
+            });
+        await dbContext.SaveChangesAsync();
+
         // Create entries in different states
-        var entry1 = new UserLibraryEntry(Guid.NewGuid(), _userId, Guid.NewGuid());
+        var entry1 = new UserLibraryEntry(Guid.NewGuid(), _userId, game1Id);
         entry1.MarkAsOwned();
 
-        var entry2 = new UserLibraryEntry(Guid.NewGuid(), _userId, Guid.NewGuid());
+        var entry2 = new UserLibraryEntry(Guid.NewGuid(), _userId, game2Id);
         entry2.AddToWishlist();
 
-        var entry3 = new UserLibraryEntry(Guid.NewGuid(), _userId, Guid.NewGuid());
+        var entry3 = new UserLibraryEntry(Guid.NewGuid(), _userId, game3Id);
         entry3.MarkAsOwned();
         entry3.MarkAsOnLoan("Borrowed");
 
@@ -228,14 +273,58 @@ public sealed class UserLibraryRepositoryIntegrationTests
             mockEventCollector.Object,
             NullLogger<UserLibraryRepository>.Instance);
 
+        // Seed SharedGame entities (FK requirement)
+        var game1Id = Guid.NewGuid();
+        var game2Id = Guid.NewGuid();
+        var game3Id = Guid.NewGuid();
+
+        await dbContext.SharedGames.AddRangeAsync(
+            new SharedGameEntity
+            {
+                Id = game1Id,
+                Title = "Test Game 1",
+                YearPublished = 2020,
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                PlayingTimeMinutes = 60,
+                MinAge = 10,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _userId
+            },
+            new SharedGameEntity
+            {
+                Id = game2Id,
+                Title = "Test Game 2",
+                YearPublished = 2021,
+                MinPlayers = 1,
+                MaxPlayers = 2,
+                PlayingTimeMinutes = 30,
+                MinAge = 8,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _userId
+            },
+            new SharedGameEntity
+            {
+                Id = game3Id,
+                Title = "Test Game 3",
+                YearPublished = 2022,
+                MinPlayers = 2,
+                MaxPlayers = 6,
+                PlayingTimeMinutes = 90,
+                MinAge = 12,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _userId
+            });
+        await dbContext.SaveChangesAsync();
+
         // Create entries
-        var entry1 = new UserLibraryEntry(Guid.NewGuid(), _userId, Guid.NewGuid());
+        var entry1 = new UserLibraryEntry(Guid.NewGuid(), _userId, game1Id);
         entry1.MarkAsOwned();
 
-        var entry2 = new UserLibraryEntry(Guid.NewGuid(), _userId, Guid.NewGuid());
+        var entry2 = new UserLibraryEntry(Guid.NewGuid(), _userId, game2Id);
         entry2.AddToWishlist();
 
-        var entry3 = new UserLibraryEntry(Guid.NewGuid(), _userId, Guid.NewGuid());
+        var entry3 = new UserLibraryEntry(Guid.NewGuid(), _userId, game3Id);
         entry3.MarkAsOwned();
 
         await repository.AddAsync(entry1);
@@ -275,14 +364,58 @@ public sealed class UserLibraryRepositoryIntegrationTests
             mockEventCollector.Object,
             NullLogger<UserLibraryRepository>.Instance);
 
+        // Seed SharedGame entities (FK requirement)
+        var game1Id = Guid.NewGuid();
+        var game2Id = Guid.NewGuid();
+        var game3Id = Guid.NewGuid();
+
+        await dbContext.SharedGames.AddRangeAsync(
+            new SharedGameEntity
+            {
+                Id = game1Id,
+                Title = "Test Game 1",
+                YearPublished = 2020,
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                PlayingTimeMinutes = 60,
+                MinAge = 10,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _userId
+            },
+            new SharedGameEntity
+            {
+                Id = game2Id,
+                Title = "Test Game 2",
+                YearPublished = 2021,
+                MinPlayers = 1,
+                MaxPlayers = 2,
+                PlayingTimeMinutes = 30,
+                MinAge = 8,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _userId
+            },
+            new SharedGameEntity
+            {
+                Id = game3Id,
+                Title = "Test Game 3",
+                YearPublished = 2022,
+                MinPlayers = 2,
+                MaxPlayers = 6,
+                PlayingTimeMinutes = 90,
+                MinAge = 12,
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _userId
+            });
+        await dbContext.SaveChangesAsync();
+
         // Create entries
-        var entry1 = new UserLibraryEntry(Guid.NewGuid(), _userId, Guid.NewGuid());
+        var entry1 = new UserLibraryEntry(Guid.NewGuid(), _userId, game1Id);
         entry1.MarkAsOwned();
 
-        var entry2 = new UserLibraryEntry(Guid.NewGuid(), _userId, Guid.NewGuid());
+        var entry2 = new UserLibraryEntry(Guid.NewGuid(), _userId, game2Id);
         entry2.AddToWishlist("Want this!");
 
-        var entry3 = new UserLibraryEntry(Guid.NewGuid(), _userId, Guid.NewGuid());
+        var entry3 = new UserLibraryEntry(Guid.NewGuid(), _userId, game3Id);
         entry3.AddToWishlist("And this!");
 
         await repository.AddAsync(entry1);

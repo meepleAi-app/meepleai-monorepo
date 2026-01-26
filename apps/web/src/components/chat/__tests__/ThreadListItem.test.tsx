@@ -85,9 +85,9 @@ describe('ThreadListItem', () => {
         />
       );
 
-      expect(screen.getByText('Archived')).toBeInTheDocument();
+      expect(screen.getByTestId('archived-badge')).toBeInTheDocument();
       // Badge has aria-label but it's a span, not findable by getByLabelText in this context
-      const badge = screen.getByText('Archived');
+      const badge = screen.getByTestId('archived-badge');
       expect(badge).toHaveAttribute('aria-label', 'Archived');
     });
 

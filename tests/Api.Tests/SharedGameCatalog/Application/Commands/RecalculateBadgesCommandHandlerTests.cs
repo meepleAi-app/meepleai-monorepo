@@ -47,7 +47,7 @@ public sealed class RecalculateBadgesCommandHandlerTests
         var badge1 = CreateBadge("FIRST_CONTRIBUTION", BadgeTier.Bronze);
         var badge2 = CreateBadge("CONTRIBUTOR_5", BadgeTier.Silver);
         var eligibleBadges = new List<Badge> { badge1, badge2 };
-        var currentBadges = new List<UserBadge> { CreateUserBadge(_userId, _badgeId1, "FIRST_CONTRIBUTION") };
+        var currentBadges = new List<UserBadge> { CreateUserBadge(_userId, badge1.Id, "FIRST_CONTRIBUTION") };
 
         _badgeRepo.Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Badge> { badge1, badge2 });
@@ -75,12 +75,13 @@ public sealed class RecalculateBadgesCommandHandlerTests
     {
         // Arrange
         var badge1 = CreateBadge("FIRST_CONTRIBUTION", BadgeTier.Bronze);
+        var badge2 = CreateBadge("CONTRIBUTOR_5", BadgeTier.Silver);
         var eligibleBadges = new List<Badge> { badge1 };
-        var invalidBadge = CreateUserBadge(_userId, _badgeId2, "CONTRIBUTOR_5");
-        var currentBadges = new List<UserBadge> { CreateUserBadge(_userId, _badgeId1, "FIRST_CONTRIBUTION"), invalidBadge };
+        var invalidBadge = CreateUserBadge(_userId, badge2.Id, "CONTRIBUTOR_5");
+        var currentBadges = new List<UserBadge> { CreateUserBadge(_userId, badge1.Id, "FIRST_CONTRIBUTION"), invalidBadge };
 
         _badgeRepo.Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<Badge> { badge1, CreateBadge("CONTRIBUTOR_5", BadgeTier.Silver) });
+            .ReturnsAsync(new List<Badge> { badge1, badge2 });
         _badgeEvaluator.Setup(e => e.EvaluateEligibleBadgesAsync(_userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(eligibleBadges);
         _userBadgeRepo.Setup(r => r.GetByUserIdAsync(_userId, true, It.IsAny<CancellationToken>()))
@@ -91,18 +92,20 @@ public sealed class RecalculateBadgesCommandHandlerTests
         // Act
         var result = await _sut.Handle(command, CancellationToken.None);
 
-        // Assert
+        // Assert - CONTRIBUTOR_5 is permanent (ContributionCount type), protected from revocation
         result.UsersProcessed.Should().Be(1);
         result.BadgesAwarded.Should().Be(0);
-        result.BadgesRevoked.Should().Be(1); // CONTRIBUTOR_5 revoked
+        result.BadgesRevoked.Should().Be(0); // Permanent badges not revoked
     }
 
     [Fact]
     public async Task Handle_WithAllUsers_ProcessesZeroUsers()
     {
-        // Arrange - GetAllDistinctUserIdsAsync returns empty list (stub implementation)
+        // Arrange - GetAllDistinctUserIdsAsync returns empty list
         _badgeRepo.Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Badge>());
+        _userBadgeRepo.Setup(r => r.GetAllDistinctUserIdsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Guid>()); // Mock empty user list
 
         var command = new RecalculateBadgesCommand { UserId = null };
 

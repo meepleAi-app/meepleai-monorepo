@@ -79,7 +79,7 @@ describe('GameSelector - Issue #2308 Phase 2', () => {
     expect(screen.getByTestId('skeleton-loader')).toBeInTheDocument();
     expect(screen.getByTestId('skeleton-loader')).toHaveTextContent('gameSelection');
 
-    // Assert - Label still visible
+    // Assert - Label still visible (using text content since no test id)
     expect(screen.getByText('Cambia Gioco:')).toBeInTheDocument();
 
     // Assert - Select not rendered during loading

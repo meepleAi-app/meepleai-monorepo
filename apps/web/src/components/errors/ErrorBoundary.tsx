@@ -127,7 +127,7 @@ function DefaultErrorFallback({
             </svg>
           </div>
 
-          <h2 className="mt-4 text-center text-2xl font-bold text-gray-900">
+          <h2 className="mt-4 text-center text-2xl font-bold text-gray-900" data-testid="error-title">
             Something went wrong
           </h2>
 
@@ -142,6 +142,7 @@ function DefaultErrorFallback({
                 onClick={() => setDetailsExpanded(!detailsExpanded)}
                 className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 aria-expanded={detailsExpanded}
+                data-testid="error-details-toggle"
               >
                 <span>Error Details</span>
                 <svg

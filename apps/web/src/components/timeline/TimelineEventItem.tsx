@@ -94,7 +94,7 @@ export function TimelineEventItem({
           {/* Message Content */}
           {event.data.message && event.type === 'message' && (
             <div className="mb-3">
-              <div className="font-semibold mb-1.5 text-slate-500">Messaggio:</div>
+              <div className="font-semibold mb-1.5 text-slate-500" data-testid="message-label">Messaggio:</div>
               <div className="p-2.5 bg-white border border-gray-300 rounded whitespace-pre-wrap">
                 {event.data.message}
               </div>
@@ -104,7 +104,7 @@ export function TimelineEventItem({
           {/* Citations */}
           {event.data.citations && event.data.citations.length > 0 && (
             <div className="mb-3">
-              <div className="font-semibold mb-1.5 text-slate-500">
+              <div className="font-semibold mb-1.5 text-slate-500" data-testid="citations-label">
                 Citazioni ({event.data.citations.length}):
               </div>
               {event.data.citations.map((citation: Snippet, idx: number) => (
@@ -124,11 +124,11 @@ export function TimelineEventItem({
           {/* Metrics */}
           {event.data.metrics && (
             <div className="mb-3">
-              <div className="font-semibold mb-1.5 text-slate-500">Metriche:</div>
+              <div className="font-semibold mb-1.5 text-slate-500" data-testid="metrics-label">Metriche:</div>
               <div className="grid grid-cols-2 gap-2">
                 {event.data.metrics.latencyMs !== undefined && (
                   <div className="p-2 bg-white border border-gray-300 rounded">
-                    <div className="text-[10px] text-slate-500 mb-0.5">Latenza</div>
+                    <div className="text-[10px] text-slate-500 mb-0.5" data-testid="latency-label">Latenza</div>
                     <div className="font-semibold text-blue-600">
                       {formatDuration(event.data.metrics.latencyMs)}
                     </div>
@@ -136,7 +136,7 @@ export function TimelineEventItem({
                 )}
                 {event.data.metrics.promptTokens !== undefined && (
                   <div className="p-2 bg-white border border-gray-300 rounded">
-                    <div className="text-[10px] text-slate-500 mb-0.5">Token Prompt</div>
+                    <div className="text-[10px] text-slate-500 mb-0.5" data-testid="prompt-tokens-label">Token Prompt</div>
                     <div className="font-semibold text-blue-600">
                       {event.data.metrics.promptTokens}
                     </div>
@@ -144,7 +144,7 @@ export function TimelineEventItem({
                 )}
                 {event.data.metrics.completionTokens !== undefined && (
                   <div className="p-2 bg-white border border-gray-300 rounded">
-                    <div className="text-[10px] text-slate-500 mb-0.5">Token Completamento</div>
+                    <div className="text-[10px] text-slate-500 mb-0.5" data-testid="completion-tokens-label">Token Completamento</div>
                     <div className="font-semibold text-blue-600">
                       {event.data.metrics.completionTokens}
                     </div>
@@ -152,7 +152,7 @@ export function TimelineEventItem({
                 )}
                 {event.data.metrics.totalTokens !== undefined && (
                   <div className="p-2 bg-white border border-gray-300 rounded">
-                    <div className="text-[10px] text-slate-500 mb-0.5">Totale Token</div>
+                    <div className="text-[10px] text-slate-500 mb-0.5" data-testid="total-tokens-label">Totale Token</div>
                     <div className="font-semibold text-blue-600">
                       {event.data.metrics.totalTokens}
                     </div>
@@ -160,7 +160,7 @@ export function TimelineEventItem({
                 )}
                 {event.data.metrics.confidence !== undefined && (
                   <div className="p-2 bg-white border border-gray-300 rounded">
-                    <div className="text-[10px] text-slate-500 mb-0.5">Confidenza</div>
+                    <div className="text-[10px] text-slate-500 mb-0.5" data-testid="confidence-label">Confidenza</div>
                     <div className="font-semibold text-green-700">
                       {(event.data.metrics.confidence * 100).toFixed(1)}%
                     </div>
@@ -182,7 +182,7 @@ export function TimelineEventItem({
 
           {/* Technical Details */}
           <details className="mt-2">
-            <summary className="cursor-pointer text-slate-500 text-[11px] font-medium py-1">
+            <summary className="cursor-pointer text-slate-500 text-[11px] font-medium py-1" data-testid="technical-details-label">
               Dettagli Tecnici
             </summary>
             <div className="mt-2 p-2 bg-gray-100 rounded font-mono text-[11px]">

@@ -1,0 +1,181 @@
+# Codecov Configuration
+# https://docs.codecov.com/docs/codecov-yaml
+#
+# Part of: Issue #3024 - Codecov Integration & CI Gates
+# Epic: Issue #3005 - Test Coverage & Quality Improvement
+
+codecov:
+  # Require CI to pass before report is accepted
+  require_ci_to_pass: yes
+  # Max wait time for report to be uploaded
+  max_report_age: 24h
+  # Notify on status changes
+  notify:
+    after_n_builds: 2  # Wait for both frontend and backend
+
+coverage:
+  # Precision of coverage percentages
+  precision: 2
+  round: down
+  range: "50...100"
+
+  status:
+    # Overall project coverage
+    project:
+      default:
+        # Target coverage thresholds (Phase 2 targets)
+        target: auto
+        # Allow coverage to drop by max 1%
+        threshold: 1%
+        # Only report if coverage data exists
+        if_ci_failed: error
+        # Only consider files with changes
+        only_pulls: true
+
+      # Backend-specific target (currently 4.30%, target 50% Phase 2, 90% Phase 3)
+      backend:
+        paths:
+          - "apps/api/**"
+        target: 50%
+        threshold: 2%
+        # Informational only until we reach target
+        informational: true
+
+      # Frontend-specific target (currently 39%, target 50% Phase 2, 85% Phase 3)
+      frontend:
+        paths:
+          - "apps/web/src/**"
+        target: 50%
+        threshold: 2%
+        # Informational only until we reach target
+        informational: true
+
+    # Per-patch coverage (new/modified lines)
+    patch:
+      default:
+        # New code should have good coverage
+        target: 80%
+        threshold: 5%
+        # Don't block PRs on patch coverage yet
+        informational: true
+
+  # Ignore paths that shouldn't be counted
+  ignore:
+    # Node modules and build artifacts
+    - "**/.next/**"
+    - "**/node_modules/**"
+    - "**/dist/**"
+    - "**/coverage/**"
+    - "**/bin/**"
+    - "**/obj/**"
+
+    # Test files (we don't test tests)
+    - "**/__tests__/**"
+    - "**/*.test.ts"
+    - "**/*.test.tsx"
+    - "**/*.spec.ts"
+    - "**/*.spec.tsx"
+    - "**/tests/**"
+    - "**/*.Tests/**"
+
+    # Configuration files
+    - "**/vitest.config.*"
+    - "**/vitest.setup.*"
+    - "**/jest.config.*"
+    - "**/playwright.config.*"
+    - "**/*.config.ts"
+    - "**/*.config.js"
+
+    # Generated code
+    - "**/generated/**"
+    - "**/*.generated.ts"
+    - "**/Migrations/**"
+
+    # Storybook (visual testing, not unit)
+    - "**/*.stories.tsx"
+    - "**/*.stories.ts"
+    - "**/.storybook/**"
+
+    # E2E tests (separate coverage)
+    - "**/e2e/**"
+    - "**/playwright/**"
+
+    # Infrastructure
+    - "infra/**"
+    - "scripts/**"
+    - "docs/**"
+
+# Flag management for different test types
+flags:
+  frontend:
+    paths:
+      - apps/web/src/
+    carryforward: true
+
+  backend:
+    paths:
+      - apps/api/
+    carryforward: true
+
+# Comment configuration for PRs
+comment:
+  # Post coverage comment on PRs
+  layout: "header, diff, flags, files"
+  # Only comment if coverage changes
+  behavior: default
+  # Show coverage for files with changes
+  require_changes: true
+  # Don't require base report
+  require_base: false
+  # Don't require head report
+  require_head: false
+  # Hide project coverage if no changes
+  hide_project_coverage: false
+
+# GitHub integration
+github_checks:
+  # Create GitHub check annotations
+  annotations: true
+
+# Parallel uploads
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+# Component management (optional, for detailed breakdown)
+component_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: auto
+      - type: patch
+        target: 80%
+  individual_components:
+    - component_id: frontend-components
+      name: Frontend Components
+      paths:
+        - apps/web/src/components/**
+    - component_id: frontend-hooks
+      name: Frontend Hooks
+      paths:
+        - apps/web/src/hooks/**
+    - component_id: frontend-stores
+      name: Frontend Stores
+      paths:
+        - apps/web/src/stores/**
+    - component_id: backend-domain
+      name: Backend Domain
+      paths:
+        - apps/api/**/Domain/**
+    - component_id: backend-application
+      name: Backend Application
+      paths:
+        - apps/api/**/Application/**
+    - component_id: backend-infrastructure
+      name: Backend Infrastructure
+      paths:
+        - apps/api/**/Infrastructure/**

@@ -9,6 +9,17 @@
   - Path-based filtering for optimal performance
   - Parallel job execution
 
+- **deploy-staging.yml** - Deploy to Staging environment
+  - Trigger: Push to `main-staging` branch
+  - Automatic deployment (no approval required)
+  - Builds Docker images → Deploys via SSH/K8s → Validates
+
+- **deploy-production.yml** - Deploy to Production environment
+  - Trigger: Push/tag to `main` branch
+  - **Requires manual approval** (environment: `production-approval`)
+  - Blue-green deployment strategy
+  - Creates GitHub Release on tag
+
 - **security.yml** - Security scanning
   - CodeQL SAST (C# + JavaScript)
   - Dependency vulnerability scanning

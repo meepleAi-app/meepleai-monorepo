@@ -242,7 +242,8 @@ describe('AdminBreadcrumbs', () => {
       render(<AdminBreadcrumbs />);
 
       const adminLink = screen.getByRole('link', { name: /admin/i });
-      expect(adminLink).toHaveClass('hover:text-gray-700');
+      // Component uses design system tokens
+      expect(adminLink).toHaveClass('hover:text-foreground');
     });
 
     it('applies font-medium to current page', () => {

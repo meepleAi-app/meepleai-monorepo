@@ -194,7 +194,8 @@ describe('GameDetailClient', () => {
       await user.click(faqTab);
 
       expect(screen.getByTestId('faq-tab')).toBeVisible();
-      expect(screen.queryByTestId('overview-tab')).not.toBeVisible();
+      // Overview tab is removed from DOM when not active (Radix Tabs behavior)
+      expect(screen.queryByTestId('overview-tab')).not.toBeInTheDocument();
     });
 
     it('should render all three tab triggers', () => {

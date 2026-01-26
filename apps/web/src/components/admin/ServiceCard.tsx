@@ -172,6 +172,7 @@ export function ServiceCard({
                   config.badgeText
                 )}
                 aria-label={`${i18n.labels.status}: ${stateLabel}`}
+                data-testid="service-status-badge"
               >
                 {stateLabel}
               </span>

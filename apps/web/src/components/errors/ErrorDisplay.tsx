@@ -246,8 +246,8 @@ export function ErrorDisplay({
       <div style={messageStyle}>{error.message}</div>
 
       {error.suggestions.length > 0 && (
-        <div style={suggestionsStyle}>
-          <h4 style={suggestionsTitleStyle}>What you can try:</h4>
+        <div style={suggestionsStyle} data-testid="error-suggestions">
+          <h4 style={suggestionsTitleStyle} data-testid="suggestions-title">What you can try:</h4>
           <ul style={suggestionListStyle}>
             {error.suggestions.map((suggestion, index) => (
               <li key={index}>{suggestion}</li>
@@ -257,9 +257,9 @@ export function ErrorDisplay({
       )}
 
       {error.correlationId && (
-        <div style={correlationIdStyle}>
+        <div style={correlationIdStyle} data-testid="correlation-id-section">
           <span>
-            <strong>Error ID:</strong> <span id="correlation-id-text">{error.correlationId}</span>
+            <strong data-testid="error-id-label">Error ID:</strong> <span id="correlation-id-text">{error.correlationId}</span>
           </span>
           <button
             onClick={copyCorrelationId}
@@ -271,6 +271,7 @@ export function ErrorDisplay({
               color: 'hsl(var(--foreground))',
             }}
             title="Copy to clipboard"
+            data-testid="copy-error-id-button"
           >
             Copy
           </button>
@@ -279,7 +280,7 @@ export function ErrorDisplay({
 
       <div style={buttonContainerStyle}>
         {onRetry && error.canRetry && (
-          <button onClick={handleRetry} style={retryButtonStyle} disabled={isRetrying}>
+          <button onClick={handleRetry} style={retryButtonStyle} disabled={isRetrying} data-testid="retry-button">
             {isRetrying
               ? 'Retrying...'
               : retryCount > 0
@@ -289,7 +290,7 @@ export function ErrorDisplay({
         )}
 
         {onDismiss && (
-          <button onClick={onDismiss} style={dismissButtonStyle}>
+          <button onClick={onDismiss} style={dismissButtonStyle} data-testid="dismiss-button">
             {error.canRetry ? 'Cancel' : 'Go Back'}
           </button>
         )}

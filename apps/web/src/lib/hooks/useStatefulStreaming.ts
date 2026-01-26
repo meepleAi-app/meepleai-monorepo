@@ -178,13 +178,13 @@ function transition(current: StreamingState, event: StreamingEvent): StreamingSt
     case 'streaming':
       if (event === 'RECEIVE') return 'streaming';
       if (event === 'PAUSE') return 'paused';
-      if (event === 'COMPLETE') return 'completing';
+      if (event === 'COMPLETE') return 'complete';
       if (event === 'ERROR') return 'error';
       break;
     case 'paused':
       if (event === 'RECEIVE') return 'paused';
       if (event === 'RESUME') return 'streaming';
-      if (event === 'COMPLETE') return 'completing';
+      if (event === 'COMPLETE') return 'complete';
       if (event === 'ERROR') return 'error';
       break;
     case 'completing':
@@ -437,9 +437,9 @@ export function useStatefulStreaming(
     try {
       cleanupRef.current = streamFn(handlers);
     } catch (error) {
-      dispatch('ERROR', {
-        error: error instanceof Error ? error.message : 'Stream initialization failed',
-      });
+      const errorMessage = error instanceof Error ? error.message : 'Stream initialization failed';
+      dispatch('ERROR', { error: errorMessage });
+      optionsRef.current.onError?.(errorMessage);
     }
   }, [dispatch]);
 

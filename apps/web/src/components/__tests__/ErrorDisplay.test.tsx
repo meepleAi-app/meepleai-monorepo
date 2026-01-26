@@ -77,7 +77,7 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} />);
 
-      expect(screen.getByText('What you can try:')).toBeInTheDocument();
+      expect(screen.getByTestId('suggestions-title')).toBeInTheDocument();
       expect(screen.getByText('Re-download the original file')).toBeInTheDocument();
       expect(screen.getByText('Convert to standard PDF format')).toBeInTheDocument();
       expect(screen.getByText('Remove password protection')).toBeInTheDocument();
@@ -93,7 +93,7 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} />);
 
-      expect(screen.queryByText('What you can try:')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('suggestions-title')).not.toBeInTheDocument();
     });
   });
 
@@ -109,7 +109,7 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} />);
 
-      expect(screen.getByText('Error ID:')).toBeInTheDocument();
+      expect(screen.getByTestId('error-id-label')).toBeInTheDocument();
       expect(screen.getByText('test-correlation-123')).toBeInTheDocument();
     });
 
@@ -123,7 +123,7 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} />);
 
-      expect(screen.queryByText('Error ID:')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('error-id-label')).not.toBeInTheDocument();
     });
 
     it('should copy correlation ID to clipboard when Copy button clicked', async () => {
@@ -137,7 +137,7 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} />);
 
-      const copyButton = screen.getByText('Copy');
+      const copyButton = screen.getByTestId('copy-error-id-button');
       fireEvent.click(copyButton);
 
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith('copy-test-123');
@@ -155,7 +155,7 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} onRetry={mockOnRetry} />);
 
-      expect(screen.getByText('Retry')).toBeInTheDocument();
+      expect(screen.getByTestId('retry-button')).toBeInTheDocument();
     });
 
     it('should not show retry button when error is not retryable', () => {
@@ -168,7 +168,7 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} onRetry={mockOnRetry} />);
 
-      expect(screen.queryByText('Retry')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('retry-button')).not.toBeInTheDocument();
     });
 
     it('should not show retry button when onRetry not provided', () => {
@@ -181,7 +181,7 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} />);
 
-      expect(screen.queryByText('Retry')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('retry-button')).not.toBeInTheDocument();
     });
 
     it('should call onRetry when retry button clicked', () => {
@@ -194,7 +194,7 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} onRetry={mockOnRetry} />);
 
-      const retryButton = screen.getByText('Retry');
+      const retryButton = screen.getByTestId('retry-button');
       fireEvent.click(retryButton);
 
       expect(mockOnRetry).toHaveBeenCalledTimes(1);
@@ -212,7 +212,7 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} onDismiss={mockOnDismiss} />);
 
-      expect(screen.getByText('Go Back')).toBeInTheDocument();
+      expect(screen.getByTestId('dismiss-button')).toHaveTextContent('Go Back');
     });
 
     it('should show Cancel text when error is retryable', () => {
@@ -225,7 +225,7 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} onDismiss={mockOnDismiss} />);
 
-      expect(screen.getByText('Cancel')).toBeInTheDocument();
+      expect(screen.getByTestId('dismiss-button')).toHaveTextContent('Cancel');
     });
 
     it('should call onDismiss when dismiss button clicked', () => {
@@ -238,7 +238,7 @@ describe('ErrorDisplay', () => {
 
       render(<ErrorDisplay error={error} onDismiss={mockOnDismiss} />);
 
-      const dismissButton = screen.getByText('Go Back');
+      const dismissButton = screen.getByTestId('dismiss-button');
       fireEvent.click(dismissButton);
 
       expect(mockOnDismiss).toHaveBeenCalledTimes(1);
@@ -361,7 +361,7 @@ describe('ErrorDisplay', () => {
       render(<ErrorDisplay error={error} onRetry={mockOnRetry} />);
 
       expect(screen.getByText('Connection Lost')).toBeInTheDocument();
-      expect(screen.getByText('Retry')).toBeInTheDocument();
+      expect(screen.getByTestId('retry-button')).toBeInTheDocument();
     });
 
     it('should render processing error correctly', () => {

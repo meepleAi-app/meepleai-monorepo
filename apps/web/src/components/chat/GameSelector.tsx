@@ -42,7 +42,7 @@ export function GameSelector() {
   return (
     <div className="mb-3">
       <label htmlFor="gameSelect" className="block mb-1.5 font-medium text-[13px]">
-        Cambia Gioco:
+        <span data-testid="game-selector-label">Cambia Gioco:</span>
       </label>
       <Select
         value={selectedGameId ?? ''}

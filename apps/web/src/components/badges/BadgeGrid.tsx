@@ -76,8 +76,8 @@ export function BadgeGrid({
 
   if (visibleBadges.length === 0) {
     return (
-      <div className={cn('flex flex-col items-center justify-center py-12', className)}>
-        <p className="text-muted-foreground text-sm">No badges to display</p>
+      <div className={cn('flex flex-col items-center justify-center py-12', className)} data-testid="badges-empty">
+        <p className="text-muted-foreground text-sm" data-testid="badges-empty-message">No badges to display</p>
       </div>
     );
   }

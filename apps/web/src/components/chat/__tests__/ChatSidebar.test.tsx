@@ -134,11 +134,11 @@ describe('ChatSidebar - Issue #2308', () => {
     render(<ChatSidebar />);
 
     // Assert - Limit indicator visible
-    expect(screen.getByText('5 / 5 thread attivi')).toBeInTheDocument();
-    expect(screen.getByText('(thread più vecchio sarà archiviato)')).toBeInTheDocument();
+    expect(screen.getByTestId('thread-count')).toHaveTextContent('5 / 5 thread attivi');
+    expect(screen.getByTestId('thread-limit-warning')).toHaveTextContent('(thread più vecchio sarà archiviato)');
 
     // Assert - Warning styling applied
-    const limitText = screen.getByText('5 / 5 thread attivi');
+    const limitText = screen.getByTestId('thread-count');
     expect(limitText).toHaveClass('text-[#d93025]', 'font-semibold');
   });
 
@@ -156,10 +156,10 @@ describe('ChatSidebar - Issue #2308', () => {
     render(<ChatSidebar />);
 
     // Assert - Normal count displayed (2 active out of 3 total)
-    expect(screen.getByText('2 / 5 thread attivi')).toBeInTheDocument();
+    expect(screen.getByTestId('thread-count')).toHaveTextContent('2 / 5 thread attivi');
 
     // Assert - No warning message
-    expect(screen.queryByText('(thread più vecchio sarà archiviato)')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('thread-limit-warning')).not.toBeInTheDocument();
   });
 
   // ============================================================================

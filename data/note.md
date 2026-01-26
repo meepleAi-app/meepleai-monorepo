@@ -1,4 +1,4 @@
-/implementa https://github.com/DegrassiAaron/meepleai-monorepo/issues/2965 wave 4
+/implementa https://github.com/DegrassiAaron/meepleai-monorepo/issues/2843
 aggiorna i checkpoint della issue
 
 Nice-To-Have
@@ -16,6 +16,11 @@ Nice-To-Have
 - Playwright E2E tests
 - Storybook stories
 
+Vengono create immagini duplicate in docker (per esempio redis, vers 7.4.1 e 7 alpine)
+Vengono creati volumi anonimi (es d1046eb8b4f9336fc12ec4dcb31574d30070104696f553818a4facdb5a031284), devono avere un nome riconoscibile
+A cosa servono e come si fanno le build docker?
+
+TODO(#2759): Re-enable confetti state after fixing react-confetti in pnpm-lock.yaml
 Wave 4-7 Parallel Execution (10-12 giorni)
 
 main-dev branch (Admin):

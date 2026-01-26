@@ -188,7 +188,7 @@ export function QuickActions({
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-semibold flex items-center gap-2">
           <ZapIcon className="h-5 w-5 text-yellow-500" aria-hidden="true" />
-          {title}
+          <span data-testid="quick-actions-title">{title}</span>
         </CardTitle>
       </CardHeader>
       <CardContent>

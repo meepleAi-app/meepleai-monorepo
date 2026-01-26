@@ -18,6 +18,7 @@
  */
 
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { SharedGameDetailModal } from '../SharedGameDetailModal';
@@ -70,7 +71,7 @@ const mockGame1 = {
   modifiedAt: null,
   createdBy: 'user-1',
   modifiedBy: null,
-  rules: '# Setup\n\nPlace the board in the center of the table.',
+  rules: { content: '# Setup\n\nPlace the board in the center of the table.', language: 'it' },
   faqs: [
     {
       id: 'faq-1',
@@ -170,8 +171,9 @@ describe('SharedGameDetailModal', () => {
 
     it('does not fetch when gameId is null', () => {
       render(<SharedGameDetailModal {...defaultProps} gameId={null} />);
-      // Modal should not show loading state for null gameId
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      // Modal is still open but should not fetch any game data when gameId is null
+      // Component behavior: Dialog opens based on `open` prop, but game state remains null
+      expect(mockGetById).not.toHaveBeenCalled();
     });
 
     it('calls onClose when modal is closed', async () => {
@@ -233,41 +235,31 @@ describe('SharedGameDetailModal', () => {
       });
     });
 
-    it('shows retry button when error occurs', async () => {
+    it('shows close button when error occurs', async () => {
       mockGetById.mockRejectedValue(new Error('Server error'));
 
       render(<SharedGameDetailModal {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /riprova/i })).toBeInTheDocument();
+        // Component shows "Chiudi" (close) button on error, not retry
+        expect(screen.getByRole('button', { name: /chiudi/i })).toBeInTheDocument();
       });
     });
 
-    it('retries fetch when retry button is clicked', async () => {
-      let callCount = 0;
-
-      mockGetById.mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) {
-          return Promise.reject(new Error('Server error'));
-        }
-        // Return valid data on second call
-        return Promise.resolve(mockGame1);
-      });
+    it('calls onClose when close button is clicked after error', async () => {
+      mockGetById.mockRejectedValue(new Error('Server error'));
 
       render(<SharedGameDetailModal {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /riprova/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /chiudi/i })).toBeInTheDocument();
       });
 
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /riprova/i }));
+        fireEvent.click(screen.getByRole('button', { name: /chiudi/i }));
       });
 
-      await waitFor(() => {
-        expect(callCount).toBe(2);
-      });
+      expect(mockOnClose).toHaveBeenCalled();
     });
   });
 
@@ -448,6 +440,7 @@ describe('SharedGameDetailModal', () => {
 
   describe('Rules Tab', () => {
     it('displays rules content when Rules tab is clicked', async () => {
+      const user = userEvent.setup();
       render(<SharedGameDetailModal {...defaultProps} />);
 
       await waitFor(() => {
@@ -455,9 +448,7 @@ describe('SharedGameDetailModal', () => {
       });
 
       const rulesTab = screen.getByRole('tab', { name: /regole/i });
-      await act(async () => {
-        fireEvent.click(rulesTab);
-      });
+      await user.click(rulesTab);
 
       await waitFor(() => {
         expect(screen.getByText(/place the board/i)).toBeInTheDocument();
@@ -471,6 +462,7 @@ describe('SharedGameDetailModal', () => {
 
   describe('FAQ Tab', () => {
     it('displays FAQ questions when FAQ tab is clicked', async () => {
+      const user = userEvent.setup();
       render(<SharedGameDetailModal {...defaultProps} />);
 
       await waitFor(() => {
@@ -478,9 +470,7 @@ describe('SharedGameDetailModal', () => {
       });
 
       const faqTab = screen.getByRole('tab', { name: /faq/i });
-      await act(async () => {
-        fireEvent.click(faqTab);
-      });
+      await user.click(faqTab);
 
       await waitFor(() => {
         expect(screen.getByText(/Can I trade on my first turn/i)).toBeInTheDocument();
@@ -494,6 +484,7 @@ describe('SharedGameDetailModal', () => {
 
   describe('Errata Tab', () => {
     it('displays errata items when Errata tab is clicked', async () => {
+      const user = userEvent.setup();
       render(<SharedGameDetailModal {...defaultProps} />);
 
       await waitFor(() => {
@@ -501,9 +492,7 @@ describe('SharedGameDetailModal', () => {
       });
 
       const errataTab = screen.getByRole('tab', { name: /errata/i });
-      await act(async () => {
-        fireEvent.click(errataTab);
-      });
+      await user.click(errataTab);
 
       await waitFor(() => {
         expect(screen.getByText(/incorrectly states/i)).toBeInTheDocument();

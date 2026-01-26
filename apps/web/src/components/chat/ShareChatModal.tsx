@@ -170,7 +170,7 @@ export function ShareChatModal({
           <div className="space-y-4">
             {/* Role badge */}
             <div>
-              <Label className="text-sm font-medium">Access Level</Label>
+              <Label className="text-sm font-medium" data-testid="access-level-label">Access Level</Label>
               <div className="mt-1.5">
                 <Badge variant={createdShareLink.role === 'comment' ? 'default' : 'secondary'}>
                   {createdShareLink.role === 'view' && (
@@ -307,7 +307,7 @@ export function ShareChatModal({
 
           {/* Expiry duration */}
           <div className="space-y-2">
-            <Label htmlFor="expiry">Link Expires After</Label>
+            <Label htmlFor="expiry" data-testid="link-expiry-label">Link Expires After</Label>
             <Select
               value={formData.expiryDays.toString()}
               onValueChange={value => setFormData({ ...formData, expiryDays: parseInt(value) })}

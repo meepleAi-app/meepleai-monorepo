@@ -214,13 +214,15 @@ describe('BottomNav', () => {
     it('should use card background color', () => {
       const { container } = render(<BottomNav />);
       const nav = container.querySelector('nav');
-      expect(nav).toHaveClass('bg-card');
+      // Component uses glass morphism with bg-background/95 in light mode
+      expect(nav).toHaveClass('bg-background/95');
     });
 
     it('should have border-top with border color', () => {
       const { container } = render(<BottomNav />);
       const nav = container.querySelector('nav');
-      expect(nav).toHaveClass('border-t', 'border-border');
+      // Component uses border-border/50 for lighter border
+      expect(nav).toHaveClass('border-t', 'border-border/50');
     });
 
     it('should have shadow-lg for elevation', () => {

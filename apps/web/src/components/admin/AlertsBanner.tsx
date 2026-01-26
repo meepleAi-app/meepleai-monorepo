@@ -197,12 +197,14 @@ export function AlertsBanner({
           <motion.p
             variants={shouldReduceMotion ? undefined : VARIANTS.fadeIn}
             className="font-semibold text-lg text-stone-900 dark:text-white"
+            data-testid="alerts-primary-message"
           >
             {primaryMessage}
           </motion.p>
           <motion.p
             variants={shouldReduceMotion ? undefined : VARIANTS.fadeIn}
             className="text-sm text-stone-600 dark:text-stone-400"
+            data-testid="alerts-secondary-message"
           >
             {secondaryMessage}
           </motion.p>

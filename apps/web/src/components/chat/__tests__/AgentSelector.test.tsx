@@ -60,7 +60,7 @@ describe('AgentSelector - Issue #2308 Phase 2', () => {
     expect(screen.getByTestId('skeleton-loader')).toHaveTextContent('gameSelection');
 
     // Assert - Label visible
-    expect(screen.getByText('Seleziona Agente:')).toBeInTheDocument();
+    expect(screen.getByTestId('agent-selector-label')).toBeInTheDocument();
 
     // Assert - Select not rendered
     expect(screen.queryByTestId('agent-selector')).not.toBeInTheDocument();

@@ -7,6 +7,14 @@ vi.mock('@/components/admin/AdminAuthGuard', () => ({
   AdminAuthGuard: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+// Mock useAuthUser hook
+vi.mock('@/components/auth/AuthProvider', () => ({
+  useAuthUser: () => ({
+    user: { id: 'admin-1', email: 'admin@test.com', role: 'admin' },
+    loading: false,
+  }),
+}));
+
 // Mock child components
 vi.mock('../_components/TierConfigSection/TierConfigSection', () => ({
   TierConfigSection: () => <div data-testid="tier-config-section">Tier Config Section</div>,

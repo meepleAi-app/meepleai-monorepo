@@ -396,7 +396,7 @@ describe('ExportButton - Count Display', () => {
     await user.click(screen.getByRole('button', { name: /Esporta/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('50 giochi')).toBeInTheDocument();
+      expect(screen.getByTestId('export-count')).toHaveTextContent('50 giochi');
     });
   });
 
@@ -407,7 +407,7 @@ describe('ExportButton - Count Display', () => {
     await user.click(screen.getByRole('button', { name: /Esporta/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('10 di 50 giochi')).toBeInTheDocument();
+      expect(screen.getByTestId('export-count')).toHaveTextContent('10 di 50 giochi');
     });
   });
 
@@ -419,7 +419,7 @@ describe('ExportButton - Count Display', () => {
 
     // When only filteredCount is provided (no totalCount), shows data.length as fallback
     await waitFor(() => {
-      expect(screen.getByText('2 giochi')).toBeInTheDocument();
+      expect(screen.getByTestId('export-count')).toHaveTextContent('2 giochi');
     });
   });
 

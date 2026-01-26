@@ -135,9 +135,9 @@ export function ActivityFeed({
     : (_index: number) => ({});
 
   return (
-    <Card className={className}>
+    <Card className={className} data-testid="activity-feed">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg font-semibold">{strings.title}</CardTitle>
+        <CardTitle className="text-lg font-semibold" data-testid="activity-feed-title">{strings.title}</CardTitle>
         {showViewAll && (hasMoreEvents || events.length > 0) && (
           <Link
             href={viewAllHref}
@@ -151,9 +151,9 @@ export function ActivityFeed({
       </CardHeader>
       <CardContent className="p-0">
         {displayEvents.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">
+          <div className="p-8 text-center text-muted-foreground" data-testid="activity-feed-empty">
             <ActivityIcon className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" aria-hidden="true" />
-            <p>{strings.emptyState}</p>
+            <p data-testid="activity-feed-empty-message">{strings.emptyState}</p>
           </div>
         ) : (
           <div className="max-h-[480px] overflow-y-auto" role="region" aria-label={strings.regionLabel}>

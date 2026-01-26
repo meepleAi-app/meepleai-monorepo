@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ErrorBoundary, useErrorHandler } from '../errors/ErrorBoundary';
@@ -28,18 +29,12 @@ describe('ErrorBoundary', () => {
   const originalError = console.error;
   beforeAll(() => {
     console.error = vi.fn();
-    // Mock fetch for logger (not available in jsdom)
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      } as Response)
-    );
+    // Note: MSW is already configured globally in vitest.setup.tsx
+    // No need to mock fetch here - it would conflict with MSW interceptors
   });
 
   afterAll(() => {
     console.error = originalError;
-    delete (global as any).fetch;
   });
 
   it('should render children when no error', () => {
@@ -61,7 +56,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
     expect(screen.getByText(/We apologize for the inconvenience/)).toBeInTheDocument();
   });
 
@@ -131,7 +126,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
 
     shouldThrow = false;
     const tryAgainButton = screen.getByRole('button', { name: /try again/i });
@@ -171,7 +166,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Error Details')).toBeInTheDocument();
+    expect(screen.getByTestId('error-details-toggle')).toBeInTheDocument();
   });
 
   it('should not show error details when showDetails is false', () => {
@@ -216,7 +211,7 @@ describe('ErrorBoundary', () => {
     );
 
     // Component should render error UI
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
   });
 });
 
@@ -240,7 +235,7 @@ describe('useErrorHandler', () => {
       );
     }).not.toThrow();
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
   });
 
   it('should not throw error when handleError is not called', () => {
@@ -257,21 +252,15 @@ describe('useErrorHandler', () => {
 describe('ErrorBoundary - Enhanced Coverage', () => {
   // Suppress console.error for these tests
   const originalError = console.error;
-  const mockLogger = { error: vi.fn() };
 
   beforeAll(() => {
     console.error = vi.fn();
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      } as Response)
-    );
+    // Note: MSW is already configured globally in vitest.setup.tsx
+    // No need to mock fetch here - it would conflict with MSW interceptors
   });
 
   afterAll(() => {
     console.error = originalError;
-    delete (global as any).fetch;
   });
 
   beforeEach(() => {
@@ -288,7 +277,7 @@ describe('ErrorBoundary - Enhanced Coverage', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
   });
 
   it('should log error with componentStack in errorInfo', () => {
@@ -326,7 +315,7 @@ describe('ErrorBoundary - Enhanced Coverage', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
 
     // Reset error boundary
     shouldThrow = false;
@@ -358,7 +347,7 @@ describe('ErrorBoundary - Enhanced Coverage', () => {
 
     // Wait for async error to propagate
     await waitFor(() => {
-      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+      expect(screen.getByTestId('error-title')).toBeInTheDocument();
     });
   });
 
@@ -415,7 +404,7 @@ describe('ErrorBoundary - Enhanced Coverage', () => {
     );
 
     expect(onError).toHaveBeenCalled();
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
   });
 
   it('should pass full errorInfo to custom onError handler', () => {
@@ -449,7 +438,7 @@ describe('ErrorBoundary - Enhanced Coverage', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-    expect(screen.getByText('Error Details')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
+    expect(screen.getByTestId('error-details-toggle')).toBeInTheDocument();
   });
 });

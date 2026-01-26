@@ -68,7 +68,8 @@ public abstract class E2ETestBase : IAsyncLifetime
     public virtual async ValueTask InitializeAsync()
     {
         // Create isolated database for this test class
-        _databaseName = $"e2e_{TestClassName}_{Guid.NewGuid():N}".Substring(0, 63);
+        var fullDbName = $"e2e_{TestClassName}_{Guid.NewGuid():N}";
+        _databaseName = fullDbName.Length > 63 ? fullDbName.Substring(0, 63) : fullDbName;
         var connectionString = await _fixture.Fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         // Update factory configuration with new database connection string

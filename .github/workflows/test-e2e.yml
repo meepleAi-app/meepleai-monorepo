@@ -6,7 +6,7 @@ on:
     paths:
       - 'apps/web/**'
       - 'apps/api/**'
-      - '.github/workflows/e2e-tests.yml'
+      - '.github/workflows/test-e2e.yml'
   pull_request:
     branches: [main, main-dev, frontend-dev]
     paths:
@@ -55,7 +55,7 @@ jobs:
             e2e:
               - 'apps/web/**'
               - 'apps/api/**'
-              - '.github/workflows/e2e-tests.yml'
+              - '.github/workflows/test-e2e.yml'
 
   # E2E Tests with Sharding (4 shards) - Backend runs in same job
   e2e-tests:

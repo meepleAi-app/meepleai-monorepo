@@ -1,0 +1,500 @@
+name: Performance Tests
+
+# Consolidated performance testing: K6 load tests + Lighthouse CI
+# Issue #2286: Workflow re-enabled after modernization
+
+on:
+  schedule:
+    # K6: Run nightly at 2 AM UTC (only on main branch)
+    - cron: '0 2 * * *'
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'apps/api/src/Api/Routing/*AdminEndpoints.cs'
+      - 'apps/api/src/Api/Routing/LlmAnalyticsEndpoints.cs'
+      - 'apps/api/src/Api/Routing/ReportingEndpoints.cs'
+      - 'apps/api/src/Api/BoundedContexts/Administration/**'
+      - 'tests/k6/**'
+      - '.github/workflows/test-performance.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/test-performance.yml'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'K6 test type'
+        required: false
+        default: 'smoke'
+        type: choice
+        options:
+          - smoke
+          - load
+          - stress
+      run_lighthouse:
+        description: 'Run Lighthouse CI'
+        required: false
+        default: 'true'
+        type: boolean
+      run_k6:
+        description: 'Run K6 tests'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  actions: write
+
+concurrency:
+  group: test-performance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  API_BASE_URL: http://localhost:8080
+  TEST_GAME_ID: '00000000-0000-0000-0000-000000000001'
+  POSTGRES_USER: 'postgres'
+  POSTGRES_PASSWORD: 'testpass123'
+  POSTGRES_DB: 'meepleai_test'
+
+jobs:
+  # ============================================
+  # CHANGE DETECTION
+  # ============================================
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      api: ${{ steps.filter.outputs.api }}
+      k6: ${{ steps.filter.outputs.k6 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'apps/web/**'
+            api:
+              - 'apps/api/**'
+            k6:
+              - 'tests/k6/**'
+
+  # ============================================
+  # K6 PERFORMANCE TESTS
+  # ============================================
+  k6-tests:
+    name: K6 Performance Tests
+    runs-on: ubuntu-latest
+    needs: changes
+    timeout-minutes: 45
+    continue-on-error: true
+    if: |
+      (github.event_name == 'workflow_dispatch' && inputs.run_k6 != 'false') ||
+      (github.event_name == 'schedule') ||
+      (github.event_name == 'pull_request' && (needs.changes.outputs.api == 'true' || needs.changes.outputs.k6 == 'true'))
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: 'postgres'
+          POSTGRES_PASSWORD: 'testpass123'
+          POSTGRES_DB: meepleai_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      qdrant:
+        image: qdrant/qdrant:v1.12.4
+        options: >-
+          --health-cmd "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /readyz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n\" >&3 && grep -q \"HTTP/1.1 200\" <&3'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+        ports:
+          - 6333:6333
+          - 6334:6334
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup backend environment
+        uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '9.0.x'
+          working-directory: apps/api
+          cache-nuget: 'true'
+
+      - name: Install k6 and Redis CLI
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6 redis-tools
+
+      - name: Clean API build outputs
+        working-directory: apps/api/src/Api
+        run: dotnet clean --configuration Release
+
+      - name: Build API
+        working-directory: apps/api/src/Api
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef --version 9.0.11
+
+      - name: Create test database
+        run: |
+          echo "Creating test database..."
+          PGPASSWORD="testpass123" psql -h localhost -U "postgres" -d postgres <<-EOSQL
+            SELECT 'CREATE DATABASE meepleai_test'
+            WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'meepleai_test')\gexec
+          EOSQL
+          echo "Database ready"
+
+      - name: Verify database connectivity
+        run: |
+          echo "Testing PostgreSQL connection..."
+          PGPASSWORD="testpass123" psql -h localhost -U "postgres" -d postgres -c "SELECT version();"
+          echo "Database connection successful"
+
+      - name: Apply migrations
+        working-directory: apps/api/src/Api
+        run: dotnet ef database update --configuration Release
+
+      - name: Start API server
+        working-directory: apps/api/src/Api
+        run: |
+          nohup dotnet run --configuration Release --environment CI > ../../../../api.log 2>&1 &
+          echo $! > ../../../../api.pid
+        env:
+          DISABLE_RATE_LIMITING: 'true'
+          ASPNETCORE_ENVIRONMENT: CI
+          RateLimiting__MaxTokens__user: '999999'
+          RateLimiting__RefillRate__user: '10000'
+          RateLimiting__MaxTokens__anonymous: '999999'
+          RateLimiting__RefillRate__anonymous: '10000'
+          POSTGRES_USER: 'postgres'
+          POSTGRES_PASSWORD: 'testpass123'
+          POSTGRES_PASSWORD_FILE: ''
+          POSTGRES_DB: 'meepleai_test'
+          POSTGRES_HOST: 'localhost'
+          POSTGRES_PORT: '5432'
+          ConnectionStrings__Redis: 'localhost:6379'
+          ConnectionStrings__Qdrant: 'http://localhost:6333'
+          HealthChecks__Postgres__Enabled: 'false'
+          OPENROUTER_API_KEY: 'sk-or-v1-dummy-key-for-ci-testing-only'
+          ASPNETCORE_URLS: 'http://0.0.0.0:8080'
+
+      - name: Wait for API to be ready
+        run: |
+          MAX_RETRIES=60
+          RETRY=0
+          BACKOFF=1
+
+          echo "Waiting for API to be ready (max ${MAX_RETRIES} attempts)..."
+
+          while [ $RETRY -lt $MAX_RETRIES ]; do
+            if curl -f -s http://localhost:8080/health/live > /dev/null 2>&1; then
+              echo "API is ready after $((RETRY + 1)) attempts"
+              exit 0
+            fi
+
+            RETRY=$((RETRY + 1))
+            echo "Waiting for API... ($RETRY/$MAX_RETRIES) - sleeping ${BACKOFF}s"
+            sleep $BACKOFF
+
+            if [ $BACKOFF -lt 5 ]; then
+              BACKOFF=$((BACKOFF + 1))
+            fi
+          done
+
+          echo "API failed to start after ${MAX_RETRIES} attempts"
+          tail -n 100 api.log || echo "Could not read api.log"
+          exit 1
+
+      - name: Run k6 performance tests
+        working-directory: tests/k6
+        timeout-minutes: 15
+        env:
+          K6_TEST_TYPE: ${{ inputs.test_type || 'smoke' }}
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            TEST_TYPE="smoke"
+            echo "PR detected - running smoke test"
+          elif [ "${{ github.event_name }}" == "schedule" ]; then
+            TEST_TYPE="smoke"
+            echo "Scheduled run - running smoke test"
+          else
+            TEST_TYPE="${K6_TEST_TYPE}"
+            echo "Manual run - running ${TEST_TYPE} test"
+          fi
+
+          mkdir -p reports
+          k6 run --env TEST_TYPE=${TEST_TYPE} scenarios/admin-polling.js
+
+      - name: Debug API logs on failure
+        if: failure()
+        run: |
+          echo "========================================="
+          echo "API Logs"
+          echo "========================================="
+          tail -n 200 api.log 2>/dev/null || echo "No API logs found"
+          echo ""
+          echo "========================================="
+          echo "Health Check Status"
+          echo "========================================="
+          curl -v http://localhost:8080/health 2>&1 || echo "Health check failed"
+
+      - name: Upload performance reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: k6-performance-reports-${{ github.run_number }}
+          path: tests/k6/reports/
+          retention-days: 30
+
+      - name: Archive API logs
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: k6-api-logs-${{ github.run_number }}
+          path: api.log
+          retention-days: 7
+
+      - name: Cleanup resources
+        if: always()
+        run: |
+          if [ -f api.pid ]; then
+            kill $(cat api.pid) 2>/dev/null || true
+            rm api.pid
+          fi
+          pkill -f "dotnet.*Api" 2>/dev/null || true
+          redis-cli FLUSHALL 2>/dev/null || true
+          echo "Cleanup complete"
+
+  # ============================================
+  # LIGHTHOUSE CI
+  # ============================================
+  lighthouse-build:
+    name: Build Next.js (Lighthouse)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: |
+      (github.event_name == 'workflow_dispatch' && inputs.run_lighthouse != 'false') ||
+      (github.event_name == 'push') ||
+      (github.event_name == 'pull_request' && needs.changes.outputs.web == 'true')
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Setup Test Environment
+        run: cp .env.test.example .env.test
+
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: apps/web/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('apps/web/pnpm-lock.yaml') }}-${{ hashFiles('apps/web/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('apps/web/pnpm-lock.yaml') }}-
+            ${{ runner.os }}-nextjs-
+
+      - name: Build Next.js for Production
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+      - name: Upload Next.js Build Artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: nextjs-build-lighthouse-${{ github.sha }}
+          path: |
+            apps/web/.next/
+            apps/web/.env.test
+          retention-days: 1
+
+  lighthouse-ci:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+    needs: [changes, lighthouse-build]
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup frontend environment
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Download Next.js Build
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-build-lighthouse-${{ github.sha }}
+          path: apps/web
+
+      - name: Run Lighthouse CI
+        run: pnpm exec lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Upload Lighthouse CI Results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: lighthouse-ci-results-${{ github.run_number }}
+          path: apps/web/.lighthouseci/
+          retention-days: 7
+
+      - name: Comment PR with Performance Results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const comment = `## Lighthouse CI Performance Report
+
+            Performance tests have been executed for this PR.
+
+            **Core Web Vitals Targets:**
+            - LCP (Largest Contentful Paint) < 2.5s
+            - FID (First Input Delay) < 100ms
+            - CLS (Cumulative Layout Shift) < 0.1
+
+            **Performance Scores:**
+            - Performance: >= 85%
+            - Accessibility: >= 95%
+            - Best Practices: >= 90%
+            - SEO: >= 90%
+
+            Full reports are available in the workflow artifacts.
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # ============================================
+  # FAILURE NOTIFICATION
+  # ============================================
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [k6-tests, lighthouse-ci]
+    if: failure() && github.event_name == 'schedule'
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create GitHub issue on failure
+        uses: actions/github-script@v8
+        env:
+          RUN_ID: ${{ github.run_id }}
+          REF: ${{ github.ref }}
+        with:
+          script: |
+            const { RUN_ID, REF } = process.env;
+
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'performance,automated',
+              per_page: 100
+            });
+
+            const existingIssue = issues.data.find(issue =>
+              issue.title.includes('Performance Tests Failed')
+            );
+
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${RUN_ID}`;
+            const timestamp = new Date().toISOString();
+            const branch = REF.replace('refs/heads/', '');
+
+            const comment = `## Performance Test Failure - ${timestamp}
+
+            **Run:** [#${RUN_ID}](${runUrl})
+            **Branch:** ${branch}
+            **Trigger:** Scheduled (nightly)
+
+            ### Action Required
+            The nightly performance tests have failed. Please investigate the workflow run for details.
+
+            ### Common Issues to Check
+            - [ ] API response times exceeding thresholds
+            - [ ] Increased error rates
+            - [ ] Database connection issues
+            - [ ] Memory or resource constraints
+            - [ ] Breaking changes in recent commits
+
+            ### Next Steps
+            1. Review the [workflow run](${runUrl}) logs
+            2. Check the performance reports artifact
+            3. Investigate and fix the root cause
+            4. Re-run the workflow to verify the fix
+            5. Close this issue once resolved`;
+
+            if (existingIssue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: comment
+              });
+              console.log(`Added comment to existing issue #${existingIssue.number}`);
+            } else {
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Performance Tests Failed - Investigation Required',
+                body: comment,
+                labels: ['performance', 'automated', 'bug', 'priority-high']
+              });
+              console.log(`Created new issue #${issue.data.number}`);
+            }

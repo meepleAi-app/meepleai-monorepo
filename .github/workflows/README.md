@@ -1,79 +1,125 @@
 # GitHub Actions Workflows
 
-## Active Workflows
+## Workflow Organization
 
-### Core CI/CD
+Workflows are organized by category with consistent naming prefixes:
 
-- **ci.yml** - Main CI pipeline (Frontend + Backend + E2E)
-  - Auto-runs on push/PR to main/frontend-dev
-  - Path-based filtering for optimal performance
-  - Parallel job execution
+```
+.github/workflows/
+├── # Core CI/CD (no prefix)
+├── ci.yml                    # Main CI pipeline
+├── deploy-staging.yml        # Staging deployment
+├── deploy-production.yml     # Production deployment
+│
+├── # Testing (test- prefix)
+├── test-e2e.yml              # Full E2E suite (4-shard parallel)
+├── test-performance.yml      # K6 + Lighthouse performance
+├── test-visual.yml           # Playwright + Chromatic visual
+│
+├── # Security (security- prefix)
+├── security-scan.yml         # CodeQL + dependency scan + secrets
+├── security-pentest.yml      # OWASP penetration tests
+├── security-review.yml       # Quarterly security review reminder
+│
+├── # Automation (auto- prefix)
+├── auto-branch-policy.yml    # Branch protection rules
+├── auto-dependabot.yml       # Dependabot auto-merge
+├── auto-validate.yml         # Workflow validation
+```
 
-- **deploy-staging.yml** - Deploy to Staging environment
-  - Trigger: Push to `main-staging` branch
-  - Automatic deployment (no approval required)
-  - Builds Docker images → Deploys via SSH/K8s → Validates
+## Core CI/CD
 
-- **deploy-production.yml** - Deploy to Production environment
-  - Trigger: Push/tag to `main` branch
-  - **Requires manual approval** (environment: `production-approval`)
-  - Blue-green deployment strategy
-  - Creates GitHub Release on tag
+### ci.yml - Main CI Pipeline
+- **Triggers**: Push/PR to main, main-dev, frontend-dev
+- **Jobs**: Frontend (lint, typecheck, test, build), Backend (build, test), E2E critical paths
+- **Features**: Path-based filtering, parallel execution, Codecov integration
 
-- **security.yml** - Security scanning
-  - CodeQL SAST (C# + JavaScript)
-  - Dependency vulnerability scanning
-  - Secrets detection with Semgrep
-  - Weekly scheduled scans
+### deploy-staging.yml - Staging Deployment
+- **Triggers**: Push to `main-staging` branch, manual dispatch
+- **Jobs**: Pre-deploy tests, Docker build, SSH/K8s deploy, validation
+- **Features**: Automatic deployment (no approval), health checks
 
-### Supporting Workflows
+### deploy-production.yml - Production Deployment
+- **Triggers**: Push/tag to `main` branch, manual dispatch
+- **Jobs**: Staging verification, tests, Docker build, approval gate, blue-green deploy
+- **Features**: Manual approval required, rollback capability, GitHub Release creation
 
-- **branch-policy.yml** - Branch protection enforcement
-- **security-penetration-tests.yml** - Penetration testing
-- **validate-workflows.yml** - Workflow syntax validation
-- **dependabot-automerge.yml** - Auto-merge Dependabot PRs
+## Testing Workflows
 
-## Disabled Workflows (*.disabled)
+### test-e2e.yml - Full E2E Suite
+- **Triggers**: Push/PR with web/api changes
+- **Jobs**: 4-shard parallel Playwright tests, quality gate (≥90% pass rate)
+- **Features**: Full browser matrix, coverage reports, PR comments
 
-The following workflows were temporarily disabled during the CI/CD modernization:
+### test-performance.yml - Performance Testing
+- **Triggers**: Nightly schedule, PR with api/web changes, manual
+- **Jobs**: K6 load tests, Lighthouse CI
+- **Features**: Smoke/load/stress test types, Core Web Vitals, failure notifications
 
-- `e2e-*.yml.disabled` - Replaced by streamlined E2E in ci.yml
-- `k6-*.yml.disabled` - Performance tests (will be re-enabled after CI stabilization)
-- `lighthouse-ci.yml.disabled` - Lighthouse performance (will be integrated later)
-- `migration-guard.yml.disabled` - EF Core migration checks (to be re-enabled)
-- `storybook-deploy.yml.disabled` - Storybook deployment (to be re-enabled)
+### test-visual.yml - Visual Regression
+- **Triggers**: Push/PR with web changes
+- **Jobs**: Playwright snapshots, Chromatic Storybook review
+- **Features**: Visual diff detection, PR comments with review links
 
-## Recent Changes (2025-12-26)
+## Security Workflows
 
-### Modernization Goals
-1. ✅ Simplified CI pipeline (14 → 4 active workflows)
-2. ✅ Fixed failing schema validation
-3. ✅ Reduced CI execution time (~14min → ~8min estimated)
-4. ✅ Improved maintainability and debugging
+### security-scan.yml - Security Scanning
+- **Triggers**: Push to main, weekly schedule
+- **Jobs**: CodeQL SAST (C#, JavaScript), dependency vulnerabilities, Semgrep secrets
+- **Features**: SARIF uploads, HIGH/CRITICAL threshold enforcement
 
-### Migration Notes
-- Old workflows backed up as `*.disabled` files
-- Can be safely deleted after 30 days of stable CI
-- Re-enable specific workflows as needed by renaming back to `.yml`
+### security-pentest.yml - Penetration Testing
+- **Triggers**: Weekly schedule, PR with security label, security file changes
+- **Jobs**: OWASP 2FA penetration tests (brute force, replay, timing attacks)
+- **Features**: 15 security tests, automatic PR comments
 
-## Workflow Execution Time Targets
+### security-review.yml - Security Review Reminder
+- **Triggers**: Quarterly schedule (Jan, Apr, Jul, Oct)
+- **Jobs**: Create security review GitHub issue
+- **Features**: Review checklist, command templates, success criteria
 
-| Workflow | Target | Actual |
-|----------|--------|--------|
-| Frontend | 3-5 min | TBD |
-| Backend | 5-7 min | TBD |
-| E2E | 3-5 min | TBD |
-| Security (push) | 8-10 min | TBD |
-| Security (weekly) | 15-20 min | TBD |
+## Automation Workflows
 
-## Troubleshooting
+### auto-branch-policy.yml - Branch Protection
+- **Triggers**: PR to main, main-dev
+- **Jobs**: Validate source branch matches policy
+- **Policy**: main ← main-dev only; main-dev ← frontend-dev, feature/*, fix/*, etc.
 
-### CI Failures
-1. Check job logs in GitHub Actions UI
-2. Review path filters in `ci.yml` if jobs are unexpectedly skipped
-3. Verify secrets are configured: `CODECOV_TOKEN`, `POSTGRES_SERVICE_PASSWORD`
+### auto-dependabot.yml - Dependabot Auto-merge
+- **Triggers**: Dependabot PRs with `automerge` label
+- **Jobs**: CI status check, auto-merge with squash
+- **Features**: Waits for CI, comments on PR
 
-### Local Testing
+### auto-validate.yml - Workflow Validation
+- **Triggers**: PR/push with workflow changes
+- **Jobs**: Validate pnpm cache patterns
+- **Features**: Prevents broken workflows from merging
+
+## Workflow Execution Targets
+
+| Workflow | Target Time | Notes |
+|----------|-------------|-------|
+| ci.yml (Frontend) | 3-5 min | Parallel lint/typecheck |
+| ci.yml (Backend) | 5-7 min | With Testcontainers |
+| ci.yml (E2E) | 3-5 min | Critical paths only |
+| test-e2e.yml | 10-15 min | Full 4-shard suite |
+| test-performance.yml | 15-20 min | K6 + Lighthouse |
+| test-visual.yml | 5-10 min | Playwright + Chromatic |
+| security-scan.yml | 8-12 min | Full security suite |
+
+## Configuration
+
+### Required Secrets
+- `CODECOV_TOKEN` - Code coverage uploads
+- `CHROMATIC_PROJECT_TOKEN` - Chromatic visual testing
+- `LHCI_GITHUB_APP_TOKEN` - Lighthouse CI (optional, falls back to GITHUB_TOKEN)
+- `SLACK_WEBHOOK_URL` - Failure notifications (optional)
+
+### Environment Variables
+See individual workflow files for environment-specific configuration.
+
+## Local Testing
+
 ```bash
 # Install act (GitHub Actions local runner)
 # https://github.com/nektos/act
@@ -85,9 +131,23 @@ act -W .github/workflows/ci.yml -j frontend
 act -W .github/workflows/ci.yml --dryrun
 ```
 
-## Future Improvements
-- [ ] Re-enable performance testing (K6)
-- [ ] Re-enable Lighthouse CI
-- [ ] Re-enable migration guard
-- [ ] Add matrix testing for multiple Node/dotnet versions
-- [ ] Implement workflow caching improvements
+## Troubleshooting
+
+### CI Failures
+1. Check job logs in GitHub Actions UI
+2. Review path filters if jobs unexpectedly skipped
+3. Verify secrets are configured
+
+### Performance Issues
+1. Check K6/Lighthouse reports in artifacts
+2. Review API response times
+3. Check for memory/resource constraints
+
+### Security Alerts
+1. Review CodeQL findings
+2. Check dependency audit reports
+3. Address HIGH/CRITICAL vulnerabilities first
+
+---
+
+**Last Updated**: 2026-01-26

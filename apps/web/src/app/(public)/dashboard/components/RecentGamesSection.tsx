@@ -97,8 +97,8 @@ export function RecentGamesSection({ games, isLoading, error }: RecentGamesSecti
           <p className="text-muted-foreground text-center mb-4 max-w-md" data-testid="recent-games-empty-description">
             Aggiungi i tuoi giochi da tavolo preferiti per iniziare a chattare con l'AI.
           </p>
-          <Button asChild data-testid="recent-games-explore-button">
-            <Link href="/games">
+          <Button asChild>
+            <Link href="/games" data-testid="recent-games-explore-button">
               Esplora Catalogo
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
@@ -113,8 +113,8 @@ export function RecentGamesSection({ games, isLoading, error }: RecentGamesSecti
     <section className="space-y-4" aria-label="Recent games" data-testid="recent-games-section">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-quicksand font-semibold" data-testid="recent-games-title">Giochi Recenti</h2>
-        <Button variant="ghost" size="sm" asChild data-testid="recent-games-view-all-button">
-          <Link href="/games">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/games" data-testid="recent-games-view-all-button">
             Vedi Tutti
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>

@@ -1620,7 +1620,7 @@ namespace Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_game_checklists", x => x.Id);
-                    table.CheckConstraint("chk_game_checklists_display_order", "\"display_order\" >= 0");
+                    table.CheckConstraint("chk_game_checklists_display_order", "\"DisplayOrder\" >= 0");
                     table.ForeignKey(
                         name: "FK_game_checklists_user_library_entries_UserLibraryEntryId",
                         column: x => x.UserLibraryEntryId,
@@ -1646,7 +1646,7 @@ namespace Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_game_sessions", x => x.Id);
-                    table.CheckConstraint("chk_game_sessions_duration", "duration_minutes > 0");
+                    table.CheckConstraint("chk_game_sessions_duration", "\"DurationMinutes\" > 0");
                     table.ForeignKey(
                         name: "FK_game_sessions_user_library_entries_UserLibraryEntryId",
                         column: x => x.UserLibraryEntryId,

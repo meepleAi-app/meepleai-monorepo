@@ -49,9 +49,10 @@ public abstract class E2ETestBase : IAsyncLifetime
     private readonly E2ETestFixture _fixture;
     private MeepleAiDbContext? _dbContext;
     private string? _databaseName;
+    private WebApplicationFactory<Program>? _factory;
 
     protected HttpClient Client { get; private set; } = null!;
-    protected WebApplicationFactory<Program> Factory => _fixture.Factory!;
+    protected WebApplicationFactory<Program> Factory => _factory ?? throw new InvalidOperationException("Factory not initialized");
     protected MeepleAiDbContext DbContext => _dbContext ?? throw new InvalidOperationException("DbContext not initialized");
 
     /// <summary>
@@ -72,11 +73,11 @@ public abstract class E2ETestBase : IAsyncLifetime
         _databaseName = fullDbName.Length > 63 ? fullDbName.Substring(0, 63) : fullDbName;
         var connectionString = await _fixture.Fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        // Update factory configuration with new database connection string
-        _fixture.SetDatabaseConnectionString(connectionString);
+        // Create factory specific to this test class (not shared)
+        _factory = CreateTestFactory(connectionString, _fixture.Fixture.RedisConnectionString);
 
         // Create HttpClient from factory
-        Client = _fixture.Factory!.CreateClient(new WebApplicationFactoryClientOptions
+        Client = _factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,
             HandleCookies = true
@@ -106,6 +107,11 @@ public abstract class E2ETestBase : IAsyncLifetime
     public virtual async ValueTask DisposeAsync()
     {
         Client?.Dispose();
+        
+        if (_factory != null)
+        {
+            await _factory.DisposeAsync();
+        }
 
         if (_dbContext != null)
         {
@@ -116,6 +122,73 @@ public abstract class E2ETestBase : IAsyncLifetime
         {
             await _fixture.Fixture.DropIsolatedDatabaseAsync(_databaseName);
         }
+    }
+
+    /// <summary>
+    /// Creates a WebApplicationFactory configured for this specific test class.
+    /// Each test class gets its own factory to avoid shared state issues.
+    /// </summary>
+    private static WebApplicationFactory<Program> CreateTestFactory(string postgresConnectionString, string redisConnectionString)
+    {
+        return new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment("Testing");
+
+                builder.ConfigureAppConfiguration((context, config) =>
+                {
+                    config.Sources.Clear();
+
+                    var testConfig = new Dictionary<string, string?>
+                    {
+                        ["ConnectionStrings:DefaultConnection"] = postgresConnectionString,
+                        ["ConnectionStrings:Redis"] = redisConnectionString,
+                        ["Jwt:Secret"] = "test-secret-key-for-e2e-tests-minimum-32-characters-long",
+                        ["Jwt:Issuer"] = "MeepleAI-Test",
+                        ["Jwt:Audience"] = "MeepleAI-Test",
+                        ["OpenRouter:ApiKey"] = "test-key",
+                        ["OpenRouter:BaseUrl"] = "https://test.local",
+                        ["BoardGameGeek:Enabled"] = "false",
+                        ["Embedding:Enabled"] = "false",
+                        ["Embedding:Url"] = "http://localhost:8000",
+                        ["Redis:Enabled"] = "true",
+                        ["Redis:ConnectionString"] = redisConnectionString,
+                        ["Qdrant:Enabled"] = "false",
+                        ["Qdrant:Host"] = "localhost",
+                        ["Qdrant:Port"] = "6333",
+                        ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
+                        ["Admin:Email"] = "admin@test.local",
+                        ["Admin:Password"] = "TestAdmin123!",
+                        ["Admin:DisplayName"] = "Test Admin",
+                        ["Observability:Enabled"] = "false",
+                        ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
+                    };
+
+                    config.AddInMemoryCollection(testConfig);
+                });
+
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();
+                    services.RemoveAll<MeepleAiDbContext>();
+
+                    // Register domain event collector (skipped in Testing environment by InfrastructureServiceExtensions)
+                    services.TryAddScoped<IDomainEventCollector, DomainEventCollector>();
+
+                    services.AddDbContext<MeepleAiDbContext>((serviceProvider, options) =>
+                    {
+                        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+                        var connStr = configuration.GetConnectionString("DefaultConnection")
+                            ?? throw new InvalidOperationException("DefaultConnection not configured");
+
+                        options.UseNpgsql(connStr);
+                        options.ConfigureWarnings(warnings =>
+                            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+                    });
+
+                    services.AddScoped<IDbContextMigrator, TestDbContextMigrator>();
+                });
+            });
     }
 
     /// <summary>
@@ -230,183 +303,22 @@ public abstract class E2ETestBase : IAsyncLifetime
 }
 
 /// <summary>
-/// xUnit fixture for E2E tests that manages the WebApplicationFactory and Testcontainers.
+/// xUnit fixture for E2E tests that manages Testcontainers.
 /// Shared across all E2E test classes via collection fixture.
+/// Each test class creates its own WebApplicationFactory for isolation.
 /// </summary>
 public sealed class E2ETestFixture : IAsyncLifetime
 {
-    private string _postgresConnectionString = string.Empty;
-    private string _redisConnectionString = string.Empty;
-    private string? _currentDatabaseConnectionString;
-
     public SharedTestcontainersFixture Fixture { get; } = new SharedTestcontainersFixture();
-    public WebApplicationFactory<Program>? Factory { get; private set; }
 
     public async ValueTask InitializeAsync()
     {
-        // Initialize shared Testcontainers fixture
+        // Initialize shared Testcontainers fixture (PostgreSQL and Redis)
         await Fixture.InitializeAsync();
-
-        _postgresConnectionString = Fixture.PostgresConnectionString;
-        _redisConnectionString = Fixture.RedisConnectionString;
-
-        // Create WebApplicationFactory with test configuration
-        Factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Testing");
-
-                builder.ConfigureAppConfiguration((context, config) =>
-                {
-                    // Clear existing configuration
-                    config.Sources.Clear();
-
-                    // Add test configuration
-                    var testConfig = new Dictionary<string, string?>
-                    {
-                        // Use testcontainers connection strings
-                        ["ConnectionStrings:DefaultConnection"] = _currentDatabaseConnectionString ?? _postgresConnectionString,
-                        ["ConnectionStrings:Redis"] = _redisConnectionString,
-
-                        // JWT configuration for testing
-                        ["Jwt:Secret"] = "test-secret-key-for-e2e-tests-minimum-32-characters-long",
-                        ["Jwt:Issuer"] = "MeepleAI-Test",
-                        ["Jwt:Audience"] = "MeepleAI-Test",
-
-                        // Disable external services for E2E tests
-                        ["OpenRouter:ApiKey"] = "test-key",
-                        ["OpenRouter:BaseUrl"] = "https://test.local",
-                        ["BoardGameGeek:Enabled"] = "false",
-
-                        // Embedding service configuration
-                        ["Embedding:Enabled"] = "false",
-                        ["Embedding:Url"] = "http://localhost:8000",
-
-                        // Redis cache configuration
-                        ["Redis:Enabled"] = "true",
-                        ["Redis:ConnectionString"] = _redisConnectionString,
-
-                        // Qdrant configuration (disabled for E2E)
-                        ["Qdrant:Enabled"] = "false",
-                        ["Qdrant:Host"] = "localhost",
-                        ["Qdrant:Port"] = "6333",
-
-                        // Session configuration
-                        ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
-
-                        // Admin configuration
-                        ["Admin:Email"] = "admin@test.local",
-                        ["Admin:Password"] = "TestAdmin123!",
-                        ["Admin:DisplayName"] = "Test Admin",
-
-                        // Disable telemetry for tests
-                        ["Observability:Enabled"] = "false",
-                        ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
-                    };
-
-                    config.AddInMemoryCollection(testConfig);
-                });
-
-                builder.ConfigureServices(services =>
-                {
-                    // Replace DbContext configuration to use test database
-                    services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();
-                    services.RemoveAll<MeepleAiDbContext>();
-
-                    // Register domain event collector (skipped in Testing environment by InfrastructureServiceExtensions)
-                    services.TryAddScoped<IDomainEventCollector, DomainEventCollector>();
-
-                    services.AddDbContext<MeepleAiDbContext>((serviceProvider, options) =>
-                    {
-                        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-                        var connectionString = configuration.GetConnectionString("DefaultConnection")
-                            ?? throw new InvalidOperationException("DefaultConnection not configured");
-
-                        options.UseNpgsql(connectionString);
-                        options.ConfigureWarnings(warnings =>
-                            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-                    });
-
-                    // Ensure migrations run on startup
-                    services.AddScoped<IDbContextMigrator, TestDbContextMigrator>();
-                });
-            });
-    }
-
-    /// <summary>
-    /// Updates the database connection string for test isolation.
-    /// Called by E2ETestBase for each test class.
-    /// </summary>
-    internal void SetDatabaseConnectionString(string connectionString)
-    {
-        _currentDatabaseConnectionString = connectionString;
-
-        // Recreate the factory with updated configuration
-        Factory?.Dispose();
-        Factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Testing");
-
-                builder.ConfigureAppConfiguration((context, config) =>
-                {
-                    config.Sources.Clear();
-
-                    var testConfig = new Dictionary<string, string?>
-                    {
-                        ["ConnectionStrings:DefaultConnection"] = connectionString,
-                        ["ConnectionStrings:Redis"] = _redisConnectionString,
-                        ["Jwt:Secret"] = "test-secret-key-for-e2e-tests-minimum-32-characters-long",
-                        ["Jwt:Issuer"] = "MeepleAI-Test",
-                        ["Jwt:Audience"] = "MeepleAI-Test",
-                        ["OpenRouter:ApiKey"] = "test-key",
-                        ["OpenRouter:BaseUrl"] = "https://test.local",
-                        ["BoardGameGeek:Enabled"] = "false",
-                        ["Embedding:Enabled"] = "false",
-                        ["Embedding:Url"] = "http://localhost:8000",
-                        ["Redis:Enabled"] = "true",
-                        ["Redis:ConnectionString"] = _redisConnectionString,
-                        ["Qdrant:Enabled"] = "false",
-                        ["Qdrant:Host"] = "localhost",
-                        ["Qdrant:Port"] = "6333",
-                        ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
-                        ["Admin:Email"] = "admin@test.local",
-                        ["Admin:Password"] = "TestAdmin123!",
-                        ["Admin:DisplayName"] = "Test Admin",
-                        ["Observability:Enabled"] = "false",
-                        ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
-                    };
-
-                    config.AddInMemoryCollection(testConfig);
-                });
-
-                builder.ConfigureServices(services =>
-                {
-                    services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();
-                    services.RemoveAll<MeepleAiDbContext>();
-
-                    // Register domain event collector (skipped in Testing environment by InfrastructureServiceExtensions)
-                    services.TryAddScoped<IDomainEventCollector, DomainEventCollector>();
-
-                    services.AddDbContext<MeepleAiDbContext>((serviceProvider, options) =>
-                    {
-                        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-                        var connStr = configuration.GetConnectionString("DefaultConnection")
-                            ?? throw new InvalidOperationException("DefaultConnection not configured");
-
-                        options.UseNpgsql(connStr);
-                        options.ConfigureWarnings(warnings =>
-                            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-                    });
-
-                    services.AddScoped<IDbContextMigrator, TestDbContextMigrator>();
-                });
-            });
     }
 
     public async ValueTask DisposeAsync()
     {
-        Factory?.Dispose();
         await Fixture.DisposeAsync();
     }
 }

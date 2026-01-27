@@ -23,12 +23,18 @@ namespace Api.Tests.E2E.Infrastructure;
 ///
 /// Issue #3023: Backend E2E Test Suite
 ///
+/// Architecture:
+/// - Single WebApplicationFactory shared across ALL E2E tests (avoids TestServer disposal issues)
+/// - Single shared database for all tests (API and DbContext use same database)
+/// - Each test gets its own DbContext instance (avoids change tracker issues)
+/// - Tests designed to be independent (unique emails, GUIDs per test)
+/// - Migrations run once at fixture initialization
+///
 /// Features:
 /// - Full API pipeline testing (HTTP → Endpoints → Handlers → Database)
 /// - Real PostgreSQL and Redis via Testcontainers
-/// - Isolated database per test class
 /// - Cookie-based and API key authentication helpers
-/// - Automatic cleanup between tests
+/// - Automatic test data with unique identifiers
 ///
 /// Usage:
 /// [Collection("E2ETests")]
@@ -39,7 +45,8 @@ namespace Api.Tests.E2E.Infrastructure;
 ///     [Fact]
 ///     public async Task RegisterAndLogin_ValidCredentials_Succeeds()
 ///     {
-///         var response = await Client.PostAsJsonAsync("/api/v1/auth/register", new { ... });
+///         var email = $"test_{Guid.NewGuid():N}@example.com"; // Unique per test
+///         var response = await Client.PostAsJsonAsync("/api/v1/auth/register", new { email, ... });
 ///         response.EnsureSuccessStatusCode();
 ///     }
 /// }
@@ -47,17 +54,21 @@ namespace Api.Tests.E2E.Infrastructure;
 public abstract class E2ETestBase : IAsyncLifetime
 {
     private readonly E2ETestFixture _fixture;
+    private HttpClient? _client;
     private MeepleAiDbContext? _dbContext;
-    private string? _databaseName;
-    private WebApplicationFactory<Program>? _factory;
 
-    protected HttpClient Client { get; private set; } = null!;
-    protected WebApplicationFactory<Program> Factory => _factory ?? throw new InvalidOperationException("Factory not initialized");
+    protected HttpClient Client => _client ?? throw new InvalidOperationException("Client not initialized");
+    protected WebApplicationFactory<Program> Factory => _fixture.Factory;
+
+    /// <summary>
+    /// Per-test DbContext for test assertions and data seeding.
+    /// Uses the same database as the API for consistency.
+    /// Each test gets its own instance to avoid change tracker issues.
+    /// </summary>
     protected MeepleAiDbContext DbContext => _dbContext ?? throw new InvalidOperationException("DbContext not initialized");
 
     /// <summary>
-    /// Unique test class identifier for database isolation.
-    /// Override to provide a custom database name.
+    /// Unique test identifier for debugging and logging.
     /// </summary>
     protected virtual string TestClassName => GetType().Name.ToLowerInvariant();
 
@@ -68,132 +79,36 @@ public abstract class E2ETestBase : IAsyncLifetime
 
     public virtual async ValueTask InitializeAsync()
     {
-        // Create isolated database for this test class
-        var fullDbName = $"e2e_{TestClassName}_{Guid.NewGuid():N}";
-        _databaseName = fullDbName.Length > 63 ? fullDbName.Substring(0, 63) : fullDbName;
-        var connectionString = await _fixture.Fixture.CreateIsolatedDatabaseAsync(_databaseName);
-
-        // Create factory specific to this test class (not shared)
-        _factory = CreateTestFactory(connectionString, _fixture.Fixture.RedisConnectionString);
-
-        // Create HttpClient from factory
-        Client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        // Create HttpClient from shared factory
+        _client = _fixture.Factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,
             HandleCookies = true
         });
 
-        // Create DbContext for test assertions
-        var optionsBuilder = new DbContextOptionsBuilder<MeepleAiDbContext>();
-        optionsBuilder.UseNpgsql(connectionString);
-        optionsBuilder.ConfigureWarnings(warnings =>
-            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+        // Create per-test DbContext (connected to shared database)
+        _dbContext = _fixture.CreateDbContext();
 
-        var mockMediator = new Mock<IMediator>();
-        var mockEventCollector = new Mock<IDomainEventCollector>();
-        mockEventCollector
-            .Setup(e => e.GetAndClearEvents())
-            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
-
-        _dbContext = new MeepleAiDbContext(optionsBuilder.Options, mockMediator.Object, mockEventCollector.Object);
-
-        // Run migrations
-        await _dbContext.Database.MigrateAsync();
-
-        // Seed default test data if needed
+        // Seed test data if needed by derived classes
         await SeedTestDataAsync();
     }
 
     public virtual async ValueTask DisposeAsync()
     {
-        Client?.Dispose();
-        
-        if (_factory != null)
-        {
-            await _factory.DisposeAsync();
-        }
+        _client?.Dispose();
+        _client = null;
 
         if (_dbContext != null)
         {
             await _dbContext.DisposeAsync();
+            _dbContext = null;
         }
-
-        if (_databaseName != null)
-        {
-            await _fixture.Fixture.DropIsolatedDatabaseAsync(_databaseName);
-        }
-    }
-
-    /// <summary>
-    /// Creates a WebApplicationFactory configured for this specific test class.
-    /// Each test class gets its own factory to avoid shared state issues.
-    /// </summary>
-    private static WebApplicationFactory<Program> CreateTestFactory(string postgresConnectionString, string redisConnectionString)
-    {
-        return new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Testing");
-
-                builder.ConfigureAppConfiguration((context, config) =>
-                {
-                    config.Sources.Clear();
-
-                    var testConfig = new Dictionary<string, string?>
-                    {
-                        ["ConnectionStrings:DefaultConnection"] = postgresConnectionString,
-                        ["ConnectionStrings:Redis"] = redisConnectionString,
-                        ["Jwt:Secret"] = "test-secret-key-for-e2e-tests-minimum-32-characters-long",
-                        ["Jwt:Issuer"] = "MeepleAI-Test",
-                        ["Jwt:Audience"] = "MeepleAI-Test",
-                        ["OpenRouter:ApiKey"] = "test-key",
-                        ["OpenRouter:BaseUrl"] = "https://test.local",
-                        ["BoardGameGeek:Enabled"] = "false",
-                        ["Embedding:Enabled"] = "false",
-                        ["Embedding:Url"] = "http://localhost:8000",
-                        ["Redis:Enabled"] = "true",
-                        ["Redis:ConnectionString"] = redisConnectionString,
-                        ["Qdrant:Enabled"] = "false",
-                        ["Qdrant:Host"] = "localhost",
-                        ["Qdrant:Port"] = "6333",
-                        ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
-                        ["Admin:Email"] = "admin@test.local",
-                        ["Admin:Password"] = "TestAdmin123!",
-                        ["Admin:DisplayName"] = "Test Admin",
-                        ["Observability:Enabled"] = "false",
-                        ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
-                    };
-
-                    config.AddInMemoryCollection(testConfig);
-                });
-
-                builder.ConfigureServices(services =>
-                {
-                    services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();
-                    services.RemoveAll<MeepleAiDbContext>();
-
-                    // Register domain event collector (skipped in Testing environment by InfrastructureServiceExtensions)
-                    services.TryAddScoped<IDomainEventCollector, DomainEventCollector>();
-
-                    services.AddDbContext<MeepleAiDbContext>((serviceProvider, options) =>
-                    {
-                        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-                        var connStr = configuration.GetConnectionString("DefaultConnection")
-                            ?? throw new InvalidOperationException("DefaultConnection not configured");
-
-                        options.UseNpgsql(connStr);
-                        options.ConfigureWarnings(warnings =>
-                            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-                    });
-
-                    services.AddScoped<IDbContextMigrator, TestDbContextMigrator>();
-                });
-            });
     }
 
     /// <summary>
     /// Override to seed test data before tests run.
-    /// Called after database migration in InitializeAsync.
+    /// Called after initialization in InitializeAsync.
+    /// Data persists in shared database between tests.
     /// </summary>
     protected virtual Task SeedTestDataAsync()
     {
@@ -303,23 +218,150 @@ public abstract class E2ETestBase : IAsyncLifetime
 }
 
 /// <summary>
-/// xUnit fixture for E2E tests that manages Testcontainers.
+/// xUnit fixture for E2E tests that manages Testcontainers and shared WebApplicationFactory.
 /// Shared across all E2E test classes via collection fixture.
-/// Each test class creates its own WebApplicationFactory for isolation.
+///
+/// Key design decisions:
+/// - Single WebApplicationFactory shared across ALL tests (avoids TestServer disposal issues)
+/// - Single shared database for all tests (API and assertions use same database)
+/// - Each test creates its own DbContext via CreateDbContext() to avoid change tracker issues
+/// - Migrations run once at fixture initialization
+/// - Tests must be designed to be independent (unique identifiers per test)
 /// </summary>
 public sealed class E2ETestFixture : IAsyncLifetime
 {
+    private const string E2EDatabaseName = "e2e_shared_test_db";
+
     public SharedTestcontainersFixture Fixture { get; } = new SharedTestcontainersFixture();
+
+    private WebApplicationFactory<Program>? _factory;
+    private string? _databaseConnectionString;
+
+    /// <summary>
+    /// Shared WebApplicationFactory for all E2E tests.
+    /// Using a single factory avoids ObjectDisposedException on TestServer.
+    /// </summary>
+    public WebApplicationFactory<Program> Factory => _factory ?? throw new InvalidOperationException("Factory not initialized");
+
+    /// <summary>
+    /// Connection string for the shared E2E database.
+    /// </summary>
+    public string DatabaseConnectionString => _databaseConnectionString ?? throw new InvalidOperationException("Database not initialized");
 
     public async ValueTask InitializeAsync()
     {
         // Initialize shared Testcontainers fixture (PostgreSQL and Redis)
         await Fixture.InitializeAsync();
+
+        // Create a dedicated database for E2E tests
+        _databaseConnectionString = await Fixture.CreateIsolatedDatabaseAsync(E2EDatabaseName);
+
+        // Create shared WebApplicationFactory once for all tests
+        _factory = CreateSharedFactory(_databaseConnectionString);
+
+        // Run migrations once using a temporary DbContext
+        using var dbContext = CreateDbContext();
+        await dbContext.Database.MigrateAsync();
     }
 
     public async ValueTask DisposeAsync()
     {
+        if (_factory != null)
+        {
+            await _factory.DisposeAsync();
+            _factory = null;
+        }
+
+        // Drop the E2E database
+        await Fixture.DropIsolatedDatabaseAsync(E2EDatabaseName);
+
         await Fixture.DisposeAsync();
+    }
+
+    /// <summary>
+    /// Creates a new DbContext connected to the shared E2E database.
+    /// Each test should call this to get its own DbContext instance.
+    /// </summary>
+    public MeepleAiDbContext CreateDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<MeepleAiDbContext>();
+        optionsBuilder.UseNpgsql(_databaseConnectionString);
+        optionsBuilder.ConfigureWarnings(warnings =>
+            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector
+            .Setup(e => e.GetAndClearEvents())
+            .Returns(new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>().AsReadOnly());
+
+        return new MeepleAiDbContext(optionsBuilder.Options, mockMediator.Object, mockEventCollector.Object);
+    }
+
+    /// <summary>
+    /// Creates the shared WebApplicationFactory with the E2E database connection.
+    /// </summary>
+    private WebApplicationFactory<Program> CreateSharedFactory(string connectionString)
+    {
+        return new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment("Testing");
+
+                builder.ConfigureAppConfiguration((context, config) =>
+                {
+                    config.Sources.Clear();
+
+                    var testConfig = new Dictionary<string, string?>
+                    {
+                        ["ConnectionStrings:DefaultConnection"] = connectionString,
+                        ["ConnectionStrings:Redis"] = Fixture.RedisConnectionString,
+                        ["Jwt:Secret"] = "test-secret-key-for-e2e-tests-minimum-32-characters-long",
+                        ["Jwt:Issuer"] = "MeepleAI-Test",
+                        ["Jwt:Audience"] = "MeepleAI-Test",
+                        ["OpenRouter:ApiKey"] = "test-key",
+                        ["OpenRouter:BaseUrl"] = "https://test.local",
+                        ["BoardGameGeek:Enabled"] = "false",
+                        ["Embedding:Enabled"] = "false",
+                        ["Embedding:Url"] = "http://localhost:8000",
+                        ["Redis:Enabled"] = "true",
+                        ["Redis:ConnectionString"] = Fixture.RedisConnectionString,
+                        ["Qdrant:Enabled"] = "false",
+                        ["Qdrant:Host"] = "localhost",
+                        ["Qdrant:Port"] = "6333",
+                        ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
+                        ["Admin:Email"] = "admin@test.local",
+                        ["Admin:Password"] = "TestAdmin123!",
+                        ["Admin:DisplayName"] = "Test Admin",
+                        ["Observability:Enabled"] = "false",
+                        ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
+                    };
+
+                    config.AddInMemoryCollection(testConfig);
+                });
+
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();
+                    services.RemoveAll<MeepleAiDbContext>();
+
+                    // Register domain event collector (skipped in Testing environment by InfrastructureServiceExtensions)
+                    services.TryAddScoped<IDomainEventCollector, DomainEventCollector>();
+
+                    services.AddDbContext<MeepleAiDbContext>((serviceProvider, options) =>
+                    {
+                        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+                        var connStr = configuration.GetConnectionString("DefaultConnection")
+                            ?? throw new InvalidOperationException("DefaultConnection not configured");
+
+                        options.UseNpgsql(connStr);
+                        options.ConfigureWarnings(warnings =>
+                            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+                    });
+
+                    services.AddScoped<IDbContextMigrator, TestDbContextMigrator>();
+                });
+            });
     }
 }
 
@@ -353,7 +395,7 @@ internal sealed class TestDbContextMigrator : IDbContextMigrator
 /// Collection definition for E2E tests.
 /// All E2E test classes should use this collection to share the test fixture.
 /// DisableParallelization ensures test classes run sequentially to avoid
-/// ObjectDisposedException when factories are disposed while other tests are running.
+/// database conflicts and race conditions.
 /// </summary>
 [CollectionDefinition("E2ETests", DisableParallelization = true)]
 public class E2ETestCollection : ICollectionFixture<E2ETestFixture>

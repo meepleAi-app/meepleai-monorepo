@@ -352,8 +352,10 @@ internal sealed class TestDbContextMigrator : IDbContextMigrator
 /// <summary>
 /// Collection definition for E2E tests.
 /// All E2E test classes should use this collection to share the test fixture.
+/// DisableParallelization ensures test classes run sequentially to avoid
+/// ObjectDisposedException when factories are disposed while other tests are running.
 /// </summary>
-[CollectionDefinition("E2ETests")]
+[CollectionDefinition("E2ETests", DisableParallelization = true)]
 public class E2ETestCollection : ICollectionFixture<E2ETestFixture>
 {
     // This class has no code, and is never created. Its purpose is simply

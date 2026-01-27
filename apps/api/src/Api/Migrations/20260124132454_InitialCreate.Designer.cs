@@ -4023,7 +4023,7 @@ namespace Api.Migrations
 
                     b.ToTable("game_checklists", null, t =>
                         {
-                            t.HasCheckConstraint("chk_game_checklists_display_order", "\"display_order\" >= 0");
+                            t.HasCheckConstraint("chk_game_checklists_display_order", "\"DisplayOrder\" >= 0");
                         });
                 });
 

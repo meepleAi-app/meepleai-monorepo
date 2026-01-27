@@ -247,12 +247,12 @@ jobs:
             -p:CoverletOutput=./coverage/unit-coverage.xml || true
 
           # Run Integration tests
-          # Issue #3102: Exclude tests using SharedTestcontainers collection - they create their own
-          # PostgreSQL containers which conflicts with the service container defined in this workflow.
-          # Also excludes FrontendSdk tests which have their own Testcontainers setup.
+          # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
+          # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
+          # - FrontendSdk tests: Use FrontendSdkTestFactory with own containers
           # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
           dotnet test \
-            --filter "Category=Integration&FullyQualifiedName!~SharedTestcontainers&FullyQualifiedName!~FrontendSdk" \
+            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk" \
             --logger "console;verbosity=minimal" \
             --no-build \
             --configuration Release \

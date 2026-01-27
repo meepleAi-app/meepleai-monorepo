@@ -27,8 +27,13 @@ internal static class RateLimitingServiceExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         // Issue #2705: Allow disabling rate limiting for integration tests
+        // Issue #3102: Also check DISABLE_RATE_LIMITING env var as fallback for WebApplicationFactory tests
+        // where configuration might not be applied yet during service registration
         var rateLimitingEnabled = configuration.GetValue("RateLimiting:Enabled", true);
-        if (!rateLimitingEnabled)
+        var disableRateLimitingEnvVar = Environment.GetEnvironmentVariable("DISABLE_RATE_LIMITING");
+        var disabledByEnvVar = string.Equals(disableRateLimitingEnvVar, "true", StringComparison.OrdinalIgnoreCase);
+
+        if (!rateLimitingEnabled || disabledByEnvVar)
         {
             // Register a permissive rate limiter that allows all requests
             services.AddRateLimiter(options =>

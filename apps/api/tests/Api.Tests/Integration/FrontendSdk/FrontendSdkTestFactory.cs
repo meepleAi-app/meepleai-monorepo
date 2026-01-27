@@ -40,6 +40,16 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
     private string? _connectionString;
 
     /// <summary>
+    /// Issue #3102: Static constructor ensures DISABLE_RATE_LIMITING is set BEFORE
+    /// WebApplicationFactory creates the host. This is critical because AddRateLimitingServices
+    /// reads this env var during service registration, which happens before ConfigureWebHost.
+    /// </summary>
+    static FrontendSdkTestFactory()
+    {
+        Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
+    }
+
+    /// <summary>
     /// Initialize PostgreSQL container before tests.
     /// Container is shared across all tests in the collection for performance.
     /// </summary>
@@ -120,7 +130,8 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
         builder.UseEnvironment("Testing");
 
         // Issue #2705: Disable custom RateLimitingMiddleware via environment variable
-        // This complements the RateLimiting:Enabled=false config setting
+        // Issue #3102: Note - the static constructor sets this BEFORE host creation
+        // for the built-in rate limiter. This line ensures it's set for the custom middleware.
         Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
 
         builder.ConfigureAppConfiguration((context, configBuilder) =>

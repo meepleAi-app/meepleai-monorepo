@@ -33,7 +33,9 @@ export interface BadgeDetailSheetProps {
 
 /**
  * Helper: Get confetti configuration based on tier
+ * @internal Reserved for future confetti celebration feature
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getConfettiConfig(tier: BadgeTier) {
   const configs = {
     [BadgeTier.Diamond]: {
@@ -62,7 +64,9 @@ function getConfettiConfig(tier: BadgeTier) {
 
 /**
  * Helper: Get tier glow color
+ * @internal Reserved for future glow effect feature
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getTierGlow(tier: string): string {
   const glows: Record<string, string> = {
     Diamond: 'rgba(6, 182, 212, 0.8)',

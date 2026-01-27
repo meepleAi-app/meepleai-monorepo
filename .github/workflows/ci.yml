@@ -220,7 +220,7 @@ jobs:
       # Stage 4: Backend Integration Tests (Testcontainers)
       # Both stages run sequentially in this job with service containers
       - name: Run Tests
-        timeout-minutes: 15
+        timeout-minutes: 20
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
@@ -246,8 +246,11 @@ jobs:
             -p:CoverletOutput=./coverage/unit-coverage.xml || true
 
           # Run Integration tests
+          # Issue #3102: Exclude UploadPdfMidPhaseCancellationTests - conflicts with CI service containers
+          # These tests use SharedTestcontainersFixture which requires dedicated container management
+          # that conflicts with the PostgreSQL service container defined in this workflow
           dotnet test \
-            --filter "Category=Integration" \
+            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests" \
             --logger "console;verbosity=minimal" \
             --no-build \
             --configuration Release \

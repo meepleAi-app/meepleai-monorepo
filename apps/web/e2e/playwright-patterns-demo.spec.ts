@@ -17,11 +17,12 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { BasePage } from './pages/base/BasePage';
-import { authenticateViaAPI } from './fixtures/auth';
+
+import { assertSuccessToast } from './helpers/assertions';
 import { mockApiSuccess, mockApiError } from './helpers/mocks';
 import { setViewport, isMobileViewport } from './helpers/responsive-utils';
-import { assertSuccessToast } from './helpers/assertions';
+import { authenticateViaAPI } from './fixtures/auth';
+import { BasePage } from './pages/base/BasePage';
 
 /**
  * Example: Simple Page Object extending BasePage

@@ -11,14 +11,17 @@
 
 | Categoria | Issue Totali | Completate | Rimanenti |
 |-----------|--------------|------------|-----------|
-| Backend | 22 | 3 | 19 |
-| Frontend | 24 | 0 | 24 |
-| Infra/CI | 12 | 0 | 12 |
-| **TOTALE** | 58 | **3** | **55** |
+| Backend | 22 | 7 | 15 |
+| Frontend | 24 | 1 | 23 |
+| Infra/CI | 12 | 3 | 9 |
+| **TOTALE** | 58 | **11** | **47** |
 
 **Principio Guida**: Test/Fix PRIMA delle nuove implementazioni
 
-> **AGGIORNAMENTO 2026-01-27**: Issue #3067, #3068, #3069 (CQRS compliance) chiuse perché già implementate. FASE 2 completata automaticamente.
+> **AGGIORNAMENTO 2026-01-27**:
+> - FASE 0 (Bug Fixes): 4/5 completate (#3006, #3007, #3008, #2991)
+> - FASE 1 (Coverage): 4/5 completate (#3010, #3011, #3012, #3013)
+> - FASE 2 (CQRS): 3/3 completate (#3067, #3068, #3069)
 
 ---
 
@@ -38,31 +41,30 @@
 
 ---
 
-## FASE 0: Test Foundation & Bug Fixes (Priorita Massima)
+## FASE 0: Test Foundation & Bug Fixes ✅ QUASI COMPLETATA
 
 > **Obiettivo**: Zero test failures, coverage collection funzionante
+> **Stato**: 4/5 completate (80%)
 
-### Sprint 0.1: Backend Bug Fixes (1 settimana)
-
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| 1 | #3006 | 🐛 Fix Backend Event Handler Tests (26 failures) | `backend-dev` | ⏳ |
-| 2 | #3007 | 🐛 Fix Backend Repository Filter Queries (2 critical) | `backend-dev` | ⏳ |
-| 3 | #3008 | 🐛 Fix Backend ShareRequest State Machine (23+ failures) | `backend-dev` | ⏳ |
-| 4 | #2991 | 🐛 UserLibraryRepository.GetUserGamesAsync tests | `backend-dev` | ⏳ |
-
-### Sprint 0.2: Frontend Bug Fixes (Parallelizzabile con 0.1)
+### Sprint 0.1: Backend Bug Fixes ✅ COMPLETATO
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 5 | #3009 | 🐛 Fix Frontend Coverage Collection (v8 Provider) | `frontend-dev` | ⏳ |
+| ~~1~~ | ~~#3006~~ | ~~🐛 Fix Backend Event Handler Tests (26 failures)~~ | `backend-dev` | ✅ **CLOSED** |
+| ~~2~~ | ~~#3007~~ | ~~🐛 Fix Backend Repository Filter Queries (2 critical)~~ | `backend-dev` | ✅ **CLOSED** |
+| ~~3~~ | ~~#3008~~ | ~~🐛 Fix Backend ShareRequest State Machine (23+ failures)~~ | `backend-dev` | ✅ **CLOSED** |
+| ~~4~~ | ~~#2991~~ | ~~🐛 UserLibraryRepository.GetUserGamesAsync tests~~ | `backend-dev` | ✅ **CLOSED** |
 
-### 🚩 CHECKPOINT 0 - Bug Fix Merge
+### Sprint 0.2: Frontend Bug Fixes (In Progress)
+
+| # | Issue | Tipo | Branch | Status |
+|---|-------|------|--------|--------|
+| 5 | #3009 | 🐛 Fix Frontend Coverage Collection (v8 Provider) | `frontend-dev` | 🔄 OPEN |
+
+### 🚩 CHECKPOINT 0 - Bug Fix Merge (Backend ✅ / Frontend ⏳)
 ```bash
-# Backend: backend-dev → main-dev
-git checkout main-dev && git merge backend-dev --no-ff -m "fix: resolve all backend test failures (#3006, #3007, #3008, #2991)"
-
-# Frontend: frontend-dev → main-dev
+# Backend: ✅ COMPLETATO
+# Frontend: ⏳ In attesa #3009
 git checkout main-dev && git merge frontend-dev --no-ff -m "fix: resolve frontend coverage collection (#3009)"
 
 # Tag checkpoint
@@ -71,39 +73,37 @@ git tag -a checkpoint-0-bug-fixes -m "All test failures resolved"
 
 ---
 
-## FASE 1: Coverage Infrastructure (2 settimane)
+## FASE 1: Coverage Infrastructure ✅ QUASI COMPLETATA
 
 > **Obiettivo**: Raggiungere 50% coverage su entrambi i stack
+> **Stato**: 4/5 completate (80%)
 
-### Sprint 1.1: Coverage Tools Setup
+### Sprint 1.1: Coverage Tools Setup ✅ COMPLETATO
 
 | # | Issue | Tipo | Branch | Dipende Da | Status |
 |---|-------|------|--------|------------|--------|
-| 6 | #3013 | 🧪 Codecov Integration & CI Gates | `main-dev` | Checkpoint 0 | ⏳ |
+| ~~6~~ | ~~#3013~~ | ~~🧪 Codecov Integration & CI Gates~~ | `main-dev` | Checkpoint 0 | ✅ **CLOSED** |
 
-### Sprint 1.2: Backend Coverage (⇄ Parallelizzabile)
-
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| 7 | #3010 | 🧪 Increase Backend Coverage to 50% | `backend-dev` | ⏳ |
-| 8 | #3012 | 🧪 Add Backend E2E Test Suite | `backend-dev` | ⏳ |
-
-### Sprint 1.3: Frontend Coverage (⇄ Parallelizzabile con 1.2)
+### Sprint 1.2: Backend Coverage ✅ COMPLETATO
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 9 | #3011 | 🧪 Increase Frontend Coverage to 50% | `frontend-dev` | ⏳ |
-| 10 | #2861 | 🧪 [User Dashboard] Component Tests | `frontend-dev` | ⏳ |
+| ~~7~~ | ~~#3010~~ | ~~🧪 Increase Backend Coverage to 50%~~ | `backend-dev` | ✅ **CLOSED** |
+| ~~8~~ | ~~#3012~~ | ~~🧪 Add Backend E2E Test Suite~~ | `backend-dev` | ✅ **CLOSED** |
 
-### 🚩 CHECKPOINT 1 - Coverage Foundation Merge
+### Sprint 1.3: Frontend Coverage (In Progress)
+
+| # | Issue | Tipo | Branch | Status |
+|---|-------|------|--------|--------|
+| ~~9~~ | ~~#3011~~ | ~~🧪 Increase Frontend Coverage to 50%~~ | `frontend-dev` | ✅ **CLOSED** |
+| 10 | #2861 | 🧪 [User Dashboard] Component Tests | `frontend-dev` | 🔄 OPEN |
+
+### 🚩 CHECKPOINT 1 - Coverage Foundation Merge (Backend ✅ / Frontend ⏳)
 ```bash
-# Backend coverage work
-git checkout main-dev && git merge backend-dev --no-ff -m "test: increase backend coverage to 50% (#3010, #3012)"
+# Backend coverage: ✅ COMPLETATO (#3010, #3012)
+# Frontend coverage: ⏳ In attesa #2861
+git checkout main-dev && git merge frontend-dev --no-ff -m "test: complete frontend component tests (#2861)"
 
-# Frontend coverage work
-git checkout main-dev && git merge frontend-dev --no-ff -m "test: increase frontend coverage to 50% (#3011, #2861)"
-
-# Verify Codecov reports pass CI gates
 # Tag checkpoint
 git tag -a checkpoint-1-coverage-foundation -m "50% coverage achieved on both stacks"
 ```
@@ -348,19 +348,19 @@ git tag -a v2.0.0 -m "Production release with full CQRS compliance and 90%/85% c
 
 ---
 
-## Parallelizzazione Matrix (Aggiornata)
+## Parallelizzazione Matrix (Aggiornata 2026-01-27)
 
 ```
 FASE    | Backend (backend-dev)          | Frontend (frontend-dev)         | Sync Point
 --------|--------------------------------|----------------------------------|------------
-0       | #3006,#3007,#3008,#2991        | #3009                           | CHECKPOINT 0
-        | ⇄ PARALLEL                     | ⇄ PARALLEL                      |
+0       | ✅ #3006,#3007,#3008,#2991     | #3009 🔄                        | CHECKPOINT 0
+        | ✅ COMPLETATO                  | IN PROGRESS                      | (Backend ✅)
 --------|--------------------------------|----------------------------------|------------
-1       | #3010,#3012                    | #3011,#2861                     | CHECKPOINT 1
-        | ⇄ PARALLEL                     | ⇄ PARALLEL                      |
+1       | ✅ #3010,#3012,#3013           | ✅ #3011, #2861 🔄              | CHECKPOINT 1
+        | ✅ COMPLETATO                  | #2861 IN PROGRESS                | (Backend ✅)
 --------|--------------------------------|----------------------------------|------------
-2       | ✅ COMPLETATA (già impl.)      | ✅ N/A                          | ✅ SKIP
-        | #3067,#3068,#3069 CLOSED       |                                  |
+2       | ✅ #3067,#3068,#3069           | ✅ N/A                          | ✅ SKIP
+        | ✅ COMPLETATO                  | ✅ N/A                           |
 --------|--------------------------------|----------------------------------|------------
 3       | #3070 → #3071                  | #3075 (dopo #3070)              | CHECKPOINT 3
         |         ⇄ PARALLEL             | #3076 (dopo #3071)              |
@@ -380,14 +380,14 @@ FASE    | Backend (backend-dev)          | Frontend (frontend-dev)         | Syn
 
 ---
 
-## Gantt Semplificato (Settimane) - Aggiornato
+## Gantt Semplificato (Settimane) - Aggiornato 2026-01-27
 
 ```
 Settimana:  1   2   3   4   5   6   7   8   9  10  11  12  13  14
             |   |   |   |   |   |   |   |   |   |   |   |   |   |
-FASE 0      [===]                                                      Bug Fixes
-FASE 1          [=======]                                              Coverage 50%
-FASE 2          ✅ SKIP (già completata)                               CQRS ✅
+FASE 0      [✅=]🔄                                                    Bug Fixes (4/5 ✅)
+FASE 1          [✅====]🔄                                             Coverage 50% (4/5 ✅)
+FASE 2          ✅ COMPLETATA                                          CQRS ✅ (3/3)
 FASE 3                  [===========]                                  Security
 FASE 4                              [=======]                          Admin
 FASE 5                                      [=====]                    E2E Tests
@@ -396,15 +396,36 @@ FASE 7                                                    [===]        Final
 
 CHECKPOINTS: CP0  CP1         CP3     CP4     CP5         CP6  FINAL
               ↓    ↓           ↓       ↓       ↓           ↓      ↓
-main-dev:    [merge][merge]   [merge] [merge] [merge]    [merge][merge]
+main-dev:    [🔄] [🔄]       [merge] [merge] [merge]    [merge][merge]
 main:                                                              [release]
 
-⏱️ Tempo risparmiato: ~3-4 settimane (FASE 2 già completata)
+📊 Progresso: 11/58 issue completate (19%)
+⏱️ Tempo risparmiato: ~5-6 settimane (FASE 0-2 quasi completate)
 ```
 
 ---
 
-## Issue Completate (3)
+## Issue Completate (11)
+
+### FASE 0 - Bug Fixes (4/5)
+
+| # | Issue | Titolo | Data Chiusura |
+|---|-------|--------|---------------|
+| ~~1~~ | #3006 | Fix Backend Event Handler Tests (26 failures) | 2026-01-XX |
+| ~~2~~ | #3007 | Fix Backend Repository Filter Queries (2 critical) | 2026-01-XX |
+| ~~3~~ | #3008 | Fix Backend ShareRequest State Machine (23+ failures) | 2026-01-XX |
+| ~~4~~ | #2991 | UserLibraryRepository.GetUserGamesAsync tests | 2026-01-XX |
+
+### FASE 1 - Coverage Infrastructure (4/5)
+
+| # | Issue | Titolo | Data Chiusura |
+|---|-------|--------|---------------|
+| ~~6~~ | #3013 | Codecov Integration & CI Gates | 2026-01-XX |
+| ~~7~~ | #3010 | Increase Backend Coverage to 50% | 2026-01-XX |
+| ~~8~~ | #3012 | Add Backend E2E Test Suite | 2026-01-XX |
+| ~~9~~ | #3011 | Increase Frontend Coverage to 50% | 2026-01-XX |
+
+### FASE 2 - CQRS (3/3)
 
 | # | Issue | Titolo | Data Chiusura |
 |---|-------|--------|---------------|
@@ -412,7 +433,20 @@ main:                                                              [release]
 | ~~12~~ | #3068 | SharedGameCatalog Share Flow Handlers (2/2) | 2026-01-27 |
 | ~~13~~ | #3069 | Authentication - Migrate to Full CQRS | 2026-01-27 |
 
-**Motivo**: Tutti gli handler CQRS erano già implementati. Vedi Epic #3066.
+**Note**:
+- FASE 0/1: Bug fixes e coverage infrastructure completati durante sprint precedenti
+- FASE 2: Handler CQRS già implementati, issue chiuse come "già completate"
+
+---
+
+## Issue Recenti (Non ancora in sequenza)
+
+Issue create recentemente che possono essere lavorate in parallelo:
+
+| Issue | Titolo | Branch | Priorita |
+|-------|--------|--------|----------|
+| #3096 | refactor(tests): Convert dashboard tests to data-testid (i18n) | `frontend-dev` | Medium |
+| #3095 | fix(dashboard): RecentGamesSection incorrect /giochi route | `frontend-dev` | Medium |
 
 ---
 
@@ -462,6 +496,7 @@ git log --oneline --graph main-dev..frontend-dev
 
 **Ultimo aggiornamento**: 2026-01-27
 **Changelog**:
+- v3.0 (2026-01-27): Sincronizzato con GitHub - FASE 0/1 quasi completate (11/58 issue closed)
 - v2.0 (2026-01-27): Rimosso FASE 2 (già completata), rinumerato issue, aggiornato Gantt
 - v1.0 (2026-01-26): Versione iniziale
 

@@ -18,10 +18,10 @@
 
 import { test, expect } from '@playwright/test';
 
+import { authenticateViaAPI } from './fixtures/auth';
 import { assertSuccessToast } from './helpers/assertions';
 import { mockApiSuccess, mockApiError } from './helpers/mocks';
 import { setViewport, isMobileViewport } from './helpers/responsive-utils';
-import { authenticateViaAPI } from './fixtures/auth';
 import { BasePage } from './pages/base/BasePage';
 
 /**

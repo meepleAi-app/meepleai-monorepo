@@ -78,8 +78,9 @@ internal class ApiKeyAuthenticationService
             return ApiKeyValidationResult.Invalid("Invalid API key configuration");
         }
 
-        // Update last used timestamp (fire-and-forget, non-blocking)
-        _ = UpdateLastUsedAsync(apiKeyEntity.Id.ToString());
+        // Update last used timestamp
+        // Note: Must await to prevent concurrent DbContext usage (Npgsql doesn't support MARS)
+        await UpdateLastUsedAsync(apiKeyEntity.Id.ToString()).ConfigureAwait(false);
 
         _logger.LogInformation(
             "API key validated successfully. KeyId: {KeyId}, UserId: {UserId}, Scopes: {Scopes}",

@@ -105,6 +105,9 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
     /// </summary>
     public new async ValueTask DisposeAsync()
     {
+        // Clear environment variable set during configuration
+        Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", null);
+
         if (_postgresContainer != null)
         {
             await _postgresContainer.DisposeAsync();
@@ -115,6 +118,10 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+
+        // Issue #2705: Disable custom RateLimitingMiddleware via environment variable
+        // This complements the RateLimiting:Enabled=false config setting
+        Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
 
         builder.ConfigureAppConfiguration((context, configBuilder) =>
         {

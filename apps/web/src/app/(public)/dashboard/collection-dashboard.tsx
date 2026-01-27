@@ -22,12 +22,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Filter, Plus, Grid3x3, List, TrendingUp, Star, Gamepad2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Filter, Plus, Grid3x3, List, TrendingUp, Star, Gamepad2 } from 'lucide-react';
+
+import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { Badge } from '@/components/ui/data-display/badge';
 import { cn } from '@/lib/utils';
 
 // Types

@@ -22,9 +22,9 @@ import { useState, useMemo } from 'react';
 import { AlertCircle, FileText, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 
+import { CatalogPagination } from '@/components/catalog/CatalogPagination';
 import { ShareRequestCard } from '@/components/contributions/ShareRequestCard';
 import { ShareRequestFilters } from '@/components/contributions/ShareRequestFilters';
-import { CatalogPagination } from '@/components/catalog/CatalogPagination';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';

@@ -232,6 +232,8 @@ jobs:
           REDIS_URL: localhost:6379
           OPENROUTER_API_KEY: test-key
           CI: true
+          # Issue #3102: Disable rate limiting middleware for integration tests to prevent 429 errors
+          DISABLE_RATE_LIMITING: "true"
         run: |
           # Run Unit tests
           dotnet test \

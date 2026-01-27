@@ -557,7 +557,8 @@ await app.RunAsync().ConfigureAwait(false);
 // OPS-01: Helper method for database migration logic
 static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
 {
-    if (app.Environment.IsEnvironment("Testing"))
+    // Skip migrations in Testing and CI environments (E2E tests use Testcontainers)
+    if (app.Environment.IsEnvironment("Testing") || app.Environment.IsEnvironment("CI"))
     {
         return true;
     }

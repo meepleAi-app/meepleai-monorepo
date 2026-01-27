@@ -162,31 +162,36 @@ dotnet test --filter "Category=Integration"
 
 ---
 
-### 3. E2E Tests (~700 tests)
+### 3. E2E Tests (~75+ tests)
 
 **Prerequisites**:
-- ✅ Docker Desktop running
-- ✅ API running on `http://localhost:8080`
-- ✅ PostgreSQL, Qdrant, Redis services running
-- ✅ Environment secrets configured
-- ✅ OpenRouter API key (for LLM tests)
+- ✅ Docker Desktop running (Testcontainers manages infrastructure automatically)
+- ✅ Environment secrets configured (optional for some tests)
+- ✅ OpenRouter API key (for LLM-dependent tests only)
 
-**Description**: Full-stack integration tests that validate complete workflows including API endpoints, RAG pipeline, AI agents, and external services.
+**Description**: Full-stack integration tests that validate complete user journeys using Testcontainers for isolated infrastructure. Tests use WebApplicationFactory with real database instances.
 
-**Examples**:
-- RAG accuracy validation (`FirstAccuracyBaselineTest`)
-- AI agent integration tests
-- Complete chat → RAG → response workflows
-- PDF processing pipelines
-- OAuth authentication flows
+**Test Categories** (Issue #3012):
+
+| Category | Test File | Test Count | Description |
+|----------|-----------|------------|-------------|
+| **Authentication** | `AuthenticationE2ETests.cs` | 13 | Registration, login, logout, password, 2FA |
+| **Game Management** | `GameManagementE2ETests.cs` | 11 | CRUD, search, filter, pagination |
+| **Share Requests** | `ShareRequestE2ETests.cs` | 6 | Submit, admin review, approve/reject |
+| **User Library** | `UserLibraryE2ETests.cs` | 12 | Add/remove games, stats, quota |
+| **Notifications** | `NotificationsE2ETests.cs` | 9 | List, mark read, unread count |
+| **Document Processing** | `DocumentProcessingE2ETests.cs` | 10 | PDF upload, processing, extraction |
+| **Chat/AI** | `ChatE2ETests.cs` | 14 | Thread lifecycle, messages, close/reopen |
+
+**Total**: 75+ E2E tests covering critical user journeys
 
 **Run Command**:
 ```bash
-# After starting infrastructure and API
+# Testcontainers automatically starts PostgreSQL, Redis, Qdrant
 dotnet test --filter "Category=E2E"
 ```
 
-**Typical Duration**: 10-15 minutes
+**Typical Duration**: <10 minutes (target per Issue #3012)
 
 ---
 
@@ -608,155 +613,115 @@ git pull origin main-dev
 
 ## CI/CD Integration
 
-### Current GitHub Actions Workflow
+### Backend E2E Tests Workflow (Issue #3012)
 
-**File**: `.github/workflows/ci.yml`
-
-```yaml
-jobs:
-  backend-tests:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: meepleai
-          POSTGRES_PASSWORD: meepleai_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      qdrant:
-        image: qdrant/qdrant:v1.12.4
-        env:
-          QDRANT__SERVICE__API_KEY: test_api_key
-
-    steps:
-      - name: Cleanup Orphaned Containers
-        run: pwsh tools/cleanup/cleanup-testcontainers.ps1
-
-      - name: Wait for Services
-        run: |
-          # PostgreSQL health check
-          until pg_isready -h localhost -p 5432; do sleep 1; done
-
-          # Redis health check
-          until redis-cli -h localhost ping; do sleep 1; done
-
-          # Qdrant health check
-          until curl -f http://localhost:6333/collections; do sleep 1; done
-
-      - name: Run Unit Tests
-        run: dotnet test --filter "Category=Unit"
-
-      - name: Run Integration Tests
-        run: dotnet test --filter "Category=Integration"
-
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v4
-```
-
-### Why E2E Tests Skip in CI
-
-**Reasons**:
-1. **Long-running API process**: Requires background API server
-2. **External API keys**: OpenRouter API key not in CI secrets
-3. **Duration**: 25-35 minutes (expensive for every PR)
-4. **Reliability**: External API dependencies can cause flaky tests
-
-**Recommendation**: Run E2E tests nightly or on release branches only
-
----
-
-### Proposed: Nightly E2E Workflow
-
-**File**: `.github/workflows/nightly-e2e.yml`
+**File**: `.github/workflows/backend-e2e-tests.yml`
 
 ```yaml
-name: Nightly E2E Tests
+name: Backend E2E Tests
 
 on:
-  schedule:
-    - cron: '0 2 * * *'  # 2 AM daily
-  workflow_dispatch:      # Manual trigger
+  push:
+    branches: [main, main-dev]
+    paths:
+      - 'apps/api/**'
+      - 'tests/Api.Tests/E2E/**'
+  pull_request:
+    branches: [main, main-dev]
+    paths:
+      - 'apps/api/**'
+      - 'tests/Api.Tests/E2E/**'
+  workflow_dispatch:
 
 jobs:
-  e2e-full-suite:
+  backend-e2e-tests:
+    name: Backend E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: meepleai
-          POSTGRES_PASSWORD: meepleai_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-      redis:
-        image: redis:7-alpine
-      qdrant:
-        image: qdrant/qdrant:latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET 9
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
 
-      - name: Configure Secrets
-        run: |
-          mkdir -p infra/secrets
-          echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" > infra/secrets/openrouter.secret
-          echo "POSTGRES_PASSWORD=meepleai_test" > infra/secrets/database.secret
-          pwsh infra/secrets/setup-secrets.ps1 -SaveGenerated
+      - name: Restore Dependencies
+        working-directory: apps/api
+        run: dotnet restore
 
-      - name: Start API (Background)
-        run: |
-          cd apps/api/src/Api
-          dotnet run &
-          sleep 30  # Wait for API startup
-
-      - name: Verify API Health
-        run: |
-          curl --retry 5 --retry-delay 5 http://localhost:8080/health
+      - name: Build Solution
+        working-directory: apps/api
+        run: dotnet build --no-restore --configuration Release
 
       - name: Run E2E Tests
+        working-directory: apps/api
         run: |
-          cd apps/api/tests/Api.Tests
-          dotnet test --filter "Category=E2E" --logger "trx;LogFileName=e2e-results.trx"
+          dotnet test tests/Api.Tests/Api.Tests.csproj \
+            --no-build \
+            --configuration Release \
+            --filter "Category=E2E" \
+            --logger "trx;LogFileName=e2e-test-results.trx" \
+            --results-directory ./TestResults
 
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-test-results
-          path: '**/TestResults/*.trx'
+          name: backend-e2e-test-results
+          path: apps/api/TestResults/
 
-      - name: Notify on Failure
-        if: failure()
-        uses: actions/github-script@v7
+      - name: Publish Test Results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          script: |
-            github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: 'E2E Test Failure - Nightly Run',
-              body: 'E2E tests failed in nightly run. Check workflow logs.',
-              labels: ['testing', 'e2e', 'automated']
-            })
+          files: apps/api/TestResults/**/*.trx
 ```
+
+### E2E Test Execution Flow
+
+1. **Testcontainers Auto-Start**: PostgreSQL, Redis, Qdrant containers start automatically
+2. **WebApplicationFactory**: Creates isolated API instance with test configuration
+3. **Test Execution**: Each test class gets isolated database via `E2ETestBase`
+4. **Auto-Cleanup**: Containers and databases cleaned up after test completion
+
+### Test Infrastructure Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    E2E Test Execution                        │
+├─────────────────────────────────────────────────────────────┤
+│  E2ETestFixture (Collection Fixture)                        │
+│  └── WebApplicationFactory<Program>                         │
+│      └── Test Database (PostgreSQL Testcontainer)           │
+│      └── Cache (Redis Testcontainer)                        │
+│      └── Vector DB (Qdrant Testcontainer)                   │
+├─────────────────────────────────────────────────────────────┤
+│  E2ETestBase (Per-Test Class)                               │
+│  └── HttpClient (Authenticated)                             │
+│  └── DbContext (Isolated per test class)                    │
+│  └── SeedTestDataAsync() (Test-specific data)               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Why Testcontainers for E2E
+
+**Benefits**:
+1. **No manual service setup**: Containers auto-start/stop
+2. **Isolated execution**: Each run gets fresh infrastructure
+3. **CI-friendly**: Works on GitHub Actions without external services
+4. **Fast**: Container reuse across test classes (~8-10 min total)
+
+### Frontend E2E vs Backend E2E
+
+| Aspect | Frontend E2E | Backend E2E |
+|--------|-------------|-------------|
+| **Workflow** | `test-e2e.yml` | `backend-e2e-tests.yml` |
+| **Tool** | Playwright | xUnit + WebApplicationFactory |
+| **Focus** | UI flows, browser interaction | API endpoints, business logic |
+| **Duration** | 15-25 min | <10 min |
+| **Sharding** | Yes (4 shards) | No (fast enough) |
 
 ---
 
@@ -996,6 +961,7 @@ SELECT * FROM games LIMIT 10;
 
 ---
 
-**Last Updated**: 2026-01-18
-**Issue**: #2533 (Backend E2E Test Documentation)
+**Last Updated**: 2026-01-27
+**Issue**: #3012 (Backend E2E Test Suite)
+**Previous Issue**: #2533 (Backend E2E Test Documentation)
 **Maintained By**: MeepleAI Development Team

@@ -101,7 +101,7 @@ internal class MonthlyOptimizationReportService : IMonthlyOptimizationReportServ
         var summary = new List<string>
         {
             $"📊 **Monthly LLM Costs**: ${efficiency.TotalCost:F2} ({efficiency.TotalQueries} queries, {efficiency.TotalTokens:N0} tokens)",
-            $"💾 **Cache Performance**: {cache.HitRate:P0} hit rate (${cache.EstimatedSavingsUsd:F2} saved)",
+            $"💾 **Cache Performance**: {cache.HitRate * 100:0}% hit rate (${cache.EstimatedSavingsUsd:F2} saved)",
             $"🎯 **Recommended Model**: {recommendation.RecommendedModel} ({recommendation.QualityTier} tier)",
             $"💰 **Optimization Opportunity**: ${totalSavings:F2} potential monthly savings"
         };

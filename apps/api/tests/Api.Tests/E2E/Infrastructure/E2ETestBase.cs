@@ -313,6 +313,9 @@ public sealed class E2ETestFixture : IAsyncLifetime
                     services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();
                     services.RemoveAll<MeepleAiDbContext>();
 
+                    // Register domain event collector (skipped in Testing environment by InfrastructureServiceExtensions)
+                    services.TryAddScoped<IDomainEventCollector, DomainEventCollector>();
+
                     services.AddDbContext<MeepleAiDbContext>((serviceProvider, options) =>
                     {
                         var configuration = serviceProvider.GetRequiredService<IConfiguration>();
@@ -381,6 +384,9 @@ public sealed class E2ETestFixture : IAsyncLifetime
                 {
                     services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();
                     services.RemoveAll<MeepleAiDbContext>();
+
+                    // Register domain event collector (skipped in Testing environment by InfrastructureServiceExtensions)
+                    services.TryAddScoped<IDomainEventCollector, DomainEventCollector>();
 
                     services.AddDbContext<MeepleAiDbContext>((serviceProvider, options) =>
                     {

@@ -220,7 +220,7 @@ export const useGameStore = create<GameStore>((set) => ({
 
 ## Testing
 
-**Backend** (xUnit + Testcontainers) - Target: 90%+
+**Backend** (xUnit + Testcontainers) - Target: 90%+ | **737 test files** | **8,630+ tests**
 - Unit: 70% (domain logic, fast, isolated)
 - Integration: 25% (DB, handlers, full flows)
 - E2E: 5% (critical journeys)
@@ -228,9 +228,73 @@ export const useGameStore = create<GameStore>((set) => ({
 ```bash
 cd apps/api/src/Api
 dotnet test                                    # All tests
-dotnet test --filter "FullyQualifiedName~GameTests"  # Specific
+dotnet test --filter "Category=Unit"           # Unit only
+dotnet test --filter "Category=Integration"    # Integration only
+dotnet test --filter "BoundedContext=GameManagement"  # By context
 dotnet test /p:CollectCoverage=true            # With coverage
 ```
+
+### Backend Test Patterns
+
+**Handler Test** (mock dependencies):
+```csharp
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "YourContext")]
+public class YourHandlerTests
+{
+    private readonly Mock<IRepository> _mockRepo;
+    private readonly YourHandler _handler;
+
+    public YourHandlerTests()
+    {
+        _mockRepo = new Mock<IRepository>();
+        _handler = new YourHandler(_mockRepo.Object);
+    }
+
+    [Fact]
+    public async Task Handle_WithValidCommand_ReturnsResult()
+    {
+        // Arrange
+        _mockRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Entity());
+
+        // Act
+        var result = await _handler.Handle(new Command(), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        _mockRepo.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+}
+```
+
+**Integration Test** (Testcontainers):
+```csharp
+[Collection("SharedTestcontainers")]
+[Trait("Category", TestCategories.Integration)]
+public class RepoIntegrationTests : IAsyncLifetime
+{
+    private readonly SharedTestcontainersFixture _fixture;
+    private MeepleAiDbContext _dbContext = null!;
+
+    public async ValueTask InitializeAsync()
+    {
+        var connString = await _fixture.CreateIsolatedDatabaseAsync($"test_{Guid.NewGuid():N}");
+        // Setup DbContext and run migrations
+    }
+
+    [Fact]
+    public async Task AddAsync_PersistsEntity()
+    {
+        await _repository.AddAsync(entity, CancellationToken.None);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear(); // Fresh read
+        // Assert retrieval
+    }
+}
+```
+
+**Docs**: `docs/05-testing/backend/backend-testing-patterns.md`, `docs/05-testing/backend/test-data-builders.md`
 
 **Frontend** (Vitest + Playwright) - Target: 85%+
 

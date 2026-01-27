@@ -50,10 +50,10 @@ export interface ChatHistorySectionProps {
  */
 export function ChatHistorySection({ userId: _userId }: ChatHistorySectionProps) {
   return (
-    <section className="space-y-4" aria-label="Chat history">
+    <section className="space-y-4" aria-label="Chat history" data-testid="chat-history-section">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-quicksand font-semibold">Cronologia Chat</h2>
-        <Button variant="ghost" size="sm" asChild>
+        <h2 className="text-xl font-quicksand font-semibold" data-testid="chat-history-title">Cronologia Chat</h2>
+        <Button variant="ghost" size="sm" asChild data-testid="chat-history-view-all-button">
           <Link href="/chat">
             Vedi Tutte
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -62,25 +62,25 @@ export function ChatHistorySection({ userId: _userId }: ChatHistorySectionProps)
       </div>
 
       {/* MVP Placeholder Card */}
-      <Card className="border-dashed">
+      <Card className="border-dashed" data-testid="chat-history-placeholder-card">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
               <MessageSquare className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1">
-              <CardTitle className="text-base">Chat Recenti</CardTitle>
-              <CardDescription className="text-sm mt-1">
+              <CardTitle className="text-base" data-testid="chat-history-card-title">Chat Recenti</CardTitle>
+              <CardDescription className="text-sm mt-1" data-testid="chat-history-card-description">
                 Visualizza le tue conversazioni più recenti
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="text-sm text-muted-foreground mb-4" data-testid="chat-history-info-text">
             La cronologia completa delle chat è disponibile nella sezione Chat.
           </p>
-          <Button asChild className="w-full sm:w-auto">
+          <Button asChild className="w-full sm:w-auto" data-testid="chat-history-open-button">
             <Link href="/chat">
               Apri Chat
               <MessageSquare className="ml-2 h-4 w-4" />

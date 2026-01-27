@@ -11,6 +11,8 @@
  * - Accessibility
  *
  * Target: >=85% coverage
+ *
+ * Updated for i18n compliance (Issue #3096): Uses data-testid pattern
  */
 
 import { render, screen } from '@testing-library/react';
@@ -136,13 +138,16 @@ describe('RecentGamesSection', () => {
 
   describe('Loading State', () => {
     it('renders skeleton grid while loading', () => {
-      const { container } = render(
+      render(
         <RecentGamesSection games={undefined} isLoading={true} error={null} />
       );
 
-      expect(screen.getByText('Giochi Recenti')).toBeInTheDocument();
-      const skeletons = container.querySelectorAll('.animate-pulse');
-      expect(skeletons.length).toBe(6);
+      expect(screen.getByTestId('recent-games-title')).toBeInTheDocument();
+      expect(screen.getByTestId('recent-games-skeleton-grid')).toBeInTheDocument();
+      // 6 skeleton items
+      for (let i = 0; i < 6; i++) {
+        expect(screen.getByTestId(`recent-games-skeleton-${i}`)).toBeInTheDocument();
+      }
     });
 
     it('shows loading section with aria-label', () => {
@@ -162,9 +167,10 @@ describe('RecentGamesSection', () => {
         <RecentGamesSection games={undefined} isLoading={false} error={new Error('Network error')} />
       );
 
-      expect(screen.getByText('Errore di Caricamento')).toBeInTheDocument();
-      expect(screen.getByText(/Impossibile caricare i giochi recenti/)).toBeInTheDocument();
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+      expect(screen.getByTestId('recent-games-error')).toBeInTheDocument();
+      expect(screen.getByTestId('recent-games-error-title')).toBeInTheDocument();
+      expect(screen.getByTestId('recent-games-error-description')).toBeInTheDocument();
+      expect(screen.getByTestId('recent-games-error-message')).toHaveTextContent('Network error');
     });
 
     it('handles non-Error error objects', () => {
@@ -172,7 +178,7 @@ describe('RecentGamesSection', () => {
         <RecentGamesSection games={undefined} isLoading={false} error="String error" />
       );
 
-      expect(screen.getByText('String error')).toBeInTheDocument();
+      expect(screen.getByTestId('recent-games-error-message')).toHaveTextContent('String error');
     });
 
     it('renders AlertCircle icon in error state', () => {
@@ -194,14 +200,15 @@ describe('RecentGamesSection', () => {
     it('renders empty state when games array is empty', () => {
       render(<RecentGamesSection games={[]} isLoading={false} error={null} />);
 
-      expect(screen.getByText('Nessun Gioco Ancora')).toBeInTheDocument();
-      expect(screen.getByText(/Aggiungi i tuoi giochi da tavolo/)).toBeInTheDocument();
+      expect(screen.getByTestId('recent-games-empty')).toBeInTheDocument();
+      expect(screen.getByTestId('recent-games-empty-title')).toBeInTheDocument();
+      expect(screen.getByTestId('recent-games-empty-description')).toBeInTheDocument();
     });
 
     it('renders empty state when games is undefined', () => {
       render(<RecentGamesSection games={undefined} isLoading={false} error={null} />);
 
-      expect(screen.getByText('Nessun Gioco Ancora')).toBeInTheDocument();
+      expect(screen.getByTestId('recent-games-empty')).toBeInTheDocument();
     });
 
     it('renders Gamepad2 icon in empty state', () => {
@@ -213,11 +220,12 @@ describe('RecentGamesSection', () => {
       expect(icon).toBeInTheDocument();
     });
 
-    it('renders "Esplora Catalogo" button in empty state', () => {
+    it('renders explore catalog button in empty state', () => {
       render(<RecentGamesSection games={[]} isLoading={false} error={null} />);
 
-      const link = screen.getByRole('link', { name: /Esplora Catalogo/i });
-      expect(link).toHaveAttribute('href', '/games');
+      const button = screen.getByTestId('recent-games-explore-button');
+      expect(button).toBeInTheDocument();
+      expect(button.closest('a')).toHaveAttribute('href', '/games');
     });
   });
 
@@ -237,14 +245,15 @@ describe('RecentGamesSection', () => {
     it('renders section header with title', () => {
       render(<RecentGamesSection games={mockGames} isLoading={false} error={null} />);
 
-      expect(screen.getByText('Giochi Recenti')).toBeInTheDocument();
+      expect(screen.getByTestId('recent-games-title')).toBeInTheDocument();
     });
 
-    it('renders "Vedi Tutti" link to games catalog', () => {
+    it('renders view all link to games catalog', () => {
       render(<RecentGamesSection games={mockGames} isLoading={false} error={null} />);
 
-      const link = screen.getByRole('link', { name: /Vedi Tutti/i });
-      expect(link).toHaveAttribute('href', '/games');
+      const button = screen.getByTestId('recent-games-view-all-button');
+      expect(button).toBeInTheDocument();
+      expect(button.closest('a')).toHaveAttribute('href', '/games');
     });
 
     it('limits displayed games to 6', () => {
@@ -264,7 +273,7 @@ describe('RecentGamesSection', () => {
   });
 
   // ============================================================================
-  // Navigation Tests
+  // Navigation Tests (Issue #3095 - Fixed routing from /giochi to /games)
   // ============================================================================
 
   describe('Navigation', () => {
@@ -275,7 +284,7 @@ describe('RecentGamesSection', () => {
       const catanCard = screen.getByTestId('game-card-game-1');
       await user.click(catanCard);
 
-      expect(mockPush).toHaveBeenCalledWith('/giochi/game-1');
+      expect(mockPush).toHaveBeenCalledWith('/games/game-1');
     });
 
     it('navigates to correct game detail for each card', async () => {
@@ -285,7 +294,7 @@ describe('RecentGamesSection', () => {
       const azulCard = screen.getByTestId('game-card-game-2');
       await user.click(azulCard);
 
-      expect(mockPush).toHaveBeenCalledWith('/giochi/game-2');
+      expect(mockPush).toHaveBeenCalledWith('/games/game-2');
     });
   });
 
@@ -304,17 +313,18 @@ describe('RecentGamesSection', () => {
       render(<RecentGamesSection games={mockGames} isLoading={false} error={null} />);
 
       const heading = screen.getByRole('heading', { level: 2 });
-      expect(heading).toHaveTextContent('Giochi Recenti');
+      expect(heading).toBeInTheDocument();
+      expect(heading).toHaveAttribute('data-testid', 'recent-games-title');
     });
 
     it('has correct heading in empty state', () => {
       render(<RecentGamesSection games={[]} isLoading={false} error={null} />);
 
       const h2 = screen.getByRole('heading', { level: 2 });
-      expect(h2).toHaveTextContent('Giochi Recenti');
+      expect(h2).toHaveAttribute('data-testid', 'recent-games-title');
 
       const h3 = screen.getByRole('heading', { level: 3 });
-      expect(h3).toHaveTextContent('Nessun Gioco Ancora');
+      expect(h3).toHaveAttribute('data-testid', 'recent-games-empty-title');
     });
   });
 
@@ -326,27 +336,23 @@ describe('RecentGamesSection', () => {
     it('applies font-quicksand to heading', () => {
       render(<RecentGamesSection games={mockGames} isLoading={false} error={null} />);
 
-      const heading = screen.getByRole('heading', { level: 2 });
+      const heading = screen.getByTestId('recent-games-title');
       expect(heading).toHaveClass('font-quicksand');
     });
 
     it('applies grid classes for responsive layout', () => {
-      const { container } = render(
-        <RecentGamesSection games={mockGames} isLoading={false} error={null} />
-      );
+      render(<RecentGamesSection games={mockGames} isLoading={false} error={null} />);
 
-      const grid = container.querySelector('.grid');
+      const grid = screen.getByTestId('recent-games-grid');
       expect(grid).toHaveClass('grid-cols-2');
       expect(grid).toHaveClass('md:grid-cols-3');
     });
 
     it('applies dashed border in empty state', () => {
-      const { container } = render(
-        <RecentGamesSection games={[]} isLoading={false} error={null} />
-      );
+      render(<RecentGamesSection games={[]} isLoading={false} error={null} />);
 
-      const placeholder = container.querySelector('.border-dashed');
-      expect(placeholder).toBeInTheDocument();
+      const placeholder = screen.getByTestId('recent-games-empty');
+      expect(placeholder).toHaveClass('border-dashed');
     });
   });
 
@@ -366,7 +372,7 @@ describe('RecentGamesSection', () => {
     it('handles null games prop gracefully', () => {
       render(<RecentGamesSection games={null as unknown as Game[]} isLoading={false} error={null} />);
 
-      expect(screen.getByText('Nessun Gioco Ancora')).toBeInTheDocument();
+      expect(screen.getByTestId('recent-games-empty')).toBeInTheDocument();
     });
   });
 });

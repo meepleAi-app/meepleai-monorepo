@@ -68,7 +68,7 @@ function SessionStatusBadge({ status }: { status: string }) {
 
   return (
     // eslint-disable-next-line security/detect-object-injection -- status comes from typed API response
-    <Badge variant={variants[status] || 'outline'} className="text-xs">
+    <Badge variant={variants[status] || 'outline'} className="text-xs" data-testid={`session-status-badge-${status.toLowerCase()}`}>
       {/* eslint-disable-next-line security/detect-object-injection -- status is controlled */}
       {labels[status] || status}
     </Badge>
@@ -228,14 +228,14 @@ export function ActiveSessionsSection({ limit = 3 }: ActiveSessionsSectionProps)
   // Loading state: Skeleton cards
   if (isLoading) {
     return (
-      <section className="space-y-4" aria-label="Sessioni attive">
+      <section className="space-y-4" aria-label="Sessioni attive" data-testid="active-sessions-section">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-quicksand font-semibold">Partite in Corso</h2>
+          <h2 className="text-xl font-quicksand font-semibold" data-testid="active-sessions-title">Partite in Corso</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="active-sessions-skeleton-grid">
           {Array.from({ length: limit }).map((_, i) => (
-            <Skeleton key={i} className="h-40 w-full" />
+            <Skeleton key={i} className="h-40 w-full" data-testid={`active-sessions-skeleton-${i}`} />
           ))}
         </div>
       </section>
@@ -247,15 +247,15 @@ export function ActiveSessionsSection({ limit = 3 }: ActiveSessionsSectionProps)
     const errorMessage = sessionsError instanceof Error ? sessionsError.message : String(sessionsError);
 
     return (
-      <section className="space-y-4" aria-label="Sessioni attive">
-        <h2 className="text-xl font-quicksand font-semibold">Partite in Corso</h2>
+      <section className="space-y-4" aria-label="Sessioni attive" data-testid="active-sessions-section">
+        <h2 className="text-xl font-quicksand font-semibold" data-testid="active-sessions-title">Partite in Corso</h2>
 
-        <Alert variant="destructive">
+        <Alert variant="destructive" data-testid="active-sessions-error">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Errore di Caricamento</AlertTitle>
-          <AlertDescription>
+          <AlertTitle data-testid="active-sessions-error-title">Errore di Caricamento</AlertTitle>
+          <AlertDescription data-testid="active-sessions-error-description">
             Impossibile caricare le sessioni attive.
-            <span className="block mt-2 text-xs opacity-75">{errorMessage}</span>
+            <span className="block mt-2 text-xs opacity-75" data-testid="active-sessions-error-message">{errorMessage}</span>
           </AlertDescription>
         </Alert>
       </section>
@@ -269,18 +269,18 @@ export function ActiveSessionsSection({ limit = 3 }: ActiveSessionsSectionProps)
 
   // Main content: Sessions grid
   return (
-    <section className="space-y-4" aria-label="Sessioni attive">
+    <section className="space-y-4" aria-label="Sessioni attive" data-testid="active-sessions-section">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <PlayCircle className="h-5 w-5 text-muted-foreground" />
-          <h2 className="text-xl font-quicksand font-semibold">Partite in Corso</h2>
+          <h2 className="text-xl font-quicksand font-semibold" data-testid="active-sessions-title">Partite in Corso</h2>
           {sessionsData.total > 0 && (
-            <Badge variant="secondary" className="ml-2">
+            <Badge variant="secondary" className="ml-2" data-testid="active-sessions-total-badge">
               {sessionsData.total}
             </Badge>
           )}
         </div>
-        <Button variant="ghost" size="sm" asChild>
+        <Button variant="ghost" size="sm" asChild data-testid="active-sessions-view-all-button">
           <Link href="/sessions">
             Vedi Tutte
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -288,7 +288,7 @@ export function ActiveSessionsSection({ limit = 3 }: ActiveSessionsSectionProps)
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="active-sessions-grid">
         {sessionsData.sessions.map(session => (
           <SessionCard
             key={session.id}

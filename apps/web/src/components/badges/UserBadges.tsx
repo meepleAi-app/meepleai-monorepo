@@ -9,16 +9,18 @@
 'use client';
 
 import React from 'react';
+
 import Link from 'next/link';
 
-import { useMyBadges, useToggleBadgeDisplay } from '@/hooks/queries';
-import { BadgeGrid } from './BadgeGrid';
-import { BadgeDetailSheet } from './BadgeDetailSheet';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
-import { Button } from '@/components/ui/primitives/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
+import { useMyBadges, useToggleBadgeDisplay } from '@/hooks/queries';
 import { cn } from '@/lib/utils';
 import type { UserBadgeDto } from '@/types/badges';
+
+import { BadgeDetailSheet } from './BadgeDetailSheet';
+import { BadgeGrid } from './BadgeGrid';
 
 export interface UserBadgesProps {
   /** Optional CSS class */

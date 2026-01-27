@@ -50,6 +50,7 @@ export function BackgroundTexture({
     return null;
   }
 
+  // eslint-disable-next-line security/detect-object-injection -- Safe: intensity is a typed union literal from props
   const multiplier = INTENSITY_MULTIPLIERS[intensity];
 
   // Calculate adjusted opacity values for texture layers

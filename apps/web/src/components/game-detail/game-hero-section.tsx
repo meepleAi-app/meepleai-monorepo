@@ -52,6 +52,7 @@ export function GameHeroSection({
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50">{title}</h1>
           <span
+            // eslint-disable-next-line security/detect-object-injection -- Safe: status is a typed union literal from props
             className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[status]}`}
             role="status"
             aria-label={`Game status: ${status}`}

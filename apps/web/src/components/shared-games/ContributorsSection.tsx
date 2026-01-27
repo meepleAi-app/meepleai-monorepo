@@ -10,10 +10,12 @@
 'use client';
 
 import { Users } from 'lucide-react';
-import { useGameContributors } from '@/hooks/queries';
-import { ContributorCard } from './ContributorCard';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { useGameContributors } from '@/hooks/queries';
+
+import { ContributorCard } from './ContributorCard';
 
 interface ContributorsSectionProps {
   gameId: string;

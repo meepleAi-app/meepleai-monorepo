@@ -1,5 +1,7 @@
 'use client';
 
+import { AlertCircle } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import {
   Dialog,
@@ -9,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui';
-import { AlertCircle } from 'lucide-react';
 
 /**
  * Review Conflict Dialog Component

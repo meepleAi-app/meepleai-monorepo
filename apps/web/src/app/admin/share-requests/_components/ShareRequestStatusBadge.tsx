@@ -1,5 +1,6 @@
+import { AlertCircle, CheckCircle, Eye, FileText, MessageSquare, XCircle } from 'lucide-react';
+
 import { Badge } from '@/components/ui';
-import { FileText, Eye, AlertCircle, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
 import type { ShareRequestStatus } from '@/lib/api/schemas/share-requests.schemas';
 
 /**

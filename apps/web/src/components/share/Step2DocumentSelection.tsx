@@ -1,6 +1,7 @@
 import { FileText, Upload } from 'lucide-react';
-import { Checkbox } from '@/components/ui/primitives/checkbox';
+
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
 import type { PdfDocumentDto } from '@/lib/api';
 
 /**

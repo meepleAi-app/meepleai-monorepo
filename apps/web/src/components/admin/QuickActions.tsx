@@ -207,6 +207,7 @@ export function QuickActions({
               ? 'hover:border-orange-500 hover:shadow-md'
               : variantStyles[variant];
             const iconClass = useGradient
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Safe: useGradient is true only when action.gradient exists
               ? gradientStyles[action.gradient!]
               : iconVariantStyles[variant];
 

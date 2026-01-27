@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
 
-import { Button } from '../primitives/button';
 import { Toaster } from './sonner';
+import { Button } from '../primitives/button';
 
 import type { Meta, StoryObj } from '@storybook/react';
 

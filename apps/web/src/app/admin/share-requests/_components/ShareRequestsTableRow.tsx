@@ -1,12 +1,14 @@
+import { formatDistanceToNow } from 'date-fns';
+import { Eye, FileText } from 'lucide-react';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
 import { Badge } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { TableCell, TableRow } from '@/components/ui/data-display/table';
-import { formatDistanceToNow } from 'date-fns';
-import { FileText, Eye } from 'lucide-react';
-import { ShareRequestStatusBadge } from './ShareRequestStatusBadge';
-import { LockStatusBadge } from './LockStatusBadge';
 import type { AdminShareRequestDto } from '@/lib/api/schemas/admin-share-requests.schemas';
+
+import { LockStatusBadge } from './LockStatusBadge';
+import { ShareRequestStatusBadge } from './ShareRequestStatusBadge';
 
 /**
  * Share Requests Table Row Component
@@ -41,6 +43,7 @@ export function ShareRequestsTableRow({ request, onReview }: ShareRequestsTableR
       <TableCell>
         <div className="flex items-center gap-3">
           {request.gameThumbnailUrl && (
+            /* eslint-disable-next-line @next/next/no-img-element -- External game thumbnail URL */
             <img
               src={request.gameThumbnailUrl}
               alt={request.gameTitle}

@@ -422,12 +422,18 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        // Create game
+        // Create game with all required fields to satisfy database constraints
         var gameId = Guid.NewGuid();
         var game = new SharedGameEntity
         {
             Id = gameId,
             Title = $"Test Game {Guid.NewGuid():N}",
+            Description = "Test game description",
+            MinPlayers = 2,        // chk_shared_games_players: min_players > 0
+            MaxPlayers = 4,        // chk_shared_games_players: max_players >= min_players
+            PlayingTimeMinutes = 60, // chk_shared_games_playing_time: playing_time_minutes > 0
+            YearPublished = 2024,  // chk_shared_games_year_published: year_published > 1900 AND <= 2100
+            MinAge = 10,           // chk_shared_games_min_age: min_age >= 0
             CreatedAt = DateTime.UtcNow,
             CreatedBy = TestContributorId
         };

@@ -51,14 +51,14 @@ export function RecentGamesSection({ games, isLoading, error }: RecentGamesSecti
   // Loading state: Skeleton grid
   if (isLoading) {
     return (
-      <section className="space-y-4" aria-label="Recent games">
+      <section className="space-y-4" aria-label="Recent games" data-testid="recent-games-section">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-quicksand font-semibold">Giochi Recenti</h2>
+          <h2 className="text-xl font-quicksand font-semibold" data-testid="recent-games-title">Giochi Recenti</h2>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4" data-testid="recent-games-skeleton-grid">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-64 w-full" />
+            <Skeleton key={i} className="h-64 w-full" data-testid={`recent-games-skeleton-${i}`} />
           ))}
         </div>
       </section>
@@ -70,15 +70,15 @@ export function RecentGamesSection({ games, isLoading, error }: RecentGamesSecti
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     return (
-      <section className="space-y-4" aria-label="Recent games">
-        <h2 className="text-xl font-quicksand font-semibold">Giochi Recenti</h2>
+      <section className="space-y-4" aria-label="Recent games" data-testid="recent-games-section">
+        <h2 className="text-xl font-quicksand font-semibold" data-testid="recent-games-title">Giochi Recenti</h2>
 
-        <Alert variant="destructive">
+        <Alert variant="destructive" data-testid="recent-games-error">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Errore di Caricamento</AlertTitle>
-          <AlertDescription>
+          <AlertTitle data-testid="recent-games-error-title">Errore di Caricamento</AlertTitle>
+          <AlertDescription data-testid="recent-games-error-description">
             Impossibile caricare i giochi recenti. Riprova più tardi.
-            <span className="block mt-2 text-xs opacity-75">{errorMessage}</span>
+            <span className="block mt-2 text-xs opacity-75" data-testid="recent-games-error-message">{errorMessage}</span>
           </AlertDescription>
         </Alert>
       </section>
@@ -88,16 +88,16 @@ export function RecentGamesSection({ games, isLoading, error }: RecentGamesSecti
   // Empty state: No games yet
   if (!games || games.length === 0) {
     return (
-      <section className="space-y-4" aria-label="Recent games">
-        <h2 className="text-xl font-quicksand font-semibold">Giochi Recenti</h2>
+      <section className="space-y-4" aria-label="Recent games" data-testid="recent-games-section">
+        <h2 className="text-xl font-quicksand font-semibold" data-testid="recent-games-title">Giochi Recenti</h2>
 
-        <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-muted rounded-lg">
+        <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-muted rounded-lg" data-testid="recent-games-empty">
           <Gamepad2 className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Nessun Gioco Ancora</h3>
-          <p className="text-muted-foreground text-center mb-4 max-w-md">
+          <h3 className="text-lg font-semibold mb-2" data-testid="recent-games-empty-title">Nessun Gioco Ancora</h3>
+          <p className="text-muted-foreground text-center mb-4 max-w-md" data-testid="recent-games-empty-description">
             Aggiungi i tuoi giochi da tavolo preferiti per iniziare a chattare con l'AI.
           </p>
-          <Button asChild>
+          <Button asChild data-testid="recent-games-explore-button">
             <Link href="/games">
               Esplora Catalogo
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -110,10 +110,10 @@ export function RecentGamesSection({ games, isLoading, error }: RecentGamesSecti
 
   // Main content: Games grid (2x3 responsive)
   return (
-    <section className="space-y-4" aria-label="Recent games">
+    <section className="space-y-4" aria-label="Recent games" data-testid="recent-games-section">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-quicksand font-semibold">Giochi Recenti</h2>
-        <Button variant="ghost" size="sm" asChild>
+        <h2 className="text-xl font-quicksand font-semibold" data-testid="recent-games-title">Giochi Recenti</h2>
+        <Button variant="ghost" size="sm" asChild data-testid="recent-games-view-all-button">
           <Link href="/games">
             Vedi Tutti
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -121,13 +121,13 @@ export function RecentGamesSection({ games, isLoading, error }: RecentGamesSecti
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4" data-testid="recent-games-grid">
         {games.slice(0, 6).map(game => (
           <GameCard
             key={game.id}
             game={game}
             variant="grid"
-            onClick={() => router.push(`/giochi/${game.id}`)}
+            onClick={() => router.push(`/games/${game.id}`)}
           />
         ))}
       </div>

@@ -10,6 +10,8 @@
  * - Accessibility
  *
  * Target: >=85% coverage
+ *
+ * Updated for i18n compliance (Issue #3096): Uses data-testid pattern
  */
 
 import { render, screen } from '@testing-library/react';
@@ -22,8 +24,8 @@ import { ChatHistorySection } from '../ChatHistorySection';
 // ============================================================================
 
 vi.mock('next/link', () => ({
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
+  default: ({ children, href, 'data-testid': testId }: { children: React.ReactNode; href: string; 'data-testid'?: string }) => (
+    <a href={href} data-testid={testId}>{children}</a>
   ),
 }));
 
@@ -44,13 +46,13 @@ describe('ChatHistorySection', () => {
     it('renders section title', () => {
       render(<ChatHistorySection userId="user-1" />);
 
-      expect(screen.getByText('Cronologia Chat')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-history-title')).toBeInTheDocument();
     });
 
     it('renders "Vedi Tutte" link in header', () => {
       render(<ChatHistorySection userId="user-1" />);
 
-      const link = screen.getByRole('link', { name: /Vedi Tutte/i });
+      const link = screen.getByTestId('chat-history-view-all-button');
       expect(link).toHaveAttribute('href', '/chat');
     });
 
@@ -58,7 +60,7 @@ describe('ChatHistorySection', () => {
       render(<ChatHistorySection userId="user-1" />);
 
       const heading = screen.getByRole('heading', { level: 2 });
-      expect(heading).toHaveTextContent('Cronologia Chat');
+      expect(heading).toHaveAttribute('data-testid', 'chat-history-title');
     });
   });
 
@@ -67,31 +69,35 @@ describe('ChatHistorySection', () => {
   // ============================================================================
 
   describe('MVP Placeholder Card', () => {
-    it('renders card title "Chat Recenti"', () => {
+    it('renders placeholder card', () => {
       render(<ChatHistorySection userId="user-1" />);
 
-      expect(screen.getByText('Chat Recenti')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-history-placeholder-card')).toBeInTheDocument();
+    });
+
+    it('renders card title', () => {
+      render(<ChatHistorySection userId="user-1" />);
+
+      expect(screen.getByTestId('chat-history-card-title')).toBeInTheDocument();
     });
 
     it('renders card description', () => {
       render(<ChatHistorySection userId="user-1" />);
 
-      expect(screen.getByText('Visualizza le tue conversazioni più recenti')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-history-card-description')).toBeInTheDocument();
     });
 
     it('renders info text about chat history', () => {
       render(<ChatHistorySection userId="user-1" />);
 
-      expect(
-        screen.getByText('La cronologia completa delle chat è disponibile nella sezione Chat.')
-      ).toBeInTheDocument();
+      expect(screen.getByTestId('chat-history-info-text')).toBeInTheDocument();
     });
 
     it('renders "Apri Chat" button', () => {
       render(<ChatHistorySection userId="user-1" />);
 
-      const link = screen.getByRole('link', { name: /Apri Chat/i });
-      expect(link).toHaveAttribute('href', '/chat');
+      const button = screen.getByTestId('chat-history-open-button');
+      expect(button).toHaveAttribute('href', '/chat');
     });
 
     it('renders MessageSquare icon', () => {
@@ -103,10 +109,10 @@ describe('ChatHistorySection', () => {
     });
 
     it('renders dashed border on placeholder card', () => {
-      const { container } = render(<ChatHistorySection userId="user-1" />);
+      render(<ChatHistorySection userId="user-1" />);
 
-      const card = container.querySelector('.border-dashed');
-      expect(card).toBeInTheDocument();
+      const card = screen.getByTestId('chat-history-placeholder-card');
+      expect(card).toHaveClass('border-dashed');
     });
   });
 
@@ -121,11 +127,17 @@ describe('ChatHistorySection', () => {
       expect(screen.getByLabelText('Chat history')).toBeInTheDocument();
     });
 
-    it('has semantic HTML structure', () => {
-      const { container } = render(<ChatHistorySection userId="user-1" />);
+    it('has correct data-testid on section', () => {
+      render(<ChatHistorySection userId="user-1" />);
 
-      const section = container.querySelector('section');
-      expect(section).toBeInTheDocument();
+      expect(screen.getByTestId('chat-history-section')).toBeInTheDocument();
+    });
+
+    it('has semantic HTML structure', () => {
+      render(<ChatHistorySection userId="user-1" />);
+
+      const section = screen.getByTestId('chat-history-section');
+      expect(section.tagName.toLowerCase()).toBe('section');
     });
   });
 
@@ -141,10 +153,10 @@ describe('ChatHistorySection', () => {
 
     it('renders with different userId values', () => {
       const { rerender } = render(<ChatHistorySection userId="user-1" />);
-      expect(screen.getByText('Cronologia Chat')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-history-title')).toBeInTheDocument();
 
       rerender(<ChatHistorySection userId="user-2" />);
-      expect(screen.getByText('Cronologia Chat')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-history-title')).toBeInTheDocument();
     });
   });
 
@@ -156,14 +168,14 @@ describe('ChatHistorySection', () => {
     it('applies font-quicksand to heading', () => {
       render(<ChatHistorySection userId="user-1" />);
 
-      const heading = screen.getByRole('heading', { level: 2 });
+      const heading = screen.getByTestId('chat-history-title');
       expect(heading).toHaveClass('font-quicksand');
     });
 
     it('applies space-y-4 to section', () => {
-      const { container } = render(<ChatHistorySection userId="user-1" />);
+      render(<ChatHistorySection userId="user-1" />);
 
-      const section = container.querySelector('section');
+      const section = screen.getByTestId('chat-history-section');
       expect(section).toHaveClass('space-y-4');
     });
 
@@ -183,22 +195,24 @@ describe('ChatHistorySection', () => {
     it('has two links to /chat', () => {
       render(<ChatHistorySection userId="user-1" />);
 
-      const links = screen.getAllByRole('link');
-      const chatLinks = links.filter(link => link.getAttribute('href') === '/chat');
-      expect(chatLinks.length).toBe(2); // "Vedi Tutte" and "Apri Chat"
+      const viewAllLink = screen.getByTestId('chat-history-view-all-button');
+      const openChatLink = screen.getByTestId('chat-history-open-button');
+
+      expect(viewAllLink).toHaveAttribute('href', '/chat');
+      expect(openChatLink).toHaveAttribute('href', '/chat');
     });
 
     it('"Vedi Tutte" link is in header', () => {
       render(<ChatHistorySection userId="user-1" />);
 
-      const vediTutteLink = screen.getByRole('link', { name: /Vedi Tutte/i });
+      const vediTutteLink = screen.getByTestId('chat-history-view-all-button');
       expect(vediTutteLink).toBeInTheDocument();
     });
 
     it('"Apri Chat" link is in card', () => {
       render(<ChatHistorySection userId="user-1" />);
 
-      const apriChatLink = screen.getByRole('link', { name: /Apri Chat/i });
+      const apriChatLink = screen.getByTestId('chat-history-open-button');
       expect(apriChatLink).toBeInTheDocument();
     });
   });

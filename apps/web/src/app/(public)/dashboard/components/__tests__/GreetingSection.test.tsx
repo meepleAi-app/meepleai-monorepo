@@ -8,6 +8,8 @@
  * - Accessibility (aria-label, heading structure)
  *
  * Target: >=85% coverage
+ *
+ * Updated for i18n compliance (Issue #3096): Uses data-testid pattern
  */
 
 import { render, screen } from '@testing-library/react';
@@ -71,67 +73,77 @@ describe('GreetingSection', () => {
   // ============================================================================
 
   describe('Time-based Greetings', () => {
-    it('renders "Buongiorno" in the morning (5:00-11:59)', () => {
+    it('renders morning greeting (5:00-11:59)', () => {
       mockTime(8);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      expect(screen.getByText(/Buongiorno/)).toBeInTheDocument();
+      const greetingText = screen.getByTestId('greeting-text');
+      expect(greetingText).toBeInTheDocument();
+      expect(greetingText.textContent).toMatch(/Buongiorno/);
     });
 
-    it('renders "Buongiorno" at 5:00 AM', () => {
+    it('renders morning greeting at 5:00 AM', () => {
       mockTime(5);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      expect(screen.getByText(/Buongiorno/)).toBeInTheDocument();
+      const greetingText = screen.getByTestId('greeting-text');
+      expect(greetingText.textContent).toMatch(/Buongiorno/);
     });
 
-    it('renders "Buon pomeriggio" in the afternoon (12:00-17:59)', () => {
+    it('renders afternoon greeting (12:00-17:59)', () => {
       mockTime(14);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      expect(screen.getByText(/Buon pomeriggio/)).toBeInTheDocument();
+      const greetingText = screen.getByTestId('greeting-text');
+      expect(greetingText.textContent).toMatch(/Buon pomeriggio/);
     });
 
-    it('renders "Buon pomeriggio" at noon', () => {
+    it('renders afternoon greeting at noon', () => {
       mockTime(12);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      expect(screen.getByText(/Buon pomeriggio/)).toBeInTheDocument();
+      const greetingText = screen.getByTestId('greeting-text');
+      expect(greetingText.textContent).toMatch(/Buon pomeriggio/);
     });
 
-    it('renders "Buonasera" in the evening (18:00-21:59)', () => {
+    it('renders evening greeting (18:00-21:59)', () => {
       mockTime(19);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      expect(screen.getByText(/Buonasera/)).toBeInTheDocument();
+      const greetingText = screen.getByTestId('greeting-text');
+      expect(greetingText.textContent).toMatch(/Buonasera/);
     });
 
-    it('renders "Buonasera" at 18:00', () => {
+    it('renders evening greeting at 18:00', () => {
       mockTime(18);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      expect(screen.getByText(/Buonasera/)).toBeInTheDocument();
+      const greetingText = screen.getByTestId('greeting-text');
+      expect(greetingText.textContent).toMatch(/Buonasera/);
     });
 
-    it('renders "Buonanotte" at night (22:00-4:59)', () => {
+    it('renders night greeting (22:00-4:59)', () => {
       mockTime(23);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      expect(screen.getByText(/Buonanotte/)).toBeInTheDocument();
+      const greetingText = screen.getByTestId('greeting-text');
+      expect(greetingText.textContent).toMatch(/Buonanotte/);
     });
 
-    it('renders "Buonanotte" at midnight', () => {
+    it('renders night greeting at midnight', () => {
       mockTime(0);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      expect(screen.getByText(/Buonanotte/)).toBeInTheDocument();
+      const greetingText = screen.getByTestId('greeting-text');
+      expect(greetingText.textContent).toMatch(/Buonanotte/);
     });
 
-    it('renders "Buonanotte" at 4:00 AM', () => {
+    it('renders night greeting at 4:00 AM', () => {
       mockTime(4);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      expect(screen.getByText(/Buonanotte/)).toBeInTheDocument();
+      const greetingText = screen.getByTestId('greeting-text');
+      expect(greetingText.textContent).toMatch(/Buonanotte/);
     });
   });
 
@@ -144,29 +156,31 @@ describe('GreetingSection', () => {
       mockTime(10);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      expect(screen.getByText(/Mario Rossi/)).toBeInTheDocument();
+      const nameElement = screen.getByTestId('greeting-name');
+      expect(nameElement).toHaveTextContent('Mario Rossi');
     });
 
     it('renders email username when displayName is null', () => {
       mockTime(10);
       render(<GreetingSection user={mockUserWithoutDisplayName} />);
 
-      expect(screen.getByText(/luigi.verdi/)).toBeInTheDocument();
-      expect(screen.queryByText('@example.com')).not.toBeInTheDocument();
+      const nameElement = screen.getByTestId('greeting-name');
+      expect(nameElement).toHaveTextContent('luigi.verdi');
     });
 
     it('renders email username when displayName is empty string', () => {
       mockTime(10);
       render(<GreetingSection user={mockUserWithEmptyDisplayName} />);
 
-      expect(screen.getByText(/anna.bianchi/)).toBeInTheDocument();
+      const nameElement = screen.getByTestId('greeting-name');
+      expect(nameElement).toHaveTextContent('anna.bianchi');
     });
 
     it('includes wave emoji in greeting', () => {
       mockTime(10);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      const heading = screen.getByRole('heading', { level: 1 });
+      const heading = screen.getByTestId('greeting-title');
       expect(heading.textContent).toContain('👋');
     });
   });
@@ -180,9 +194,8 @@ describe('GreetingSection', () => {
       mockTime(10);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      expect(
-        screen.getByText('Benvenuto nel tuo dashboard. Ecco cosa c\'è di nuovo.')
-      ).toBeInTheDocument();
+      const subtitle = screen.getByTestId('greeting-subtitle');
+      expect(subtitle).toBeInTheDocument();
     });
   });
 
@@ -211,14 +224,16 @@ describe('GreetingSection', () => {
 
       const heading = screen.getByRole('heading', { level: 1 });
       expect(heading).toBeInTheDocument();
+      expect(heading).toHaveAttribute('data-testid', 'greeting-title');
     });
 
-    it('heading contains complete greeting', () => {
+    it('heading contains greeting and name elements', () => {
       mockTime(14);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading.textContent).toMatch(/Buon pomeriggio.*Mario Rossi.*👋/);
+      const heading = screen.getByTestId('greeting-title');
+      expect(heading).toContainElement(screen.getByTestId('greeting-text'));
+      expect(heading).toContainElement(screen.getByTestId('greeting-name'));
     });
   });
 
@@ -231,7 +246,7 @@ describe('GreetingSection', () => {
       mockTime(10);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      const heading = screen.getByRole('heading', { level: 1 });
+      const heading = screen.getByTestId('greeting-title');
       expect(heading).toHaveClass('font-quicksand');
     });
 
@@ -239,7 +254,7 @@ describe('GreetingSection', () => {
       mockTime(10);
       render(<GreetingSection user={mockUserWithDisplayName} />);
 
-      const subtitle = screen.getByText(/Benvenuto nel tuo dashboard/);
+      const subtitle = screen.getByTestId('greeting-subtitle');
       expect(subtitle).toHaveClass('text-muted-foreground');
     });
 
@@ -268,7 +283,8 @@ describe('GreetingSection', () => {
 
       render(<GreetingSection user={userWithSpecialEmail} />);
 
-      expect(screen.getByText(/user\+test/)).toBeInTheDocument();
+      const nameElement = screen.getByTestId('greeting-name');
+      expect(nameElement).toHaveTextContent('user+test');
     });
 
     it('handles user with undefined displayName', () => {
@@ -282,7 +298,8 @@ describe('GreetingSection', () => {
 
       render(<GreetingSection user={userWithUndefinedName} />);
 
-      expect(screen.getByText(/undefined.user/)).toBeInTheDocument();
+      const nameElement = screen.getByTestId('greeting-name');
+      expect(nameElement).toHaveTextContent('undefined.user');
     });
   });
 });

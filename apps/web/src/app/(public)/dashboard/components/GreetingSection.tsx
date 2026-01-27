@@ -50,10 +50,10 @@ export function GreetingSection({ user }: GreetingSectionProps) {
 
   return (
     <section className="space-y-2" aria-label="Greeting" data-testid="dashboard-greeting">
-      <h1 className="text-3xl font-quicksand font-bold text-foreground">
-        {greeting}, {displayName}! 👋
+      <h1 className="text-3xl font-quicksand font-bold text-foreground" data-testid="greeting-title">
+        <span data-testid="greeting-text">{greeting}</span>, <span data-testid="greeting-name">{displayName}</span>! 👋
       </h1>
-      <p className="text-muted-foreground">Benvenuto nel tuo dashboard. Ecco cosa c'è di nuovo.</p>
+      <p className="text-muted-foreground" data-testid="greeting-subtitle">Benvenuto nel tuo dashboard. Ecco cosa c'è di nuovo.</p>
     </section>
   );
 }

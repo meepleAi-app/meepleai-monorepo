@@ -34,7 +34,7 @@ interface CallBackProps {
 }
 const STATUS = { FINISHED: 'finished', SKIPPED: 'skipped' };
 const EVENTS = { TOUR_END: 'tour:end' };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Joyride = (_props: any) => null;
 
 // ========== Tour Steps ==========

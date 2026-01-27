@@ -1,4 +1,7 @@
 import { useState } from 'react';
+
+import { CheckCircle } from 'lucide-react';
+
 import { Button } from '@/components/ui';
 import {
   Dialog,
@@ -8,9 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui';
-import { Textarea } from '@/components/ui';
 import { Label } from '@/components/ui';
-import { CheckCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui';
 
 /**
  * Approve Button Component

@@ -1,4 +1,3 @@
-import type { HttpClient } from '../core/httpClient';
 import {
   type ShareRequestDetailsDto,
   type PaginatedAdminShareRequestsResponse,
@@ -13,6 +12,8 @@ import {
   StartReviewResponseSchema,
   ActiveReviewDtoSchema,
 } from '../schemas/admin-share-requests.schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 /**
  * Admin Share Requests API Client

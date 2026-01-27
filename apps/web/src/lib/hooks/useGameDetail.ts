@@ -79,8 +79,6 @@ export interface UpdateStatePayload {
 export function useGameDetail(gameId: string) {
   const setGameId = useGameDetailStore((s) => s.setGameId);
   const setCurrentState = useGameDetailStore((s) => s.setCurrentState);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _setError = useGameDetailStore((s) => s.setError);
 
   return useQuery<GameDetail, Error>({
     queryKey: GAME_DETAIL_QUERY_KEY(gameId),

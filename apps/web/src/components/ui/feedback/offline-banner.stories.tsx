@@ -1,9 +1,11 @@
 import React from 'react';
+
 import { WifiOff, RefreshCw, AlertTriangle, X, Loader2 } from 'lucide-react';
 
-import { Button } from '../primitives/button';
 import { cn } from '@/lib/utils';
+
 import { offlineBannerVariants } from './offline-banner';
+import { Button } from '../primitives/button';
 
 import type { Meta, StoryObj } from '@storybook/react';
 

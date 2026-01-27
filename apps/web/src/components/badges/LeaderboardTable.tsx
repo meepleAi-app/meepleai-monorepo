@@ -8,14 +8,13 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 
-import { useLeaderboard } from '@/hooks/queries';
-import { useCurrentUser } from '@/hooks/queries';
-import { LeaderboardPeriod, getTierIcon, type LeaderboardEntryDto } from '@/types/badges';
-import { cn } from '@/lib/utils';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { useCurrentUser, useLeaderboard } from '@/hooks/queries';
+import { cn } from '@/lib/utils';
+import { getTierIcon, LeaderboardPeriod, type LeaderboardEntryDto } from '@/types/badges';
 
 export interface LeaderboardTableProps {
   /** Initial period filter (default: AllTime) */
@@ -152,6 +151,7 @@ function LeaderboardRow({ entry, position, isCurrentUser }: LeaderboardRowProps)
       {/* User Avatar */}
       <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
         {entry.avatarUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element -- External user-provided avatar URL */
           <img
             src={entry.avatarUrl}
             alt={entry.userName}
@@ -186,6 +186,7 @@ function LeaderboardRow({ entry, position, isCurrentUser }: LeaderboardRowProps)
             title={badge.name}
           >
             {badge.iconUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- External user-provided badge icon URL */
               <img
                 src={badge.iconUrl}
                 alt={badge.name}

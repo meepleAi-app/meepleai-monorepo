@@ -6,8 +6,9 @@
  * Issue #2748: Frontend - Admin Review Lock UI
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { ReviewConflictDialog } from './ReviewConflictDialog';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof ReviewConflictDialog> = {
   title: 'Admin/ShareRequests/ReviewConflictDialog',

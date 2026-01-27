@@ -68,6 +68,7 @@ export function getTierIcon(tier: BadgeTier): string {
     [BadgeTier.Silver]: '🥈',
     [BadgeTier.Bronze]: '🥉',
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return icons[tier];
 }
 
@@ -82,6 +83,7 @@ export function getCelebratoryTitle(tier: BadgeTier): string {
     [BadgeTier.Platinum]: 'Amazing Achievement! ⭐',
     [BadgeTier.Diamond]: 'Legendary Badge! 💎',
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return titles[tier];
 }
 
@@ -96,6 +98,7 @@ export function getTierOrder(tier: BadgeTier): number {
     [BadgeTier.Silver]: 3,
     [BadgeTier.Bronze]: 4,
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return order[tier];
 }
 
@@ -110,5 +113,6 @@ export function getTierClass(tier: BadgeTier): string {
     [BadgeTier.Silver]: 'bg-gradient-to-r from-gray-300 to-gray-400',
     [BadgeTier.Bronze]: 'bg-gradient-to-r from-amber-600 to-amber-800',
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return classes[tier];
 }

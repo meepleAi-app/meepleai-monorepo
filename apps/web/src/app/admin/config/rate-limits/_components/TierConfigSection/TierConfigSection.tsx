@@ -1,15 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useApiClient } from '@/lib/api/context';
-import { type RateLimitConfigDto, type UpdateTierConfigRequest } from '@/types';
+
+import { format } from 'date-fns';
+import { Pencil } from 'lucide-react';
+
+import { toast } from '@/components/layout/Toast';
+import { Spinner } from '@/components/loading/Spinner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
-import { Spinner } from '@/components/loading/Spinner';
-import { toast } from '@/components/layout/Toast';
+import { useApiClient } from '@/lib/api/context';
+import { type RateLimitConfigDto, type UpdateTierConfigRequest } from '@/types';
+
 import { TierConfigEditDialog } from './TierConfigEditDialog';
-import { Pencil } from 'lucide-react';
-import { format } from 'date-fns';
 
 export function TierConfigSection() {
   const { rateLimits } = useApiClient();
@@ -137,6 +140,7 @@ export function TierConfigSection() {
         config={configs.find((c) => c.tier === editingTier)}
         open={!!editingTier}
         onClose={() => setEditingTier(null)}
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Safe: callback only called when dialog is open (editingTier is truthy)
         onSave={(data) => handleSave(editingTier!, data)}
         isLoading={saving === editingTier}
       />

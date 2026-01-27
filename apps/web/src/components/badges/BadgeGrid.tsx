@@ -8,11 +8,10 @@
 
 'use client';
 
-import React from 'react';
 import { motion } from 'framer-motion';
 
-import { BadgeTier, getTierIcon, type UserBadgeDto } from '@/types/badges';
 import { cn } from '@/lib/utils';
+import { BadgeTier, getTierIcon, type UserBadgeDto } from '@/types/badges';
 
 export interface BadgeGridProps {
   /** Array of user badges to display */
@@ -53,9 +52,12 @@ export function BadgeGrid({
   const badgesByTier = visibleBadges.reduce<Record<BadgeTier, UserBadgeDto[]>>(
     (acc, badge) => {
       const tier = badge.tier;
+      // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
       if (!acc[tier]) {
+        // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
         acc[tier] = [];
       }
+      // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
       acc[tier].push(badge);
       return acc;
     },
@@ -72,6 +74,7 @@ export function BadgeGrid({
   ];
 
   // Sort tiers by order
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is from known BadgeTier enum array
   const sortedTiers = tierOrder.filter((tier) => badgesByTier[tier]?.length > 0);
 
   if (visibleBadges.length === 0) {
@@ -85,6 +88,7 @@ export function BadgeGrid({
   return (
     <div className={cn('space-y-8', className)}>
       {sortedTiers.map((tier) => {
+        // eslint-disable-next-line security/detect-object-injection -- Safe: tier is from filtered BadgeTier enum array
         const tierBadges = badgesByTier[tier];
         if (!tierBadges?.length) return null;
 
@@ -164,6 +168,7 @@ function BadgeItem({ badge, onClick }: BadgeItemProps){
       >
         <div className="flex h-full w-full items-center justify-center rounded-full bg-background">
           {badge.iconUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element -- External user-provided URL, Next.js Image optimization not applicable */
             <img
               src={badge.iconUrl}
               alt={badge.name}
@@ -213,6 +218,7 @@ function getTierGradient(tier: BadgeTier): string {
     [BadgeTier.Silver]: 'bg-gradient-to-br from-gray-300 to-gray-400',
     [BadgeTier.Bronze]: 'bg-gradient-to-br from-amber-600 to-amber-800',
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return gradients[tier];
 }
 
@@ -227,6 +233,7 @@ function getTierGlow(tier: BadgeTier): string {
     [BadgeTier.Silver]: 'rgba(209, 213, 219, 0.5)', // gray-300
     [BadgeTier.Bronze]: 'rgba(217, 119, 6, 0.5)', // amber-600
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return glows[tier];
 }
 

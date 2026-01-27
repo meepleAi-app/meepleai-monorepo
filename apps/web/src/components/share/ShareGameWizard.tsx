@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
+
 import { Loader2, Share2, ArrowLeft, ArrowRight, Send } from 'lucide-react';
+
+import { Progress } from '@/components/ui/feedback/progress';
 import {
   Dialog,
   DialogContent,
@@ -9,13 +12,14 @@ import {
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
-import { Progress } from '@/components/ui/feedback/progress';
 import { useCreateShareRequest } from '@/hooks/queries/useShareRequests';
+import type { UserLibraryEntry, PdfDocumentDto } from '@/lib/api';
+import { cn } from '@/lib/utils';
+
 import { Step1GamePreview } from './Step1GamePreview';
 import { Step2DocumentSelection } from './Step2DocumentSelection';
 import { Step3NotesAndConfirm } from './Step3NotesAndConfirm';
-import { cn } from '@/lib/utils';
-import type { UserLibraryEntry, PdfDocumentDto } from '@/lib/api';
+
 
 /**
  * ShareGameWizard - 3-step modal for sharing games to the community catalog

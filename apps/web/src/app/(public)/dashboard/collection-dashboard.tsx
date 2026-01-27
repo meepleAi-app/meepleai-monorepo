@@ -398,6 +398,7 @@ function GameCardFlip({ game, viewMode }: { game: GameCardData; viewMode: 'grid'
     // List view - no flip, horizontal layout
     return (
       <div className="bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none rounded-xl border border-border/50 dark:border-border/30 p-4 hover:shadow-lg transition-shadow duration-300 flex gap-4">
+        {/* eslint-disable-next-line @next/next/no-img-element -- External game cover URL from user's collection */}
         <img src={game.coverUrl} alt={game.title} className="w-24 h-32 object-cover rounded-lg" />
         <div className="flex-1">
           <h3 className="font-playfair font-bold text-lg text-stone-900">{game.title}</h3>
@@ -425,6 +426,7 @@ function GameCardFlip({ game, viewMode }: { game: GameCardData; viewMode: 'grid'
         {/* Front */}
         <div className="absolute inset-0 backface-hidden">
           <div className="relative h-full rounded-2xl overflow-hidden shadow-xl group">
+            {/* eslint-disable-next-line @next/next/no-img-element -- External game cover URL from user's collection */}
             <img src={game.coverUrl} alt={game.title} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2">

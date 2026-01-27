@@ -10,8 +10,9 @@
 'use client';
 
 import { Suspense } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // Issue #2850: MeepleAI color palette
 const MEEPLE_COLORS = {

@@ -6,8 +6,9 @@
  * Issue #2748: Frontend - Admin Review Lock UI
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { ReviewLockTimer } from './ReviewLockTimer';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof ReviewLockTimer> = {
   title: 'Admin/ShareRequests/ReviewLockTimer',

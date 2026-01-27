@@ -11,8 +11,6 @@
 
 import { useState, useEffect, ReactNode } from 'react';
 
-import { ThemeProvider } from '@/components/providers/ThemeProvider';
-
 import { QueryProvider } from '@/app/QueryProvider';
 import { AccessibleSkipLink } from '@/components/accessible';
 import { AuthProvider } from '@/components/auth/AuthProvider';
@@ -20,6 +18,7 @@ import { ErrorBoundary, RouteErrorBoundary } from '@/components/errors';
 import { KeyboardShortcutsHelp } from '@/components/layout';
 import { SessionWarningModal } from '@/components/modals';
 import { IntlProvider } from '@/components/providers/IntlProvider';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { Toaster } from '@/components/ui/feedback/sonner';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSessionCheck } from '@/hooks/useSessionCheck';

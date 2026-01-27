@@ -11,8 +11,8 @@
 import { useQuery, useMutation, UseQueryResult, UseMutationResult } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
-import type { UserBadgeDto, LeaderboardEntryDto, LeaderboardPeriod } from '@/types/badges';
 import { getQueryClient } from '@/lib/queryClient';
+import type { UserBadgeDto, LeaderboardEntryDto, LeaderboardPeriod } from '@/types/badges';
 
 /**
  * Query key factory for badge queries

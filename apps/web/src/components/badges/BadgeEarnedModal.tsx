@@ -9,14 +9,15 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
+
+import { AnimatePresence, motion } from 'framer-motion';
 import Confetti from 'react-confetti';
 
-import { BadgeTier, getCelebratoryTitle, getTierIcon, type BadgeNotificationData } from '@/types/badges';
-import { cn } from '@/lib/utils';
 import { Dialog, DialogContent } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
+import { BadgeTier, getCelebratoryTitle, getTierIcon, type BadgeNotificationData } from '@/types/badges';
 
 export interface BadgeEarnedModalProps {
   /** Badge that was earned (null to hide modal) */
@@ -139,6 +140,7 @@ export function BadgeEarnedModal({
                 >
                   <div className="flex h-full w-full items-center justify-center rounded-full bg-background">
                     {badge.iconUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element -- External user-provided URL, Next.js Image optimization not applicable */
                       <img
                         src={badge.iconUrl}
                         alt={badge.name}
@@ -224,6 +226,7 @@ function getConfettiConfig(tier: BadgeTier) {
       colors: ['#d97706', '#f59e0b', '#b45309'],
     },
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return configs[tier];
 }
 
@@ -238,6 +241,7 @@ function getTierGradient(tier: BadgeTier): string {
     [BadgeTier.Silver]: 'bg-gradient-to-br from-gray-300 to-gray-400',
     [BadgeTier.Bronze]: 'bg-gradient-to-br from-amber-600 to-amber-800',
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return gradients[tier];
 }
 
@@ -252,6 +256,7 @@ function getTierGlow(tier: BadgeTier): string {
     [BadgeTier.Silver]: 'rgba(209, 213, 219, 0.5)',
     [BadgeTier.Bronze]: 'rgba(217, 119, 6, 0.5)',
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return glows[tier];
 }
 

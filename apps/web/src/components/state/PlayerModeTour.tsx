@@ -17,9 +17,21 @@ import { useCallback, useState, useEffect } from 'react';
 // TEMPORARILY DISABLED: react-joyride incompatible with React 19
 // import Joyride, { Step, CallBackProps, STATUS, EVENTS } from 'react-joyride';
 
-// Temporary types until react-joyride is updated
-type Step = any;
-type CallBackProps = any;
+// Temporary types until react-joyride is updated for React 19
+interface Step {
+  target: string;
+  content: React.ReactNode;
+  placement?: 'top' | 'bottom' | 'left' | 'right' | 'center' | 'auto';
+  disableBeacon?: boolean;
+  title?: string;
+}
+
+interface CallBackProps {
+  action: string;
+  index: number;
+  status: string;
+  type: string;
+}
 const STATUS = { FINISHED: 'finished', SKIPPED: 'skipped' };
 const EVENTS = { TOUR_END: 'tour:end' };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars

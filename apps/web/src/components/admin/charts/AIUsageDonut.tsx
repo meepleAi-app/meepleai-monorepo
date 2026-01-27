@@ -96,7 +96,7 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps){
                   borderRadius: '0.75rem',
                   boxShadow: '0 4px 12px rgba(139, 90, 60, 0.1)',
                 }}
-                formatter={(value: any, name: any, props: any) => [
+                formatter={(value: number, name: string, props: { payload?: { count?: number } }) => [
                   `${props?.payload?.count?.toLocaleString() ?? value} calls (${value}%)`,
                   name
                 ]}

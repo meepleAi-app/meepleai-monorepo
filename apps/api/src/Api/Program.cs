@@ -82,8 +82,8 @@ builder.Host.UseSerilog();
 // ISSUE-2510: Validate secrets from infra/secrets/ directory
 // Load and validate all secrets with 3-level validation (Critical/Important/Optional)
 // Note: Using temporary logger factory since DI container not yet built
-// Issue #2556: Skip secret validation in Testing environment (used by integration tests)
-if (!builder.Environment.IsEnvironment("Testing"))
+// Issue #2556: Skip secret validation in Testing/CI environments (used by integration/E2E tests)
+if (!builder.Environment.IsEnvironment("Testing") && !builder.Environment.IsEnvironment("CI"))
 {
     using var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder.AddSerilog(Log.Logger));
     var tempLogger = loggerFactory.CreateLogger<Program>();
@@ -114,7 +114,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
 }
 else
 {
-    Log.Information("Testing environment detected - skipping secret validation");
+    Log.Information("Testing/CI environment detected - skipping secret validation");
 }
 
 // BGAI-081: Cookie Policy for Development

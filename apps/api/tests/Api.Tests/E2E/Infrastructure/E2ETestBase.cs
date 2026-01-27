@@ -24,11 +24,11 @@ namespace Api.Tests.E2E.Infrastructure;
 /// Issue #3023: Backend E2E Test Suite
 ///
 /// Architecture:
-/// - Single WebApplicationFactory shared across ALL E2E tests (avoids TestServer disposal issues)
-/// - Single shared database for all tests (API and DbContext use same database)
-/// - Each test gets its own DbContext instance (avoids change tracker issues)
+/// - Static WebApplicationFactory shared across ALL E2E tests (avoids TestServer disposal issues)
+/// - Static containers and database shared for all tests
+/// - Each test gets its own HttpClient and DbContext instance
 /// - Tests designed to be independent (unique emails, GUIDs per test)
-/// - Migrations run once at fixture initialization
+/// - Migrations run once at first test initialization
 ///
 /// Features:
 /// - Full API pipeline testing (HTTP → Endpoints → Handlers → Database)
@@ -58,7 +58,7 @@ public abstract class E2ETestBase : IAsyncLifetime
     private MeepleAiDbContext? _dbContext;
 
     protected HttpClient Client => _client ?? throw new InvalidOperationException("Client not initialized");
-    protected WebApplicationFactory<Program> Factory => _fixture.Factory;
+    protected WebApplicationFactory<Program> Factory => E2ESharedInfrastructure.Factory;
 
     /// <summary>
     /// Per-test DbContext for test assertions and data seeding.
@@ -79,15 +79,18 @@ public abstract class E2ETestBase : IAsyncLifetime
 
     public virtual async ValueTask InitializeAsync()
     {
+        // Ensure static infrastructure is initialized
+        await E2ESharedInfrastructure.EnsureInitializedAsync();
+
         // Create HttpClient from shared factory
-        _client = _fixture.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        _client = E2ESharedInfrastructure.Factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,
             HandleCookies = true
         });
 
         // Create per-test DbContext (connected to shared database)
-        _dbContext = _fixture.CreateDbContext();
+        _dbContext = E2ESharedInfrastructure.CreateDbContext();
 
         // Seed test data if needed by derived classes
         await SeedTestDataAsync();
@@ -218,72 +221,87 @@ public abstract class E2ETestBase : IAsyncLifetime
 }
 
 /// <summary>
-/// xUnit fixture for E2E tests that manages Testcontainers and shared WebApplicationFactory.
-/// Shared across all E2E test classes via collection fixture.
+/// Static shared infrastructure for E2E tests.
+/// This ensures the WebApplicationFactory and containers persist for the entire test run,
+/// avoiding ObjectDisposedException issues with xUnit's collection fixture lifecycle.
 ///
-/// Key design decisions:
-/// - Single WebApplicationFactory shared across ALL tests (avoids TestServer disposal issues)
-/// - Single shared database for all tests (API and assertions use same database)
-/// - Each test creates its own DbContext via CreateDbContext() to avoid change tracker issues
-/// - Migrations run once at fixture initialization
-/// - Tests must be designed to be independent (unique identifiers per test)
+/// The infrastructure is lazily initialized on first access and never explicitly disposed
+/// (relies on process termination for cleanup, which is fine for test runs).
 /// </summary>
-public sealed class E2ETestFixture : IAsyncLifetime
+internal static class E2ESharedInfrastructure
 {
     private const string E2EDatabaseName = "e2e_shared_test_db";
 
-    public SharedTestcontainersFixture Fixture { get; } = new SharedTestcontainersFixture();
-
-    private WebApplicationFactory<Program>? _factory;
-    private string? _databaseConnectionString;
+    private static readonly SemaphoreSlim InitLock = new(1, 1);
+    private static SharedTestcontainersFixture? _testcontainers;
+    private static WebApplicationFactory<Program>? _factory;
+    private static string? _databaseConnectionString;
+    private static bool _initialized;
 
     /// <summary>
     /// Shared WebApplicationFactory for all E2E tests.
-    /// Using a single factory avoids ObjectDisposedException on TestServer.
     /// </summary>
-    public WebApplicationFactory<Program> Factory => _factory ?? throw new InvalidOperationException("Factory not initialized");
+    public static WebApplicationFactory<Program> Factory =>
+        _factory ?? throw new InvalidOperationException("E2E infrastructure not initialized. Call EnsureInitializedAsync first.");
 
     /// <summary>
     /// Connection string for the shared E2E database.
     /// </summary>
-    public string DatabaseConnectionString => _databaseConnectionString ?? throw new InvalidOperationException("Database not initialized");
+    public static string DatabaseConnectionString =>
+        _databaseConnectionString ?? throw new InvalidOperationException("E2E infrastructure not initialized. Call EnsureInitializedAsync first.");
 
-    public async ValueTask InitializeAsync()
+    /// <summary>
+    /// Ensures the E2E infrastructure is initialized.
+    /// Thread-safe and idempotent - can be called multiple times safely.
+    /// </summary>
+    public static async Task EnsureInitializedAsync()
     {
-        // Initialize shared Testcontainers fixture (PostgreSQL and Redis)
-        await Fixture.InitializeAsync();
-
-        // Create a dedicated database for E2E tests
-        _databaseConnectionString = await Fixture.CreateIsolatedDatabaseAsync(E2EDatabaseName);
-
-        // Create shared WebApplicationFactory once for all tests
-        _factory = CreateSharedFactory(_databaseConnectionString);
-
-        // Run migrations once using a temporary DbContext
-        using var dbContext = CreateDbContext();
-        await dbContext.Database.MigrateAsync();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory != null)
+        if (_initialized)
         {
-            await _factory.DisposeAsync();
-            _factory = null;
+            return;
         }
 
-        // Drop the E2E database
-        await Fixture.DropIsolatedDatabaseAsync(E2EDatabaseName);
+        await InitLock.WaitAsync();
+        try
+        {
+            if (_initialized)
+            {
+                return;
+            }
 
-        await Fixture.DisposeAsync();
+            // Initialize shared Testcontainers fixture (PostgreSQL and Redis)
+            _testcontainers = new SharedTestcontainersFixture();
+            await _testcontainers.InitializeAsync();
+
+            // Create a dedicated database for E2E tests
+            _databaseConnectionString = await _testcontainers.CreateIsolatedDatabaseAsync(E2EDatabaseName);
+
+            // Create shared WebApplicationFactory once for all tests
+            _factory = CreateSharedFactory(_databaseConnectionString, _testcontainers.RedisConnectionString);
+
+            // Run migrations once using a temporary DbContext
+            using var dbContext = CreateDbContext();
+            await dbContext.Database.MigrateAsync();
+
+            _initialized = true;
+        }
+        finally
+        {
+            InitLock.Release();
+        }
     }
 
     /// <summary>
     /// Creates a new DbContext connected to the shared E2E database.
     /// Each test should call this to get its own DbContext instance.
     /// </summary>
-    public MeepleAiDbContext CreateDbContext()
+    public static MeepleAiDbContext CreateDbContext()
     {
+        if (_databaseConnectionString == null)
+        {
+            throw new InvalidOperationException("E2E infrastructure not initialized. Call EnsureInitializedAsync first.");
+        }
+
         var optionsBuilder = new DbContextOptionsBuilder<MeepleAiDbContext>();
         optionsBuilder.UseNpgsql(_databaseConnectionString);
         optionsBuilder.ConfigureWarnings(warnings =>
@@ -301,7 +319,7 @@ public sealed class E2ETestFixture : IAsyncLifetime
     /// <summary>
     /// Creates the shared WebApplicationFactory with the E2E database connection.
     /// </summary>
-    private WebApplicationFactory<Program> CreateSharedFactory(string connectionString)
+    private static WebApplicationFactory<Program> CreateSharedFactory(string connectionString, string redisConnectionString)
     {
         return new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
@@ -315,7 +333,7 @@ public sealed class E2ETestFixture : IAsyncLifetime
                     var testConfig = new Dictionary<string, string?>
                     {
                         ["ConnectionStrings:DefaultConnection"] = connectionString,
-                        ["ConnectionStrings:Redis"] = Fixture.RedisConnectionString,
+                        ["ConnectionStrings:Redis"] = redisConnectionString,
                         ["Jwt:Secret"] = "test-secret-key-for-e2e-tests-minimum-32-characters-long",
                         ["Jwt:Issuer"] = "MeepleAI-Test",
                         ["Jwt:Audience"] = "MeepleAI-Test",
@@ -325,7 +343,7 @@ public sealed class E2ETestFixture : IAsyncLifetime
                         ["Embedding:Enabled"] = "false",
                         ["Embedding:Url"] = "http://localhost:8000",
                         ["Redis:Enabled"] = "true",
-                        ["Redis:ConnectionString"] = Fixture.RedisConnectionString,
+                        ["Redis:ConnectionString"] = redisConnectionString,
                         ["Qdrant:Enabled"] = "false",
                         ["Qdrant:Host"] = "localhost",
                         ["Qdrant:Port"] = "6333",
@@ -362,6 +380,29 @@ public sealed class E2ETestFixture : IAsyncLifetime
                     services.AddScoped<IDbContextMigrator, TestDbContextMigrator>();
                 });
             });
+    }
+}
+
+/// <summary>
+/// xUnit fixture for E2E tests.
+/// This is a minimal fixture that defers to the static E2ESharedInfrastructure.
+/// The fixture itself doesn't manage the lifecycle - it just provides the interface
+/// for xUnit collection fixtures while the actual infrastructure is static.
+/// </summary>
+public sealed class E2ETestFixture : IAsyncLifetime
+{
+    public async ValueTask InitializeAsync()
+    {
+        // Initialize the static shared infrastructure
+        await E2ESharedInfrastructure.EnsureInitializedAsync();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        // Do NOT dispose the static infrastructure here.
+        // It will be cleaned up when the process terminates.
+        // This is intentional to avoid ObjectDisposedException issues.
+        return ValueTask.CompletedTask;
     }
 }
 

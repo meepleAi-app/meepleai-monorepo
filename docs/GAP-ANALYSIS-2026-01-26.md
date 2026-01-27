@@ -1,71 +1,79 @@
 # MeepleAI Gap Analysis: Codebase vs Documentazione
 
-**Data**: 2026-01-26
+**Data Originale**: 2026-01-26
+**Ultimo Aggiornamento**: 2026-01-27
 **Analisi**: Confronto sistematico tra documentazione e implementazione effettiva
 
 ---
 
 ## Executive Summary
 
-L'analisi ha identificato **gap critici** tra documentazione e implementazione:
+> **AGGIORNAMENTO 2026-01-27**: L'analisi originale conteneva dati errati sui bounded context CQRS. La verifica ha dimostrato che SharedGameCatalog e Authentication sono **100% implementati**.
 
-| Categoria | Severity | Gap Identificati |
-|-----------|----------|------------------|
-| **CQRS Pattern Violations** | CRITICO | 2 bounded contexts |
-| **Backend Missing Features** | ALTO | 5 funzionalita |
-| **Frontend Placeholders** | MEDIO | 3 componenti |
-| **API Endpoints Missing** | MEDIO | 5 endpoint |
-| **User Flows Incomplete** | BASSO | 4 flussi |
+| Categoria | Severity | Gap Identificati | Status |
+|-----------|----------|------------------|--------|
+| ~~**CQRS Pattern Violations**~~ | ~~CRITICO~~ | ~~2 bounded contexts~~ | **RISOLTO** |
+| **Backend Missing Features** | ALTO | 5 funzionalita | DA FARE |
+| **Frontend Placeholders** | MEDIO | 3 componenti | DA FARE |
+| **API Endpoints Missing** | MEDIO | 5 endpoint | DA FARE |
+| **User Flows Incomplete** | BASSO | 4 flussi | DA FARE |
 
 ---
 
-## 1. GAP CRITICI: Pattern CQRS Violati
+## 1. ~~GAP CRITICI: Pattern CQRS Violati~~ RISOLTO
 
-### 1.1 SharedGameCatalog - HANDLERS COMPLETAMENTE VUOTI
+### 1.1 SharedGameCatalog - COMPLETAMENTE IMPLEMENTATO
 
-**Severity**: CRITICO
-**Impatto**: 193 operazioni CQRS definite ma non implementate
+**Severity**: ~~CRITICO~~ **RISOLTO**
+**Status**: 69/69 handlers implementati (100%)
 
 ```
 SharedGameCatalog/
 ├── Application/
-│   ├── Commands/     → 123 commands definiti
-│   ├── Queries/      → 70 queries definite
-│   └── Handlers/     → 0 HANDLERS (folder vuota!)
+│   ├── Commands/     → 41 commands definiti, 41 handlers
+│   ├── Queries/      → 28 queries definite, 28 handlers
+│   └── EventHandlers → 4 event handlers aggiuntivi
+└── Tests/            → 124 file di test
 ```
 
-**Problema**: Il bounded context SharedGameCatalog ha Commands e Queries definiti ma **NESSUN handler implementato**. La logica probabilmente usa servizi diretti, violando il pattern CQRS documentato in CLAUDE.md.
+**Verifica (2026-01-27)**:
+```bash
+find SharedGameCatalog -name "*Command.cs" ! -name "*Handler*" ! -name "*Validator*" | wc -l  # 41
+find SharedGameCatalog -name "*CommandHandler.cs" | wc -l  # 41
+find SharedGameCatalog -name "*Query.cs" ! -name "*Handler*" | wc -l  # 28
+find SharedGameCatalog -name "*QueryHandler.cs" | wc -l  # 28
+```
 
-**Azione Richiesta**:
-1. Implementare tutti i 193 handlers mancanti
-2. Migrare da servizi diretti a MediatR pattern
-3. Aggiungere validators FluentValidation
+**Note**: L'analisi originale riportava erroneamente "193 operazioni, 0 handlers". Gli handlers sono organizzati in sottocartelle (es. `Commands/StartReview/StartReviewCommandHandler.cs`), non in una cartella `Handlers/` piatta.
 
-**Stima**: Epic con 10-15 issues
+**Issues Correlate**: #3067, #3068 (chiuse come già completate)
 
 ---
 
-### 1.2 Authentication - Handlers Sotto-implementati
+### 1.2 Authentication - COMPLETAMENTE IMPLEMENTATO
 
-**Severity**: ALTO
-**Impatto**: 104 operazioni CQRS, solo 2 handlers
+**Severity**: ~~ALTO~~ **RISOLTO**
+**Status**: 53/53 handlers implementati (100%)
 
 ```
 Authentication/
 ├── Application/
-│   ├── Commands/     → 67 commands definiti
-│   ├── Queries/      → 37 queries definite
-│   └── Handlers/     → SOLO 2 handlers (BulkExport/BulkImport)
+│   ├── Commands/     → 34 commands definiti, 34 handlers
+│   ├── Queries/      → 19 queries definite, 19 handlers
+│   └── EventHandlers → handlers per domain events
 ```
 
-**Problema**: La maggior parte della logica di autenticazione bypassa MediatR, violando la regola "ZERO direct service injection" documentata.
+**Verifica (2026-01-27)**:
+```bash
+find Authentication -name "*Command.cs" ! -name "*Handler*" ! -name "*Validator*" | wc -l  # 34
+find Authentication -name "*CommandHandler.cs" | wc -l  # 34
+find Authentication -name "*Query.cs" ! -name "*Handler*" | wc -l  # 19
+find Authentication -name "*QueryHandler.cs" | wc -l  # 19
+```
 
-**Azione Richiesta**:
-1. Verificare come gli endpoint auth eseguono i comandi
-2. Migrare logica da servizi diretti a handlers
-3. Mantenere consistenza con altri bounded contexts
+**Note**: L'analisi originale riportava erroneamente "104 operazioni, solo 2 handlers".
 
-**Stima**: 8-12 issues
+**Issues Correlate**: #3069 (chiusa come già completata)
 
 ---
 
@@ -85,6 +93,8 @@ Authentication/
 - `GET /api/v1/admin/system/session-limits`
 - `PUT /api/v1/admin/system/session-limits`
 
+**Issue**: #3070
+
 ---
 
 ### 2.2 PDF Upload Limits Admin UI
@@ -99,6 +109,8 @@ Authentication/
 **Handler Mancante**:
 - `UpdatePdfUploadLimitsCommandHandler.cs`
 
+**Issue**: #3072
+
 ---
 
 ### 2.3 Email Verification
@@ -111,6 +123,8 @@ Authentication/
 - Tabella `email_verifications`
 - `VerifyEmailCommand.cs`
 - `ResendVerificationCommand.cs`
+
+**Issue**: #3071
 
 ---
 
@@ -129,6 +143,8 @@ Features.RAG.Free = false
 Features.RAG.Normal = true
 Features.RAG.Premium = true
 ```
+
+**Issue**: #3073
 
 ---
 
@@ -150,6 +166,8 @@ CREATE TABLE ai_usage_logs (
 );
 ```
 
+**Issue**: #3074
+
 ---
 
 ## 3. GAP Frontend: Componenti Placeholder/Mancanti
@@ -168,6 +186,8 @@ CREATE TABLE ai_usage_logs (
 - `TwoFactorVerification.tsx` (implementazione reale)
 - Integrazione con endpoint `/2fa/*`
 
+**Issue**: #3077
+
 ---
 
 ### 3.2 Session Quota UI
@@ -180,6 +200,8 @@ CREATE TABLE ai_usage_logs (
 - Integrazione in `/sessions` page
 - Widget in dashboard
 
+**Issue**: #3075
+
 ---
 
 ### 3.3 PDF Limits Admin Config
@@ -191,17 +213,16 @@ CREATE TABLE ai_usage_logs (
 - `PdfLimitsConfig.tsx`
 - Integrazione in `/admin/configuration`
 
+**Issue**: #3078
+
 ---
 
-### 3.4 Streaming Chat Improvements
+### 3.4 Feature Flags Tier UI
 
-**Documentato**: Phase 4 chat features
-**Implementato**: Parziale
+**Documentato**: UI per gestione feature flags per tier
+**Implementato**: NO
 
-**Funzionalita Mancanti**:
-- Stop button per interrompere risposta streaming
-- Typing indicator avanzato
-- Export thread button funzionante
+**Issue**: #3079
 
 ---
 
@@ -209,13 +230,13 @@ CREATE TABLE ai_usage_logs (
 
 ### Endpoint Documentati ma Non Implementati
 
-| Endpoint | Metodo | Bounded Context | Status |
-|----------|--------|-----------------|--------|
-| `/admin/system/session-limits` | GET/PUT | SystemConfiguration | MANCANTE |
-| `/admin/system/pdf-upload-limits` | GET/PUT | SystemConfiguration | MANCANTE |
-| `/admin/users/{id}/usage` | GET | Administration | MANCANTE |
-| `/auth/email/verify` | POST | Authentication | MANCANTE |
-| `/auth/email/resend` | POST | Authentication | MANCANTE |
+| Endpoint | Metodo | Bounded Context | Status | Issue |
+|----------|--------|-----------------|--------|-------|
+| `/admin/system/session-limits` | GET/PUT | SystemConfiguration | MANCANTE | #3070 |
+| `/admin/system/pdf-upload-limits` | GET/PUT | SystemConfiguration | MANCANTE | #3072 |
+| `/admin/users/{id}/usage` | GET | Administration | MANCANTE | #3074 |
+| `/auth/email/verify` | POST | Authentication | MANCANTE | #3071 |
+| `/auth/email/resend` | POST | Authentication | MANCANTE | #3071 |
 
 ---
 
@@ -234,62 +255,61 @@ CREATE TABLE ai_usage_logs (
 
 ## 6. Prioritizzazione Interventi
 
-### CRITICO (Sprint Immediato)
+### ~~CRITICO (Sprint Immediato)~~ COMPLETATO
 
-1. **SharedGameCatalog Handlers** - Implementare i 193 handlers mancanti
-   - Severity: CRITICO
-   - Effort: 2-3 sprint
-   - Issue: Da creare epic
+~~1. **SharedGameCatalog Handlers** - Implementare i 193 handlers mancanti~~
+   - **Status**: COMPLETATO (2026-01-27)
+   - Issue #3067, #3068 chiuse
 
-2. **Authentication Handlers** - Migrare a pattern CQRS
-   - Severity: ALTO
-   - Effort: 1-2 sprint
+~~2. **Authentication Handlers** - Migrare a pattern CQRS~~
+   - **Status**: COMPLETATO (2026-01-27)
+   - Issue #3069 chiusa
 
-### ALTO (Q1 2026)
+### ALTO (Priorita Attuale)
 
-3. **Session Limits**
+1. **Session Limits** (#3070, #3075)
    - Backend: SessionQuotaService + endpoints
    - Frontend: SessionQuotaBar
    - Effort: 1 sprint
 
-4. **Email Verification**
+2. **Email Verification** (#3071, #3076)
    - Backend: Service + endpoints
    - Frontend: Verification flow
    - Effort: 1 sprint
 
-5. **2FA Implementation**
+3. **2FA Implementation** (#3077)
    - Convertire placeholder in componenti reali
    - Effort: 0.5 sprint
 
-### MEDIO (Q2 2026)
+### MEDIO (Q1-Q2 2026)
 
-6. **PDF Limits Admin UI**
+4. **PDF Limits Admin UI** (#3072, #3078)
    - Endpoints + frontend form
    - Effort: 0.5 sprint
 
-7. **Feature Flags Tier-Based**
+5. **Feature Flags Tier-Based** (#3073, #3079)
    - Estendere FeatureFlagService
    - Effort: 1 sprint
 
-8. **AI Token Tracking**
+6. **AI Token Tracking** (#3074, #3080)
    - Database + service + dashboard
    - Effort: 1 sprint
 
 ### BASSO (Q3-Q4 2026)
 
-9. Advanced Chat Features (voice, feedback)
-10. Collaboration Features (session invites)
-11. Admin Enhancements (impersonation, tracing)
+7. Advanced Chat Features (voice, feedback)
+8. Collaboration Features (session invites)
+9. Admin Enhancements (impersonation, tracing)
 
 ---
 
 ## 7. Metriche di Completamento
 
-### Stato Attuale
+### Stato Attuale (Aggiornato 2026-01-27)
 
 | Area | Documentato | Implementato | Gap |
 |------|-------------|--------------|-----|
-| Bounded Contexts (CQRS) | 10 | 8 completi | 2 critici |
+| Bounded Contexts (CQRS) | 10 | **10 completi** | **0** |
 | API Endpoints | ~170 | ~165 | 5 mancanti |
 | Frontend Components | ~150 | ~139 | 11 placeholder |
 | User Flows | 100% | 85% | 15% incompleti |
@@ -298,7 +318,7 @@ CREATE TABLE ai_usage_logs (
 
 | Area | Target | Timeline |
 |------|--------|----------|
-| CQRS Compliance | 100% | Q1 2026 |
+| ~~CQRS Compliance~~ | ~~100%~~ | **COMPLETATO** |
 | API Endpoints | 100% | Q1 2026 |
 | Frontend Components | 95% | Q2 2026 |
 | User Flows | 95% | Q2 2026 |
@@ -309,7 +329,7 @@ CREATE TABLE ai_usage_logs (
 
 ### Immediate Actions
 
-1. **Creare Epic**: "CQRS Pattern Compliance" per SharedGameCatalog e Authentication
+1. ~~**Creare Epic**: "CQRS Pattern Compliance" per SharedGameCatalog e Authentication~~ FATTO
 2. **Prioritizzare**: Session limits e email verification per sicurezza
 3. **Convertire**: 2FA placeholder in implementazione reale
 
@@ -318,12 +338,37 @@ CREATE TABLE ai_usage_logs (
 1. **Pre-commit Check**: Verificare che ogni Command/Query abbia handler
 2. **Documentation Sync**: Aggiornare docs quando si implementa
 3. **Gap Review**: Eseguire questa analisi trimestralmente
+4. **Verifica Dati**: Prima di creare issue, verificare stato reale del codice
 
-### Technical Debt
+### Lessons Learned (2026-01-27)
 
-1. **SharedGameCatalog**: Refactoring urgente necessario
-2. **Authentication**: Debt medio, migrare gradualmente
-3. **Frontend Placeholders**: Convertire o rimuovere
+1. **Struttura Cartelle**: Gli handlers possono essere in sottocartelle, non solo in `Handlers/`
+2. **Conteggio Automatico**: Usare script di verifica per contare handlers
+3. **Validazione Pre-Issue**: Verificare sempre lo stato reale prima di aprire issue
+
+---
+
+## 9. Issue Tracking (Epic #3066)
+
+### Completate (3/14)
+- [x] #3067 - SharedGameCatalog Core CQRS (chiusa 2026-01-27)
+- [x] #3068 - SharedGameCatalog Share Flow (chiusa 2026-01-27)
+- [x] #3069 - Authentication CQRS Migration (chiusa 2026-01-27)
+
+### Da Fare - Backend (5)
+- [ ] #3070 - Session Limits Backend
+- [ ] #3071 - Email Verification Backend
+- [ ] #3072 - PDF Limits Admin API
+- [ ] #3073 - Feature Flags Tier-Based
+- [ ] #3074 - AI Token Usage Tracking
+
+### Da Fare - Frontend (6)
+- [ ] #3075 - Session Quota UI
+- [ ] #3076 - Email Verification Flow
+- [ ] #3077 - 2FA UI Components
+- [ ] #3078 - PDF Limits Admin UI
+- [ ] #3079 - Feature Flags Tier UI
+- [ ] #3080 - AI Usage Dashboard
 
 ---
 
@@ -339,8 +384,23 @@ CREATE TABLE ai_usage_logs (
 - `apps/api/src/Api/Routing/*.cs` - 44 endpoint files
 - `apps/web/src/` - 1.391 frontend files
 
+### Verifica CQRS (2026-01-27)
+```bash
+# SharedGameCatalog
+Commands: 41 | CommandHandlers: 41 | Queries: 28 | QueryHandlers: 28
+Total: 69 operations, 69 handlers (100%)
+
+# Authentication
+Commands: 34 | CommandHandlers: 34 | Queries: 19 | QueryHandlers: 19
+Total: 53 operations, 53 handlers (100%)
+```
+
 ---
 
 **Autore**: Claude Code Analysis
-**Versione**: 1.0
-**Prossima Review**: 2026-04-26
+**Versione**: 2.0 (aggiornato 2026-01-27)
+**Changelog**:
+- v2.0 (2026-01-27): Corretto stato CQRS, chiuse issue #3067/#3068/#3069, aggiornate metriche
+- v1.0 (2026-01-26): Analisi iniziale (con dati errati su CQRS)
+
+**Prossima Review**: 2026-04-27

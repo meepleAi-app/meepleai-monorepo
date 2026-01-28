@@ -101,3 +101,25 @@ export const UpdateGameLibraryLimitsRequestSchema = z.object({
 });
 
 export type UpdateGameLibraryLimitsRequest = z.infer<typeof UpdateGameLibraryLimitsRequestSchema>;
+
+// ========== PDF Upload Limits (Issue #3078) ==========
+
+export const PdfUploadLimitsDtoSchema = z.object({
+  maxFileSizeBytes: z.number().int().min(1),
+  maxPagesPerDocument: z.number().int().min(1).max(10000),
+  maxDocumentsPerGame: z.number().int().min(1).max(1000),
+  allowedMimeTypes: z.array(z.string().min(1)),
+  lastUpdatedAt: z.string().datetime(),
+  lastUpdatedByUserId: z.string().uuid().nullable(),
+});
+
+export type PdfUploadLimitsDto = z.infer<typeof PdfUploadLimitsDtoSchema>;
+
+export const UpdatePdfUploadLimitsRequestSchema = z.object({
+  maxFileSizeBytes: z.number().int().min(1),
+  maxPagesPerDocument: z.number().int().min(1).max(10000),
+  maxDocumentsPerGame: z.number().int().min(1).max(1000),
+  allowedMimeTypes: z.array(z.string().min(1)).min(1),
+});
+
+export type UpdatePdfUploadLimitsRequest = z.infer<typeof UpdatePdfUploadLimitsRequestSchema>;

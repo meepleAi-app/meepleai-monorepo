@@ -60,7 +60,8 @@ describe('PdfLimitsConfig', () => {
     render(<PdfLimitsConfig />);
 
     await waitFor(() => {
-      expect(screen.getByText(/PDF Upload Limits/)).toBeInTheDocument();
+      // Use heading role to be more specific (avoid matching "About PDF Upload Limits")
+      expect(screen.getByRole('heading', { name: /PDF Upload Limits/, level: 1 })).toBeInTheDocument();
     });
 
     // Check form fields have correct values
@@ -116,7 +117,7 @@ describe('PdfLimitsConfig', () => {
     render(<PdfLimitsConfig />);
 
     await waitFor(() => {
-      expect(screen.getByText(/PDF Upload Limits/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /^PDF Upload Limits$/ })).toBeInTheDocument();
     });
 
     const saveButton = screen.getByRole('button', { name: /Save Changes/i });
@@ -128,7 +129,7 @@ describe('PdfLimitsConfig', () => {
     render(<PdfLimitsConfig />);
 
     await waitFor(() => {
-      expect(screen.getByText(/PDF Upload Limits/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /^PDF Upload Limits$/ })).toBeInTheDocument();
     });
 
     const pagesInput = screen.getByLabelText(/Maximum Pages Per Document/i);
@@ -144,7 +145,7 @@ describe('PdfLimitsConfig', () => {
     render(<PdfLimitsConfig />);
 
     await waitFor(() => {
-      expect(screen.getByText(/PDF Upload Limits/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /^PDF Upload Limits$/ })).toBeInTheDocument();
     });
 
     // Change pages per document
@@ -174,11 +175,11 @@ describe('PdfLimitsConfig', () => {
     render(<PdfLimitsConfig />);
 
     await waitFor(() => {
-      expect(screen.getByText(/PDF Upload Limits/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /^PDF Upload Limits$/ })).toBeInTheDocument();
     });
 
     // Toggle additional MIME type
-    const legacyPdfCheckbox = screen.getByLabelText(/PDF Legacy/);
+    const legacyPdfCheckbox = screen.getByLabelText(/PDF Legacy \(application\/x-pdf\)/);
     await user.click(legacyPdfCheckbox);
 
     expect(legacyPdfCheckbox).toBeChecked();
@@ -193,7 +194,7 @@ describe('PdfLimitsConfig', () => {
     render(<PdfLimitsConfig />);
 
     await waitFor(() => {
-      expect(screen.getByText(/PDF Upload Limits/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /^PDF Upload Limits$/ })).toBeInTheDocument();
     });
 
     // Uncheck the only MIME type
@@ -214,7 +215,7 @@ describe('PdfLimitsConfig', () => {
     render(<PdfLimitsConfig />);
 
     await waitFor(() => {
-      expect(screen.getByText(/PDF Upload Limits/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /^PDF Upload Limits$/ })).toBeInTheDocument();
     });
 
     // Change a value
@@ -255,7 +256,7 @@ describe('PdfLimitsConfig', () => {
     render(<PdfLimitsConfig />);
 
     await waitFor(() => {
-      expect(screen.getByText(/PDF Upload Limits/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /^PDF Upload Limits$/ })).toBeInTheDocument();
     });
 
     // Change a value
@@ -297,7 +298,7 @@ describe('PdfLimitsConfig', () => {
     render(<PdfLimitsConfig />);
 
     await waitFor(() => {
-      expect(screen.getByText(/PDF Upload Limits/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /^PDF Upload Limits$/ })).toBeInTheDocument();
     });
 
     // Change file size to 150 MB

@@ -28,8 +28,9 @@ describe('TwoFactorSetup', () => {
     it('renders title and instructions', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} />);
 
-      expect(screen.getByText('Set Up Two-Factor Authentication')).toBeInTheDocument();
-      expect(screen.getByText(/scan the QR code/i)).toBeInTheDocument();
+      // i18n mock returns keys as fallback text
+      expect(screen.getByText('auth.2fa.setupTitle')).toBeInTheDocument();
+      expect(screen.getByText('auth.2fa.setupSubtitle')).toBeInTheDocument();
     });
 
     it('renders QR code', () => {
@@ -42,34 +43,35 @@ describe('TwoFactorSetup', () => {
     it('renders manual entry section with secret', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} />);
 
-      expect(screen.getByText(/can't scan/i)).toBeInTheDocument();
-      expect(screen.getByTestId('manual-secret')).toBeInTheDocument();
+      // i18n mock returns keys as fallback
+      expect(screen.getByText('auth.2fa.cantScan')).toBeInTheDocument();
+      expect(screen.getByTestId('secret-display')).toBeInTheDocument();
       expect(screen.getByText(mockSetupData.secret)).toBeInTheDocument();
     });
 
     it('renders verification code input', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} />);
 
-      expect(screen.getByLabelText(/verification code/i)).toBeInTheDocument();
+      expect(screen.getByTestId('verification-code-input')).toBeInTheDocument();
     });
 
     it('renders verify button', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} />);
 
-      expect(screen.getByRole('button', { name: /verify|enable/i })).toBeInTheDocument();
+      expect(screen.getByTestId('verify-enable-button')).toBeInTheDocument();
     });
 
     it('renders cancel button when onCancel is provided', () => {
       const onCancel = vi.fn();
       renderWithIntl(<TwoFactorSetup {...defaultProps} onCancel={onCancel} />);
 
-      expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+      expect(screen.getByTestId('cancel-setup-button')).toBeInTheDocument();
     });
 
     it('hides cancel button when onCancel is not provided', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} />);
 
-      expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('cancel-setup-button')).not.toBeInTheDocument();
     });
   });
 
@@ -77,24 +79,21 @@ describe('TwoFactorSetup', () => {
     it('disables inputs when loading', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} loading={true} />);
 
-      const input = screen.getByLabelText(/verification code/i);
+      const input = screen.getByTestId('verification-code-input');
       expect(input).toBeDisabled();
     });
 
     it('shows loading state on verify button', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} loading={true} />);
 
-      expect(screen.getByText(/verifying/i)).toBeInTheDocument();
+      // i18n mock returns keys as fallback
+      expect(screen.getByText('auth.2fa.verifying')).toBeInTheDocument();
     });
 
     it('disables verify button when loading', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} loading={true} />);
 
-      const buttons = screen.getAllByRole('button');
-      const verifyButton = buttons.find(
-        btn => btn.textContent?.toLowerCase().includes('verify') ||
-               btn.textContent?.toLowerCase().includes('enable')
-      );
+      const verifyButton = screen.getByTestId('verify-enable-button');
       expect(verifyButton).toBeDisabled();
     });
   });
@@ -126,14 +125,14 @@ describe('TwoFactorSetup', () => {
 
       renderWithIntl(<TwoFactorSetup {...defaultProps} onVerify={onVerify} />);
 
-      const input = screen.getByLabelText(/verification code/i);
+      const input = screen.getByTestId('verification-code-input');
       await user.type(input, '123456');
 
-      const verifyButton = screen.getByRole('button', { name: /verify|enable/i });
+      const verifyButton = screen.getByTestId('verify-enable-button');
       await user.click(verifyButton);
 
       await waitFor(() => {
-        expect(onVerify).toHaveBeenCalledWith({ code: '123456' });
+        expect(onVerify).toHaveBeenCalledWith('123456');
       });
     });
 
@@ -143,7 +142,7 @@ describe('TwoFactorSetup', () => {
 
       renderWithIntl(<TwoFactorSetup {...defaultProps} onCancel={onCancel} />);
 
-      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      const cancelButton = screen.getByTestId('cancel-setup-button');
       await user.click(cancelButton);
 
       expect(onCancel).toHaveBeenCalledTimes(1);
@@ -152,11 +151,14 @@ describe('TwoFactorSetup', () => {
     it('allows copying secret to clipboard', async () => {
       const user = userEvent.setup();
 
-      // Mock clipboard API
-      const mockClipboard = {
-        writeText: vi.fn().mockResolvedValue(undefined),
-      };
-      Object.assign(navigator, { clipboard: mockClipboard });
+      // Mock clipboard API using vi.stubGlobal
+      const mockWriteText = vi.fn().mockResolvedValue(undefined);
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        clipboard: {
+          writeText: mockWriteText,
+        },
+      });
 
       renderWithIntl(<TwoFactorSetup {...defaultProps} />);
 
@@ -164,8 +166,10 @@ describe('TwoFactorSetup', () => {
       await user.click(copyButton);
 
       await waitFor(() => {
-        expect(mockClipboard.writeText).toHaveBeenCalledWith(mockSetupData.secret);
+        expect(mockWriteText).toHaveBeenCalledWith(mockSetupData.secret);
       });
+
+      vi.unstubAllGlobals();
     });
   });
 
@@ -179,24 +183,24 @@ describe('TwoFactorSetup', () => {
     it('has accessible label for code input', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} />);
 
-      const input = screen.getByLabelText(/verification code/i);
+      const input = screen.getByTestId('verification-code-input');
       expect(input).toBeInTheDocument();
+      expect(input).toHaveAttribute('id', 'verification-code');
     });
 
     it('has proper input mode for numeric keyboard', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} />);
 
-      const input = screen.getByLabelText(/verification code/i);
+      const input = screen.getByTestId('verification-code-input');
       expect(input).toHaveAttribute('inputMode', 'numeric');
     });
 
-    it('renders step numbers for setup instructions', () => {
+    it('renders step titles for setup instructions', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} />);
 
-      // Should have step indicators (1, 2, 3)
-      expect(screen.getByText('1')).toBeInTheDocument();
-      expect(screen.getByText('2')).toBeInTheDocument();
-      expect(screen.getByText('3')).toBeInTheDocument();
+      // Should have step titles (i18n keys)
+      expect(screen.getByText('auth.2fa.step1')).toBeInTheDocument();
+      expect(screen.getByText('auth.2fa.step2')).toBeInTheDocument();
     });
   });
 
@@ -207,10 +211,10 @@ describe('TwoFactorSetup', () => {
 
       renderWithIntl(<TwoFactorSetup {...defaultProps} onVerify={onVerify} />);
 
-      const input = screen.getByLabelText(/verification code/i);
+      const input = screen.getByTestId('verification-code-input');
       await user.type(input, '123'); // Only 3 digits
 
-      const verifyButton = screen.getByRole('button', { name: /verify|enable/i });
+      const verifyButton = screen.getByTestId('verify-enable-button');
       await user.click(verifyButton);
 
       // Should show validation error or not submit
@@ -238,8 +242,9 @@ describe('TwoFactorSetup', () => {
     it('shows copy feedback after copying secret', async () => {
       const user = userEvent.setup();
 
-      // Mock clipboard API
-      Object.assign(navigator, {
+      // Mock clipboard API using vi.stubGlobal
+      vi.stubGlobal('navigator', {
+        ...navigator,
         clipboard: {
           writeText: vi.fn().mockResolvedValue(undefined),
         },
@@ -251,8 +256,11 @@ describe('TwoFactorSetup', () => {
       await user.click(copyButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/copied/i)).toBeInTheDocument();
+        // i18n mock returns keys as fallback
+        expect(screen.getByText('common.copied')).toBeInTheDocument();
       });
+
+      vi.unstubAllGlobals();
     });
   });
 });

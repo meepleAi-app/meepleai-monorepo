@@ -43,7 +43,7 @@ async function setupAccountLockoutMocks(
     adminUnlock = false,
   } = options;
 
-  let currentState: LockoutState = {
+  const currentState: LockoutState = {
     failedAttempts,
     isLocked,
     lockedUntil: isLocked

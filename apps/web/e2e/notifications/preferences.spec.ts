@@ -42,7 +42,7 @@ interface NotificationPreferences {
  * Setup mock routes for notification preferences testing
  */
 async function setupNotificationPreferencesMocks(page: Page) {
-  let preferences: NotificationPreferences = {
+  const preferences: NotificationPreferences = {
     email: {
       marketing: false,
       productUpdates: true,

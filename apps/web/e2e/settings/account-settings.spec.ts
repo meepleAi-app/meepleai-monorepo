@@ -16,7 +16,7 @@ const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function setupAccountSettingsMocks(page: Page) {
-  let user = { id: 'test-user', email: 'test@example.com', displayName: 'Test User' };
+  const user = { id: 'test-user', email: 'test@example.com', displayName: 'Test User' };
 
   await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
     await route.fulfill({

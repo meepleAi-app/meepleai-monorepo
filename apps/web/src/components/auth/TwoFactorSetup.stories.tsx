@@ -8,7 +8,6 @@
 import { fn } from 'storybook/test';
 
 import type { Meta, StoryObj } from '@storybook/react';
-
 import { TwoFactorSetup } from './TwoFactorSetup';
 
 const mockSetupData = {

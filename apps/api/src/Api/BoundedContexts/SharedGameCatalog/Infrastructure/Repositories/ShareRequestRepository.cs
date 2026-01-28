@@ -51,8 +51,37 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
     public void Update(ShareRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var entity = MapToEntity(request);
-        _context.Set<ShareRequestEntity>().Update(entity);
+
+        // Find the tracked entity (loaded by GetByIdForUpdateAsync)
+        var trackedEntity = _context.Set<ShareRequestEntity>()
+            .Local
+            .FirstOrDefault(e => e.Id == request.Id);
+
+        if (trackedEntity != null)
+        {
+            // Update the tracked entity's properties directly
+            trackedEntity.UserId = request.UserId;
+            trackedEntity.SourceGameId = request.SourceGameId;
+            trackedEntity.TargetSharedGameId = request.TargetSharedGameId;
+            trackedEntity.Status = (int)request.Status;
+            trackedEntity.StatusBeforeReview = request.StatusBeforeReview.HasValue ? (int)request.StatusBeforeReview.Value : null;
+            trackedEntity.ContributionType = (int)request.ContributionType;
+            trackedEntity.UserNotes = request.UserNotes;
+            trackedEntity.AdminFeedback = request.AdminFeedback;
+            trackedEntity.ReviewingAdminId = request.ReviewingAdminId;
+            trackedEntity.ReviewStartedAt = request.ReviewStartedAt;
+            trackedEntity.ReviewLockExpiresAt = request.ReviewLockExpiresAt;
+            trackedEntity.ResolvedAt = request.ResolvedAt;
+            trackedEntity.ModifiedAt = request.ModifiedAt;
+            trackedEntity.ModifiedBy = request.ModifiedBy;
+            // RowVersion is managed by EF Core concurrency token
+        }
+        else
+        {
+            // No tracked entity found - attach a new one
+            var entity = MapToEntity(request);
+            _context.Set<ShareRequestEntity>().Update(entity);
+        }
     }
 
     public async Task<bool> HasPendingRequestAsync(

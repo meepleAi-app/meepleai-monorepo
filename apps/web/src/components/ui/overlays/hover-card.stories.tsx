@@ -1,8 +1,8 @@
 import { CalendarDays } from 'lucide-react';
 
+import { HoverCard, HoverCardContent, HoverCardTrigger } from './hover-card';
 import { Avatar, AvatarFallback, AvatarImage } from '../data-display/avatar';
 import { Button } from '../primitives/button';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from './hover-card';
 
 import type { Meta, StoryObj } from '@storybook/react';
 

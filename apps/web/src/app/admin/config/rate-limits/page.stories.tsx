@@ -1,5 +1,7 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { RateLimitConfigClient } from './client';
+
+import type { Meta, StoryObj } from '@storybook/react';
+
 
 const meta: Meta<typeof RateLimitConfigClient> = {
   title: 'Admin/Config/RateLimitConfigPage',

@@ -70,12 +70,15 @@ export function PageTransition({
     },
   };
 
+  // eslint-disable-next-line security/detect-object-injection -- Safe: variant is a typed union literal from props
+  const selectedVariant = variants[variant];
+
   return (
     <motion.div
       initial="hidden"
       animate="visible"
       exit="exit"
-      variants={variants[variant]}
+      variants={selectedVariant}
       className={className}
     >
       {children}

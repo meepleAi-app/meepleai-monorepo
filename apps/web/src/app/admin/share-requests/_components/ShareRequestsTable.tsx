@@ -5,8 +5,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/data-display/table';
-import { ShareRequestsTableRow } from './ShareRequestsTableRow';
 import type { AdminShareRequestDto } from '@/lib/api/schemas/admin-share-requests.schemas';
+
+import { ShareRequestsTableRow } from './ShareRequestsTableRow';
 
 /**
  * Share Requests Table Component

@@ -8,14 +8,12 @@
 
 'use client';
 
-import React from 'react';
 import { motion } from 'framer-motion';
 
-import { getTierIcon, BadgeTier, type UserBadgeDto } from '@/types/badges';
-// import { cn } from '@/lib/utils'; // Unused - removed for lint
+import { Switch } from '@/components/ui/forms/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
-import { Switch } from '@/components/ui/forms/switch';
+import { BadgeTier, getTierIcon, type UserBadgeDto } from '@/types/badges';
 
 export interface BadgeDetailSheetProps {
   /** Badge to display (null to hide sheet) */
@@ -33,7 +31,9 @@ export interface BadgeDetailSheetProps {
 
 /**
  * Helper: Get confetti configuration based on tier
+ * @internal Reserved for future confetti celebration feature
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getConfettiConfig(tier: BadgeTier) {
   const configs = {
     [BadgeTier.Diamond]: {
@@ -57,12 +57,15 @@ function getConfettiConfig(tier: BadgeTier) {
       colors: ['#d97706', '#f59e0b', '#b45309'],
     },
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return configs[tier];
 }
 
 /**
  * Helper: Get tier glow color
+ * @internal Reserved for future glow effect feature
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getTierGlow(tier: string): string {
   const glows: Record<string, string> = {
     Diamond: 'rgba(6, 182, 212, 0.8)',
@@ -71,6 +74,7 @@ function getTierGlow(tier: string): string {
     Silver: 'rgba(209, 213, 219, 0.5)',
     Bronze: 'rgba(217, 119, 6, 0.6)',
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is from known BadgeTier enum, with fallback
   return glows[tier] || 'rgba(0, 0, 0, 0.3)';
 }
 
@@ -119,6 +123,7 @@ export function BadgeDetailSheet({
             <div className="relative h-24 w-24 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 p-2">
               <div className="flex h-full w-full items-center justify-center rounded-full bg-background">
                 {badge.iconUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element -- External user-provided URL, Next.js Image optimization not applicable */
                   <img
                     src={badge.iconUrl}
                     alt={badge.name}

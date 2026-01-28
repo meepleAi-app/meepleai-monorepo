@@ -1,4 +1,8 @@
 import { useState } from 'react';
+
+import { MessageSquare } from 'lucide-react';
+import { toast } from 'sonner';
+
 import { Button } from '@/components/ui';
 import {
   Dialog,
@@ -8,10 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui';
-import { Textarea } from '@/components/ui';
 import { Label } from '@/components/ui';
-import { MessageSquare } from 'lucide-react';
-import { toast } from 'sonner';
+import { Textarea } from '@/components/ui';
 
 /**
  * Request Changes Button Component

@@ -10,6 +10,7 @@
 'use client';
 
 import { Suspense } from 'react';
+
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 export type AiUsageStats = {
@@ -35,6 +36,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 function getCategoryColor(category: string): string {
+  // eslint-disable-next-line security/detect-object-injection -- Safe: category is from known data, with fallback to 'Default'
   return CATEGORY_COLORS[category] ?? CATEGORY_COLORS['Default'];
 }
 
@@ -96,7 +98,7 @@ export function AIUsageDonut({ data, isLoading }: AIUsageDonutProps){
                   borderRadius: '0.75rem',
                   boxShadow: '0 4px 12px rgba(139, 90, 60, 0.1)',
                 }}
-                formatter={(value: any, name: any, props: any) => [
+                formatter={(value: number, name: string, props: { payload?: { count?: number } }) => [
                   `${props?.payload?.count?.toLocaleString() ?? value} calls (${value}%)`,
                   name
                 ]}

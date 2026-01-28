@@ -1,7 +1,7 @@
 import { Info, HelpCircle, Settings, Copy } from 'lucide-react';
 
-import { Button } from '../primitives/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
+import { Button } from '../primitives/button';
 
 import type { Meta, StoryObj } from '@storybook/react';
 

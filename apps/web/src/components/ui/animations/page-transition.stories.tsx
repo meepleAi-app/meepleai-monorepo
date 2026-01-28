@@ -1,5 +1,3 @@
-
-import { Button } from '../primitives/button';
 import { PageTransition } from './PageTransition';
 
 import type { Meta, StoryObj } from '@storybook/react';

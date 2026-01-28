@@ -4,8 +4,8 @@
  * Tests WCAG 2.1 AA compliance using axe-core in both light and dark modes.
  */
 
-import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { test, expect } from '@playwright/test';
 
 test.describe('Accessibility - Light Mode', () => {
   test.beforeEach(async ({ page }) => {

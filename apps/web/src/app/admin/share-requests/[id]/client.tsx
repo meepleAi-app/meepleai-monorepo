@@ -1,29 +1,32 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
+import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { Badge } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import {
   useShareRequestDetails,
   useApproveRequest,
   useRejectRequest,
   useRequestChanges,
 } from '@/hooks/queries';
-import { Button } from '@/components/ui';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
-import { Badge } from '@/components/ui';
-import { ArrowLeft } from 'lucide-react';
-import { ShareRequestStatusBadge } from '../_components/ShareRequestStatusBadge';
-import { LockStatusBadge } from '../_components/LockStatusBadge';
+import { useAuthUser } from '@/hooks/useAuthUser';
+
 import { ContributorProfile } from '../_components/ContributorProfile';
 import { DocumentsPreviewGrid } from '../_components/DocumentsPreviewGrid';
 import { GameEditableFields } from '../_components/GameEditableFields';
+import { LockStatusBadge } from '../_components/LockStatusBadge';
+import { MyActiveReviewsButton } from '../_components/MyActiveReviewsButton';
+import { ReviewActionButtons } from '../_components/ReviewActionButtons';
 import { ApproveButton } from '../_components/ReviewActions/ApproveButton';
 import { RejectButton } from '../_components/ReviewActions/RejectButton';
 import { RequestChangesButton } from '../_components/ReviewActions/RequestChangesButton';
-import { MyActiveReviewsButton } from '../_components/MyActiveReviewsButton';
-import { ReviewActionButtons } from '../_components/ReviewActionButtons';
+import { ShareRequestStatusBadge } from '../_components/ShareRequestStatusBadge';
 
 /**
  * Admin Share Request Review Detail Page - Client Component

@@ -37,7 +37,8 @@ public sealed class GameRepositoryIntegrationTests : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         // Create isolated database for this test class
-        _databaseName = $"test_gamerepo_{Guid.NewGuid():N}".Substring(0, 63);
+        // Issue #3102: Removed Substring(0, 63) - string is only 46 chars, which is under PostgreSQL's 63-char limit
+        _databaseName = $"test_gamerepo_{Guid.NewGuid():N}";
         _connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         // Create DbContext and apply migrations

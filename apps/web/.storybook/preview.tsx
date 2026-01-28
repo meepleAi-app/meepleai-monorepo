@@ -3,8 +3,8 @@ import type { Preview } from '@storybook/react';
 
 import React from 'react';
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { withThemeByClassName } from '@storybook/addon-themes';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 
 import '../src/styles/globals.css'; // Import Tailwind CSS

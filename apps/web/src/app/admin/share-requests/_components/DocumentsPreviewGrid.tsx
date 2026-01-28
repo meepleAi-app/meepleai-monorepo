@@ -1,5 +1,6 @@
+import { File as FileIcon, FileImage, FileText } from 'lucide-react';
+
 import { Checkbox } from '@/components/ui';
-import { FileText, FileImage, File as FileIcon } from 'lucide-react';
 import type { DocumentPreviewDto } from '@/lib/api/schemas/admin-share-requests.schemas';
 
 /**
@@ -104,6 +105,7 @@ export function DocumentsPreviewGrid({
               {/* Preview or Icon */}
               <div className="flex-shrink-0">
                 {doc.previewUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element -- External document preview URL */
                   <img
                     src={doc.previewUrl}
                     alt={doc.fileName}

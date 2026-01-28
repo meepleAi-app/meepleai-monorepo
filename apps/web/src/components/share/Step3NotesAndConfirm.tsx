@@ -1,9 +1,10 @@
 import { Info } from 'lucide-react';
-import { Textarea } from '@/components/ui/primitives/textarea';
-import { Label } from '@/components/ui/primitives/label';
+
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/primitives/label';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import type { UserLibraryEntry } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 /**
  * Step 3: Notes and Confirmation

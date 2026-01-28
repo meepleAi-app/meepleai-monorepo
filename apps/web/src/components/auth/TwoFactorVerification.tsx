@@ -27,7 +27,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 
 export interface TwoFactorVerificationData {
   code: string;
-  rememberDevice: boolean;
+  rememberDevice?: boolean;
 }
 
 // ============================================================================
@@ -180,7 +180,6 @@ export function TwoFactorVerification({
             {...register('code')}
             ref={(e) => {
               register('code').ref(e);
-              // @ts-expect-error - combining refs
               inputRef.current = e;
             }}
             id="2fa-code"

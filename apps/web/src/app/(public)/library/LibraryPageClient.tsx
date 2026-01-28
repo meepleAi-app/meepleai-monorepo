@@ -205,6 +205,42 @@ export default function LibraryPageClient() {
     });
   };
 
+  // Derive data - always computed to ensure hooks are called consistently
+  const games = libraryData?.items ?? [];
+  const hasGames = games.length > 0;
+
+  // Client-side search filtering (until backend supports it)
+  const filteredGames = searchQuery
+    ? games.filter(game => game.gameTitle.toLowerCase().includes(searchQuery.toLowerCase()))
+    : games;
+
+  // Calculate state counts for filter badges (Issue #2866)
+  // Must be called before any early returns to follow React hooks rules
+  const stateCounts = useMemo(() => {
+    return {
+      total: games.length,
+      favorites: games.filter(g => g.isFavorite).length,
+      nuovo: games.filter(g => g.currentState === 'Nuovo').length,
+      inPrestito: games.filter(g => g.currentState === 'InPrestito').length,
+      wishlist: games.filter(g => g.currentState === 'Wishlist').length,
+      owned: games.filter(g => g.currentState === 'Owned').length,
+    };
+  }, [games]);
+
+  // All game IDs for selection operations (Issue #2613)
+  const allGameIds = filteredGames.map(g => g.gameId);
+
+  // Handle game selection (Issue #2613)
+  const handleGameSelect = (gameId: string, shiftKey: boolean) => {
+    if (shiftKey && allGameIds.length > 0) {
+      // Shift+Click: select range
+      selectRange(allGameIds, gameId);
+    } else {
+      // Normal click: toggle single selection
+      toggleSelection(gameId);
+    }
+  };
+
   // Loading state with staggered skeleton animations (Issue #2618)
   if (libraryLoading || quotaLoading) {
     return (
@@ -261,40 +297,6 @@ export default function LibraryPageClient() {
       </div>
     );
   }
-
-  const games = libraryData?.items ?? [];
-  const hasGames = games.length > 0;
-
-  // Client-side search filtering (until backend supports it)
-  const filteredGames = searchQuery
-    ? games.filter(game => game.gameTitle.toLowerCase().includes(searchQuery.toLowerCase()))
-    : games;
-
-  // Calculate state counts for filter badges (Issue #2866)
-  const stateCounts = useMemo(() => {
-    return {
-      total: games.length,
-      favorites: games.filter(g => g.isFavorite).length,
-      nuovo: games.filter(g => g.currentState === 'Nuovo').length,
-      inPrestito: games.filter(g => g.currentState === 'InPrestito').length,
-      wishlist: games.filter(g => g.currentState === 'Wishlist').length,
-      owned: games.filter(g => g.currentState === 'Owned').length,
-    };
-  }, [games]);
-
-  // All game IDs for selection operations (Issue #2613)
-  const allGameIds = filteredGames.map(g => g.gameId);
-
-  // Handle game selection (Issue #2613)
-  const handleGameSelect = (gameId: string, shiftKey: boolean) => {
-    if (shiftKey && allGameIds.length > 0) {
-      // Shift+Click: select range
-      selectRange(allGameIds, gameId);
-    } else {
-      // Normal click: toggle single selection
-      toggleSelection(gameId);
-    }
-  };
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">

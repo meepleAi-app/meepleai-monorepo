@@ -277,19 +277,20 @@ function ResetPasswordPageContent() {
 
       // Auto-login after reset
       try {
-        const authUser = await api.auth.login({
+        const loginResponse = await api.auth.login({
           email: email || '', // Email might not be known in reset mode
           password: newPassword,
         });
 
-        if (authUser) {
-          setAuthUser(authUser);
+        // Handle 2FA requirement or successful login
+        if (loginResponse.user && !loginResponse.requiresTwoFactor) {
+          setAuthUser(loginResponse.user);
           // Redirect to chat after 2 seconds
           setTimeout(() => {
             void router.push('/chat');
           }, 2000);
         } else {
-          // If auto-login fails, redirect to login page
+          // If 2FA required or auto-login fails, redirect to login page
           setTimeout(() => {
             void router.push('/');
           }, 2000);

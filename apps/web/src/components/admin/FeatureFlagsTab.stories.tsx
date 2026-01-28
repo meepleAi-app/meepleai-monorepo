@@ -5,7 +5,7 @@
  * Demonstrates role-based and tier-based feature flag configurations.
  */
 
-import { fn } from '@storybook/test';
+import { fn } from 'storybook/test';
 
 import FeatureFlagsTab from './FeatureFlagsTab';
 

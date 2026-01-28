@@ -36,11 +36,23 @@ export interface RegisterData {
   role?: string;
 }
 
+/**
+ * Login result supporting 2FA flow
+ */
+export interface LoginResult {
+  /** The authenticated user (null if 2FA is required) */
+  user: AuthUser | null;
+  /** Whether 2FA verification is required */
+  requiresTwoFactor: boolean;
+  /** Temporary session token for 2FA verification */
+  tempSessionToken?: string | null;
+}
+
 export interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<AuthUser>;
+  login: (email: string, password: string) => Promise<LoginResult>;
   register: (data: RegisterData) => Promise<AuthUser>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -99,13 +111,28 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, [user]);
 
-  const login = useCallback(async (email: string, password: string): Promise<AuthUser> => {
+  const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
     setLoading(true);
     setError(null);
     try {
-      const authUser = await api.auth.login({ email, password });
-      setUser(authUser);
-      return authUser;
+      const loginResponse = await api.auth.login({ email, password });
+
+      // Check if 2FA is required
+      if (loginResponse.requiresTwoFactor) {
+        return {
+          user: null,
+          requiresTwoFactor: true,
+          tempSessionToken: loginResponse.tempSessionToken,
+        };
+      }
+
+      // Normal login - set user and return result
+      const user = loginResponse.user ?? null;
+      setUser(user);
+      return {
+        user,
+        requiresTwoFactor: false,
+      };
     } catch (err) {
       logger.error('Login failed', err instanceof Error ? err : new Error(String(err)), {
         component: 'AuthProvider',

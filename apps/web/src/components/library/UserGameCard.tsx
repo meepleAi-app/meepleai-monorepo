@@ -40,7 +40,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/overlays/dropdown-menu';
+} from '@/components/ui/navigation/dropdown-menu';
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { useAgentConfig } from '@/hooks/queries';

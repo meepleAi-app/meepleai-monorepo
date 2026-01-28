@@ -117,7 +117,7 @@ export default function FeatureFlagsTab({
     }
   };
 
-  const handleTierToggle = async (flag: SystemConfigurationDto, tier: SubscriptionTier) => {
+  const handleTierToggle = async (flag: SystemConfigurationDto, _tier: SubscriptionTier) => {
     // Guard: Tier toggle requires backend #3073 to be complete
     // For now, show informational message instead of misleading success
     toast.info(
@@ -133,7 +133,7 @@ export default function FeatureFlagsTab({
   };
 
   const handleBulkTierAction = useCallback(
-    async (tier: SubscriptionTier, enable: boolean) => {
+    async (tier: SubscriptionTier, _enable: boolean) => {
       if (selectedFlags.size === 0) {
         toast.error('No feature flags selected');
         return;

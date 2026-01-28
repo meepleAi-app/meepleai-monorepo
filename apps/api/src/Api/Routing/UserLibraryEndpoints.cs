@@ -59,6 +59,7 @@ internal static class UserLibraryEndpoints
             [FromQuery] int? page,
             [FromQuery] int? pageSize,
             [FromQuery] bool? favoritesOnly,
+            [FromQuery] string[]? stateFilter,
             [FromQuery] string? sortBy,
             [FromQuery] bool? sortDescending,
             IMediator mediator,
@@ -78,6 +79,7 @@ internal static class UserLibraryEndpoints
                 Page: page ?? 1,
                 PageSize: pageSize ?? 20,
                 FavoritesOnly: favoritesOnly,
+                StateFilter: stateFilter,
                 SortBy: sortBy ?? "addedAt",
                 Descending: sortDescending ?? true
             );
@@ -89,7 +91,7 @@ internal static class UserLibraryEndpoints
         .Produces<PaginatedLibraryResponseDto>(200)
         .WithTags("Library")
         .WithSummary("Get user's game library")
-        .WithDescription("Returns paginated list of games in user's library. Supports filtering by favorites and sorting by addedAt, title, or favorite status.")
+        .WithDescription("Returns paginated list of games in user's library. Supports filtering by favorites, state (Nuovo/InPrestito/Wishlist/Owned), and sorting by addedAt, title, or favorite status.")
         .WithOpenApi();
     }
 

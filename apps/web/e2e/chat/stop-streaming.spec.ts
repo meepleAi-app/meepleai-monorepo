@@ -10,6 +10,7 @@
  */
 
 import { test, expect } from '../fixtures/chromatic';
+
 import type { Page } from '@playwright/test';
 
 const API_BASE =
@@ -19,7 +20,7 @@ const API_BASE =
  * Setup mock routes for stop streaming testing
  */
 async function setupStopStreamingMocks(page: Page) {
-  let streamController: { abort: () => void } | null = null;
+  const streamController: { abort: () => void } | null = null;
   let isStreaming = false;
 
   // Mock auth

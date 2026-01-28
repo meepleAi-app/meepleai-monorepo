@@ -43,8 +43,8 @@
     "test:a11y:e2e": "dotenv -e .env.test -- playwright test e2e/accessibility.spec.ts --project=desktop-chrome --workers=1",
     "test:a11y:e2e:errors": "dotenv -e .env.test -- cross-env FORCE_PRODUCTION_SERVER=true playwright test e2e/accessibility.spec.ts --grep '@error-state' --project=desktop-chrome --workers=1",
     "audit:a11y": "tsx scripts/run-accessibility-audit.ts",
-    "lint": "eslint . --max-warnings=0",
-    "lint:fix": "eslint . --fix",
+    "lint": "pnpm exec eslint . --max-warnings=0",
+    "lint:fix": "pnpm exec eslint . --fix",
     "typecheck": "tsc --noEmit",
     "test:e2e:groups": "dotenv -e .env.test -- playwright test",
     "storybook": "storybook dev -p 6006",
@@ -70,12 +70,12 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "bash -c 'files=\"$@\"; files_filtered=$(echo \"$files\" | tr \" \" \"\\n\" | grep -v \"__tests__\" | tr \"\\n\" \" \"); [ -n \"$files_filtered\" ] && eslint --max-warnings=0 --fix $files_filtered || true' --",
-      "prettier --write"
+      "bash -c 'files=\"$@\"; files_filtered=$(echo \"$files\" | tr \" \" \"\\n\" | grep -v \"__tests__\" | tr \"\\n\" \" \"); [ -n \"$files_filtered\" ] && pnpm exec eslint --max-warnings=0 --fix $files_filtered || true' --",
+      "pnpm exec prettier --write"
     ],
     "*.{js,jsx}": [
-      "bash -c 'files=\"$@\"; files_filtered=$(echo \"$files\" | tr \" \" \"\\n\" | grep -v \"__tests__\" | tr \"\\n\" \" \"); [ -n \"$files_filtered\" ] && eslint --max-warnings=0 --fix $files_filtered || true' --",
-      "prettier --write"
+      "bash -c 'files=\"$@\"; files_filtered=$(echo \"$files\" | tr \" \" \"\\n\" | grep -v \"__tests__\" | tr \"\\n\" \" \"); [ -n \"$files_filtered\" ] && pnpm exec eslint --max-warnings=0 --fix $files_filtered || true' --",
+      "pnpm exec prettier --write"
     ]
   },
   "dependencies": {

@@ -10,13 +10,14 @@
  */
 
 import { test, expect } from '../fixtures/chromatic';
+
 import type { Page } from '@playwright/test';
 
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function setupNotificationsMocks(page: Page) {
-  let notifications = [
+  const notifications = [
     { id: 'n1', title: 'New game added', message: 'Chess variants are now available', read: false, createdAt: new Date().toISOString() },
     { id: 'n2', title: 'Session reminder', message: 'Your session starts in 1 hour', read: false, createdAt: new Date(Date.now() - 3600000).toISOString() },
     { id: 'n3', title: 'Welcome!', message: 'Thanks for joining MeepleAI', read: true, createdAt: new Date(Date.now() - 86400000).toISOString() },

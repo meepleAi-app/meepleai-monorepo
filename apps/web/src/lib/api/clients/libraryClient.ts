@@ -83,6 +83,12 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
       if (params?.favoritesOnly !== undefined) {
         queryParams.append('favoritesOnly', String(params.favoritesOnly));
       }
+      // State filter support (Issue #2866)
+      if (params?.stateFilter && params.stateFilter.length > 0) {
+        for (const state of params.stateFilter) {
+          queryParams.append('stateFilter', state);
+        }
+      }
       if (params?.sortBy !== undefined) {
         queryParams.append('sortBy', params.sortBy);
       }

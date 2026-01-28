@@ -31,6 +31,26 @@ vi.mock('@/lib/logger', () => ({
   },
 }));
 
+// Mock useSessionQuota hooks to avoid useAuth/useRouter dependency chain
+// SessionSetupModal uses useSessionQuotaWithStatus which calls useAuth which calls useRouter
+vi.mock('@/hooks/queries/useSessionQuota', () => ({
+  useSessionQuotaWithStatus: vi.fn(() => ({
+    data: {
+      activeSessions: 1,
+      maxSessions: 5,
+      remainingSlots: 4,
+      canCreateNew: true,
+      isUnlimited: false,
+      warningLevel: 'none',
+      percentageUsed: 20,
+    },
+    isLoading: false,
+    isError: false,
+    error: null,
+  })),
+  useInvalidateSessionQuota: vi.fn(() => vi.fn()),
+}));
+
 const createMockGame = (overrides?: Partial<Game>): Game => ({
   id: 'game-1',
   title: 'Catan',

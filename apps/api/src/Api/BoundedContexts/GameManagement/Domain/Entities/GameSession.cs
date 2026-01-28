@@ -11,6 +11,13 @@ namespace Api.BoundedContexts.GameManagement.Domain.Entities;
 internal sealed class GameSession : AggregateRoot<Guid>
 {
     public Guid GameId { get; private set; }
+
+    /// <summary>
+    /// The user who created this session. Used for session quota enforcement.
+    /// Issue #3070: Added for session limits per user tier.
+    /// </summary>
+    public Guid? CreatedByUserId { get; private set; }
+
     public SessionStatus Status { get; private set; }
     public DateTime StartedAt { get; private set; }
     public DateTime? CompletedAt { get; private set; }
@@ -35,10 +42,15 @@ internal sealed class GameSession : AggregateRoot<Guid>
     /// <summary>
     /// Creates a new game session in Setup status.
     /// </summary>
+    /// <param name="id">Unique session identifier</param>
+    /// <param name="gameId">The game being played</param>
+    /// <param name="players">Players participating in the session</param>
+    /// <param name="createdByUserId">Optional user ID of the session creator (for quota enforcement)</param>
     public GameSession(
         Guid id,
         Guid gameId,
-        IEnumerable<SessionPlayer> players) : base(id)
+        IEnumerable<SessionPlayer> players,
+        Guid? createdByUserId = null) : base(id)
     {
         if (gameId == Guid.Empty)
             throw new ArgumentException("GameId cannot be empty", nameof(gameId));
@@ -53,6 +65,7 @@ internal sealed class GameSession : AggregateRoot<Guid>
             throw new ArgumentException("Session cannot have more than 100 players", nameof(players));
 
         GameId = gameId;
+        CreatedByUserId = createdByUserId;
         Status = SessionStatus.Setup;
         StartedAt = DateTime.UtcNow;
         _players.AddRange(playerList);

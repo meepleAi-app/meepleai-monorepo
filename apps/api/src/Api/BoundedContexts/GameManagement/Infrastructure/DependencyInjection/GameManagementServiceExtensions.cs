@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
+using Api.BoundedContexts.GameManagement.Infrastructure.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -33,6 +34,9 @@ internal static class GameManagementServiceExtensions
 
         // Issue #2055: Register collaborative editing services
         services.AddScoped<IEditorLockService, EditorLockService>();
+
+        // Issue #3070: Register session quota service
+        services.AddScoped<ISessionQuotaService, SessionQuotaService>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

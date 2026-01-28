@@ -107,6 +107,19 @@ internal class GameSessionRepository : RepositoryBase, IGameSessionRepository
             .CountAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Counts active sessions for a specific user.
+    /// Issue #3070: Required for session quota enforcement.
+    /// </summary>
+    public async Task<int> CountActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.GameSessions
+            .AsNoTracking()
+            .Where(s => s.CreatedByUserId == userId &&
+                       (s.Status == "Setup" || s.Status == "InProgress" || s.Status == "Paused"))
+            .CountAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyList<GameSession>> FindHistoryAsync(
         Guid? gameId = null,
         DateTime? startDate = null,
@@ -200,11 +213,12 @@ internal class GameSessionRepository : RepositoryBase, IGameSessionRepository
         var playerDtos = JsonSerializer.Deserialize<List<SessionPlayerDto>>(entity.PlayersJson) ?? new List<SessionPlayerDto>();
         var players = playerDtos.Select(dto => new SessionPlayer(dto.PlayerName, dto.PlayerOrder, dto.Color)).ToList();
 
-        // Reconstruct session
+        // Reconstruct session with CreatedByUserId (Issue #3070)
         var session = new GameSession(
             id: entity.Id,
             gameId: entity.GameId,
-            players: players
+            players: players,
+            createdByUserId: entity.CreatedByUserId
         );
 
         // Override status and timestamps via reflection
@@ -253,6 +267,7 @@ internal class GameSessionRepository : RepositoryBase, IGameSessionRepository
         {
             Id = domainEntity.Id,
             GameId = domainEntity.GameId,
+            CreatedByUserId = domainEntity.CreatedByUserId, // Issue #3070
             Status = domainEntity.Status.Value,
             StartedAt = domainEntity.StartedAt,
             CompletedAt = domainEntity.CompletedAt,

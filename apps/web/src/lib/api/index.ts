@@ -40,6 +40,7 @@ import {
   createGameContributorsClient,
   createBadgesClient,
   createRateLimitsClient,
+  createEmailVerificationClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -60,6 +61,7 @@ import {
   type GameContributorsClient,
   type BadgesClient,
   type RateLimitsClient,
+  type EmailVerificationClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -202,6 +204,9 @@ export interface ApiClient {
   /** Rate Limit Configuration (Issue #2750) */
   rateLimits: RateLimitsClient;
 
+  /** Email Verification (Issue #3076) */
+  emailVerification: EmailVerificationClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -272,6 +277,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     gameContributors: createGameContributorsClient({ httpClient }), // ISSUE-2746
     badges: createBadgesClient({ httpClient }), // ISSUE-2747
     rateLimits: createRateLimitsClient({ httpClient }), // ISSUE-2750
+    emailVerification: createEmailVerificationClient({ httpClient }), // ISSUE-3076
     delete: (path: string) => httpClient.delete(path),
   };
 

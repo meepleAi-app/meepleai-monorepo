@@ -1,9 +1,10 @@
 /**
  * Unit tests for BottomNav component
  * Issue #1829 [UI-002] BottomNav Component (Mobile-First)
+ * Updated: Issue #3104 - Reduced to 4 items (Settings moved to header)
  *
  * Coverage:
- * - Rendering (5 nav items, correct icons/labels)
+ * - Rendering (4 nav items, correct icons/labels)
  * - Active state logic (path matching)
  * - Accessibility (ARIA labels, keyboard nav, touch targets)
  * - Responsive (hidden on desktop)
@@ -27,25 +28,23 @@ describe('BottomNav', () => {
   });
 
   describe('Rendering', () => {
-    it('should render all 5 navigation items', () => {
+    it('should render all 4 navigation items', () => {
       render(<BottomNav />);
 
-      // Check all labels are present
-      expect(screen.getByText('Home')).toBeInTheDocument();
-      expect(screen.getByText('Giochi')).toBeInTheDocument();
-      expect(screen.getByText('Libreria')).toBeInTheDocument();
+      // Check all labels are present (Issue #3104: reduced to 4 items)
+      expect(screen.getByText('Catalogo')).toBeInTheDocument();
+      expect(screen.getByText('I Miei Giochi')).toBeInTheDocument();
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
       expect(screen.getByText('Chat')).toBeInTheDocument();
-      expect(screen.getByText('Config')).toBeInTheDocument();
     });
 
     it('should render correct ARIA labels', () => {
       render(<BottomNav />);
 
-      expect(screen.getByLabelText('Navigate to dashboard home')).toBeInTheDocument();
       expect(screen.getByLabelText('Navigate to games catalog')).toBeInTheDocument();
-      expect(screen.getByLabelText('Navigate to your library')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to your game library')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to dashboard')).toBeInTheDocument();
       expect(screen.getByLabelText('Navigate to chat interface')).toBeInTheDocument();
-      expect(screen.getByLabelText('Navigate to settings')).toBeInTheDocument();
     });
 
     it('should have primary navigation landmark', () => {
@@ -72,33 +71,33 @@ describe('BottomNav', () => {
       mockUsePathname.mockReturnValue('/dashboard');
       render(<BottomNav />);
 
-      const homeLink = screen.getByLabelText('Navigate to dashboard home');
-      expect(homeLink).toHaveAttribute('aria-current', 'page');
-      expect(homeLink).toHaveClass('text-primary', 'font-semibold');
+      const dashboardLink = screen.getByLabelText('Navigate to dashboard');
+      expect(dashboardLink).toHaveAttribute('aria-current', 'page');
+      expect(dashboardLink).toHaveClass('text-primary', 'font-semibold');
     });
 
     it('should mark /dashboard as active when pathname is / (root)', () => {
       mockUsePathname.mockReturnValue('/');
       render(<BottomNav />);
 
-      const homeLink = screen.getByLabelText('Navigate to dashboard home');
-      expect(homeLink).toHaveAttribute('aria-current', 'page');
+      const dashboardLink = screen.getByLabelText('Navigate to dashboard');
+      expect(dashboardLink).toHaveAttribute('aria-current', 'page');
     });
 
     it('should mark /games as active for /games/* routes', () => {
       mockUsePathname.mockReturnValue('/games/catan');
       render(<BottomNav />);
 
-      const giochiLink = screen.getByLabelText('Navigate to games catalog');
-      expect(giochiLink).toHaveAttribute('aria-current', 'page');
-      expect(giochiLink).toHaveClass('text-primary', 'font-semibold');
+      const gamesLink = screen.getByLabelText('Navigate to games catalog');
+      expect(gamesLink).toHaveAttribute('aria-current', 'page');
+      expect(gamesLink).toHaveClass('text-primary', 'font-semibold');
     });
 
     it('should mark /library as active for /library/* routes', () => {
       mockUsePathname.mockReturnValue('/library');
       render(<BottomNav />);
 
-      const libraryLink = screen.getByLabelText('Navigate to your library');
+      const libraryLink = screen.getByLabelText('Navigate to your game library');
       expect(libraryLink).toHaveAttribute('aria-current', 'page');
       expect(libraryLink).toHaveClass('text-primary', 'font-semibold');
     });
@@ -109,14 +108,6 @@ describe('BottomNav', () => {
 
       const chatLink = screen.getByLabelText('Navigate to chat interface');
       expect(chatLink).toHaveAttribute('aria-current', 'page');
-    });
-
-    it('should mark /settings as active for /settings/* routes', () => {
-      mockUsePathname.mockReturnValue('/settings/profile');
-      render(<BottomNav />);
-
-      const settingsLink = screen.getByLabelText('Navigate to settings');
-      expect(settingsLink).toHaveAttribute('aria-current', 'page');
     });
 
     it('should not mark multiple items as active', () => {
@@ -133,10 +124,10 @@ describe('BottomNav', () => {
       mockUsePathname.mockReturnValue('/chat');
       render(<BottomNav />);
 
-      const homeLink = screen.getByLabelText('Navigate to dashboard home');
-      expect(homeLink).not.toHaveAttribute('aria-current');
-      expect(homeLink).toHaveClass('text-muted-foreground');
-      expect(homeLink).not.toHaveClass('text-primary', 'font-semibold');
+      const dashboardLink = screen.getByLabelText('Navigate to dashboard');
+      expect(dashboardLink).not.toHaveAttribute('aria-current');
+      expect(dashboardLink).toHaveClass('text-muted-foreground');
+      expect(dashboardLink).not.toHaveClass('text-primary', 'font-semibold');
     });
   });
 
@@ -164,7 +155,7 @@ describe('BottomNav', () => {
 
       // Lucide icons render as <svg> with aria-hidden
       const icons = container.querySelectorAll('svg');
-      expect(icons.length).toBe(5);
+      expect(icons.length).toBe(4); // Updated: 4 items now
       icons.forEach(icon => {
         expect(icon).toHaveAttribute('aria-hidden', 'true');
       });
@@ -184,14 +175,10 @@ describe('BottomNav', () => {
     it('should render correct href attributes', () => {
       render(<BottomNav />);
 
-      expect(screen.getByLabelText('Navigate to dashboard home')).toHaveAttribute(
-        'href',
-        '/dashboard'
-      );
       expect(screen.getByLabelText('Navigate to games catalog')).toHaveAttribute('href', '/games');
-      expect(screen.getByLabelText('Navigate to your library')).toHaveAttribute('href', '/library');
+      expect(screen.getByLabelText('Navigate to your game library')).toHaveAttribute('href', '/library');
+      expect(screen.getByLabelText('Navigate to dashboard')).toHaveAttribute('href', '/dashboard');
       expect(screen.getByLabelText('Navigate to chat interface')).toHaveAttribute('href', '/chat');
-      expect(screen.getByLabelText('Navigate to settings')).toHaveAttribute('href', '/settings');
     });
 
     it('should use Next.js Link component for client-side navigation', () => {
@@ -199,7 +186,7 @@ describe('BottomNav', () => {
 
       // Next.js Link renders as <a> with href
       const links = container.querySelectorAll('a[href^="/"]');
-      expect(links.length).toBe(5);
+      expect(links.length).toBe(4); // Updated: 4 items now
     });
   });
 
@@ -208,7 +195,7 @@ describe('BottomNav', () => {
       mockUsePathname.mockReturnValue('/dashboard');
       render(<BottomNav />);
 
-      const activeLink = screen.getByLabelText('Navigate to dashboard home');
+      const activeLink = screen.getByLabelText('Navigate to dashboard');
       expect(activeLink).toHaveClass('text-primary'); // Orange #F97316
     });
 
@@ -258,7 +245,7 @@ describe('BottomNav', () => {
     it('should use correct label font size (10px)', () => {
       render(<BottomNav />);
 
-      const labels = screen.getAllByText(/Home|Giochi|Libreria|Chat|Config/);
+      const labels = screen.getAllByText(/Catalogo|I Miei Giochi|Dashboard|Chat/);
       labels.forEach(label => {
         expect(label).toHaveClass('text-[10px]');
       });
@@ -267,7 +254,7 @@ describe('BottomNav', () => {
     it('should use Inter font for labels', () => {
       render(<BottomNav />);
 
-      const labels = screen.getAllByText(/Home|Giochi|Libreria|Chat|Config/);
+      const labels = screen.getAllByText(/Catalogo|I Miei Giochi|Dashboard|Chat/);
       labels.forEach(label => {
         expect(label).toHaveClass('font-[Inter]');
       });

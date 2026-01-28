@@ -1,5 +1,6 @@
 /**
  * User Library Page (Issue #2464, #2613, #2618)
+ * Updated: Issue #3104 - Navigation handled by layout
  *
  * Enhanced user library management with search, filtering, and actions.
  *
@@ -24,8 +25,6 @@
 
 import dynamic from 'next/dynamic';
 
-import { BottomNav } from '@/components/layout/BottomNav';
-import { TopNav } from '@/components/layout/TopNav';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 
 // Dynamically import the client component with SSR disabled
@@ -33,24 +32,20 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 const LibraryPageClient = dynamic(() => import('./LibraryPageClient'), {
   ssr: false,
   loading: () => (
-    <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
-      <TopNav />
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        {/* Quota skeleton */}
-        <Skeleton className="h-24 w-full" />
+    <div className="container mx-auto px-4 py-8 space-y-6">
+      {/* Quota skeleton */}
+      <Skeleton className="h-24 w-full" />
 
-        {/* Filters skeleton */}
-        <Skeleton className="h-16 w-full" />
+      {/* Filters skeleton */}
+      <Skeleton className="h-16 w-full" />
 
-        {/* Cards grid skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-64 w-full rounded-lg" />
-          ))}
-        </div>
+      {/* Cards grid skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-64 w-full rounded-lg" />
+        ))}
       </div>
-      <BottomNav />
-    </main>
+    </div>
   ),
 });
 

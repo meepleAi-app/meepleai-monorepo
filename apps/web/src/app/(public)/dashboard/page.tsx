@@ -1,5 +1,6 @@
 /**
  * Dashboard Page (Post-Login) - Issue #1836 [PAGE-002]
+ * Updated: Issue #3104 - Navigation handled by layout
  *
  * Main user dashboard after login with personalized greeting, recent games,
  * and chat history. Protected route with TanStack Query integration.
@@ -11,7 +12,7 @@
  * - Recent games grid (6 games, 2x3)
  * - Chat history (5 most recent threads)
  * - QuickActions (Add Game, New Chat)
- * - BottomNav integration (active: /dashboard)
+ * - Navigation via layout (UnifiedHeader + BottomNav)
  *
  * Tech Stack:
  * - TanStack Query v5 (useCurrentUser, useGames, useChats)
@@ -19,7 +20,6 @@
  * - Responsive design (mobile-first)
  *
  * Dependencies:
- * - UI-002: BottomNav ✅
  * - UI-003: GameCard ✅
  * - UI-007: QuickActions ✅
  * - FE-IMP-003: TanStack Query ✅
@@ -39,8 +39,6 @@ import React from 'react';
 import { AlertCircle } from 'lucide-react';
 
 import { QuickActions } from '@/components/dashboard/QuickActions';
-import { BottomNav } from '@/components/layout/BottomNav';
-import { TopNav } from '@/components/layout/TopNav';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
@@ -71,35 +69,29 @@ export default function DashboardPage() {
   // Loading state: Show skeleton UI
   if (userLoading) {
     return (
-      <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
-        {/* Top Navigation (desktop) */}
-        <TopNav />
-        <div className="container mx-auto px-4 py-8 space-y-8">
-          {/* Greeting Skeleton */}
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-64" />
-          </div>
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Greeting Skeleton */}
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-64" />
+        </div>
 
-          {/* Recent Games Skeleton */}
-          <div className="space-y-4">
-            <Skeleton className="h-6 w-32" />
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-64 w-full" />
-              ))}
-            </div>
-          </div>
-
-          {/* QuickActions Skeleton */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
+        {/* Recent Games Skeleton */}
+        <div className="space-y-4">
+          <Skeleton className="h-6 w-32" />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-64 w-full" />
+            ))}
           </div>
         </div>
 
-        <BottomNav />
-      </main>
+        {/* QuickActions Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      </div>
     );
   }
 
@@ -108,85 +100,66 @@ export default function DashboardPage() {
     const errorMessage = userError instanceof Error ? userError.message : String(userError);
 
     return (
-      <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
-        {/* Top Navigation (desktop) */}
-        <TopNav />
-        <div className="container mx-auto px-4 py-8">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Errore di Caricamento</AlertTitle>
-            <AlertDescription>
-              Impossibile caricare i dati del dashboard. Riprova più tardi.
-              <span className="block mt-2 text-xs opacity-75">{errorMessage}</span>
-            </AlertDescription>
-          </Alert>
-        </div>
-
-        <BottomNav />
-      </main>
+      <div className="container mx-auto px-4 py-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Errore di Caricamento</AlertTitle>
+          <AlertDescription>
+            Impossibile caricare i dati del dashboard. Riprova più tardi.
+            <span className="block mt-2 text-xs opacity-75">{errorMessage}</span>
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
   // No user data (should not happen with middleware, but defensive)
   if (!user) {
     return (
-      <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
-        {/* Top Navigation (desktop) */}
-        <TopNav />
-        <div className="container mx-auto px-4 py-8">
-          <Alert data-testid="dashboard-no-user-error">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Nessun Utente</AlertTitle>
-            <AlertDescription>
-              Non è stato possibile recuperare i dati utente. Effettua nuovamente il login.
-            </AlertDescription>
-          </Alert>
-        </div>
-
-        <BottomNav />
-      </main>
+      <div className="container mx-auto px-4 py-8">
+        <Alert data-testid="dashboard-no-user-error">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Nessun Utente</AlertTitle>
+          <AlertDescription>
+            Non è stato possibile recuperare i dati utente. Effettua nuovamente il login.
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
   // Main dashboard content
   return (
-    <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
-      {/* Top Navigation (desktop) */}
-      <TopNav />
-      <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Greeting Section */}
-        <GreetingSection user={user} />
+    <div className="container mx-auto px-4 py-8 space-y-8">
+      {/* Greeting Section */}
+      <GreetingSection user={user} />
 
-        {/* Quota Widgets Grid (Library + Sessions) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Library Quota Widget (Issue #2445) */}
-          <LibraryQuotaSection />
+      {/* Quota Widgets Grid (Library + Sessions) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Library Quota Widget (Issue #2445) */}
+        <LibraryQuotaSection />
 
-          {/* Session Quota Widget (Issue #3075) */}
-          <SessionQuotaSection />
-        </div>
-
-        {/* Active Sessions Widget (Issue #2617) */}
-        <ActiveSessionsSection />
-
-        {/* Recently Added Games from Library (Issue #2612) */}
-        <RecentlyAddedSection />
-
-        {/* Recent Games Section */}
-        <RecentGamesSection games={gamesData?.games} isLoading={gamesLoading} error={gamesError} />
-
-        {/* Chat History Section */}
-        <ChatHistorySection userId={user.id} />
-
-        {/* Quick Actions */}
-        <section aria-label="Quick actions">
-          <h2 className="text-xl font-quicksand font-semibold mb-4">Azioni Rapide</h2>
-          <QuickActions />
-        </section>
+        {/* Session Quota Widget (Issue #3075) */}
+        <SessionQuotaSection />
       </div>
 
-      {/* Bottom Navigation (mobile) */}
-      <BottomNav />
-    </main>
+      {/* Active Sessions Widget (Issue #2617) */}
+      <ActiveSessionsSection />
+
+      {/* Recently Added Games from Library (Issue #2612) */}
+      <RecentlyAddedSection />
+
+      {/* Recent Games Section */}
+      <RecentGamesSection games={gamesData?.games} isLoading={gamesLoading} error={gamesError} />
+
+      {/* Chat History Section */}
+      <ChatHistorySection userId={user.id} />
+
+      {/* Quick Actions */}
+      <section aria-label="Quick actions">
+        <h2 className="text-xl font-quicksand font-semibold mb-4">Azioni Rapide</h2>
+        <QuickActions />
+      </section>
+    </div>
   );
 }

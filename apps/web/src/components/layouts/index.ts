@@ -1,11 +1,9 @@
 /**
  * Public Layout Components - Issue #2230
+ * Updated: Issue #3104 - Removed PublicHeader (replaced by UnifiedHeader)
  *
  * Esportazioni per i componenti del layout pubblico.
  */
-
-export { PublicHeader } from './PublicHeader';
-export type { PublicHeaderProps, PublicUser } from './PublicHeader';
 
 export { PublicFooter } from './PublicFooter';
 export type { PublicFooterProps } from './PublicFooter';

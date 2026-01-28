@@ -12,8 +12,19 @@ import { toast } from '@/components/layout/Toast';
 
 import type { SystemConfigurationDto } from '../../../lib/api';
 
-// Mock dependencies
-vi.mock('../../../lib/api');
+// Mock dependencies - use partial mock to preserve schema exports (TIER_ORDER, etc.)
+vi.mock('../../../lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/api')>();
+  return {
+    ...actual,
+    api: {
+      config: {
+        updateConfiguration: vi.fn(),
+        bulkUpdate: vi.fn(),
+      },
+    },
+  };
+});
 vi.mock('@/components/layout/Toast');
 
 const mockApi = api as Mocked<typeof api>;
@@ -92,9 +103,10 @@ describe('FeatureFlagsTab', () => {
         <FeatureFlagsTab configurations={mockRoleOnlyConfigurations} onConfigurationChange={mockOnChange} />
       );
 
-      expect(screen.getByText('RagCaching')).toBeInTheDocument();
-      expect(screen.getByText('StreamingResponses')).toBeInTheDocument();
-      expect(screen.getByText('BetaSurvey')).toBeInTheDocument();
+      // Feature names appear in both preview and table, so use getAllByText
+      expect(screen.getAllByText('RagCaching').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('StreamingResponses').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('BetaSurvey').length).toBeGreaterThan(0);
     });
 
     it('shows active features preview', () => {
@@ -180,14 +192,18 @@ describe('FeatureFlagsTab', () => {
   });
 
   describe('Tier-Based Feature Flags (Issue #3079)', () => {
-    it('displays tier columns when tier data is present', () => {
+    it('displays tier columns when tier data is present', async () => {
       render(
         <FeatureFlagsTab configurations={mockTierConfigurations} onConfigurationChange={mockOnChange} />
       );
 
-      expect(screen.getByText('Free')).toBeInTheDocument();
-      expect(screen.getByText('Normal')).toBeInTheDocument();
-      expect(screen.getByText('Premium')).toBeInTheDocument();
+      // Wait for state to update after useEffect, then check tier columns
+      // Tier names appear in both column headers and guide section, use getAllByText
+      await waitFor(() => {
+        expect(screen.getAllByText('Free').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Normal').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Premium').length).toBeGreaterThan(0);
+      });
     });
 
     it('does not display tier columns when no tier data', () => {
@@ -349,9 +365,10 @@ describe('FeatureFlagsTab', () => {
       const firstFlagCheckbox = screen.getAllByRole('checkbox')[1];
       await user.click(firstFlagCheckbox);
 
-      expect(screen.getByText(/Enable Premium/)).toBeInTheDocument();
-      expect(screen.getByText(/Enable Normal/)).toBeInTheDocument();
-      expect(screen.getByText(/Disable Free/)).toBeInTheDocument();
+      // Use testIds for reliable selection - buttons have responsive text that varies
+      expect(screen.getByTestId('feature-flags-bulk-actions-action-enable-premium')).toBeInTheDocument();
+      expect(screen.getByTestId('feature-flags-bulk-actions-action-enable-normal')).toBeInTheDocument();
+      expect(screen.getByTestId('feature-flags-bulk-actions-action-disable-free')).toBeInTheDocument();
     });
 
     it('shows info toast for bulk tier actions (pending backend #3073)', async () => {
@@ -365,8 +382,8 @@ describe('FeatureFlagsTab', () => {
       const headerCheckbox = screen.getAllByRole('checkbox')[0];
       await user.click(headerCheckbox);
 
-      // Click bulk action
-      const enablePremiumButton = screen.getByText(/Enable Premium/);
+      // Click bulk action using testId for reliable selection
+      const enablePremiumButton = screen.getByTestId('feature-flags-bulk-actions-action-enable-premium');
       await user.click(enablePremiumButton);
 
       await waitFor(() => {
@@ -432,9 +449,10 @@ describe('FeatureFlagsTab', () => {
         <FeatureFlagsTab configurations={configurations} onConfigurationChange={mockOnChange} />
       );
 
-      // Verify both features are rendered
-      expect(screen.getByText('EnabledFeature')).toBeInTheDocument();
-      expect(screen.getByText('DisabledFeature')).toBeInTheDocument();
+      // Verify both features are rendered - enabled features appear in preview and table
+      expect(screen.getAllByText('EnabledFeature').length).toBeGreaterThan(0);
+      // Disabled features only appear in table
+      expect(screen.getAllByText('DisabledFeature').length).toBeGreaterThan(0);
     });
   });
 
@@ -444,10 +462,10 @@ describe('FeatureFlagsTab', () => {
         <FeatureFlagsTab configurations={mockTierConfigurations} onConfigurationChange={mockOnChange} />
       );
 
-      // Tier headers should have tooltip triggers
-      expect(screen.getByText('Free')).toBeInTheDocument();
-      expect(screen.getByText('Normal')).toBeInTheDocument();
-      expect(screen.getByText('Premium')).toBeInTheDocument();
+      // Tier headers should have tooltip triggers - tier names appear in both headers and guide
+      expect(screen.getAllByText('Free').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Normal').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Premium').length).toBeGreaterThan(0);
     });
 
     it('shows help guide with tier descriptions', () => {
@@ -492,8 +510,8 @@ describe('FeatureFlagsTab', () => {
         <FeatureFlagsTab configurations={mockRoleOnlyConfigurations} onConfigurationChange={mockOnChange} />
       );
 
-      // Should render without errors
-      expect(screen.getByText('RagCaching')).toBeInTheDocument();
+      // Should render without errors - RagCaching appears in both preview and table
+      expect(screen.getAllByText('RagCaching').length).toBeGreaterThan(0);
 
       // Should not show tier columns
       expect(screen.queryByText('Free')).not.toBeInTheDocument();

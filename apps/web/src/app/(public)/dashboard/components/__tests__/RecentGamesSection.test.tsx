@@ -34,9 +34,10 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+// Mock Next.js Link - handle data-testid passthrough for Button asChild pattern
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({ children, href, 'data-testid': testId, ...props }: { children: React.ReactNode; href: string; 'data-testid'?: string; [key: string]: unknown }) => (
+    <a href={href} data-testid={testId} {...props}>{children}</a>
   ),
 }));
 

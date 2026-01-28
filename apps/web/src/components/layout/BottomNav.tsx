@@ -19,7 +19,7 @@
 
 'use client';
 
-import { Home, Gamepad2, MessageSquare, Settings, User } from 'lucide-react';
+import { Home, Gamepad2, MessageSquare, Settings, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -49,6 +49,13 @@ const navItems: NavItem[] = [
     testId: 'bottomnav-games',
   },
   {
+    href: '/library',
+    icon: BookOpen,
+    label: 'Libreria',
+    ariaLabel: 'Navigate to your library',
+    testId: 'bottomnav-library',
+  },
+  {
     href: '/chat',
     icon: MessageSquare,
     label: 'Chat',
@@ -61,13 +68,6 @@ const navItems: NavItem[] = [
     label: 'Config',
     ariaLabel: 'Navigate to settings',
     testId: 'bottomnav-settings',
-  },
-  {
-    href: '/profile',
-    icon: User,
-    label: 'Profilo',
-    ariaLabel: 'Navigate to user profile',
-    testId: 'bottomnav-profile',
   },
 ];
 

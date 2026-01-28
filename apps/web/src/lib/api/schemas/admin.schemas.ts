@@ -17,10 +17,19 @@ export const AdminUserSchema = z.object({
   displayName: z.string().min(1),
   role: z.string().min(1),
   createdAt: z.string().datetime(),
+  lastSeenAt: z.string().datetime().nullable().optional(),
   isTwoFactorEnabled: z.boolean().optional(),
+  isSuspended: z.boolean().optional().default(false),
+  suspendReason: z.string().nullable().optional(),
 });
 
 export type AdminUser = z.infer<typeof AdminUserSchema>;
+
+export const SuspendUserRequestSchema = z.object({
+  reason: z.string().optional(),
+});
+
+export type SuspendUserRequest = z.infer<typeof SuspendUserRequestSchema>;
 
 export const CreateUserRequestSchema = z.object({
   email: z.string().email(),

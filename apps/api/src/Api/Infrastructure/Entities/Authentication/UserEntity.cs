@@ -30,6 +30,11 @@ public class UserEntity
     public bool EmailVerified { get; set; }
     public DateTime? EmailVerifiedAt { get; set; }
 
+    // ISSUE-2886: User Suspension
+    public bool IsSuspended { get; set; }
+    public DateTime? SuspendedAt { get; set; }
+    public string? SuspendReason { get; set; }
+
     // Navigation properties
     public ICollection<UserSessionEntity> Sessions { get; set; } = new List<UserSessionEntity>();
     public ICollection<UserBackupCodeEntity> BackupCodes { get; set; } = new List<UserBackupCodeEntity>();

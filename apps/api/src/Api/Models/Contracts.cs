@@ -424,7 +424,9 @@ internal record UserDto(
     string DisplayName,
     string Role,
     DateTime CreatedAt,
-    DateTime? LastSeenAt
+    DateTime? LastSeenAt,
+    bool IsSuspended = false,
+    string? SuspendReason = null
 );
 
 /// <summary>

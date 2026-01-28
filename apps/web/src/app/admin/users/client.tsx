@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { Trash2, Eye, Download, Shield, Key } from 'lucide-react';
+import { Trash2, Eye, Download, Shield, Key, Ban, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 
 import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
@@ -18,6 +18,8 @@ type User = {
   role: string;
   createdAt: string;
   lastSeenAt: string | null;
+  isSuspended?: boolean;
+  suspendReason?: string | null;
 };
 
 type CreateUserRequest = {
@@ -68,6 +70,7 @@ export function AdminPageClient() {
   const [pageSize] = useState(20);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [dataLoading, setDataLoading] = useState(true);
@@ -128,6 +131,7 @@ export function AdminPageClient() {
         pageSize: 20,
         search: search || undefined,
         role: roleFilter !== 'all' ? roleFilter : undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API response type coercion
@@ -140,7 +144,7 @@ export function AdminPageClient() {
       addToast('error', 'Failed to load users');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- addToast is stable (defined with useCallback and empty deps)
-  }, [page, pageSize, search, roleFilter, sortBy, sortOrder]);
+  }, [page, pageSize, search, roleFilter, statusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchUsers();
@@ -195,6 +199,43 @@ export function AdminPageClient() {
           }
         },
       });
+    },
+    [addToast, fetchUsers]
+  );
+
+  // Suspend user
+  const handleSuspend = useCallback(
+    async (userId: string, email: string) => {
+      setConfirmation({
+        isOpen: true,
+        title: 'Suspend User',
+        message: `Are you sure you want to suspend ${email}? They will not be able to login.`,
+        onConfirm: async () => {
+          try {
+            await api.admin.suspendUser(userId, 'Suspended by admin');
+            addToast('success', `User ${email} suspended successfully`);
+            setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+            fetchUsers();
+          } catch (err) {
+            addToast('error', err instanceof Error ? err.message : 'Failed to suspend user');
+            setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+          }
+        },
+      });
+    },
+    [addToast, fetchUsers]
+  );
+
+  // Unsuspend user
+  const handleUnsuspend = useCallback(
+    async (userId: string, email: string) => {
+      try {
+        await api.admin.unsuspendUser(userId);
+        addToast('success', `User ${email} reactivated successfully`);
+        fetchUsers();
+      } catch (err) {
+        addToast('error', err instanceof Error ? err.message : 'Failed to unsuspend user');
+      }
     },
     [addToast, fetchUsers]
   );
@@ -405,6 +446,22 @@ export function AdminPageClient() {
               <option value="User">User</option>
             </select>
           </div>
+          <div>
+            <select
+              value={statusFilter}
+              onChange={e => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              className="p-2 border border-gray-300 rounded"
+              aria-label="Filter by status"
+              data-testid="status-filter"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
         </div>
 
         {/* Actions */}
@@ -496,6 +553,7 @@ export function AdminPageClient() {
                 >
                   Role {sortBy === 'role' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </th>
+                <th className="p-3 border-b-2 border-gray-300 text-left">Status</th>
                 <th
                   className="p-3 border-b-2 border-gray-300 cursor-pointer text-left"
                   onClick={() => handleSort('createdAt')}
@@ -509,7 +567,7 @@ export function AdminPageClient() {
             <tbody>
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-gray-600">
+                  <td colSpan={8} className="p-8 text-center text-gray-600">
                     No users found
                   </td>
                 </tr>
@@ -538,6 +596,19 @@ export function AdminPageClient() {
                         {user.role}
                       </span>
                     </td>
+                    <td className="p-3">
+                      <span
+                        className={cn(
+                          'px-2 py-1 rounded text-sm',
+                          user.isSuspended
+                            ? 'bg-orange-500 text-white'
+                            : 'bg-green-100 text-green-800'
+                        )}
+                        data-testid={`status-badge-${user.id}`}
+                      >
+                        {user.isSuspended ? 'Suspended' : 'Active'}
+                      </span>
+                    </td>
                     <td className="p-3 text-sm text-gray-600">{formatDate(user.createdAt)}</td>
                     <td className="p-3 text-sm text-gray-600">{formatDate(user.lastSeenAt)}</td>
                     <td className="p-3 text-center">
@@ -555,6 +626,27 @@ export function AdminPageClient() {
                       >
                         Edit
                       </button>
+                      {user.isSuspended ? (
+                        <button
+                          onClick={() => handleUnsuspend(user.id, user.email)}
+                          className="inline-flex items-center px-3 py-1 mr-2 bg-green-600 text-white border-none rounded cursor-pointer text-sm hover:bg-green-700"
+                          data-testid={`unsuspend-${user.id}`}
+                          title="Reactivate user"
+                        >
+                          <UserCheck className="h-3 w-3 mr-1" />
+                          Activate
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleSuspend(user.id, user.email)}
+                          className="inline-flex items-center px-3 py-1 mr-2 bg-orange-500 text-white border-none rounded cursor-pointer text-sm hover:bg-orange-600"
+                          data-testid={`suspend-${user.id}`}
+                          title="Suspend user"
+                        >
+                          <Ban className="h-3 w-3 mr-1" />
+                          Suspend
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(user.id, user.email)}
                         className="px-3 py-1 bg-red-600 text-white border-none rounded cursor-pointer text-sm hover:bg-red-700"

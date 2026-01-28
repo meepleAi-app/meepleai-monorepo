@@ -272,6 +272,7 @@ export class AdminHelper {
         const url = new URL(route.request().url());
         const search = url.searchParams.get('search');
         const role = url.searchParams.get('role');
+        const status = url.searchParams.get('status');
         const sortBy = url.searchParams.get('sortBy') || 'createdAt';
         const sortOrder = url.searchParams.get('sortOrder') || 'desc';
         const page = parseInt(url.searchParams.get('page') || '1');
@@ -290,6 +291,12 @@ export class AdminHelper {
         // Apply role filter
         if (role && role !== 'all') {
           filteredUsers = filteredUsers.filter(u => u.role === role);
+        }
+
+        // Apply status filter (active/suspended)
+        if (status && status !== 'all') {
+          const isSuspended = status === 'suspended';
+          filteredUsers = filteredUsers.filter(u => (u.isSuspended || false) === isSuspended);
         }
 
         // Apply sorting
@@ -387,6 +394,60 @@ export class AdminHelper {
             contentType: 'application/json',
             body: JSON.stringify({ error: 'User not found' }),
           });
+        }
+      } else if (route.request().method() === 'POST') {
+        // Handle suspend/unsuspend endpoints
+        const urlPath = route.request().url();
+        const suspendMatch = urlPath.match(/\/users\/([^/]+)\/suspend$/);
+        const unsuspendMatch = urlPath.match(/\/users\/([^/]+)\/unsuspend$/);
+
+        if (suspendMatch) {
+          const userId = suspendMatch[1];
+          const requestData = JSON.parse(route.request().postData() || '{}');
+          const userIndex = users.findIndex(u => u.id === userId);
+
+          if (userIndex !== -1) {
+            users[userIndex] = {
+              ...users[userIndex],
+              isSuspended: true,
+              suspendReason: requestData.reason || 'Suspended by admin',
+            };
+
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({ user: users[userIndex] }),
+            });
+          } else {
+            await route.fulfill({
+              status: 404,
+              contentType: 'application/json',
+              body: JSON.stringify({ error: 'User not found' }),
+            });
+          }
+        } else if (unsuspendMatch) {
+          const userId = unsuspendMatch[1];
+          const userIndex = users.findIndex(u => u.id === userId);
+
+          if (userIndex !== -1) {
+            users[userIndex] = {
+              ...users[userIndex],
+              isSuspended: false,
+              suspendReason: null,
+            };
+
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({ user: users[userIndex] }),
+            });
+          } else {
+            await route.fulfill({
+              status: 404,
+              contentType: 'application/json',
+              body: JSON.stringify({ error: 'User not found' }),
+            });
+          }
         }
       }
     });

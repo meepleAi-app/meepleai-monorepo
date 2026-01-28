@@ -4,11 +4,11 @@
  * Games Table Row Component (Issue #2515)
  *
  * Single row in games table with dropdown actions menu.
- * Actions vary based on game status:
- * - Draft (0): [Configure] [Delete]
- * - PendingApproval (1): [Review] [Reject]
- * - Published (2): [Edit] [Archive]
- * - Archived (3): [Restore] [Delete]
+ * Actions vary based on game status (string enum):
+ * - Draft: [Configure] [Submit for Approval] [Delete]
+ * - PendingApproval: [Review] [Approve & Publish] [Reject]
+ * - Published: [Edit] [Archive]
+ * - Archived: [Restore & Edit] [Delete Permanently]
  */
 
 import { useState } from 'react';
@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/navigation/dropdown-menu';
 import { Button } from '@/components/ui/primitives/button';
 import { useApiClient } from '@/lib/api/context';
-import { type SharedGameDetail } from '@/lib/api/schemas/shared-games.schemas';
+import { type SharedGameDetail, type GameStatus } from '@/lib/api/schemas/shared-games.schemas';
 
 
 interface GamesTableRowProps {
@@ -43,16 +43,16 @@ export function GamesTableRow({ game, onEdit, onReviewApproval, onRefresh }: Gam
   const { sharedGames } = useApiClient();
   const [loading, setLoading] = useState(false);
 
-  // Get status badge variant (status is numeric: 0=Draft, 1=PendingApproval, 2=Published, 3=Archived)
-  const getStatusBadge = (status: number) => {
+  // Get status badge variant (status is string enum: Draft, PendingApproval, Published, Archived)
+  const getStatusBadge = (status: GameStatus) => {
     switch (status) {
-      case 0: // Draft
+      case 'Draft':
         return <Badge variant="secondary">Draft</Badge>;
-      case 1: // PendingApproval
+      case 'PendingApproval':
         return <Badge variant="outline">Pending Approval</Badge>;
-      case 2: // Published
+      case 'Published':
         return <Badge variant="default">Published</Badge>;
-      case 3: // Archived
+      case 'Archived':
         return <Badge variant="destructive">Archived</Badge>;
       default:
         return <Badge>Unknown ({status})</Badge>;
@@ -145,8 +145,8 @@ export function GamesTableRow({ game, onEdit, onReviewApproval, onRefresh }: Gam
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
 
-            {/* Draft (0) actions */}
-            {game.status === 0 && (
+            {/* Draft actions */}
+            {game.status === 'Draft' && (
               <>
                 <DropdownMenuItem onClick={handleConfigure}>
                   <Edit className="h-4 w-4 mr-2" />
@@ -164,8 +164,8 @@ export function GamesTableRow({ game, onEdit, onReviewApproval, onRefresh }: Gam
               </>
             )}
 
-            {/* PendingApproval (1) actions */}
-            {game.status === 1 && (
+            {/* PendingApproval actions */}
+            {game.status === 'PendingApproval' && (
               <>
                 <DropdownMenuItem onClick={handleReview}>
                   <Eye className="h-4 w-4 mr-2" />
@@ -182,8 +182,8 @@ export function GamesTableRow({ game, onEdit, onReviewApproval, onRefresh }: Gam
               </>
             )}
 
-            {/* Published (2) actions */}
-            {game.status === 2 && (
+            {/* Published actions */}
+            {game.status === 'Published' && (
               <>
                 <DropdownMenuItem onClick={handleConfigure}>
                   <Edit className="h-4 w-4 mr-2" />
@@ -196,8 +196,8 @@ export function GamesTableRow({ game, onEdit, onReviewApproval, onRefresh }: Gam
               </>
             )}
 
-            {/* Archived (3) actions */}
-            {game.status === 3 && (
+            {/* Archived actions */}
+            {game.status === 'Archived' && (
               <>
                 <DropdownMenuItem onClick={handleConfigure}>
                   <Edit className="h-4 w-4 mr-2" />

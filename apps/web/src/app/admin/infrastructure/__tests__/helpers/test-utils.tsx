@@ -16,7 +16,7 @@ export const createMockService = (
   state,
   errorMessage: errorMsg || null,
   checkedAt: new Date('2024-12-11T10:00:00Z').toISOString(),
-  responseTime: `00:00:00.${responseMs.toString().padStart(7, '0')}`,
+  responseTimeMs: responseMs, // API schema expects responseTimeMs as number in milliseconds
 });
 
 export const createHealthyInfraData = (): InfrastructureDetails => ({

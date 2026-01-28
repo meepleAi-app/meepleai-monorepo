@@ -150,16 +150,16 @@ describe('ServiceHealthMatrix', () => {
     expect(grid).toBeInTheDocument();
   });
 
-  // ==================== Data Parsing ====================
+  // ==================== Response Time Display ====================
 
-  it('parses TimeSpan response time correctly', () => {
+  it('displays response time in milliseconds correctly', () => {
     const services: ServiceHealthStatus[] = [
       {
         serviceName: 'postgres',
         state: 'Healthy',
         errorMessage: null,
         checkedAt: new Date().toISOString(),
-        responseTime: '00:00:00.0153000', // 15.3ms
+        responseTimeMs: 15, // 15ms
       },
     ];
 
@@ -168,14 +168,14 @@ describe('ServiceHealthMatrix', () => {
     expect(screen.getByText(/15ms/)).toBeInTheDocument();
   });
 
-  it('parses TimeSpan with seconds correctly', () => {
+  it('displays response time in seconds for values >= 1000ms', () => {
     const services: ServiceHealthStatus[] = [
       {
         serviceName: 'n8n',
         state: 'Healthy',
         errorMessage: null,
         checkedAt: new Date().toISOString(),
-        responseTime: '00:00:01.5000000', // 1.5s = 1500ms
+        responseTimeMs: 1500, // 1.5s = 1500ms
       },
     ];
 
@@ -192,7 +192,7 @@ describe('ServiceHealthMatrix', () => {
         state: 'Healthy',
         errorMessage: null,
         checkedAt: now.toISOString(),
-        responseTime: '00:00:00.0150000',
+        responseTimeMs: 15,
       },
     ];
 
@@ -312,14 +312,14 @@ describe('ServiceHealthMatrix', () => {
 
   // ==================== Edge Cases ====================
 
-  it('handles services with undefined response time', () => {
+  it('handles services with zero response time', () => {
     const services: ServiceHealthStatus[] = [
       {
         serviceName: 'postgres',
         state: 'Healthy',
         errorMessage: null,
         checkedAt: new Date().toISOString(),
-        responseTime: '00:00:00.0000000',
+        responseTimeMs: 0,
       },
     ];
 
@@ -335,7 +335,7 @@ describe('ServiceHealthMatrix', () => {
         state: 'Degraded',
         errorMessage: null,
         checkedAt: new Date().toISOString(),
-        responseTime: '00:00:00.0150000',
+        responseTimeMs: 15,
       },
     ];
 
@@ -364,16 +364,16 @@ describe('ServiceHealthMatrix', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
 
-  // ==================== TimeSpan Parsing Edge Cases ====================
+  // ==================== Response Time Edge Cases ====================
 
-  it('parses TimeSpan with hours correctly', () => {
+  it('displays large response times in seconds', () => {
     const services: ServiceHealthStatus[] = [
       {
         serviceName: 'postgres',
         state: 'Healthy',
         errorMessage: null,
         checkedAt: new Date().toISOString(),
-        responseTime: '01:30:15.0000000', // 1h 30m 15s = 5415000ms
+        responseTimeMs: 5415000, // 1h 30m 15s in ms
       },
     ];
 
@@ -383,14 +383,14 @@ describe('ServiceHealthMatrix', () => {
     expect(screen.getByText(/5415.00s/)).toBeInTheDocument();
   });
 
-  it('handles malformed TimeSpan gracefully', () => {
+  it('handles services without response time', () => {
     const services: ServiceHealthStatus[] = [
       {
         serviceName: 'postgres',
         state: 'Healthy',
         errorMessage: null,
         checkedAt: new Date().toISOString(),
-        responseTime: 'invalid-timespan',
+        responseTimeMs: undefined as unknown as number, // Missing responseTimeMs
       },
     ];
 
@@ -400,14 +400,14 @@ describe('ServiceHealthMatrix', () => {
     expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
   });
 
-  it('parses TimeSpan with only fractional seconds', () => {
+  it('displays sub-second response times correctly', () => {
     const services: ServiceHealthStatus[] = [
       {
         serviceName: 'postgres',
         state: 'Healthy',
         errorMessage: null,
         checkedAt: new Date().toISOString(),
-        responseTime: '00:00:00.5000000', // 0.5s = 500ms
+        responseTimeMs: 500, // 500ms
       },
     ];
 

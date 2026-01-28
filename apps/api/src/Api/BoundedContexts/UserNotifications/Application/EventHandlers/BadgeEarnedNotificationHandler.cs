@@ -107,7 +107,7 @@ internal sealed class BadgeEarnedNotificationHandler : INotificationHandler<Badg
 
             await _emailService.SendBadgeEarnedEmailAsync(
                 toEmail: user.Email,
-                userName: user.DisplayName,
+                userName: user.DisplayName ?? user.Email,
                 badgeName: badge.Name,
                 badgeDescription: badge.Description,
                 badgeIconUrl: badge.IconUrl,

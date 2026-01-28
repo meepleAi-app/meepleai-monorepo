@@ -226,12 +226,46 @@ Output: Tutti i DoD verificati e completati
 
 Phase 8: Merge & Closure 🎯
 
-Obiettivo: Integrare implementazione e chiudere issue
+Obiettivo: Validare build/test finali e integrare implementazione
 
-1. Merge PR:
+1. **Final Build Validation** (MANDATORY before merge):
+   ```bash
+   # Backend
+   cd apps/api/src/Api && dotnet build --no-restore
+
+   # Frontend
+   cd apps/web && pnpm build
+   ```
+
+2. **Final Test Run** (MANDATORY before merge):
+   ```bash
+   # Backend - full test suite
+   cd apps/api/src/Api && dotnet test --no-build
+
+   # Frontend - full test suite + type check
+   cd apps/web && pnpm test && pnpm typecheck
+   ```
+
+**Validation Gate**: ❌ STOP merge se:
+- Build backend o frontend fallisce
+- Qualsiasi test fallisce
+- TypeScript ha errori
+
+**Se validazione fallisce**:
+```
+❌ STOP workflow
+📋 Show build/test errors
+🤔 AskUserQuestion: "Final validation failed before merge. Options?"
+   a) Fix errors and retry validation
+   b) Abort merge and investigate
+   c) Force merge anyway (NOT RECOMMENDED - requires explicit user approval)
+```
+
+3. Merge PR (SOLO dopo validazione ✅):
+   ```bash
    gh pr merge --squash --delete-branch
-
-# O usa --merge se convenzione progetto richiede merge commit
+   ```
+   # O usa --merge se convenzione progetto richiede merge commit
 
 2. Close issue:
 
@@ -310,6 +344,10 @@ MCP/Agent/Tool Integration Matrix
 ├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
 │ 7 │ Ask user │ AskUserQuestion │
 ├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
+│ 8 │ Final build │ Bash (dotnet build, pnpm build) │
+├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
+│ 8 │ Final tests │ Bash (dotnet test, pnpm test, pnpm typecheck) │
+├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
 │ 8 │ Merge │ Bash (gh pr merge) │
 ├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
 │ 8 │ Close issue │ mcp**MCP_DOCKER**issue_write │
@@ -334,6 +372,7 @@ Regole Critiche di Esecuzione
 - Phase 5: Test falliscono o coverage < target
 - Phase 6: PR score < 80% dopo 3 iterazioni code review
 - Phase 7: DoD mancanti (lista, chiedi come procedere)
+- Phase 8: Build o test falliscono nella validazione finale pre-merge
 
 ✅ SEMPRE Esegui
 
@@ -542,6 +581,10 @@ Output Template Atteso
 ✅ All DoD verified
 
 🎯 Phase 8: Merge & Closure
+✅ Backend build: PASS
+✅ Frontend build: PASS
+✅ Backend tests: PASS (final validation)
+✅ Frontend tests + typecheck: PASS (final validation)
 ✅ PR merged: <url>
 ✅ Issue #<N> closed
 ✅ Branch cleaned (local + remote)
@@ -643,14 +686,23 @@ GATE: STOP if compilation errors (show, ask user)
 
 === PHASE 8: MERGE & CLOSURE ===
 
-1. Merge: gh pr merge --squash --delete-branch
-2. Close: mcp**MCP_DOCKER**issue_write(state: closed, reason: completed)
-3. Cleanup:
+1. Final Build Validation (MANDATORY):
+   - Backend: cd apps/api/src/Api && dotnet build --no-restore
+   - Frontend: cd apps/web && pnpm build
+   GATE: STOP if build fails
+2. Final Test Run (MANDATORY):
+   - Backend: dotnet test --no-build
+   - Frontend: pnpm test && pnpm typecheck
+   GATE: STOP if tests fail or typecheck errors
+   IF validation fails: AskUserQuestion(fix | abort | force)
+3. Merge: gh pr merge --squash --delete-branch (ONLY after validation ✅)
+4. Close: mcp**MCP_DOCKER**issue_write(state: closed, reason: completed)
+6. Cleanup:
    - git checkout main-dev && git pull
    - git branch -D <branch>
    - git remote prune origin
-4. Save: /sc:save
-5. Checkpoint: write*memory("issue*$N_completed", final_stats)
+7. Save: /sc:save
+8. Checkpoint: write_memory("issue_$N_completed", final_stats)
 
 === OUTPUT ===
 Report progress after each phase with ✅/❌/🔄 status
@@ -658,9 +710,15 @@ Final summary with stats: files changed, tests added, coverage, score, time
 
 ---
 
-Versione: 2.0 (2026-01-24)
+Versione: 2.1 (2026-01-28)
 Changelog:
 
+v2.1 (2026-01-28):
+- ✅ **Validazione build+test finale PRIMA del merge** in Phase 8
+- ✅ GATE obbligatorio: build backend/frontend + test suite completa pre-merge
+- ✅ Gestione fallimento validazione finale con opzioni utente
+
+v2.0 (2026-01-24):
 - ✅ Aggiunto session management (Phase 0, /sc:load, /sc:save)
 - ✅ Aggiunto checkpoint system con Serena memory
 - ✅ Validation gates a ogni fase critica

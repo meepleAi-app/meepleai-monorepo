@@ -70,7 +70,9 @@ export function AuthModal({
       const user = await login(data);
       onSuccess?.(user);
       onClose();
-      await router.push(redirectTo);
+      // Redirect admins to admin dashboard, others to specified redirect or default dashboard
+      const targetUrl = user.role?.toLowerCase() === 'admin' ? '/admin' : redirectTo;
+      await router.push(targetUrl);
     } catch (err) {
       // Error is already set in useAuth hook
       console.error('Login failed:', err);

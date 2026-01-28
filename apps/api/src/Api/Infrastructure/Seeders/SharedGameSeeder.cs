@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
@@ -113,7 +114,7 @@ internal static class SharedGameSeeder
             AverageRating = bgg.AverageRating.HasValue ? (decimal)bgg.AverageRating.Value : null,
             ImageUrl = bgg.ImageUrl ?? $"{PlaceholderImageBase}/400x300?text=No+Image",
             ThumbnailUrl = bgg.ThumbnailUrl ?? $"{PlaceholderImageBase}/150x150?text=No+Image",
-            Status = 1, // Published
+            Status = (int)GameStatus.Published,
             RulesLanguage = rulesLanguage,
             CreatedBy = systemUserId,
             CreatedAt = DateTime.UtcNow,
@@ -144,7 +145,7 @@ internal static class SharedGameSeeder
             AverageRating = null,
             ImageUrl = $"{PlaceholderImageBase}/400x300?text=" + Uri.EscapeDataString(data.Name),
             ThumbnailUrl = $"{PlaceholderImageBase}/150x150?text=" + Uri.EscapeDataString(data.Name),
-            Status = 1,
+            Status = (int)GameStatus.Published,
             RulesLanguage = data.Language,
             CreatedBy = systemUserId,
             CreatedAt = DateTime.UtcNow,

@@ -44,31 +44,34 @@ internal sealed class AutoConfigurationService : IAutoConfigurationService
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        var isFirstRun = await IsFirstRunAsync(cancellationToken).ConfigureAwait(false);
-
-        if (!isFirstRun)
-        {
-            _logger.LogInformation("Not first run. Skipping auto-configuration.");
-            return;
-        }
-
-        _logger.LogInformation("First run detected. Starting auto-configuration...");
+        _logger.LogInformation("Starting auto-configuration check...");
 
         try
         {
-            // Seed admin user (from admin.secret)
-            _logger.LogInformation("Seeding admin user...");
-            await _mediator.Send(new SeedAdminUserCommand(), cancellationToken).ConfigureAwait(false);
+            // Seed users only if no users exist
+            var hasUsers = await _userRepository.HasAnyUsersAsync(cancellationToken).ConfigureAwait(false);
+            if (!hasUsers)
+            {
+                _logger.LogInformation("No users found. Seeding users...");
 
-            // Seed test user (hardcoded demo credentials)
-            _logger.LogInformation("Seeding test user...");
-            await _mediator.Send(new SeedTestUserCommand(), cancellationToken).ConfigureAwait(false);
+                // Seed admin user (from admin.secret)
+                _logger.LogInformation("Seeding admin user...");
+                await _mediator.Send(new SeedAdminUserCommand(), cancellationToken).ConfigureAwait(false);
 
-            // Seed AI models (OpenRouter + Ollama)
-            _logger.LogInformation("Seeding AI models...");
-            await _mediator.Send(new SeedAiModelsCommand(), cancellationToken).ConfigureAwait(false);
+                // Seed test user (hardcoded demo credentials)
+                _logger.LogInformation("Seeding test user...");
+                await _mediator.Send(new SeedTestUserCommand(), cancellationToken).ConfigureAwait(false);
 
-            // Seed shared games, badges, and rate limits (requires admin user)
+                // Seed AI models (OpenRouter + Ollama)
+                _logger.LogInformation("Seeding AI models...");
+                await _mediator.Send(new SeedAiModelsCommand(), cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                _logger.LogInformation("Users already exist. Skipping user seeding.");
+            }
+
+            // Always check and seed games, badges, and rate limits if missing
             await SeedSharedGamesAndRelatedDataAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Auto-configuration completed successfully.");

@@ -131,10 +131,10 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
     // ========== Chat Threads ==========
 
     async getThreadsByGame(gameId: string): Promise<ChatThreadDto[]> {
-      const response = await httpClient.get<ChatThreadDto[]>(
+      const response = await httpClient.get<{ threads: ChatThreadDto[]; count: number }>(
         `/api/v1/chat-threads?gameId=${encodeURIComponent(gameId)}`
       );
-      return response ?? [];
+      return response?.threads ?? [];
     },
 
     async getThreadById(threadId: string): Promise<ChatThreadDto | null> {

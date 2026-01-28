@@ -2,16 +2,17 @@
  * Game Status Badge Component - Issue #2372
  *
  * Displays the publication status of a shared game with appropriate styling.
- * Statuses: Draft (0), Published (1), Archived (2)
+ * Statuses: Draft, PendingApproval, Published, Archived (string enum)
  */
 
-import { Archive, Eye, FileText } from 'lucide-react';
+import { Archive, Clock, Eye, FileText } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
+import { type GameStatus } from '@/lib/api/schemas/shared-games.schemas';
 
 export interface GameStatusBadgeProps {
-  /** Numeric status: 0=Draft, 1=Published, 2=Archived */
-  status: number;
+  /** String status: Draft, PendingApproval, Published, Archived */
+  status: GameStatus;
   /** Optional size variant */
   size?: 'sm' | 'default';
 }
@@ -24,7 +25,7 @@ export function GameStatusBadge({ status, size = 'default' }: GameStatusBadgePro
   const badgeClass = size === 'sm' ? 'text-xs px-1.5 py-0' : '';
 
   switch (status) {
-    case 0: // Draft
+    case 'Draft':
       return (
         <Badge
           variant="outline"
@@ -34,7 +35,17 @@ export function GameStatusBadge({ status, size = 'default' }: GameStatusBadgePro
           Bozza
         </Badge>
       );
-    case 1: // Published
+    case 'PendingApproval':
+      return (
+        <Badge
+          variant="outline"
+          className={`bg-blue-50 text-blue-700 border-blue-200 ${badgeClass}`}
+        >
+          <Clock className={iconClass} />
+          In Approvazione
+        </Badge>
+      );
+    case 'Published':
       return (
         <Badge
           variant="outline"
@@ -44,7 +55,7 @@ export function GameStatusBadge({ status, size = 'default' }: GameStatusBadgePro
           Pubblicato
         </Badge>
       );
-    case 2: // Archived
+    case 'Archived':
       return (
         <Badge
           variant="outline"
@@ -66,13 +77,15 @@ export function GameStatusBadge({ status, size = 'default' }: GameStatusBadgePro
 /**
  * Get status label text
  */
-export function getStatusLabel(status: number): string {
+export function getStatusLabel(status: GameStatus): string {
   switch (status) {
-    case 0:
+    case 'Draft':
       return 'Bozza';
-    case 1:
+    case 'PendingApproval':
+      return 'In Approvazione';
+    case 'Published':
       return 'Pubblicato';
-    case 2:
+    case 'Archived':
       return 'Archiviato';
     default:
       return 'Sconosciuto';
@@ -82,13 +95,15 @@ export function getStatusLabel(status: number): string {
 /**
  * Get status color class for custom styling
  */
-export function getStatusColorClass(status: number): string {
+export function getStatusColorClass(status: GameStatus): string {
   switch (status) {
-    case 0:
+    case 'Draft':
       return 'text-yellow-700 bg-yellow-50';
-    case 1:
+    case 'PendingApproval':
+      return 'text-blue-700 bg-blue-50';
+    case 'Published':
       return 'text-green-700 bg-green-50';
-    case 2:
+    case 'Archived':
       return 'text-muted-foreground bg-muted';
     default:
       return 'text-muted-foreground bg-muted';

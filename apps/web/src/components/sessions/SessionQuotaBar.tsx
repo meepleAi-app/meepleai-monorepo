@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection */
 /**
  * SessionQuotaBar Component (Issue #3075)
  *

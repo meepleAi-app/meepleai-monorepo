@@ -7,13 +7,13 @@
 
 import { useQuery, useQueryClient, UseQueryResult } from '@tanstack/react-query';
 
+import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
 import type { SessionQuotaResponse } from '@/lib/api/schemas/session-quota.schemas';
 import {
   calculateQuotaPercentage,
   getQuotaWarningLevel,
 } from '@/lib/api/schemas/session-quota.schemas';
-import { useAuth } from '@/hooks/useAuth';
 
 /**
  * Query key factory for session quota queries

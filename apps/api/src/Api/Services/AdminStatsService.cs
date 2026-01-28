@@ -60,24 +60,22 @@ internal class AdminStatsService : IAdminStatsService
                 var fromDate = queryParams.FromDate ?? now.AddDays(-queryParams.Days);
                 var toDate = queryParams.ToDate ?? now;
 
-                // Parallel execution of independent queries for performance
-                var metricsTask = GetMetricsAsync(now, cancellationToken);
-                var userTrendTask = GetUserTrendAsync(fromDate, toDate, queryParams.RoleFilter, cancellationToken);
-                var sessionTrendTask = GetSessionTrendAsync(fromDate, toDate, cancellationToken);
-                var apiRequestTrendTask = GetApiRequestTrendAsync(fromDate, toDate, queryParams.GameId, cancellationToken);
-                var pdfUploadTrendTask = GetPdfUploadTrendAsync(fromDate, toDate, queryParams.GameId, cancellationToken);
-                var chatMessageTrendTask = GetChatMessageTrendAsync(fromDate, toDate, cancellationToken);
-
-                await Task.WhenAll(metricsTask, userTrendTask, sessionTrendTask,
-                    apiRequestTrendTask, pdfUploadTrendTask, chatMessageTrendTask).ConfigureAwait(false);
+                // Sequential execution - DbContext is not thread-safe for parallel operations
+                // Issue: "A second operation was started on this context instance before a previous operation completed"
+                var metrics = await GetMetricsAsync(now, cancellationToken).ConfigureAwait(false);
+                var userTrend = await GetUserTrendAsync(fromDate, toDate, queryParams.RoleFilter, cancellationToken).ConfigureAwait(false);
+                var sessionTrend = await GetSessionTrendAsync(fromDate, toDate, cancellationToken).ConfigureAwait(false);
+                var apiRequestTrend = await GetApiRequestTrendAsync(fromDate, toDate, queryParams.GameId, cancellationToken).ConfigureAwait(false);
+                var pdfUploadTrend = await GetPdfUploadTrendAsync(fromDate, toDate, queryParams.GameId, cancellationToken).ConfigureAwait(false);
+                var chatMessageTrend = await GetChatMessageTrendAsync(fromDate, toDate, cancellationToken).ConfigureAwait(false);
 
                 return new DashboardStatsDto(
-                    Metrics: await metricsTask.ConfigureAwait(false),
-                    UserTrend: await userTrendTask.ConfigureAwait(false),
-                    SessionTrend: await sessionTrendTask.ConfigureAwait(false),
-                    ApiRequestTrend: await apiRequestTrendTask.ConfigureAwait(false),
-                    PdfUploadTrend: await pdfUploadTrendTask.ConfigureAwait(false),
-                    ChatMessageTrend: await chatMessageTrendTask.ConfigureAwait(false),
+                    Metrics: metrics,
+                    UserTrend: userTrend,
+                    SessionTrend: sessionTrend,
+                    ApiRequestTrend: apiRequestTrend,
+                    PdfUploadTrend: pdfUploadTrend,
+                    ChatMessageTrend: chatMessageTrend,
                     GeneratedAt: _timeProvider.GetUtcNow().UtcDateTime
                 );
             },
@@ -102,14 +100,9 @@ internal class AdminStatsService : IAdminStatsService
         var start7DaysAgo = now.AddDays(-7);
         var start30DaysAgo = now.AddDays(-30);
 
-        // Execute parallel queries
-        var basicMetricsTask = ExecuteBasicMetricsQueriesAsync(startOfDay, cancellationToken);
-        var additionalMetricsTask = ExecuteAdditionalMetricsQueriesAsync(startOfDay, start7DaysAgo, start30DaysAgo, cancellationToken);
-
-        await Task.WhenAll(basicMetricsTask, additionalMetricsTask).ConfigureAwait(false);
-
-        var basicMetrics = await basicMetricsTask.ConfigureAwait(false);
-        var additionalMetrics = await additionalMetricsTask.ConfigureAwait(false);
+        // Sequential execution - DbContext is not thread-safe for parallel operations
+        var basicMetrics = await ExecuteBasicMetricsQueriesAsync(startOfDay, cancellationToken).ConfigureAwait(false);
+        var additionalMetrics = await ExecuteAdditionalMetricsQueriesAsync(startOfDay, start7DaysAgo, start30DaysAgo, cancellationToken).ConfigureAwait(false);
 
         // Calculate error rate
         var errorRate = CalculateErrorRate(additionalMetrics.ErrorCount24h, additionalMetrics.TotalCount24h);
@@ -140,56 +133,51 @@ internal class AdminStatsService : IAdminStatsService
         DateTime startOfDay,
         CancellationToken cancellationToken)
     {
-        var totalUsersTask = _dbContext.Users
+        // Sequential execution - DbContext is not thread-safe for parallel operations
+        var totalUsers = await _dbContext.Users
             .AsNoTracking()
-            .CountAsync(cancellationToken);
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var activeSessionsTask = _dbContext.UserSessions
+        var activeSessions = await _dbContext.UserSessions
             .AsNoTracking()
             .Where(s => s.RevokedAt == null && s.ExpiresAt > _timeProvider.GetUtcNow().UtcDateTime)
-            .CountAsync(cancellationToken);
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var apiRequestsTodayTask = _dbContext.AiRequestLogs
+        var apiRequestsToday = await _dbContext.AiRequestLogs
             .AsNoTracking()
             .Where(log => log.CreatedAt >= startOfDay)
-            .CountAsync(cancellationToken);
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var totalPdfDocumentsTask = _dbContext.PdfDocuments
+        var totalPdfDocuments = await _dbContext.PdfDocuments
             .AsNoTracking()
-            .CountAsync(cancellationToken);
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var totalChatMessagesTask = _dbContext.ChatLogs
+        var totalChatMessages = await _dbContext.ChatLogs
             .AsNoTracking()
-            .CountAsync(cancellationToken);
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var avgConfidenceTask = _dbContext.AiRequestLogs
+        var avgConfidence = await _dbContext.AiRequestLogs
             .AsNoTracking()
             .Where(log => log.Confidence.HasValue)
-            .AverageAsync(log => log.Confidence, cancellationToken);
+            .AverageAsync(log => log.Confidence, cancellationToken).ConfigureAwait(false);
 
-        var totalRagRequestsTask = _dbContext.AiRequestLogs
+        var totalRagRequests = await _dbContext.AiRequestLogs
             .AsNoTracking()
-            .CountAsync(cancellationToken);
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var totalTokensTask = _dbContext.AiRequestLogs
+        var totalTokens = await _dbContext.AiRequestLogs
             .AsNoTracking()
-            .SumAsync(log => (long)log.TokenCount, cancellationToken);
-
-        await Task.WhenAll(
-            totalUsersTask, activeSessionsTask, apiRequestsTodayTask,
-            totalPdfDocumentsTask, totalChatMessagesTask, avgConfidenceTask,
-            totalRagRequestsTask, totalTokensTask
-        ).ConfigureAwait(false);
+            .SumAsync(log => (long)log.TokenCount, cancellationToken).ConfigureAwait(false);
 
         return new BasicMetricsResult(
-            TotalUsers: await totalUsersTask.ConfigureAwait(false),
-            ActiveSessions: await activeSessionsTask.ConfigureAwait(false),
-            ApiRequestsToday: await apiRequestsTodayTask.ConfigureAwait(false),
-            TotalPdfDocuments: await totalPdfDocumentsTask.ConfigureAwait(false),
-            TotalChatMessages: await totalChatMessagesTask.ConfigureAwait(false),
-            AvgConfidence: await avgConfidenceTask.ConfigureAwait(false),
-            TotalRagRequests: await totalRagRequestsTask.ConfigureAwait(false),
-            TotalTokens: await totalTokensTask.ConfigureAwait(false));
+            TotalUsers: totalUsers,
+            ActiveSessions: activeSessions,
+            ApiRequestsToday: apiRequestsToday,
+            TotalPdfDocuments: totalPdfDocuments,
+            TotalChatMessages: totalChatMessages,
+            AvgConfidence: avgConfidence,
+            TotalRagRequests: totalRagRequests,
+            TotalTokens: totalTokens);
     }
 
     /// <summary>
@@ -201,66 +189,61 @@ internal class AdminStatsService : IAdminStatsService
         DateTime start30DaysAgo,
         CancellationToken cancellationToken)
     {
-        var totalGamesTask = _dbContext.Games
+        // Sequential execution - DbContext is not thread-safe for parallel operations
+        var totalGames = await _dbContext.Games
             .AsNoTracking()
-            .CountAsync(cancellationToken);
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var apiRequests7dTask = _dbContext.AiRequestLogs
+        var apiRequests7d = await _dbContext.AiRequestLogs
             .AsNoTracking()
             .Where(log => log.CreatedAt >= start7DaysAgo)
-            .CountAsync(cancellationToken);
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var apiRequests30dTask = _dbContext.AiRequestLogs
+        var apiRequests30d = await _dbContext.AiRequestLogs
             .AsNoTracking()
             .Where(log => log.CreatedAt >= start30DaysAgo)
-            .CountAsync(cancellationToken);
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var avgLatency24hTask = _dbContext.AiRequestLogs
+        var avgLatency24h = await _dbContext.AiRequestLogs
             .AsNoTracking()
             .Where(log => log.CreatedAt >= startOfDay)
-            .AverageAsync(log => (double?)log.LatencyMs, cancellationToken);
+            .AverageAsync(log => (double?)log.LatencyMs, cancellationToken).ConfigureAwait(false);
 
-        var avgLatency7dTask = _dbContext.AiRequestLogs
+        var avgLatency7d = await _dbContext.AiRequestLogs
             .AsNoTracking()
             .Where(log => log.CreatedAt >= start7DaysAgo)
-            .AverageAsync(log => (double?)log.LatencyMs, cancellationToken);
+            .AverageAsync(log => (double?)log.LatencyMs, cancellationToken).ConfigureAwait(false);
 
-        var errorCount24hTask = _dbContext.AiRequestLogs
+        var errorCount24h = await _dbContext.AiRequestLogs
             .AsNoTracking()
             .Where(log => log.CreatedAt >= startOfDay && log.Status != "Success")
-            .CountAsync(cancellationToken);
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var totalCount24hTask = _dbContext.AiRequestLogs
+        var totalCount24h = await _dbContext.AiRequestLogs
             .AsNoTracking()
             .Where(log => log.CreatedAt >= startOfDay)
-            .CountAsync(cancellationToken);
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var activeAlertsTask = _dbContext.Alerts
+        var activeAlerts = await _dbContext.Alerts
             .AsNoTracking()
             .Where(a => a.IsActive)
-            .CountAsync(cancellationToken);
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var resolvedAlertsTask = _dbContext.Alerts
+        var resolvedAlerts = await _dbContext.Alerts
             .AsNoTracking()
             .Where(a => !a.IsActive && a.ResolvedAt.HasValue)
-            .CountAsync(cancellationToken);
-
-        await Task.WhenAll(
-            totalGamesTask, apiRequests7dTask, apiRequests30dTask,
-            avgLatency24hTask, avgLatency7dTask, errorCount24hTask,
-            totalCount24hTask, activeAlertsTask, resolvedAlertsTask
-        ).ConfigureAwait(false);
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
         return new AdditionalMetricsResult(
-            TotalGames: await totalGamesTask.ConfigureAwait(false),
-            ApiRequests7d: await apiRequests7dTask.ConfigureAwait(false),
-            ApiRequests30d: await apiRequests30dTask.ConfigureAwait(false),
-            AvgLatency24h: await avgLatency24hTask.ConfigureAwait(false),
-            AvgLatency7d: await avgLatency7dTask.ConfigureAwait(false),
-            ErrorCount24h: await errorCount24hTask.ConfigureAwait(false),
-            TotalCount24h: await totalCount24hTask.ConfigureAwait(false),
-            ActiveAlerts: await activeAlertsTask.ConfigureAwait(false),
-            ResolvedAlerts: await resolvedAlertsTask.ConfigureAwait(false));
+            TotalGames: totalGames,
+            ApiRequests7d: apiRequests7d,
+            ApiRequests30d: apiRequests30d,
+            AvgLatency24h: avgLatency24h,
+            AvgLatency7d: avgLatency7d,
+            ErrorCount24h: errorCount24h,
+            TotalCount24h: totalCount24h,
+            ActiveAlerts: activeAlerts,
+            ResolvedAlerts: resolvedAlerts);
     }
 
     /// <summary>

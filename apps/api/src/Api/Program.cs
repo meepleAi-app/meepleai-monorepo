@@ -287,6 +287,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     // Use camelCase for JSON serialization (JavaScript convention)
     // PropertyNameCaseInsensitive handles deserialization, this handles serialization
     options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+
+    // Serialize enums as strings (e.g., "UserRegistered" instead of 0)
+    // Required for frontend schema validation (zod expects string enum values)
+    options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 
 builder.Services.AddCors(options =>

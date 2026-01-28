@@ -409,7 +409,7 @@ export const ServiceHealthStatusSchema = z.object({
   state: HealthStateSchema,
   errorMessage: z.string().nullable().optional(),
   checkedAt: z.string().datetime(),
-  responseTime: z.string(), // TimeSpan from backend (e.g., "00:00:00.0150000")
+  responseTimeMs: z.number().nonnegative(), // Response time in milliseconds
 });
 
 export type ServiceHealthStatus = z.infer<typeof ServiceHealthStatusSchema>;

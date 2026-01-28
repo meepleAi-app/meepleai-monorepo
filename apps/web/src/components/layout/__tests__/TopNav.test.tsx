@@ -3,7 +3,7 @@
  * Issue #2053 - User notifications with bell icon
  *
  * Coverage:
- * - Rendering (4 nav items, logo, user menu, notification bell)
+ * - Rendering (5 nav items, logo, user menu, notification bell)
  * - Active state logic (path matching)
  * - Accessibility (ARIA labels, keyboard nav)
  * - Responsive (hidden on mobile, visible on desktop)
@@ -66,11 +66,12 @@ describe('TopNav', () => {
   });
 
   describe('Rendering', () => {
-    it('should render all 4 navigation items', () => {
+    it('should render all 5 navigation items', () => {
       render(<TopNav />);
 
       expect(screen.getByText('Home')).toBeInTheDocument();
       expect(screen.getByText('Giochi')).toBeInTheDocument();
+      expect(screen.getByText('Libreria')).toBeInTheDocument();
       expect(screen.getByText('Chat')).toBeInTheDocument();
       expect(screen.getByText('Impostazioni')).toBeInTheDocument();
     });
@@ -86,6 +87,7 @@ describe('TopNav', () => {
 
       expect(screen.getByLabelText('Navigate to dashboard home')).toBeInTheDocument();
       expect(screen.getByLabelText('Navigate to games catalog')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to your library')).toBeInTheDocument();
       expect(screen.getByLabelText('Navigate to chat interface')).toBeInTheDocument();
       expect(screen.getByLabelText('Navigate to settings')).toBeInTheDocument();
     });
@@ -140,6 +142,15 @@ describe('TopNav', () => {
       const giochiLink = screen.getByLabelText('Navigate to games catalog');
       expect(giochiLink).toHaveAttribute('aria-current', 'page');
       expect(giochiLink).toHaveClass('text-primary', 'font-semibold');
+    });
+
+    it('should mark /library as active for /library/* routes', () => {
+      mockUsePathname.mockReturnValue('/library');
+      render(<TopNav />);
+
+      const libraryLink = screen.getByLabelText('Navigate to your library');
+      expect(libraryLink).toHaveAttribute('aria-current', 'page');
+      expect(libraryLink).toHaveClass('text-primary', 'font-semibold');
     });
 
     it('should mark /chat as active for /chat/* routes', () => {
@@ -218,6 +229,7 @@ describe('TopNav', () => {
         '/dashboard'
       );
       expect(screen.getByLabelText('Navigate to games catalog')).toHaveAttribute('href', '/games');
+      expect(screen.getByLabelText('Navigate to your library')).toHaveAttribute('href', '/library');
       expect(screen.getByLabelText('Navigate to chat interface')).toHaveAttribute('href', '/chat');
       expect(screen.getByLabelText('Navigate to settings')).toHaveAttribute('href', '/settings');
     });
@@ -227,7 +239,7 @@ describe('TopNav', () => {
 
       // Next.js Link renders as <a> with href
       const links = container.querySelectorAll('a[href^="/"]');
-      expect(links.length).toBeGreaterThanOrEqual(4);
+      expect(links.length).toBeGreaterThanOrEqual(5);
     });
   });
 

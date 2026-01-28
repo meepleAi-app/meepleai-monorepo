@@ -52,6 +52,7 @@ import { GreetingSection } from './components/GreetingSection';
 import { LibraryQuotaSection } from './components/LibraryQuotaSection';
 import { RecentGamesSection } from './components/RecentGamesSection';
 import { RecentlyAddedSection } from './components/RecentlyAddedSection';
+import { SessionQuotaSection } from './components/SessionQuotaSection';
 
 export default function DashboardPage() {
   // TanStack Query hooks (automatic caching, refetching, error handling)
@@ -156,8 +157,14 @@ export default function DashboardPage() {
         {/* Greeting Section */}
         <GreetingSection user={user} />
 
-        {/* Library Quota Widget (Issue #2445) */}
-        <LibraryQuotaSection />
+        {/* Quota Widgets Grid (Library + Sessions) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Library Quota Widget (Issue #2445) */}
+          <LibraryQuotaSection />
+
+          {/* Session Quota Widget (Issue #3075) */}
+          <SessionQuotaSection />
+        </div>
 
         {/* Active Sessions Widget (Issue #2617) */}
         <ActiveSessionsSection />

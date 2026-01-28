@@ -10,6 +10,8 @@ import { useQuery, useMutation, useQueryClient, UseQueryResult, UseMutationResul
 import { api } from '@/lib/api';
 import type { PaginatedSessionsResponse, GameSessionDto } from '@/lib/api/schemas';
 
+import { sessionQuotaKeys } from './useSessionQuota';
+
 /**
  * Query key factory for sessions queries
  */
@@ -129,6 +131,8 @@ export function useEndSession(): UseMutationResult<
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: sessionsKeys.active() });
       queryClient.invalidateQueries({ queryKey: sessionsKeys.history() });
+      // Invalidate session quota since ending a session frees up a slot (Issue #3075)
+      queryClient.invalidateQueries({ queryKey: sessionQuotaKeys.all });
     },
   });
 }

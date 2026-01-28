@@ -68,3 +68,6 @@ export * from './badges.schemas';
 
 // Rate Limit Configuration schemas (Issue #2750)
 export * from './rate-limits.schemas';
+
+// Session Quota schemas (Issue #3075)
+export * from './session-quota.schemas';

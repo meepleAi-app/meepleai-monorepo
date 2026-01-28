@@ -12,7 +12,14 @@
 
 const fs = require('fs');
 const path = require('path');
-const yaml = require('js-yaml');
+
+// Try to load js-yaml, but fall back to basic validation if not available
+let yaml = null;
+try {
+  yaml = require('js-yaml');
+} catch {
+  // js-yaml not installed, will use basic text-based validation
+}
 
 const WORKFLOWS_DIR = path.join(__dirname, '..', '.github', 'workflows');
 const ACTIONS_DIR = path.join(__dirname, '..', '.github', 'actions');
@@ -85,43 +92,61 @@ function validatePermissions(workflow, filePath) {
   }
 }
 
+function validateWorkflowBasic(filePath, content) {
+  // Basic text-based validation when js-yaml is not available
+  if (!content.includes('name:')) {
+    log('warn', filePath, 'Workflow may be missing name field');
+  }
+  if (!content.includes('on:')) {
+    log('warn', filePath, 'Workflow may be missing trigger (on:) field');
+  }
+  if (!content.includes('jobs:')) {
+    log('error', filePath, 'Workflow is missing jobs field');
+  }
+
+  // Check for common action patterns
+  const actionsToCheck = [
+    'actions/checkout',
+    'actions/setup-node',
+    'actions/cache',
+    'pnpm/action-setup'
+  ];
+
+  actionsToCheck.forEach(action => {
+    // Simple regex to find unversioned actions
+    const regex = new RegExp(`uses:\\s*['"]?${action.replace('/', '\\/')}['"]?\\s*$`, 'gm');
+    if (regex.test(content)) {
+      log('warn', filePath, `Action ${action} may not have a pinned version`);
+    }
+  });
+
+  log('info', filePath, 'Basic validation complete');
+}
+
 function validateWorkflow(filePath) {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
-    const workflow = yaml.load(content);
 
-    if (!workflow) {
-      log('error', filePath, 'Failed to parse workflow YAML');
-      return;
-    }
+    // Use js-yaml if available, otherwise basic text validation
+    if (yaml) {
+      const workflow = yaml.load(content);
 
-    // Run validations
-    validatePnpmCache(workflow, filePath);
-    validateActionVersions(workflow, filePath);
-    validatePermissions(workflow, filePath);
-
-    log('info', filePath, 'Validation complete');
-  } catch (err) {
-    // js-yaml might not be installed - just do basic checks
-    if (err.code === 'MODULE_NOT_FOUND') {
-      console.log('⚠️  js-yaml not installed, running basic validation only');
-      const content = fs.readFileSync(filePath, 'utf8');
-
-      // Basic YAML syntax check
-      if (!content.includes('name:')) {
-        log('warn', filePath, 'Workflow may be missing name field');
-      }
-      if (!content.includes('on:')) {
-        log('warn', filePath, 'Workflow may be missing trigger (on:) field');
-      }
-      if (!content.includes('jobs:')) {
-        log('error', filePath, 'Workflow is missing jobs field');
+      if (!workflow) {
+        log('error', filePath, 'Failed to parse workflow YAML');
+        return;
       }
 
-      log('info', filePath, 'Basic validation complete');
+      // Run validations
+      validatePnpmCache(workflow, filePath);
+      validateActionVersions(workflow, filePath);
+      validatePermissions(workflow, filePath);
+
+      log('info', filePath, 'Validation complete');
     } else {
-      log('error', filePath, `Parse error: ${err.message}`);
+      validateWorkflowBasic(filePath, content);
     }
+  } catch (err) {
+    log('error', filePath, `Parse error: ${err.message}`);
   }
 }
 
@@ -159,6 +184,10 @@ function validateAction(dirPath) {
 
 // Main execution
 console.log('🔍 Validating GitHub Actions workflows...\n');
+
+if (!yaml) {
+  console.log('ℹ️  js-yaml not installed, using basic text-based validation\n');
+}
 
 // Validate workflows
 if (fs.existsSync(WORKFLOWS_DIR)) {

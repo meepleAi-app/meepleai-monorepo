@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260128084523_AddEmailVerification")]
+    partial class AddEmailVerification
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1148,9 +1151,6 @@ namespace Api.Migrations
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("InvalidatedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -1359,9 +1359,6 @@ namespace Api.Migrations
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("CreatedByUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("GameId")
                         .HasColumnType("uuid");
 
@@ -1394,9 +1391,6 @@ namespace Api.Migrations
 
                     b.HasIndex("StartedAt")
                         .HasDatabaseName("IX_GameSessions_StartedAt");
-
-                    b.HasIndex("CreatedByUserId", "Status")
-                        .HasDatabaseName("IX_GameSessions_CreatedByUserId_Status");
 
                     b.HasIndex("Status", "StartedAt")
                         .HasDatabaseName("IX_GameSessions_Status_StartedAt");
@@ -4093,8 +4087,7 @@ namespace Api.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<int>("DurationMinutes")
-                        .HasColumnType("integer")
-                        .HasColumnName("duration_minutes");
+                        .HasColumnType("integer");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -4886,18 +4879,11 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameSessionEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("CreatedByUser");
 
                     b.Navigation("Game");
                 });

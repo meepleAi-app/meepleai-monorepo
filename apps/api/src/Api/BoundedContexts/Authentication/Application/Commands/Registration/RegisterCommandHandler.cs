@@ -1,10 +1,12 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Guards;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
@@ -17,15 +19,21 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
     private readonly IUserRepository _userRepository;
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmailVerificationService _emailVerificationService;
+    private readonly ILogger<RegisterCommandHandler> _logger;
 
     public RegisterCommandHandler(
         IUserRepository userRepository,
         ISessionRepository sessionRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IEmailVerificationService emailVerificationService,
+        ILogger<RegisterCommandHandler> logger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _emailVerificationService = emailVerificationService ?? throw new ArgumentNullException(nameof(emailVerificationService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<RegisterResponse> Handle(RegisterCommand command, CancellationToken cancellationToken)
@@ -99,6 +107,24 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
         await _userRepository.AddAsync(user, cancellationToken).ConfigureAwait(false);
         await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // ISSUE-3071: Send verification email after successful registration
+        // This is fire-and-forget - email failures should not fail registration
+        try
+        {
+            await _emailVerificationService.SendVerificationEmailAsync(
+                userId,
+                email.Value,
+                command.DisplayName.Trim(),
+                cancellationToken).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            // Log but don't fail registration - user can request resend
+            _logger.LogWarning(ex, "Failed to send verification email for user {UserId}", userId);
+        }
+#pragma warning restore CA1031
 
         // Map to DTO
         var userDto = MapToUserDto(user);

@@ -139,6 +139,106 @@ internal class EmailService : IEmailService
 #pragma warning restore CA1031
     }
 
+    // ISSUE-3071: Email verification
+    public async Task SendVerificationEmailAsync(
+        string toEmail,
+        string toName,
+        string verificationToken,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var verifyUrl = $"{_frontendBaseUrl}/verify-email?token={Uri.EscapeDataString(verificationToken)}";
+            var subject = "Verify Your MeepleAI Email";
+            var body = BuildVerificationEmailBody(toName, verifyUrl);
+
+            using var message = new MailMessage();
+            message.From = new MailAddress(_fromAddress, _fromName);
+            message.To.Add(new MailAddress(toEmail, toName));
+            message.Subject = subject;
+            message.Body = body;
+            message.IsBodyHtml = true;
+
+            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
+            smtpClient.EnableSsl = _enableSsl;
+
+            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
+            {
+                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+            }
+
+            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Verification email sent successfully to {Email}",
+                DataMasking.MaskEmail(toEmail));
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
+        // External service integration requires catching all SMTP exceptions to provide consistent error handling
+#pragma warning restore S125
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send verification email to {Email}",
+                DataMasking.MaskEmail(toEmail));
+            throw new InvalidOperationException("Failed to send verification email", ex);
+        }
+#pragma warning restore CA1031
+    }
+
+    private static string BuildVerificationEmailBody(string userName, string verifyUrl)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Verify Your Email</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
+        <h1 style=""color: #2c3e50; margin: 0;"">MeepleAI</h1>
+    </div>
+
+    <div style=""background-color: #d4edda; padding: 20px; border-radius: 5px; border: 2px solid #28a745; margin-bottom: 20px;"">
+        <h2 style=""color: #155724; margin-top: 0;"">Welcome to MeepleAI!</h2>
+        <p style=""margin: 0; color: #155724;"">Please verify your email address to get started.</p>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
+        <p>Hello {userName},</p>
+
+        <p>Thank you for registering with MeepleAI! To complete your registration and access all features, please verify your email address by clicking the button below:</p>
+
+        <div style=""text-align: center; margin: 30px 0;"">
+            <a href=""{verifyUrl}"" style=""background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">Verify Email Address</a>
+        </div>
+
+        <p>Or copy and paste this link into your browser:</p>
+        <p style=""word-break: break-all; color: #3498db;"">{verifyUrl}</p>
+
+        <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
+            This verification link will expire in 24 hours for security reasons.
+        </p>
+
+        <p style=""font-size: 14px; color: #666;"">
+            If you didn't create a MeepleAI account, you can safely ignore this email.
+        </p>
+    </div>
+
+    <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
+        <p>This is an automated message, please do not reply to this email.</p>
+        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+    </div>
+</body>
+</html>
+";
+    }
+
     private static string BuildPasswordResetEmailBody(string userName, string resetUrl)
     {
         return $@"

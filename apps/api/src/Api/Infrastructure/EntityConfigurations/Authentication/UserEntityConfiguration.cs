@@ -31,6 +31,10 @@ internal class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
         builder.Property(e => e.IsTwoFactorEnabled).IsRequired().HasDefaultValue(false);
         builder.Property(e => e.TwoFactorEnabledAt);
 
+        // ISSUE-3071: Email Verification
+        builder.Property(e => e.EmailVerified).IsRequired().HasDefaultValue(false);
+        builder.Property(e => e.EmailVerifiedAt);
+
         // Relationships
         builder.HasMany(e => e.Sessions)
             .WithOne(s => s.User)

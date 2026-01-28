@@ -51,11 +51,12 @@ import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api, type SharedGameDetail, type SharedGameDocument } from '@/lib/api';
 
-// Game status numeric values (matches C# GameStatus enum)
+// Game status string values (matches C# GameStatus enum with JsonStringEnumConverter)
 const GAME_STATUS = {
-  Draft: 0,
-  Published: 1,
-  Archived: 2,
+  Draft: 'Draft',
+  PendingApproval: 'PendingApproval',
+  Published: 'Published',
+  Archived: 'Archived',
 } as const;
 
 type TabValue = 'details' | 'categories' | 'rules' | 'documents' | 'history';

@@ -128,7 +128,7 @@ function buildQuickActions(metrics: DashboardMetrics | null): QuickAction[] {
       id: 'view-alerts',
       label: 'View Alerts',
       description: 'System notifications',
-      href: '/admin/configuration',
+      href: '/admin/alerts',
       icon: AlertTriangleIcon,
       variant: 'warning',
       badge: metrics?.activeAlerts || undefined,

@@ -42,11 +42,23 @@ export interface LoginData {
   password: string;
 }
 
+/**
+ * Login result supporting 2FA flow
+ */
+export interface LoginResult {
+  /** The authenticated user (null if 2FA is required) */
+  user: AuthUser | null;
+  /** Whether 2FA verification is required */
+  requiresTwoFactor: boolean;
+  /** Temporary session token for 2FA verification */
+  tempSessionToken?: string | null;
+}
+
 export interface UseAuthReturn {
   user: AuthUser | null;
   loading: boolean;
   error: string;
-  login: (data: LoginData) => Promise<AuthUser>;
+  login: (data: LoginData) => Promise<LoginResult>;
   register: (data: RegisterData) => Promise<AuthUser>;
   logout: () => Promise<void>;
   loadCurrentUser: () => Promise<void>;
@@ -87,24 +99,38 @@ export function useAuth(): UseAuthReturn {
    * After successful login, invalidates TanStack Query cache to ensure
    * dashboard and other components fetch fresh user data (fixes #XXXX)
    */
-  const login = useCallback(async (data: LoginData): Promise<AuthUser> => {
+  const login = useCallback(async (data: LoginData): Promise<LoginResult> => {
     setLoading(true);
     setError('');
 
     try {
-      const authUser = await api.auth.login({
+      const loginResponse = await api.auth.login({
         email: data.email,
         password: data.password,
       });
 
-      setUser(authUser);
+      // Check if 2FA is required
+      if (loginResponse.requiresTwoFactor) {
+        return {
+          user: null,
+          requiresTwoFactor: true,
+          tempSessionToken: loginResponse.tempSessionToken,
+        };
+      }
+
+      // Normal login - set user and return result
+      const user = loginResponse.user ?? null;
+      setUser(user);
 
       // Invalidate TanStack Query cache to ensure fresh data on dashboard
       // This fixes the desync between useAuth (local state) and useCurrentUser (TanStack Query)
       const queryClient = getQueryClient();
       await queryClient.invalidateQueries({ queryKey: userKeys.current() });
 
-      return authUser;
+      return {
+        user,
+        requiresTwoFactor: false,
+      };
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : 'Login failed. Please check your credentials.';

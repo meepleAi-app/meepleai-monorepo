@@ -20,7 +20,7 @@
 
 import { useTransition } from 'react';
 
-import { Home, Gamepad2, MessageSquare, Settings, LogOut, Shield } from 'lucide-react';
+import { Home, Gamepad2, MessageSquare, Settings, LogOut, Shield, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -59,6 +59,12 @@ const navItems: NavItem[] = [
     icon: Gamepad2,
     label: 'Giochi',
     ariaLabel: 'Navigate to games catalog',
+  },
+  {
+    href: '/library',
+    icon: BookOpen,
+    label: 'Libreria',
+    ariaLabel: 'Navigate to your library',
   },
   {
     href: '/chat',

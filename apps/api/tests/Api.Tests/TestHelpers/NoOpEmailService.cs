@@ -14,6 +14,10 @@ internal class NoOpEmailService : IEmailService
     public Task SendTwoFactorDisabledEmailAsync(string toEmail, string toName, bool wasAdminOverride, CancellationToken ct = default)
         => Task.CompletedTask;
 
+    // ISSUE-3071: Email verification
+    public Task SendVerificationEmailAsync(string toEmail, string toName, string verificationToken, CancellationToken ct = default)
+        => Task.CompletedTask;
+
     public Task SendReportEmailAsync(
         IReadOnlyList<string> recipients,
         string reportName,

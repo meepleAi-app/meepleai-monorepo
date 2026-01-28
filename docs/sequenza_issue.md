@@ -1,7 +1,7 @@
 # Sequenza Risoluzione Issue - MeepleAI
 
 **Data**: 2026-01-26
-**Ultimo Aggiornamento**: 2026-01-27
+**Ultimo Aggiornamento**: 2026-01-28
 **Branch attuale**: `frontend-dev`
 **Target finale**: Merge in `main-dev` → `main`
 
@@ -11,17 +11,18 @@
 
 | Categoria | Issue Totali | Completate | Rimanenti |
 |-----------|--------------|------------|-----------|
-| Backend | 22 | 7 | 15 |
-| Frontend | 24 | 1 | 23 |
+| Backend | 22 | 14 | 8 |
+| Frontend | 24 | 11 | 13 |
 | Infra/CI | 12 | 3 | 9 |
-| **TOTALE** | 58 | **11** | **47** |
+| **TOTALE** | 58 | **28** | **30** |
 
 **Principio Guida**: Test/Fix PRIMA delle nuove implementazioni
 
-> **AGGIORNAMENTO 2026-01-27**:
-> - FASE 0 (Bug Fixes): 4/5 completate (#3006, #3007, #3008, #2991)
-> - FASE 1 (Coverage): 4/5 completate (#3010, #3011, #3012, #3013)
-> - FASE 2 (CQRS): 3/3 completate (#3067, #3068, #3069)
+> **AGGIORNAMENTO 2026-01-28**:
+> - FASE 0-4: ✅ COMPLETATE
+> - FASE 5 (E2E): 2/7 completate (#3082, #2862)
+> - FASE 6 (UI): 3/20 completate (#2866, #2867, #2870)
+> - Progresso totale: 28/58 (48%)
 
 ---
 
@@ -41,257 +42,114 @@
 
 ---
 
-## FASE 0: Test Foundation & Bug Fixes ✅ QUASI COMPLETATA
+## ~~FASE 0: Test Foundation & Bug Fixes~~ ✅ COMPLETATA
 
-> **Obiettivo**: Zero test failures, coverage collection funzionante
-> **Stato**: 4/5 completate (80%)
-
-### Sprint 0.1: Backend Bug Fixes ✅ COMPLETATO
-
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| ~~1~~ | ~~#3006~~ | ~~🐛 Fix Backend Event Handler Tests (26 failures)~~ | `backend-dev` | ✅ **CLOSED** |
-| ~~2~~ | ~~#3007~~ | ~~🐛 Fix Backend Repository Filter Queries (2 critical)~~ | `backend-dev` | ✅ **CLOSED** |
-| ~~3~~ | ~~#3008~~ | ~~🐛 Fix Backend ShareRequest State Machine (23+ failures)~~ | `backend-dev` | ✅ **CLOSED** |
-| ~~4~~ | ~~#2991~~ | ~~🐛 UserLibraryRepository.GetUserGamesAsync tests~~ | `backend-dev` | ✅ **CLOSED** |
-
-### Sprint 0.2: Frontend Bug Fixes (In Progress)
-
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| 5 | #3009 | 🐛 Fix Frontend Coverage Collection (v8 Provider) | `frontend-dev` | 🔄 OPEN |
-
-### 🚩 CHECKPOINT 0 - Bug Fix Merge (Backend ✅ / Frontend ⏳)
-```bash
-# Backend: ✅ COMPLETATO
-# Frontend: ⏳ In attesa #3009
-git checkout main-dev && git merge frontend-dev --no-ff -m "fix: resolve frontend coverage collection (#3009)"
-
-# Tag checkpoint
-git tag -a checkpoint-0-bug-fixes -m "All test failures resolved"
-```
+> **Issue completate**: #3006, #3007, #3008, #2991, #3009
+> **Vedi sezione "Issue Completate" per dettagli**
 
 ---
 
-## FASE 1: Coverage Infrastructure ✅ QUASI COMPLETATA
+## ~~FASE 1: Coverage Infrastructure~~ ✅ COMPLETATA
 
-> **Obiettivo**: Raggiungere 50% coverage su entrambi i stack
-> **Stato**: 4/5 completate (80%)
-
-### Sprint 1.1: Coverage Tools Setup ✅ COMPLETATO
-
-| # | Issue | Tipo | Branch | Dipende Da | Status |
-|---|-------|------|--------|------------|--------|
-| ~~6~~ | ~~#3013~~ | ~~🧪 Codecov Integration & CI Gates~~ | `main-dev` | Checkpoint 0 | ✅ **CLOSED** |
-
-### Sprint 1.2: Backend Coverage ✅ COMPLETATO
-
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| ~~7~~ | ~~#3010~~ | ~~🧪 Increase Backend Coverage to 50%~~ | `backend-dev` | ✅ **CLOSED** |
-| ~~8~~ | ~~#3012~~ | ~~🧪 Add Backend E2E Test Suite~~ | `backend-dev` | ✅ **CLOSED** |
-
-### Sprint 1.3: Frontend Coverage (In Progress)
-
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| ~~9~~ | ~~#3011~~ | ~~🧪 Increase Frontend Coverage to 50%~~ | `frontend-dev` | ✅ **CLOSED** |
-| 10 | #2861 | 🧪 [User Dashboard] Component Tests | `frontend-dev` | 🔄 OPEN |
-
-### 🚩 CHECKPOINT 1 - Coverage Foundation Merge (Backend ✅ / Frontend ⏳)
-```bash
-# Backend coverage: ✅ COMPLETATO (#3010, #3012)
-# Frontend coverage: ⏳ In attesa #2861
-git checkout main-dev && git merge frontend-dev --no-ff -m "test: complete frontend component tests (#2861)"
-
-# Tag checkpoint
-git tag -a checkpoint-1-coverage-foundation -m "50% coverage achieved on both stacks"
-```
+> **Issue completate**: #3013, #3010, #3012, #3011, #2861
+> **Vedi sezione "Issue Completate" per dettagli**
 
 ---
 
-## ~~FASE 2: CQRS Critical Fixes~~ ✅ COMPLETATA (2026-01-27)
+## ~~FASE 2: CQRS Critical Fixes~~ ✅ COMPLETATA
 
-> **Obiettivo**: ~~Risolvere violazioni CQRS critiche~~ **GIÀ IMPLEMENTATO**
-
-### ~~Sprint 2.1: SharedGameCatalog Core (Backend)~~ ✅
-
-| # | Issue | Tipo | Priorita | Status |
-|---|-------|------|----------|--------|
-| ~~11~~ | ~~#3067~~ | ~~🔴⭐ SharedGameCatalog Core CQRS Handlers (1/2)~~ | ~~P0~~ | ✅ **CLOSED** |
-| ~~12~~ | ~~#3068~~ | ~~🔴⭐ SharedGameCatalog Share Flow Handlers (2/2)~~ | ~~P0~~ | ✅ **CLOSED** |
-
-### ~~Sprint 2.2: Authentication CQRS (Backend)~~ ✅
-
-| # | Issue | Tipo | Priorita | Status |
-|---|-------|------|----------|--------|
-| ~~13~~ | ~~#3069~~ | ~~🟠⭐ Authentication - Migrate to Full CQRS~~ | ~~P1~~ | ✅ **CLOSED** |
-
-> **NOTA**: Verificato il 2026-01-27 che tutti gli handler CQRS erano già implementati:
-> - SharedGameCatalog: 69/69 handlers (100%)
-> - Authentication: 53/53 handlers (100%)
->
-> Issues chiuse come "già completate". Vedi `docs/GAP-ANALYSIS-2026-01-26.md` v2.0
-
-### ~~🚩 CHECKPOINT 2 - CQRS Compliance Merge~~ ✅ NON NECESSARIO
-
-CQRS già compliant. Procedere direttamente a FASE 3.
+> **Issue completate**: #3067, #3068, #3069
+> **Vedi sezione "Issue Completate" per dettagli**
 
 ---
 
-## FASE 3: Security Features (3 settimane)
+## ~~FASE 3: Security Features~~ ✅ COMPLETATA
 
-> **Obiettivo**: Session limits e Email verification
-> **Nota**: Ora prima fase attiva dopo completamento FASE 2
-
-### Sprint 3.1: Session Limits
-
-| # | Issue | Tipo | Branch | Priorita | Dipende Da | Status |
-|---|-------|------|--------|----------|------------|--------|
-| 11 | #3070 | 🟠⭐ Session Limits Backend | `backend-dev` | P1 | Checkpoint 1 | ⏳ |
-| 12 | #3075 | 🟠⭐ Session Quota UI Frontend | `frontend-dev` | P1 | #3070 | ⏳ |
-
-**Sequenza**:
-```
-#3070 (backend) ──→ PR ──→ merge backend-dev
-                          ↓
-                    #3075 (frontend) ──→ PR ──→ merge frontend-dev
-```
-
-### Sprint 3.2: Email Verification (⇄ Parallelizzabile dopo 3070)
-
-| # | Issue | Tipo | Branch | Priorita | Dipende Da | Status |
-|---|-------|------|--------|----------|------------|--------|
-| 13 | #3071 | 🟠⭐ Email Verification Backend | `backend-dev` | P1 | Checkpoint 1 | ⏳ |
-| 14 | #3076 | 🟠⭐ Email Verification Frontend | `frontend-dev` | P1 | #3071 | ⏳ |
-
-### 🚩 CHECKPOINT 3 - Security Features Merge
-```bash
-# Backend security features
-git checkout main-dev && git merge backend-dev --no-ff -m "feat: implement session limits and email verification backend (#3070, #3071)"
-
-# Frontend security features (after backend APIs available)
-git checkout main-dev && git merge frontend-dev --no-ff -m "feat: implement session quota UI and email verification flow (#3075, #3076)"
-
-git tag -a checkpoint-3-security-features -m "Session limits and email verification complete"
-```
+> **Issue completate**: #3070, #3075, #3071, #3076
+> **Vedi sezione "Issue Completate" per dettagli**
 
 ---
 
-## FASE 4: Admin Features (2-3 settimane)
+## ~~FASE 4: Admin Features~~ ✅ COMPLETATA
 
-> **Obiettivo**: PDF limits, Feature flags, 2FA UI
-
-### Sprint 4.1: PDF Limits
-
-| # | Issue | Tipo | Branch | Priorita | Dipende Da | Status |
-|---|-------|------|--------|----------|------------|--------|
-| 15 | #3072 | 🟡⭐ PDF Upload Limits Admin API | `backend-dev` | P2 | Checkpoint 3 | ⏳ |
-| 16 | #3078 | 🟡⭐ PDF Limits Admin UI | `frontend-dev` | P2 | #3072 | ⏳ |
-
-### Sprint 4.2: Feature Flags (⇄ Parallelizzabile con 4.1)
-
-| # | Issue | Tipo | Branch | Priorita | Dipende Da | Status |
-|---|-------|------|--------|----------|------------|--------|
-| 17 | #3073 | 🟡⭐ Feature Flags Tier-Based Backend | `backend-dev` | P2 | Checkpoint 3 | ⏳ |
-| 18 | #3079 | 🟡⭐ Feature Flags Tier UI | `frontend-dev` | P2 | #3073 | ⏳ |
-
-### Sprint 4.3: 2FA UI (Frontend Only - Backend Ready)
-
-| # | Issue | Tipo | Branch | Priorita | Dipende Da | Status |
-|---|-------|------|--------|----------|------------|--------|
-| 19 | #3077 | 🟡⭐ 2FA UI - Convert Placeholders | `frontend-dev` | P2 | **Nessuna** | ⏳ |
-
-> **NOTA**: #3077 può iniziare immediatamente - backend 2FA già implementato
-
-### 🚩 CHECKPOINT 4 - Admin Features Merge
-```bash
-# Backend admin APIs
-git checkout main-dev && git merge backend-dev --no-ff -m "feat: add PDF limits and feature flags tier-based APIs (#3072, #3073)"
-
-# Frontend admin UIs
-git checkout main-dev && git merge frontend-dev --no-ff -m "feat: add PDF limits UI, feature flags UI, and 2FA components (#3078, #3079, #3077)"
-
-git tag -a checkpoint-4-admin-features -m "Admin features complete"
-```
+> **Issue completate**: #3072, #3078, #3073, #3079, #3077
+> **Vedi sezione "Issue Completate" per dettagli**
 
 ---
 
-## FASE 5: E2E Test Suite (2 settimane)
+## FASE 5: E2E Test Suite (In Progress)
 
 > **Obiettivo**: E2E tests per tutti i flussi implementati
+> **Stato**: 2/7 completate (29%)
 
 ### Sprint 5.1: E2E Tests (⇄ Tutte parallelizzabili)
 
-| # | Issue | Tipo | Branch | Priorita | Status |
-|---|-------|------|--------|----------|--------|
-| 20 | #3082 | 🧪 Implement Missing E2E Test Flows (50 flows) | `frontend-dev` | High | ⏳ |
-| 21 | #2862 | 🧪 [User Dashboard] E2E Tests | `frontend-dev` | Medium | ⏳ |
-| 22 | #2870 | 🧪 [Personal Library] E2E Tests | `frontend-dev` | Medium | ⏳ |
-| 23 | #2877 | 🧪 [Shared Catalog] E2E Tests | `frontend-dev` | Medium | ⏳ |
-| 24 | #2883 | 🧪 [Profile/Settings] E2E Tests | `frontend-dev` | Medium | ⏳ |
-| 25 | #2891 | 🧪 [User Management] E2E Tests | `frontend-dev` | Medium | ⏳ |
-| 26 | #2897 | 🧪 [Editor Dashboard] E2E Tests | `frontend-dev` | Medium | ⏳ |
+| # | Issue | Tipo | Branch | Status |
+|---|-------|------|--------|--------|
+| 1 | #2870 | 🧪 [Personal Library] E2E Tests | `frontend-dev` | ✅ **CLOSED** |
+| 2 | #2877 | 🧪 [Shared Catalog] E2E Tests | `frontend-dev` | ⏳ |
+| 3 | #2883 | 🧪 [Profile/Settings] E2E Tests | `frontend-dev` | ⏳ |
+| 4 | #2891 | 🧪 [User Management] E2E Tests | `frontend-dev` | ⏳ |
+| 5 | #2897 | 🧪 [Editor Dashboard] E2E Tests | `frontend-dev` | ⏳ |
 
 ### 🚩 CHECKPOINT 5 - E2E Tests Merge
 ```bash
-git checkout main-dev && git merge frontend-dev --no-ff -m "test: add comprehensive E2E test suite (#3082, #2862, #2870, #2877, #2883, #2891, #2897)"
+git checkout main-dev && git merge frontend-dev --no-ff -m "test: add comprehensive E2E test suite (#2877, #2883, #2891, #2897)"
 
 git tag -a checkpoint-5-e2e-tests -m "E2E test suite complete"
 ```
 
 ---
 
-## FASE 6: UI Components & Polish (3-4 settimane)
+## FASE 6: UI Components & Polish (In Progress)
 
 > **Obiettivo**: Completare component library e UI features
+> **Stato**: 3/20 completate (15%)
 
 ### Sprint 6.1: User Dashboard Components
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 27 | #2857 | ⭐ LibraryQuotaWidget Component | `frontend-dev` | ⏳ |
-| 28 | #2858 | ⭐ ActiveSessionsPanel Component | `frontend-dev` | ⏳ |
-| 29 | #2859 | ⭐ Dashboard API Integration | `frontend-dev` | ⏳ |
-| 30 | #2860 | ⭐ Responsive Navigation | `frontend-dev` | ⏳ |
+| 6 | #2857 | ⭐ LibraryQuotaWidget Component | `frontend-dev` | ⏳ |
+| 7 | #2858 | ⭐ ActiveSessionsPanel Component | `frontend-dev` | ⏳ |
+| 8 | #2859 | ⭐ Dashboard API Integration | `frontend-dev` | ⏳ |
+| 9 | #2860 | ⭐ Responsive Navigation | `frontend-dev` | ⏳ |
 
 ### Sprint 6.2: Library & Catalog UI (⇄ Parallelizzabile)
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 31 | #2866 | ⭐ Library Page with Search | `frontend-dev` | ⏳ |
-| 32 | #2867 | ⭐ Game Cards (Grid + List) | `frontend-dev` | ⏳ |
-| 33 | #2868 | ⭐ Bulk Selection Mode | `frontend-dev` | ⏳ |
-| 34 | #2869 | ⭐ Quota Sticky Header | `frontend-dev` | ⏳ |
-| 35 | #2873 | ⭐ Advanced Filter Panel | `frontend-dev` | ⏳ |
-| 36 | #2874 | ⭐ Catalog Game Cards | `frontend-dev` | ⏳ |
-| 37 | #2875 | ⭐ Add to Library Overlay | `frontend-dev` | ⏳ |
-| 38 | #2876 | ⭐ Pagination Component | `frontend-dev` | ⏳ |
+| 10 | #2868 | ⭐ Bulk Selection Mode | `frontend-dev` | ⏳ |
+| 11 | #2869 | ⭐ Quota Sticky Header | `frontend-dev` | ⏳ |
+| 12 | #2873 | ⭐ Advanced Filter Panel | `frontend-dev` | ⏳ |
+| 13 | #2874 | ⭐ Catalog Game Cards | `frontend-dev` | ⏳ |
+| 14 | #2875 | ⭐ Add to Library Overlay | `frontend-dev` | ⏳ |
+| 15 | #2876 | ⭐ Pagination Component | `frontend-dev` | ⏳ |
 
 ### Sprint 6.3: Profile & Settings
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 39 | #2881 | ⭐ Settings Page with 4 Tabs | `frontend-dev` | ⏳ |
-| 40 | #2882 | ⭐ Avatar Upload with Crop | `frontend-dev` | ⏳ |
+| 16 | #2881 | ⭐ Settings Page with 4 Tabs | `frontend-dev` | ⏳ |
+| 17 | #2882 | ⭐ Avatar Upload with Crop | `frontend-dev` | ⏳ |
 
 ### Sprint 6.4: Admin Components
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 41 | #2887 | ⭐ User Management Table | `frontend-dev` | ⏳ |
-| 42 | #2888 | ⭐ Bulk Selection Action Bar | `frontend-dev` | ⏳ |
-| 43 | #2890 | ⭐ User Detail Modal | `frontend-dev` | ⏳ |
-| 44 | #2894 | ⭐ Editor Dashboard Page | `frontend-dev` | ⏳ |
-| 45 | #2895 | ⭐ Approval Queue Items | `frontend-dev` | ⏳ |
-| 46 | #2896 | ⭐ Bulk Approval UI | `frontend-dev` | ⏳ |
+| 18 | #2887 | ⭐ User Management Table | `frontend-dev` | ⏳ |
+| 19 | #2888 | ⭐ Bulk Selection Action Bar | `frontend-dev` | ⏳ |
+| 20 | #2890 | ⭐ User Detail Modal | `frontend-dev` | ⏳ |
+| 21 | #2894 | ⭐ Editor Dashboard Page | `frontend-dev` | ⏳ |
+| 22 | #2895 | ⭐ Approval Queue Items | `frontend-dev` | ⏳ |
+| 23 | #2896 | ⭐ Bulk Approval UI | `frontend-dev` | ⏳ |
 
 ### Backend Support (⇄ Parallelizzabile)
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 47 | #2886 | ⭐ SuspendUser/UnsuspendUser Commands | `backend-dev` | ⏳ |
-| 48 | #2893 | ⭐ BulkApprove/BulkReject Commands | `backend-dev` | ⏳ |
+| 24 | #2886 | ⭐ SuspendUser/UnsuspendUser Commands | `backend-dev` | ⏳ |
+| 25 | #2893 | ⭐ BulkApprove/BulkReject Commands | `backend-dev` | ⏳ |
 
 ### 🚩 CHECKPOINT 6 - UI Components Merge
 ```bash
@@ -306,7 +164,7 @@ git tag -a checkpoint-6-ui-components -m "UI component library complete"
 
 ---
 
-## FASE 7: Analytics & Final Features (2 settimane)
+## FASE 7: Analytics & Final Features (Ultima fase)
 
 > **Obiettivo**: AI tracking, coverage targets, final polish
 
@@ -314,23 +172,23 @@ git tag -a checkpoint-6-ui-components -m "UI component library complete"
 
 | # | Issue | Tipo | Branch | Priorita | Dipende Da | Status |
 |---|-------|------|--------|----------|------------|--------|
-| 49 | #3074 | 🟢⭐ AI Token Usage Tracking Backend | `backend-dev` | P3 | Checkpoint 6 | ⏳ |
-| 50 | #3080 | 🟢⭐ AI Usage Dashboard Frontend | `frontend-dev` | P3 | #3074 | ⏳ |
+| 26 | #3074 | 🟢⭐ AI Token Usage Tracking Backend | `backend-dev` | P3 | Checkpoint 6 | ⏳ |
+| 27 | #3080 | 🟢⭐ AI Usage Dashboard Frontend | `frontend-dev` | P3 | #3074 | ⏳ |
 
 ### Sprint 7.2: Coverage Targets
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 51 | #3025 | 🧪 Reach Backend 90% Coverage | `backend-dev` | ⏳ |
-| 52 | #3026 | 🧪 Reach Frontend 85% Coverage | `frontend-dev` | ⏳ |
+| 28 | #3025 | 🧪 Reach Backend 90% Coverage | `backend-dev` | ⏳ |
+| 29 | #3026 | 🧪 Reach Frontend 85% Coverage | `frontend-dev` | ⏳ |
 
 ### Sprint 7.3: Component Library Foundation
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 53 | #2924 | ⭐ Storybook Setup | `frontend-dev` | ⏳ |
-| 54 | #2925 | ⭐ Extract Reusable Components | `frontend-dev` | ⏳ |
-| 55 | #2926 | ⭐ Design System Docs | `frontend-dev` | ⏳ |
+| 30 | #2924 | ⭐ Storybook Setup | `frontend-dev` | ⏳ |
+| 31 | #2925 | ⭐ Extract Reusable Components | `frontend-dev` | ⏳ |
+| 32 | #2926 | ⭐ Design System Docs | `frontend-dev` | ⏳ |
 
 ### 🚩 CHECKPOINT FINALE - Production Ready Merge
 ```bash
@@ -348,122 +206,180 @@ git tag -a v2.0.0 -m "Production release with full CQRS compliance and 90%/85% c
 
 ---
 
-## Parallelizzazione Matrix (Aggiornata 2026-01-27)
+## Dipendenze Consolidate
 
 ```
-FASE    | Backend (backend-dev)          | Frontend (frontend-dev)         | Sync Point
---------|--------------------------------|----------------------------------|------------
-0       | ✅ #3006,#3007,#3008,#2991     | #3009 🔄                        | CHECKPOINT 0
-        | ✅ COMPLETATO                  | IN PROGRESS                      | (Backend ✅)
---------|--------------------------------|----------------------------------|------------
-1       | ✅ #3010,#3012,#3013           | ✅ #3011, #2861 🔄              | CHECKPOINT 1
-        | ✅ COMPLETATO                  | #2861 IN PROGRESS                | (Backend ✅)
---------|--------------------------------|----------------------------------|------------
-2       | ✅ #3067,#3068,#3069           | ✅ N/A                          | ✅ SKIP
-        | ✅ COMPLETATO                  | ✅ N/A                           |
---------|--------------------------------|----------------------------------|------------
-3       | #3070 → #3071                  | #3075 (dopo #3070)              | CHECKPOINT 3
-        |         ⇄ PARALLEL             | #3076 (dopo #3071)              |
---------|--------------------------------|----------------------------------|------------
-4       | #3072 ⇄ #3073                  | #3078,#3079,#3077               | CHECKPOINT 4
-        | PARALLEL                       | ⇄ PARALLEL (dopo BE)            |
---------|--------------------------------|----------------------------------|------------
-5       | (manutenzione)                 | #3082,#2862-#2897               | CHECKPOINT 5
-        |                                | ⇄ ALL PARALLEL                   |
---------|--------------------------------|----------------------------------|------------
-6       | #2886 ⇄ #2893                  | #2857-#2896                     | CHECKPOINT 6
-        | PARALLEL                       | ⇄ ALL PARALLEL                   |
---------|--------------------------------|----------------------------------|------------
-7       | #3074 → #3025                  | #3080,#3026,#2924-#2926         | FINAL
-        | SEQUENTIAL                     | ⇄ PARALLEL                       |
+FASE 5 (E2E Tests) - Nessuna dipendenza esterna
+├── #2877 [Shared Catalog] ⇄ parallelizzabile
+├── #2883 [Profile/Settings] ⇄ parallelizzabile
+├── #2891 [User Management] ⇄ parallelizzabile
+└── #2897 [Editor Dashboard] ⇄ parallelizzabile
+
+FASE 6 (UI Components) - Nessuna dipendenza esterna
+├── Sprint 6.1: Dashboard (#2857→#2858→#2859→#2860) sequenziale
+├── Sprint 6.2: Library (#2868-#2876) ⇄ parallelizzabile
+├── Sprint 6.3: Profile (#2881, #2882) ⇄ parallelizzabile
+├── Sprint 6.4: Admin (#2887-#2896) ⇄ parallelizzabile
+└── Backend: #2886, #2893 ⇄ parallelizzabile con frontend
+
+FASE 7 (Analytics & Final)
+├── #3074 (AI Backend) → #3080 (AI Frontend) sequenziale
+├── #3025 (Backend 90%) indipendente
+├── #3026 (Frontend 85%) indipendente
+└── #2924→#2925→#2926 (Storybook) sequenziale
 ```
 
 ---
 
-## Gantt Semplificato (Settimane) - Aggiornato 2026-01-27
+## Gantt Semplificato (Settimane) - Aggiornato 2026-01-28
 
 ```
 Settimana:  1   2   3   4   5   6   7   8   9  10  11  12  13  14
             |   |   |   |   |   |   |   |   |   |   |   |   |   |
-FASE 0      [✅=]🔄                                                    Bug Fixes (4/5 ✅)
-FASE 1          [✅====]🔄                                             Coverage 50% (4/5 ✅)
-FASE 2          ✅ COMPLETATA                                          CQRS ✅ (3/3)
-FASE 3                  [===========]                                  Security
-FASE 4                              [=======]                          Admin
-FASE 5                                      [=====]                    E2E Tests
-FASE 6                                          [=========]            UI
-FASE 7                                                    [===]        Final
+FASE 0-4    ✅✅✅✅ COMPLETATE
+FASE 5              [====]🔄                                      E2E Tests (2/5)
+FASE 6                  [=========]🔄                             UI (3/17)
+FASE 7                              [===]                         Final
 
-CHECKPOINTS: CP0  CP1         CP3     CP4     CP5         CP6  FINAL
-              ↓    ↓           ↓       ↓       ↓           ↓      ↓
-main-dev:    [🔄] [🔄]       [merge] [merge] [merge]    [merge][merge]
-main:                                                              [release]
+CHECKPOINTS:         CP5     CP6  FINAL
+                      ↓       ↓      ↓
+main-dev:          [merge] [merge][merge]
+main:                                    [release]
 
-📊 Progresso: 11/58 issue completate (19%)
-⏱️ Tempo risparmiato: ~5-6 settimane (FASE 0-2 quasi completate)
+📊 Progresso: 28/58 issue completate (48%)
+⏱️ Tempo risparmiato: FASE 0-4 completate (28 issue)
 ```
 
 ---
 
-## Issue Completate (11)
+## Issue Completate (28)
 
-### FASE 0 - Bug Fixes (4/5)
+### FASE 0 - Bug Fixes (5/5) ✅
 
-| # | Issue | Titolo | Data Chiusura |
-|---|-------|--------|---------------|
-| ~~1~~ | #3006 | Fix Backend Event Handler Tests (26 failures) | 2026-01-XX |
-| ~~2~~ | #3007 | Fix Backend Repository Filter Queries (2 critical) | 2026-01-XX |
-| ~~3~~ | #3008 | Fix Backend ShareRequest State Machine (23+ failures) | 2026-01-XX |
-| ~~4~~ | #2991 | UserLibraryRepository.GetUserGamesAsync tests | 2026-01-XX |
+| Issue | Titolo | Commit/PR |
+|-------|--------|-----------|
+| #3006 | Fix Backend Event Handler Tests (26 failures) | backend-dev |
+| #3007 | Fix Backend Repository Filter Queries | backend-dev |
+| #3008 | Fix Backend ShareRequest State Machine | backend-dev |
+| #2991 | UserLibraryRepository.GetUserGamesAsync tests | backend-dev |
+| #3009 | Fix Frontend Coverage Collection (v8 Provider) | frontend-dev |
 
-### FASE 1 - Coverage Infrastructure (4/5)
+### FASE 1 - Coverage Infrastructure (5/5) ✅
 
-| # | Issue | Titolo | Data Chiusura |
-|---|-------|--------|---------------|
-| ~~6~~ | #3013 | Codecov Integration & CI Gates | 2026-01-XX |
-| ~~7~~ | #3010 | Increase Backend Coverage to 50% | 2026-01-XX |
-| ~~8~~ | #3012 | Add Backend E2E Test Suite | 2026-01-XX |
-| ~~9~~ | #3011 | Increase Frontend Coverage to 50% | 2026-01-XX |
+| Issue | Titolo | Commit/PR |
+|-------|--------|-----------|
+| #3013 | Codecov Integration & CI Gates | main-dev |
+| #3010 | Increase Backend Coverage to 50% | backend-dev |
+| #3012 | Add Backend E2E Test Suite | backend-dev |
+| #3011 | Increase Frontend Coverage to 50% | frontend-dev |
+| #2861 | [User Dashboard] Component Tests | frontend-dev |
 
-### FASE 2 - CQRS (3/3)
+### FASE 2 - CQRS (3/3) ✅
 
-| # | Issue | Titolo | Data Chiusura |
-|---|-------|--------|---------------|
-| ~~11~~ | #3067 | SharedGameCatalog Core CQRS Handlers (1/2) | 2026-01-27 |
-| ~~12~~ | #3068 | SharedGameCatalog Share Flow Handlers (2/2) | 2026-01-27 |
-| ~~13~~ | #3069 | Authentication - Migrate to Full CQRS | 2026-01-27 |
+| Issue | Titolo | Data |
+|-------|--------|------|
+| #3067 | SharedGameCatalog Core CQRS Handlers (1/2) | 2026-01-27 |
+| #3068 | SharedGameCatalog Share Flow Handlers (2/2) | 2026-01-27 |
+| #3069 | Authentication - Migrate to Full CQRS | 2026-01-27 |
 
-**Note**:
-- FASE 0/1: Bug fixes e coverage infrastructure completati durante sprint precedenti
-- FASE 2: Handler CQRS già implementati, issue chiuse come "già completate"
+### FASE 3 - Security Features (4/4) ✅
+
+| Issue | Titolo | Commit/PR |
+|-------|--------|-----------|
+| #3070 | Session Limits Backend | #3102 |
+| #3075 | Session Quota UI Frontend | #3103 |
+| #3071 | Email Verification Backend | #3105 |
+| #3076 | Email Verification Frontend | #3109 |
+
+### FASE 4 - Admin Features (5/5) ✅
+
+| Issue | Titolo | Commit/PR |
+|-------|--------|-----------|
+| #3072 | PDF Upload Limits Admin API | #3111 |
+| #3078 | PDF Limits Admin UI | #3112 |
+| #3073 | Feature Flags Tier-Based Backend | #3113 |
+| #3079 | Feature Flags Tier UI | #3114 |
+| #3077 | 2FA UI - Convert Placeholders | #3115 |
+
+### FASE 5 - E2E Tests (3/7 parziale)
+
+| Issue | Titolo | Commit/PR |
+|-------|--------|-----------|
+| #3082 | Implement Missing E2E Test Flows (50 flows) | #3116 |
+| #2862 | [User Dashboard] E2E Tests | #3117 |
+| #2870 | [Personal Library] E2E Tests | 319cc9f08 |
+
+### FASE 6 - UI Components (2/20 parziale)
+
+| Issue | Titolo | Commit/PR |
+|-------|--------|-----------|
+| #2866 | Library Page with Search | 319cc9f08 |
+| #2867 | Game Cards (Grid + List) | 319cc9f08 |
 
 ---
 
-## Issue Recenti (Non ancora in sequenza)
+## Issue Rimanenti (30)
 
-Issue create recentemente che possono essere lavorate in parallelo:
+### FASE 5 - E2E Tests (4 rimanenti)
 
-| Issue | Titolo | Branch | Priorita |
-|-------|--------|--------|----------|
-| #3096 | refactor(tests): Convert dashboard tests to data-testid (i18n) | `frontend-dev` | Medium |
-| #3095 | fix(dashboard): RecentGamesSection incorrect /giochi route | `frontend-dev` | Medium |
+| Issue | Titolo | Priorità |
+|-------|--------|----------|
+| #2877 | [Shared Catalog] E2E Tests | Medium |
+| #2883 | [Profile/Settings] E2E Tests | Medium |
+| #2891 | [User Management] E2E Tests | Medium |
+| #2897 | [Editor Dashboard] E2E Tests | Medium |
+
+### FASE 6 - UI Components (17 rimanenti)
+
+| Issue | Titolo | Sprint |
+|-------|--------|--------|
+| #2857 | LibraryQuotaWidget Component | 6.1 |
+| #2858 | ActiveSessionsPanel Component | 6.1 |
+| #2859 | Dashboard API Integration | 6.1 |
+| #2860 | Responsive Navigation | 6.1 |
+| #2868 | Bulk Selection Mode | 6.2 |
+| #2869 | Quota Sticky Header | 6.2 |
+| #2873 | Advanced Filter Panel | 6.2 |
+| #2874 | Catalog Game Cards | 6.2 |
+| #2875 | Add to Library Overlay | 6.2 |
+| #2876 | Pagination Component | 6.2 |
+| #2881 | Settings Page with 4 Tabs | 6.3 |
+| #2882 | Avatar Upload with Crop | 6.3 |
+| #2887 | User Management Table | 6.4 |
+| #2888 | Bulk Selection Action Bar | 6.4 |
+| #2890 | User Detail Modal | 6.4 |
+| #2894 | Editor Dashboard Page | 6.4 |
+| #2895 | Approval Queue Items | 6.4 |
+| #2896 | Bulk Approval UI | 6.4 |
+| #2886 | SuspendUser/UnsuspendUser Commands (BE) | 6.4 |
+| #2893 | BulkApprove/BulkReject Commands (BE) | 6.4 |
+
+### FASE 7 - Analytics & Final (7 rimanenti)
+
+| Issue | Titolo | Priorità |
+|-------|--------|----------|
+| #3074 | AI Token Usage Tracking Backend | P3 |
+| #3080 | AI Usage Dashboard Frontend | P3 |
+| #3025 | Reach Backend 90% Coverage | High |
+| #3026 | Reach Frontend 85% Coverage | High |
+| #2924 | Storybook Setup | Medium |
+| #2925 | Extract Reusable Components | Medium |
+| #2926 | Design System Docs | Medium |
 
 ---
 
 ## Issue Escluse (Bassa Priorita/Optional)
 
-Queste issue sono state escluse dal percorso principale ma possono essere lavorate in parallelo se risorse disponibili:
-
-| # | Issue | Motivo |
-|---|-------|--------|
-| #2965 | Dual-Theme Design System | Epic separata, non bloccante |
-| #2967 | Zero-Cost CI/CD Infrastructure | Infra separata |
-| #2968-#2976 | Oracle Cloud Setup | Infra separata |
-| #2927 | Lighthouse CI | Nice-to-have |
-| #2928 | k6 Load Testing | Nice-to-have |
-| #2929 | WCAG Accessibility Audit | Post-MVP |
-| #2852 | Chromatic Visual Regression | Post-MVP |
-| #2703 | S3 Object Storage | Infra separata |
+| Issue | Motivo |
+|-------|--------|
+| #2965 | Dual-Theme Design System - Epic separata |
+| #2967 | Zero-Cost CI/CD Infrastructure - Infra separata |
+| #2968-#2976 | Oracle Cloud Setup - Infra separata |
+| #2927 | Lighthouse CI - Nice-to-have |
+| #2928 | k6 Load Testing - Nice-to-have |
+| #2929 | WCAG Accessibility Audit - Post-MVP |
+| #2852 | Chromatic Visual Regression - Post-MVP |
+| #2703 | S3 Object Storage - Infra separata |
 
 ---
 
@@ -476,8 +392,8 @@ gh issue view <numero> --json state,title,labels
 
 ### Creare branch per issue
 ```bash
-git checkout backend-dev  # o frontend-dev
-git pull origin backend-dev
+git checkout frontend-dev
+git pull origin frontend-dev
 git checkout -b feature/issue-<numero>-<descrizione>
 ```
 
@@ -488,16 +404,16 @@ gh pr create --title "feat: <descrizione>" --body "Closes #<numero>"
 
 ### Verificare checkpoint
 ```bash
-git log --oneline --graph main-dev..backend-dev
 git log --oneline --graph main-dev..frontend-dev
 ```
 
 ---
 
-**Ultimo aggiornamento**: 2026-01-27
+**Ultimo aggiornamento**: 2026-01-28
 **Changelog**:
-- v3.0 (2026-01-27): Sincronizzato con GitHub - FASE 0/1 quasi completate (11/58 issue closed)
-- v2.0 (2026-01-27): Rimosso FASE 2 (già completata), rinumerato issue, aggiornato Gantt
+- v4.0 (2026-01-28): Rimosso issue chiuse (FASE 0-4 complete, parziali 5-6), consolidato dipendenze
+- v3.0 (2026-01-27): Sincronizzato con GitHub - FASE 0/1 quasi completate
+- v2.0 (2026-01-27): Rimosso FASE 2 (già completata), rinumerato issue
 - v1.0 (2026-01-26): Versione iniziale
 
 **Prossima revisione**: Dopo ogni checkpoint

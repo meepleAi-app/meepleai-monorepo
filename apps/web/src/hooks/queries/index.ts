@@ -134,6 +134,15 @@ export {
   badgeKeys,
 } from './useBadges';
 
+// Session Quota queries (Issue #3075)
+export {
+  useSessionQuota,
+  useSessionQuotaWithStatus,
+  usePrefetchSessionQuota,
+  useInvalidateSessionQuota,
+  sessionQuotaKeys,
+} from './useSessionQuota';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

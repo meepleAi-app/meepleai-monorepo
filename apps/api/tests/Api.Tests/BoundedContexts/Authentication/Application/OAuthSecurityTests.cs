@@ -133,7 +133,7 @@ public sealed class OAuthSecurityTests : IDisposable
 
         var userId = Guid.NewGuid();
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(userId, "test@gmail.com", "Test User", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(userId, "test@gmail.com", "Test User", "user", "normal", DateTime.UtcNow, false, null),
             SessionToken: "session_token_1",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -195,7 +195,7 @@ public sealed class OAuthSecurityTests : IDisposable
 
         var userId = Guid.NewGuid();
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(userId, "test@gmail.com", "Test User", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(userId, "test@gmail.com", "Test User", "user", "normal", DateTime.UtcNow, false, null),
             SessionToken: "session_token",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -264,7 +264,7 @@ public sealed class OAuthSecurityTests : IDisposable
 
         var userId = Guid.NewGuid();
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(userId, "test@gmail.com", "Test User", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(userId, "test@gmail.com", "Test User", "user", "normal", DateTime.UtcNow, false, null),
             SessionToken: "session_token",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -302,7 +302,7 @@ public sealed class OAuthSecurityTests : IDisposable
 
         var userId = Guid.NewGuid();
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(userId, "test@gmail.com", "Test User", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(userId, "test@gmail.com", "Test User", "user", "normal", DateTime.UtcNow, false, null),
             SessionToken: "session_token",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -345,7 +345,7 @@ public sealed class OAuthSecurityTests : IDisposable
 
         var userId = Guid.NewGuid();
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(userId, "test@gmail.com", "Test User", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(userId, "test@gmail.com", "Test User", "user", "normal", DateTime.UtcNow, false, null),
             SessionToken: "session_token",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -385,7 +385,7 @@ public sealed class OAuthSecurityTests : IDisposable
 
         var userId = Guid.NewGuid();
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(userId, "test@gmail.com", "Test User", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(userId, "test@gmail.com", "Test User", "user", "normal", DateTime.UtcNow, false, null),
             SessionToken: "super_secret_session_token_789",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -456,7 +456,7 @@ public sealed class OAuthSecurityTests : IDisposable
 
         var userId = Guid.NewGuid();
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(userId, "test@gmail.com", "Test User", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(userId, "test@gmail.com", "Test User", "user", "normal", DateTime.UtcNow, false, null),
             SessionToken: "new_session_token_after_login",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );

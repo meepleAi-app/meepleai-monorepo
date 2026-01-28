@@ -44,4 +44,13 @@ internal interface IGameSessionRepository : IRepository<GameSession, Guid>
         int? limit = null,
         int? offset = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts active sessions (Setup, InProgress, Paused) for a specific user.
+    /// Issue #3070: Required for session quota enforcement.
+    /// </summary>
+    /// <param name="userId">The user ID to count sessions for</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Number of active sessions for the user</returns>
+    Task<int> CountActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 }

@@ -9,13 +9,14 @@
  */
 
 import { test, expect } from '../fixtures/chromatic';
+
 import type { Page } from '@playwright/test';
 
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function setupSessionArchiveMocks(page: Page) {
-  let sessions = [
+  const sessions = [
     { id: 's1', name: 'Active Session', archived: false, createdAt: new Date().toISOString() },
     { id: 's2', name: 'Old Session', archived: true, createdAt: new Date(Date.now() - 2592000000).toISOString() },
   ];

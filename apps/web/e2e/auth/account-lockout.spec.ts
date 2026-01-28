@@ -11,6 +11,7 @@
  */
 
 import { test, expect } from '../fixtures/chromatic';
+
 import type { Page } from '@playwright/test';
 
 const API_BASE =
@@ -42,7 +43,7 @@ async function setupAccountLockoutMocks(
     adminUnlock = false,
   } = options;
 
-  let currentState: LockoutState = {
+  const currentState: LockoutState = {
     failedAttempts,
     isLocked,
     lockedUntil: isLocked

@@ -10,6 +10,7 @@
  */
 
 import { test, expect } from '../fixtures/chromatic';
+
 import type { Page } from '@playwright/test';
 
 const API_BASE =
@@ -41,7 +42,7 @@ interface NotificationPreferences {
  * Setup mock routes for notification preferences testing
  */
 async function setupNotificationPreferencesMocks(page: Page) {
-  let preferences: NotificationPreferences = {
+  const preferences: NotificationPreferences = {
     email: {
       marketing: false,
       productUpdates: true,

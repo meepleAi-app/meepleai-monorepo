@@ -28,6 +28,7 @@ internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
     /// <param name="userId">The user ID</param>
     /// <param name="search">Optional search term to filter by game title</param>
     /// <param name="favoritesOnly">If true, only return favorite games</param>
+    /// <param name="stateFilter">Optional array of game states to filter by ("Nuovo", "InPrestito", "Wishlist", "Owned")</param>
     /// <param name="sortBy">Sort field: "addedAt", "title", "favorite"</param>
     /// <param name="descending">Sort direction</param>
     /// <param name="page">Page number (1-based)</param>
@@ -38,6 +39,7 @@ internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
         Guid userId,
         string? search,
         bool? favoritesOnly,
+        string[]? stateFilter,
         string? sortBy,
         bool descending,
         int page,

@@ -10,6 +10,7 @@
  */
 
 import { test, expect } from '../fixtures/chromatic';
+
 import type { Page } from '@playwright/test';
 
 const API_BASE =
@@ -46,7 +47,7 @@ async function setupPdfLimitsConfigMocks(
     },
   };
 
-  let currentConfig = { ...defaultConfig, ...options.initialConfig };
+  const currentConfig = { ...defaultConfig, ...options.initialConfig };
 
   // Mock admin auth
   await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {

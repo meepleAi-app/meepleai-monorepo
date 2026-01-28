@@ -10,6 +10,7 @@
  */
 
 import { test, expect } from '../fixtures/chromatic';
+
 import type { Page } from '@playwright/test';
 
 const API_BASE =
@@ -38,7 +39,7 @@ async function setupAdminSessionLimitsMocks(
     },
   } = options;
 
-  let currentLimits = { ...initialLimits };
+  const currentLimits = { ...initialLimits };
 
   // Mock admin auth
   await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {

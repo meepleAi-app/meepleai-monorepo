@@ -44,11 +44,17 @@ import type { MessageDescriptor, IntlShape } from 'react-intl';
 
 /**
  * Translation function type
+ *
+ * Supports two signatures:
+ * - t(id): Translate with just the key
+ * - t(id, defaultMessage): Translate with fallback
+ * - t(id, values): Translate with interpolation values
  */
-export type TranslationFunction = (
-  id: string,
-  values?: Record<string, string | number | boolean | Date | null | undefined>
-) => string;
+export type TranslationFunction = {
+  (id: string): string;
+  (id: string, defaultMessage: string): string;
+  (id: string, values: Record<string, string | number | boolean | Date | null | undefined>): string;
+};
 
 /**
  * Hook return type
@@ -111,10 +117,19 @@ export function useTranslation(): UseTranslationReturn {
 
   /**
    * Simple translation function that accepts a dot-notated message ID
+   * Supports optional default message or interpolation values
    */
-  const t: TranslationFunction = (id, values) => {
-    return intl.formatMessage({ id }, values);
-  };
+  const t: TranslationFunction = ((
+    id: string,
+    valuesOrDefault?: string | Record<string, string | number | boolean | Date | null | undefined>
+  ) => {
+    // If second arg is a string, treat it as defaultMessage
+    if (typeof valuesOrDefault === 'string') {
+      return intl.formatMessage({ id, defaultMessage: valuesOrDefault });
+    }
+    // Otherwise treat it as interpolation values
+    return intl.formatMessage({ id }, valuesOrDefault);
+  }) as TranslationFunction;
 
   return {
     t,

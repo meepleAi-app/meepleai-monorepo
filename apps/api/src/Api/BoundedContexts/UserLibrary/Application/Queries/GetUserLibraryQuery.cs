@@ -10,6 +10,7 @@ internal record GetUserLibraryQuery(
     Guid UserId,
     string? Search = null,
     bool? FavoritesOnly = null,
+    string[]? StateFilter = null,
     string? SortBy = null,
     bool Descending = false,
     int Page = 1,

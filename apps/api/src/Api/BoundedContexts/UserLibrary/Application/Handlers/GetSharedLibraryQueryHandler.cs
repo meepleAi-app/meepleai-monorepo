@@ -80,6 +80,7 @@ internal class GetSharedLibraryQueryHandler : IQueryHandler<GetSharedLibraryQuer
             userId: shareLink.UserId,
             search: null,
             favoritesOnly: null,
+            stateFilter: null,
             sortBy: "addedAt",
             descending: true,
             page: 1,

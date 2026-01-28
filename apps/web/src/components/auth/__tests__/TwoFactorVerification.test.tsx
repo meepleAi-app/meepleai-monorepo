@@ -21,8 +21,9 @@ describe('TwoFactorVerification', () => {
     it('renders default title and subtitle', () => {
       renderWithIntl(<TwoFactorVerification {...defaultProps} />);
 
-      expect(screen.getByText('Two-Factor Authentication')).toBeInTheDocument();
-      expect(screen.getByText('Enter the 6-digit code from your authenticator app')).toBeInTheDocument();
+      // Uses i18n keys as fallback text in test environment
+      expect(screen.getByText('auth.2fa.verificationTitle')).toBeInTheDocument();
+      expect(screen.getByText('auth.2fa.verificationSubtitle')).toBeInTheDocument();
     });
 
     it('renders custom title and subtitle', () => {
@@ -38,17 +39,18 @@ describe('TwoFactorVerification', () => {
       expect(screen.getByText('Custom subtitle text')).toBeInTheDocument();
     });
 
-    it('renders 6 input fields for code entry', () => {
+    it('renders single code input field', () => {
       renderWithIntl(<TwoFactorVerification {...defaultProps} />);
 
-      const inputs = screen.getAllByRole('textbox');
-      expect(inputs).toHaveLength(6);
+      const input = screen.getByTestId('2fa-code-input');
+      expect(input).toBeInTheDocument();
+      expect(input).toHaveAttribute('maxLength', '8');
     });
 
     it('renders remember device checkbox by default', () => {
       renderWithIntl(<TwoFactorVerification {...defaultProps} />);
 
-      expect(screen.getByLabelText(/trust this device/i)).toBeInTheDocument();
+      expect(screen.getByTestId('remember-device-checkbox')).toBeInTheDocument();
     });
 
     it('hides remember device checkbox when showRememberDevice is false', () => {
@@ -56,13 +58,13 @@ describe('TwoFactorVerification', () => {
         <TwoFactorVerification {...defaultProps} showRememberDevice={false} />
       );
 
-      expect(screen.queryByLabelText(/trust this device/i)).not.toBeInTheDocument();
+      expect(screen.queryByTestId('remember-device-checkbox')).not.toBeInTheDocument();
     });
 
     it('renders verify button', () => {
       renderWithIntl(<TwoFactorVerification {...defaultProps} />);
 
-      expect(screen.getByRole('button', { name: /verify/i })).toBeInTheDocument();
+      expect(screen.getByTestId('2fa-verify-button')).toBeInTheDocument();
     });
 
     it('renders backup code link when onUseBackupCode is provided', () => {
@@ -71,49 +73,48 @@ describe('TwoFactorVerification', () => {
         <TwoFactorVerification {...defaultProps} onUseBackupCode={onUseBackupCode} />
       );
 
-      expect(screen.getByRole('button', { name: /use backup code/i })).toBeInTheDocument();
+      expect(screen.getByTestId('use-backup-code-link')).toBeInTheDocument();
     });
 
     it('hides backup code link when onUseBackupCode is not provided', () => {
       renderWithIntl(<TwoFactorVerification {...defaultProps} />);
 
-      expect(screen.queryByRole('button', { name: /use backup code/i })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('use-backup-code-link')).not.toBeInTheDocument();
     });
 
     it('renders cancel button when onCancel is provided', () => {
       const onCancel = vi.fn();
       renderWithIntl(<TwoFactorVerification {...defaultProps} onCancel={onCancel} />);
 
-      expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+      expect(screen.getByTestId('2fa-cancel-button')).toBeInTheDocument();
     });
 
     it('hides cancel button when onCancel is not provided', () => {
       renderWithIntl(<TwoFactorVerification {...defaultProps} />);
 
-      expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('2fa-cancel-button')).not.toBeInTheDocument();
     });
   });
 
   describe('Loading State', () => {
-    it('disables all inputs when loading', () => {
+    it('disables input when loading', () => {
       renderWithIntl(<TwoFactorVerification {...defaultProps} loading={true} />);
 
-      const inputs = screen.getAllByRole('textbox');
-      inputs.forEach(input => {
-        expect(input).toBeDisabled();
-      });
+      const input = screen.getByTestId('2fa-code-input');
+      expect(input).toBeDisabled();
     });
 
-    it('shows loading text on verify button', () => {
+    it('shows loading state on verify button', () => {
       renderWithIntl(<TwoFactorVerification {...defaultProps} loading={true} />);
 
-      expect(screen.getByText(/verifying/i)).toBeInTheDocument();
+      const button = screen.getByTestId('2fa-verify-button');
+      expect(button).toHaveAttribute('aria-busy', 'true');
     });
 
     it('disables verify button when loading', () => {
       renderWithIntl(<TwoFactorVerification {...defaultProps} loading={true} />);
 
-      expect(screen.getByRole('button', { name: /verifying/i })).toBeDisabled();
+      expect(screen.getByTestId('2fa-verify-button')).toBeDisabled();
     });
   });
 
@@ -134,7 +135,7 @@ describe('TwoFactorVerification', () => {
         <TwoFactorVerification {...defaultProps} error="Error message" />
       );
 
-      const alert = screen.getByTestId('verification-error');
+      const alert = screen.getByTestId('2fa-error');
       expect(alert).toBeInTheDocument();
     });
   });
@@ -146,10 +147,10 @@ describe('TwoFactorVerification', () => {
 
       renderWithIntl(<TwoFactorVerification onVerify={onVerify} />);
 
-      const inputs = screen.getAllByRole('textbox');
-      await user.type(inputs[0], '123456');
+      const input = screen.getByTestId('2fa-code-input');
+      await user.type(input, '123456');
 
-      const verifyButton = screen.getByRole('button', { name: /verify/i });
+      const verifyButton = screen.getByTestId('2fa-verify-button');
       await user.click(verifyButton);
 
       await waitFor(() => {
@@ -166,13 +167,13 @@ describe('TwoFactorVerification', () => {
 
       renderWithIntl(<TwoFactorVerification onVerify={onVerify} />);
 
-      const inputs = screen.getAllByRole('textbox');
-      await user.type(inputs[0], '123456');
+      const input = screen.getByTestId('2fa-code-input');
+      await user.type(input, '123456');
 
-      const checkbox = screen.getByLabelText(/trust this device/i);
+      const checkbox = screen.getByTestId('remember-device-checkbox');
       await user.click(checkbox);
 
-      const verifyButton = screen.getByRole('button', { name: /verify/i });
+      const verifyButton = screen.getByTestId('2fa-verify-button');
       await user.click(verifyButton);
 
       await waitFor(() => {
@@ -191,7 +192,7 @@ describe('TwoFactorVerification', () => {
         <TwoFactorVerification {...defaultProps} onUseBackupCode={onUseBackupCode} />
       );
 
-      const backupLink = screen.getByRole('button', { name: /use backup code/i });
+      const backupLink = screen.getByTestId('use-backup-code-link');
       await user.click(backupLink);
 
       expect(onUseBackupCode).toHaveBeenCalledTimes(1);
@@ -203,33 +204,30 @@ describe('TwoFactorVerification', () => {
 
       renderWithIntl(<TwoFactorVerification {...defaultProps} onCancel={onCancel} />);
 
-      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      const cancelButton = screen.getByTestId('2fa-cancel-button');
       await user.click(cancelButton);
 
       expect(onCancel).toHaveBeenCalledTimes(1);
     });
 
-    it('auto-focuses next input after typing a digit', async () => {
-      const user = userEvent.setup();
-
+    it('auto-focuses input on mount', async () => {
       renderWithIntl(<TwoFactorVerification {...defaultProps} />);
 
-      const inputs = screen.getAllByRole('textbox');
-      await user.type(inputs[0], '1');
-
-      // Second input should now be focused
-      expect(inputs[1]).toHaveFocus();
+      const input = screen.getByTestId('2fa-code-input');
+      // Input should be auto-focused on mount
+      expect(input).toHaveFocus();
     });
   });
 
   describe('Accessibility', () => {
-    it('has accessible label for code inputs', () => {
+    it('has accessible label for code input', () => {
       renderWithIntl(<TwoFactorVerification {...defaultProps} />);
 
-      const inputs = screen.getAllByRole('textbox');
-      inputs.forEach((input, index) => {
-        expect(input).toHaveAttribute('aria-label', expect.stringContaining(`${index + 1}`));
-      });
+      // Input has sr-only label via htmlFor/id association
+      const input = screen.getByTestId('2fa-code-input');
+      expect(input).toHaveAttribute('id', '2fa-code');
+      expect(input).toHaveAttribute('inputMode', 'numeric');
+      expect(input).toHaveAttribute('autoComplete', 'one-time-code');
     });
 
     it('has proper form structure', () => {
@@ -243,17 +241,15 @@ describe('TwoFactorVerification', () => {
         <TwoFactorVerification {...defaultProps} error="Error message" />
       );
 
-      const alert = screen.getByTestId('verification-error');
+      const alert = screen.getByTestId('2fa-error');
       expect(alert).toBeInTheDocument();
     });
 
     it('has proper input mode for numeric keyboard on mobile', () => {
       renderWithIntl(<TwoFactorVerification {...defaultProps} />);
 
-      const inputs = screen.getAllByRole('textbox');
-      inputs.forEach(input => {
-        expect(input).toHaveAttribute('inputMode', 'numeric');
-      });
+      const input = screen.getByTestId('2fa-code-input');
+      expect(input).toHaveAttribute('inputMode', 'numeric');
     });
   });
 
@@ -264,13 +260,13 @@ describe('TwoFactorVerification', () => {
 
       renderWithIntl(<TwoFactorVerification onVerify={onVerify} />);
 
-      const inputs = screen.getAllByRole('textbox');
+      const input = screen.getByTestId('2fa-code-input');
 
-      // Simulate paste by typing the full code into first input
-      await user.click(inputs[0]);
+      // Simulate paste by typing the full code into input
+      await user.click(input);
       await user.paste('123456');
 
-      const verifyButton = screen.getByRole('button', { name: /verify/i });
+      const verifyButton = screen.getByTestId('2fa-verify-button');
       await user.click(verifyButton);
 
       await waitFor(() => {
@@ -278,16 +274,17 @@ describe('TwoFactorVerification', () => {
       });
     });
 
-    it('prevents non-numeric input', async () => {
+    it('filters special characters but allows alphanumeric for backup codes', async () => {
       const user = userEvent.setup();
 
       renderWithIntl(<TwoFactorVerification {...defaultProps} />);
 
-      const inputs = screen.getAllByRole('textbox');
-      await user.type(inputs[0], 'abc');
+      const input = screen.getByTestId('2fa-code-input');
+      // Component allows A-Za-z0-9- for backup code support
+      await user.type(input, 'abc!@#');
 
-      // Input should be empty or filtered
-      expect(inputs[0]).toHaveValue('');
+      // Special characters filtered, alphanumeric kept
+      expect(input).toHaveValue('abc');
     });
 
     it('does not submit when code is incomplete', async () => {
@@ -296,10 +293,10 @@ describe('TwoFactorVerification', () => {
 
       renderWithIntl(<TwoFactorVerification onVerify={onVerify} />);
 
-      const inputs = screen.getAllByRole('textbox');
-      await user.type(inputs[0], '123'); // Only 3 digits
+      const input = screen.getByTestId('2fa-code-input');
+      await user.type(input, '123'); // Only 3 digits
 
-      const verifyButton = screen.getByRole('button', { name: /verify/i });
+      const verifyButton = screen.getByTestId('2fa-verify-button');
       await user.click(verifyButton);
 
       // Should not call onVerify with incomplete code

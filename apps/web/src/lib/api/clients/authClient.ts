@@ -27,6 +27,7 @@ import {
   ApiKeyLoginResponseSchema,
   UserSearchResultSchema,
   type AuthUser,
+  type LoginResponse,
   type RequestPasswordResetResponse,
   type ConfirmPasswordResetResponse,
   type SessionStatusResponse,
@@ -102,9 +103,36 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
     /**
      * Login with email and password
      * POST /api/v1/auth/login
+     *
+     * Returns LoginResponse which may indicate 2FA is required.
+     * If requiresTwoFactor is true, use verify2FALogin() to complete authentication.
      */
-    async login(request: LoginRequest): Promise<AuthUser> {
-      const response = await httpClient.post('/api/v1/auth/login', request, LoginResponseSchema);
+    async login(request: LoginRequest): Promise<LoginResponse> {
+      return httpClient.post('/api/v1/auth/login', request, LoginResponseSchema);
+    },
+
+    /**
+     * Complete 2FA verification during login
+     * POST /api/v1/auth/2fa/verify
+     *
+     * Called after login() returns requiresTwoFactor: true
+     * @param sessionToken - The tempSessionToken from login response
+     * @param code - 6-digit TOTP code or backup code
+     * @param rememberDevice - Optional: trust this device for 30 days
+     */
+    async verify2FALogin(
+      sessionToken: string,
+      code: string,
+      rememberDevice?: boolean
+    ): Promise<AuthUser> {
+      const response = await httpClient.post(
+        '/api/v1/auth/2fa/verify',
+        { sessionToken, code, rememberDevice },
+        CurrentUserResponseSchema
+      );
+      if (!response?.user) {
+        throw new Error('2FA verification failed');
+      }
       return response.user;
     },
 

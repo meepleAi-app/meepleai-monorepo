@@ -23,9 +23,12 @@ export type AuthUser = z.infer<typeof AuthUserSchema>;
 
 /**
  * Schema for login response
+ * Supports both normal login and 2FA challenge flow
  */
 export const LoginResponseSchema = z.object({
-  user: AuthUserSchema,
+  user: AuthUserSchema.nullable().optional(),
+  requiresTwoFactor: z.boolean().default(false),
+  tempSessionToken: z.string().nullable().optional(),
 });
 
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;

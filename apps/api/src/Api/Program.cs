@@ -372,29 +372,10 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
 
-        // ISSUE-2512: Auto-configuration pipeline - Seed admin user, test user, and AI models
+        // ISSUE-2512: Auto-configuration pipeline - Seed admin user, test user, AI models,
+        // shared games, badges, and rate limits (environment-independent, runs on first startup only)
         var autoConfigService = scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.Administration.Application.Services.IAutoConfigurationService>();
         await autoConfigService.InitializeAsync().ConfigureAwait(false);
-
-        // Seed SharedGameCatalog from PDF rulebooks (Issue: SharedGame seed from rulebooks ≤ 10MB)
-        if (app.Environment.IsDevelopment())
-        {
-            var adminUser = await db.Users.FirstOrDefaultAsync(u => u.Role == "admin").ConfigureAwait(false);
-            if (adminUser != null)
-            {
-                var bggService = scope.ServiceProvider.GetRequiredService<IBggApiService>();
-                await Api.Infrastructure.Seeders.SharedGameSeeder.SeedSharedGamesAsync(
-                    db, bggService, adminUser.Id, app.Logger).ConfigureAwait(false);
-
-                // Seed predefined badges (ISSUE-2731)
-                await Api.Infrastructure.Seeders.BadgeSeeder.SeedBadgesAsync(
-                    db, app.Logger).ConfigureAwait(false);
-
-                // Seed default rate limit configurations (ISSUE-2809)
-                await Api.Infrastructure.Seeders.RateLimitConfigSeeder.SeedRateLimitConfigsAsync(
-                    db, app.Logger).ConfigureAwait(false);
-            }
-        }
     }
 }
 

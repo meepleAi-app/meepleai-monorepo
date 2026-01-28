@@ -6,6 +6,7 @@
  *
  * Route: /games/catalog
  * Features:
+ * - Hero section with Top 5 BGG Rating + Latest 5 Added
  * - Responsive grid (1→2→3 columns)
  * - Search with debounce
  * - Advanced filters (complexity, players, playtime, categories, mechanics)
@@ -20,7 +21,7 @@
 
 import { useState, useMemo } from 'react';
 
-import { AlertCircle, Library } from 'lucide-react';
+import { AlertCircle, Library, Star, Clock } from 'lucide-react';
 import Link from 'next/link';
 
 import { CatalogFilters } from '@/components/catalog/CatalogFilters';
@@ -81,6 +82,25 @@ export default function SharedGamesCatalogPage() {
   const { data: gamesData, isLoading, error } = useSharedGames(queryParams);
   const { data: categories = [] } = useGameCategories();
   const { data: mechanics = [] } = useGameMechanics();
+
+  // Hero section: Top 5 by BGG Rating
+  const { data: topRatedData, isLoading: topRatedLoading } = useSharedGames({
+    sortBy: 'AverageRating',
+    sortDescending: true,
+    pageSize: 5,
+    page: 1,
+  });
+
+  // Hero section: Latest 5 Added
+  const { data: latestAddedData, isLoading: latestAddedLoading } = useSharedGames({
+    sortBy: 'CreatedAt',
+    sortDescending: true,
+    pageSize: 5,
+    page: 1,
+  });
+
+  const topRatedGames = topRatedData?.items || [];
+  const latestAddedGames = latestAddedData?.items || [];
 
   const games = gamesData?.items || [];
   const total = gamesData?.total || 0;
@@ -153,6 +173,55 @@ export default function SharedGamesCatalogPage() {
               La Mia Libreria
             </Button>
           </Link>
+        </div>
+
+        {/* Hero Section: Top Rated + Latest Added */}
+        <div className="mb-8 space-y-6">
+          {/* Top 5 by BGG Rating */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+              <h2 className="font-heading text-xl font-semibold">Top 5 per Valutazione BGG</h2>
+            </div>
+            {topRatedLoading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-72 w-full" />
+                ))}
+              </div>
+            ) : topRatedGames.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {topRatedGames.map((game) => (
+                  <GameCatalogCard key={game.id} game={game} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">Nessun gioco con valutazione disponibile.</p>
+            )}
+          </section>
+
+          {/* Latest 5 Added */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="h-5 w-5 text-blue-500" />
+              <h2 className="font-heading text-xl font-semibold">Ultimi 5 Aggiunti</h2>
+            </div>
+            {latestAddedLoading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-72 w-full" />
+                ))}
+              </div>
+            ) : latestAddedGames.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {latestAddedGames.map((game) => (
+                  <GameCatalogCard key={game.id} game={game} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">Nessun gioco aggiunto di recente.</p>
+            )}
+          </section>
         </div>
 
         {/* Filters and Content */}

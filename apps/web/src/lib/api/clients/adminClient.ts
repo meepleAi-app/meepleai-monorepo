@@ -431,12 +431,14 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       pageSize?: number;
       search?: string;
       role?: string;
+      status?: string;
     }): Promise<PagedResult<AdminUser>> {
       const queryParams = new URLSearchParams();
       if (params?.page) queryParams.set('page', params.page.toString());
       if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
       if (params?.search) queryParams.set('search', params.search);
       if (params?.role && params.role !== 'all') queryParams.set('role', params.role);
+      if (params?.status && params.status !== 'all') queryParams.set('status', params.status);
 
       const query = queryParams.toString();
       const result = await httpClient.get<PagedResult<AdminUser>>(
@@ -444,6 +446,32 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         PagedResultSchema(AdminUserSchema)
       );
       return result ?? { items: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Suspend a user account (admin only)
+     * POST /api/v1/admin/users/{userId}/suspend
+     */
+    async suspendUser(userId: string, reason?: string): Promise<AdminUser> {
+      const response = await httpClient.post(
+        `/api/v1/admin/users/${userId}/suspend`,
+        { reason },
+        AdminUserResponseSchema
+      );
+      return response.user;
+    },
+
+    /**
+     * Unsuspend (reactivate) a user account (admin only)
+     * POST /api/v1/admin/users/{userId}/unsuspend
+     */
+    async unsuspendUser(userId: string): Promise<AdminUser> {
+      const response = await httpClient.post(
+        `/api/v1/admin/users/${userId}/unsuspend`,
+        {},
+        AdminUserResponseSchema
+      );
+      return response.user;
     },
 
     // ========== N8N Workflow Templates ==========

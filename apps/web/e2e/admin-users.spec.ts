@@ -408,3 +408,362 @@ test.describe('Admin User Management E2E Flow', () => {
     await expect(page.getByText(getTextMatcher('admin.users.deleteUser'))).not.toBeVisible();
   });
 });
+
+// ========== ISSUE #2891: User Management E2E Tests ==========
+test.describe('Issue #2891 - User Management E2E Tests', () => {
+  // DoD #1: Test: Search user by email
+  test('search user by email', async ({ adminPage: page }) => {
+    const adminHelper = new AdminHelper(page);
+
+    const searchUsers = [
+      {
+        id: 'search-1',
+        email: 'alice@example.com',
+        displayName: 'Alice Smith',
+        role: 'User',
+        createdAt: new Date().toISOString(),
+        lastSeenAt: null,
+        isSuspended: false,
+      },
+      {
+        id: 'search-2',
+        email: 'bob@example.com',
+        displayName: 'Bob Jones',
+        role: 'Editor',
+        createdAt: new Date().toISOString(),
+        lastSeenAt: null,
+        isSuspended: false,
+      },
+      {
+        id: 'search-3',
+        email: 'charlie@example.com',
+        displayName: 'Charlie Brown',
+        role: 'Admin',
+        createdAt: new Date().toISOString(),
+        lastSeenAt: null,
+        isSuspended: false,
+      },
+    ];
+
+    await adminHelper.mockUsersCRUD(searchUsers);
+    await page.goto('http://localhost:3000/admin/users');
+
+    // Verify all users visible initially
+    await expect(page.getByText('alice@example.com')).toBeVisible();
+    await expect(page.getByText('bob@example.com')).toBeVisible();
+    await expect(page.getByText('charlie@example.com')).toBeVisible();
+
+    // Search for Alice by email
+    await page.getByPlaceholder(/search/i).fill('alice');
+    await expect(page.getByText('alice@example.com')).toBeVisible();
+    await expect(page.getByText('bob@example.com')).not.toBeVisible();
+    await expect(page.getByText('charlie@example.com')).not.toBeVisible();
+
+    // Clear and search for Bob
+    await page.getByPlaceholder(/search/i).clear();
+    await page.getByPlaceholder(/search/i).fill('bob');
+    await expect(page.getByText('bob@example.com')).toBeVisible();
+    await expect(page.getByText('alice@example.com')).not.toBeVisible();
+  });
+
+  // DoD #2: Test: Filter by role (Admin, Editor, User)
+  test('filter by role (Admin, Editor, User)', async ({ adminPage: page }) => {
+    const adminHelper = new AdminHelper(page);
+
+    const roleUsers = [
+      {
+        id: 'role-admin',
+        email: 'admin@example.com',
+        displayName: 'Admin User',
+        role: 'Admin',
+        createdAt: new Date().toISOString(),
+        lastSeenAt: null,
+        isSuspended: false,
+      },
+      {
+        id: 'role-editor',
+        email: 'editor@example.com',
+        displayName: 'Editor User',
+        role: 'Editor',
+        createdAt: new Date().toISOString(),
+        lastSeenAt: null,
+        isSuspended: false,
+      },
+      {
+        id: 'role-user',
+        email: 'user@example.com',
+        displayName: 'Regular User',
+        role: 'User',
+        createdAt: new Date().toISOString(),
+        lastSeenAt: null,
+        isSuspended: false,
+      },
+    ];
+
+    await adminHelper.mockUsersCRUD(roleUsers);
+    await page.goto('http://localhost:3000/admin/users');
+
+    // Filter by Admin
+    await page.getByRole('combobox', { name: /filter by role/i }).selectOption('Admin');
+    await expect(page.getByRole('cell', { name: 'admin@example.com' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'editor@example.com' })).not.toBeVisible();
+    await expect(page.getByRole('cell', { name: 'user@example.com' })).not.toBeVisible();
+
+    // Filter by Editor
+    await page.getByRole('combobox', { name: /filter by role/i }).selectOption('Editor');
+    await expect(page.getByRole('cell', { name: 'editor@example.com' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'admin@example.com' })).not.toBeVisible();
+    await expect(page.getByRole('cell', { name: 'user@example.com' })).not.toBeVisible();
+
+    // Filter by User
+    await page.getByRole('combobox', { name: /filter by role/i }).selectOption('User');
+    await expect(page.getByRole('cell', { name: 'user@example.com' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'admin@example.com' })).not.toBeVisible();
+    await expect(page.getByRole('cell', { name: 'editor@example.com' })).not.toBeVisible();
+
+    // Reset to All Roles
+    await page.getByRole('combobox', { name: /filter by role/i }).selectOption('all');
+    await expect(page.getByRole('cell', { name: 'admin@example.com' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'editor@example.com' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'user@example.com' })).toBeVisible();
+  });
+
+  // DoD #3: Test: Filter by status (Active, Suspended)
+  test('filter by status (Active, Suspended)', async ({ adminPage: page }) => {
+    const adminHelper = new AdminHelper(page);
+
+    const statusUsers = [
+      {
+        id: 'status-active',
+        email: 'active@example.com',
+        displayName: 'Active User',
+        role: 'User',
+        createdAt: new Date().toISOString(),
+        lastSeenAt: null,
+        isSuspended: false,
+      },
+      {
+        id: 'status-suspended',
+        email: 'suspended@example.com',
+        displayName: 'Suspended User',
+        role: 'User',
+        createdAt: new Date().toISOString(),
+        lastSeenAt: null,
+        isSuspended: true,
+        suspendReason: 'Violation of terms',
+      },
+    ];
+
+    await adminHelper.mockUsersCRUD(statusUsers);
+    await page.goto('http://localhost:3000/admin/users');
+
+    // Verify both users visible initially
+    await expect(page.getByRole('cell', { name: 'active@example.com' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'suspended@example.com' })).toBeVisible();
+
+    // Verify status badges
+    await expect(page.getByTestId('status-badge-status-active')).toContainText('Active');
+    await expect(page.getByTestId('status-badge-status-suspended')).toContainText('Suspended');
+
+    // Filter by Active
+    await page.getByTestId('status-filter').selectOption('active');
+    await expect(page.getByRole('cell', { name: 'active@example.com' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'suspended@example.com' })).not.toBeVisible();
+
+    // Filter by Suspended
+    await page.getByTestId('status-filter').selectOption('suspended');
+    await expect(page.getByRole('cell', { name: 'suspended@example.com' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'active@example.com' })).not.toBeVisible();
+
+    // Reset to All Status
+    await page.getByTestId('status-filter').selectOption('all');
+    await expect(page.getByRole('cell', { name: 'active@example.com' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'suspended@example.com' })).toBeVisible();
+  });
+
+  // DoD #4: Test: Change user role (User → Editor)
+  test('change user role (User → Editor)', async ({ adminPage: page }) => {
+    const adminHelper = new AdminHelper(page);
+
+    const roleChangeUsers = [
+      {
+        id: 'role-change-1',
+        email: 'tobe-editor@example.com',
+        displayName: 'User To Editor',
+        role: 'User',
+        createdAt: new Date().toISOString(),
+        lastSeenAt: null,
+        isSuspended: false,
+      },
+    ];
+
+    await adminHelper.mockUsersCRUD(roleChangeUsers);
+    await page.goto('http://localhost:3000/admin/users');
+
+    // Verify user shows as User role
+    const userRow = page.locator('tr:has-text("tobe-editor@example.com")');
+    await expect(userRow.locator('span:has-text("User")')).toBeVisible();
+
+    // Click Edit button
+    await userRow.getByRole('button', { name: /edit/i }).click();
+
+    // Change role to Editor
+    await page.getByLabel(/role/i).selectOption('Editor');
+
+    // Save changes
+    await page.getByTestId('submit-user-form').click();
+
+    // Verify success toast
+    await expect(page.getByText(/updated successfully/i)).toBeVisible();
+
+    // Verify role changed to Editor
+    await expect(userRow.locator('span:has-text("Editor")')).toBeVisible();
+  });
+
+  // DoD #5: Test: Suspend user account
+  test('suspend user account', async ({ adminPage: page }) => {
+    const adminHelper = new AdminHelper(page);
+
+    const suspendUsers = [
+      {
+        id: 'to-suspend',
+        email: 'tosuspend@example.com',
+        displayName: 'User To Suspend',
+        role: 'User',
+        createdAt: new Date().toISOString(),
+        lastSeenAt: null,
+        isSuspended: false,
+      },
+    ];
+
+    await adminHelper.mockUsersCRUD(suspendUsers);
+    await page.goto('http://localhost:3000/admin/users');
+
+    // Verify user is active
+    await expect(page.getByTestId('status-badge-to-suspend')).toContainText('Active');
+
+    // Click Suspend button
+    await page.getByTestId('suspend-to-suspend').click();
+
+    // Verify confirmation dialog
+    await expect(page.getByText(/suspend user/i)).toBeVisible();
+    await expect(page.getByText(/are you sure/i)).toBeVisible();
+
+    // Confirm suspension
+    await page.getByRole('button', { name: /confirm/i }).click();
+
+    // Verify success toast
+    await expect(page.getByText(/suspended successfully/i)).toBeVisible();
+
+    // Verify status changed to Suspended
+    await expect(page.getByTestId('status-badge-to-suspend')).toContainText('Suspended');
+
+    // Verify Activate button now visible (instead of Suspend)
+    await expect(page.getByTestId('unsuspend-to-suspend')).toBeVisible();
+  });
+
+  // DoD #6: Test: Bulk select and export CSV
+  test('bulk select and export CSV', async ({ adminPage: page }) => {
+    const adminHelper = new AdminHelper(page);
+
+    const exportUsers = [
+      {
+        id: 'export-1',
+        email: 'export1@example.com',
+        displayName: 'Export User 1',
+        role: 'User',
+        createdAt: new Date().toISOString(),
+        lastSeenAt: null,
+        isSuspended: false,
+      },
+      {
+        id: 'export-2',
+        email: 'export2@example.com',
+        displayName: 'Export User 2',
+        role: 'Editor',
+        createdAt: new Date().toISOString(),
+        lastSeenAt: null,
+        isSuspended: false,
+      },
+      {
+        id: 'export-3',
+        email: 'export3@example.com',
+        displayName: 'Export User 3',
+        role: 'Admin',
+        createdAt: new Date().toISOString(),
+        lastSeenAt: null,
+        isSuspended: false,
+      },
+    ];
+
+    await adminHelper.mockUsersCRUD(exportUsers);
+    await page.goto('http://localhost:3000/admin/users');
+
+    // Verify users loaded
+    await expect(page.getByText('export1@example.com')).toBeVisible();
+
+    // Select first two users via checkboxes
+    const checkboxes = page.getByRole('checkbox');
+    await checkboxes.nth(1).check(); // First user
+    await checkboxes.nth(2).check(); // Second user
+
+    // Verify bulk action bar shows selection count
+    await expect(page.getByText(/2.*(selected|user)/i)).toBeVisible();
+
+    // Setup download listener
+    const downloadPromise = page.waitForEvent('download');
+
+    // Click Export CSV button
+    await page.getByRole('button', { name: /esporta csv/i }).click();
+
+    // Verify download started
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/users_export.*\.csv/);
+
+    // Verify success toast
+    await expect(page.getByText(/esportati in csv/i)).toBeVisible();
+  });
+
+  // DoD #7: Test: Pagination navigation (already exists above, but adding explicit test)
+  test('pagination navigation with multiple pages', async ({ adminPage: page }) => {
+    const adminHelper = new AdminHelper(page);
+
+    // Create 25 users to test pagination (20 per page)
+    const paginationUsers = Array.from({ length: 25 }, (_, i) => ({
+      id: `page-user-${i + 1}`,
+      email: `pageuser${i + 1}@example.com`,
+      displayName: `Page User ${i + 1}`,
+      role: 'User',
+      createdAt: new Date().toISOString(),
+      lastSeenAt: null,
+      isSuspended: false,
+    }));
+
+    await adminHelper.mockUsersCRUD(paginationUsers);
+    await page.goto('http://localhost:3000/admin/users');
+
+    // Verify page 1 info
+    await expect(page.getByText(/page 1 of 2/i)).toBeVisible();
+    await expect(page.getByText(/showing 1 to 20 of 25/i)).toBeVisible();
+
+    // Verify Previous button is disabled on first page
+    await expect(page.getByTestId('pagination-previous')).toBeDisabled();
+
+    // Click Next to go to page 2
+    await page.getByTestId('pagination-next').click();
+
+    // Verify page 2 info
+    await expect(page.getByText(/page 2 of 2/i)).toBeVisible();
+    await expect(page.getByText(/showing 21 to 25 of 25/i)).toBeVisible();
+
+    // Verify Next button is disabled on last page
+    await expect(page.getByTestId('pagination-next')).toBeDisabled();
+
+    // Verify Previous is now enabled
+    await expect(page.getByTestId('pagination-previous')).toBeEnabled();
+
+    // Go back to page 1
+    await page.getByTestId('pagination-previous').click();
+    await expect(page.getByText(/page 1 of 2/i)).toBeVisible();
+  });
+});

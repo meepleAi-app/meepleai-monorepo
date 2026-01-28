@@ -55,6 +55,10 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
         if (!user.VerifyPassword(command.Password))
             throw new DomainException("Invalid email or password");
 
+        // Issue #2886: Check if user is suspended
+        if (user.IsSuspended)
+            throw new DomainException("Account is suspended");
+
         // Check if 2FA is required
         if (user.RequiresTwoFactor())
         {

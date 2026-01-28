@@ -45,6 +45,7 @@ internal static class AuthenticationEndpoints
         group.MapTwoFactorEndpoints();
         group.MapOAuthEndpoints(CookieHelpers.WriteSessionCookie);
         group.MapPasswordResetEndpoints(CookieHelpers.WriteSessionCookie);
+        group.MapEmailVerificationEndpoints(); // ISSUE-3071: Email verification
 
         return group;
     }

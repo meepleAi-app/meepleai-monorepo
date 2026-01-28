@@ -205,14 +205,19 @@ export default function LibraryPageClient() {
     });
   };
 
-  // Derive data - always computed to ensure hooks are called consistently
-  const games = libraryData?.items ?? [];
+  // Derive data - memoized to ensure stable reference across renders
+  // This prevents useMemo dependency warnings for downstream computations
+  const games = useMemo(() => libraryData?.items ?? [], [libraryData?.items]);
   const hasGames = games.length > 0;
 
   // Client-side search filtering (until backend supports it)
-  const filteredGames = searchQuery
-    ? games.filter(game => game.gameTitle.toLowerCase().includes(searchQuery.toLowerCase()))
-    : games;
+  const filteredGames = useMemo(
+    () =>
+      searchQuery
+        ? games.filter(game => game.gameTitle.toLowerCase().includes(searchQuery.toLowerCase()))
+        : games,
+    [games, searchQuery]
+  );
 
   // Calculate state counts for filter badges (Issue #2866)
   // Must be called before any early returns to follow React hooks rules

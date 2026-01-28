@@ -111,7 +111,7 @@ export interface UnifiedHeaderProps {
   className?: string;
 }
 
-export function UnifiedHeader({ className }: UnifiedHeaderProps): JSX.Element {
+export function UnifiedHeader({ className }: UnifiedHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: user } = useCurrentUser();

@@ -208,13 +208,14 @@ public class EmailVerificationServiceTests
 
         var token = "test-verification-token-expired";
         var tokenHash = Api.Helpers.CryptographyHelper.ComputeSha256HashBase64(token);
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var verification = new EmailVerificationEntity
         {
             Id = Guid.NewGuid(),
             UserId = userId,
             TokenHash = tokenHash,
-            ExpiresAt = DateTime.UtcNow.AddHours(-1), // Expired
-            CreatedAt = DateTime.UtcNow.AddHours(-25)
+            ExpiresAt = now.AddHours(-1), // Expired relative to fake time
+            CreatedAt = now.AddHours(-25)
         };
         dbContext.EmailVerifications.Add(verification);
         await dbContext.SaveChangesAsync(TestCancellationToken);

@@ -13,7 +13,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-import { Search, X, SortAsc, Heart, Sparkles, Share2, Star } from 'lucide-react';
+import { Search, X, SortAsc, Heart, Sparkles, Share2, Star, Package } from 'lucide-react';
 
 import {
   Select,
@@ -107,6 +107,13 @@ const filterChips: FilterChip[] = [
     color: 'bg-muted text-muted-foreground hover:bg-muted/80',
     activeColor: 'bg-yellow-600 text-white',
   },
+  {
+    id: 'Owned',
+    label: 'Posseduto',
+    icon: <Package className="h-3 w-3" />,
+    color: 'bg-muted text-muted-foreground hover:bg-muted/80',
+    activeColor: 'bg-blue-600 text-white',
+  },
 ];
 
 export function LibraryFilters({
@@ -197,6 +204,8 @@ export function LibraryFilters({
         return stateCounts.inPrestito;
       case 'Wishlist':
         return stateCounts.wishlist;
+      case 'Owned':
+        return stateCounts.owned;
       default:
         return undefined;
     }

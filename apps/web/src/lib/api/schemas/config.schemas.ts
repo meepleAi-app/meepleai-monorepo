@@ -26,9 +26,27 @@ export const SystemConfigurationDtoSchema = z.object({
   createdByUserId: z.string().uuid(),
   updatedByUserId: z.string().uuid().nullable(),
   lastToggledAt: z.string().datetime().nullable(),
+  // Tier-based feature flags (Issue #3079) - optional until backend #3073 completes
+  tierFree: z.boolean().optional(),
+  tierNormal: z.boolean().optional(),
+  tierPremium: z.boolean().optional(),
 });
 
 export type SystemConfigurationDto = z.infer<typeof SystemConfigurationDtoSchema>;
+
+// ========== Subscription Tiers (Issue #3079) ==========
+
+export const SubscriptionTierSchema = z.enum(['Free', 'Normal', 'Premium']);
+
+export type SubscriptionTier = z.infer<typeof SubscriptionTierSchema>;
+
+export const TIER_DESCRIPTIONS: Record<SubscriptionTier, string> = {
+  Free: 'Basic access with limited features',
+  Normal: 'Standard subscription with most features',
+  Premium: 'Full access to all features',
+};
+
+export const TIER_ORDER: SubscriptionTier[] = ['Free', 'Normal', 'Premium'];
 
 // ========== Paged Results ==========
 

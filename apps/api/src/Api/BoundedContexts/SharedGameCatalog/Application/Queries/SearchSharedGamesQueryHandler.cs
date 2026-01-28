@@ -124,6 +124,10 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 ? dbQuery.OrderByDescending(g => g.AverageRating).ThenBy(g => g.Title)
                 : dbQuery.OrderBy(g => g.AverageRating).ThenBy(g => g.Title),
 
+            "CreatedAt" => query.SortDescending
+                ? dbQuery.OrderByDescending(g => g.CreatedAt).ThenBy(g => g.Title)
+                : dbQuery.OrderBy(g => g.CreatedAt).ThenBy(g => g.Title),
+
             _ => query.SortDescending
                 ? dbQuery.OrderByDescending(g => g.Title)
                 : dbQuery.OrderBy(g => g.Title)

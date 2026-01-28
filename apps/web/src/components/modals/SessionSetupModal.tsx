@@ -23,9 +23,10 @@
  * ```
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-import { Plus, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { LoadingButton } from '@/components/loading/LoadingButton';
 import {
@@ -46,6 +47,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+import { useSessionQuotaWithStatus, useInvalidateSessionQuota } from '@/hooks/queries/useSessionQuota';
 import { Game, SessionPlayerDto, GameSessionDto, api } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
@@ -95,6 +97,10 @@ export function SessionSetupModal({
   const minPlayers = game.minPlayers ?? 2;
   const maxPlayers = game.maxPlayers ?? 8;
 
+  // Session quota hook (Issue #3075)
+  const { data: quota, isLoading: quotaLoading } = useSessionQuotaWithStatus(isOpen);
+  const invalidateQuota = useInvalidateSessionQuota();
+
   // Players state (start with minimum players)
   const [players, setPlayers] = useState<PlayerFormData[]>([]);
 
@@ -104,6 +110,42 @@ export function SessionSetupModal({
 
   // Validation state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Track if quota warning toast has been shown this session
+  const [quotaWarningShown, setQuotaWarningShown] = useState(false);
+
+  // Show quota warning toast when near limit (Issue #3075)
+  const showQuotaWarning = useCallback(() => {
+    if (!quota || quotaWarningShown || quota.isUnlimited) return;
+
+    if (quota.warningLevel === 'critical') {
+      toast.warning('Attenzione: stai per raggiungere il limite di sessioni', {
+        description: `Hai ${quota.remainingSlots} slot disponibili su ${quota.maxSessions}`,
+        duration: 5000,
+      });
+      setQuotaWarningShown(true);
+    } else if (quota.warningLevel === 'warning') {
+      toast.info('Ti stai avvicinando al limite di sessioni', {
+        description: `${quota.remainingSlots} slot ancora disponibili`,
+        duration: 4000,
+      });
+      setQuotaWarningShown(true);
+    }
+  }, [quota, quotaWarningShown]);
+
+  // Show warning when modal opens and quota is near limit
+  useEffect(() => {
+    if (isOpen && quota && !quotaLoading) {
+      showQuotaWarning();
+    }
+  }, [isOpen, quota, quotaLoading, showQuotaWarning]);
+
+  // Reset quota warning state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setQuotaWarningShown(false);
+    }
+  }, [isOpen]);
 
   // Initialize players when modal opens
   useEffect(() => {
@@ -227,7 +269,8 @@ export function SessionSetupModal({
         players: sessionPlayers,
       });
 
-      // Success
+      // Success - invalidate quota cache (Issue #3075)
+      invalidateQuota();
       onSessionCreated?.(session);
       onClose();
     } catch (err) {
@@ -263,6 +306,42 @@ export function SessionSetupModal({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Quota limit reached warning (Issue #3075) */}
+          {quota && !quota.canCreateNew && !quota.isUnlimited && (
+            <div
+              className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md"
+              role="alert"
+              data-testid="quota-limit-reached-alert"
+            >
+              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-red-800 dark:text-red-200">
+                <p className="font-medium">Limite sessioni raggiunto</p>
+                <p>
+                  Hai raggiunto il limite di {quota.maxSessions} sessioni attive. Termina una sessione
+                  esistente per iniziarne una nuova.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Quota warning (near limit) */}
+          {quota && quota.canCreateNew && (quota.warningLevel === 'warning' || quota.warningLevel === 'critical') && (
+            <div
+              className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md"
+              role="alert"
+              data-testid="quota-warning-alert"
+            >
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-800 dark:text-amber-200">
+                <p>
+                  {quota.warningLevel === 'critical'
+                    ? `Attenzione: solo ${quota.remainingSlots} slot disponibili su ${quota.maxSessions}`
+                    : `${quota.remainingSlots} slot sessione disponibili su ${quota.maxSessions}`}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Error message */}
           {error && (
             <div
@@ -421,9 +500,17 @@ export function SessionSetupModal({
           <LoadingButton
             type="submit"
             onClick={handleSubmit}
-            isLoading={isSubmitting}
+            isLoading={isSubmitting || quotaLoading}
             loadingText="Starting Session..."
-            disabled={players.length < minPlayers}
+            disabled={
+              players.length < minPlayers ||
+              (quota && !quota.canCreateNew && !quota.isUnlimited)
+            }
+            title={
+              quota && !quota.canCreateNew && !quota.isUnlimited
+                ? 'Limite sessioni raggiunto'
+                : undefined
+            }
           >
             Start Session
           </LoadingButton>

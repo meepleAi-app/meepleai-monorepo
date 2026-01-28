@@ -258,6 +258,19 @@ function addSecurityHeaders(response: NextResponse, requestOrigin?: string): Nex
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const requestOrigin = request.nextUrl.origin;
+  const hostname = request.nextUrl.hostname;
+
+  // ============================================================================
+  // Domain Normalization: Redirect 127.0.0.1 to localhost
+  // ============================================================================
+  // Cookies are domain-specific. If the backend sets cookies for 'localhost',
+  // they won't be sent when accessing via '127.0.0.1'. This redirect ensures
+  // consistent cookie handling by normalizing all requests to use 'localhost'.
+  if (hostname === '127.0.0.1') {
+    const normalizedUrl = new URL(request.url);
+    normalizedUrl.hostname = 'localhost';
+    return NextResponse.redirect(normalizedUrl);
+  }
 
   // Check if user has a session cookie
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);

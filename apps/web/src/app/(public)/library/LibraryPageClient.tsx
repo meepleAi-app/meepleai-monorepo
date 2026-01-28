@@ -1,5 +1,6 @@
 /**
  * Library Page Client Component (Issue #2464, #2613, #2618)
+ * Updated: Issue #3104 - Navigation handled by layout
  *
  * Client-side component for the library page with framer-motion animations.
  * Loaded via next/dynamic with ssr: false to avoid DOMMatrix SSR issues.
@@ -13,8 +14,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpen, CheckSquare, Plus, Share2 } from 'lucide-react';
 import Link from 'next/link';
 
-import { BottomNav } from '@/components/layout/BottomNav';
-import { TopNav } from '@/components/layout/TopNav';
 import {
   QuotaStatusBar,
   LibraryFilters,
@@ -186,47 +185,43 @@ export default function LibraryPageClient() {
   // Loading state with staggered skeleton animations (Issue #2618)
   if (libraryLoading || quotaLoading) {
     return (
-      <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
-        <TopNav />
-        <div className="container mx-auto px-4 py-8 space-y-6">
-          {/* Quota skeleton */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Skeleton className="h-24 w-full" />
-          </motion.div>
+      <div className="container mx-auto px-4 py-8 space-y-6">
+        {/* Quota skeleton */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Skeleton className="h-24 w-full" />
+        </motion.div>
 
-          {/* Filters skeleton */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
-            <Skeleton className="h-16 w-full" />
-          </motion.div>
+        {/* Filters skeleton */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <Skeleton className="h-16 w-full" />
+        </motion.div>
 
-          {/* Cards grid skeleton with staggered animation */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.3,
-                  delay: 0.2 + i * 0.08,
-                  ease: 'easeOut',
-                }}
-              >
-                <Skeleton className="h-64 w-full rounded-lg" />
-              </motion.div>
-            ))}
-          </div>
+        {/* Cards grid skeleton with staggered animation */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.3,
+                delay: 0.2 + i * 0.08,
+                ease: 'easeOut',
+              }}
+            >
+              <Skeleton className="h-64 w-full rounded-lg" />
+            </motion.div>
+          ))}
         </div>
-        <BottomNav />
-      </main>
+      </div>
     );
   }
 
@@ -236,15 +231,11 @@ export default function LibraryPageClient() {
       libraryError instanceof Error ? libraryError.message : String(libraryError || quotaError);
 
     return (
-      <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
-        <TopNav />
-        <div className="container mx-auto px-4 py-8">
-          <Alert variant="destructive">
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        </div>
-        <BottomNav />
-      </main>
+      <div className="container mx-auto px-4 py-8">
+        <Alert variant="destructive">
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
@@ -271,122 +262,118 @@ export default function LibraryPageClient() {
   };
 
   return (
-    <main className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
-      <TopNav />
-
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <h1 className="text-3xl font-bold font-quicksand">La Mia Libreria</h1>
-          <div className="flex gap-2">
-            {/* Share Library Button (Issue #2614) */}
-            {hasGames && (
-              <Button variant="outline" onClick={() => setShareModalOpen(true)}>
-                <Share2 className="mr-2 h-4 w-4" />
-                Condividi
-              </Button>
-            )}
-            {/* Selection Mode Toggle (Issue #2613) */}
-            {hasGames && (
-              <Button
-                variant={selectionMode ? 'secondary' : 'outline'}
-                onClick={toggleSelectionMode}
-              >
-                <CheckSquare className="mr-2 h-4 w-4" />
-                {selectionMode ? 'Annulla Selezione' : 'Seleziona'}
-              </Button>
-            )}
-            <Button asChild>
-              <Link href="/games/catalog">
-                <Plus className="mr-2 h-4 w-4" />
-                Aggiungi Gioco
-              </Link>
+    <div className="container mx-auto px-4 py-8 space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <h1 className="text-3xl font-bold font-quicksand">La Mia Libreria</h1>
+        <div className="flex gap-2">
+          {/* Share Library Button (Issue #2614) */}
+          {hasGames && (
+            <Button variant="outline" onClick={() => setShareModalOpen(true)}>
+              <Share2 className="mr-2 h-4 w-4" />
+              Condividi
             </Button>
-          </div>
+          )}
+          {/* Selection Mode Toggle (Issue #2613) */}
+          {hasGames && (
+            <Button
+              variant={selectionMode ? 'secondary' : 'outline'}
+              onClick={toggleSelectionMode}
+            >
+              <CheckSquare className="mr-2 h-4 w-4" />
+              {selectionMode ? 'Annulla Selezione' : 'Seleziona'}
+            </Button>
+          )}
+          <Button asChild>
+            <Link href="/games/catalog">
+              <Plus className="mr-2 h-4 w-4" />
+              Aggiungi Gioco
+            </Link>
+          </Button>
         </div>
-
-        {/* Quota Status Bar */}
-        {quota && (
-          <QuotaStatusBar
-            currentCount={quota.currentCount}
-            maxAllowed={quota.maxAllowed}
-            userTier={quota.userTier}
-            remainingSlots={quota.remainingSlots}
-            percentageUsed={quota.percentageUsed}
-          />
-        )}
-
-        {/* Filters */}
-        {hasGames && (
-          <LibraryFilters
-            searchQuery={searchQuery}
-            onSearchChange={handleSearchChange}
-            favoritesOnly={filters.favoritesOnly}
-            onFavoritesChange={handleFavoritesChange}
-            sortBy={filters.sortBy}
-            sortDescending={filters.sortDescending}
-            onSortChange={handleSortChange}
-            onClearFilters={handleClearFilters}
-          />
-        )}
-
-        {/* Library Content */}
-        {hasGames ? (
-          <>
-            {filteredGames.length > 0 ? (
-              <motion.div
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-                layout
-              >
-                <AnimatePresence mode="popLayout">
-                  {filteredGames.map((game, index) => (
-                    <UserGameCard
-                      key={game.id}
-                      game={game}
-                      onConfigureAgent={handleConfigureAgent}
-                      onUploadPdf={handleUploadPdf}
-                      onEditNotes={handleEditNotes}
-                      onRemove={handleRemoveGame}
-                      selectionMode={selectionMode}
-                      isSelected={isSelected(game.gameId)}
-                      onSelect={handleGameSelect}
-                      index={index}
-                    />
-                  ))}
-                </AnimatePresence>
-              </motion.div>
-            ) : (
-              /* No Results from Search */
-              <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                  <BookOpen className="h-16 w-16 text-muted-foreground mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">Nessun gioco trovato</h3>
-                  <p className="text-muted-foreground mb-6 max-w-md">
-                    Prova a modificare i filtri o la ricerca per trovare i tuoi giochi.
-                  </p>
-                  <Button variant="outline" onClick={handleClearFilters}>
-                    Pulisci Filtri
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        ) : (
-          /* Empty State */
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <BookOpen className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">La tua libreria è vuota</h3>
-              <p className="text-muted-foreground mb-6 max-w-md">
-                Inizia ad aggiungere giochi dal catalogo per costruire la tua collezione personale.
-              </p>
-              <Button asChild>
-                <Link href="/games/catalog">Esplora Catalogo Giochi</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
       </div>
+
+      {/* Quota Status Bar */}
+      {quota && (
+        <QuotaStatusBar
+          currentCount={quota.currentCount}
+          maxAllowed={quota.maxAllowed}
+          userTier={quota.userTier}
+          remainingSlots={quota.remainingSlots}
+          percentageUsed={quota.percentageUsed}
+        />
+      )}
+
+      {/* Filters */}
+      {hasGames && (
+        <LibraryFilters
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          favoritesOnly={filters.favoritesOnly}
+          onFavoritesChange={handleFavoritesChange}
+          sortBy={filters.sortBy}
+          sortDescending={filters.sortDescending}
+          onSortChange={handleSortChange}
+          onClearFilters={handleClearFilters}
+        />
+      )}
+
+      {/* Library Content */}
+      {hasGames ? (
+        <>
+          {filteredGames.length > 0 ? (
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+              layout
+            >
+              <AnimatePresence mode="popLayout">
+                {filteredGames.map((game, index) => (
+                  <UserGameCard
+                    key={game.id}
+                    game={game}
+                    onConfigureAgent={handleConfigureAgent}
+                    onUploadPdf={handleUploadPdf}
+                    onEditNotes={handleEditNotes}
+                    onRemove={handleRemoveGame}
+                    selectionMode={selectionMode}
+                    isSelected={isSelected(game.gameId)}
+                    onSelect={handleGameSelect}
+                    index={index}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          ) : (
+            /* No Results from Search */
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <BookOpen className="h-16 w-16 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Nessun gioco trovato</h3>
+                <p className="text-muted-foreground mb-6 max-w-md">
+                  Prova a modificare i filtri o la ricerca per trovare i tuoi giochi.
+                </p>
+                <Button variant="outline" onClick={handleClearFilters}>
+                  Pulisci Filtri
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      ) : (
+        /* Empty State */
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <BookOpen className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-semibold mb-2">La tua libreria è vuota</h3>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              Inizia ad aggiungere giochi dal catalogo per costruire la tua collezione personale.
+            </p>
+            <Button asChild>
+              <Link href="/games/catalog">Esplora Catalogo Giochi</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Bulk Action Bar (Issue #2613) */}
       {selectionMode && (
@@ -400,8 +387,6 @@ export default function LibraryPageClient() {
           onDeselectAll={deselectAll}
         />
       )}
-
-      <BottomNav />
 
       {/* Edit Notes Modal */}
       <EditNotesModal
@@ -441,6 +426,6 @@ export default function LibraryPageClient() {
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
       />
-    </main>
+    </div>
   );
 }

@@ -26,9 +26,27 @@ export const SystemConfigurationDtoSchema = z.object({
   createdByUserId: z.string().uuid(),
   updatedByUserId: z.string().uuid().nullable(),
   lastToggledAt: z.string().datetime().nullable(),
+  // Tier-based feature flags (Issue #3079) - optional until backend #3073 completes
+  tierFree: z.boolean().optional(),
+  tierNormal: z.boolean().optional(),
+  tierPremium: z.boolean().optional(),
 });
 
 export type SystemConfigurationDto = z.infer<typeof SystemConfigurationDtoSchema>;
+
+// ========== Subscription Tiers (Issue #3079) ==========
+
+export const SubscriptionTierSchema = z.enum(['Free', 'Normal', 'Premium']);
+
+export type SubscriptionTier = z.infer<typeof SubscriptionTierSchema>;
+
+export const TIER_DESCRIPTIONS: Record<SubscriptionTier, string> = {
+  Free: 'Basic access with limited features',
+  Normal: 'Standard subscription with most features',
+  Premium: 'Full access to all features',
+};
+
+export const TIER_ORDER: SubscriptionTier[] = ['Free', 'Normal', 'Premium'];
 
 // ========== Paged Results ==========
 
@@ -101,3 +119,25 @@ export const UpdateGameLibraryLimitsRequestSchema = z.object({
 });
 
 export type UpdateGameLibraryLimitsRequest = z.infer<typeof UpdateGameLibraryLimitsRequestSchema>;
+
+// ========== PDF Upload Limits (Issue #3078) ==========
+
+export const PdfUploadLimitsDtoSchema = z.object({
+  maxFileSizeBytes: z.number().int().min(1),
+  maxPagesPerDocument: z.number().int().min(1).max(10000),
+  maxDocumentsPerGame: z.number().int().min(1).max(1000),
+  allowedMimeTypes: z.array(z.string().min(1)),
+  lastUpdatedAt: z.string().datetime(),
+  lastUpdatedByUserId: z.string().uuid().nullable(),
+});
+
+export type PdfUploadLimitsDto = z.infer<typeof PdfUploadLimitsDtoSchema>;
+
+export const UpdatePdfUploadLimitsRequestSchema = z.object({
+  maxFileSizeBytes: z.number().int().min(1),
+  maxPagesPerDocument: z.number().int().min(1).max(10000),
+  maxDocumentsPerGame: z.number().int().min(1).max(1000),
+  allowedMimeTypes: z.array(z.string().min(1)).min(1),
+});
+
+export type UpdatePdfUploadLimitsRequest = z.infer<typeof UpdatePdfUploadLimitsRequestSchema>;

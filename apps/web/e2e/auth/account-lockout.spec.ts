@@ -11,6 +11,7 @@
  */
 
 import { test, expect } from '../fixtures/chromatic';
+
 import type { Page } from '@playwright/test';
 
 const API_BASE =

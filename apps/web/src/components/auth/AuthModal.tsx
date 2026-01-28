@@ -101,7 +101,9 @@ export function AuthModal({
         await loadCurrentUser(); // Sync useAuth state
         onSuccess?.(response.user);
         onClose();
-        await router.push(redirectTo);
+        // Redirect admins to admin dashboard, others to specified redirect or default dashboard
+        const targetUrl = response.user.role?.toLowerCase() === 'admin' ? '/admin' : redirectTo;
+        await router.push(targetUrl);
       } else {
         throw new Error('Login failed: No user data received');
       }
@@ -135,7 +137,9 @@ export function AuthModal({
       await loadCurrentUser(); // Sync useAuth state
       onSuccess?.(user);
       onClose();
-      await router.push(redirectTo);
+      // Redirect admins to admin dashboard, others to specified redirect or default dashboard
+      const targetUrl = user.role?.toLowerCase() === 'admin' ? '/admin' : redirectTo;
+      await router.push(targetUrl);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Invalid verification code. Please try again.';

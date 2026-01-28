@@ -103,7 +103,7 @@ export function GamesTable({ onEdit, onReviewApproval }: GamesTableProps) {
   };
 
   const handleCreate = () => {
-    router.push('/admin/games/new');
+    router.push('/admin/shared-games/new');
   };
 
   const handleStatusChange = (status: StatusFilter) => {

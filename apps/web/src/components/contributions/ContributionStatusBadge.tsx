@@ -69,6 +69,7 @@ export function ContributionStatusBadge({
   showIcon = true,
   className,
 }: ContributionStatusBadgeProps) {
+  // eslint-disable-next-line security/detect-object-injection -- Safe: status is a typed ShareRequestStatus enum value
   const config = statusConfig[status];
   const Icon = config.icon;
 

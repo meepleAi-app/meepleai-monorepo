@@ -12,6 +12,12 @@ namespace Api.Extensions;
 /// Policies:
 /// - SharedGamesAdmin: 100 req/min (authenticated admin operations)
 /// - SharedGamesPublic: 300 req/min (public search operations)
+/// - FaqUpvote: 10 req/min (FAQ upvoting, prevents vote manipulation)
+/// - ShareRequestAdmin: 100 req/min (admin share request operations) - Issue #3098
+/// - ShareRequestCreation: 30 req/min (creating share requests) - Issue #3098
+/// - ShareRequestQuery: 100 req/min (querying share requests) - Issue #3098
+/// - ShareRequestUpdate: 50 req/min (updating share requests) - Issue #3098
+/// - UserDashboard: 100 req/min (user dashboard operations) - Issue #3098
 /// - Default: 60 req/min (general API protection)
 /// </summary>
 internal static class RateLimitingServiceExtensions
@@ -21,8 +27,13 @@ internal static class RateLimitingServiceExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         // Issue #2705: Allow disabling rate limiting for integration tests
+        // Issue #3102: Also check DISABLE_RATE_LIMITING env var as fallback for WebApplicationFactory tests
+        // where configuration might not be applied yet during service registration
         var rateLimitingEnabled = configuration.GetValue("RateLimiting:Enabled", true);
-        if (!rateLimitingEnabled)
+        var disableRateLimitingEnvVar = Environment.GetEnvironmentVariable("DISABLE_RATE_LIMITING");
+        var disabledByEnvVar = string.Equals(disableRateLimitingEnvVar, "true", StringComparison.OrdinalIgnoreCase);
+
+        if (!rateLimitingEnabled || disabledByEnvVar)
         {
             // Register a permissive rate limiter that allows all requests
             services.AddRateLimiter(options =>
@@ -37,6 +48,23 @@ internal static class RateLimitingServiceExtensions
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
                 options.AddPolicy("FaqUpvote", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // Issue #3098: Share request rate limiting policies
+                options.AddPolicy("ShareRequestAdmin", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("ShareRequestCreation", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("ShareRequestQuery", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("ShareRequestUpdate", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // Issue #3098: User dashboard rate limiting policy
+                options.AddPolicy("UserDashboard", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
             });
 
@@ -107,6 +135,91 @@ internal static class RateLimitingServiceExtensions
                     {
                         Window = TimeSpan.FromMinutes(1),
                         PermitLimit = 10, // Low limit to prevent vote manipulation
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 4: ShareRequestAdmin - 100 req/min for admin share request operations (Issue #3098)
+            options.AddPolicy("ShareRequestAdmin", httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"share-request-admin-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 100, // Same as SharedGamesAdmin
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 5: ShareRequestCreation - 30 req/min for creating share requests (Issue #3098)
+            options.AddPolicy("ShareRequestCreation", httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"share-request-create-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 30, // Lower limit for create operations
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 6: ShareRequestQuery - 100 req/min for querying share requests (Issue #3098)
+            options.AddPolicy("ShareRequestQuery", httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"share-request-query-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 100, // Similar to admin operations
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 7: ShareRequestUpdate - 50 req/min for updating share requests (Issue #3098)
+            options.AddPolicy("ShareRequestUpdate", httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"share-request-update-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 50, // Moderate limit for update operations
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 8: UserDashboard - 100 req/min for user dashboard operations (Issue #3098)
+            options.AddPolicy("UserDashboard", httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"user-dashboard-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 100, // User-specific operations
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,

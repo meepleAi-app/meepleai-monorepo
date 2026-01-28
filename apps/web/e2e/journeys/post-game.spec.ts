@@ -11,8 +11,8 @@
  */
 
 import { expect, test } from '../fixtures/chromatic';
-import { AuthHelper, USER_FIXTURES } from '../pages';
 import { WaitHelper } from '../helpers/WaitHelper';
+import { AuthHelper, USER_FIXTURES } from '../pages';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 

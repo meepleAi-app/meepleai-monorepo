@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
 import { PendingApprovalsWidget } from './PendingApprovalsWidget';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof PendingApprovalsWidget> = {
   title: 'Admin/PendingApprovalsWidget',

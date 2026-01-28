@@ -28,6 +28,7 @@ internal class GameSessionEntityConfiguration : IEntityTypeConfiguration<UserGam
             .IsRequired();
 
         builder.Property(e => e.DurationMinutes)
+            .HasColumnName("duration_minutes")
             .IsRequired();
 
         builder.Property(e => e.DidWin)

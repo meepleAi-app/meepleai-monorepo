@@ -57,7 +57,6 @@ public sealed class WorkflowUrlTests
     [Theory]
     [InlineData("not-a-url")]
     [InlineData("example.com")]
-    [InlineData("/api/workflow")]
     [InlineData("www.example.com")]
     public void Constructor_WithInvalidUrlFormat_ThrowsValidationException(string url)
     {
@@ -67,6 +66,20 @@ public sealed class WorkflowUrlTests
         // Assert
         action.Should().Throw<ValidationException>()
             .WithMessage($"Invalid URL format: {url}");
+    }
+
+    [Theory]
+    [InlineData("/api/workflow")] // Relative path - may parse as file:// URI on Linux
+    public void Constructor_WithRelativePath_ThrowsValidationException(string url)
+    {
+        // Act
+        var action = () => new WorkflowUrl(url);
+
+        // Assert - Accept either message due to cross-platform URI parsing differences
+        // On Windows: fails at Uri.TryCreate (relative path) -> "Invalid URL format"
+        // On Linux: parses as file:// URI -> "URL must use HTTP or HTTPS protocol"
+        action.Should().Throw<ValidationException>()
+            .Where(ex => ex.Message.Contains("Invalid URL format") || ex.Message.Contains("URL must use HTTP or HTTPS protocol"));
     }
 
     [Theory]

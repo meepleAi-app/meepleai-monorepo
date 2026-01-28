@@ -33,9 +33,9 @@
 
 import { useMemo } from 'react';
 
+import { motion } from 'framer-motion';
 import { ActivityIcon, ArrowRightIcon } from 'lucide-react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/data-display/card';
 import { cn } from '@/lib/utils';

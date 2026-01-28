@@ -18,6 +18,7 @@
  */
 
 import { test as base, expect, Page } from '@playwright/test';
+
 import { AdminHelper } from './pages';
 
 const test = base.extend<{ adminPage: Page }>({

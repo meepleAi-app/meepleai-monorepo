@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Moq;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -234,8 +235,9 @@ internal static class E2ESharedInfrastructure
 
     private static readonly SemaphoreSlim InitLock = new(1, 1);
     private static SharedTestcontainersFixture? _testcontainers;
-    private static WebApplicationFactory<Program>? _factory;
+    private static E2EWebApplicationFactory? _factory;
     private static string? _databaseConnectionString;
+    private static string? _redisConnectionString;
     private static bool _initialized;
 
     /// <summary>
@@ -269,15 +271,46 @@ internal static class E2ESharedInfrastructure
                 return;
             }
 
+            // Disable custom rate limiting middleware for E2E tests
+            // The middleware checks these env vars directly (not from configuration)
+            // Setting both DISABLE_RATE_LIMITING and ASPNETCORE_ENVIRONMENT for defense in depth
+            Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "CI");
+
+            // Disable ASP.NET Core built-in rate limiting via environment variable
+            // This must be set BEFORE the WebApplicationFactory is created since AddRateLimitingServices
+            // reads this config during service registration in Program.cs
+            // Environment variables use __ as hierarchy separator
+            Environment.SetEnvironmentVariable("RateLimiting__Enabled", "false");
+
             // Initialize shared Testcontainers fixture (PostgreSQL and Redis)
             _testcontainers = new SharedTestcontainersFixture();
             await _testcontainers.InitializeAsync();
 
             // Create a dedicated database for E2E tests
             _databaseConnectionString = await _testcontainers.CreateIsolatedDatabaseAsync(E2EDatabaseName);
+            _redisConnectionString = _testcontainers.RedisConnectionString;
 
-            // Create shared WebApplicationFactory once for all tests
-            _factory = CreateSharedFactory(_databaseConnectionString, _testcontainers.RedisConnectionString);
+            // Create shared WebApplicationFactory once for all tests using a custom class (not fluent builder)
+            // This avoids the derived factory lifecycle issues that can cause ObjectDisposedException
+            _factory = new E2EWebApplicationFactory(_databaseConnectionString, _redisConnectionString);
+
+            // Force server creation during initialization to catch any startup errors early
+            // This also ensures the server is created before any tests run
+            try
+            {
+                var server = _factory.Server;
+                Console.WriteLine($"[E2E] TestServer created successfully. BaseAddress: {server.BaseAddress}");
+
+                // Verify the service provider is accessible
+                using var scope = server.Services.CreateScope();
+                Console.WriteLine("[E2E] Service provider is accessible");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[E2E] ERROR: Failed to create TestServer: {ex}");
+                throw;
+            }
 
             // Run migrations once using a temporary DbContext
             using var dbContext = CreateDbContext();
@@ -315,71 +348,137 @@ internal static class E2ESharedInfrastructure
 
         return new MeepleAiDbContext(optionsBuilder.Options, mockMediator.Object, mockEventCollector.Object);
     }
+}
+
+/// <summary>
+/// Custom WebApplicationFactory for E2E tests.
+/// Using a concrete class instead of the fluent builder pattern avoids
+/// derived factory lifecycle issues that can cause ObjectDisposedException.
+///
+/// IMPORTANT: This factory overrides Dispose to prevent premature disposal.
+/// The TestServer should persist for the entire test run.
+/// </summary>
+internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
+{
+    private readonly string _connectionString;
+    private readonly string _redisConnectionString;
+    private bool _isDisposed;
+
+    public E2EWebApplicationFactory(string connectionString, string redisConnectionString)
+    {
+        _connectionString = connectionString;
+        _redisConnectionString = redisConnectionString;
+    }
 
     /// <summary>
-    /// Creates the shared WebApplicationFactory with the E2E database connection.
+    /// Override Dispose to prevent the TestServer from being disposed.
+    /// The factory is static and should persist for the entire test run.
     /// </summary>
-    private static WebApplicationFactory<Program> CreateSharedFactory(string connectionString, string redisConnectionString)
+    protected override void Dispose(bool disposing)
     {
-        return new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
+        // Intentionally do NOT call base.Dispose() to prevent TestServer disposal.
+        // The TestServer will be cleaned up when the process terminates.
+        // This is the fix for ObjectDisposedException in E2E tests.
+        _isDisposed = true;
+    }
+
+    /// <summary>
+    /// Override DisposeAsync to prevent the TestServer from being disposed.
+    /// The factory is static and should persist for the entire test run.
+    /// </summary>
+    public override ValueTask DisposeAsync()
+    {
+        // Intentionally do NOT call base.DisposeAsync() to prevent TestServer disposal.
+        // The TestServer will be cleaned up when the process terminates.
+        _isDisposed = true;
+        return ValueTask.CompletedTask;
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        // Use CI environment to bypass rate limiting middleware
+        // The middleware checks for both env.EnvironmentName == "CI" and ASPNETCORE_ENVIRONMENT == "CI"
+        builder.UseEnvironment("CI");
+
+        builder.ConfigureAppConfiguration((context, config) =>
+        {
+            // Clear all configuration sources to ensure test config takes precedence
+            config.Sources.Clear();
+
+            var testConfig = new Dictionary<string, string?>
             {
-                builder.UseEnvironment("Testing");
+                ["ConnectionStrings:DefaultConnection"] = _connectionString,
+                ["ConnectionStrings:Redis"] = _redisConnectionString,
+                ["Jwt:Secret"] = "test-secret-key-for-e2e-tests-minimum-32-characters-long",
+                ["Jwt:Issuer"] = "MeepleAI-Test",
+                ["Jwt:Audience"] = "MeepleAI-Test",
+                ["OpenRouter:ApiKey"] = "test-key",
+                ["OpenRouter:BaseUrl"] = "https://test.local",
+                ["BoardGameGeek:Enabled"] = "false",
+                ["Embedding:Enabled"] = "false",
+                ["Embedding:Url"] = "http://localhost:8000",
+                ["Redis:Enabled"] = "true",
+                ["Redis:ConnectionString"] = _redisConnectionString,
+                ["Qdrant:Enabled"] = "false",
+                ["Qdrant:Host"] = "localhost",
+                ["Qdrant:Port"] = "6333",
+                ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
+                ["Admin:Email"] = "admin@test.local",
+                ["Admin:Password"] = "TestAdmin123!",
+                ["Admin:DisplayName"] = "Test Admin",
+                // CI environment admin seeding configuration
+                ["INITIAL_ADMIN_EMAIL"] = "admin@test.local",
+                ["INITIAL_ADMIN_PASSWORD"] = "TestAdmin123!",
+                ["INITIAL_ADMIN_DISPLAY_NAME"] = "Test Admin",
+                ["Observability:Enabled"] = "false",
+                ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "",
+                // Disable rate limiting for E2E tests to prevent 429 errors
+                ["RateLimiting:Enabled"] = "false"
+            };
 
-                builder.ConfigureAppConfiguration((context, config) =>
-                {
-                    config.Sources.Clear();
+            config.AddInMemoryCollection(testConfig);
+        });
 
-                    var testConfig = new Dictionary<string, string?>
-                    {
-                        ["ConnectionStrings:DefaultConnection"] = connectionString,
-                        ["ConnectionStrings:Redis"] = redisConnectionString,
-                        ["Jwt:Secret"] = "test-secret-key-for-e2e-tests-minimum-32-characters-long",
-                        ["Jwt:Issuer"] = "MeepleAI-Test",
-                        ["Jwt:Audience"] = "MeepleAI-Test",
-                        ["OpenRouter:ApiKey"] = "test-key",
-                        ["OpenRouter:BaseUrl"] = "https://test.local",
-                        ["BoardGameGeek:Enabled"] = "false",
-                        ["Embedding:Enabled"] = "false",
-                        ["Embedding:Url"] = "http://localhost:8000",
-                        ["Redis:Enabled"] = "true",
-                        ["Redis:ConnectionString"] = redisConnectionString,
-                        ["Qdrant:Enabled"] = "false",
-                        ["Qdrant:Host"] = "localhost",
-                        ["Qdrant:Port"] = "6333",
-                        ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
-                        ["Admin:Email"] = "admin@test.local",
-                        ["Admin:Password"] = "TestAdmin123!",
-                        ["Admin:DisplayName"] = "Test Admin",
-                        ["Observability:Enabled"] = "false",
-                        ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
-                    };
+        builder.ConfigureServices(services =>
+        {
+            // Remove all hosted services to prevent startup failures in test environment
+            // Hosted services like CacheWarmingService, QualityReportService, etc. might fail
+            // during startup and cause the host to dispose
+            var hostedServiceDescriptors = services
+                .Where(d => d.ServiceType == typeof(IHostedService))
+                .ToList();
+            foreach (var descriptor in hostedServiceDescriptors)
+            {
+                services.Remove(descriptor);
+            }
 
-                    config.AddInMemoryCollection(testConfig);
-                });
+            // Rate limiting is disabled via environment variable RateLimiting__Enabled=false
+            // which is set in EnsureInitializedAsync() BEFORE the factory is created.
+            // The AddRateLimitingServices method in Program.cs reads this and uses NoLimiter policies.
+            // Additionally, the custom RateLimitingMiddleware checks DISABLE_RATE_LIMITING env var.
 
-                builder.ConfigureServices(services =>
-                {
-                    services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();
-                    services.RemoveAll<MeepleAiDbContext>();
+            // Remove any existing DbContext registrations first
+            services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();
+            services.RemoveAll<MeepleAiDbContext>();
+            services.RemoveAll<IDomainEventCollector>();
 
-                    // Register domain event collector (skipped in Testing environment by InfrastructureServiceExtensions)
-                    services.TryAddScoped<IDomainEventCollector, DomainEventCollector>();
+            // Register domain event collector (skipped in Testing environment by InfrastructureServiceExtensions)
+            // Use AddScoped (not TryAddScoped) to ensure registration even if something partial existed
+            services.AddScoped<IDomainEventCollector, DomainEventCollector>();
 
-                    services.AddDbContext<MeepleAiDbContext>((serviceProvider, options) =>
-                    {
-                        var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-                        var connStr = configuration.GetConnectionString("DefaultConnection")
-                            ?? throw new InvalidOperationException("DefaultConnection not configured");
+            services.AddDbContext<MeepleAiDbContext>((serviceProvider, options) =>
+            {
+                var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+                var connStr = configuration.GetConnectionString("DefaultConnection")
+                    ?? throw new InvalidOperationException("DefaultConnection not configured");
 
-                        options.UseNpgsql(connStr);
-                        options.ConfigureWarnings(warnings =>
-                            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-                    });
-
-                    services.AddScoped<IDbContextMigrator, TestDbContextMigrator>();
-                });
+                options.UseNpgsql(connStr);
+                options.ConfigureWarnings(warnings =>
+                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
             });
+
+            services.AddScoped<IDbContextMigrator, TestDbContextMigrator>();
+        });
     }
 }
 

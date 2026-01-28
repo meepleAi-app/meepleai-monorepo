@@ -14,7 +14,6 @@
 import { format } from 'date-fns';
 import { AlertCircle } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import {
   Card,
   CardContent,
@@ -22,8 +21,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/data-display/card';
-import { RateLimitProgress } from './RateLimitProgress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { useRateLimitStatus } from '@/hooks/queries/useShareRequests';
+
+import { RateLimitProgress } from './RateLimitProgress';
+
 
 /**
  * Calculate if user can create a new share request

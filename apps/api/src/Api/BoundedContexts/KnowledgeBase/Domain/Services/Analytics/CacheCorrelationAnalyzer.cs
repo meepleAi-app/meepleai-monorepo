@@ -84,17 +84,17 @@ internal class CacheCorrelationAnalyzer : ICacheCorrelationAnalyzer
 
         if (hitRate >= ExcellentHitRateThreshold)
         {
-            recommendations.Add($"✅ Excellent cache hit rate ({hitRate:P0}). Cache is highly effective.");
+            recommendations.Add($"✅ Excellent cache hit rate ({hitRate * 100:0}%). Cache is highly effective.");
             recommendations.Add($"💰 Estimated savings: ${savings:F2} from avoided LLM calls.");
         }
         else if (hitRate >= GoodHitRateThreshold)
         {
-            recommendations.Add($"👍 Good cache hit rate ({hitRate:P0}). Continue current strategy.");
+            recommendations.Add($"👍 Good cache hit rate ({hitRate * 100:0}%). Continue current strategy.");
             recommendations.Add($"💡 Consider increasing cache TTL to improve hit rate further.");
         }
         else
         {
-            recommendations.Add($"⚠️ Low cache hit rate ({hitRate:P0}). Review caching strategy.");
+            recommendations.Add($"⚠️ Low cache hit rate ({hitRate * 100:0}%). Review caching strategy.");
             recommendations.Add($"🔍 Analyze query patterns: Are queries too unique? Increase TTL? Expand cache scope?");
         }
 

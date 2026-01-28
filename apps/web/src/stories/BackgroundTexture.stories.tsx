@@ -6,9 +6,10 @@
  * Epic #2845: MeepleAI Design System Integration
  */
 
+import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
-import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
 
 const meta: Meta<typeof BackgroundTexture> = {
   title: 'Design System/Background Texture',

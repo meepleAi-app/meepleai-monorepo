@@ -10,11 +10,13 @@
 'use client';
 
 import { use } from 'react';
-import { useSharedGame } from '@/hooks/queries';
-import { ContributorsSection } from '@/components/shared-games/ContributorsSection';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+
 import { AlertCircle } from 'lucide-react';
+
+import { ContributorsSection } from '@/components/shared-games/ContributorsSection';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { useSharedGame } from '@/hooks/queries';
 
 interface SharedGamePageProps {
   params: Promise<{

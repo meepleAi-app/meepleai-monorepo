@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { type RateLimitConfigDto, type UpdateTierConfigRequest } from '@/types';
+
+import { Spinner } from '@/components/loading/Spinner';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,7 @@ import {
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { Spinner } from '@/components/loading/Spinner';
+import { type RateLimitConfigDto, type UpdateTierConfigRequest } from '@/types';
 
 interface TierConfigEditDialogProps {
   tier: string | null;

@@ -1,7 +1,8 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
-import { Badge } from '@/components/ui';
 import { formatDistanceToNow } from 'date-fns';
 import { Award, Calendar, CheckCircle, TrendingUp } from 'lucide-react';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import type { ContributorProfileDto } from '@/lib/api/schemas/admin-share-requests.schemas';
 
 /**
@@ -92,6 +93,7 @@ export function ContributorProfile({ contributor, className }: ContributorProfil
                 title={`Earned ${formatDistanceToNow(new Date(badge.awardedAt), { addSuffix: true })}`}
               >
                 {badge.iconUrl && (
+                  /* eslint-disable-next-line @next/next/no-img-element -- External badge icon URL */
                   <img src={badge.iconUrl} alt="" className="mr-1 h-3 w-3" />
                 )}
                 {badge.name}

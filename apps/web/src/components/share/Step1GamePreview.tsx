@@ -1,4 +1,5 @@
 import { Info } from 'lucide-react';
+
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import type { UserLibraryEntry } from '@/lib/api';
 
@@ -19,6 +20,7 @@ export function Step1GamePreview({ game, existingInCatalog }: Step1GamePreviewPr
       <div className="flex gap-4 rounded-lg border bg-card p-4">
         <div className="relative h-24 w-24 flex-shrink-0">
           {game.gameIconUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element -- External user-provided game icon URL */
             <img
               src={game.gameIconUrl}
               alt={game.gameTitle}

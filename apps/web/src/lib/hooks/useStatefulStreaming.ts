@@ -163,6 +163,7 @@ const VALID_TRANSITIONS: Record<StreamingState, StreamingEvent[]> = {
  * State transition logic
  */
 function transition(current: StreamingState, event: StreamingEvent): StreamingState | null {
+  // eslint-disable-next-line security/detect-object-injection -- Safe: current is a typed StreamingState enum value
   if (!VALID_TRANSITIONS[current].includes(event)) {
     return null; // Invalid transition
   }

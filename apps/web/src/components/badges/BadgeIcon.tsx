@@ -35,6 +35,7 @@ function getTierGlow(tier: BadgeTier): string {
     Diamond:
       'ring-2 ring-cyan-400/50 shadow-cyan-400/30 shadow-lg animate-pulse hover:ring-cyan-400/70 hover:shadow-2xl',
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a typed BadgeTier enum value
   return glows[tier] || '';
 }
 
@@ -49,6 +50,7 @@ function getTierColor(tier: BadgeTier): string {
     Platinum: 'text-gray-300',
     Diamond: 'text-cyan-400',
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a typed BadgeTier enum value
   return colors[tier] || 'text-gray-500';
 }
 
@@ -62,11 +64,13 @@ export function BadgeIcon({ badge, size = 'md', className }: BadgeIconProps) {
       <div
         className={cn(
           'relative rounded-full bg-gradient-to-br from-background to-muted overflow-hidden transition-all duration-300',
+          // eslint-disable-next-line security/detect-object-injection -- Safe: size is typed 'sm' | 'md' | 'lg'
           sizeClasses[size],
           tierGlow
         )}
       >
         {badge.iconUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element -- External user-provided URL, Next.js Image optimization not applicable */
           <img
             src={badge.iconUrl}
             alt={badge.name}

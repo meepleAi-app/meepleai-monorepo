@@ -1,7 +1,7 @@
 import { ChevronDown } from 'lucide-react';
 
-import { Button } from '../primitives/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './collapsible';
+import { Button } from '../primitives/button';
 
 import type { Meta, StoryObj } from '@storybook/react';
 

@@ -63,6 +63,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         Guid userId,
         string? search,
         bool? favoritesOnly,
+        string[]? stateFilter,
         string? sortBy,
         bool descending,
         int page,
@@ -89,6 +90,21 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         if (favoritesOnly == true)
         {
             query = query.Where(e => e.IsFavorite);
+        }
+
+        // Apply state filter (Issue #2866)
+        if (stateFilter is { Length: > 0 })
+        {
+            var stateValues = stateFilter
+                .Select(s => Enum.TryParse<GameStateType>(s, true, out var state) ? (int?)state : null)
+                .Where(s => s.HasValue)
+                .Select(s => s!.Value)
+                .ToArray();
+
+            if (stateValues.Length > 0)
+            {
+                query = query.Where(e => stateValues.Contains(e.CurrentState));
+            }
         }
 
         // Get total count before pagination

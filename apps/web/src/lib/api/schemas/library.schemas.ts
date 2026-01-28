@@ -7,6 +7,10 @@
 
 import { z } from 'zod';
 
+// Game state types for library filtering (Issue #2866)
+export const GameStateTypeSchema = z.enum(['Nuovo', 'InPrestito', 'Wishlist', 'Owned']);
+export type GameStateType = z.infer<typeof GameStateTypeSchema>;
+
 // User library entry DTO matching backend contract
 export const UserLibraryEntrySchema = z.object({
   id: z.string().uuid(),
@@ -20,6 +24,9 @@ export const UserLibraryEntrySchema = z.object({
   addedAt: z.string().datetime(),
   notes: z.string().nullable().optional(),
   isFavorite: z.boolean(),
+  currentState: GameStateTypeSchema,
+  stateChangedAt: z.string().datetime().nullable().optional(),
+  stateNotes: z.string().nullable().optional(),
 });
 
 export type UserLibraryEntry = z.infer<typeof UserLibraryEntrySchema>;
@@ -75,6 +82,7 @@ export interface GetUserLibraryParams {
   page?: number;
   pageSize?: number;
   favoritesOnly?: boolean;
+  stateFilter?: GameStateType[];
   sortBy?: 'addedAt' | 'title' | 'favorite';
   sortDescending?: boolean;
 }

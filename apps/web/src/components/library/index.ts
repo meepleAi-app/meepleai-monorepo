@@ -22,3 +22,6 @@ export { BulkRemoveDialog, type BulkRemoveDialogProps } from './BulkRemoveDialog
 // Library Sharing (Issue #2614)
 export { ShareLibraryModal } from './ShareLibraryModal';
 export { SharedLibraryGameCard } from './SharedLibraryGameCard';
+
+// View Mode Toggle (Issue #2866)
+export { ViewModeToggle, type ViewModeToggleProps, type ViewMode } from './ViewModeToggle';

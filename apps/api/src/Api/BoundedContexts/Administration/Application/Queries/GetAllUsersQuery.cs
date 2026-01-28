@@ -9,6 +9,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 internal record GetAllUsersQuery(
     string? SearchTerm = null,
     string? RoleFilter = null,
+    string? StatusFilter = null, // "active", "suspended", or "all"
     string? SortBy = null,
     string? SortOrder = "desc", // Default to descending order
     int Page = 1,

@@ -43,6 +43,13 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
             dbQuery = dbQuery.Where(u => u.Role == query.RoleFilter);
         }
 
+        // Status filter (active/suspended)
+        if (!string.IsNullOrWhiteSpace(query.StatusFilter) && !string.Equals(query.StatusFilter, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            var isSuspended = string.Equals(query.StatusFilter, "suspended", StringComparison.OrdinalIgnoreCase);
+            dbQuery = dbQuery.Where(u => u.IsSuspended == isSuspended);
+        }
+
         // Sorting
         var sortOrder = query.SortOrder ?? "asc";
         var isAsc = string.Equals(sortOrder, "asc", StringComparison.OrdinalIgnoreCase);
@@ -83,7 +90,9 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
             DisplayName: user.DisplayName ?? string.Empty,
             Role: user.Role,
             CreatedAt: user.CreatedAt,
-            LastSeenAt: lastSeenAt
+            LastSeenAt: lastSeenAt,
+            IsSuspended: user.IsSuspended,
+            SuspendReason: user.SuspendReason
         );
     }
 }

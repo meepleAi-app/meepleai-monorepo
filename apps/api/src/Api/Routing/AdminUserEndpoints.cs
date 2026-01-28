@@ -122,6 +122,26 @@ internal static class AdminUserEndpoints
         .WithDescription("Returns CSV with format: email,displayName,role,createdAt")
         .Produces<string>(StatusCodes.Status200OK, "text/csv")
         .Produces(StatusCodes.Status401Unauthorized);
+
+        // Suspend/Unsuspend endpoints - Issue #2886
+        group.MapPost("/admin/users/{id}/suspend", HandleSuspendUser)
+        .WithName("SuspendUser")
+        .WithTags("Admin")
+        .WithSummary("Suspend a user account")
+        .WithDescription("Suspended users cannot login until unsuspended.")
+        .Produces<Api.Models.UserDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status404NotFound);
+
+        group.MapPost("/admin/users/{id}/unsuspend", HandleUnsuspendUser)
+        .WithName("UnsuspendUser")
+        .WithTags("Admin")
+        .WithSummary("Unsuspend (reactivate) a user account")
+        .Produces<Api.Models.UserDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status404NotFound);
     }
 
     private static void MapUserActivityEndpoints(RouteGroupBuilder group)
@@ -175,6 +195,7 @@ internal static class AdminUserEndpoints
         CancellationToken ct,
         string? search = null,
         string? role = null,
+        string? status = null,
         string? sortBy = null,
         string? sortOrder = "desc",
         int page = 1,
@@ -183,7 +204,7 @@ internal static class AdminUserEndpoints
         var (authorized, _, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var query = new GetAllUsersQuery(search, role, sortBy, sortOrder, page, limit);
+        var query = new GetAllUsersQuery(search, role, status, sortBy, sortOrder, page, limit);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Json(result);
     }
@@ -387,6 +408,59 @@ internal static class AdminUserEndpoints
         return Results.Content(csv, "text/csv", System.Text.Encoding.UTF8);
     }
 
+    private static async Task<IResult> HandleSuspendUser(
+        string id,
+        SuspendUserRequest? request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} suspending user {UserId}", session!.User!.Id, id);
+
+        try
+        {
+            var command = new SuspendUserCommand(id, request?.Reason);
+            var user = await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("User {UserId} suspended successfully", id);
+            return Results.Ok(user);
+        }
+        catch (DomainException ex)
+        {
+            logger.LogWarning(ex, "Domain error suspending user {UserId}", id);
+            return Results.BadRequest(new { error = "domain_error", message = ex.Message });
+        }
+    }
+
+    private static async Task<IResult> HandleUnsuspendUser(
+        string id,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} unsuspending user {UserId}", session!.User!.Id, id);
+
+        try
+        {
+            var command = new UnsuspendUserCommand(id);
+            var user = await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("User {UserId} unsuspended successfully", id);
+            return Results.Ok(user);
+        }
+        catch (DomainException ex)
+        {
+            logger.LogWarning(ex, "Domain error unsuspending user {UserId}", id);
+            return Results.BadRequest(new { error = "domain_error", message = ex.Message });
+        }
+    }
+
     private static async Task<IResult> HandleGetUserActivity(
         Guid userId,
         HttpContext context,
@@ -434,3 +508,8 @@ internal record BulkPasswordResetRequest(IReadOnlyList<Guid> UserIds, string New
 /// Request payload for bulk role change.
 /// </summary>
 internal record BulkRoleChangeRequest(IReadOnlyList<Guid> UserIds, string NewRole);
+
+/// <summary>
+/// Request payload for suspending a user account.
+/// </summary>
+internal record SuspendUserRequest(string? Reason);

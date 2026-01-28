@@ -8,8 +8,22 @@
 import { z } from 'zod';
 
 // Game state types for library filtering (Issue #2866)
-export const GameStateTypeSchema = z.enum(['Nuovo', 'InPrestito', 'Wishlist', 'Owned']);
+// Valid enum values - strict parsing
+const VALID_GAME_STATES = ['Nuovo', 'InPrestito', 'Wishlist', 'Owned'] as const;
+export const GameStateTypeSchema = z.enum(VALID_GAME_STATES);
 export type GameStateType = z.infer<typeof GameStateTypeSchema>;
+
+// Defensive schema that falls back to 'Owned' for unknown values (prevents API breaking on new states)
+export const GameStateTypeWithFallbackSchema = z
+  .string()
+  .transform((val) => {
+    if (VALID_GAME_STATES.includes(val as GameStateType)) {
+      return val as GameStateType;
+    }
+    // Log unknown state for debugging, fallback to 'Owned'
+    console.warn(`Unknown GameStateType received: "${val}", falling back to "Owned"`);
+    return 'Owned' as GameStateType;
+  });
 
 // User library entry DTO matching backend contract
 export const UserLibraryEntrySchema = z.object({
@@ -24,7 +38,7 @@ export const UserLibraryEntrySchema = z.object({
   addedAt: z.string().datetime(),
   notes: z.string().nullable().optional(),
   isFavorite: z.boolean(),
-  currentState: GameStateTypeSchema,
+  currentState: GameStateTypeWithFallbackSchema,
   stateChangedAt: z.string().datetime().nullable().optional(),
   stateNotes: z.string().nullable().optional(),
 });

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Application;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
@@ -407,17 +408,29 @@ internal static class GameEndpoints
 
     private static async Task<IResult> HandleStartSession(
         StartGameSessionRequest request,
+        HttpContext context,
         IMediator mediator,
-                ILogger<Program> logger,
+        ILogger<Program> logger,
         CancellationToken ct)
     {
+        // Issue #3070: Get user info for session quota enforcement
+        var (authenticated, session, error) = context.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        var userId = session!.User!.Id;
+        var userTier = UserTier.Parse(session.User!.Tier);
+        var userRole = Role.Parse(session.User!.Role);
+
         var command = new StartGameSessionCommand(
             GameId: request.GameId,
-            Players: request.Players
+            Players: request.Players,
+            UserId: userId,
+            UserTier: userTier,
+            UserRole: userRole
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        logger.LogInformation("Started game session {SessionId} for game {GameId}", result.Id, result.GameId);
+        logger.LogInformation("Started game session {SessionId} for game {GameId} by user {UserId}", result.Id, result.GameId, userId);
         return Results.Created($"/api/v1/sessions/{result.Id}", result);
     }
 

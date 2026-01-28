@@ -74,6 +74,19 @@ internal static class Guard
     }
 
     /// <summary>
+    /// Ensures value is not null (domain business rule).
+    /// </summary>
+    /// <typeparam name="T">Value type</typeparam>
+    /// <param name="value">Value to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <exception cref="ValidationException">Value is null</exception>
+    public static void AgainstNull<T>(T? value, string paramName) where T : class
+    {
+        if (value is null)
+            throw new ValidationException($"{paramName} cannot be null");
+    }
+
+    /// <summary>
     /// Ensures string is not null, empty, or whitespace (domain business rule).
     /// </summary>
     /// <param name="value">String to validate</param>

@@ -9,8 +9,10 @@
  * - Custom className
  */
 
+import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PublicLayout, type PublicUser } from '../PublicLayout';
 
 // Mock Next.js router and Link
@@ -44,6 +46,35 @@ vi.mock('@/components/ui/meeple/meeple-logo', () => ({
   MeepleLogo: () => <div data-testid="meeple-logo">MeepleAI</div>,
 }));
 
+// Mock useCurrentUser to avoid QueryClient dependency in UnifiedHeader
+const mockUseCurrentUser = vi.fn(() => ({
+  data: null,
+  isLoading: false,
+  isError: false,
+  error: null,
+}));
+
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: () => mockUseCurrentUser(),
+}));
+
+// Create a wrapper with QueryClientProvider for tests that need it
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+const renderWithQueryClient = (ui: React.ReactElement) => {
+  const testQueryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={testQueryClient}>{ui}</QueryClientProvider>
+  );
+};
+
 describe('PublicLayout', () => {
   const mockUser: PublicUser = {
     name: 'Test User',
@@ -54,7 +85,7 @@ describe('PublicLayout', () => {
 
   describe('Base Rendering', () => {
     it('renders layout with children', () => {
-      render(
+      renderWithQueryClient(
         <PublicLayout>
           <div>Test Content</div>
         </PublicLayout>
@@ -64,7 +95,7 @@ describe('PublicLayout', () => {
     });
 
     it('renders PublicHeader', () => {
-      render(
+      renderWithQueryClient(
         <PublicLayout>
           <div>Content</div>
         </PublicLayout>
@@ -76,7 +107,7 @@ describe('PublicLayout', () => {
     });
 
     it('renders PublicFooter', () => {
-      render(
+      renderWithQueryClient(
         <PublicLayout>
           <div>Content</div>
         </PublicLayout>
@@ -89,7 +120,7 @@ describe('PublicLayout', () => {
     });
 
     it('renders main element for content', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout>
           <div>Content</div>
         </PublicLayout>
@@ -103,7 +134,15 @@ describe('PublicLayout', () => {
 
   describe('User Prop Propagation', () => {
     it('passes user prop to PublicHeader', () => {
-      render(
+      // Mock authenticated user for this test
+      mockUseCurrentUser.mockReturnValue({
+        data: { id: '1', email: mockUser.email, displayName: mockUser.name },
+        isLoading: false,
+        isError: false,
+        error: null,
+      });
+
+      renderWithQueryClient(
         <PublicLayout user={mockUser} onLogout={mockOnLogout}>
           <div>Content</div>
         </PublicLayout>
@@ -112,10 +151,26 @@ describe('PublicLayout', () => {
       // User menu should be present
       const userMenuButton = screen.getByLabelText('User menu');
       expect(userMenuButton).toBeInTheDocument();
+
+      // Reset mock
+      mockUseCurrentUser.mockReturnValue({
+        data: null,
+        isLoading: false,
+        isError: false,
+        error: null,
+      });
     });
 
     it('passes onLogout prop to PublicHeader', () => {
-      render(
+      // Mock authenticated user for this test
+      mockUseCurrentUser.mockReturnValue({
+        data: { id: '1', email: mockUser.email, displayName: mockUser.name },
+        isLoading: false,
+        isError: false,
+        error: null,
+      });
+
+      renderWithQueryClient(
         <PublicLayout user={mockUser} onLogout={mockOnLogout}>
           <div>Content</div>
         </PublicLayout>
@@ -124,10 +179,18 @@ describe('PublicLayout', () => {
       // Logout should be available in user menu
       const userMenuButton = screen.getByLabelText('User menu');
       expect(userMenuButton).toBeInTheDocument();
+
+      // Reset mock
+      mockUseCurrentUser.mockReturnValue({
+        data: null,
+        isLoading: false,
+        isError: false,
+        error: null,
+      });
     });
 
     it('renders login button when no user provided', () => {
-      render(
+      renderWithQueryClient(
         <PublicLayout>
           <div>Content</div>
         </PublicLayout>
@@ -140,7 +203,7 @@ describe('PublicLayout', () => {
 
   describe('Container Width', () => {
     it('uses full width by default', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout>
           <div>Content</div>
         </PublicLayout>
@@ -151,7 +214,7 @@ describe('PublicLayout', () => {
     });
 
     it('applies sm container width', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout containerWidth="sm">
           <div>Content</div>
         </PublicLayout>
@@ -162,7 +225,7 @@ describe('PublicLayout', () => {
     });
 
     it('applies md container width', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout containerWidth="md">
           <div>Content</div>
         </PublicLayout>
@@ -173,7 +236,7 @@ describe('PublicLayout', () => {
     });
 
     it('applies lg container width', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout containerWidth="lg">
           <div>Content</div>
         </PublicLayout>
@@ -184,7 +247,7 @@ describe('PublicLayout', () => {
     });
 
     it('applies xl container width', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout containerWidth="xl">
           <div>Content</div>
         </PublicLayout>
@@ -197,7 +260,7 @@ describe('PublicLayout', () => {
 
   describe('Layout Structure', () => {
     it('has min-h-screen for full viewport height', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout>
           <div>Content</div>
         </PublicLayout>
@@ -210,7 +273,7 @@ describe('PublicLayout', () => {
     });
 
     it('main content has flex-1 for sticky footer', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout>
           <div>Content</div>
         </PublicLayout>
@@ -221,7 +284,7 @@ describe('PublicLayout', () => {
     });
 
     it('applies proper spacing classes', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout>
           <div>Content</div>
         </PublicLayout>
@@ -238,7 +301,7 @@ describe('PublicLayout', () => {
 
   describe('Custom Styling', () => {
     it('accepts custom className for main content', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout className="custom-class">
           <div>Content</div>
         </PublicLayout>
@@ -249,7 +312,7 @@ describe('PublicLayout', () => {
     });
 
     it('preserves base classes with custom className', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout className="custom-class">
           <div>Content</div>
         </PublicLayout>
@@ -264,7 +327,7 @@ describe('PublicLayout', () => {
 
   describe('Footer Props', () => {
     it('passes showNewsletter prop to PublicFooter', () => {
-      render(
+      renderWithQueryClient(
         <PublicLayout showNewsletter>
           <div>Content</div>
         </PublicLayout>
@@ -277,7 +340,7 @@ describe('PublicLayout', () => {
     });
 
     it('does not show newsletter by default', () => {
-      render(
+      renderWithQueryClient(
         <PublicLayout>
           <div>Content</div>
         </PublicLayout>
@@ -290,7 +353,7 @@ describe('PublicLayout', () => {
 
   describe('Responsive Behavior', () => {
     it('applies responsive padding', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout>
           <div>Content</div>
         </PublicLayout>
@@ -303,7 +366,7 @@ describe('PublicLayout', () => {
     });
 
     it('content container centers with mx-auto', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout>
           <div>Content</div>
         </PublicLayout>
@@ -316,24 +379,35 @@ describe('PublicLayout', () => {
 
   describe('Composition', () => {
     it('renders all layout parts in correct order', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout>
           <div data-testid="content">Content</div>
         </PublicLayout>
       );
 
       const wrapper = container.querySelector('div.min-h-screen');
-      const children = wrapper?.children;
 
-      // Should have 3 children: header, main, footer
-      expect(children).toHaveLength(3);
-      expect(children?.[0]?.tagName).toBe('HEADER');
-      expect(children?.[1]?.tagName).toBe('MAIN');
-      expect(children?.[2]?.tagName).toBe('FOOTER');
+      // Should contain header, main, and footer elements
+      // (may have additional utility elements like Toaster)
+      expect(wrapper?.querySelector('header')).toBeInTheDocument();
+      expect(wrapper?.querySelector('main')).toBeInTheDocument();
+      expect(wrapper?.querySelector('footer')).toBeInTheDocument();
+
+      // Verify order: header before main, main before footer
+      const header = wrapper?.querySelector('header');
+      const main = wrapper?.querySelector('main');
+      const footer = wrapper?.querySelector('footer');
+
+      if (header && main) {
+        expect(header.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      }
+      if (main && footer) {
+        expect(main.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      }
     });
 
     it('renders content inside main element', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout>
           <div data-testid="test-content">Test Content</div>
         </PublicLayout>
@@ -348,7 +422,7 @@ describe('PublicLayout', () => {
 
   describe('Accessibility', () => {
     it('uses semantic HTML elements', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout>
           <div>Content</div>
         </PublicLayout>
@@ -360,7 +434,7 @@ describe('PublicLayout', () => {
     });
 
     it('main element is properly labeled', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <PublicLayout>
           <div>Content</div>
         </PublicLayout>

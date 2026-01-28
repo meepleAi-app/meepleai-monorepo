@@ -487,6 +487,7 @@ v1Api.MapRateLimitAdminEndpoints();    // Issue #2738: Rate limit admin manageme
 // v1Api.MapAiModelEndpoints();        // Issue #2580: REMOVED - Replaced by MapAiModelAdminEndpoints (Issue #2567)
 v1Api.MapGameLibraryConfigEndpoints(); // Issue #2444: Game library tier limits config
 v1Api.MapSessionLimitsConfigEndpoints(); // Issue #3070: Session limits config
+v1Api.MapPdfUploadLimitsConfigEndpoints(); // Issue #3072: PDF upload limits config
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics

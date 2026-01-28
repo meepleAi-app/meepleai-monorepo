@@ -68,7 +68,10 @@ internal class UpdateLibraryEntryCommandHandler : ICommandHandler<UpdateLibraryE
             GameImageUrl: sharedGame.ImageUrl,
             AddedAt: entry.AddedAt,
             Notes: entry.Notes?.Value,
-            IsFavorite: entry.IsFavorite
+            IsFavorite: entry.IsFavorite,
+            CurrentState: entry.CurrentState.Value.ToString(),
+            StateChangedAt: entry.CurrentState.ChangedAt,
+            StateNotes: entry.CurrentState.StateNotes
         );
     }
 }

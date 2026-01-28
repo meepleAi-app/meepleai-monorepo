@@ -1,5 +1,5 @@
 /**
- * UserGameCard Component (Issue #2518, #2613, #2618)
+ * UserGameCard Component (Issue #2518, #2613, #2618, #2866, #2867)
  *
  * Enhanced library card with:
  * - Game cover image
@@ -10,24 +10,43 @@
  * - Favorite toggle
  * - Selection mode with checkbox (Issue #2613)
  * - Framer Motion animations (Issue #2618)
+ * - Grid/List view modes (Issue #2866, #2867)
  */
 
 'use client';
 
 import { motion } from 'framer-motion';
-import { MessageCircle, Settings, Upload, Edit2, Trash2, Library, Share2 } from 'lucide-react';
+import {
+  MessageCircle,
+  Settings,
+  Upload,
+  Edit2,
+  Trash2,
+  Library,
+  Share2,
+  MoreVertical,
+  RefreshCw,
+} from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-
+import type { ViewMode } from '@/components/library/ViewModeToggle';
 import { FavoriteToggle } from '@/components/library/FavoriteToggle';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/overlays/dropdown-menu';
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { useAgentConfig } from '@/hooks/queries';
 import { useCanShareGame } from '@/hooks/queries/useCanShareGame';
 import type { UserLibraryEntry } from '@/lib/api';
+import type { GameStateType } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';
 
 interface UserGameCardProps {
@@ -36,6 +55,8 @@ interface UserGameCardProps {
   onUploadPdf: (gameId: string, gameTitle: string) => void;
   onEditNotes: (gameId: string, gameTitle: string, currentNotes?: string | null) => void;
   onRemove: (gameId: string, gameTitle: string) => void;
+  /** Change game state callback (Issue #2867) */
+  onChangeState?: (gameId: string, gameTitle: string, newState: GameStateType) => void;
   /** Share game with community (Issue #2743) */
   onShare?: (gameId: string, gameTitle: string) => void;
   /** Selection mode props (Issue #2613) */
@@ -44,7 +65,25 @@ interface UserGameCardProps {
   onSelect?: (gameId: string, shiftKey: boolean) => void;
   /** Animation props for staggered entrance (Issue #2618) */
   index?: number;
+  /** View mode: grid or list (Issue #2866, #2867) */
+  viewMode?: ViewMode;
 }
+
+// State-coded border colors (Issue #2867)
+const stateBorderColors: Record<GameStateType, string> = {
+  Nuovo: 'border-l-4 border-l-green-500',
+  InPrestito: 'border-l-4 border-l-red-500',
+  Wishlist: 'border-l-4 border-l-yellow-500',
+  Owned: 'border-l-4 border-l-blue-500',
+};
+
+// State labels for display
+const stateLabels: Record<GameStateType, string> = {
+  Nuovo: 'Nuovo',
+  InPrestito: 'In Prestito',
+  Wishlist: 'Wishlist',
+  Owned: 'Posseduto',
+};
 
 // Animation variants for card entrance (Issue #2618)
 const cardVariants = {
@@ -78,14 +117,21 @@ export function UserGameCard({
   onUploadPdf,
   onEditNotes,
   onRemove,
+  onChangeState,
   onShare,
   selectionMode = false,
   isSelected = false,
   onSelect,
   index = 0,
+  viewMode = 'grid',
 }: UserGameCardProps) {
+  // List view mode (Issue #2866, #2867)
+  const isListView = viewMode === 'list';
   // Fetch agent configuration status
   const { data: agentConfig } = useAgentConfig(game.gameId, true);
+
+  // Get state border color (Issue #2867)
+  const stateBorderClass = game.currentState ? stateBorderColors[game.currentState] : '';
 
   // Check if game can be shared (Issue #2743)
   const { canShare, reason: shareBlockReason } = useCanShareGame(game.gameId);
@@ -118,6 +164,184 @@ export function UserGameCard({
     }
   };
 
+  // List view rendering (Issue #2866, #2867)
+  if (isListView) {
+    return (
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        custom={index}
+        layout
+        whileHover={{ x: 4, transition: { duration: 0.2 } }}
+      >
+        <Card
+          className={cn(
+            'flex flex-row hover:shadow-md hover:border-primary/50 transition-all',
+            stateBorderClass,
+            selectionMode && 'cursor-pointer',
+            isSelected && 'ring-2 ring-primary bg-primary/5'
+          )}
+          data-testid="game-card"
+          data-view-mode="list"
+          data-game-state={game.currentState}
+          onClick={handleCardClick}
+        >
+          {/* Cover Image - Compact for list view */}
+          <div className="relative w-24 h-24 flex-shrink-0 bg-muted">
+            {game.gameImageUrl ? (
+              <Image
+                src={game.gameImageUrl}
+                alt={game.gameTitle}
+                fill
+                className="object-cover"
+                sizes="96px"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <Library className="h-8 w-8" />
+              </div>
+            )}
+
+            {/* Selection Checkbox (Issue #2613) */}
+            {selectionMode && (
+              <div
+                className="absolute top-1 left-1 z-10"
+                onClick={handleCheckboxChange}
+              >
+                <Checkbox
+                  checked={isSelected}
+                  className="h-4 w-4 bg-background border-2 shadow-md"
+                  aria-label={`Seleziona ${game.gameTitle}`}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Content - Horizontal layout */}
+          <CardContent className="flex-1 p-3 flex items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              {/* Title & Publisher */}
+              <h3 className="font-semibold text-base truncate">{game.gameTitle}</h3>
+              {game.gamePublisher && (
+                <p className="text-sm text-muted-foreground truncate">{game.gamePublisher}</p>
+              )}
+              {/* Date */}
+              <p className="text-xs text-muted-foreground mt-1">
+                Aggiunto il {new Date(game.addedAt).toLocaleDateString('it-IT')}
+              </p>
+            </div>
+
+            {/* Status Badges */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* State Badge (Issue #2867) */}
+              {game.currentState && (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'text-xs',
+                    game.currentState === 'Nuovo' && 'bg-green-50 text-green-700 border-green-300',
+                    game.currentState === 'InPrestito' && 'bg-red-50 text-red-700 border-red-300',
+                    game.currentState === 'Wishlist' && 'bg-yellow-50 text-yellow-700 border-yellow-300',
+                    game.currentState === 'Owned' && 'bg-blue-50 text-blue-700 border-blue-300'
+                  )}
+                >
+                  {stateLabels[game.currentState]}
+                </Badge>
+              )}
+              {agentConfigured && (
+                <Badge variant="secondary" className="text-xs">
+                  🤖 {modelDisplayName[agentModel]}
+                </Badge>
+              )}
+              {game.isFavorite && (
+                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700">
+                  ❤️
+                </Badge>
+              )}
+            </div>
+
+            {/* Compact Actions */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {!selectionMode && (
+                <FavoriteToggle
+                  gameId={game.gameId}
+                  isFavorite={game.isFavorite}
+                  gameTitle={game.gameTitle}
+                  size="sm"
+                />
+              )}
+              <Button asChild variant="default" size="sm">
+                <Link href={`/chat?gameId=${game.gameId}`}>
+                  <MessageCircle className="h-3 w-3" />
+                </Link>
+              </Button>
+
+              {/* Quick Actions Dropdown (Issue #2867) */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onEditNotes(game.gameId, game.gameTitle, game.notes)}>
+                    <Edit2 className="mr-2 h-4 w-4" />
+                    Modifica Note
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onConfigureAgent(game.gameId, game.gameTitle)}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Configura Agente
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onUploadPdf(game.gameId, game.gameTitle)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Carica PDF
+                  </DropdownMenuItem>
+                  {onChangeState && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => onChangeState(game.gameId, game.gameTitle, 'Nuovo')}
+                        disabled={game.currentState === 'Nuovo'}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4 text-green-600" />
+                        Segna come Nuovo
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => onChangeState(game.gameId, game.gameTitle, 'InPrestito')}
+                        disabled={game.currentState === 'InPrestito'}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4 text-red-600" />
+                        Segna In Prestito
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => onChangeState(game.gameId, game.gameTitle, 'Owned')}
+                        disabled={game.currentState === 'Owned'}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4 text-blue-600" />
+                        Segna come Posseduto
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onRemove(game.gameId, game.gameTitle)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Rimuovi
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  }
+
+  // Grid view rendering (default)
   return (
     <motion.div
       variants={cardVariants}
@@ -126,15 +350,18 @@ export function UserGameCard({
       exit="exit"
       custom={index}
       layout
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.2 } }}
     >
       <Card
         className={cn(
-          'flex flex-col hover:shadow-lg transition-shadow',
+          'flex flex-col hover:shadow-lg hover:border-primary/50 transition-all',
+          stateBorderClass,
           selectionMode && 'cursor-pointer',
           isSelected && 'ring-2 ring-primary bg-primary/5'
         )}
         data-testid="game-card"
+        data-view-mode="grid"
+        data-game-state={game.currentState}
         onClick={handleCardClick}
       >
       <CardHeader className="p-0">
@@ -154,10 +381,28 @@ export function UserGameCard({
             </div>
           )}
 
+          {/* State Badge Overlay (Issue #2867) */}
+          {game.currentState && (
+            <div className="absolute top-2 left-2">
+              <Badge
+                variant="secondary"
+                className={cn(
+                  'text-xs shadow-md',
+                  game.currentState === 'Nuovo' && 'bg-green-500 text-white',
+                  game.currentState === 'InPrestito' && 'bg-red-500 text-white',
+                  game.currentState === 'Wishlist' && 'bg-yellow-500 text-black',
+                  game.currentState === 'Owned' && 'bg-blue-500 text-white'
+                )}
+              >
+                {stateLabels[game.currentState]}
+              </Badge>
+            </div>
+          )}
+
           {/* Selection Checkbox (Issue #2613) */}
           {selectionMode && (
             <div
-              className="absolute top-2 left-2 z-10"
+              className={cn('absolute top-2 z-10', game.currentState ? 'left-20' : 'left-2')}
               onClick={handleCheckboxChange}
             >
               <Checkbox
@@ -168,15 +413,71 @@ export function UserGameCard({
             </div>
           )}
 
-          {/* Favorite Toggle - hide in selection mode */}
+          {/* Favorite Toggle and Quick Actions Menu - hide in selection mode */}
           {!selectionMode && (
-            <div className="absolute top-2 right-2">
+            <div className="absolute top-2 right-2 flex items-center gap-1">
               <FavoriteToggle
                 gameId={game.gameId}
                 isFavorite={game.isFavorite}
                 gameTitle={game.gameTitle}
                 size="sm"
               />
+              {/* Quick Actions Dropdown (Issue #2867) */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary" size="icon" className="h-7 w-7 shadow-md">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onEditNotes(game.gameId, game.gameTitle, game.notes)}>
+                    <Edit2 className="mr-2 h-4 w-4" />
+                    Modifica Note
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onConfigureAgent(game.gameId, game.gameTitle)}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Configura Agente
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onUploadPdf(game.gameId, game.gameTitle)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Carica PDF
+                  </DropdownMenuItem>
+                  {onChangeState && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => onChangeState(game.gameId, game.gameTitle, 'Nuovo')}
+                        disabled={game.currentState === 'Nuovo'}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4 text-green-600" />
+                        Segna come Nuovo
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => onChangeState(game.gameId, game.gameTitle, 'InPrestito')}
+                        disabled={game.currentState === 'InPrestito'}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4 text-red-600" />
+                        Segna In Prestito
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => onChangeState(game.gameId, game.gameTitle, 'Owned')}
+                        disabled={game.currentState === 'Owned'}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4 text-blue-600" />
+                        Segna come Posseduto
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onRemove(game.gameId, game.gameTitle)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Rimuovi
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
         </div>

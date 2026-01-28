@@ -1,6 +1,7 @@
 /**
- * Library Page Client Component (Issue #2464, #2613, #2618)
+ * Library Page Client Component (Issue #2464, #2613, #2618, #2866)
  * Updated: Issue #3104 - Navigation handled by layout
+ * Updated: Issue #2866 - Filters and View Mode Toggle
  *
  * Client-side component for the library page with framer-motion animations.
  * Loaded via next/dynamic with ssr: false to avoid DOMMatrix SSR issues.
@@ -8,7 +9,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { BookOpen, CheckSquare, Plus, Share2 } from 'lucide-react';
@@ -24,25 +25,31 @@ import {
   PdfUploadModal,
   BulkActionBar,
   ShareLibraryModal,
+  ViewModeToggle,
+  type ViewMode,
 } from '@/components/library';
 import { Card, CardContent } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useLibrary, useLibraryQuota } from '@/hooks/queries/useLibrary';
-import type { GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
+import type { GameStateType, GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
 import { useBulkSelectionStore } from '@/lib/stores/bulk-selection-store';
 
 export default function LibraryPageClient() {
-  // Filter state
+  // Filter state (Issue #2866)
   const [filters, setFilters] = useState<GetUserLibraryParams>({
     page: 1,
     pageSize: 20,
     favoritesOnly: false,
+    stateFilter: [],
     sortBy: 'addedAt',
     sortDescending: true,
   });
   const [searchQuery, setSearchQuery] = useState('');
+
+  // View mode state (Issue #2866)
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
   // Modal state
   const [editNotesModal, setEditNotesModal] = useState<{
@@ -123,7 +130,22 @@ export default function LibraryPageClient() {
   };
 
   const handleFavoritesChange = (enabled: boolean) => {
-    setFilters(prev => ({ ...prev, favoritesOnly: enabled, page: 1 }));
+    setFilters(prev => ({
+      ...prev,
+      favoritesOnly: enabled,
+      stateFilter: enabled ? [] : prev.stateFilter, // Clear state filter when selecting favorites
+      page: 1,
+    }));
+  };
+
+  // State filter handler (Issue #2866)
+  const handleStateFilterChange = (states: GameStateType[]) => {
+    setFilters(prev => ({
+      ...prev,
+      stateFilter: states,
+      favoritesOnly: states.length > 0 ? false : prev.favoritesOnly, // Clear favorites when selecting states
+      page: 1,
+    }));
   };
 
   const handleSortChange = (
@@ -144,6 +166,7 @@ export default function LibraryPageClient() {
       page: 1,
       pageSize: 20,
       favoritesOnly: false,
+      stateFilter: [],
       sortBy: 'addedAt',
       sortDescending: true,
     });
@@ -247,6 +270,18 @@ export default function LibraryPageClient() {
     ? games.filter(game => game.gameTitle.toLowerCase().includes(searchQuery.toLowerCase()))
     : games;
 
+  // Calculate state counts for filter badges (Issue #2866)
+  const stateCounts = useMemo(() => {
+    return {
+      total: games.length,
+      favorites: games.filter(g => g.isFavorite).length,
+      nuovo: games.filter(g => g.currentState === 'Nuovo').length,
+      inPrestito: games.filter(g => g.currentState === 'InPrestito').length,
+      wishlist: games.filter(g => g.currentState === 'Wishlist').length,
+      owned: games.filter(g => g.currentState === 'Owned').length,
+    };
+  }, [games]);
+
   // All game IDs for selection operations (Issue #2613)
   const allGameIds = filteredGames.map(g => g.gameId);
 
@@ -266,7 +301,11 @@ export default function LibraryPageClient() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <h1 className="text-3xl font-bold font-quicksand">La Mia Libreria</h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {/* View Mode Toggle (Issue #2866) */}
+          {hasGames && (
+            <ViewModeToggle viewMode={viewMode} onViewModeChange={setViewMode} />
+          )}
           {/* Share Library Button (Issue #2614) */}
           {hasGames && (
             <Button variant="outline" onClick={() => setShareModalOpen(true)}>
@@ -304,26 +343,33 @@ export default function LibraryPageClient() {
         />
       )}
 
-      {/* Filters */}
+      {/* Filters (Issue #2866) */}
       {hasGames && (
         <LibraryFilters
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
           favoritesOnly={filters.favoritesOnly}
           onFavoritesChange={handleFavoritesChange}
+          stateFilter={filters.stateFilter}
+          onStateFilterChange={handleStateFilterChange}
           sortBy={filters.sortBy}
           sortDescending={filters.sortDescending}
           onSortChange={handleSortChange}
           onClearFilters={handleClearFilters}
+          stateCounts={stateCounts}
         />
       )}
 
-      {/* Library Content */}
+      {/* Library Content (Issue #2866 - Grid/List view support) */}
       {hasGames ? (
         <>
           {filteredGames.length > 0 ? (
             <motion.div
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+              className={
+                viewMode === 'grid'
+                  ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+                  : 'flex flex-col gap-3'
+              }
               layout
             >
               <AnimatePresence mode="popLayout">
@@ -339,6 +385,7 @@ export default function LibraryPageClient() {
                     isSelected={isSelected(game.gameId)}
                     onSelect={handleGameSelect}
                     index={index}
+                    viewMode={viewMode}
                   />
                 ))}
               </AnimatePresence>

@@ -69,7 +69,7 @@ const mockGames = [
     imageUrl: 'https://example.com/catan.jpg',
     thumbnailUrl: 'https://example.com/catan-thumb.jpg',
     bggId: 13,
-    status: 1,
+    status: 'Published',
     hasRules: true,
     categoryCount: 2,
     mechanicCount: 3,
@@ -90,7 +90,7 @@ const mockGames = [
     imageUrl: 'https://example.com/ticket.jpg',
     thumbnailUrl: 'https://example.com/ticket-thumb.jpg',
     bggId: 9209,
-    status: 1,
+    status: 'Published',
     hasRules: true,
     categoryCount: 1,
     mechanicCount: 2,
@@ -111,7 +111,7 @@ const mockGames = [
     imageUrl: 'https://example.com/gloomhaven.jpg',
     thumbnailUrl: 'https://example.com/gloomhaven-thumb.jpg',
     bggId: 174430,
-    status: 0, // Draft
+    status: 'Draft',
     hasRules: false,
     categoryCount: 3,
     mechanicCount: 5,
@@ -132,7 +132,7 @@ const mockGames = [
     imageUrl: 'https://example.com/codenames.jpg',
     thumbnailUrl: 'https://example.com/codenames-thumb.jpg',
     bggId: 178900,
-    status: 2, // Archived
+    status: 'Archived',
     hasRules: true,
     categoryCount: 2,
     mechanicCount: 2,
@@ -153,7 +153,7 @@ const mockGames = [
     imageUrl: 'https://example.com/wingspan.jpg',
     thumbnailUrl: 'https://example.com/wingspan-thumb.jpg',
     bggId: 266192,
-    status: 1,
+    status: 'Published',
     hasRules: true,
     categoryCount: 2,
     mechanicCount: 4,
@@ -240,7 +240,7 @@ export const FilteredByDraft: Story = {
   parameters: {
     mockData: {
       '/api/v1/admin/shared-games': {
-        games: mockGames.filter(g => g.status === 0),
+        games: mockGames.filter(g => g.status === 'Draft'),
         totalCount: 1,
         pageSize: 10,
         pageNumber: 1,
@@ -272,7 +272,7 @@ export const FilteredByPublished: Story = {
   parameters: {
     mockData: {
       '/api/v1/admin/shared-games': {
-        games: mockGames.filter(g => g.status === 1),
+        games: mockGames.filter(g => g.status === 'Published'),
         totalCount: 3,
         pageSize: 10,
         pageNumber: 1,
@@ -461,7 +461,7 @@ export const AllDraftGames: Story = {
   parameters: {
     mockData: {
       '/api/v1/admin/shared-games': {
-        games: mockGames.map(g => ({ ...g, status: 0 })),
+        games: mockGames.map(g => ({ ...g, status: 'Draft' })),
         totalCount: 5,
         pageSize: 10,
         pageNumber: 1,

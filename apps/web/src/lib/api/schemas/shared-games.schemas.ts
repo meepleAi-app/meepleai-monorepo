@@ -177,7 +177,7 @@ export const SharedGameSchema = z.object({
   averageRating: z.number().nullable(),
   imageUrl: z.string(),
   thumbnailUrl: z.string(),
-  status: GameStatusNumericSchema,
+  status: GameStatusSchema, // Now string enum with JsonStringEnumConverter
   createdAt: z.string().datetime(),
   modifiedAt: z.string().datetime().nullable(),
 });
@@ -203,7 +203,7 @@ export const SharedGameDetailSchema = z.object({
   imageUrl: z.string(),
   thumbnailUrl: z.string(),
   rules: GameRulesSchema.nullable(),
-  status: GameStatusNumericSchema,
+  status: GameStatusSchema, // Now string enum with JsonStringEnumConverter
   createdBy: z.string().uuid(),
   modifiedBy: z.string().uuid().nullable(),
   createdAt: z.string().datetime(),

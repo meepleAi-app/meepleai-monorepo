@@ -490,7 +490,7 @@ export function SharedGamesClient() {
                                 </DropdownMenuItem>
 
                                 {/* Publish (only for Draft) */}
-                                {game.status === 0 && (
+                                {game.status === 'Draft' && (
                                   <DropdownMenuItem onClick={() => handlePublish(game)}>
                                     <Eye className="h-4 w-4 mr-2" />
                                     Pubblica
@@ -498,7 +498,7 @@ export function SharedGamesClient() {
                                 )}
 
                                 {/* Archive (only for Published) */}
-                                {game.status === 1 && (
+                                {game.status === 'Published' && (
                                   <DropdownMenuItem onClick={() => handleArchive(game)}>
                                     <Archive className="h-4 w-4 mr-2" />
                                     Archivia

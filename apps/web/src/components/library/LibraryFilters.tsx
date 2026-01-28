@@ -15,6 +15,7 @@ import React, { useState, useEffect } from 'react';
 
 import { Search, X, SortAsc, Heart, Sparkles, Share2, Star, Package } from 'lucide-react';
 
+import { Badge } from '@/components/ui/data-display/badge';
 import {
   Select,
   SelectContent,
@@ -22,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';

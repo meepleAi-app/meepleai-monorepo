@@ -39,7 +39,7 @@ async function setupAdminSessionLimitsMocks(
     },
   } = options;
 
-  let currentLimits = { ...initialLimits };
+  const currentLimits = { ...initialLimits };
 
   // Mock admin auth
   await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {

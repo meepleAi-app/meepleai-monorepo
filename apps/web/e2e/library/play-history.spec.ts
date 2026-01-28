@@ -17,7 +17,7 @@ const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function setupPlayHistoryMocks(page: Page) {
-  let plays = [
+  const plays = [
     { id: 'play-1', gameId: 'chess', gameName: 'Chess', playedAt: new Date(Date.now() - 86400000).toISOString(), duration: 45, winner: 'Player 1' },
     { id: 'play-2', gameId: 'catan', gameName: 'Catan', playedAt: new Date(Date.now() - 172800000).toISOString(), duration: 90, winner: 'Player 2' },
   ];

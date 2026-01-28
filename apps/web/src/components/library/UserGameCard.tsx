@@ -30,8 +30,8 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 
-import type { ViewMode } from '@/components/library/ViewModeToggle';
 import { FavoriteToggle } from '@/components/library/FavoriteToggle';
+import type { ViewMode } from '@/components/library/ViewModeToggle';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
 import {
@@ -252,6 +252,7 @@ export function UserGameCard({
               )}
               {agentConfigured && (
                 <Badge variant="secondary" className="text-xs">
+                  {/* eslint-disable-next-line security/detect-object-injection -- agentModel is a controlled enum value */}
                   🤖 {modelDisplayName[agentModel]}
                 </Badge>
               )}

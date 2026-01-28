@@ -47,7 +47,7 @@ async function setupPdfLimitsConfigMocks(
     },
   };
 
-  let currentConfig = { ...defaultConfig, ...options.initialConfig };
+  const currentConfig = { ...defaultConfig, ...options.initialConfig };
 
   // Mock admin auth
   await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {

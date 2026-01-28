@@ -86,7 +86,9 @@ export function AuthModal({
       const user = await register(data);
       onSuccess?.(user);
       onClose();
-      await router.push(redirectTo);
+      // Redirect to email verification pending page with email as parameter
+      // The user needs to verify their email before accessing the dashboard
+      await router.push(`/verification-pending?email=${encodeURIComponent(data.email)}`);
     } catch (err) {
       // Error is already set in useAuth hook
       console.error('Registration failed:', err);

@@ -143,6 +143,60 @@
       "error": "Invalid code. Please try again.",
       "submit": "Verify",
       "title": "Two-Factor Authentication"
+    },
+    "emailVerification": {
+      "verifying": "Verifying your email...",
+      "pending": {
+        "title": "Check your email",
+        "description": "We've sent a verification link to your email address.",
+        "sentTo": "Verification email sent to:",
+        "instructions": "Click the link in the email to verify your account.",
+        "spamHint": "If you don't see it, check your spam folder.",
+        "resendButton": "Resend verification email",
+        "resending": "Sending...",
+        "resendCooldown": "Resend in {seconds}s",
+        "cooldownMessage": "You can request a new email in {seconds} seconds.",
+        "noEmail": "No email address found. Please register first.",
+        "goToRegister": "Go to registration"
+      },
+      "success": {
+        "title": "Email verified!",
+        "description": "Your email has been successfully verified.",
+        "continueButton": "Continue to Dashboard",
+        "redirectCountdown": "Redirecting in {seconds} seconds...",
+        "welcomeMessage": "Welcome to MeepleAI! You can now use all features."
+      },
+      "error": {
+        "noToken": "No verification token provided. Please use the link from your email.",
+        "resendButton": "Resend verification email",
+        "goToLogin": "Go to Login",
+        "tryAgain": "Try Again",
+        "helpText": "If you continue to have issues, please contact support.",
+        "expired": {
+          "title": "Link expired",
+          "description": "This verification link has expired. Please request a new one."
+        },
+        "invalid": {
+          "title": "Invalid link",
+          "description": "This verification link is invalid or has already been used."
+        },
+        "already_verified": {
+          "title": "Already verified",
+          "description": "Your email has already been verified. You can log in now."
+        },
+        "not_found": {
+          "title": "Link not found",
+          "description": "This verification link could not be found. It may have been deleted."
+        },
+        "rate_limited": {
+          "title": "Too many requests",
+          "description": "Please wait before requesting another verification email."
+        },
+        "unknown": {
+          "title": "Verification failed",
+          "description": "An error occurred while verifying your email. Please try again."
+        }
+      }
     }
   },
   "chat": {

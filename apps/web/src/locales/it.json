@@ -143,6 +143,60 @@
       "error": "Codice non valido. Riprova.",
       "submit": "Verifica",
       "title": "Autenticazione a due fattori"
+    },
+    "emailVerification": {
+      "verifying": "Verifica email in corso...",
+      "pending": {
+        "title": "Controlla la tua email",
+        "description": "Ti abbiamo inviato un link di verifica al tuo indirizzo email.",
+        "sentTo": "Email di verifica inviata a:",
+        "instructions": "Clicca sul link nell'email per verificare il tuo account.",
+        "spamHint": "Se non la trovi, controlla la cartella spam.",
+        "resendButton": "Reinvia email di verifica",
+        "resending": "Invio in corso...",
+        "resendCooldown": "Reinvia tra {seconds}s",
+        "cooldownMessage": "Puoi richiedere una nuova email tra {seconds} secondi.",
+        "noEmail": "Nessun indirizzo email trovato. Registrati prima.",
+        "goToRegister": "Vai alla registrazione"
+      },
+      "success": {
+        "title": "Email verificata!",
+        "description": "La tua email è stata verificata con successo.",
+        "continueButton": "Continua alla Dashboard",
+        "redirectCountdown": "Reindirizzamento tra {seconds} secondi...",
+        "welcomeMessage": "Benvenuto su MeepleAI! Ora puoi utilizzare tutte le funzionalità."
+      },
+      "error": {
+        "noToken": "Nessun token di verifica fornito. Usa il link dalla tua email.",
+        "resendButton": "Reinvia email di verifica",
+        "goToLogin": "Vai al Login",
+        "tryAgain": "Riprova",
+        "helpText": "Se continui ad avere problemi, contatta il supporto.",
+        "expired": {
+          "title": "Link scaduto",
+          "description": "Questo link di verifica è scaduto. Richiedi un nuovo link."
+        },
+        "invalid": {
+          "title": "Link non valido",
+          "description": "Questo link di verifica non è valido o è già stato utilizzato."
+        },
+        "already_verified": {
+          "title": "Già verificato",
+          "description": "La tua email è già stata verificata. Puoi effettuare l'accesso."
+        },
+        "not_found": {
+          "title": "Link non trovato",
+          "description": "Questo link di verifica non è stato trovato. Potrebbe essere stato eliminato."
+        },
+        "rate_limited": {
+          "title": "Troppe richieste",
+          "description": "Attendi prima di richiedere un'altra email di verifica."
+        },
+        "unknown": {
+          "title": "Verifica fallita",
+          "description": "Si è verificato un errore durante la verifica. Riprova."
+        }
+      }
     }
   },
   "chat": {

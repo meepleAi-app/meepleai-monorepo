@@ -71,3 +71,6 @@ export * from './rate-limits.schemas';
 
 // Session Quota schemas (Issue #3075)
 export * from './session-quota.schemas';
+
+// Email Verification schemas (Issue #3076)
+export * from './email-verification.schemas';

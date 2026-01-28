@@ -11,6 +11,7 @@ internal record UserDto(
     string Email,
     string DisplayName,
     string Role,
+    string Tier,
     DateTime CreatedAt,
     bool IsTwoFactorEnabled,
     DateTime? TwoFactorEnabledAt

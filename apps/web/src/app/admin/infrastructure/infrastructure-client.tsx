@@ -183,17 +183,8 @@ export function InfrastructureClient() {
           return stateOrder[a.state] - stateOrder[b.state];
         }
         case 'responseTime': {
-          const parseTime = (ts: string) => {
-            const match = ts.match(/(\d+):(\d+):(\d+)\.(\d+)/);
-            if (!match) return 0;
-            return (
-              parseInt(match[1]) * 3600000 +
-              parseInt(match[2]) * 60000 +
-              parseInt(match[3]) * 1000 +
-              parseInt(match[4]) / 10000
-            );
-          };
-          return parseTime(a.responseTime) - parseTime(b.responseTime);
+          // responseTimeMs is already a number in milliseconds
+          return a.responseTimeMs - b.responseTimeMs;
         }
         default:
           return 0;
@@ -218,17 +209,8 @@ export function InfrastructureClient() {
       // CSV format
       const headers = ['Service,Status,Response Time (ms),Last Check,Error'];
       const rows = data.services.map(s => {
-        const parseTime = (ts: string) => {
-          const match = ts.match(/(\d+):(\d+):(\d+)\.(\d+)/);
-          if (!match) return '0';
-          return (
-            parseInt(match[1]) * 3600000 +
-            parseInt(match[2]) * 60000 +
-            parseInt(match[3]) * 1000 +
-            parseInt(match[4]) / 10000
-          ).toString();
-        };
-        return `"${s.serviceName}","${s.state}","${parseTime(s.responseTime)}","${s.checkedAt}","${s.errorMessage || ''}"`;
+        // responseTimeMs is already a number in milliseconds
+        return `"${s.serviceName}","${s.state}","${s.responseTimeMs.toFixed(2)}","${s.checkedAt}","${s.errorMessage || ''}"`;
       });
       const csv = [headers, ...rows].join('\n');
       const blob = new Blob([csv], { type: 'text/csv' });

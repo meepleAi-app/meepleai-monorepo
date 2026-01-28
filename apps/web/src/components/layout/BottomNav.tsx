@@ -1,14 +1,15 @@
 /**
  * BottomNav - Mobile bottom navigation (Global)
  *
- * Primary mobile navigation with 5 main app sections.
+ * Primary mobile navigation with 4 main app sections.
  * Fixed bottom sticky nav, hidden on desktop (≥768px).
  *
  * Design: Playful Boardroom - wireframes-playful-boardroom.md
  * Issue: #1829 [UI-002] BottomNav Component (Mobile-First)
+ * Issue: #3104 - Updated to 4 items (Settings moved to top bar)
  *
  * Features:
- * - 5 nav items: Home, Games, Chat, Settings, Profile
+ * - 4 nav items: Catalogo, I Miei Giochi, Dashboard, Chat
  * - Active state detection (path matching)
  * - Touch-friendly targets (44x44px minimum - WCAG 2.1 AA)
  * - Lucide icons with labels
@@ -19,7 +20,7 @@
 
 'use client';
 
-import { Home, Gamepad2, MessageSquare, Settings, BookOpen } from 'lucide-react';
+import { Gamepad2, MessageSquare, BookOpen, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -35,25 +36,25 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
-    href: '/dashboard',
-    icon: Home,
-    label: 'Home',
-    ariaLabel: 'Navigate to dashboard home',
-    testId: 'bottomnav-home',
-  },
-  {
     href: '/games',
     icon: Gamepad2,
-    label: 'Giochi',
+    label: 'Catalogo',
     ariaLabel: 'Navigate to games catalog',
     testId: 'bottomnav-games',
   },
   {
     href: '/library',
     icon: BookOpen,
-    label: 'Libreria',
-    ariaLabel: 'Navigate to your library',
+    label: 'I Miei Giochi',
+    ariaLabel: 'Navigate to your game library',
     testId: 'bottomnav-library',
+  },
+  {
+    href: '/dashboard',
+    icon: LayoutDashboard,
+    label: 'Dashboard',
+    ariaLabel: 'Navigate to dashboard',
+    testId: 'bottomnav-dashboard',
   },
   {
     href: '/chat',
@@ -61,13 +62,6 @@ const navItems: NavItem[] = [
     label: 'Chat',
     ariaLabel: 'Navigate to chat interface',
     testId: 'bottomnav-chat',
-  },
-  {
-    href: '/settings',
-    icon: Settings,
-    label: 'Config',
-    ariaLabel: 'Navigate to settings',
-    testId: 'bottomnav-settings',
   },
 ];
 

@@ -89,7 +89,11 @@ public class UserRepository : RepositoryBase, IUserRepository
             Language = entity.Language,
             EmailNotifications = entity.EmailNotifications,
             Theme = entity.Theme,
-            DataRetentionDays = entity.DataRetentionDays
+            DataRetentionDays = entity.DataRetentionDays,
+            // ISSUE-2886: Suspension fields
+            IsSuspended = entity.IsSuspended,
+            SuspendedAt = entity.SuspendedAt,
+            SuspendReason = entity.SuspendReason
         };
 
         // Map backup codes
@@ -141,6 +145,11 @@ public class UserRepository : RepositoryBase, IUserRepository
         existingUser.EmailNotifications = entity.EmailNotifications;
         existingUser.Theme = entity.Theme;
         existingUser.DataRetentionDays = entity.DataRetentionDays;
+
+        // ISSUE-2886: Update suspension state
+        existingUser.IsSuspended = entity.IsSuspended;
+        existingUser.SuspendedAt = entity.SuspendedAt;
+        existingUser.SuspendReason = entity.SuspendReason;
 
         // Synchronize backup codes collection (delete old, add new)
         // This ensures we don't duplicate codes on every update
@@ -261,6 +270,12 @@ public class UserRepository : RepositoryBase, IUserRepository
 
             // Use internal method instead of reflection (S3011 compliance)
             user.RestoreOAuthAccounts(oauthAccounts);
+        }
+
+        // ISSUE-2886: Restore suspension state
+        if (entity.IsSuspended)
+        {
+            user.RestoreSuspensionState(entity.IsSuspended, entity.SuspendedAt, entity.SuspendReason);
         }
 
         return user;

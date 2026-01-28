@@ -55,6 +55,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<PromptVersionEntity> PromptVersions => Set<PromptVersionEntity>();
     public DbSet<PromptAuditLogEntity> PromptAuditLogs => Set<PromptAuditLogEntity>();
     public DbSet<PasswordResetTokenEntity> PasswordResetTokens => Set<PasswordResetTokenEntity>();
+    public DbSet<EmailVerificationEntity> EmailVerifications => Set<EmailVerificationEntity>(); // ISSUE-3071: Email verification
     public DbSet<CacheStatEntity> CacheStats => Set<CacheStatEntity>();
     public DbSet<SystemConfigurationEntity> SystemConfigurations => Set<SystemConfigurationEntity>();
     public DbSet<WorkflowErrorLogEntity> WorkflowErrorLogs => Set<WorkflowErrorLogEntity>(); // N8N-05

@@ -211,10 +211,10 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      expect(screen.getByRole('tab', { name: /profile/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /preferences/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /profil/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /prefer/i })).toBeInTheDocument();
       expect(screen.getByRole('tab', { name: /privacy/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /advanced/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /account/i })).toBeInTheDocument();
     });
 
     it('should load user profile on mount', async () => {
@@ -646,7 +646,7 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const advancedTab = screen.getByRole('tab', { name: /advanced/i });
+      const advancedTab = screen.getByRole('tab', { name: /account/i });
       await user.click(advancedTab);
 
       // Wait for tab to be selected
@@ -660,7 +660,7 @@ describe('SettingsPage', () => {
       // Then wait for tab content to render
       await waitFor(
         () => {
-          const tabPanel = screen.getByRole('tabpanel', { name: /advanced/i });
+          const tabPanel = screen.getByRole('tabpanel', { name: /account/i });
           expect(tabPanel).toBeVisible();
           // Verify content within the visible panel
           expect(within(tabPanel).getByText(/api key authentication/i)).toBeInTheDocument();
@@ -674,13 +674,13 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const advancedTab = screen.getByRole('tab', { name: /advanced/i });
+      const advancedTab = screen.getByRole('tab', { name: /account/i });
       await user.click(advancedTab);
 
       // Wait for tab panel to be visible
       await waitFor(
         () => {
-          const tabPanel = screen.getByRole('tabpanel', { name: /advanced/i });
+          const tabPanel = screen.getByRole('tabpanel', { name: /account/i });
           expect(tabPanel).toBeVisible();
           expect(within(tabPanel).getByText(/api key authentication/i)).toBeInTheDocument();
         },
@@ -706,13 +706,13 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const advancedTab = screen.getByRole('tab', { name: /advanced/i });
+      const advancedTab = screen.getByRole('tab', { name: /account/i });
       await user.click(advancedTab);
 
       // Wait for tab panel to be visible first
       await waitFor(
         () => {
-          const tabPanel = screen.getByRole('tabpanel', { name: /advanced/i });
+          const tabPanel = screen.getByRole('tabpanel', { name: /account/i });
           expect(tabPanel).toBeVisible();
         },
         { timeout: 5000 }
@@ -721,7 +721,7 @@ describe('SettingsPage', () => {
       // Then check for sessions content
       await waitFor(
         () => {
-          const tabPanel = screen.getByRole('tabpanel', { name: /advanced/i });
+          const tabPanel = screen.getByRole('tabpanel', { name: /account/i });
           expect(within(tabPanel).getByText(/active sessions/i)).toBeInTheDocument();
         },
         { timeout: 5000 }
@@ -750,7 +750,7 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const advancedTab = screen.getByRole('tab', { name: /advanced/i });
+      const advancedTab = screen.getByRole('tab', { name: /account/i });
       await user.click(advancedTab);
 
       await waitFor(
@@ -781,13 +781,13 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const advancedTab = screen.getByRole('tab', { name: /advanced/i });
+      const advancedTab = screen.getByRole('tab', { name: /account/i });
       await user.click(advancedTab);
 
       // Wait for tab panel to be visible
       await waitFor(
         () => {
-          const tabPanel = screen.getByRole('tabpanel', { name: /advanced/i });
+          const tabPanel = screen.getByRole('tabpanel', { name: /account/i });
           expect(tabPanel).toBeVisible();
           expect(within(tabPanel).getByText(/danger zone/i)).toBeInTheDocument();
         },
@@ -834,7 +834,7 @@ describe('SettingsPage', () => {
       });
 
       // Switch to advanced
-      const advancedTab = screen.getByRole('tab', { name: /advanced/i });
+      const advancedTab = screen.getByRole('tab', { name: /account/i });
       await user.click(advancedTab);
 
       await waitFor(() => {

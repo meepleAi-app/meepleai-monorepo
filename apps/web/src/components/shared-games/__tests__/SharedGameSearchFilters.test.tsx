@@ -2,16 +2,14 @@
  * SharedGameSearchFilters Component Tests
  *
  * Issue #2763: Sprint 3 - Catalog & Shared Games Components (0% → 85%)
+ * Updated for Issue #2873: Advanced Filter Panel Component
  *
  * Tests:
- * - Filter panel expansion/collapse
- * - Category multi-select
- * - Mechanic multi-select
- * - Player count inputs
- * - Playing time input
- * - Catalog-only toggle
- * - Active filters badges
- * - Clear filters functionality
+ * - Filter toggle button with active count badge
+ * - Advanced Filter Panel integration
+ * - Active filters badges display
+ * - Clear all filters functionality
+ * - Individual filter removal from badges
  *
  * Note: Mocks api module directly due to singleton timing issues with MSW.
  * The api singleton is created at module import time before MSW can intercept.
@@ -78,10 +76,10 @@ describe('SharedGameSearchFilters', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: /Filtri/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Filtri Avanzati/i })).toBeInTheDocument();
     });
 
-    it('does not show filters panel by default', () => {
+    it('does not show filter panel by default', () => {
       render(
         <SharedGameSearchFilters
           filters={defaultFilters}
@@ -89,10 +87,11 @@ describe('SharedGameSearchFilters', () => {
         />
       );
 
-      expect(screen.queryByText('Categorie')).not.toBeInTheDocument();
+      // Sheet content should not be visible
+      expect(screen.queryByText('Applica Filtri')).not.toBeInTheDocument();
     });
 
-    it('shows filters panel when expanded', async () => {
+    it('opens AdvancedFilterPanel when button is clicked', async () => {
       render(
         <SharedGameSearchFilters
           filters={defaultFilters}
@@ -100,17 +99,15 @@ describe('SharedGameSearchFilters', () => {
         />
       );
 
-      const toggleButton = screen.getByRole('button', { name: /Filtri/i });
+      const toggleButton = screen.getByRole('button', { name: /Filtri Avanzati/i });
       await act(async () => {
         fireEvent.click(toggleButton);
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Categorie')).toBeInTheDocument();
-        expect(screen.getByText('Meccaniche')).toBeInTheDocument();
-        expect(screen.getByText('Numero giocatori')).toBeInTheDocument();
-        expect(screen.getByText('Tempo massimo di gioco')).toBeInTheDocument();
-        expect(screen.getByText('Solo dal catalogo')).toBeInTheDocument();
+        // Sheet dialog should be visible with panel content
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(screen.getByText('Applica Filtri')).toBeInTheDocument();
       });
     });
   });
@@ -146,342 +143,50 @@ describe('SharedGameSearchFilters', () => {
         />
       );
 
-      // No badge element should exist
-      const filterButton = screen.getByRole('button', { name: /Filtri/i });
-      expect(filterButton.querySelector('[class*="badge"]')).toBeNull();
-    });
-  });
-
-  // ==========================================================================
-  // Category Selection
-  // ==========================================================================
-
-  describe('Category Selection', () => {
-    it('loads and displays categories from API', async () => {
-      render(
-        <SharedGameSearchFilters
-          filters={defaultFilters}
-          onFiltersChange={mockOnFiltersChange}
-        />
-      );
-
-      // Expand filters
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Categorie')).toBeInTheDocument();
-      });
-
-      // Open category dropdown
-      const categoryButton = screen.getByRole('button', { name: /Seleziona categorie/i });
-      await act(async () => {
-        fireEvent.click(categoryButton);
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Strategy')).toBeInTheDocument();
-        expect(screen.getByText('Family')).toBeInTheDocument();
-      });
+      // Only the button should exist, no badge number
+      const filterButton = screen.getByRole('button', { name: /Filtri Avanzati/i });
+      // Check that there's no number in the button (no count badge)
+      expect(filterButton.textContent).not.toMatch(/\d+/);
     });
 
-    it('calls onFiltersChange when category is selected', async () => {
-      render(
-        <SharedGameSearchFilters
-          filters={defaultFilters}
-          onFiltersChange={mockOnFiltersChange}
-        />
-      );
-
-      // Expand filters and open dropdown
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Seleziona categorie/i })).toBeInTheDocument();
-      });
-
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Seleziona categorie/i }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Strategy')).toBeInTheDocument();
-      });
-
-      // Find and click the checkbox for Strategy
-      const strategyLabel = screen.getByText('Strategy');
-      await act(async () => {
-        fireEvent.click(strategyLabel);
-      });
-
-      expect(mockOnFiltersChange).toHaveBeenCalledWith(
-        expect.objectContaining({
-          categoryIds: ['cat-strategy'],
-        })
-      );
-    });
-  });
-
-  // ==========================================================================
-  // Mechanic Selection
-  // ==========================================================================
-
-  describe('Mechanic Selection', () => {
-    it('loads and displays mechanics from API', async () => {
-      render(
-        <SharedGameSearchFilters
-          filters={defaultFilters}
-          onFiltersChange={mockOnFiltersChange}
-        />
-      );
-
-      // Expand filters
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Meccaniche')).toBeInTheDocument();
-      });
-
-      // Open mechanic dropdown
-      const mechanicButton = screen.getByRole('button', { name: /Seleziona meccaniche/i });
-      await act(async () => {
-        fireEvent.click(mechanicButton);
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Worker Placement')).toBeInTheDocument();
-        expect(screen.getByText('Deck Building')).toBeInTheDocument();
-      });
-    });
-  });
-
-  // ==========================================================================
-  // Player Count Filters
-  // ==========================================================================
-
-  describe('Player Count Filters', () => {
-    it('renders min and max player inputs', async () => {
-      render(
-        <SharedGameSearchFilters
-          filters={defaultFilters}
-          onFiltersChange={mockOnFiltersChange}
-        />
-      );
-
-      // Expand filters
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('Minimo giocatori')).toBeInTheDocument();
-        expect(screen.getByLabelText('Massimo giocatori')).toBeInTheDocument();
-      });
-    });
-
-    it('calls onFiltersChange when min players is changed', async () => {
-      render(
-        <SharedGameSearchFilters
-          filters={defaultFilters}
-          onFiltersChange={mockOnFiltersChange}
-        />
-      );
-
-      // Expand filters
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('Minimo giocatori')).toBeInTheDocument();
-      });
-
-      const minInput = screen.getByLabelText('Minimo giocatori');
-      await act(async () => {
-        fireEvent.change(minInput, { target: { value: '2' } });
-      });
-
-      expect(mockOnFiltersChange).toHaveBeenCalledWith(
-        expect.objectContaining({
-          minPlayers: 2,
-        })
-      );
-    });
-
-    it('calls onFiltersChange when max players is changed', async () => {
-      render(
-        <SharedGameSearchFilters
-          filters={defaultFilters}
-          onFiltersChange={mockOnFiltersChange}
-        />
-      );
-
-      // Expand filters
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('Massimo giocatori')).toBeInTheDocument();
-      });
-
-      const maxInput = screen.getByLabelText('Massimo giocatori');
-      await act(async () => {
-        fireEvent.change(maxInput, { target: { value: '4' } });
-      });
-
-      expect(mockOnFiltersChange).toHaveBeenCalledWith(
-        expect.objectContaining({
-          maxPlayers: 4,
-        })
-      );
-    });
-
-    it('sets null when player input is cleared', async () => {
-      const filtersWithPlayers: SearchFilters = {
+    it('counts complexity filter correctly', () => {
+      const activeFilters: SearchFilters = {
         ...defaultFilters,
-        minPlayers: 2,
+        minComplexity: 2.0,
+        maxComplexity: 4.0,
       };
 
       render(
         <SharedGameSearchFilters
-          filters={filtersWithPlayers}
+          filters={activeFilters}
           onFiltersChange={mockOnFiltersChange}
         />
       );
 
-      // Expand filters - use getAllByRole to find toggle button (first one, not "Cancella filtri")
-      const filterButtons = screen.getAllByRole('button', { name: /Filtri/i });
-      await act(async () => {
-        // First button is the toggle, second is "Cancella filtri"
-        fireEvent.click(filterButtons[0]);
-      });
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('Minimo giocatori')).toBeInTheDocument();
-      });
-
-      const minInput = screen.getByLabelText('Minimo giocatori');
-      await act(async () => {
-        fireEvent.change(minInput, { target: { value: '' } });
-      });
-
-      expect(mockOnFiltersChange).toHaveBeenCalledWith(
-        expect.objectContaining({
-          minPlayers: null,
-        })
-      );
-    });
-  });
-
-  // ==========================================================================
-  // Playing Time Filter
-  // ==========================================================================
-
-  describe('Playing Time Filter', () => {
-    it('renders max playing time input', async () => {
-      render(
-        <SharedGameSearchFilters
-          filters={defaultFilters}
-          onFiltersChange={mockOnFiltersChange}
-        />
-      );
-
-      // Expand filters
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('Tempo massimo in minuti')).toBeInTheDocument();
-      });
+      // Should show badge with count 1 (complexity)
+      expect(screen.getByText('1')).toBeInTheDocument();
     });
 
-    it('calls onFiltersChange when max playing time is changed', async () => {
+    it('counts all filter types correctly', () => {
+      const activeFilters: SearchFilters = {
+        ...defaultFilters,
+        categoryIds: ['cat-strategy'],
+        mechanicIds: ['mech-worker-placement'],
+        minPlayers: 2,
+        minComplexity: 2.0,
+        minPlayingTime: 30,
+        catalogOnly: true,
+      };
+
       render(
         <SharedGameSearchFilters
-          filters={defaultFilters}
+          filters={activeFilters}
           onFiltersChange={mockOnFiltersChange}
         />
       );
 
-      // Expand filters
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('Tempo massimo in minuti')).toBeInTheDocument();
-      });
-
-      const timeInput = screen.getByLabelText('Tempo massimo in minuti');
-      await act(async () => {
-        fireEvent.change(timeInput, { target: { value: '60' } });
-      });
-
-      expect(mockOnFiltersChange).toHaveBeenCalledWith(
-        expect.objectContaining({
-          maxPlayingTime: 60,
-        })
-      );
-    });
-  });
-
-  // ==========================================================================
-  // Catalog Only Toggle
-  // ==========================================================================
-
-  describe('Catalog Only Toggle', () => {
-    it('renders catalog only switch', async () => {
-      render(
-        <SharedGameSearchFilters
-          filters={defaultFilters}
-          onFiltersChange={mockOnFiltersChange}
-        />
-      );
-
-      // Expand filters
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByRole('switch', { name: /Solo dal catalogo/i })).toBeInTheDocument();
-      });
-    });
-
-    it('calls onFiltersChange when catalog only is toggled', async () => {
-      render(
-        <SharedGameSearchFilters
-          filters={defaultFilters}
-          onFiltersChange={mockOnFiltersChange}
-        />
-      );
-
-      // Expand filters
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByRole('switch', { name: /Solo dal catalogo/i })).toBeInTheDocument();
-      });
-
-      const toggle = screen.getByRole('switch', { name: /Solo dal catalogo/i });
-      await act(async () => {
-        fireEvent.click(toggle);
-      });
-
-      expect(mockOnFiltersChange).toHaveBeenCalledWith(
-        expect.objectContaining({
-          catalogOnly: true,
-        })
-      );
+      // Should show badge with count 6
+      expect(screen.getByText('6')).toBeInTheDocument();
     });
   });
 
@@ -490,7 +195,7 @@ describe('SharedGameSearchFilters', () => {
   // ==========================================================================
 
   describe('Active Filters Badges', () => {
-    it('shows category badges when collapsed', async () => {
+    it('shows category badges with orange styling', async () => {
       const filtersWithCategory: SearchFilters = {
         ...defaultFilters,
         categoryIds: ['cat-strategy'],
@@ -503,10 +208,30 @@ describe('SharedGameSearchFilters', () => {
         />
       );
 
-      // Wait for the category badge to appear (shows category name from mock data)
       await waitFor(() => {
-        // Should show badge with category name from mock useCategories hook
-        expect(screen.getByText('Strategy')).toBeInTheDocument();
+        const badge = screen.getByText('Strategy');
+        expect(badge).toBeInTheDocument();
+        // Check for orange styling class
+        expect(badge.closest('.bg-orange-500\\/10')).toBeInTheDocument();
+      });
+    });
+
+    it('shows mechanic badges with orange border', async () => {
+      const filtersWithMechanic: SearchFilters = {
+        ...defaultFilters,
+        mechanicIds: ['mech-worker-placement'],
+      };
+
+      render(
+        <SharedGameSearchFilters
+          filters={filtersWithMechanic}
+          onFiltersChange={mockOnFiltersChange}
+        />
+      );
+
+      await waitFor(() => {
+        const badge = screen.getByText('Worker Placement');
+        expect(badge).toBeInTheDocument();
       });
     });
 
@@ -527,10 +252,28 @@ describe('SharedGameSearchFilters', () => {
       expect(screen.getByText('2-4 giocatori')).toBeInTheDocument();
     });
 
+    it('shows complexity filter badge when set', () => {
+      const filtersWithComplexity: SearchFilters = {
+        ...defaultFilters,
+        minComplexity: 2.0,
+        maxComplexity: 4.0,
+      };
+
+      render(
+        <SharedGameSearchFilters
+          filters={filtersWithComplexity}
+          onFiltersChange={mockOnFiltersChange}
+        />
+      );
+
+      expect(screen.getByText(/Complessit.*2\.0.*4\.0/)).toBeInTheDocument();
+    });
+
     it('shows playing time badge when set', () => {
       const filtersWithTime: SearchFilters = {
         ...defaultFilters,
-        maxPlayingTime: 60,
+        minPlayingTime: 30,
+        maxPlayingTime: 120,
       };
 
       render(
@@ -540,10 +283,10 @@ describe('SharedGameSearchFilters', () => {
         />
       );
 
-      expect(screen.getByText('Max 60 min')).toBeInTheDocument();
+      expect(screen.getByText('30-120 min')).toBeInTheDocument();
     });
 
-    it('shows catalog only badge when enabled', () => {
+    it('shows catalog only badge with solid orange when enabled', () => {
       const filtersWithCatalog: SearchFilters = {
         ...defaultFilters,
         catalogOnly: true,
@@ -556,15 +299,17 @@ describe('SharedGameSearchFilters', () => {
         />
       );
 
-      expect(screen.getByText('Solo catalogo')).toBeInTheDocument();
+      const badge = screen.getByText('Solo catalogo');
+      expect(badge).toBeInTheDocument();
+      expect(badge.closest('.bg-orange-500')).toBeInTheDocument();
     });
   });
 
   // ==========================================================================
-  // Clear Filters
+  // Clear All Filters
   // ==========================================================================
 
-  describe('Clear Filters', () => {
+  describe('Clear All Filters', () => {
     it('shows clear button when filters are active', () => {
       const activeFilters: SearchFilters = {
         ...defaultFilters,
@@ -578,7 +323,7 @@ describe('SharedGameSearchFilters', () => {
         />
       );
 
-      expect(screen.getByText('Cancella filtri')).toBeInTheDocument();
+      expect(screen.getByText('Cancella tutti')).toBeInTheDocument();
     });
 
     it('does not show clear button when no filters', () => {
@@ -589,7 +334,7 @@ describe('SharedGameSearchFilters', () => {
         />
       );
 
-      expect(screen.queryByText('Cancella filtri')).not.toBeInTheDocument();
+      expect(screen.queryByText('Cancella tutti')).not.toBeInTheDocument();
     });
 
     it('calls onFiltersChange with DEFAULT_FILTERS when clear is clicked', async () => {
@@ -606,7 +351,7 @@ describe('SharedGameSearchFilters', () => {
         />
       );
 
-      const clearButton = screen.getByText('Cancella filtri');
+      const clearButton = screen.getByText('Cancella tutti');
       await act(async () => {
         fireEvent.click(clearButton);
       });
@@ -620,6 +365,64 @@ describe('SharedGameSearchFilters', () => {
   // ==========================================================================
 
   describe('Remove Individual Filter', () => {
+    it('removes category when badge X is clicked', async () => {
+      const filtersWithCategory: SearchFilters = {
+        ...defaultFilters,
+        categoryIds: ['cat-strategy'],
+      };
+
+      render(
+        <SharedGameSearchFilters
+          filters={filtersWithCategory}
+          onFiltersChange={mockOnFiltersChange}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Strategy')).toBeInTheDocument();
+      });
+
+      const removeButton = screen.getByLabelText('Rimuovi Strategy');
+      await act(async () => {
+        fireEvent.click(removeButton);
+      });
+
+      expect(mockOnFiltersChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          categoryIds: [],
+        })
+      );
+    });
+
+    it('removes mechanic when badge X is clicked', async () => {
+      const filtersWithMechanic: SearchFilters = {
+        ...defaultFilters,
+        mechanicIds: ['mech-worker-placement'],
+      };
+
+      render(
+        <SharedGameSearchFilters
+          filters={filtersWithMechanic}
+          onFiltersChange={mockOnFiltersChange}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Worker Placement')).toBeInTheDocument();
+      });
+
+      const removeButton = screen.getByLabelText('Rimuovi Worker Placement');
+      await act(async () => {
+        fireEvent.click(removeButton);
+      });
+
+      expect(mockOnFiltersChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mechanicIds: [],
+        })
+      );
+    });
+
     it('removes player filter when badge X is clicked', async () => {
       const filtersWithPlayers: SearchFilters = {
         ...defaultFilters,
@@ -647,10 +450,38 @@ describe('SharedGameSearchFilters', () => {
       );
     });
 
-    it('removes playing time filter when badge X is clicked', async () => {
+    it('removes complexity filter when badge X is clicked', async () => {
+      const filtersWithComplexity: SearchFilters = {
+        ...defaultFilters,
+        minComplexity: 2.0,
+        maxComplexity: 4.0,
+      };
+
+      render(
+        <SharedGameSearchFilters
+          filters={filtersWithComplexity}
+          onFiltersChange={mockOnFiltersChange}
+        />
+      );
+
+      const removeButton = screen.getByLabelText(/Rimuovi filtro complessit/);
+      await act(async () => {
+        fireEvent.click(removeButton);
+      });
+
+      expect(mockOnFiltersChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          minComplexity: null,
+          maxComplexity: null,
+        })
+      );
+    });
+
+    it('removes duration filter when badge X is clicked', async () => {
       const filtersWithTime: SearchFilters = {
         ...defaultFilters,
-        maxPlayingTime: 60,
+        minPlayingTime: 30,
+        maxPlayingTime: 120,
       };
 
       render(
@@ -660,13 +491,14 @@ describe('SharedGameSearchFilters', () => {
         />
       );
 
-      const removeButton = screen.getByLabelText('Rimuovi filtro tempo');
+      const removeButton = screen.getByLabelText('Rimuovi filtro durata');
       await act(async () => {
         fireEvent.click(removeButton);
       });
 
       expect(mockOnFiltersChange).toHaveBeenCalledWith(
         expect.objectContaining({
+          minPlayingTime: null,
           maxPlayingTime: null,
         })
       );
@@ -695,6 +527,105 @@ describe('SharedGameSearchFilters', () => {
           catalogOnly: false,
         })
       );
+    });
+  });
+
+  // ==========================================================================
+  // Orange Button Styling
+  // ==========================================================================
+
+  describe('Orange Button Styling', () => {
+    it('shows orange border on toggle button when filters are active', () => {
+      const activeFilters: SearchFilters = {
+        ...defaultFilters,
+        categoryIds: ['cat-strategy'],
+      };
+
+      render(
+        <SharedGameSearchFilters
+          filters={activeFilters}
+          onFiltersChange={mockOnFiltersChange}
+        />
+      );
+
+      const toggleButton = screen.getByRole('button', { name: /Filtri Avanzati/i });
+      expect(toggleButton).toHaveClass('border-orange-500/50');
+    });
+
+    it('shows orange badge on toggle button when filters are active', () => {
+      const activeFilters: SearchFilters = {
+        ...defaultFilters,
+        categoryIds: ['cat-strategy'],
+      };
+
+      render(
+        <SharedGameSearchFilters
+          filters={activeFilters}
+          onFiltersChange={mockOnFiltersChange}
+        />
+      );
+
+      // Check for orange badge inside the button
+      const badge = screen.getByText('1');
+      expect(badge).toHaveClass('bg-orange-500');
+    });
+  });
+
+  // ==========================================================================
+  // Integration with AdvancedFilterPanel
+  // ==========================================================================
+
+  describe('AdvancedFilterPanel Integration', () => {
+    it('passes filters to AdvancedFilterPanel', async () => {
+      const activeFilters: SearchFilters = {
+        ...defaultFilters,
+        categoryIds: ['cat-strategy'],
+      };
+
+      render(
+        <SharedGameSearchFilters
+          filters={activeFilters}
+          onFiltersChange={mockOnFiltersChange}
+        />
+      );
+
+      // Open panel
+      const toggleButton = screen.getByRole('button', { name: /Filtri Avanzati/i });
+      await act(async () => {
+        fireEvent.click(toggleButton);
+      });
+
+      await waitFor(() => {
+        // Panel should show "1 attivi" from the passed filters
+        expect(screen.getByText(/1 attivi/i)).toBeInTheDocument();
+      });
+    });
+
+    it('calls onFiltersChange when panel applies filters', async () => {
+      render(
+        <SharedGameSearchFilters
+          filters={defaultFilters}
+          onFiltersChange={mockOnFiltersChange}
+        />
+      );
+
+      // Open panel
+      const toggleButton = screen.getByRole('button', { name: /Filtri Avanzati/i });
+      await act(async () => {
+        fireEvent.click(toggleButton);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Applica Filtri/i })).toBeInTheDocument();
+      });
+
+      // Click Apply
+      const applyButton = screen.getByRole('button', { name: /Applica Filtri/i });
+      await act(async () => {
+        fireEvent.click(applyButton);
+      });
+
+      expect(mockOnFiltersChange).toHaveBeenCalled();
     });
   });
 });

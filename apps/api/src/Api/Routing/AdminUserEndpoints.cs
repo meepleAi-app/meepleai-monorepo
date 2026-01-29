@@ -2,6 +2,8 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserBadges;
 using Api.Extensions;
 using Api.Infrastructure.Security;
 using Api.Models;
@@ -34,6 +36,8 @@ internal static class AdminUserEndpoints
         MapUserActivityEndpoints(group);
         // Get user library stats (Issue #3139)
         MapUserLibraryStatsEndpoints(group);
+        // Get user badges (Issue #3140)
+        MapUserBadgesEndpoints(group);
 
         return group;
     }
@@ -568,6 +572,41 @@ internal static class AdminUserEndpoints
 
         logger.LogInformation("User {UserId} level set to {Level} by admin {AdminId}",
             userId, request.Level, session.User.Id);
+
+        return Results.Ok(result);
+    }
+
+    private static void MapUserBadgesEndpoints(RouteGroupBuilder group)
+    {
+        // Get user badges (admin only) - Issue #3140
+        group.MapGet("/admin/users/{userId:guid}/badges", HandleGetUserBadges)
+            .RequireAdminSession()
+            .WithName("GetUserBadgesAdmin")
+            .WithTags("Admin", "Badges")
+            .WithDescription("Retrieve all badges (including hidden) for a specific user (admin only)")
+            .Produces<List<UserBadgeDto>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> HandleGetUserBadges(
+        Guid userId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} retrieving badges for user {UserId}", session!.User!.Id, userId);
+
+        // Reuse existing GetUserBadgesQuery with IncludeHidden: true
+        var query = new GetUserBadgesQuery(userId, IncludeHidden: true);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        logger.LogInformation("Admin {AdminId} retrieved {Count} badges for user {UserId}",
+            session.User.Id, result.Count, userId);
 
         return Results.Ok(result);
     }

@@ -580,6 +580,100 @@ describe('useLibrary hooks', () => {
 
       expect(result.current.data?.isFavorite).toBe(false);
     });
+
+    // ==================== Optimistic Update Tests (Issue #2859) ====================
+
+    it('optimistically updates favorite status before API response', async () => {
+      // Pre-populate library cache with unfavorited entry
+      const mockLibraryResponse: PaginatedLibraryResponse = {
+        items: [
+          {
+            id: 'lib-entry-1',
+            gameId,
+            userId: 'user-1',
+            game: { id: gameId, name: 'Catan' } as any,
+            addedAt: '2024-01-01T00:00:00Z',
+            isFavorite: false,
+            playCount: 5,
+          },
+        ],
+        totalCount: 1,
+        page: 1,
+        pageSize: 20,
+        totalPages: 1,
+      };
+      queryClient.setQueryData(libraryKeys.list(), mockLibraryResponse);
+
+      // Make API call slow to observe optimistic update
+      let resolveApiCall: (value: UserLibraryEntry) => void;
+      (api.library.updateEntry as Mock).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveApiCall = resolve;
+          })
+      );
+
+      const { result } = renderHook(() => useToggleLibraryFavorite(), { wrapper });
+
+      // Start mutation but don't await
+      act(() => {
+        result.current.mutate({ gameId, isFavorite: true });
+      });
+
+      // Check that cache was optimistically updated
+      await waitFor(() => {
+        const cachedData = queryClient.getQueryData<PaginatedLibraryResponse>(
+          libraryKeys.list()
+        );
+        expect(cachedData?.items[0]?.isFavorite).toBe(true);
+      });
+
+      // Now resolve the API call
+      await act(async () => {
+        resolveApiCall!(mockEntry);
+      });
+    });
+
+    it('rolls back optimistic favorite toggle on error', async () => {
+      // Pre-populate library cache
+      const mockLibraryResponse: PaginatedLibraryResponse = {
+        items: [
+          {
+            id: 'lib-entry-1',
+            gameId,
+            userId: 'user-1',
+            game: { id: gameId, name: 'Catan' } as any,
+            addedAt: '2024-01-01T00:00:00Z',
+            isFavorite: false,
+            playCount: 5,
+          },
+        ],
+        totalCount: 1,
+        page: 1,
+        pageSize: 20,
+        totalPages: 1,
+      };
+      queryClient.setQueryData(libraryKeys.list(), mockLibraryResponse);
+
+      // API will fail
+      const error = new Error('Network error');
+      (api.library.updateEntry as Mock).mockRejectedValue(error);
+
+      const { result } = renderHook(() => useToggleLibraryFavorite(), { wrapper });
+
+      await act(async () => {
+        try {
+          await result.current.mutateAsync({ gameId, isFavorite: true });
+        } catch {
+          // Expected to fail
+        }
+      });
+
+      // After error, mutation should be in error state
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+    });
   });
 
   // ==================== useRecentlyAddedGames ====================

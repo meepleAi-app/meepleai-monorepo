@@ -4,5 +4,7 @@ export { default as ViewModeToggle } from './ViewModeToggle';
 // Issue #2055: Collaborative editing components
 export { ConflictResolutionModal } from './ConflictResolutionModal';
 export { PresenceIndicator, PresenceIndicatorCompact } from './PresenceIndicator';
-// Issue #2895: Editor approval queue components
+// Issue #2895, #2896: Editor approval queue components
 export { EditorApprovalQueueItem, type EditorApprovalQueueItemProps } from './EditorApprovalQueueItem';
+export { EditorApprovalQueue, type EditorApprovalQueueProps } from './EditorApprovalQueue';
+export { BulkRejectDialog, type BulkRejectDialogProps } from './BulkRejectDialog';

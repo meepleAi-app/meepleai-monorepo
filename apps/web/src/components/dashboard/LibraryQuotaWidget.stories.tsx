@@ -7,10 +7,11 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+import type { LibraryQuotaResponse } from '@/lib/api';
+
 import { LibraryQuotaWidget } from './LibraryQuotaWidget';
 
 import type { Meta, StoryObj } from '@storybook/react';
-import type { LibraryQuotaResponse } from '@/lib/api';
 
 // ============================================================================
 // Mock Data
@@ -30,7 +31,7 @@ const createMockQuota = (override: Partial<LibraryQuotaResponse>): LibraryQuotaR
 // ============================================================================
 
 // Create a wrapper that provides QueryClient and mocks the hook
-const createWrapper = (mockData: LibraryQuotaResponse | null, isLoading = false, error: Error | null = null) => {
+const createWrapper = (mockData: LibraryQuotaResponse | null, _isLoading = false, _error: Error | null = null) => {
   // We'll use the actual component but with mocked data injected via decorator
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -494,15 +495,6 @@ export const WithCustomClassName: Story = {
 export const ColorComparison: Story = {
   decorators: [
     () => {
-      const queryClient = new QueryClient({
-        defaultOptions: {
-          queries: {
-            retry: false,
-            refetchOnWindowFocus: false,
-          },
-        },
-      });
-
       // Create multiple query clients for different states
       const lowQueryClient = new QueryClient();
       lowQueryClient.setQueryData(['library', 'quota'], createMockQuota({

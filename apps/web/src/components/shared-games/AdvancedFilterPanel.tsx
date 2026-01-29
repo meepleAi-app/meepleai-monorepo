@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-object-injection */
+ 
 /**
  * AdvancedFilterPanel Component (Issue #2873)
  *
@@ -15,10 +15,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, ChevronDown, RotateCcw, SlidersHorizontal, Users, Clock, Puzzle, Grid3X3 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
-import { Checkbox } from '@/components/ui/primitives/checkbox';
-import { Label } from '@/components/ui/primitives/label';
-import { Slider } from '@/components/ui/primitives/slider';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/data-display/collapsible';
 import {
   Sheet,
   SheetContent,
@@ -27,11 +28,9 @@ import {
   SheetDescription,
   SheetFooter,
 } from '@/components/ui/navigation/sheet';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/data-display/collapsible';
+import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
+import { Slider } from '@/components/ui/primitives/slider';
 import { api } from '@/lib/api';
 import type { GameCategory, GameMechanic } from '@/lib/api/schemas/shared-games.schemas';
 import { cn } from '@/lib/utils';

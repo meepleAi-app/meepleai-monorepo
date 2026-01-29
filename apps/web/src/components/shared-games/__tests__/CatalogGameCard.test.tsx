@@ -18,7 +18,7 @@ import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { CatalogGameCard, CatalogGameCardSkeleton, type CommunityStats } from '../CatalogGameCard';
-import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
+import { useGameInLibraryStatus, useAddGameToLibrary, useLibraryQuota } from '@/hooks/queries';
 import { toast } from '@/components/layout/Toast';
 import type { SharedGame } from '@/lib/api';
 
@@ -26,6 +26,7 @@ import type { SharedGame } from '@/lib/api';
 vi.mock('@/hooks/queries', () => ({
   useGameInLibraryStatus: vi.fn(),
   useAddGameToLibrary: vi.fn(),
+  useLibraryQuota: vi.fn(),
 }));
 
 // Mock toast
@@ -115,6 +116,12 @@ describe('CatalogGameCard', () => {
     (useAddGameToLibrary as Mock).mockReturnValue({
       mutateAsync: mockMutateAsync,
       isPending: false,
+    });
+
+    // Default: quota not exceeded
+    (useLibraryQuota as Mock).mockReturnValue({
+      data: { remainingSlots: 10, currentCount: 5, maxAllowed: 15, userTier: 'normal', percentageUsed: 33.3 },
+      isLoading: false,
     });
   });
 
@@ -402,6 +409,111 @@ describe('CatalogGameCard', () => {
 
       expect(preventDefaultSpy).toHaveBeenCalled();
       expect(stopPropagationSpy).toHaveBeenCalled();
+    });
+  });
+
+  // ==========================================================================
+  // Quota Exceeded (Issue #2875)
+  // ==========================================================================
+
+  describe('Quota Exceeded (Issue #2875)', () => {
+    it('disables button when quota is exceeded (remainingSlots = 0)', () => {
+      (useLibraryQuota as Mock).mockReturnValue({
+        data: { remainingSlots: 0, currentCount: 15, maxAllowed: 15, userTier: 'normal', percentageUsed: 100 },
+        isLoading: false,
+      });
+
+      renderWithQuery(<CatalogGameCard game={mockGame} />);
+
+      const addButton = screen.getByTestId('add-to-library-button');
+      expect(addButton).toBeDisabled();
+    });
+
+    it('shows "Quota esaurita" text when quota is exceeded', () => {
+      (useLibraryQuota as Mock).mockReturnValue({
+        data: { remainingSlots: 0, currentCount: 15, maxAllowed: 15, userTier: 'normal', percentageUsed: 100 },
+        isLoading: false,
+      });
+
+      renderWithQuery(<CatalogGameCard game={mockGame} />);
+
+      expect(screen.getByText('Quota esaurita')).toBeInTheDocument();
+    });
+
+    it('shows tooltip explaining quota exceeded', () => {
+      (useLibraryQuota as Mock).mockReturnValue({
+        data: { remainingSlots: 0, currentCount: 15, maxAllowed: 15, userTier: 'normal', percentageUsed: 100 },
+        isLoading: false,
+      });
+
+      renderWithQuery(<CatalogGameCard game={mockGame} />);
+
+      const addButton = screen.getByTestId('add-to-library-button');
+      expect(addButton).toHaveAttribute('title', 'Hai raggiunto il limite di giochi in libreria');
+    });
+
+    it('applies gray styling when quota is exceeded', () => {
+      (useLibraryQuota as Mock).mockReturnValue({
+        data: { remainingSlots: 0, currentCount: 15, maxAllowed: 15, userTier: 'normal', percentageUsed: 100 },
+        isLoading: false,
+      });
+
+      renderWithQuery(<CatalogGameCard game={mockGame} />);
+
+      const addButton = screen.getByTestId('add-to-library-button');
+      expect(addButton).toHaveClass('bg-gray-400');
+    });
+
+    it('does not call mutation when clicking disabled quota exceeded button', async () => {
+      (useLibraryQuota as Mock).mockReturnValue({
+        data: { remainingSlots: 0, currentCount: 15, maxAllowed: 15, userTier: 'normal', percentageUsed: 100 },
+        isLoading: false,
+      });
+
+      renderWithQuery(<CatalogGameCard game={mockGame} />);
+
+      const addButton = screen.getByTestId('add-to-library-button');
+      fireEvent.click(addButton);
+
+      expect(mockMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('enables button when quota has remaining slots', () => {
+      (useLibraryQuota as Mock).mockReturnValue({
+        data: { remainingSlots: 5, currentCount: 10, maxAllowed: 15, userTier: 'normal', percentageUsed: 66.7 },
+        isLoading: false,
+      });
+
+      renderWithQuery(<CatalogGameCard game={mockGame} />);
+
+      const addButton = screen.getByTestId('add-to-library-button');
+      expect(addButton).not.toBeDisabled();
+      expect(screen.getByText('Aggiungi')).toBeInTheDocument();
+    });
+
+    it('disables button while quota is loading', () => {
+      (useLibraryQuota as Mock).mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      });
+
+      renderWithQuery(<CatalogGameCard game={mockGame} />);
+
+      const addButton = screen.getByTestId('add-to-library-button');
+      expect(addButton).toBeDisabled();
+    });
+
+    it('handles undefined quota data gracefully (button not disabled)', () => {
+      (useLibraryQuota as Mock).mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      });
+
+      renderWithQuery(<CatalogGameCard game={mockGame} />);
+
+      const addButton = screen.getByTestId('add-to-library-button');
+      expect(addButton).not.toBeDisabled();
+      expect(screen.getByText('Aggiungi')).toBeInTheDocument();
     });
   });
 

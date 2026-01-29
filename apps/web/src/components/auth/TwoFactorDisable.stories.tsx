@@ -7,8 +7,9 @@
 
 import { fn } from 'storybook/test';
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { TwoFactorDisable } from './TwoFactorDisable';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/Auth/TwoFactorDisable',

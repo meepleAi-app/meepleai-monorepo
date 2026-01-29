@@ -8,6 +8,7 @@ import {
   type VisibilityState,
   type RowSelectionState,
   type OnChangeFn,
+  type Row,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
@@ -30,6 +31,16 @@ import {
 // Re-export types for convenience
 export type { ColumnDef, SortingState, VisibilityState, RowSelectionState };
 
+// Shift selection context for range selection support
+interface ShiftSelectionContextValue<TData> {
+  enabled: boolean;
+  handleRowClick?: (row: Row<TData>, event: React.MouseEvent) => void;
+}
+
+const ShiftSelectionContext = React.createContext<ShiftSelectionContextValue<any>>({
+  enabled: false,
+});
+
 export interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
@@ -43,6 +54,7 @@ export interface DataTableProps<TData, TValue> {
   getRowId?: (row: TData) => string;
   isLoading?: boolean;
   emptyMessage?: string;
+  enableShiftSelection?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -58,6 +70,7 @@ export function DataTable<TData, TValue>({
   getRowId,
   isLoading = false,
   emptyMessage = 'No results.',
+  enableShiftSelection = false,
 }: DataTableProps<TData, TValue>) {
   // Internal state when external state is not provided
   const [internalSorting, setInternalSorting] = React.useState<SortingState>([]);
@@ -65,6 +78,7 @@ export function DataTable<TData, TValue>({
   const [internalColumnVisibility, setInternalColumnVisibility] = React.useState<VisibilityState>(
     {}
   );
+  const [lastSelectedIndex, setLastSelectedIndex] = React.useState<number | null>(null);
 
   const table = useReactTable({
     data,
@@ -82,7 +96,47 @@ export function DataTable<TData, TValue>({
     },
   });
 
+  // Shift+click handler for range selection
+  const handleShiftClick = React.useCallback((row: Row<TData>, event: React.MouseEvent) => {
+    if (!enableShiftSelection || !event.shiftKey || lastSelectedIndex === null) {
+      // Normal click - just toggle selection
+      row.toggleSelected();
+      const rows = table.getRowModel().rows;
+      const currentIndex = rows.findIndex(r => r.id === row.id);
+      setLastSelectedIndex(currentIndex);
+      return;
+    }
+
+    // Shift+click - range selection
+    event.preventDefault(); // Prevent text selection
+    const rows = table.getRowModel().rows;
+    const currentIndex = rows.findIndex(r => r.id === row.id);
+    const start = Math.min(lastSelectedIndex, currentIndex);
+    const end = Math.max(lastSelectedIndex, currentIndex);
+
+    // Select all rows in range
+    const newSelection: RowSelectionState = { ...(rowSelection ?? internalRowSelection) };
+    for (let i = start; i <= end; i++) {
+      newSelection[rows[i].id] = true;
+    }
+
+    // Update selection
+    const handler = onRowSelectionChange ?? setInternalRowSelection;
+    if (typeof handler === 'function') {
+      handler(newSelection);
+    }
+
+    setLastSelectedIndex(currentIndex);
+  }, [enableShiftSelection, lastSelectedIndex, table, rowSelection, internalRowSelection, onRowSelectionChange]);
+
+  // Shift selection context value
+  const shiftSelectionValue = React.useMemo<ShiftSelectionContextValue<TData>>(() => ({
+    enabled: enableShiftSelection,
+    handleRowClick: enableShiftSelection ? handleShiftClick : undefined,
+  }), [enableShiftSelection, handleShiftClick]);
+
   return (
+    <ShiftSelectionContext.Provider value={shiftSelectionValue}>
     <div className="rounded-md border">
       <Table>
         <TableHeader>
@@ -130,6 +184,7 @@ export function DataTable<TData, TValue>({
         </TableBody>
       </Table>
     </div>
+    </ShiftSelectionContext.Provider>
   );
 }
 
@@ -163,6 +218,33 @@ export function SortableHeader({ column, children }: SortableHeaderProps) {
   );
 }
 
+// Checkbox cell component with Shift+click support
+function SelectCheckboxCell<TData>({ row }: { row: Row<TData> }) {
+  const shiftContext = React.useContext(ShiftSelectionContext);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (shiftContext.enabled && shiftContext.handleRowClick && e.shiftKey) {
+      // Use Shift+click handler from context
+      shiftContext.handleRowClick(row, e);
+    } else {
+      // Normal click - toggle selection
+      row.toggleSelected();
+    }
+  };
+
+  return (
+    <Checkbox
+      checked={row.getIsSelected()}
+      onCheckedChange={value => row.toggleSelected(!!value)}
+      aria-label="Select row"
+      className="translate-y-[2px]"
+      onClick={handleClick}
+    />
+  );
+}
+
 // Helper to create a checkbox selection column
 export function createSelectColumn<TData>(): ColumnDef<TData> {
   return {
@@ -178,15 +260,7 @@ export function createSelectColumn<TData>(): ColumnDef<TData> {
         className="translate-y-[2px]"
       />
     ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={value => row.toggleSelected(!!value)}
-        aria-label="Select row"
-        className="translate-y-[2px]"
-        onClick={e => e.stopPropagation()}
-      />
-    ),
+    cell: ({ row }) => <SelectCheckboxCell row={row} />,
     enableSorting: false,
     enableHiding: false,
   };

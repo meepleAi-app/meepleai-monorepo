@@ -124,6 +124,14 @@ export interface BulkActionBarProps {
   onClearSelection: () => void;
 
   /**
+   * Visual variant of the action bar
+   * - default: muted background with border
+   * - floating: white background with orange border (prominent)
+   * @default "default"
+   */
+  variant?: 'default' | 'floating';
+
+  /**
    * Custom class name for the container
    */
   className?: string;
@@ -174,6 +182,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
   totalCount,
   actions,
   onClearSelection,
+  variant = 'default',
   className,
   itemLabel = 'items',
   itemLabelSingular,
@@ -205,8 +214,10 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
   return (
     <div
       className={cn(
-        'flex items-center justify-between gap-4 p-4 rounded-lg border',
-        'bg-muted/50 border-border',
+        'flex items-center justify-between gap-4 p-4 rounded-lg',
+        variant === 'floating'
+          ? 'border-2 border-orange-500 bg-white'
+          : 'border bg-muted/50 border-border',
         'transition-all duration-200',
         'animate-in slide-in-from-top-2 fade-in-0',
         className

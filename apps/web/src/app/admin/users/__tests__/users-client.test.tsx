@@ -13,6 +13,8 @@ vi.mock('@/lib/api', () => ({
       createUser: vi.fn(),
       updateUser: vi.fn(),
       deleteUser: vi.fn(),
+      suspendUser: vi.fn(),
+      unsuspendUser: vi.fn(),
     },
   },
 }));
@@ -510,6 +512,49 @@ describe('Users AdminPageClient', () => {
         const calls = vi.mocked(api.admin.getUsers).mock.calls;
         const page2Calls = calls.filter(call => call[0].page === 2);
         expect(page2Calls.length).toBeGreaterThan(0);
+      },
+      { timeout: 3000 }
+    );
+  });
+
+  it('performs bulk suspend with confirmation (Issue #2888)', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.admin.suspendUser).mockResolvedValue(undefined);
+
+    render(
+      <AuthProvider>
+        <AdminPageClient />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('user1@example.com')).toBeInTheDocument();
+    });
+
+    // Select a user
+    const checkboxes = screen.getAllByRole('checkbox');
+    await user.click(checkboxes[1]);
+
+    // Click bulk suspend button
+    const bulkSuspendButton = await screen.findByTestId('bulk-action-bar-action-suspend');
+    await user.click(bulkSuspendButton);
+
+    // Verify confirmation dialog appears
+    await waitFor(() => {
+      expect(screen.getByText('Suspend Multiple Users')).toBeInTheDocument();
+    });
+
+    // Confirm suspension
+    const confirmButton = screen.getByRole('button', { name: /confirm/i });
+    await user.click(confirmButton);
+
+    // Verify API was called
+    await waitFor(
+      () => {
+        expect(api.admin.suspendUser).toHaveBeenCalledWith(
+          'user-1',
+          'Bulk suspended by admin'
+        );
       },
       { timeout: 3000 }
     );

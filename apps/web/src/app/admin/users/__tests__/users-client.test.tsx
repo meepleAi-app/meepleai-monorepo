@@ -6,6 +6,20 @@ import { AuthProvider } from '@/components/auth/AuthProvider';
 import type { AuthUser } from '@/types/auth';
 import { api } from '@/lib/api';
 
+// Mock Next.js navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => '/admin/users',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock('@/lib/api', () => ({
   api: {
     admin: {

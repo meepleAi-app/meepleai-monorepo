@@ -64,7 +64,7 @@ export function AdminPageClient() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'createdAt', desc: true }]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'lastSeenAt', desc: true }]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -116,7 +116,7 @@ export function AdminPageClient() {
       setError(null);
 
       // Extract sort from TanStack sorting state
-      const sortBy = sorting[0]?.id || 'createdAt';
+      const sortBy = sorting[0]?.id || 'lastSeenAt';
       const sortOrder = sorting[0]?.desc ? 'desc' : 'asc';
 
       const queryParams = new URLSearchParams({

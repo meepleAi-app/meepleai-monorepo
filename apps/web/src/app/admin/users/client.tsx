@@ -861,7 +861,7 @@ function UserModal({ mode, user, onClose, onCreate, onUpdate }: UserModalProps) 
             <select
               id="role"
               value={role}
-              onChange={e => setRole(e.target.value)}
+              onChange={e => setRole(e.target.value as UserRole)}
               className="w-full p-2 border border-gray-300 rounded"
               required
             >

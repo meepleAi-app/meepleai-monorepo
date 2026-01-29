@@ -64,7 +64,8 @@ export function getUserStatus(user: {
   // Consider user inactive if not seen in last 30 days
   if (user.lastSeenAt) {
     const lastSeen = new Date(user.lastSeenAt);
-    const thirtyDaysAgo = new Date();
+    const now = new Date(Date.now()); // Use Date.now() to respect mocks in tests
+    const thirtyDaysAgo = new Date(now);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     if (lastSeen < thirtyDaysAgo) {
       return 'Inactive';

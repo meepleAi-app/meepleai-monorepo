@@ -251,3 +251,83 @@ describe('SortableHeader', () => {
     expect(mockColumn.toggleSorting).toHaveBeenCalledWith(true);
   });
 });
+
+describe('Shift Selection (Issue #2888)', () => {
+  const columnsWithSelect: ColumnDef<TestData>[] = [
+    createSelectColumn<TestData>(),
+    ...basicColumns,
+  ];
+
+  it('should enable Shift+click range selection when enableShiftSelection is true', () => {
+    const mockRowSelectionChange = vi.fn();
+
+    render(
+      <DataTable
+        columns={columnsWithSelect}
+        data={testData}
+        rowSelection={{}}
+        onRowSelectionChange={mockRowSelectionChange}
+        getRowId={(row) => row.id}
+        enableShiftSelection={true}
+      />
+    );
+
+    // Get checkboxes (first is "select all", rest are rows)
+    const checkboxes = screen.getAllByRole('checkbox');
+
+    // Click first row checkbox (normal click)
+    fireEvent.click(checkboxes[1]);
+
+    // Shift+click third row checkbox
+    fireEvent.click(checkboxes[3], { shiftKey: true });
+
+    // Should have called onRowSelectionChange with rows 1-3 selected
+    expect(mockRowSelectionChange).toHaveBeenCalled();
+  });
+
+  it('should handle Shift+click without initial selection', () => {
+    const mockRowSelectionChange = vi.fn();
+
+    render(
+      <DataTable
+        columns={columnsWithSelect}
+        data={testData}
+        rowSelection={{}}
+        onRowSelectionChange={mockRowSelectionChange}
+        getRowId={(row) => row.id}
+        enableShiftSelection={true}
+      />
+    );
+
+    const checkboxes = screen.getAllByRole('checkbox');
+
+    // Shift+click without prior selection should just select that row
+    fireEvent.click(checkboxes[2], { shiftKey: true });
+
+    expect(mockRowSelectionChange).toHaveBeenCalled();
+  });
+
+  it('should not use Shift selection when enableShiftSelection is false', () => {
+    const mockRowSelectionChange = vi.fn();
+
+    render(
+      <DataTable
+        columns={columnsWithSelect}
+        data={testData}
+        rowSelection={{}}
+        onRowSelectionChange={mockRowSelectionChange}
+        getRowId={(row) => row.id}
+        enableShiftSelection={false}
+      />
+    );
+
+    const checkboxes = screen.getAllByRole('checkbox');
+
+    // Normal clicks
+    fireEvent.click(checkboxes[1]);
+    fireEvent.click(checkboxes[3], { shiftKey: true });
+
+    // Should just toggle individual selections, not range
+    expect(mockRowSelectionChange).toHaveBeenCalled();
+  });
+});

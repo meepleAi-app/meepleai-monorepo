@@ -5,7 +5,7 @@
 
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithIntl } from '../../../__tests__/fixtures/common-fixtures';
+import { renderWithIntl, msg } from '../../../__tests__/fixtures/common-fixtures';
 import { TwoFactorSetup } from '../TwoFactorSetup';
 
 describe('TwoFactorSetup', () => {
@@ -28,9 +28,8 @@ describe('TwoFactorSetup', () => {
     it('renders title and instructions', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} />);
 
-      // i18n mock returns keys as fallback text
-      expect(screen.getByText('auth.2fa.setupTitle')).toBeInTheDocument();
-      expect(screen.getByText('auth.2fa.setupSubtitle')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.setupTitle'))).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.setupSubtitle'))).toBeInTheDocument();
     });
 
     it('renders QR code', () => {
@@ -43,8 +42,7 @@ describe('TwoFactorSetup', () => {
     it('renders manual entry section with secret', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} />);
 
-      // i18n mock returns keys as fallback
-      expect(screen.getByText('auth.2fa.cantScan')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.cantScan'))).toBeInTheDocument();
       expect(screen.getByTestId('secret-display')).toBeInTheDocument();
       expect(screen.getByText(mockSetupData.secret)).toBeInTheDocument();
     });
@@ -86,8 +84,7 @@ describe('TwoFactorSetup', () => {
     it('shows loading state on verify button', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} loading={true} />);
 
-      // i18n mock returns keys as fallback
-      expect(screen.getByText('auth.2fa.verifying')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.verifying'))).toBeInTheDocument();
     });
 
     it('disables verify button when loading', () => {
@@ -198,9 +195,8 @@ describe('TwoFactorSetup', () => {
     it('renders step titles for setup instructions', () => {
       renderWithIntl(<TwoFactorSetup {...defaultProps} />);
 
-      // Should have step titles (i18n keys)
-      expect(screen.getByText('auth.2fa.step1')).toBeInTheDocument();
-      expect(screen.getByText('auth.2fa.step2')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.step1'))).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.step2'))).toBeInTheDocument();
     });
   });
 
@@ -256,8 +252,7 @@ describe('TwoFactorSetup', () => {
       await user.click(copyButton);
 
       await waitFor(() => {
-        // i18n mock returns keys as fallback
-        expect(screen.getByText('common.copied')).toBeInTheDocument();
+        expect(screen.getByText(msg('common.copied'))).toBeInTheDocument();
       });
 
       vi.unstubAllGlobals();

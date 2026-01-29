@@ -66,6 +66,7 @@ export function UsersDataTable({
       getRowId={user => user.id}
       isLoading={isLoading}
       emptyMessage="No users found."
+      enableShiftSelection={true}
     />
   );
 }

@@ -5,6 +5,21 @@ import { AdminPageClient } from '../client';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import type { AuthUser } from '@/types/auth';
 import { api } from '@/lib/api';
+import { settingsPatterns } from '@/__tests__/fixtures/common-fixtures';
+
+// Mock Next.js navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => '/admin/users',
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -13,6 +28,8 @@ vi.mock('@/lib/api', () => ({
       createUser: vi.fn(),
       updateUser: vi.fn(),
       deleteUser: vi.fn(),
+      suspendUser: vi.fn(),
+      unsuspendUser: vi.fn(),
     },
   },
 }));
@@ -268,13 +285,26 @@ describe('Users AdminPageClient', () => {
       expect(screen.getByText('user1@example.com')).toBeInTheDocument();
     });
 
-    const editButtons = screen.getAllByRole('button', { name: /edit/i });
-    await user.click(editButtons[0]);
+    // Actions are in dropdown menu
+    const menuButtons = screen.getAllByRole('button', { name: settingsPatterns.menu.openMenu });
+    await user.click(menuButtons[0]);
 
+    // Wait for dropdown and click Edit
+    const editMenuItem = await screen.findByRole('menuitem', { name: settingsPatterns.menu.edit });
+    await user.click(editMenuItem);
+
+    // Wait for modal to open with longer timeout
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(screen.getByTestId('user-modal-title')).toHaveTextContent('Edit User');
+      },
+      { timeout: 3000 }
+    );
+
+    // Email field should be pre-filled (user-2 is first due to sorting)
     await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-      expect(screen.getByTestId('user-modal-title')).toHaveTextContent('Edit User');
-      expect(screen.getByDisplayValue('user1@example.com')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('user2@example.com')).toBeInTheDocument();
     });
   });
 
@@ -292,14 +322,23 @@ describe('Users AdminPageClient', () => {
       expect(screen.getByText('user1@example.com')).toBeInTheDocument();
     });
 
-    const editButtons = screen.getAllByRole('button', { name: /edit/i });
-    await user.click(editButtons[0]);
+    // Actions are in dropdown menu
+    const menuButtons = screen.getAllByRole('button', { name: settingsPatterns.menu.openMenu });
+    await user.click(menuButtons[0]);
 
-    await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-    });
+    const editMenuItem = await screen.findByRole('menuitem', { name: settingsPatterns.menu.edit });
+    await user.click(editMenuItem);
 
-    const displayNameInput = screen.getByDisplayValue('User One');
+    // Wait for modal with longer timeout
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
+
+    // user-2 (User Two) is first due to sorting
+    const displayNameInput = screen.getByDisplayValue('User Two');
     await user.clear(displayNameInput);
     await user.type(displayNameInput, 'Updated User Name');
 
@@ -307,8 +346,9 @@ describe('Users AdminPageClient', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
+      // user-2 is first due to lastSeenAt desc sort
       expect(api.admin.updateUser).toHaveBeenCalledWith(
-        'user-1',
+        'user-2',
         expect.objectContaining({
           displayName: 'Updated User Name',
         })
@@ -328,8 +368,13 @@ describe('Users AdminPageClient', () => {
       expect(screen.getByText('user1@example.com')).toBeInTheDocument();
     });
 
-    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
-    await user.click(deleteButtons[0]);
+    // Open dropdown menu
+    const menuButtons = screen.getAllByRole('button', { name: settingsPatterns.menu.openMenu });
+    await user.click(menuButtons[0]);
+
+    // Click Delete in dropdown
+    const deleteMenuItem = await screen.findByRole('menuitem', { name: settingsPatterns.menu.delete });
+    await user.click(deleteMenuItem);
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -352,8 +397,13 @@ describe('Users AdminPageClient', () => {
       expect(screen.getByText('user1@example.com')).toBeInTheDocument();
     });
 
-    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
-    await user.click(deleteButtons[0]);
+    // Open dropdown menu
+    const menuButtons = screen.getAllByRole('button', { name: settingsPatterns.menu.openMenu });
+    await user.click(menuButtons[0]);
+
+    // Click Delete in dropdown
+    const deleteMenuItem = await screen.findByRole('menuitem', { name: settingsPatterns.menu.delete });
+    await user.click(deleteMenuItem);
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -363,7 +413,8 @@ describe('Users AdminPageClient', () => {
     await user.click(confirmButton);
 
     await waitFor(() => {
-      expect(api.admin.deleteUser).toHaveBeenCalledWith('user-1');
+      // user-2 is first due to lastSeenAt desc sort
+      expect(api.admin.deleteUser).toHaveBeenCalledWith('user-2');
     });
   });
 
@@ -379,8 +430,13 @@ describe('Users AdminPageClient', () => {
       expect(screen.getByText('user1@example.com')).toBeInTheDocument();
     });
 
-    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
-    await user.click(deleteButtons[0]);
+    // Open dropdown menu
+    const menuButtons = screen.getAllByRole('button', { name: settingsPatterns.menu.openMenu });
+    await user.click(menuButtons[0]);
+
+    // Click Delete in dropdown
+    const deleteMenuItem = await screen.findByRole('menuitem', { name: settingsPatterns.menu.delete });
+    await user.click(deleteMenuItem);
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -510,6 +566,49 @@ describe('Users AdminPageClient', () => {
         const calls = vi.mocked(api.admin.getUsers).mock.calls;
         const page2Calls = calls.filter(call => call[0].page === 2);
         expect(page2Calls.length).toBeGreaterThan(0);
+      },
+      { timeout: 3000 }
+    );
+  });
+
+  it('performs bulk suspend with confirmation (Issue #2888)', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.admin.suspendUser).mockResolvedValue(undefined);
+
+    render(
+      <AuthProvider>
+        <AdminPageClient />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('user1@example.com')).toBeInTheDocument();
+    });
+
+    // Select a user
+    const checkboxes = screen.getAllByRole('checkbox');
+    await user.click(checkboxes[1]);
+
+    // Click bulk suspend button
+    const bulkSuspendButton = await screen.findByTestId('bulk-action-bar-action-suspend');
+    await user.click(bulkSuspendButton);
+
+    // Verify confirmation dialog appears
+    await waitFor(() => {
+      expect(screen.getByText('Suspend Multiple Users')).toBeInTheDocument();
+    });
+
+    // Confirm suspension
+    const confirmButton = screen.getByRole('button', { name: /confirm/i });
+    await user.click(confirmButton);
+
+    // Verify API was called (user-2 is first due to lastSeenAt desc sort)
+    await waitFor(
+      () => {
+        expect(api.admin.suspendUser).toHaveBeenCalledWith(
+          'user-2',
+          'Bulk suspended by admin'
+        );
       },
       { timeout: 3000 }
     );

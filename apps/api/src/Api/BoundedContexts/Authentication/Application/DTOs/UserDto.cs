@@ -14,7 +14,9 @@ internal record UserDto(
     string Tier,
     DateTime CreatedAt,
     bool IsTwoFactorEnabled,
-    DateTime? TwoFactorEnabledAt
+    DateTime? TwoFactorEnabledAt,
+    int Level,
+    int ExperiencePoints
 );
 
 /// <summary>

@@ -124,7 +124,7 @@ function StatsCard({ title, count, icon, color, onClick, active }: StatsCardProp
 // ========== Status Badge Component ==========
 
 function GameStatusBadge({ status }: { status: GameStatus }) {
-  // eslint-disable-next-line security/detect-object-injection -- safe: status is typed enum
+  // eslint-disable-next-line security/detect-object-injection -- status is typed GameStatus enum
   const config = STATUS_CONFIG[status];
   return (
     <Badge className={`${config.color} flex items-center gap-1`} data-testid={`status-badge-${status.toLowerCase()}`}>
@@ -292,7 +292,7 @@ export function EditorDashboardClient() {
       Published: 2,
       Archived: 3,
     };
-    // eslint-disable-next-line security/detect-object-injection -- safe: status is typed enum
+    // eslint-disable-next-line security/detect-object-injection -- status is typed GameStatus enum
     return map[status];
   }
 

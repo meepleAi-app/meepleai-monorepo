@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from '../fixtures/chromatic';
 
 const API_BASE = 'http://localhost:8080';
 const WEB_BASE = 'http://localhost:3000';

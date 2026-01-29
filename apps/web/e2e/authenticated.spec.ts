@@ -47,10 +47,9 @@ test.describe('Authenticated journeys', () => {
   test('supports an authenticated chat exchange', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Authenticated session (still mocked - auth flow tested elsewhere)
-    await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
+    // Use real authentication - middleware validates session server-side
+    await authHelper.setupRealSession('admin');
 
-    // ✅ REMOVED MOCK: Use real QA agent API
     // Real backend must be running with test game data seeded
 
     await page.goto('/chat');
@@ -84,10 +83,10 @@ test.describe('Authenticated journeys', () => {
   test('walks through the PDF upload wizard for an authenticated user', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
-    // Authenticated session (still mocked - auth flow tested elsewhere)
-    await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
+    // Use real authentication - middleware validates session server-side
+    await authHelper.setupRealSession('admin');
 
-    // ✅ REMOVED ALL MOCKS: Use real backend APIs
+    // Real backend APIs are used:
     // - GET /games - must return seeded test games
     // - POST /games - must create games
     // - GET /games/{id}/pdfs - must return PDF list

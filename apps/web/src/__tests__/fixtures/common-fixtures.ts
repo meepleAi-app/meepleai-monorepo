@@ -16,10 +16,10 @@ import type { NextRouter } from 'next/router';
 import { render, type RenderOptions } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 
-import { allTestMessages, msg } from './i18n-test-messages';
+import { allTestMessages, msg, settingsPatterns } from './i18n-test-messages';
 
-// Re-export msg helper for type-safe i18n assertions in tests
-export { msg } from './i18n-test-messages';
+// Re-export helpers for type-safe i18n/label assertions in tests
+export { msg, settingsPatterns } from './i18n-test-messages';
 
 // =============================================================================
 // AUTH FIXTURES

@@ -1,8 +1,12 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Handlers;
+using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -52,10 +56,14 @@ public sealed class SetUserLevelCommandHandlerIntegrationTests : IAsyncLifetime
         });
 
         services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector, Api.SharedKernel.Application.Services.DomainEventCollector>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
         var serviceProvider = services.BuildServiceProvider();
         _dbContext = serviceProvider.GetRequiredService<MeepleAiDbContext>();
+        var userRepository = serviceProvider.GetRequiredService<IUserRepository>();
+        var unitOfWork = serviceProvider.GetRequiredService<IUnitOfWork>();
 
         // Run migrations with retry
         for (var attempt = 0; attempt < 3; attempt++)
@@ -72,7 +80,7 @@ public sealed class SetUserLevelCommandHandlerIntegrationTests : IAsyncLifetime
         }
 
         var logger = new Mock<ILogger<SetUserLevelCommandHandler>>();
-        _handler = new SetUserLevelCommandHandler(_dbContext, logger.Object);
+        _handler = new SetUserLevelCommandHandler(userRepository, unitOfWork, _dbContext, logger.Object);
     }
 
     public async ValueTask DisposeAsync()
@@ -90,8 +98,8 @@ public sealed class SetUserLevelCommandHandlerIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = CreateTestUser(userId, initialLevel: 1);
-        _dbContext!.Users.Add(user);
+        var userEntity = CreateTestUserEntity(userId, initialLevel: 1);
+        _dbContext!.Users.Add(userEntity);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
@@ -118,8 +126,8 @@ public sealed class SetUserLevelCommandHandlerIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = CreateTestUser(userId, initialLevel: 5);
-        _dbContext!.Users.Add(user);
+        var userEntity = CreateTestUserEntity(userId, initialLevel: 5);
+        _dbContext!.Users.Add(userEntity);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
@@ -143,8 +151,8 @@ public sealed class SetUserLevelCommandHandlerIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = CreateTestUser(userId, initialLevel: 0);
-        _dbContext!.Users.Add(user);
+        var userEntity = CreateTestUserEntity(userId, initialLevel: 0);
+        _dbContext!.Users.Add(userEntity);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
@@ -189,8 +197,8 @@ public sealed class SetUserLevelCommandHandlerIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = CreateTestUser(userId, initialLevel: 1, experiencePoints: 500);
-        _dbContext!.Users.Add(user);
+        var userEntity = CreateTestUserEntity(userId, initialLevel: 1, experiencePoints: 500);
+        _dbContext!.Users.Add(userEntity);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
@@ -202,16 +210,16 @@ public sealed class SetUserLevelCommandHandlerIntegrationTests : IAsyncLifetime
         // Assert - Verify all UserDto fields are populated
         result.Should().NotBeNull();
         result.Id.Should().Be(userId);
-        result.Email.Should().Be(user.Email);
-        result.DisplayName.Should().Be(user.DisplayName);
-        result.Role.Should().Be(user.Role);
-        result.Tier.Should().Be(user.Tier);
+        result.Email.Should().Be(userEntity.Email);
+        result.DisplayName.Should().Be(userEntity.DisplayName);
+        result.Role.Should().Be(userEntity.Role);
+        result.Tier.Should().Be(userEntity.Tier);
         result.Level.Should().Be(5);
         result.ExperiencePoints.Should().Be(500);
-        result.CreatedAt.Should().BeCloseTo(user.CreatedAt, TimeSpan.FromSeconds(1));
+        result.CreatedAt.Should().BeCloseTo(userEntity.CreatedAt, TimeSpan.FromSeconds(1));
     }
 
-    private static UserEntity CreateTestUser(
+    private static UserEntity CreateTestUserEntity(
         Guid userId,
         int initialLevel = 0,
         int experiencePoints = 0)

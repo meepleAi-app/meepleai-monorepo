@@ -151,6 +151,10 @@ public class UserRepository : RepositoryBase, IUserRepository
         existingUser.SuspendedAt = entity.SuspendedAt;
         existingUser.SuspendReason = entity.SuspendReason;
 
+        // ISSUE-3141: Update gamification fields
+        existingUser.Level = entity.Level;
+        existingUser.ExperiencePoints = entity.ExperiencePoints;
+
         // Synchronize backup codes collection (delete old, add new)
         // This ensures we don't duplicate codes on every update
         existingUser.BackupCodes.Clear();
@@ -277,6 +281,9 @@ public class UserRepository : RepositoryBase, IUserRepository
         {
             user.RestoreSuspensionState(entity.IsSuspended, entity.SuspendedAt, entity.SuspendReason);
         }
+
+        // ISSUE-3141: Restore gamification state
+        user.RestoreGamificationState(entity.Level, entity.ExperiencePoints);
 
         return user;
     }

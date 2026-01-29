@@ -28,6 +28,30 @@ public static class TestcontainersConfiguration
     /// </summary>
     public const string RedisImage = "redis:7-alpine";
 
+    /// <summary>
+    /// Unstructured PDF extraction service image.
+    /// Built from apps/unstructured-service.
+    /// </summary>
+    public const string UnstructuredImage = "infra-unstructured-service:latest";
+
+    /// <summary>
+    /// SmolDocling VLM PDF extraction service image.
+    /// Built from apps/smoldocling-service.
+    /// </summary>
+    public const string SmolDoclingImage = "infra-smoldocling-service:latest";
+
+    /// <summary>
+    /// Embedding service image.
+    /// Built from apps/embedding-service.
+    /// </summary>
+    public const string EmbeddingImage = "infra-embedding-service:latest";
+
+    /// <summary>
+    /// Reranker service image.
+    /// Built from apps/reranker-service.
+    /// </summary>
+    public const string RerankerImage = "infra-reranker-service:latest";
+
     #endregion
 
     #region PostgreSQL Configuration
@@ -198,6 +222,42 @@ public static class TestcontainersConfiguration
 
     #endregion
 
+    #region PDF Services Configuration
+
+    /// <summary>
+    /// Unstructured service port.
+    /// </summary>
+    public const int UnstructuredServicePort = 8001;
+
+    /// <summary>
+    /// SmolDocling service port.
+    /// </summary>
+    public const int SmolDoclingServicePort = 8002;
+
+    /// <summary>
+    /// Embedding service port.
+    /// </summary>
+    public const int EmbeddingServicePort = 8003;
+
+    /// <summary>
+    /// Reranker service port.
+    /// </summary>
+    public const int RerankerServicePort = 8004;
+
+    /// <summary>
+    /// PDF service health check timeout in seconds.
+    /// Python services may take longer to initialize (model loading).
+    /// </summary>
+    public const int PdfServiceHealthCheckTimeoutSeconds = 60;
+
+    /// <summary>
+    /// PDF service operation timeout in seconds.
+    /// OCR and extraction can be slow for complex PDFs.
+    /// </summary>
+    public const int PdfServiceOperationTimeoutSeconds = 120;
+
+    #endregion
+
     #region Environment Variables
 
     /// <summary>
@@ -211,6 +271,37 @@ public static class TestcontainersConfiguration
     /// Set this to use external Redis instead of Testcontainer (faster in CI).
     /// </summary>
     public const string EnvRedisConnectionString = "TEST_REDIS_CONNSTRING";
+
+    /// <summary>
+    /// Environment variable to enable PDF processing services.
+    /// Set to "true" to start Unstructured, SmolDocling, Embedding, and Reranker containers.
+    /// Only needed for tests that validate real PDF processing pipelines.
+    /// </summary>
+    public const string EnvEnablePdfServices = "TEST_PDF_SERVICES";
+
+    /// <summary>
+    /// Environment variable for external Unstructured service URL.
+    /// Set this to use external service instead of Testcontainer.
+    /// </summary>
+    public const string EnvUnstructuredServiceUrl = "TEST_UNSTRUCTURED_URL";
+
+    /// <summary>
+    /// Environment variable for external SmolDocling service URL.
+    /// Set this to use external service instead of Testcontainer.
+    /// </summary>
+    public const string EnvSmolDoclingServiceUrl = "TEST_SMOLDOCLING_URL";
+
+    /// <summary>
+    /// Environment variable for external Embedding service URL.
+    /// Set this to use external service instead of Testcontainer.
+    /// </summary>
+    public const string EnvEmbeddingServiceUrl = "TEST_EMBEDDING_URL";
+
+    /// <summary>
+    /// Environment variable for external Reranker service URL.
+    /// Set this to use external service instead of Testcontainer.
+    /// </summary>
+    public const string EnvRerankerServiceUrl = "TEST_RERANKER_URL";
 
     #endregion
 

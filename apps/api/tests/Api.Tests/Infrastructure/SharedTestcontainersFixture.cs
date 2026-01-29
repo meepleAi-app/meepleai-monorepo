@@ -39,8 +39,13 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
 {
     private IContainer? _postgresContainer;
     private IContainer? _redisContainer;
+    private IContainer? _unstructuredContainer;
+    private IContainer? _smoldoclingContainer;
+    private IContainer? _embeddingContainer;
+    private IContainer? _rerankerContainer;
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _initialized;
+    private bool _pdfServicesEnabled;
 
     /// <summary>
     /// PostgreSQL connection string for shared container.
@@ -53,6 +58,35 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     /// Tests must use unique key prefixes (e.g., GUID) to avoid conflicts.
     /// </summary>
     public string RedisConnectionString { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// Unstructured PDF extraction service URL.
+    /// Null if PDF services are not enabled.
+    /// </summary>
+    public string? UnstructuredServiceUrl { get; private set; }
+
+    /// <summary>
+    /// SmolDocling VLM PDF extraction service URL.
+    /// Null if PDF services are not enabled.
+    /// </summary>
+    public string? SmolDoclingServiceUrl { get; private set; }
+
+    /// <summary>
+    /// Embedding service URL.
+    /// Null if PDF services are not enabled.
+    /// </summary>
+    public string? EmbeddingServiceUrl { get; private set; }
+
+    /// <summary>
+    /// Reranker service URL.
+    /// Null if PDF services are not enabled.
+    /// </summary>
+    public string? RerankerServiceUrl { get; private set; }
+
+    /// <summary>
+    /// Indicates whether PDF processing services are enabled.
+    /// </summary>
+    public bool ArePdfServicesEnabled => _pdfServicesEnabled;
 
     /// <summary>
     /// PostgreSQL container for direct access if needed.
@@ -86,6 +120,9 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                 Console.WriteLine($"⚠️ Configuration warning: {warning}");
             }
 
+            // Check if PDF services are enabled
+            _pdfServicesEnabled = Environment.GetEnvironmentVariable(TestcontainersConfiguration.EnvEnablePdfServices)?.ToLowerInvariant() == "true";
+
             // Prefer external infrastructure if provided (faster in CI)
             var externalPostgres = Environment.GetEnvironmentVariable(TestcontainersConfiguration.EnvPostgresConnectionString);
             var externalRedis = Environment.GetEnvironmentVariable(TestcontainersConfiguration.EnvRedisConnectionString);
@@ -99,15 +136,64 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                 ? StartRedisContainerAsync()
                 : Task.FromResult(externalRedis);
 
-            // Wait for both containers to start in parallel
+            // Start PDF services if enabled
+            Task<string?>? unstructuredTask = null;
+            Task<string?>? smoldoclingTask = null;
+            Task<string?>? embeddingTask = null;
+            Task<string?>? rerankerTask = null;
+
+            if (_pdfServicesEnabled)
+            {
+                Console.WriteLine("📄 PDF services enabled - starting Python service containers...");
+
+                var externalUnstructured = Environment.GetEnvironmentVariable(TestcontainersConfiguration.EnvUnstructuredServiceUrl);
+                var externalSmoldocling = Environment.GetEnvironmentVariable(TestcontainersConfiguration.EnvSmolDoclingServiceUrl);
+                var externalEmbedding = Environment.GetEnvironmentVariable(TestcontainersConfiguration.EnvEmbeddingServiceUrl);
+                var externalReranker = Environment.GetEnvironmentVariable(TestcontainersConfiguration.EnvRerankerServiceUrl);
+
+                unstructuredTask = string.IsNullOrWhiteSpace(externalUnstructured)
+                    ? StartUnstructuredServiceAsync()
+                    : Task.FromResult<string?>(externalUnstructured);
+
+                smoldoclingTask = string.IsNullOrWhiteSpace(externalSmoldocling)
+                    ? StartSmolDoclingServiceAsync()
+                    : Task.FromResult<string?>(externalSmoldocling);
+
+                embeddingTask = string.IsNullOrWhiteSpace(externalEmbedding)
+                    ? StartEmbeddingServiceAsync()
+                    : Task.FromResult<string?>(externalEmbedding);
+
+                rerankerTask = string.IsNullOrWhiteSpace(externalReranker)
+                    ? StartRerankerServiceAsync()
+                    : Task.FromResult<string?>(externalReranker);
+            }
+
+            // Wait for all containers to start in parallel
             var startTime = DateTime.UtcNow;
-            await Task.WhenAll(postgresTask, redisTask);
+            var allTasks = new List<Task> { postgresTask, redisTask };
+            if (unstructuredTask != null) allTasks.Add(unstructuredTask);
+            if (smoldoclingTask != null) allTasks.Add(smoldoclingTask);
+            if (embeddingTask != null) allTasks.Add(embeddingTask);
+            if (rerankerTask != null) allTasks.Add(rerankerTask);
+
+            await Task.WhenAll(allTasks);
             var duration = (DateTime.UtcNow - startTime).TotalSeconds;
 
             PostgresConnectionString = await postgresTask;
             RedisConnectionString = await redisTask;
 
-            Console.WriteLine($"✅ Containers initialized in {duration:F2}s (parallel startup)");
+            if (_pdfServicesEnabled && unstructuredTask != null && smoldoclingTask != null && embeddingTask != null && rerankerTask != null)
+            {
+                UnstructuredServiceUrl = await unstructuredTask;
+                SmolDoclingServiceUrl = await smoldoclingTask;
+                EmbeddingServiceUrl = await embeddingTask;
+                RerankerServiceUrl = await rerankerTask;
+                Console.WriteLine($"✅ All containers initialized in {duration:F2}s (parallel startup with PDF services)");
+            }
+            else
+            {
+                Console.WriteLine($"✅ Containers initialized in {duration:F2}s (parallel startup)");
+            }
 
             // Issue #2920: Pre-warm connection pools with health check queries
             await PreWarmConnectionPoolsAsync();
@@ -238,6 +324,218 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     }
 
     /// <summary>
+    /// Starts Unstructured PDF extraction service container with retry logic.
+    /// Only called when TEST_PDF_SERVICES=true environment variable is set.
+    /// </summary>
+    private async Task<string?> StartUnstructuredServiceAsync()
+    {
+        for (int attempt = 0; attempt < TestcontainersConfiguration.ContainerStartupMaxRetries; attempt++)
+        {
+            try
+            {
+                _unstructuredContainer = new ContainerBuilder()
+                    .WithImage(TestcontainersConfiguration.UnstructuredImage)
+                    .WithPortBinding(TestcontainersConfiguration.UnstructuredServicePort, true)
+                    .WithWaitStrategy(Wait.ForUnixContainer()
+                        .UntilHttpRequestIsSucceeded(r => r
+                            .ForPath("/health")
+                            .ForPort(TestcontainersConfiguration.UnstructuredServicePort)
+                            .ForStatusCode(System.Net.HttpStatusCode.OK)))
+                    .WithCleanUp(true)
+                    .Build();
+
+                await _unstructuredContainer.StartAsync();
+
+                var port = _unstructuredContainer.GetMappedPublicPort(TestcontainersConfiguration.UnstructuredServicePort);
+                var serviceUrl = $"http://localhost:{port}";
+
+                Console.WriteLine($"✅ Unstructured service started at {serviceUrl}");
+                return serviceUrl;
+            }
+            catch (Exception ex) when (attempt < TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                Console.WriteLine($"⚠️ Unstructured service startup attempt {attempt + 1}/{TestcontainersConfiguration.ContainerStartupMaxRetries} failed: {ex.Message}");
+
+                if (_unstructuredContainer != null)
+                {
+                    try { await _unstructuredContainer.DisposeAsync(); }
+                    catch { /* Ignore cleanup errors */ }
+                    _unstructuredContainer = null;
+                }
+
+                await Task.Delay(TestcontainersConfiguration.ContainerStartupRetryDelays[attempt]);
+            }
+            catch (Exception ex) when (attempt == TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                Console.WriteLine($"❌ Unstructured service failed to start after {TestcontainersConfiguration.ContainerStartupMaxRetries} attempts: {ex.Message}");
+                Console.WriteLine($"   Ensure Docker image '{TestcontainersConfiguration.UnstructuredImage}' is built: cd apps/unstructured-service && docker build -t {TestcontainersConfiguration.UnstructuredImage} .");
+                return null; // Return null instead of throwing to allow tests to skip gracefully
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Starts SmolDocling VLM PDF extraction service container with retry logic.
+    /// Only called when TEST_PDF_SERVICES=true environment variable is set.
+    /// </summary>
+    private async Task<string?> StartSmolDoclingServiceAsync()
+    {
+        for (int attempt = 0; attempt < TestcontainersConfiguration.ContainerStartupMaxRetries; attempt++)
+        {
+            try
+            {
+                _smoldoclingContainer = new ContainerBuilder()
+                    .WithImage(TestcontainersConfiguration.SmolDoclingImage)
+                    .WithPortBinding(TestcontainersConfiguration.SmolDoclingServicePort, true)
+                    .WithWaitStrategy(Wait.ForUnixContainer()
+                        .UntilHttpRequestIsSucceeded(r => r
+                            .ForPath("/health")
+                            .ForPort(TestcontainersConfiguration.SmolDoclingServicePort)
+                            .ForStatusCode(System.Net.HttpStatusCode.OK)))
+                    .WithCleanUp(true)
+                    .Build();
+
+                await _smoldoclingContainer.StartAsync();
+
+                var port = _smoldoclingContainer.GetMappedPublicPort(TestcontainersConfiguration.SmolDoclingServicePort);
+                var serviceUrl = $"http://localhost:{port}";
+
+                Console.WriteLine($"✅ SmolDocling service started at {serviceUrl}");
+                return serviceUrl;
+            }
+            catch (Exception ex) when (attempt < TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                Console.WriteLine($"⚠️ SmolDocling service startup attempt {attempt + 1}/{TestcontainersConfiguration.ContainerStartupMaxRetries} failed: {ex.Message}");
+
+                if (_smoldoclingContainer != null)
+                {
+                    try { await _smoldoclingContainer.DisposeAsync(); }
+                    catch { /* Ignore cleanup errors */ }
+                    _smoldoclingContainer = null;
+                }
+
+                await Task.Delay(TestcontainersConfiguration.ContainerStartupRetryDelays[attempt]);
+            }
+            catch (Exception ex) when (attempt == TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                Console.WriteLine($"❌ SmolDocling service failed to start after {TestcontainersConfiguration.ContainerStartupMaxRetries} attempts: {ex.Message}");
+                Console.WriteLine($"   Ensure Docker image '{TestcontainersConfiguration.SmolDoclingImage}' is built: cd apps/smoldocling-service && docker build -t {TestcontainersConfiguration.SmolDoclingImage} .");
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Starts Embedding service container with retry logic.
+    /// Only called when TEST_PDF_SERVICES=true environment variable is set.
+    /// </summary>
+    private async Task<string?> StartEmbeddingServiceAsync()
+    {
+        for (int attempt = 0; attempt < TestcontainersConfiguration.ContainerStartupMaxRetries; attempt++)
+        {
+            try
+            {
+                _embeddingContainer = new ContainerBuilder()
+                    .WithImage(TestcontainersConfiguration.EmbeddingImage)
+                    .WithPortBinding(TestcontainersConfiguration.EmbeddingServicePort, true)
+                    .WithWaitStrategy(Wait.ForUnixContainer()
+                        .UntilHttpRequestIsSucceeded(r => r
+                            .ForPath("/health")
+                            .ForPort(TestcontainersConfiguration.EmbeddingServicePort)
+                            .ForStatusCode(System.Net.HttpStatusCode.OK)))
+                    .WithCleanUp(true)
+                    .Build();
+
+                await _embeddingContainer.StartAsync();
+
+                var port = _embeddingContainer.GetMappedPublicPort(TestcontainersConfiguration.EmbeddingServicePort);
+                var serviceUrl = $"http://localhost:{port}";
+
+                Console.WriteLine($"✅ Embedding service started at {serviceUrl}");
+                return serviceUrl;
+            }
+            catch (Exception ex) when (attempt < TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                Console.WriteLine($"⚠️ Embedding service startup attempt {attempt + 1}/{TestcontainersConfiguration.ContainerStartupMaxRetries} failed: {ex.Message}");
+
+                if (_embeddingContainer != null)
+                {
+                    try { await _embeddingContainer.DisposeAsync(); }
+                    catch { /* Ignore cleanup errors */ }
+                    _embeddingContainer = null;
+                }
+
+                await Task.Delay(TestcontainersConfiguration.ContainerStartupRetryDelays[attempt]);
+            }
+            catch (Exception ex) when (attempt == TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                Console.WriteLine($"❌ Embedding service failed to start after {TestcontainersConfiguration.ContainerStartupMaxRetries} attempts: {ex.Message}");
+                Console.WriteLine($"   Ensure Docker image '{TestcontainersConfiguration.EmbeddingImage}' is built: cd apps/embedding-service && docker build -t {TestcontainersConfiguration.EmbeddingImage} .");
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Starts Reranker service container with retry logic.
+    /// Only called when TEST_PDF_SERVICES=true environment variable is set.
+    /// </summary>
+    private async Task<string?> StartRerankerServiceAsync()
+    {
+        for (int attempt = 0; attempt < TestcontainersConfiguration.ContainerStartupMaxRetries; attempt++)
+        {
+            try
+            {
+                _rerankerContainer = new ContainerBuilder()
+                    .WithImage(TestcontainersConfiguration.RerankerImage)
+                    .WithPortBinding(TestcontainersConfiguration.RerankerServicePort, true)
+                    .WithWaitStrategy(Wait.ForUnixContainer()
+                        .UntilHttpRequestIsSucceeded(r => r
+                            .ForPath("/health")
+                            .ForPort(TestcontainersConfiguration.RerankerServicePort)
+                            .ForStatusCode(System.Net.HttpStatusCode.OK)))
+                    .WithCleanUp(true)
+                    .Build();
+
+                await _rerankerContainer.StartAsync();
+
+                var port = _rerankerContainer.GetMappedPublicPort(TestcontainersConfiguration.RerankerServicePort);
+                var serviceUrl = $"http://localhost:{port}";
+
+                Console.WriteLine($"✅ Reranker service started at {serviceUrl}");
+                return serviceUrl;
+            }
+            catch (Exception ex) when (attempt < TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                Console.WriteLine($"⚠️ Reranker service startup attempt {attempt + 1}/{TestcontainersConfiguration.ContainerStartupMaxRetries} failed: {ex.Message}");
+
+                if (_rerankerContainer != null)
+                {
+                    try { await _rerankerContainer.DisposeAsync(); }
+                    catch { /* Ignore cleanup errors */ }
+                    _rerankerContainer = null;
+                }
+
+                await Task.Delay(TestcontainersConfiguration.ContainerStartupRetryDelays[attempt]);
+            }
+            catch (Exception ex) when (attempt == TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                Console.WriteLine($"❌ Reranker service failed to start after {TestcontainersConfiguration.ContainerStartupMaxRetries} attempts: {ex.Message}");
+                Console.WriteLine($"   Ensure Docker image '{TestcontainersConfiguration.RerankerImage}' is built: cd apps/reranker-service && docker build -t {TestcontainersConfiguration.RerankerImage} .");
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Pre-warms connection pools with health check queries.
     /// Issue #2920: Reduces first-test latency by establishing initial connections.
     /// </summary>
@@ -286,6 +584,31 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
             {
                 await _redisContainer.StopAsync();
                 await _redisContainer.DisposeAsync();
+            }
+
+            // Dispose PDF service containers if they were started
+            if (_unstructuredContainer != null)
+            {
+                await _unstructuredContainer.StopAsync();
+                await _unstructuredContainer.DisposeAsync();
+            }
+
+            if (_smoldoclingContainer != null)
+            {
+                await _smoldoclingContainer.StopAsync();
+                await _smoldoclingContainer.DisposeAsync();
+            }
+
+            if (_embeddingContainer != null)
+            {
+                await _embeddingContainer.StopAsync();
+                await _embeddingContainer.DisposeAsync();
+            }
+
+            if (_rerankerContainer != null)
+            {
+                await _rerankerContainer.StopAsync();
+                await _rerankerContainer.DisposeAsync();
             }
         }
         finally

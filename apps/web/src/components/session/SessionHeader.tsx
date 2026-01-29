@@ -1,16 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import { Copy, Check, MoreVertical, Pause, Play, Share2, Flag } from 'lucide-react';
-import { Session } from './types';
+
+import { Badge } from '@/components/ui/data-display/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+} from '@/components/ui/navigation/dropdown-menu';
+import { Button } from '@/components/ui/primitives/button';
+
+import { Session } from './types';
 
 interface SessionHeaderProps {
   session: Session;

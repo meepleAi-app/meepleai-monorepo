@@ -39,13 +39,6 @@ describe('EditorApprovalQueueItem', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock current time to 2026-01-29 12:00:00 UTC
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-01-29T12:00:00Z'));
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it('should render game cover image', () => {
@@ -127,6 +120,16 @@ describe('EditorApprovalQueueItem', () => {
   });
 
   describe('Priority Badges', () => {
+    beforeEach(() => {
+      // Mock current time for priority calculation tests
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-01-29T12:00:00Z'));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('should NOT show priority badge for low priority (< 3 days)', () => {
       const recentGame = { ...mockGame, createdAt: '2026-01-28T12:00:00Z' }; // 1 day ago
 

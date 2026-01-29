@@ -156,7 +156,7 @@ export async function verifySharedGamesSeeded(
     const gameTitles = games.map((g: { title: string }) => g.title.toLowerCase());
 
     return expectedGames.every((expectedGame) =>
-      gameTitles.some((title) => title.includes(expectedGame.toLowerCase()))
+      gameTitles.some((title: string) => title.includes(expectedGame.toLowerCase()))
     );
   } catch {
     return false;

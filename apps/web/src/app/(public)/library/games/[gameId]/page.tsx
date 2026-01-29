@@ -7,8 +7,9 @@
 
 import { notFound } from 'next/navigation';
 
-import GameDetailClient from './GameDetailClient';
 import type { AgentMode, GamePdf } from '@/components/game-detail';
+
+import GameDetailClient from './GameDetailClient';
 
 interface PageProps {
   params: Promise<{
@@ -53,7 +54,7 @@ async function fetchAgentModes(gameId: string): Promise<AgentMode[]> {
     const data = await response.json();
 
     // Map AgentDto to AgentMode format
-    return data.agents?.map((agent: any) => ({
+    return data.agents?.map((agent: { type: string; name: string; strategyName?: string }) => ({
       id: agent.type.toLowerCase(),
       name: `Agente ${agent.name}`,
       description: agent.type,
@@ -80,7 +81,7 @@ async function fetchGamePdfs(gameId: string): Promise<GamePdf[]> {
     }
 
     const data = await response.json();
-    return data.map((pdf: any) => ({
+    return data.map((pdf: { id: string; name: string; pageCount: number }) => ({
       id: pdf.id,
       name: pdf.name,
       pageCount: pdf.pageCount,

@@ -66,10 +66,8 @@ import {
   type AdminUser,
   type GetUserActivityResult,
   type UserActivityFilters,
-  type UserBadge,
-  type UserLibraryStats,
-  type RoleChangeHistory,
 } from '@/lib/api';
+import type { UserBadge, RoleChangeHistory, UserLibraryStats } from '@/lib/api/clients/adminClient';
 
 // ========== Types ==========
 

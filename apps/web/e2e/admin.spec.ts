@@ -22,8 +22,8 @@ test.describe('Admin dashboard', () => {
     const authHelper = new AuthHelper(page);
     const adminHelper = new AdminHelper(page);
 
-    // Authenticate as admin
-    await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
+    // Authenticate as admin with real session (middleware validates server-side)
+    await authHelper.setupRealSession('admin');
 
     // ✅ REMOVED MOCK: Use real Admin Analytics API
     // Real backend GET /api/v1/admin/requests must support filtering by endpoint query param

@@ -13,6 +13,8 @@ describe('LibraryFilters', () => {
     onSearchChange: vi.fn(),
     favoritesOnly: false,
     onFavoritesChange: vi.fn(),
+    stateFilter: [],
+    onStateFilterChange: vi.fn(),
     sortBy: 'addedAt' as const,
     sortDescending: true,
     onSortChange: vi.fn(),
@@ -26,7 +28,8 @@ describe('LibraryFilters', () => {
 
   it('should render favorites toggle', () => {
     render(<LibraryFilters {...mockProps} />);
-    expect(screen.getByLabelText('Solo Preferiti')).toBeInTheDocument();
+    // Component now uses filter chips instead of toggle
+    expect(screen.getByTestId('filter-chip-favorites')).toBeInTheDocument();
   });
 
   it('should render sort dropdown', () => {
@@ -50,9 +53,10 @@ describe('LibraryFilters', () => {
 
   it('should call onFavoritesChange when toggle clicked', () => {
     render(<LibraryFilters {...mockProps} />);
-    const toggle = screen.getByRole('switch');
+    // Component now uses filter chips instead of toggle
+    const favoritesChip = screen.getByTestId('filter-chip-favorites');
 
-    fireEvent.click(toggle);
+    fireEvent.click(favoritesChip);
 
     expect(mockProps.onFavoritesChange).toHaveBeenCalledWith(true);
   });

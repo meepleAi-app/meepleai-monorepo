@@ -48,13 +48,15 @@ public class BulkRejectShareRequestsCommandHandlerTests
         var shareRequestIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
         var command = new BulkRejectShareRequestsCommand(shareRequestIds, editorId, reason);
 
-        foreach (var id in shareRequestIds)
-        {
-            var shareRequest = CreateInReviewShareRequest(id, editorId);
-            _mockShareRequestRepository
-                .Setup(r => r.GetByIdForUpdateAsync(id, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(shareRequest);
-        }
+        var shareRequestsDict = shareRequestIds.ToDictionary(
+            id => id,
+            id => CreateInReviewShareRequest(id, editorId));
+
+        _mockShareRequestRepository
+            .Setup(r => r.GetByIdsForUpdateAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<Guid> ids, CancellationToken ct) => shareRequestsDict);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -80,13 +82,15 @@ public class BulkRejectShareRequestsCommandHandlerTests
         var shareRequestIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
         var command = new BulkRejectShareRequestsCommand(shareRequestIds, editorId, reason);
 
-        foreach (var id in shareRequestIds)
-        {
-            var shareRequest = CreateInReviewShareRequest(id, editorId);
-            _mockShareRequestRepository
-                .Setup(r => r.GetByIdForUpdateAsync(id, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(shareRequest);
-        }
+        var shareRequestsDict = shareRequestIds.ToDictionary(
+            id => id,
+            id => CreateInReviewShareRequest(id, editorId));
+
+        _mockShareRequestRepository
+            .Setup(r => r.GetByIdsForUpdateAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<Guid> ids, CancellationToken ct) => shareRequestsDict);
 
         // Act
         await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -112,16 +116,19 @@ public class BulkRejectShareRequestsCommandHandlerTests
         var shareRequestIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
         var command = new BulkRejectShareRequestsCommand(shareRequestIds, editorId, reason);
 
-        // First two exist, third doesn't
+        // Only first two exist in dictionary, third missing
+        var shareRequestsDict = new Dictionary<Guid, ShareRequest>
+        {
+            { shareRequestIds[0], CreateInReviewShareRequest(shareRequestIds[0], editorId) },
+            { shareRequestIds[1], CreateInReviewShareRequest(shareRequestIds[1], editorId) }
+            // shareRequestIds[2] is missing - triggers rollback
+        };
+
         _mockShareRequestRepository
-            .Setup(r => r.GetByIdForUpdateAsync(shareRequestIds[0], It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreateInReviewShareRequest(shareRequestIds[0], editorId));
-        _mockShareRequestRepository
-            .Setup(r => r.GetByIdForUpdateAsync(shareRequestIds[1], It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreateInReviewShareRequest(shareRequestIds[1], editorId));
-        _mockShareRequestRepository
-            .Setup(r => r.GetByIdForUpdateAsync(shareRequestIds[2], It.IsAny<CancellationToken>()))
-            .ReturnsAsync((ShareRequest?)null); // Not found - triggers rollback
+            .Setup(r => r.GetByIdsForUpdateAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<Guid> ids, CancellationToken ct) => shareRequestsDict);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -147,12 +154,17 @@ public class BulkRejectShareRequestsCommandHandlerTests
         var shareRequestIds = new List<Guid> { id1, id2, id1 }; // id1 duplicated
         var command = new BulkRejectShareRequestsCommand(shareRequestIds, editorId, reason);
 
+        var shareRequestsDict = new Dictionary<Guid, ShareRequest>
+        {
+            { id1, CreateInReviewShareRequest(id1, editorId) },
+            { id2, CreateInReviewShareRequest(id2, editorId) }
+        };
+
         _mockShareRequestRepository
-            .Setup(r => r.GetByIdForUpdateAsync(id1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreateInReviewShareRequest(id1, editorId));
-        _mockShareRequestRepository
-            .Setup(r => r.GetByIdForUpdateAsync(id2, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreateInReviewShareRequest(id2, editorId));
+            .Setup(r => r.GetByIdsForUpdateAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<Guid> ids, CancellationToken ct) => shareRequestsDict);
 
         // Act
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -160,8 +172,10 @@ public class BulkRejectShareRequestsCommandHandlerTests
         // Assert - Only 2 distinct IDs processed
         Assert.Equal(2, result.SuccessCount);
         _mockShareRequestRepository.Verify(
-            r => r.GetByIdForUpdateAsync(id1, It.IsAny<CancellationToken>()),
-            Times.Once); // Only called once despite duplicate
+            r => r.GetByIdsForUpdateAsync(
+                It.IsAny<IEnumerable<Guid>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once); // Batch method called once for all IDs
     }
 
     [Fact]

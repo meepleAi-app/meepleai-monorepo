@@ -75,19 +75,25 @@ internal sealed class BulkApproveShareRequestsCommandHandler : ICommandHandler<B
 
         try
         {
+            // Batch retrieval optimization: Get all share requests in single query (Issue #2893 N+1 fix)
+            var shareRequestsDict = await _shareRequestRepository.GetByIdsForUpdateAsync(
+                distinctIds,
+                cancellationToken).ConfigureAwait(false);
+
+            // Validate all IDs found (all-or-nothing requirement)
+            var missingIds = distinctIds.Except(shareRequestsDict.Keys).ToList();
+            if (missingIds.Count > 0)
+            {
+                var missingIdsStr = string.Join(", ", missingIds);
+                throw new NotFoundException(
+                    "ShareRequest",
+                    $"Share requests not found: {missingIdsStr}");
+            }
+
             // Process all share requests in a single transaction (all-or-nothing)
             foreach (var shareRequestId in distinctIds)
             {
-                // Get share request for update
-                var shareRequest = await _shareRequestRepository.GetByIdForUpdateAsync(
-                    shareRequestId,
-                    cancellationToken).ConfigureAwait(false);
-
-                if (shareRequest == null)
-                {
-                    // Fail fast - any not found triggers rollback
-                    throw new NotFoundException("ShareRequest", shareRequestId.ToString());
-                }
+                var shareRequest = shareRequestsDict[shareRequestId];
 
                 // Approve the request (domain validates and raises events)
                 // Will throw if: not in InReview status, lock expired, reviewer mismatch, etc.

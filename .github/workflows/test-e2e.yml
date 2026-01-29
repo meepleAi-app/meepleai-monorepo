@@ -154,6 +154,9 @@ jobs:
         working-directory: apps/api/src/Api
         run: dotnet build --no-restore --configuration Release
 
+      - name: Install EF Core Tools
+        run: dotnet tool install --global dotnet-ef
+
       - name: Run Database Migrations
         working-directory: apps/api/src/Api
         run: dotnet ef database update
@@ -437,6 +440,9 @@ jobs:
       - name: Build Backend
         working-directory: apps/api/src/Api
         run: dotnet build --no-restore --configuration Release
+
+      - name: Install EF Core Tools
+        run: dotnet tool install --global dotnet-ef
 
       - name: Run Database Migrations
         working-directory: apps/api/src/Api

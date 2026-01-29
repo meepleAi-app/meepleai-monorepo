@@ -26,6 +26,9 @@ import {
   Clock,
   AlertCircle,
   RefreshCw,
+  Key,
+  Send,
+  UserCog,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -40,6 +43,14 @@ import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/overlays/dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -47,8 +58,18 @@ import {
   SelectValue,
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
-import { api, type AdminUser, type GetUserActivityResult, type UserActivityFilters } from '@/lib/api';
+import { Textarea } from '@/components/ui/primitives/textarea';
+import {
+  api,
+  type AdminUser,
+  type GetUserActivityResult,
+  type UserActivityFilters,
+  type UserBadge,
+  type UserLibraryStats,
+  type RoleChangeHistory,
+} from '@/lib/api';
 
 // ========== Types ==========
 
@@ -79,6 +100,9 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [activities, setActivities] = useState<UserActivityEvent[]>([]);
   const [totalActivities, setTotalActivities] = useState(0);
+  const [badges, setBadges] = useState<UserBadge[]>([]);
+  const [libraryStats, setLibraryStats] = useState<UserLibraryStats | null>(null);
+  const [roleHistory, setRoleHistory] = useState<RoleChangeHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +110,14 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   // Filter state
   const [activityLimit, setActivityLimit] = useState(100);
   const [actionFilter, setActionFilter] = useState<string>('all');
+
+  // Quick actions state (Issue #2890)
+  const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
+  const [showSendEmailDialog, setShowSendEmailDialog] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Toast management
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -101,17 +133,9 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   // Fetch user profile
   const fetchUserProfile = useCallback(async () => {
     try {
-      // Use admin users list and find the specific user
-      // Note: In a real implementation, you'd have a dedicated GET /admin/users/{id} endpoint
-      const result = await api.admin.getUsers({ page: 1, pageSize: 100 });
-      const foundUser = result.items.find(u => u.id === userId);
-
-      if (foundUser) {
-        // AdminUser extends naturally to UserProfile (optional fields)
-        setUserProfile(foundUser as UserProfile);
-      } else {
-        setError('Utente non trovato');
-      }
+      // Issue #2890: Use dedicated GET /admin/users/{id} endpoint
+      const user = await api.admin.getUserDetail(userId);
+      setUserProfile(user as UserProfile);
     } catch (err) {
       console.error('Failed to fetch user profile:', err);
       setError('Errore nel caricamento del profilo utente');
@@ -162,16 +186,54 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
     }
   }, [userId, activityLimit, actionFilter, addToast, userProfile]);
 
+  // Fetch user badges (Issue #2890)
+  const fetchBadges = useCallback(async () => {
+    try {
+      const userBadges = await api.admin.getUserBadges(userId);
+      setBadges(userBadges);
+    } catch (err) {
+      console.error('Failed to fetch badges:', err);
+      // Non-critical: don't show error, just empty badges
+    }
+  }, [userId]);
+
+  // Fetch library stats (Issue #2890)
+  const fetchLibraryStats = useCallback(async () => {
+    try {
+      const stats = await api.admin.getUserLibraryStats(userId);
+      setLibraryStats(stats);
+    } catch (err) {
+      console.error('Failed to fetch library stats:', err);
+      // Non-critical: don't show error
+    }
+  }, [userId]);
+
+  // Fetch role history (Issue #2890)
+  const fetchRoleHistory = useCallback(async () => {
+    try {
+      const history = await api.admin.getUserRoleHistory(userId);
+      setRoleHistory(history);
+    } catch (err) {
+      console.error('Failed to fetch role history:', err);
+      // Non-critical: don't show error
+    }
+  }, [userId]);
+
   // Initial load
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await fetchUserProfile();
-      await fetchActivities();
+      await Promise.all([
+        fetchUserProfile(),
+        fetchActivities(),
+        fetchBadges(),
+        fetchLibraryStats(),
+        fetchRoleHistory(),
+      ]);
       setLoading(false);
     };
     loadData();
-  }, [fetchUserProfile, fetchActivities]);
+  }, [fetchUserProfile, fetchActivities, fetchBadges, fetchLibraryStats, fetchRoleHistory]);
 
   // Refetch activities when filters change
   useEffect(() => {
@@ -185,6 +247,74 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
   const handleRefresh = async () => {
     await fetchActivities();
     addToast('success', 'Attività aggiornate');
+  };
+
+  // Quick actions handlers (Issue #2890)
+  const handleResetPassword = async () => {
+    if (!newPassword || newPassword.length < 8) {
+      addToast('error', 'La password deve essere almeno 8 caratteri');
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await api.admin.resetUserPassword(userId, newPassword);
+      addToast('success', 'Password reimpostata con successo');
+      setShowResetPasswordDialog(false);
+      setNewPassword('');
+    } catch (err) {
+      console.error('Failed to reset password:', err);
+      addToast('error', 'Errore nel reset della password');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailSubject || !emailBody) {
+      addToast('error', 'Compila tutti i campi');
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await api.admin.sendUserEmail(userId, emailSubject, emailBody);
+      addToast('success', 'Email inviata con successo');
+      setShowSendEmailDialog(false);
+      setEmailSubject('');
+      setEmailBody('');
+    } catch (err) {
+      console.error('Failed to send email:', err);
+      addToast('error', "Errore nell'invio dell'email");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleImpersonate = async () => {
+    if (!confirm(`⚠️ ATTENZIONE: Stai per impersonare l'utente ${userProfile?.displayName}. Continuare?`)) {
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const response = await api.admin.impersonateUser(userId);
+      // Store new session token and reload
+      document.cookie = `session=${response.sessionToken}; path=/; Secure; SameSite=Strict`;
+      addToast('success', `Impersonazione attiva fino a ${formatDate(response.expiresAt)}`);
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to impersonate user:', err);
+      // Handle specific error cases (Issue #2890 code review)
+      if (err instanceof Error && err.message.includes('suspended')) {
+        addToast('error', 'Impossibile impersonare: utente sospeso');
+      } else {
+        addToast('error', "Errore nell'impersonazione");
+      }
+      setActionLoading(false);
+    }
   };
 
   // Format date helper
@@ -306,6 +436,40 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                       {userProfile.id}
                     </code>
                   </div>
+
+                  {/* Quick Actions (Issue #2890) */}
+                  <div className="pt-4 border-t space-y-2">
+                    <Label className="text-xs text-muted-foreground">Azioni Rapide</Label>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowResetPasswordDialog(true)}
+                        disabled={actionLoading}
+                      >
+                        <Key className="h-4 w-4 mr-2" />
+                        Reset Password
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowSendEmailDialog(true)}
+                        disabled={actionLoading}
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Invia Email
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleImpersonate}
+                        disabled={actionLoading}
+                      >
+                        <UserCog className="h-4 w-4 mr-2" />
+                        ⚠️ Impersona Utente
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -320,13 +484,88 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                       <span className="text-sm text-muted-foreground">Attività totali</span>
                       <Badge variant="outline">{totalActivities}</Badge>
                     </div>
+                    {libraryStats && (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Giochi in libreria</span>
+                          <Badge variant="outline">{libraryStats.totalGames}</Badge>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Sessioni giocate</span>
+                          <Badge variant="outline">{libraryStats.sessionsPlayed}</Badge>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Badges Card (Issue #2890) */}
+              {badges.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Badge ({badges.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-2">
+                      {badges.map(badge => (
+                        <div
+                          key={badge.id}
+                          className="flex flex-col items-center p-2 border rounded-lg hover:bg-muted/50 transition-colors"
+                          title={badge.description}
+                        >
+                          <div className="text-2xl mb-1">{badge.iconUrl || '🏆'}</div>
+                          <div className="text-xs font-medium text-center">{badge.name}</div>
+                          <div className="text-xs text-muted-foreground">{badge.tier}</div>
+                          {!badge.isDisplayed && (
+                            <Badge variant="secondary" className="text-xs mt-1">
+                              Nascosto
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
-            {/* Right Column: Activity Timeline */}
-            <div className="lg:col-span-2">
+            {/* Right Column: Activity Timeline & Role History */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Role History Card (Issue #2890) */}
+              {roleHistory.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Cronologia Ruoli</CardTitle>
+                    <CardDescription>Storico cambiamenti ruolo</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {roleHistory.map((change, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="outline">{change.oldRole}</Badge>
+                              <span className="text-muted-foreground">→</span>
+                              <Badge variant={getRoleBadgeVariant(change.newRole)}>
+                                {change.newRole}
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Modificato da: {change.changedByDisplayName}
+                            </div>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatDate(change.changedAt)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Activity Timeline */}
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -420,6 +659,90 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
             </Alert>
           ))}
         </div>
+
+        {/* Reset Password Dialog (Issue #2890) */}
+        <Dialog open={showResetPasswordDialog} onOpenChange={setShowResetPasswordDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reset Password</DialogTitle>
+              <DialogDescription>
+                Imposta una nuova password per {userProfile?.displayName}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">Nuova Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="Minimo 8 caratteri"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  disabled={actionLoading}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowResetPasswordDialog(false)}
+                disabled={actionLoading}
+              >
+                Annulla
+              </Button>
+              <Button onClick={handleResetPassword} disabled={actionLoading}>
+                {actionLoading ? 'Invio...' : 'Reset Password'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Send Email Dialog (Issue #2890) */}
+        <Dialog open={showSendEmailDialog} onOpenChange={setShowSendEmailDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Invia Email</DialogTitle>
+              <DialogDescription>
+                Invia un&apos;email personalizzata a {userProfile?.displayName}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="email-subject">Oggetto</Label>
+                <Input
+                  id="email-subject"
+                  placeholder="Oggetto dell'email"
+                  value={emailSubject}
+                  onChange={e => setEmailSubject(e.target.value)}
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email-body">Messaggio</Label>
+                <Textarea
+                  id="email-body"
+                  placeholder="Corpo dell'email"
+                  value={emailBody}
+                  onChange={e => setEmailBody(e.target.value)}
+                  rows={6}
+                  disabled={actionLoading}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowSendEmailDialog(false)}
+                disabled={actionLoading}
+              >
+                Annulla
+              </Button>
+              <Button onClick={handleSendEmail} disabled={actionLoading}>
+                {actionLoading ? 'Invio...' : 'Invia Email'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminAuthGuard>
   );

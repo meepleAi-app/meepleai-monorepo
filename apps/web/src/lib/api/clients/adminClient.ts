@@ -992,7 +992,165 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
 
       return response.blob();
     },
+
+    // ========== User Detail Endpoints (Issue #2890) ==========
+
+    /**
+     * Get complete user details (admin only)
+     * GET /api/v1/admin/users/{userId}
+     */
+    async getUserDetail(userId: string): Promise<AdminUser> {
+      const result = await httpClient.get(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}`,
+        AdminUserSchema
+      );
+      if (!result) {
+        throw new Error('User not found');
+      }
+      return result;
+    },
+
+    /**
+     * Get user badges including hidden ones (admin only)
+     * GET /api/v1/admin/users/{userId}/badges
+     */
+    async getUserBadges(userId: string): Promise<UserBadge[]> {
+      const UserBadgeSchema = z.object({
+        id: z.string(),
+        code: z.string(),
+        name: z.string(),
+        description: z.string(),
+        iconUrl: z.string().nullable(),
+        tier: z.string(),
+        earnedAt: z.string(),
+        isDisplayed: z.boolean(),
+      });
+      const result = await httpClient.get(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/badges`,
+        z.array(UserBadgeSchema)
+      );
+      return result || [];
+    },
+
+    /**
+     * Get user library statistics (admin only)
+     * GET /api/v1/admin/users/{userId}/library/stats
+     */
+    async getUserLibraryStats(userId: string): Promise<UserLibraryStats> {
+      const UserLibraryStatsSchema = z.object({
+        totalGames: z.number(),
+        sessionsPlayed: z.number(),
+        avgSessionDuration: z.number().nullable(),
+      });
+      const result = await httpClient.get(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/library/stats`,
+        UserLibraryStatsSchema
+      );
+      if (!result) {
+        throw new Error('Library stats not found');
+      }
+      return result;
+    },
+
+    /**
+     * Get user role change history (admin only)
+     * GET /api/v1/admin/users/{userId}/role-history
+     */
+    async getUserRoleHistory(userId: string): Promise<RoleChangeHistory[]> {
+      const RoleChangeHistorySchema = z.object({
+        changedAt: z.string(),
+        oldRole: z.string(),
+        newRole: z.string(),
+        changedBy: z.string(),
+        changedByDisplayName: z.string(),
+        ipAddress: z.string().nullable(),
+      });
+      const result = await httpClient.get(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/role-history`,
+        z.array(RoleChangeHistorySchema)
+      );
+      return result || [];
+    },
+
+    /**
+     * Reset user password (admin only)
+     * POST /api/v1/admin/users/{userId}/reset-password
+     */
+    async resetUserPassword(userId: string, newPassword: string): Promise<void> {
+      await httpClient.post(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/reset-password`,
+        { newPassword },
+        z.object({ message: z.string() })
+      );
+    },
+
+    /**
+     * Send email to user (admin only)
+     * POST /api/v1/admin/users/{userId}/send-email
+     */
+    async sendUserEmail(userId: string, subject: string, body: string): Promise<void> {
+      await httpClient.post(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/send-email`,
+        { subject, body },
+        z.object({ message: z.string() })
+      );
+    },
+
+    /**
+     * Impersonate user for debugging (admin only - HIGH SECURITY RISK)
+     * POST /api/v1/admin/users/{userId}/impersonate
+     */
+    async impersonateUser(userId: string): Promise<ImpersonateUserResponse> {
+      const ImpersonateUserResponseSchema = z.object({
+        sessionToken: z.string(),
+        impersonatedUserId: z.string(),
+        expiresAt: z.string(),
+      });
+      const result = await httpClient.post(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/impersonate`,
+        {},
+        ImpersonateUserResponseSchema
+      );
+      if (!result) {
+        throw new Error('Failed to impersonate user');
+      }
+      return result;
+    },
   };
 }
 
 export type AdminClient = ReturnType<typeof createAdminClient>;
+
+// ========== Additional Types for Issue #2890 ==========
+
+export type UserBadge = {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  iconUrl: string | null;
+  tier: string;
+  earnedAt: string;
+  isDisplayed: boolean;
+};
+
+export type UserLibraryStats = {
+  totalGames: number;
+  sessionsPlayed: number;
+  avgSessionDuration: number | null;
+};
+
+export type RoleChangeHistory = {
+  changedAt: string;
+  oldRole: string;
+  newRole: string;
+  changedBy: string;
+  changedByDisplayName: string;
+  ipAddress: string | null;
+};
+
+export type ImpersonateUserResponse = {
+  sessionToken: string;
+  impersonatedUserId: string;
+  expiresAt: string;
+};

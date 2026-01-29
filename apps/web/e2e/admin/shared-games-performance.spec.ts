@@ -17,10 +17,8 @@ import { test, expect } from '@playwright/test';
 import { playAudit } from 'playwright-lighthouse';
 
 test.describe('SharedGameCatalog Performance (Lighthouse)', () => {
-  test.use({
-    // Use Chromium only for Lighthouse (Firefox/WebKit don't support it)
-    ...test.info().project,
-  });
+  // Note: Lighthouse tests only work with Chromium, skip on other browsers
+  test.skip(({ browserName }) => browserName !== 'chromium', 'Lighthouse requires Chromium');
 
   test('Public search page should achieve Lighthouse scores', async ({ page, browser }) => {
     await page.goto('/games/add');

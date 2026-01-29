@@ -234,7 +234,7 @@ export function EditorApprovalQueue({
               variant="floating"
               itemLabel="giochi"
               itemLabelSingular="gioco"
-              data-testid={`${testId}-bulk-action-bar`}
+              testId={`${testId}-bulk-action-bar`}
             />
           </div>
         )}

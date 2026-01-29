@@ -119,7 +119,7 @@ export function BulkRejectDialog({
                 if (error) setError(null); // Clear error on input
               }}
               disabled={isLoading}
-              className={cn(error && 'border-red-500')}
+              className={cn(error ? 'border-red-500' : '')}
               rows={4}
               data-testid="bulk-reject-reason"
             />

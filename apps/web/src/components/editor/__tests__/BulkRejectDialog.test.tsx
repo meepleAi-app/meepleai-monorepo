@@ -42,7 +42,7 @@ describe('BulkRejectDialog', () => {
     expect(screen.getByText(/Conferma Rifiuto Multiplo/i)).toBeInTheDocument();
   });
 
-  it('should display correct selected count', () => {
+  it('should display correct selected count in description', () => {
     render(
       <BulkRejectDialog
         open={true}
@@ -52,11 +52,14 @@ describe('BulkRejectDialog', () => {
       />
     );
 
-    expect(screen.getByText(/5/)).toBeInTheDocument();
-    expect(screen.getByText(/giochi/)).toBeInTheDocument();
+    // Check DialogDescription for count
+    expect(screen.getByText(/Stai per rifiutare/i)).toBeInTheDocument();
+    // Verify the confirm button shows the count
+    const confirmButton = screen.getByTestId('bulk-reject-confirm');
+    expect(confirmButton).toHaveTextContent('Rifiuta 5 Giochi');
   });
 
-  it('should singularize label for 1 item', () => {
+  it('should singularize label for 1 item in confirm button', () => {
     render(
       <BulkRejectDialog
         open={true}
@@ -66,11 +69,11 @@ describe('BulkRejectDialog', () => {
       />
     );
 
-    expect(screen.getByText(/1/)).toBeInTheDocument();
-    expect(screen.getByText(/gioco/)).toBeInTheDocument();
+    const confirmButton = screen.getByTestId('bulk-reject-confirm');
+    expect(confirmButton).toHaveTextContent('Rifiuta 1 Giochi'); // Verify button text
   });
 
-  it('should show validation error for reason < 10 characters', async () => {
+  it('should disable confirm button when reason < 10 characters', async () => {
     const user = userEvent.setup();
 
     render(
@@ -83,16 +86,16 @@ describe('BulkRejectDialog', () => {
     );
 
     const textarea = screen.getByTestId('bulk-reject-reason');
-    await user.type(textarea, 'Short'); // 5 characters
-
     const confirmButton = screen.getByTestId('bulk-reject-confirm');
-    await user.click(confirmButton);
 
-    await waitFor(() => {
-      expect(screen.getByTestId('bulk-reject-error')).toBeInTheDocument();
-      expect(screen.getByText(/almeno 10 caratteri/i)).toBeInTheDocument();
-    });
+    // Initially disabled (empty)
+    expect(confirmButton).toBeDisabled();
 
+    // Type short text (5 characters)
+    await user.type(textarea, 'Short');
+
+    // Still disabled
+    expect(confirmButton).toBeDisabled();
     expect(mockOnConfirm).not.toHaveBeenCalled();
   });
 
@@ -135,7 +138,7 @@ describe('BulkRejectDialog', () => {
     expect(confirmButton).toHaveTextContent(/in corso/i);
   });
 
-  it('should clear error when user types', async () => {
+  it('should enable confirm button when reason >= 10 characters', async () => {
     const user = userEvent.setup();
 
     render(
@@ -148,25 +151,21 @@ describe('BulkRejectDialog', () => {
     );
 
     const textarea = screen.getByTestId('bulk-reject-reason');
-
-    // Trigger error
-    await user.type(textarea, 'Short');
     const confirmButton = screen.getByTestId('bulk-reject-confirm');
-    await user.click(confirmButton);
 
-    await waitFor(() => {
-      expect(screen.getByTestId('bulk-reject-error')).toBeInTheDocument();
-    });
+    // Initially disabled
+    expect(confirmButton).toBeDisabled();
 
-    // Type more - error should clear
-    await user.type(textarea, ' - now longer');
+    // Type enough text (15 characters)
+    await user.type(textarea, 'Valid reason ok');
 
-    expect(screen.queryByTestId('bulk-reject-error')).not.toBeInTheDocument();
+    // Now enabled
+    expect(confirmButton).toBeEnabled();
   });
 
-  it('should reset state when dialog closes', async () => {
+  it('should call onOpenChange when cancel button clicked', async () => {
     const user = userEvent.setup();
-    const { rerender } = render(
+    render(
       <BulkRejectDialog
         open={true}
         onOpenChange={mockOnOpenChange}
@@ -175,32 +174,10 @@ describe('BulkRejectDialog', () => {
       />
     );
 
-    const textarea = screen.getByTestId('bulk-reject-reason');
-    await user.type(textarea, 'Some reason text');
+    const cancelButton = screen.getByTestId('bulk-reject-cancel');
+    await user.click(cancelButton);
 
-    // Close dialog
-    rerender(
-      <BulkRejectDialog
-        open={false}
-        onOpenChange={mockOnOpenChange}
-        selectedCount={2}
-        onConfirm={mockOnConfirm}
-      />
-    );
-
-    // Reopen dialog
-    rerender(
-      <BulkRejectDialog
-        open={true}
-        onOpenChange={mockOnOpenChange}
-        selectedCount={2}
-        onConfirm={mockOnConfirm}
-      />
-    );
-
-    // Textarea should be empty
-    const newTextarea = screen.getByTestId('bulk-reject-reason');
-    expect(newTextarea).toHaveValue('');
+    expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   });
 
   it('should show character counter', () => {

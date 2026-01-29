@@ -34,10 +34,10 @@ RUN python -m pip install --no-cache-dir -r requirements.txt
 
 # Download model weights at build time (optional - speeds up first startup)
 # Comment out if you prefer on-demand download
-RUN python -c "from transformers import AutoProcessor, AutoModelForVision2Seq; \
+RUN python -c "from transformers import AutoProcessor, AutoModelForImageTextToText; \
     print('Downloading SmolDocling model...'); \
     AutoProcessor.from_pretrained('docling-project/SmolDocling-256M-preview'); \
-    AutoModelForVision2Seq.from_pretrained('docling-project/SmolDocling-256M-preview'); \
+    AutoModelForImageTextToText.from_pretrained('docling-project/SmolDocling-256M-preview'); \
     print('Model download complete')"
 
 # Copy application code

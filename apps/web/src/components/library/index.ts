@@ -14,6 +14,7 @@ export { RemoveGameDialog, type RemoveGameDialogProps } from './RemoveGameDialog
 export { UserGameCard } from './UserGameCard';
 export { AgentConfigModal } from './AgentConfigModal';
 export { PdfUploadModal } from './PdfUploadModal';
+export { GameActionsModal, type GameActionsModalProps } from './GameActionsModal';
 export { RecentLibraryCard, type RecentLibraryCardProps } from './RecentLibraryCard';
 
 // Bulk Operations (Issue #2613)

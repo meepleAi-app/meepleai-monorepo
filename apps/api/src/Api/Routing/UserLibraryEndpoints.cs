@@ -35,6 +35,7 @@ internal static class UserLibraryEndpoints
         // Custom PDF endpoints
         MapUploadCustomGamePdfEndpoint(group);
         MapResetGamePdfEndpoint(group);
+        MapGetGamePdfsEndpoint(group); // Issue #3152
 
         // Library sharing endpoints
         MapCreateLibraryShareLinkEndpoint(group);
@@ -494,6 +495,37 @@ internal static class UserLibraryEndpoints
         .WithTags("Library")
         .WithSummary("Reset to default PDF")
         .WithDescription("Resets to use SharedGame's default PDF rulebook for a game in user's library.")
+        .WithOpenApi();
+    }
+
+    private static void MapGetGamePdfsEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #3152: Get all PDFs for a game (custom + catalog)
+        group.MapGet("/library/games/{gameId:guid}/pdfs", async (
+            Guid gameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetGamePdfsQuery(gameId, userId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<List<GamePdfDto>>(200)
+        .Produces(401)
+        .WithTags("Library", "PDF")
+        .WithSummary("Get game PDFs")
+        .WithDescription("Returns all PDFs associated with a game in user's library (custom uploads + shared catalog). Issue #3152.")
         .WithOpenApi();
     }
 

@@ -15,6 +15,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   MessageCircle,
@@ -26,11 +27,14 @@ import {
   Share2,
   MoreVertical,
   RefreshCw,
+  Zap,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { FavoriteToggle } from '@/components/library/FavoriteToggle';
+import { GameActionsModal } from '@/components/library/GameActionsModal';
 import type { ViewMode } from '@/components/library/ViewModeToggle';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
@@ -125,6 +129,11 @@ export function UserGameCard({
   index = 0,
   viewMode = 'grid',
 }: UserGameCardProps) {
+  const router = useRouter();
+
+  // Modal state for GameActionsModal (Issue #3151)
+  const [actionsModalOpen, setActionsModalOpen] = useState(false);
+
   // List view mode (Issue #2866, #2867)
   const isListView = viewMode === 'list';
   // Fetch agent configuration status
@@ -150,11 +159,16 @@ export function UserGameCard({
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
+    // Selection mode: toggle selection
     if (selectionMode && onSelect) {
       e.preventDefault();
       e.stopPropagation();
       onSelect(game.gameId, e.shiftKey);
+      return;
     }
+
+    // Normal mode: navigate to game detail page (Issue #3151, #3152)
+    router.push(`/library/games/${game.gameId}`);
   };
 
   const handleCheckboxChange = (e: React.MouseEvent) => {
@@ -162,6 +176,17 @@ export function UserGameCard({
     if (onSelect) {
       onSelect(game.gameId, e.shiftKey);
     }
+  };
+
+  const handleActionsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setActionsModalOpen(true);
+  };
+
+  const handleToggleFavorite = () => {
+    // Favorite toggle handled by FavoriteToggle component
+    // This is a placeholder if we need additional logic
   };
 
   // List view rendering (Issue #2866, #2867)
@@ -355,9 +380,8 @@ export function UserGameCard({
     >
       <Card
         className={cn(
-          'flex flex-col hover:shadow-lg hover:border-primary/50 transition-all',
+          'flex flex-col hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer',
           stateBorderClass,
-          selectionMode && 'cursor-pointer',
           isSelected && 'ring-2 ring-primary bg-primary/5'
         )}
         data-testid="game-card"
@@ -414,71 +438,15 @@ export function UserGameCard({
             </div>
           )}
 
-          {/* Favorite Toggle and Quick Actions Menu - hide in selection mode */}
+          {/* Favorite Toggle - hide in selection mode (Issue #3151) */}
           {!selectionMode && (
-            <div className="absolute top-2 right-2 flex items-center gap-1">
+            <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
               <FavoriteToggle
                 gameId={game.gameId}
                 isFavorite={game.isFavorite}
                 gameTitle={game.gameTitle}
                 size="sm"
               />
-              {/* Quick Actions Dropdown (Issue #2867) */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="secondary" size="icon" className="h-7 w-7 shadow-md">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onEditNotes(game.gameId, game.gameTitle, game.notes)}>
-                    <Edit2 className="mr-2 h-4 w-4" />
-                    Modifica Note
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onConfigureAgent(game.gameId, game.gameTitle)}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configura Agente
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onUploadPdf(game.gameId, game.gameTitle)}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Carica PDF
-                  </DropdownMenuItem>
-                  {onChangeState && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => onChangeState(game.gameId, game.gameTitle, 'Nuovo')}
-                        disabled={game.currentState === 'Nuovo'}
-                      >
-                        <RefreshCw className="mr-2 h-4 w-4 text-green-600" />
-                        Segna come Nuovo
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => onChangeState(game.gameId, game.gameTitle, 'InPrestito')}
-                        disabled={game.currentState === 'InPrestito'}
-                      >
-                        <RefreshCw className="mr-2 h-4 w-4 text-red-600" />
-                        Segna In Prestito
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => onChangeState(game.gameId, game.gameTitle, 'Owned')}
-                        disabled={game.currentState === 'Owned'}
-                      >
-                        <RefreshCw className="mr-2 h-4 w-4 text-blue-600" />
-                        Segna come Posseduto
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => onRemove(game.gameId, game.gameTitle)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Rimuovi
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           )}
         </div>
@@ -524,12 +492,17 @@ export function UserGameCard({
           </p>
         )}
 
-        {/* Action Buttons */}
-        <div className="space-y-2 pt-2">
-          {/* Primary Actions Row */}
-          <div className="flex gap-2">
-            <Button asChild variant="default" size="sm" className="flex-1">
-              <Link href={`/chat?gameId=${game.gameId}`}>
+        {/* Action Buttons (Issue #3151 - Simplified to 2 buttons) */}
+        {!selectionMode && (
+          <div className="flex gap-2 pt-2">
+            <Button
+              asChild
+              variant="default"
+              size="sm"
+              className="flex-1"
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            >
+              <Link href={`/library/games/${game.gameId}`}>
                 <MessageCircle className="mr-1 h-3 w-3" />
                 Chatta
               </Link>
@@ -538,58 +511,13 @@ export function UserGameCard({
               variant="outline"
               size="sm"
               className="flex-1"
-              onClick={() => onConfigureAgent(game.gameId, game.gameTitle)}
+              onClick={handleActionsClick}
             >
-              <Settings className="mr-1 h-3 w-3" />
-              Gestisci Agente
+              <Zap className="mr-1 h-3 w-3" />
+              Azioni
             </Button>
           </div>
-
-          {/* Secondary Actions Row */}
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-1"
-              onClick={() => onUploadPdf(game.gameId, game.gameTitle)}
-            >
-              <Upload className="mr-1 h-3 w-3" />
-              Carica PDF
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-1"
-              onClick={() => onEditNotes(game.gameId, game.gameTitle, game.notes)}
-            >
-              <Edit2 className="mr-1 h-3 w-3" />
-              Note
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onRemove(game.gameId, game.gameTitle)}
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
-
-          {/* Share with Community Button (Issue #2743) */}
-          {onShare && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={() => onShare(game.gameId, game.gameTitle)}
-              disabled={!canShare}
-              title={shareBlockReason || 'Share this game with the community'}
-            >
-              <Share2 className="mr-2 h-3 w-3" />
-              {canShare ? 'Share with Community' : shareBlockReason || 'Cannot Share'}
-            </Button>
-          )}
-        </div>
+        )}
 
         {/* Added Date */}
         <p className="text-xs text-muted-foreground pt-2 border-t">
@@ -597,6 +525,29 @@ export function UserGameCard({
         </p>
       </CardContent>
       </Card>
+
+      {/* Game Actions Modal (Issue #3151) */}
+      <GameActionsModal
+        isOpen={actionsModalOpen}
+        onClose={() => setActionsModalOpen(false)}
+        gameId={game.gameId}
+        gameTitle={game.gameTitle}
+        gameImageUrl={game.gameImageUrl}
+        hasAgent={agentConfigured}
+        isFavorite={game.isFavorite}
+        currentState={game.currentState}
+        onConfigureAgent={() => onConfigureAgent(game.gameId, game.gameTitle)}
+        onUploadPdf={() => onUploadPdf(game.gameId, game.gameTitle)}
+        onEditNotes={() => onEditNotes(game.gameId, game.gameTitle, game.notes)}
+        onRemove={() => onRemove(game.gameId, game.gameTitle)}
+        onChangeState={(newState) => onChangeState?.(game.gameId, game.gameTitle, newState)}
+        onToggleFavorite={handleToggleFavorite}
+        onShare={onShare ? () => onShare(game.gameId, game.gameTitle) : undefined}
+        onManageSession={() => {
+          // TODO: Implement session management
+          console.log('Manage session for', game.gameId);
+        }}
+      />
     </motion.div>
   );
 }

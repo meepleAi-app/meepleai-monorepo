@@ -30,6 +30,7 @@ import {
   type GetUserLibraryParams,
   type AddGameToLibraryRequest,
   type UpdateLibraryEntryRequest,
+  type UpdateGameStateRequest,
   type LibraryShareLink,
   type CreateLibraryShareLinkRequest,
   type UpdateLibraryShareLinkRequest,
@@ -51,6 +52,8 @@ export interface LibraryClient {
   removeGame(gameId: string): Promise<void>;
   updateEntry(gameId: string, request: UpdateLibraryEntryRequest): Promise<UserLibraryEntry>;
   getGameStatus(gameId: string): Promise<GameInLibraryStatus>;
+  // Game State Management (Issue #2868)
+  updateGameState(gameId: string, request: UpdateGameStateRequest): Promise<void>;
   // Agent Configuration (Issue #2518)
   getAgentConfig(gameId: string): Promise<AgentConfigDto | null>;
   updateAgentConfig(gameId: string, request: UpdateAgentConfigRequest): Promise<AgentConfigDto>;
@@ -209,6 +212,15 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
         GameInLibraryStatusSchema
       );
       return data ?? { inLibrary: false, isFavorite: false };
+    },
+
+    /**
+     * Update game state (Nuovo/InPrestito/Wishlist/Owned) (Issue #2868)
+     * @param gameId - Game UUID to update
+     * @param request - New state and optional notes
+     */
+    async updateGameState(gameId: string, request: UpdateGameStateRequest): Promise<void> {
+      await httpClient.put(`/api/v1/library/games/${gameId}/state`, request);
     },
 
     /**

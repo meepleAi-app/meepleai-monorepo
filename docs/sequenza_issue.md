@@ -1,7 +1,7 @@
 # Sequenza Risoluzione Issue - MeepleAI
 
 **Data**: 2026-01-26
-**Ultimo Aggiornamento**: 2026-01-28
+**Ultimo Aggiornamento**: 2026-01-29
 **Branch attuale**: `frontend-dev`
 **Target finale**: Merge in `main-dev` → `main`
 
@@ -12,17 +12,17 @@
 | Categoria | Issue Totali | Completate | Rimanenti |
 |-----------|--------------|------------|-----------|
 | Backend | 22 | 14 | 8 |
-| Frontend | 24 | 11 | 13 |
+| Frontend | 24 | 13 | 11 |
 | Infra/CI | 12 | 3 | 9 |
-| **TOTALE** | 58 | **28** | **30** |
+| **TOTALE** | 58 | **30** | **28** |
 
 **Principio Guida**: Test/Fix PRIMA delle nuove implementazioni
 
-> **AGGIORNAMENTO 2026-01-28**:
+> **AGGIORNAMENTO 2026-01-29**:
 > - FASE 0-4: ✅ COMPLETATE
-> - FASE 5 (E2E): 2/7 completate (#3082, #2862)
-> - FASE 6 (UI): 3/20 completate (#2866, #2867, #2870)
-> - Progresso totale: 28/58 (48%)
+> - FASE 5 (E2E): ✅ COMPLETATA (6/7 issue, #2870 spostata a FASE 6)
+> - FASE 6 (UI): 2/21 completate (#2866, #2867)
+> - Progresso totale: 30/58 (52%)
 
 ---
 
@@ -77,79 +77,69 @@
 
 ---
 
-## FASE 5: E2E Test Suite (In Progress)
+## ~~FASE 5: E2E Test Suite~~ ✅ COMPLETATA
 
-> **Obiettivo**: E2E tests per tutti i flussi implementati
-> **Stato**: 2/7 completate (29%)
-
-### Sprint 5.1: E2E Tests (⇄ Tutte parallelizzabili)
-
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| 1 | #2870 | 🧪 [Personal Library] E2E Tests | `frontend-dev` | ✅ **CLOSED** |
-| 2 | #2877 | 🧪 [Shared Catalog] E2E Tests | `frontend-dev` | ⏳ |
-| 3 | #2883 | 🧪 [Profile/Settings] E2E Tests | `frontend-dev` | ⏳ |
-| 4 | #2891 | 🧪 [User Management] E2E Tests | `frontend-dev` | ⏳ |
-| 5 | #2897 | 🧪 [Editor Dashboard] E2E Tests | `frontend-dev` | ⏳ |
-
-### 🚩 CHECKPOINT 5 - E2E Tests Merge
-```bash
-git checkout main-dev && git merge frontend-dev --no-ff -m "test: add comprehensive E2E test suite (#2877, #2883, #2891, #2897)"
-
-git tag -a checkpoint-5-e2e-tests -m "E2E test suite complete"
-```
+> **Issue completate**: #3082, #2862, #2877, #2883, #2891, #2897
+> **Nota**: #2870 spostata a FASE 6 (Personal Library E2E ancora pending)
+> **Vedi sezione "Issue Completate" per dettagli**
 
 ---
 
 ## FASE 6: UI Components & Polish (In Progress)
 
 > **Obiettivo**: Completare component library e UI features
-> **Stato**: 3/20 completate (15%)
+> **Stato**: 2/21 completate (10%)
+
+### Sprint 6.0: Pending E2E Tests
+
+| # | Issue | Tipo | Branch | Status |
+|---|-------|------|--------|--------|
+| 1 | #2870 | 🧪 [Personal Library] E2E Tests | `frontend-dev` | ⏳ |
 
 ### Sprint 6.1: User Dashboard Components
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 6 | #2857 | ⭐ LibraryQuotaWidget Component | `frontend-dev` | ⏳ |
-| 7 | #2858 | ⭐ ActiveSessionsPanel Component | `frontend-dev` | ⏳ |
-| 8 | #2859 | ⭐ Dashboard API Integration | `frontend-dev` | ⏳ |
-| 9 | #2860 | ⭐ Responsive Navigation | `frontend-dev` | ⏳ |
+| 2 | #2857 | ⭐ LibraryQuotaWidget Component | `frontend-dev` | ⏳ |
+| 3 | #2858 | ⭐ ActiveSessionsPanel Component | `frontend-dev` | ⏳ |
+| 4 | #2859 | ⭐ Dashboard API Integration | `frontend-dev` | ⏳ |
+| 5 | #2860 | ⭐ Responsive Navigation | `frontend-dev` | ⏳ |
 
 ### Sprint 6.2: Library & Catalog UI (⇄ Parallelizzabile)
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 10 | #2868 | ⭐ Bulk Selection Mode | `frontend-dev` | ⏳ |
-| 11 | #2869 | ⭐ Quota Sticky Header | `frontend-dev` | ⏳ |
-| 12 | #2873 | ⭐ Advanced Filter Panel | `frontend-dev` | ⏳ |
-| 13 | #2874 | ⭐ Catalog Game Cards | `frontend-dev` | ⏳ |
-| 14 | #2875 | ⭐ Add to Library Overlay | `frontend-dev` | ⏳ |
-| 15 | #2876 | ⭐ Pagination Component | `frontend-dev` | ⏳ |
+| 6 | #2868 | ⭐ Bulk Selection Mode | `frontend-dev` | ⏳ |
+| 7 | #2869 | ⭐ Quota Sticky Header | `frontend-dev` | ⏳ |
+| 8 | #2873 | ⭐ Advanced Filter Panel | `frontend-dev` | ⏳ |
+| 9 | #2874 | ⭐ Catalog Game Cards | `frontend-dev` | ⏳ |
+| 10 | #2875 | ⭐ Add to Library Overlay | `frontend-dev` | ⏳ |
+| 11 | #2876 | ⭐ Pagination Component | `frontend-dev` | ⏳ |
 
 ### Sprint 6.3: Profile & Settings
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 16 | #2881 | ⭐ Settings Page with 4 Tabs | `frontend-dev` | ⏳ |
-| 17 | #2882 | ⭐ Avatar Upload with Crop | `frontend-dev` | ⏳ |
+| 12 | #2881 | ⭐ Settings Page with 4 Tabs | `frontend-dev` | ⏳ |
+| 13 | #2882 | ⭐ Avatar Upload with Crop | `frontend-dev` | ⏳ |
 
 ### Sprint 6.4: Admin Components
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 18 | #2887 | ⭐ User Management Table | `frontend-dev` | ⏳ |
-| 19 | #2888 | ⭐ Bulk Selection Action Bar | `frontend-dev` | ⏳ |
-| 20 | #2890 | ⭐ User Detail Modal | `frontend-dev` | ⏳ |
-| 21 | #2894 | ⭐ Editor Dashboard Page | `frontend-dev` | ⏳ |
-| 22 | #2895 | ⭐ Approval Queue Items | `frontend-dev` | ⏳ |
-| 23 | #2896 | ⭐ Bulk Approval UI | `frontend-dev` | ⏳ |
+| 14 | #2887 | ⭐ User Management Table | `frontend-dev` | ⏳ |
+| 15 | #2888 | ⭐ Bulk Selection Action Bar | `frontend-dev` | ⏳ |
+| 16 | #2890 | ⭐ User Detail Modal | `frontend-dev` | ⏳ |
+| 17 | #2894 | ⭐ Editor Dashboard Page | `frontend-dev` | ⏳ |
+| 18 | #2895 | ⭐ Approval Queue Items | `frontend-dev` | ⏳ |
+| 19 | #2896 | ⭐ Bulk Approval UI | `frontend-dev` | ⏳ |
 
 ### Backend Support (⇄ Parallelizzabile)
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 24 | #2886 | ⭐ SuspendUser/UnsuspendUser Commands | `backend-dev` | ⏳ |
-| 25 | #2893 | ⭐ BulkApprove/BulkReject Commands | `backend-dev` | ⏳ |
+| 20 | #2886 | ⭐ SuspendUser/UnsuspendUser Commands | `backend-dev` | ⏳ |
+| 21 | #2893 | ⭐ BulkApprove/BulkReject Commands | `backend-dev` | ⏳ |
 
 ### 🚩 CHECKPOINT 6 - UI Components Merge
 ```bash
@@ -172,23 +162,23 @@ git tag -a checkpoint-6-ui-components -m "UI component library complete"
 
 | # | Issue | Tipo | Branch | Priorita | Dipende Da | Status |
 |---|-------|------|--------|----------|------------|--------|
-| 26 | #3074 | 🟢⭐ AI Token Usage Tracking Backend | `backend-dev` | P3 | Checkpoint 6 | ⏳ |
-| 27 | #3080 | 🟢⭐ AI Usage Dashboard Frontend | `frontend-dev` | P3 | #3074 | ⏳ |
+| 22 | #3074 | 🟢⭐ AI Token Usage Tracking Backend | `backend-dev` | P3 | Checkpoint 6 | ⏳ |
+| 23 | #3080 | 🟢⭐ AI Usage Dashboard Frontend | `frontend-dev` | P3 | #3074 | ⏳ |
 
 ### Sprint 7.2: Coverage Targets
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 28 | #3025 | 🧪 Reach Backend 90% Coverage | `backend-dev` | ⏳ |
-| 29 | #3026 | 🧪 Reach Frontend 85% Coverage | `frontend-dev` | ⏳ |
+| 24 | #3025 | 🧪 Reach Backend 90% Coverage | `backend-dev` | ⏳ |
+| 25 | #3026 | 🧪 Reach Frontend 85% Coverage | `frontend-dev` | ⏳ |
 
 ### Sprint 7.3: Component Library Foundation
 
 | # | Issue | Tipo | Branch | Status |
 |---|-------|------|--------|--------|
-| 30 | #2924 | ⭐ Storybook Setup | `frontend-dev` | ⏳ |
-| 31 | #2925 | ⭐ Extract Reusable Components | `frontend-dev` | ⏳ |
-| 32 | #2926 | ⭐ Design System Docs | `frontend-dev` | ⏳ |
+| 26 | #2924 | ⭐ Storybook Setup | `frontend-dev` | ⏳ |
+| 27 | #2925 | ⭐ Extract Reusable Components | `frontend-dev` | ⏳ |
+| 28 | #2926 | ⭐ Design System Docs | `frontend-dev` | ⏳ |
 
 ### 🚩 CHECKPOINT FINALE - Production Ready Merge
 ```bash
@@ -209,13 +199,11 @@ git tag -a v2.0.0 -m "Production release with full CQRS compliance and 90%/85% c
 ## Dipendenze Consolidate
 
 ```
-FASE 5 (E2E Tests) - Nessuna dipendenza esterna
-├── #2877 [Shared Catalog] ⇄ parallelizzabile
-├── #2883 [Profile/Settings] ⇄ parallelizzabile
-├── #2891 [User Management] ⇄ parallelizzabile
-└── #2897 [Editor Dashboard] ⇄ parallelizzabile
+FASE 5 (E2E Tests) - ✅ COMPLETATA
+└── Tutte le issue E2E completate (#2877, #2883, #2891, #2897)
 
 FASE 6 (UI Components) - Nessuna dipendenza esterna
+├── Sprint 6.0: #2870 [Personal Library] E2E - pending
 ├── Sprint 6.1: Dashboard (#2857→#2858→#2859→#2860) sequenziale
 ├── Sprint 6.2: Library (#2868-#2876) ⇄ parallelizzabile
 ├── Sprint 6.3: Profile (#2881, #2882) ⇄ parallelizzabile
@@ -231,28 +219,28 @@ FASE 7 (Analytics & Final)
 
 ---
 
-## Gantt Semplificato (Settimane) - Aggiornato 2026-01-28
+## Gantt Semplificato (Settimane) - Aggiornato 2026-01-29
 
 ```
 Settimana:  1   2   3   4   5   6   7   8   9  10  11  12  13  14
             |   |   |   |   |   |   |   |   |   |   |   |   |   |
 FASE 0-4    ✅✅✅✅ COMPLETATE
-FASE 5              [====]🔄                                      E2E Tests (2/5)
-FASE 6                  [=========]🔄                             UI (3/17)
+FASE 5          ✅✅ COMPLETATA
+FASE 6                  [=========]🔄                             UI (2/21)
 FASE 7                              [===]                         Final
 
-CHECKPOINTS:         CP5     CP6  FINAL
-                      ↓       ↓      ↓
-main-dev:          [merge] [merge][merge]
+CHECKPOINTS:     CP5     CP6  FINAL
+                  ✅       ↓      ↓
+main-dev:       [done] [merge][merge]
 main:                                    [release]
 
-📊 Progresso: 28/58 issue completate (48%)
-⏱️ Tempo risparmiato: FASE 0-4 completate (28 issue)
+📊 Progresso: 30/58 issue completate (52%)
+⏱️ Tempo risparmiato: FASE 0-5 completate (30 issue)
 ```
 
 ---
 
-## Issue Completate (28)
+## Issue Completate (30)
 
 ### FASE 0 - Bug Fixes (5/5) ✅
 
@@ -301,15 +289,18 @@ main:                                    [release]
 | #3079 | Feature Flags Tier UI | #3114 |
 | #3077 | 2FA UI - Convert Placeholders | #3115 |
 
-### FASE 5 - E2E Tests (3/7 parziale)
+### FASE 5 - E2E Tests (6/7) ✅
 
 | Issue | Titolo | Commit/PR |
 |-------|--------|-----------|
 | #3082 | Implement Missing E2E Test Flows (50 flows) | #3116 |
 | #2862 | [User Dashboard] E2E Tests | #3117 |
-| #2870 | [Personal Library] E2E Tests | 319cc9f08 |
+| #2877 | [Shared Catalog] E2E Tests | 2026-01-29 |
+| #2883 | [Profile/Settings] E2E Tests | #3122 |
+| #2891 | [User Management] E2E Tests | #2891 |
+| #2897 | [Editor Dashboard] E2E Tests | #3124 |
 
-### FASE 6 - UI Components (2/20 parziale)
+### FASE 6 - UI Components (2/18 parziale)
 
 | Issue | Titolo | Commit/PR |
 |-------|--------|-----------|
@@ -318,21 +309,13 @@ main:                                    [release]
 
 ---
 
-## Issue Rimanenti (30)
+## Issue Rimanenti (28)
 
-### FASE 5 - E2E Tests (4 rimanenti)
-
-| Issue | Titolo | Priorità |
-|-------|--------|----------|
-| #2877 | [Shared Catalog] E2E Tests | Medium |
-| #2883 | [Profile/Settings] E2E Tests | Medium |
-| #2891 | [User Management] E2E Tests | Medium |
-| #2897 | [Editor Dashboard] E2E Tests | Medium |
-
-### FASE 6 - UI Components (17 rimanenti)
+### FASE 6 - UI Components (21 rimanenti)
 
 | Issue | Titolo | Sprint |
 |-------|--------|--------|
+| #2870 | [Personal Library] E2E Tests | 6.0 |
 | #2857 | LibraryQuotaWidget Component | 6.1 |
 | #2858 | ActiveSessionsPanel Component | 6.1 |
 | #2859 | Dashboard API Integration | 6.1 |
@@ -409,8 +392,9 @@ git log --oneline --graph main-dev..frontend-dev
 
 ---
 
-**Ultimo aggiornamento**: 2026-01-28
+**Ultimo aggiornamento**: 2026-01-29
 **Changelog**:
+- v5.0 (2026-01-29): FASE 5 completata (#2877, #2883, #2891, #2897 chiuse), #2870 spostata a FASE 6 (ancora open), conteggio 30/58
 - v4.0 (2026-01-28): Rimosso issue chiuse (FASE 0-4 complete, parziali 5-6), consolidato dipendenze
 - v3.0 (2026-01-27): Sincronizzato con GitHub - FASE 0/1 quasi completate
 - v2.0 (2026-01-27): Rimosso FASE 2 (già completata), rinumerato issue

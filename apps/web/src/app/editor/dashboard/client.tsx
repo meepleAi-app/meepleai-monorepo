@@ -368,7 +368,7 @@ export function EditorDashboardClient() {
                 {/* Status Filter */}
                 <Select
                   value={statusFilter}
-                  onValueChange={(value) => setStatusFilter(value as StatusFilter)}
+                  onValueChange={(value: string) => setStatusFilter(value as StatusFilter)}
                 >
                   <SelectTrigger className="w-48" data-testid="status-filter">
                     <SelectValue placeholder="Filtra per stato" />

@@ -3,6 +3,8 @@
  *
  * Zod schemas for validating user game library responses.
  * User library management for personal game collections.
+ *
+ * Updated: Issue #2868 - Added UpdateGameStateRequest schema
  */
 
 import { z } from 'zod';
@@ -90,6 +92,14 @@ export const UpdateLibraryEntryRequestSchema = z.object({
 });
 
 export type UpdateLibraryEntryRequest = z.infer<typeof UpdateLibraryEntryRequestSchema>;
+
+// Update game state request (Issue #2868)
+export const UpdateGameStateRequestSchema = z.object({
+  newState: GameStateTypeSchema,
+  stateNotes: z.string().max(500).nullable().optional(),
+});
+
+export type UpdateGameStateRequest = z.infer<typeof UpdateGameStateRequestSchema>;
 
 // Query parameters for getting library
 export interface GetUserLibraryParams {

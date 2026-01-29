@@ -1,28 +1,28 @@
 /* eslint-disable security/detect-object-injection */
 /**
- * SharedGameSearchFilters Component (Issue #2373: Phase 4)
+ * SharedGameSearchFilters Component (Issue #2373: Phase 4, Updated Issue #2873)
  *
  * Advanced search filters for SharedGameCatalog game search.
- * Filters: Category, Mechanic, Player count, Playing time, Catalog-only toggle.
+ * Filters: Category, Mechanic, Player count, Playing time, Complexity, Catalog-only toggle.
+ * Uses AdvancedFilterPanel with slide-in Sheet for filter selection.
  *
  * @see claudedocs/shared-game-catalog-spec.md (Section: Search Filters)
+ * @see Issue #2873: Advanced Filter Panel Component
  */
 
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { ChevronDown, Filter, X } from 'lucide-react';
+import { Filter, SlidersHorizontal, X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Switch } from '@/components/ui/forms/switch';
 import { Button } from '@/components/ui/primitives/button';
-import { Checkbox } from '@/components/ui/primitives/checkbox';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
 import { api } from '@/lib/api';
 import type { GameCategory, GameMechanic } from '@/lib/api/schemas/shared-games.schemas';
 import { cn } from '@/lib/utils';
+
+import { AdvancedFilterPanel } from './AdvancedFilterPanel';
 
 // ============================================================================
 // Types
@@ -33,7 +33,10 @@ export interface SearchFilters {
   mechanicIds: string[];
   minPlayers: number | null;
   maxPlayers: number | null;
+  minPlayingTime: number | null;
   maxPlayingTime: number | null;
+  minComplexity: number | null;
+  maxComplexity: number | null;
   catalogOnly: boolean;
 }
 
@@ -55,7 +58,10 @@ export const DEFAULT_FILTERS: SearchFilters = {
   mechanicIds: [],
   minPlayers: null,
   maxPlayers: null,
+  minPlayingTime: null,
   maxPlayingTime: null,
+  minComplexity: null,
+  maxComplexity: null,
   catalogOnly: false,
 };
 
@@ -68,23 +74,19 @@ export function SharedGameSearchFilters({
   onFiltersChange,
   className,
 }: SharedGameSearchFiltersProps) {
-  // Reference data
+  // Reference data for displaying names
   const [categories, setCategories] = useState<GameCategory[]>([]);
   const [mechanics, setMechanics] = useState<GameMechanic[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // UI state
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
-  const [mechanicDropdownOpen, setMechanicDropdownOpen] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   // ============================================================================
-  // Load Reference Data
+  // Load Reference Data (for displaying badge names)
   // ============================================================================
 
   useEffect(() => {
     const loadReferenceData = async () => {
-      setLoading(true);
       try {
         const [categoriesData, mechanicsData] = await Promise.all([
           api.sharedGames.getCategories(),
@@ -94,8 +96,6 @@ export function SharedGameSearchFilters({
         setMechanics(mechanicsData);
       } catch (error) {
         console.error('Failed to load filter reference data:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -111,7 +111,8 @@ export function SharedGameSearchFilters({
     if (filters.categoryIds.length > 0) count++;
     if (filters.mechanicIds.length > 0) count++;
     if (filters.minPlayers !== null || filters.maxPlayers !== null) count++;
-    if (filters.maxPlayingTime !== null) count++;
+    if (filters.minPlayingTime !== null || filters.maxPlayingTime !== null) count++;
+    if (filters.minComplexity !== null || filters.maxComplexity !== null) count++;
     if (filters.catalogOnly) count++;
     return count;
   }, [filters]);
@@ -119,57 +120,6 @@ export function SharedGameSearchFilters({
   // ============================================================================
   // Handlers
   // ============================================================================
-
-  const handleCategoryToggle = useCallback(
-    (categoryId: string, checked: boolean) => {
-      const newCategoryIds = checked
-        ? [...filters.categoryIds, categoryId]
-        : filters.categoryIds.filter(id => id !== categoryId);
-      onFiltersChange({ ...filters, categoryIds: newCategoryIds });
-    },
-    [filters, onFiltersChange]
-  );
-
-  const handleMechanicToggle = useCallback(
-    (mechanicId: string, checked: boolean) => {
-      const newMechanicIds = checked
-        ? [...filters.mechanicIds, mechanicId]
-        : filters.mechanicIds.filter(id => id !== mechanicId);
-      onFiltersChange({ ...filters, mechanicIds: newMechanicIds });
-    },
-    [filters, onFiltersChange]
-  );
-
-  const handleMinPlayersChange = useCallback(
-    (value: string) => {
-      const num = value ? parseInt(value, 10) : null;
-      onFiltersChange({ ...filters, minPlayers: num && !isNaN(num) ? num : null });
-    },
-    [filters, onFiltersChange]
-  );
-
-  const handleMaxPlayersChange = useCallback(
-    (value: string) => {
-      const num = value ? parseInt(value, 10) : null;
-      onFiltersChange({ ...filters, maxPlayers: num && !isNaN(num) ? num : null });
-    },
-    [filters, onFiltersChange]
-  );
-
-  const handleMaxPlayingTimeChange = useCallback(
-    (value: string) => {
-      const num = value ? parseInt(value, 10) : null;
-      onFiltersChange({ ...filters, maxPlayingTime: num && !isNaN(num) ? num : null });
-    },
-    [filters, onFiltersChange]
-  );
-
-  const handleCatalogOnlyChange = useCallback(
-    (checked: boolean) => {
-      onFiltersChange({ ...filters, catalogOnly: checked });
-    },
-    [filters, onFiltersChange]
-  );
 
   const handleClearFilters = useCallback(() => {
     onFiltersChange(DEFAULT_FILTERS);
@@ -193,6 +143,13 @@ export function SharedGameSearchFilters({
       });
     },
     [filters, onFiltersChange]
+  );
+
+  const handleApplyFilters = useCallback(
+    (newFilters: SearchFilters) => {
+      onFiltersChange(newFilters);
+    },
+    [onFiltersChange]
   );
 
   // ============================================================================
@@ -222,36 +179,41 @@ export function SharedGameSearchFilters({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="gap-2"
+          onClick={() => setIsPanelOpen(true)}
+          className={cn(
+            'gap-2 transition-colors',
+            activeFiltersCount > 0 && 'border-orange-500/50 hover:border-orange-500'
+          )}
         >
-          <Filter className="h-4 w-4" />
-          Filtri
+          <SlidersHorizontal className="h-4 w-4" />
+          Filtri Avanzati
           {activeFiltersCount > 0 && (
-            <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0 text-xs">
+            <Badge className="ml-1 h-5 min-w-5 px-1.5 rounded-full text-xs bg-orange-500 hover:bg-orange-500 text-white border-0">
               {activeFiltersCount}
             </Badge>
           )}
-          <ChevronDown className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-180')} />
         </Button>
 
         {activeFiltersCount > 0 && (
           <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-xs">
-            Cancella filtri
+            Cancella tutti
           </Button>
         )}
       </div>
 
       {/* Active Filters Badges */}
-      {activeFiltersCount > 0 && !isExpanded && (
+      {activeFiltersCount > 0 && (
         <div className="flex flex-wrap gap-2">
           {selectedCategoryNames.map((name, index) => (
-            <Badge key={`cat-${index}`} variant="secondary" className="gap-1">
+            <Badge
+              key={`cat-${filters.categoryIds[index]}`}
+              className="gap-1 bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/20"
+            >
               {name}
               <button
                 type="button"
                 onClick={() => handleRemoveCategory(filters.categoryIds[index])}
-                className="ml-1 hover:text-destructive"
+                className="ml-1 hover:text-orange-900 dark:hover:text-orange-300"
                 aria-label={`Rimuovi ${name}`}
               >
                 <X className="h-3 w-3" />
@@ -259,12 +221,16 @@ export function SharedGameSearchFilters({
             </Badge>
           ))}
           {selectedMechanicNames.map((name, index) => (
-            <Badge key={`mec-${index}`} variant="outline" className="gap-1">
+            <Badge
+              key={`mec-${filters.mechanicIds[index]}`}
+              variant="outline"
+              className="gap-1 border-orange-500/30 text-orange-700 dark:text-orange-400"
+            >
               {name}
               <button
                 type="button"
                 onClick={() => handleRemoveMechanic(filters.mechanicIds[index])}
-                className="ml-1 hover:text-destructive"
+                className="ml-1 hover:text-orange-900 dark:hover:text-orange-300"
                 aria-label={`Rimuovi ${name}`}
               >
                 <X className="h-3 w-3" />
@@ -272,38 +238,51 @@ export function SharedGameSearchFilters({
             </Badge>
           ))}
           {(filters.minPlayers !== null || filters.maxPlayers !== null) && (
-            <Badge variant="secondary" className="gap-1">
-              {filters.minPlayers ?? '?'}-{filters.maxPlayers ?? '?'} giocatori
+            <Badge className="gap-1 bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30">
+              {filters.minPlayers ?? '1'}-{filters.maxPlayers ?? '12+'} giocatori
               <button
                 type="button"
                 onClick={() => onFiltersChange({ ...filters, minPlayers: null, maxPlayers: null })}
-                className="ml-1 hover:text-destructive"
+                className="ml-1 hover:text-orange-900 dark:hover:text-orange-300"
                 aria-label="Rimuovi filtro giocatori"
               >
                 <X className="h-3 w-3" />
               </button>
             </Badge>
           )}
-          {filters.maxPlayingTime !== null && (
-            <Badge variant="secondary" className="gap-1">
-              Max {filters.maxPlayingTime} min
+          {(filters.minComplexity !== null || filters.maxComplexity !== null) && (
+            <Badge className="gap-1 bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30">
+              Complessit&agrave;: {filters.minComplexity?.toFixed(1) ?? '1.0'}-{filters.maxComplexity?.toFixed(1) ?? '5.0'}
               <button
                 type="button"
-                onClick={() => onFiltersChange({ ...filters, maxPlayingTime: null })}
-                className="ml-1 hover:text-destructive"
-                aria-label="Rimuovi filtro tempo"
+                onClick={() => onFiltersChange({ ...filters, minComplexity: null, maxComplexity: null })}
+                className="ml-1 hover:text-orange-900 dark:hover:text-orange-300"
+                aria-label="Rimuovi filtro complessit&agrave;"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {(filters.minPlayingTime !== null || filters.maxPlayingTime !== null) && (
+            <Badge className="gap-1 bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30">
+              {filters.minPlayingTime ?? '5'}-{filters.maxPlayingTime ?? '300+'} min
+              <button
+                type="button"
+                onClick={() => onFiltersChange({ ...filters, minPlayingTime: null, maxPlayingTime: null })}
+                className="ml-1 hover:text-orange-900 dark:hover:text-orange-300"
+                aria-label="Rimuovi filtro durata"
               >
                 <X className="h-3 w-3" />
               </button>
             </Badge>
           )}
           {filters.catalogOnly && (
-            <Badge variant="default" className="gap-1">
+            <Badge className="gap-1 bg-orange-500 text-white border-orange-500">
               Solo catalogo
               <button
                 type="button"
                 onClick={() => onFiltersChange({ ...filters, catalogOnly: false })}
-                className="ml-1 hover:text-destructive-foreground"
+                className="ml-1 hover:text-orange-100"
                 aria-label="Rimuovi filtro catalogo"
               >
                 <X className="h-3 w-3" />
@@ -313,175 +292,13 @@ export function SharedGameSearchFilters({
         </div>
       )}
 
-      {/* Expanded Filters Panel */}
-      {isExpanded && (
-        <div className="rounded-lg border bg-card p-4 space-y-4">
-          {loading ? (
-            <div className="text-sm text-muted-foreground">Caricamento filtri...</div>
-          ) : (
-            <>
-              {/* Categories Multi-Select */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Categorie</Label>
-                <div className="relative">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between"
-                    onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
-                    type="button"
-                  >
-                    <span className="truncate text-left">
-                      {filters.categoryIds.length > 0
-                        ? `${filters.categoryIds.length} selezionate`
-                        : 'Seleziona categorie...'}
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        'h-4 w-4 shrink-0 transition-transform',
-                        categoryDropdownOpen && 'rotate-180'
-                      )}
-                    />
-                  </Button>
-                  {categoryDropdownOpen && (
-                    <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-2 shadow-lg max-h-60 overflow-auto">
-                      {categories.map(category => (
-                        <label
-                          key={category.id}
-                          className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted cursor-pointer"
-                        >
-                          <Checkbox
-                            checked={filters.categoryIds.includes(category.id)}
-                            onCheckedChange={checked =>
-                              handleCategoryToggle(category.id, checked as boolean)
-                            }
-                          />
-                          <span className="text-sm">{category.name}</span>
-                        </label>
-                      ))}
-                      {categories.length === 0 && (
-                        <div className="text-sm text-muted-foreground p-2">
-                          Nessuna categoria disponibile
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Mechanics Multi-Select */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Meccaniche</Label>
-                <div className="relative">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between"
-                    onClick={() => setMechanicDropdownOpen(!mechanicDropdownOpen)}
-                    type="button"
-                  >
-                    <span className="truncate text-left">
-                      {filters.mechanicIds.length > 0
-                        ? `${filters.mechanicIds.length} selezionate`
-                        : 'Seleziona meccaniche...'}
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        'h-4 w-4 shrink-0 transition-transform',
-                        mechanicDropdownOpen && 'rotate-180'
-                      )}
-                    />
-                  </Button>
-                  {mechanicDropdownOpen && (
-                    <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-2 shadow-lg max-h-60 overflow-auto">
-                      {mechanics.map(mechanic => (
-                        <label
-                          key={mechanic.id}
-                          className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted cursor-pointer"
-                        >
-                          <Checkbox
-                            checked={filters.mechanicIds.includes(mechanic.id)}
-                            onCheckedChange={checked =>
-                              handleMechanicToggle(mechanic.id, checked as boolean)
-                            }
-                          />
-                          <span className="text-sm">{mechanic.name}</span>
-                        </label>
-                      ))}
-                      {mechanics.length === 0 && (
-                        <div className="text-sm text-muted-foreground p-2">
-                          Nessuna meccanica disponibile
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Player Count Range */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Numero giocatori</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Min"
-                    min={1}
-                    max={99}
-                    value={filters.minPlayers ?? ''}
-                    onChange={e => handleMinPlayersChange(e.target.value)}
-                    className="w-20"
-                    aria-label="Minimo giocatori"
-                  />
-                  <span className="text-muted-foreground">-</span>
-                  <Input
-                    type="number"
-                    placeholder="Max"
-                    min={1}
-                    max={99}
-                    value={filters.maxPlayers ?? ''}
-                    onChange={e => handleMaxPlayersChange(e.target.value)}
-                    className="w-20"
-                    aria-label="Massimo giocatori"
-                  />
-                </div>
-              </div>
-
-              {/* Max Playing Time */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Tempo massimo di gioco</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Max minuti"
-                    min={1}
-                    max={9999}
-                    value={filters.maxPlayingTime ?? ''}
-                    onChange={e => handleMaxPlayingTimeChange(e.target.value)}
-                    className="w-32"
-                    aria-label="Tempo massimo in minuti"
-                  />
-                  <span className="text-sm text-muted-foreground">minuti</span>
-                </div>
-              </div>
-
-              {/* Catalog Only Toggle */}
-              <div className="flex items-center justify-between pt-2 border-t">
-                <div className="space-y-0.5">
-                  <Label htmlFor="catalog-only" className="text-sm font-medium">
-                    Solo dal catalogo
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Mostra solo giochi nel nostro database
-                  </p>
-                </div>
-                <Switch
-                  id="catalog-only"
-                  checked={filters.catalogOnly}
-                  onCheckedChange={handleCatalogOnlyChange}
-                />
-              </div>
-            </>
-          )}
-        </div>
-      )}
+      {/* Advanced Filter Panel (Slide-in Sheet) */}
+      <AdvancedFilterPanel
+        open={isPanelOpen}
+        onOpenChange={setIsPanelOpen}
+        filters={filters}
+        onApplyFilters={handleApplyFilters}
+      />
     </div>
   );
 }

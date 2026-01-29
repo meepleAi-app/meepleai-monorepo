@@ -1,6 +1,7 @@
 /**
  * Unit tests for UnifiedHeader component
  * Issue #3104 - Unify header navigation
+ * Updated: Issue #2860 - Responsive navigation with purple active, orange hover
  *
  * Coverage:
  * - Rendering (navigation items, logo, user menu)
@@ -9,6 +10,7 @@
  * - Accessibility (ARIA labels, keyboard nav)
  * - Responsive behavior (mobile/desktop)
  * - User authentication states
+ * - Color states (purple active, orange hover)
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
@@ -79,13 +81,12 @@ describe('UnifiedHeader', () => {
     it('should render navigation links on desktop', () => {
       render(<UnifiedHeader />);
 
-      // Use getAllByLabelText because there are desktop and mobile versions of some links
-      expect(screen.getAllByLabelText('Navigate to home page')[0]).toBeInTheDocument();
-      expect(screen.getAllByLabelText('Navigate to games catalog')[0]).toBeInTheDocument();
-      expect(screen.getAllByLabelText('Navigate to your game library')[0]).toBeInTheDocument();
-      expect(screen.getAllByLabelText('Navigate to dashboard')[0]).toBeInTheDocument();
-      expect(screen.getAllByLabelText('Navigate to chat interface')[0]).toBeInTheDocument();
-      expect(screen.getAllByLabelText('Navigate to settings')[0]).toBeInTheDocument();
+      // Issue #2860: Nav order is Dashboard, Library, Catalog, Chat, Profile
+      expect(screen.getByLabelText('Navigate to dashboard')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to your game library')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to games catalog')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to chat interface')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to your profile')).toBeInTheDocument();
     });
 
     it('should render login button when not authenticated', () => {
@@ -98,34 +99,35 @@ describe('UnifiedHeader', () => {
     it('should render correct href attributes', () => {
       render(<UnifiedHeader />);
 
-      // Use getAllByLabelText because there are desktop and mobile versions of some links
-      expect(screen.getAllByLabelText('Navigate to home page')[0]).toHaveAttribute('href', '/');
-      expect(screen.getAllByLabelText('Navigate to games catalog')[0]).toHaveAttribute('href', '/games');
-      expect(screen.getAllByLabelText('Navigate to your game library')[0]).toHaveAttribute('href', '/library');
-      expect(screen.getAllByLabelText('Navigate to dashboard')[0]).toHaveAttribute('href', '/dashboard');
-      expect(screen.getAllByLabelText('Navigate to chat interface')[0]).toHaveAttribute('href', '/chat');
-      expect(screen.getAllByLabelText('Navigate to settings')[0]).toHaveAttribute('href', '/settings');
+      // Issue #2860: Updated nav order - Dashboard, Library, Catalog, Chat, Profile
+      expect(screen.getByLabelText('Navigate to dashboard')).toHaveAttribute('href', '/dashboard');
+      expect(screen.getByLabelText('Navigate to your game library')).toHaveAttribute('href', '/library');
+      expect(screen.getByLabelText('Navigate to games catalog')).toHaveAttribute('href', '/games');
+      expect(screen.getByLabelText('Navigate to chat interface')).toHaveAttribute('href', '/chat');
+      expect(screen.getByLabelText('Navigate to your profile')).toHaveAttribute('href', '/profile');
     });
 
     it('should render correct labels', () => {
       render(<UnifiedHeader />);
 
-      expect(screen.getByText('Home')).toBeInTheDocument();
-      expect(screen.getByText('Catalogo')).toBeInTheDocument();
-      expect(screen.getByText('I Miei Giochi')).toBeInTheDocument();
+      // Issue #2860: Updated labels - Settings moved to dropdown
       expect(screen.getByText('Dashboard')).toBeInTheDocument();
+      expect(screen.getByText('I Miei Giochi')).toBeInTheDocument();
+      expect(screen.getByText('Catalogo')).toBeInTheDocument();
       expect(screen.getByText('Chat')).toBeInTheDocument();
-      expect(screen.getByText('Impostazioni')).toBeInTheDocument();
+      expect(screen.getByText('Profilo')).toBeInTheDocument();
     });
   });
 
   describe('Active State Logic', () => {
-    it('should mark home as active when pathname is /', () => {
-      mockUsePathname.mockReturnValue('/');
+    it('should mark dashboard as active for /dashboard route', () => {
+      mockUsePathname.mockReturnValue('/dashboard');
       render(<UnifiedHeader />);
 
-      const homeLink = screen.getByLabelText('Navigate to home page');
-      expect(homeLink).toHaveAttribute('aria-current', 'page');
+      const dashboardLink = screen.getByLabelText('Navigate to dashboard');
+      expect(dashboardLink).toHaveAttribute('aria-current', 'page');
+      // Purple active state (Issue #2860)
+      expect(dashboardLink).toHaveClass('text-[hsl(262_83%_62%)]');
     });
 
     it('should mark games as active for /games routes', () => {
@@ -144,14 +146,6 @@ describe('UnifiedHeader', () => {
       expect(libraryLink).toHaveAttribute('aria-current', 'page');
     });
 
-    it('should mark dashboard as active for /dashboard route', () => {
-      mockUsePathname.mockReturnValue('/dashboard');
-      render(<UnifiedHeader />);
-
-      const dashboardLink = screen.getByLabelText('Navigate to dashboard');
-      expect(dashboardLink).toHaveAttribute('aria-current', 'page');
-    });
-
     it('should mark chat as active for /chat routes', () => {
       mockUsePathname.mockReturnValue('/chat/thread-123');
       render(<UnifiedHeader />);
@@ -160,13 +154,14 @@ describe('UnifiedHeader', () => {
       expect(chatLink).toHaveAttribute('aria-current', 'page');
     });
 
-    it('should mark settings as active for /settings routes', () => {
-      mockUsePathname.mockReturnValue('/settings/profile');
+    it('should mark profile as active for /profile routes', () => {
+      mockUsePathname.mockReturnValue('/profile');
       render(<UnifiedHeader />);
 
-      // Use getAllByLabelText because there are desktop and mobile versions
-      const settingsLink = screen.getAllByLabelText('Navigate to settings')[0];
-      expect(settingsLink).toHaveAttribute('aria-current', 'page');
+      const profileLink = screen.getByLabelText('Navigate to your profile');
+      expect(profileLink).toHaveAttribute('aria-current', 'page');
+      // Purple active state (Issue #2860)
+      expect(profileLink).toHaveClass('text-[hsl(262_83%_62%)]');
     });
 
     it('should not mark multiple items as active', () => {
@@ -178,6 +173,15 @@ describe('UnifiedHeader', () => {
       );
       const activeLinks = navLinks.filter(link => link.getAttribute('aria-current') === 'page');
       expect(activeLinks).toHaveLength(1);
+    });
+
+    it('should apply orange hover color to inactive links', () => {
+      mockUsePathname.mockReturnValue('/dashboard');
+      render(<UnifiedHeader />);
+
+      const chatLink = screen.getByLabelText('Navigate to chat interface');
+      // Orange hover state (Issue #2860)
+      expect(chatLink).toHaveClass('hover:text-primary');
     });
   });
 
@@ -316,6 +320,7 @@ describe('UnifiedHeader', () => {
       render(<UnifiedHeader />);
 
       // Mobile settings button is visible on mobile (md:hidden)
+      // Issue #2860: Settings moved to dropdown, but mobile button still exists
       const settingsButtons = screen.getAllByLabelText('Navigate to settings');
       const mobileButton = settingsButtons.find(btn => btn.closest('.md\\:hidden'));
       expect(mobileButton).toBeInTheDocument();
@@ -335,7 +340,7 @@ describe('UnifiedHeader', () => {
       expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument();
     });
 
-    it('should have keyboard focus indicators', () => {
+    it('should have keyboard focus indicators with purple ring', () => {
       const { container } = render(<UnifiedHeader />);
 
       // Check desktop navigation links (inside nav element) which have focus indicators
@@ -343,8 +348,10 @@ describe('UnifiedHeader', () => {
       const desktopLinks = desktopNav?.querySelectorAll('a[aria-label^="Navigate to"]') || [];
 
       // At least some desktop links should have focus ring class
+      // Purple focus ring (Issue #2860)
       const linksWithFocusRing = Array.from(desktopLinks).filter(link =>
-        link.classList.contains('focus-visible:ring-2')
+        link.classList.contains('focus-visible:ring-2') &&
+        link.classList.contains('focus-visible:ring-[hsl(262_83%_62%)]')
       );
       expect(linksWithFocusRing.length).toBeGreaterThan(0);
     });

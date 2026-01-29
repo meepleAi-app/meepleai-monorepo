@@ -22,6 +22,7 @@ import type {
   GetUserLibraryParams,
   AddGameToLibraryRequest,
   UpdateLibraryEntryRequest,
+  UpdateGameStateRequest,
   LibraryShareLink,
   CreateLibraryShareLinkRequest,
   UpdateLibraryShareLinkRequest,
@@ -125,7 +126,13 @@ export function useGameInLibraryStatus(
 }
 
 /**
- * Hook to add a game to user's library
+ * Hook to add a game to user's library with optimistic update
+ *
+ * Issue #2859: Optimistic updates for quick actions
+ * - Immediately updates game status to 'InLibrary' in cache
+ * - Optimistically updates quota (currentCount + 1, remainingSlots - 1)
+ * - Rolls back on error
+ * - Refetches on settlement for consistency
  *
  * @returns UseMutationResult for adding game
  */
@@ -146,20 +153,68 @@ export function useAddGameToLibrary(): UseMutationResult<
     }) => {
       return api.library.addGame(gameId, request);
     },
-    onSuccess: (_data, variables) => {
-      // Invalidate library list and stats
+    onMutate: async ({ gameId }) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: libraryKeys.gameStatus(gameId) });
+      await queryClient.cancelQueries({ queryKey: libraryKeys.quota() });
+
+      // Snapshot previous values for rollback
+      const previousGameStatus = queryClient.getQueryData<GameInLibraryStatus>(
+        libraryKeys.gameStatus(gameId)
+      );
+      const previousQuota = queryClient.getQueryData<LibraryQuotaResponse>(libraryKeys.quota());
+
+      // Optimistically update game status to 'InLibrary'
+      queryClient.setQueryData<GameInLibraryStatus>(
+        libraryKeys.gameStatus(gameId),
+        (old) => (old ? { ...old, inLibrary: true } : { inLibrary: true, isFavorite: false })
+      );
+
+      // Optimistically update quota
+      if (previousQuota) {
+        queryClient.setQueryData<LibraryQuotaResponse>(libraryKeys.quota(), (old) => {
+          if (!old) return old;
+          const newCount = old.currentCount + 1;
+          const newRemaining = Math.max(0, old.remainingSlots - 1);
+          return {
+            ...old,
+            currentCount: newCount,
+            remainingSlots: newRemaining,
+            percentageUsed: (newCount / old.maxAllowed) * 100,
+          };
+        });
+      }
+
+      return { previousGameStatus, previousQuota };
+    },
+    onError: (_err, { gameId }, context) => {
+      // Rollback to previous data on error
+      if (context?.previousGameStatus) {
+        queryClient.setQueryData(libraryKeys.gameStatus(gameId), context.previousGameStatus);
+      }
+      if (context?.previousQuota) {
+        queryClient.setQueryData(libraryKeys.quota(), context.previousQuota);
+      }
+    },
+    onSettled: (_data, _err, { gameId }) => {
+      // Refetch to ensure cache consistency with server
       queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
-      // Invalidate quota (Issue #2445)
       queryClient.invalidateQueries({ queryKey: libraryKeys.quota() });
-      // Invalidate game status
-      queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(variables.gameId) });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(gameId) });
     },
   });
 }
 
 /**
- * Hook to remove a game from user's library
+ * Hook to remove a game from user's library with optimistic update
+ *
+ * Issue #2859: Optimistic updates for quick actions
+ * - Immediately updates game status to not in library
+ * - Optimistically updates quota (currentCount - 1, remainingSlots + 1)
+ * - Removes game from library list cache
+ * - Rolls back on error
+ * - Refetches on settlement for consistency
  *
  * @returns UseMutationResult for removing game
  */
@@ -170,13 +225,91 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
     mutationFn: async (gameId: string) => {
       return api.library.removeGame(gameId);
     },
-    onSuccess: (_data, gameId) => {
-      // Invalidate library list and stats
+    onMutate: async (gameId) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: libraryKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: libraryKeys.gameStatus(gameId) });
+      await queryClient.cancelQueries({ queryKey: libraryKeys.quota() });
+
+      // Snapshot previous values for rollback
+      const previousLibrary = queryClient.getQueriesData<PaginatedLibraryResponse>({
+        queryKey: libraryKeys.lists(),
+      });
+      const previousGameStatus = queryClient.getQueryData<GameInLibraryStatus>(
+        libraryKeys.gameStatus(gameId)
+      );
+      const previousQuota = queryClient.getQueryData<LibraryQuotaResponse>(libraryKeys.quota());
+      const previousStats = queryClient.getQueryData<UserLibraryStats>(libraryKeys.stats());
+
+      // Optimistically remove game from library lists
+      queryClient.setQueriesData<PaginatedLibraryResponse>(
+        { queryKey: libraryKeys.lists() },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: old.items.filter((entry) => entry.gameId !== gameId),
+            totalCount: Math.max(0, old.totalCount - 1),
+          };
+        }
+      );
+
+      // Optimistically update game status to not in library
+      queryClient.setQueryData<GameInLibraryStatus>(
+        libraryKeys.gameStatus(gameId),
+        (old) => (old ? { ...old, inLibrary: false, isFavorite: false } : { inLibrary: false, isFavorite: false })
+      );
+
+      // Optimistically update quota
+      if (previousQuota) {
+        queryClient.setQueryData<LibraryQuotaResponse>(libraryKeys.quota(), (old) => {
+          if (!old) return old;
+          const newCount = Math.max(0, old.currentCount - 1);
+          const newRemaining = old.remainingSlots + 1;
+          return {
+            ...old,
+            currentCount: newCount,
+            remainingSlots: Math.min(newRemaining, old.maxAllowed),
+            percentageUsed: (newCount / old.maxAllowed) * 100,
+          };
+        });
+      }
+
+      // Optimistically update stats
+      if (previousStats) {
+        queryClient.setQueryData<UserLibraryStats>(libraryKeys.stats(), (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            totalGames: Math.max(0, old.totalGames - 1),
+          };
+        });
+      }
+
+      return { previousLibrary, previousGameStatus, previousQuota, previousStats };
+    },
+    onError: (_err, gameId, context) => {
+      // Rollback to previous data on error
+      if (context?.previousLibrary) {
+        context.previousLibrary.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      if (context?.previousGameStatus) {
+        queryClient.setQueryData(libraryKeys.gameStatus(gameId), context.previousGameStatus);
+      }
+      if (context?.previousQuota) {
+        queryClient.setQueryData(libraryKeys.quota(), context.previousQuota);
+      }
+      if (context?.previousStats) {
+        queryClient.setQueryData(libraryKeys.stats(), context.previousStats);
+      }
+    },
+    onSettled: (_data, _err, gameId) => {
+      // Refetch to ensure cache consistency with server
       queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
-      // Invalidate quota (Issue #2445)
       queryClient.invalidateQueries({ queryKey: libraryKeys.quota() });
-      // Invalidate game status
       queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(gameId) });
     },
   });
@@ -215,7 +348,12 @@ export function useUpdateLibraryEntry(): UseMutationResult<
 }
 
 /**
- * Hook to toggle favorite status of a library entry
+ * Hook to toggle favorite status of a library entry with optimistic update
+ *
+ * Issue #2859: Optimistic updates for quick actions
+ * - Immediately updates isFavorite flag in cache
+ * - Rolls back on error
+ * - Refetches on settlement for consistency
  *
  * @returns UseMutationResult for toggling favorite
  */
@@ -230,12 +368,76 @@ export function useToggleLibraryFavorite(): UseMutationResult<
     mutationFn: async ({ gameId, isFavorite }: { gameId: string; isFavorite: boolean }) => {
       return api.library.updateEntry(gameId, { isFavorite });
     },
-    onSuccess: (_data, variables) => {
-      // Invalidate library list and stats
+    onMutate: async ({ gameId, isFavorite }) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: libraryKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: libraryKeys.stats() });
+
+      // Snapshot previous values for rollback
+      const previousLibrary = queryClient.getQueriesData<PaginatedLibraryResponse>({
+        queryKey: libraryKeys.lists(),
+      });
+      const previousStats = queryClient.getQueryData<UserLibraryStats>(libraryKeys.stats());
+      const previousGameStatus = queryClient.getQueryData<GameInLibraryStatus>(
+        libraryKeys.gameStatus(gameId)
+      );
+
+      // Optimistically update library lists
+      queryClient.setQueriesData<PaginatedLibraryResponse>(
+        { queryKey: libraryKeys.lists() },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: old.items.map((entry) =>
+              entry.gameId === gameId ? { ...entry, isFavorite } : entry
+            ),
+          };
+        }
+      );
+
+      // Optimistically update stats (favoriteCount)
+      if (previousStats) {
+        queryClient.setQueryData<UserLibraryStats>(libraryKeys.stats(), (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            favoriteCount: isFavorite
+              ? old.favoriteCount + 1
+              : Math.max(0, old.favoriteCount - 1),
+          };
+        });
+      }
+
+      // Optimistically update game status if cached
+      if (previousGameStatus) {
+        queryClient.setQueryData<GameInLibraryStatus>(
+          libraryKeys.gameStatus(gameId),
+          (old) => (old ? { ...old, isFavorite } : old)
+        );
+      }
+
+      return { previousLibrary, previousStats, previousGameStatus };
+    },
+    onError: (_err, { gameId }, context) => {
+      // Rollback to previous data on error
+      if (context?.previousLibrary) {
+        context.previousLibrary.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      if (context?.previousStats) {
+        queryClient.setQueryData(libraryKeys.stats(), context.previousStats);
+      }
+      if (context?.previousGameStatus) {
+        queryClient.setQueryData(libraryKeys.gameStatus(gameId), context.previousGameStatus);
+      }
+    },
+    onSettled: (_data, _err, { gameId }) => {
+      // Refetch to ensure cache consistency with server
       queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
       queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
-      // Invalidate game status
-      queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(variables.gameId) });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(gameId) });
     },
   });
 }
@@ -263,6 +465,44 @@ export function useRecentlyAddedGames(
     },
     enabled
   );
+}
+
+// ========================================
+// Game State Management (Issue #2868)
+// ========================================
+
+/**
+ * Hook to update game state (Nuovo/InPrestito/Wishlist/Owned)
+ *
+ * Updates the state of a single game. Invalidates library cache on success.
+ *
+ * @returns UseMutationResult for updating game state
+ */
+export function useUpdateGameState(): UseMutationResult<
+  void,
+  Error,
+  { gameId: string; request: UpdateGameStateRequest }
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      gameId,
+      request,
+    }: {
+      gameId: string;
+      request: UpdateGameStateRequest;
+    }) => {
+      return api.library.updateGameState(gameId, request);
+    },
+    onSuccess: (_data, variables) => {
+      // Invalidate library list and stats
+      queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
+      // Invalidate game status
+      queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(variables.gameId) });
+    },
+  });
 }
 
 // ========================================

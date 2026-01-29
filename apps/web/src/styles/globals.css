@@ -153,6 +153,23 @@
   .bg-gradient-cta {
     @apply bg-gradient-to-br from-primary to-secondary;
   }
+
+  /* Navigation Active/Hover States - Issue #2860 */
+  .nav-item-active {
+    color: hsl(var(--color-meeple-purple, 262 83% 62%));
+  }
+
+  .nav-item-active-bg {
+    background-color: hsl(262 83% 62% / 0.1);
+  }
+
+  .dark .nav-item-active-bg {
+    background-color: hsl(262 83% 62% / 0.2);
+  }
+
+  .nav-item-hover:hover {
+    color: hsl(var(--primary));
+  }
 }
 
 @layer utilities {

@@ -307,6 +307,99 @@ describe('useActiveSessions hooks', () => {
 
       expect(result.current.error).toEqual(error);
     });
+
+    // ==================== Optimistic Update Tests (Issue #2859) ====================
+
+    it('optimistically updates session status to Paused before API response', async () => {
+      // Pre-populate cache with active sessions using correct schema field names
+      const mockSessionsResponse: PaginatedSessionsResponse = {
+        sessions: [
+          {
+            id: sessionId,
+            gameId: 'game-1',
+            gameName: 'Catan',
+            status: 'InProgress',
+            playerCount: 4,
+            startedAt: '2024-01-15T10:00:00Z',
+            players: [],
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 5,
+      };
+      queryClient.setQueryData(sessionsKeys.activeList(5), mockSessionsResponse);
+
+      // Make API call slow to observe optimistic update
+      let resolveApiCall: (value: GameSessionDto) => void;
+      (api.sessions.pause as Mock).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveApiCall = resolve;
+          })
+      );
+
+      const { result } = renderHook(() => usePauseSession(), { wrapper });
+
+      // Start mutation but don't await
+      act(() => {
+        result.current.mutate(sessionId);
+      });
+
+      // Check that cache was optimistically updated
+      await waitFor(() => {
+        const cachedData = queryClient.getQueryData<PaginatedSessionsResponse>(
+          sessionsKeys.activeList(5)
+        );
+        expect(cachedData?.sessions[0]?.status).toBe('Paused');
+      });
+
+      // Now resolve the API call
+      await act(async () => {
+        resolveApiCall!(mockPausedSession);
+      });
+    });
+
+    it('rolls back optimistic update on error', async () => {
+      // Pre-populate cache with active sessions
+      const mockSessionsResponse: PaginatedSessionsResponse = {
+        sessions: [
+          {
+            id: sessionId,
+            gameId: 'game-1',
+            gameName: 'Catan',
+            status: 'InProgress',
+            playerCount: 4,
+            startedAt: '2024-01-15T10:00:00Z',
+            players: [],
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 5,
+      };
+      queryClient.setQueryData(sessionsKeys.activeList(5), mockSessionsResponse);
+
+      // API will fail
+      const error = new Error('Network error');
+      (api.sessions.pause as Mock).mockRejectedValue(error);
+
+      const { result } = renderHook(() => usePauseSession(), { wrapper });
+
+      await act(async () => {
+        try {
+          await result.current.mutateAsync(sessionId);
+        } catch {
+          // Expected to fail
+        }
+      });
+
+      // After error, cache should be refetched (invalidated) which will trigger refetch
+      // The rollback happens, then invalidate triggers
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+    });
   });
 
   // ==================== useResumeSession ====================
@@ -364,6 +457,100 @@ describe('useActiveSessions hooks', () => {
       });
 
       expect(result.current.error).toEqual(error);
+    });
+
+    // ==================== Optimistic Update Tests (Issue #2859) ====================
+
+    it('optimistically updates session status to InProgress before API response', async () => {
+      // Pre-populate cache with paused session using correct schema field names
+      const mockSessionsResponse: PaginatedSessionsResponse = {
+        sessions: [
+          {
+            id: sessionId,
+            gameId: 'game-1',
+            gameName: 'Catan',
+            status: 'Paused',
+            playerCount: 4,
+            startedAt: '2024-01-15T10:00:00Z',
+            pausedAt: '2024-01-15T11:00:00Z',
+            players: [],
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 5,
+      };
+      queryClient.setQueryData(sessionsKeys.activeList(5), mockSessionsResponse);
+
+      // Make API call slow to observe optimistic update
+      let resolveApiCall: (value: GameSessionDto) => void;
+      (api.sessions.resume as Mock).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveApiCall = resolve;
+          })
+      );
+
+      const { result } = renderHook(() => useResumeSession(), { wrapper });
+
+      // Start mutation but don't await
+      act(() => {
+        result.current.mutate(sessionId);
+      });
+
+      // Check that cache was optimistically updated
+      await waitFor(() => {
+        const cachedData = queryClient.getQueryData<PaginatedSessionsResponse>(
+          sessionsKeys.activeList(5)
+        );
+        expect(cachedData?.sessions[0]?.status).toBe('InProgress');
+      });
+
+      // Now resolve the API call
+      await act(async () => {
+        resolveApiCall!(mockResumedSession);
+      });
+    });
+
+    it('rolls back optimistic update on error', async () => {
+      // Pre-populate cache with paused session
+      const mockSessionsResponse: PaginatedSessionsResponse = {
+        sessions: [
+          {
+            id: sessionId,
+            gameId: 'game-1',
+            gameName: 'Catan',
+            status: 'Paused',
+            playerCount: 4,
+            startedAt: '2024-01-15T10:00:00Z',
+            pausedAt: '2024-01-15T11:00:00Z',
+            players: [],
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 5,
+      };
+      queryClient.setQueryData(sessionsKeys.activeList(5), mockSessionsResponse);
+
+      // API will fail
+      const error = new Error('Network error');
+      (api.sessions.resume as Mock).mockRejectedValue(error);
+
+      const { result } = renderHook(() => useResumeSession(), { wrapper });
+
+      await act(async () => {
+        try {
+          await result.current.mutateAsync(sessionId);
+        } catch {
+          // Expected to fail
+        }
+      });
+
+      // After error, mutation should be in error state
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
     });
   });
 

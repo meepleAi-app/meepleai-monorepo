@@ -1,14 +1,16 @@
 /**
- * BulkActionBar Component Tests (Issue #2613)
+ * BulkActionBar Component Tests (Issue #2613, #2868)
  *
  * Test Coverage:
  * - Rendering with selection count
  * - Bulk favorite action
+ * - Bulk change state action (Issue #2868)
  * - Bulk remove action (opens dialog)
  * - Bulk export dropdown
  * - Select all / deselect all toggle
  * - Clear selection button
  * - Mobile vs desktop rendering
+ * - Orange floating bar styling (Issue #2868)
  *
  * Target: ≥90% coverage
  */
@@ -26,10 +28,15 @@ import { getMenuItem, getAlertDialogHeading } from '@/test-utils/locale-queries'
 // ============================================================================
 
 const mockMutateAsync = vi.fn();
+const mockUpdateGameStateMutateAsync = vi.fn();
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useUpdateLibraryEntry: () => ({
     mutateAsync: mockMutateAsync,
+    isPending: false,
+  }),
+  useUpdateGameState: () => ({
+    mutateAsync: mockUpdateGameStateMutateAsync,
     isPending: false,
   }),
   useRemoveGameFromLibrary: () => ({
@@ -63,6 +70,7 @@ vi.mock('@/components/layout/Toast', () => ({
 const mockGames: UserLibraryEntry[] = [
   {
     id: 'entry-1',
+    userId: 'user-1',
     gameId: 'game-1',
     gameTitle: 'Catan',
     gamePublisher: 'Kosmos',
@@ -71,9 +79,13 @@ const mockGames: UserLibraryEntry[] = [
     addedAt: '2024-06-15T10:30:00Z',
     isFavorite: false,
     notes: null,
+    currentState: 'Nuovo',
+    stateChangedAt: null,
+    stateNotes: null,
   },
   {
     id: 'entry-2',
+    userId: 'user-1',
     gameId: 'game-2',
     gameTitle: 'Ticket to Ride',
     gamePublisher: 'Days of Wonder',
@@ -82,9 +94,13 @@ const mockGames: UserLibraryEntry[] = [
     addedAt: '2024-07-20T14:00:00Z',
     isFavorite: true,
     notes: 'Great game',
+    currentState: 'Owned',
+    stateChangedAt: null,
+    stateNotes: null,
   },
   {
     id: 'entry-3',
+    userId: 'user-1',
     gameId: 'game-3',
     gameTitle: 'Pandemic',
     gamePublisher: 'Z-Man Games',
@@ -93,6 +109,9 @@ const mockGames: UserLibraryEntry[] = [
     addedAt: '2024-08-10T09:00:00Z',
     isFavorite: false,
     notes: null,
+    currentState: 'Wishlist',
+    stateChangedAt: null,
+    stateNotes: null,
   },
 ];
 
@@ -122,6 +141,7 @@ const createWrapper = () => {
 const resetMocks = () => {
   vi.clearAllMocks();
   mockMutateAsync.mockResolvedValue({});
+  mockUpdateGameStateMutateAsync.mockResolvedValue(undefined);
 };
 
 const defaultProps = {
@@ -305,6 +325,155 @@ describe('BulkActionBar - Bulk Favorite', () => {
 });
 
 // ============================================================================
+// Bulk Change State Tests (Issue #2868)
+// ============================================================================
+
+describe('BulkActionBar - Bulk Change State', () => {
+  beforeEach(resetMocks);
+
+  it('renders change state dropdown button', () => {
+    render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
+
+    // Desktop button with text
+    expect(screen.getAllByRole('button', { name: /Cambia Stato/i }).length).toBeGreaterThan(0);
+  });
+
+  it('changes state to Nuovo for all selected games', async () => {
+    const user = userEvent.setup();
+    const onClearSelection = vi.fn();
+
+    render(
+      <BulkActionBar {...defaultProps} onClearSelection={onClearSelection} />,
+      { wrapper: createWrapper() }
+    );
+
+    // Open change state dropdown (desktop)
+    const changeStateButtons = screen.getAllByRole('button', { name: /Cambia Stato/i });
+    await user.click(changeStateButtons[0]);
+
+    // Click Nuovo option
+    await user.click(getMenuItem(/^Nuovo$/i));
+
+    await waitFor(() => {
+      expect(mockUpdateGameStateMutateAsync).toHaveBeenCalledTimes(2);
+      expect(mockUpdateGameStateMutateAsync).toHaveBeenCalledWith({
+        gameId: 'game-1',
+        request: { newState: 'Nuovo' },
+      });
+      expect(mockUpdateGameStateMutateAsync).toHaveBeenCalledWith({
+        gameId: 'game-2',
+        request: { newState: 'Nuovo' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith('2 giochi aggiornati a "Nuovo"');
+      expect(onClearSelection).toHaveBeenCalled();
+    });
+  });
+
+  it('changes state to InPrestito for all selected games', async () => {
+    const user = userEvent.setup();
+
+    render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
+
+    const changeStateButtons = screen.getAllByRole('button', { name: /Cambia Stato/i });
+    await user.click(changeStateButtons[0]);
+
+    await user.click(getMenuItem(/in prestito/i));
+
+    await waitFor(() => {
+      expect(mockUpdateGameStateMutateAsync).toHaveBeenCalledWith({
+        gameId: 'game-1',
+        request: { newState: 'InPrestito' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith('2 giochi aggiornati a "In Prestito"');
+    });
+  });
+
+  it('changes state to Owned for all selected games', async () => {
+    const user = userEvent.setup();
+
+    render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
+
+    const changeStateButtons = screen.getAllByRole('button', { name: /Cambia Stato/i });
+    await user.click(changeStateButtons[0]);
+
+    await user.click(getMenuItem(/posseduto/i));
+
+    await waitFor(() => {
+      expect(mockUpdateGameStateMutateAsync).toHaveBeenCalledWith({
+        gameId: 'game-1',
+        request: { newState: 'Owned' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith('2 giochi aggiornati a "Posseduto"');
+    });
+  });
+
+  it('changes state to Wishlist for all selected games', async () => {
+    const user = userEvent.setup();
+
+    render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
+
+    const changeStateButtons = screen.getAllByRole('button', { name: /Cambia Stato/i });
+    await user.click(changeStateButtons[0]);
+
+    await user.click(getMenuItem(/wishlist/i));
+
+    await waitFor(() => {
+      expect(mockUpdateGameStateMutateAsync).toHaveBeenCalledWith({
+        gameId: 'game-1',
+        request: { newState: 'Wishlist' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith('2 giochi aggiornati a "Wishlist"');
+    });
+  });
+
+  it('shows warning toast on partial state change success', async () => {
+    mockUpdateGameStateMutateAsync
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('Failed'));
+
+    const user = userEvent.setup();
+
+    render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
+
+    const changeStateButtons = screen.getAllByRole('button', { name: /Cambia Stato/i });
+    await user.click(changeStateButtons[0]);
+    await user.click(getMenuItem(/^Nuovo$/i));
+
+    await waitFor(() => {
+      expect(mockToastWarning).toHaveBeenCalledWith('1 aggiornati, 1 errori');
+    });
+  });
+
+  it('shows error toast when all state changes fail', async () => {
+    mockUpdateGameStateMutateAsync.mockRejectedValue(new Error('Failed'));
+
+    const user = userEvent.setup();
+
+    render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
+
+    const changeStateButtons = screen.getAllByRole('button', { name: /Cambia Stato/i });
+    await user.click(changeStateButtons[0]);
+    await user.click(getMenuItem(/^Nuovo$/i));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Impossibile cambiare lo stato');
+    });
+  });
+});
+
+// ============================================================================
 // Bulk Export Tests
 // ============================================================================
 
@@ -401,5 +570,30 @@ describe('BulkActionBar - Remove Button', () => {
     await waitFor(() => {
       expect(getAlertDialogHeading(/rimuovi 2 giochi/i)).toBeInTheDocument();
     });
+  });
+});
+
+// ============================================================================
+// Styling Tests (Issue #2868)
+// ============================================================================
+
+describe('BulkActionBar - Styling', () => {
+  beforeEach(resetMocks);
+
+  it('renders with orange background and white border', () => {
+    const { container } = render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
+
+    // Find the main floating bar div
+    const floatingBar = container.querySelector('.bg-orange-500');
+    expect(floatingBar).toBeInTheDocument();
+    expect(floatingBar).toHaveClass('border-2');
+    expect(floatingBar).toHaveClass('border-white');
+  });
+
+  it('renders selection counter with white text', () => {
+    render(<BulkActionBar {...defaultProps} />, { wrapper: createWrapper() });
+
+    const counter = screen.getByText('2 selezionati');
+    expect(counter).toHaveClass('text-white');
   });
 });

@@ -70,7 +70,12 @@ export function useSession(
 }
 
 /**
- * Hook to pause an active session
+ * Hook to pause an active session with optimistic update
+ *
+ * Issue #2859: Optimistic updates for quick actions
+ * - Immediately updates session status to 'Paused' in cache
+ * - Rolls back on error
+ * - Refetches on settlement for consistency
  *
  * @returns UseMutationResult for pausing a session
  */
@@ -81,15 +86,65 @@ export function usePauseSession(): UseMutationResult<GameSessionDto, Error, stri
     mutationFn: async (sessionId: string): Promise<GameSessionDto> => {
       return api.sessions.pause(sessionId);
     },
-    onSuccess: () => {
-      // Invalidate active sessions to refresh the list
+    onMutate: async (sessionId) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: sessionsKeys.active() });
+
+      // Snapshot previous values for rollback
+      const previousActiveSessions = queryClient.getQueriesData<PaginatedSessionsResponse>({
+        queryKey: sessionsKeys.active(),
+      });
+      const previousSessionDetail = queryClient.getQueryData<GameSessionDto>(
+        sessionsKeys.detail(sessionId)
+      );
+
+      // Optimistically update active sessions list
+      queryClient.setQueriesData<PaginatedSessionsResponse>(
+        { queryKey: sessionsKeys.active() },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            sessions: old.sessions.map((session) =>
+              session.id === sessionId ? { ...session, status: 'Paused' as const } : session
+            ),
+          };
+        }
+      );
+
+      // Optimistically update session detail if cached
+      queryClient.setQueryData<GameSessionDto | null>(
+        sessionsKeys.detail(sessionId),
+        (old) => (old ? { ...old, status: 'Paused' as const } : old)
+      );
+
+      return { previousActiveSessions, previousSessionDetail };
+    },
+    onError: (_err, sessionId, context) => {
+      // Rollback to previous data on error
+      if (context?.previousActiveSessions) {
+        context.previousActiveSessions.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      if (context?.previousSessionDetail) {
+        queryClient.setQueryData(sessionsKeys.detail(sessionId), context.previousSessionDetail);
+      }
+    },
+    onSettled: () => {
+      // Refetch to ensure cache consistency with server
       queryClient.invalidateQueries({ queryKey: sessionsKeys.active() });
     },
   });
 }
 
 /**
- * Hook to resume a paused session
+ * Hook to resume a paused session with optimistic update
+ *
+ * Issue #2859: Optimistic updates for quick actions
+ * - Immediately updates session status to 'InProgress' in cache
+ * - Rolls back on error
+ * - Refetches on settlement for consistency
  *
  * @returns UseMutationResult for resuming a session
  */
@@ -100,7 +155,53 @@ export function useResumeSession(): UseMutationResult<GameSessionDto, Error, str
     mutationFn: async (sessionId: string): Promise<GameSessionDto> => {
       return api.sessions.resume(sessionId);
     },
-    onSuccess: () => {
+    onMutate: async (sessionId) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: sessionsKeys.active() });
+
+      // Snapshot previous values for rollback
+      const previousActiveSessions = queryClient.getQueriesData<PaginatedSessionsResponse>({
+        queryKey: sessionsKeys.active(),
+      });
+      const previousSessionDetail = queryClient.getQueryData<GameSessionDto>(
+        sessionsKeys.detail(sessionId)
+      );
+
+      // Optimistically update active sessions list
+      queryClient.setQueriesData<PaginatedSessionsResponse>(
+        { queryKey: sessionsKeys.active() },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            sessions: old.sessions.map((session) =>
+              session.id === sessionId ? { ...session, status: 'InProgress' as const } : session
+            ),
+          };
+        }
+      );
+
+      // Optimistically update session detail if cached
+      queryClient.setQueryData<GameSessionDto | null>(
+        sessionsKeys.detail(sessionId),
+        (old) => (old ? { ...old, status: 'InProgress' as const } : old)
+      );
+
+      return { previousActiveSessions, previousSessionDetail };
+    },
+    onError: (_err, sessionId, context) => {
+      // Rollback to previous data on error
+      if (context?.previousActiveSessions) {
+        context.previousActiveSessions.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      if (context?.previousSessionDetail) {
+        queryClient.setQueryData(sessionsKeys.detail(sessionId), context.previousSessionDetail);
+      }
+    },
+    onSettled: () => {
+      // Refetch to ensure cache consistency with server
       queryClient.invalidateQueries({ queryKey: sessionsKeys.active() });
     },
   });

@@ -22,6 +22,7 @@ import type {
   GetUserLibraryParams,
   AddGameToLibraryRequest,
   UpdateLibraryEntryRequest,
+  UpdateGameStateRequest,
   LibraryShareLink,
   CreateLibraryShareLinkRequest,
   UpdateLibraryShareLinkRequest,
@@ -464,6 +465,44 @@ export function useRecentlyAddedGames(
     },
     enabled
   );
+}
+
+// ========================================
+// Game State Management (Issue #2868)
+// ========================================
+
+/**
+ * Hook to update game state (Nuovo/InPrestito/Wishlist/Owned)
+ *
+ * Updates the state of a single game. Invalidates library cache on success.
+ *
+ * @returns UseMutationResult for updating game state
+ */
+export function useUpdateGameState(): UseMutationResult<
+  void,
+  Error,
+  { gameId: string; request: UpdateGameStateRequest }
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      gameId,
+      request,
+    }: {
+      gameId: string;
+      request: UpdateGameStateRequest;
+    }) => {
+      return api.library.updateGameState(gameId, request);
+    },
+    onSuccess: (_data, variables) => {
+      // Invalidate library list and stats
+      queryClient.invalidateQueries({ queryKey: libraryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: libraryKeys.stats() });
+      // Invalidate game status
+      queryClient.invalidateQueries({ queryKey: libraryKeys.gameStatus(variables.gameId) });
+    },
+  });
 }
 
 // ========================================

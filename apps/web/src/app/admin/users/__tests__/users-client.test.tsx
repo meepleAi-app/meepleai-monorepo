@@ -5,6 +5,7 @@ import { AdminPageClient } from '../client';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import type { AuthUser } from '@/types/auth';
 import { api } from '@/lib/api';
+import { settingsPatterns } from '@/__tests__/fixtures/common-fixtures';
 
 // Mock Next.js navigation
 vi.mock('next/navigation', () => ({
@@ -284,8 +285,13 @@ describe('Users AdminPageClient', () => {
       expect(screen.getByText('user1@example.com')).toBeInTheDocument();
     });
 
-    const editButtons = screen.getAllByRole('button', { name: /edit/i });
-    await user.click(editButtons[0]);
+    // Actions are in dropdown menu
+    const menuButtons = screen.getAllByRole('button', { name: settingsPatterns.menu.openMenu });
+    await user.click(menuButtons[0]);
+
+    // Wait for dropdown and click Edit
+    const editMenuItem = await screen.findByRole('menuitem', { name: settingsPatterns.menu.edit });
+    await user.click(editMenuItem);
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -308,8 +314,12 @@ describe('Users AdminPageClient', () => {
       expect(screen.getByText('user1@example.com')).toBeInTheDocument();
     });
 
-    const editButtons = screen.getAllByRole('button', { name: /edit/i });
-    await user.click(editButtons[0]);
+    // Actions are in dropdown menu
+    const menuButtons = screen.getAllByRole('button', { name: settingsPatterns.menu.openMenu });
+    await user.click(menuButtons[0]);
+
+    const editMenuItem = await screen.findByRole('menuitem', { name: settingsPatterns.menu.edit });
+    await user.click(editMenuItem);
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -344,8 +354,13 @@ describe('Users AdminPageClient', () => {
       expect(screen.getByText('user1@example.com')).toBeInTheDocument();
     });
 
-    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
-    await user.click(deleteButtons[0]);
+    // Open dropdown menu
+    const menuButtons = screen.getAllByRole('button', { name: settingsPatterns.menu.openMenu });
+    await user.click(menuButtons[0]);
+
+    // Click Delete in dropdown
+    const deleteMenuItem = await screen.findByRole('menuitem', { name: settingsPatterns.menu.delete });
+    await user.click(deleteMenuItem);
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -368,8 +383,13 @@ describe('Users AdminPageClient', () => {
       expect(screen.getByText('user1@example.com')).toBeInTheDocument();
     });
 
-    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
-    await user.click(deleteButtons[0]);
+    // Open dropdown menu
+    const menuButtons = screen.getAllByRole('button', { name: settingsPatterns.menu.openMenu });
+    await user.click(menuButtons[0]);
+
+    // Click Delete in dropdown
+    const deleteMenuItem = await screen.findByRole('menuitem', { name: settingsPatterns.menu.delete });
+    await user.click(deleteMenuItem);
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -395,8 +415,13 @@ describe('Users AdminPageClient', () => {
       expect(screen.getByText('user1@example.com')).toBeInTheDocument();
     });
 
-    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
-    await user.click(deleteButtons[0]);
+    // Open dropdown menu
+    const menuButtons = screen.getAllByRole('button', { name: settingsPatterns.menu.openMenu });
+    await user.click(menuButtons[0]);
+
+    // Click Delete in dropdown
+    const deleteMenuItem = await screen.findByRole('menuitem', { name: settingsPatterns.menu.delete });
+    await user.click(deleteMenuItem);
 
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -562,11 +587,11 @@ describe('Users AdminPageClient', () => {
     const confirmButton = screen.getByRole('button', { name: /confirm/i });
     await user.click(confirmButton);
 
-    // Verify API was called
+    // Verify API was called (user-2 is first due to lastSeenAt desc sort)
     await waitFor(
       () => {
         expect(api.admin.suspendUser).toHaveBeenCalledWith(
-          'user-1',
+          'user-2',
           'Bulk suspended by admin'
         );
       },

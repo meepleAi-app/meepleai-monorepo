@@ -240,4 +240,13 @@ export const settingsPatterns = {
     failedToSetup2fa: /failed to setup 2fa|error|errore/i,
     networkError: /network|connection|error|rete|connessione|errore/i,
   },
+  // Admin users table patterns
+  menu: {
+    openMenu: /open menu|apri menu/i,
+    edit: /^edit$|^modifica$/i,
+    delete: /^delete$|^elimina$/i,
+    suspend: /suspend|sospendi/i,
+    activate: /activate|attiva/i,
+    viewDetails: /view details|visualizza dettagli/i,
+  },
 } as const;

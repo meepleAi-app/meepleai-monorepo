@@ -68,7 +68,7 @@ export function EditorApprovalQueueItem({
   onReject,
   className,
   'data-testid': testId = 'editor-approval-queue-item',
-}: EditorApprovalQueueItemProps): JSX.Element {
+}: EditorApprovalQueueItemProps) {
   const priority = calculatePriority(game.createdAt);
   const showPriorityBadge = priority !== 'low'; // Only show badge for medium/high
 

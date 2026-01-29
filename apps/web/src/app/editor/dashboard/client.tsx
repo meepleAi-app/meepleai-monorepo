@@ -60,7 +60,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/primitives/select';
+} from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { api, type SharedGame, type GameStatus } from '@/lib/api';
 
@@ -366,7 +366,7 @@ export function EditorDashboardClient() {
                 {/* Status Filter */}
                 <Select
                   value={statusFilter}
-                  onValueChange={(value) => setStatusFilter(value as StatusFilter)}
+                  onValueChange={(value: string) => setStatusFilter(value as StatusFilter)}
                 >
                   <SelectTrigger className="w-48" data-testid="status-filter">
                     <SelectValue placeholder="Filtra per stato" />

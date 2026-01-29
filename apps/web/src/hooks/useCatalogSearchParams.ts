@@ -162,21 +162,22 @@ export function useCatalogSearchParams(): UseCatalogSearchParamsReturn {
     [searchParams]
   );
 
-  // Update URL with new params
+  // Update URL with new params (handle null pathname from usePathname)
   const setParams = useCallback(
     (newParams: Partial<CatalogSearchParams>) => {
+      const currentPath = pathname ?? '/';
       const merged = { ...params, ...newParams };
       const urlParams = buildSearchParams(merged);
       const queryString = urlParams.toString();
-      const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
+      const newUrl = queryString ? `${currentPath}?${queryString}` : currentPath;
       router.push(newUrl, { scroll: false });
     },
     [params, pathname, router]
   );
 
-  // Reset all params
+  // Reset all params (handle null pathname from usePathname)
   const resetParams = useCallback(() => {
-    router.push(pathname, { scroll: false });
+    router.push(pathname ?? '/', { scroll: false });
   }, [pathname, router]);
 
   // Convenience method for page changes

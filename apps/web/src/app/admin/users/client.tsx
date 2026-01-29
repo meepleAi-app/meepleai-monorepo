@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import type { SortingState, RowSelectionState } from '@/components/ui/data-display/data-table';
+import { type UserRole } from '@/components/ui/data-display/user-role-badge';
 import { UsersDataTable, type User as UsersTableUser, type UsersTableActions } from './_components';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';

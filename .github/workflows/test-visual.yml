@@ -2,12 +2,12 @@ name: Visual Regression Tests
 
 on:
   pull_request:
-    branches: [main, main-dev, frontend-dev]
+    branches: [main, main-dev]
     paths:
       - 'apps/web/**'
       - '.github/workflows/test-visual.yml'
   push:
-    branches: [main, main-dev, frontend-dev]
+    branches: [main, main-dev]
     paths:
       - 'apps/web/**'
   workflow_dispatch:

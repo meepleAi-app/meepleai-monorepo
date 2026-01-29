@@ -167,7 +167,7 @@ export function useAddGameToLibrary(): UseMutationResult<
       // Optimistically update game status to 'InLibrary'
       queryClient.setQueryData<GameInLibraryStatus>(
         libraryKeys.gameStatus(gameId),
-        (old) => (old ? { ...old, isInLibrary: true } : { isInLibrary: true, isFavorite: false })
+        (old) => (old ? { ...old, inLibrary: true } : { inLibrary: true, isFavorite: false })
       );
 
       // Optimistically update quota
@@ -257,7 +257,7 @@ export function useRemoveGameFromLibrary(): UseMutationResult<void, Error, strin
       // Optimistically update game status to not in library
       queryClient.setQueryData<GameInLibraryStatus>(
         libraryKeys.gameStatus(gameId),
-        (old) => (old ? { ...old, isInLibrary: false, isFavorite: false } : { isInLibrary: false, isFavorite: false })
+        (old) => (old ? { ...old, inLibrary: false, isFavorite: false } : { inLibrary: false, isFavorite: false })
       );
 
       // Optimistically update quota

@@ -13,20 +13,22 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+
 import { Send, Paperclip, Mic, Bot, User, FileText } from 'lucide-react';
 
-import { PdfReferenceCard, type PdfReference } from './PdfReferenceCard';
-import { TypingIndicator } from './TypingIndicator';
 import { Button } from '@/components/ui/primitives/button';
-import { Textarea } from '@/components/ui/primitives/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/primitives/select';
+} from '@/components/ui/overlays/select';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { cn } from '@/lib/utils';
+
+import { PdfReferenceCard, type PdfReference } from './PdfReferenceCard';
+import { TypingIndicator } from './TypingIndicator';
 
 export interface ChatMessage {
   id: string;
@@ -89,7 +91,7 @@ export function AgentChatPanel({
   const [selectedPdfIds, setSelectedPdfIds] = useState<string[]>(initialPdfIds);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [_error, _setError] = useState<string | null>(null);
 
   // Auto-scroll to bottom on new messages
   const scrollToBottom = useCallback(() => {
@@ -147,7 +149,7 @@ export function AgentChatPanel({
         content: data.answer || 'Nessuna risposta disponibile',
         timestamp: new Date(),
         agentMode: selectedAgentMode,
-        pdfReferences: data.citations?.map((c: any) => ({
+        pdfReferences: data.citations?.map((c: { documentId?: string; documentTitle?: string; pageNumber?: number; excerpt?: string; score?: number }) => ({
           pdfId: c.documentId || selectedPdfIds[0] || 'pdf-1',
           pdfName: c.documentTitle || 'Regolamento',
           pageNumber: c.pageNumber || 1,

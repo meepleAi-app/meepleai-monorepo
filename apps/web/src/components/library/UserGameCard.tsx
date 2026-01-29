@@ -16,6 +16,7 @@
 'use client';
 
 import { useState } from 'react';
+
 import { motion } from 'framer-motion';
 import {
   MessageCircle,
@@ -24,7 +25,6 @@ import {
   Edit2,
   Trash2,
   Library,
-  Share2,
   MoreVertical,
   RefreshCw,
   Zap,
@@ -143,7 +143,7 @@ export function UserGameCard({
   const stateBorderClass = game.currentState ? stateBorderColors[game.currentState] : '';
 
   // Check if game can be shared (Issue #2743)
-  const { canShare, reason: shareBlockReason } = useCanShareGame(game.gameId);
+  const { canShare: _canShare, reason: _shareBlockReason } = useCanShareGame(game.gameId);
 
   // Agent status
   const agentConfigured = agentConfig !== null;

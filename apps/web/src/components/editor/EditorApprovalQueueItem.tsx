@@ -1,5 +1,5 @@
 /**
- * Editor Approval Queue Item Component (Issue #2895)
+ * Editor Approval Queue Item Component (Issue #2895, Extended #2896)
  *
  * Displays a single approval queue item with:
  * - Game cover and title
@@ -7,18 +7,22 @@
  * - Priority indicator (high/medium/low)
  * - Changes description badge
  * - Action buttons: Review, Approve, Reject
+ * - Optional checkbox for bulk selection (#2896)
  */
 
 import React from 'react';
+
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
-import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Eye, Check, X } from 'lucide-react';
-import { calculatePriority, getPriorityBadgeVariant, getPriorityLabel } from '@/lib/utils/priority';
+import Image from 'next/image';
+
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
 import type { SharedGame } from '@/lib/api/schemas/shared-games.schemas';
 import { cn } from '@/lib/utils';
+import { calculatePriority, getPriorityBadgeVariant, getPriorityLabel } from '@/lib/utils/priority';
 
 export interface EditorApprovalQueueItemProps {
   /**
@@ -42,6 +46,16 @@ export interface EditorApprovalQueueItemProps {
   onReject: (gameId: string) => void;
 
   /**
+   * Optional: Whether item is selected for bulk operations (Issue #2896)
+   */
+  selected?: boolean;
+
+  /**
+   * Optional: Callback when checkbox is toggled (Issue #2896)
+   */
+  onToggleSelect?: (gameId: string) => void;
+
+  /**
    * Optional CSS class name
    */
   className?: string;
@@ -60,12 +74,16 @@ export interface EditorApprovalQueueItemProps {
  * - High (>7 days): Red badge
  * - Medium (3-7 days): Yellow badge
  * - Low (<3 days): No badge displayed
+ *
+ * Extended in Issue #2896 to support bulk selection with optional checkbox.
  */
 export function EditorApprovalQueueItem({
   game,
   onReview,
   onApprove,
   onReject,
+  selected,
+  onToggleSelect,
   className,
   'data-testid': testId = 'editor-approval-queue-item',
 }: EditorApprovalQueueItemProps) {
@@ -78,15 +96,30 @@ export function EditorApprovalQueueItem({
     locale: it,
   });
 
+  const showCheckbox = onToggleSelect !== undefined;
+
   return (
     <div
       className={cn(
         'group relative rounded-lg border border-border/50 bg-card p-4',
         'hover:border-orange-200 hover:shadow-md transition-all duration-200',
+        selected && 'border-orange-300 bg-orange-50/30',
         className
       )}
       data-testid={testId}
     >
+      {/* Checkbox (Top Left) - Issue #2896 */}
+      {showCheckbox && (
+        <div className="absolute top-2 left-2">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={() => onToggleSelect(game.id)}
+            aria-label={`Seleziona ${game.title}`}
+            data-testid={`${testId}-checkbox`}
+          />
+        </div>
+      )}
+
       {/* Priority Badge (Top Right) - Only show for medium/high */}
       {showPriorityBadge && (
         <div className="absolute top-2 right-2">
@@ -100,7 +133,7 @@ export function EditorApprovalQueueItem({
         </div>
       )}
 
-      <div className="flex gap-4">
+      <div className={cn('flex gap-4', showCheckbox && 'ml-8')}>
         {/* Game Cover */}
         <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-border/30">
           {game.thumbnailUrl ? (

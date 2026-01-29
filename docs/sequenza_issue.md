@@ -1,7 +1,7 @@
 # Sequenza Risoluzione Issue - MeepleAI
 
-**Data**: 2026-01-26
-**Ultimo Aggiornamento**: 2026-01-29
+**Data Creazione**: 2026-01-29
+**Focus**: UX per gestione libreria, agenti AI e chat real-time
 **Branch attuale**: `frontend-dev`
 **Target finale**: Merge in `main-dev` → `main`
 
@@ -9,397 +9,468 @@
 
 ## Executive Summary
 
-| Categoria | Issue Totali | Completate | Rimanenti |
-|-----------|--------------|------------|-----------|
-| Backend | 22 | 19 | 3 |
-| Frontend | 24 | 22 | 2 |
-| Infra/CI | 12 | 2 | 10 |
-| **TOTALE** | 58 | **43** | **15** |
+| Categoria | Issue Totali | Priorità Alta | Completabili Q1 |
+|-----------|--------------|---------------|-----------------|
+| **GST Real-Time UX** | 8 | 7 (P0) | 8 |
+| **Library & Catalog UX** | 3 | 2 (P1) | 3 |
+| **Admin & Editor UX** | 3 | 1 (P1) | 3 |
+| **Session & AI UX** | 3 | 2 (P1-P2) | 2 |
+| **Testing & Quality** | 4 | 2 (P0-P1) | 2 |
+| **Component Library** | 6 | 0 (P2-P3) | 3 |
+| **TOTALE** | **27** | **14** | **21** |
 
-**Principio Guida**: Test/Fix PRIMA delle nuove implementazioni
+**Focus Strategico**: Game Session Toolkit = UX killer feature per collaborative play in tempo reale
 
-> **AGGIORNAMENTO 2026-01-29**:
-> - FASE 0-2: ✅ COMPLETATE (13/13 issue)
-> - FASE 3: ✅ PARZIALE (3/4 issue, #3075 ancora open)
-> - FASE 4: ✅ PARZIALE (4/5 issue, #3073 ancora open)
-> - FASE 5: ✅ PARZIALE (5/6 issue, #3082 ancora open)
-> - FASE 6 (UI): ✅ QUASI COMPLETA (18/23 issue chiuse)
-> - Progresso totale: 43/58 (74%)
+> **PRIORITÀ UX**:
+> - 🎯 **FASE 1 (GST)**: Real-time collaborative scorekeeper - La feature più richiesta
+> - 📚 **FASE 2**: Library management UX - Completare navigazione e ricerca
+> - 👥 **FASE 3**: Admin/Editor workflows - Bulk operations e moderazione
+> - 🤖 **FASE 4**: AI & Session UX - Quota tracking e analytics
+> - 🧪 **FASE 5**: Testing coverage - Validazione qualità
+> - 🎨 **FASE 6**: Component library - Foundation design system
 
 ---
 
 ## Legenda Simboli
 
-- `🔴` P0 - Critical (blockers)
-- `🟠` P1 - High (security, core features)
-- `🟡` P2 - Medium (admin features)
-- `🟢` P3 - Low (nice-to-have)
-- `✅` Completato
-- `🔄` In Progress
+- `🔴` P0 - Critical (blockers, killer features)
+- `🟠` P1 - High (core UX, security)
+- `🟡` P2 - Medium (admin features, polish)
+- `🟢` P3 - Low (nice-to-have, analytics)
 - `⏳` Pending
+- `🔄` In Progress
+- `✅` Completato
 - `🧪` Test
 - `🐛` Bug Fix
 - `⭐` Nuova Feature
 - `⇄` Parallelizzabile
+- `🎯` UX Critical
+- `🤖` AI/Agent Feature
+- `📊` Real-Time/SSE
 
 ---
 
-## ~~FASE 0: Test Foundation & Bug Fixes~~ ✅ COMPLETATA
+## FASE 1: Game Session Toolkit (GST) - Real-Time UX 🔴 CRITICAL
 
-> **Issue completate**: #3006, #3007, #3008, #2991, #3009
-> **Vedi sezione "Issue Completate" per dettagli**
+> **Obiettivo**: Collaborative scorekeeper con SSE real-time per sessioni multiplayer
+> **Epic**: #3167
+> **Impact**: Killer feature per UX - gestione punteggi condivisa in tempo reale
+> **Tempo stimato**: 3-4 settimane (8 issue)
 
----
+### Sprint 1.1: Backend Foundation (⇄ Parallelizzabile)
 
-## ~~FASE 1: Coverage Infrastructure~~ ✅ COMPLETATA
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 1 | #3160 | 🔴⭐ GST-001: Bounded Context & DB Schema | P0 | - | ⏳ |
+| 2 | #3161 | 🔴⭐ GST-002: CQRS Commands & Queries | P0 | #3160 | ⏳ |
+| 3 | #3162 | 🔴📊 GST-003: SSE Infrastructure | P0 | #3161 | ⏳ |
 
-> **Issue completate**: #3013, #3010, #3012, #3011, #2861
-> **Vedi sezione "Issue Completate" per dettagli**
+**Key Features**:
+- Domain: `Session`, `Participant`, `ScoreEntry`, `GameEvent`
+- Commands: `CreateSession`, `JoinSession`, `UpdateScore`, `EndSession`
+- Queries: `GetActiveSession`, `GetSessionHistory`, `GetParticipantScores`
+- Real-time: SSE endpoint `/api/v1/game-session-toolkit/{id}/events`
 
----
+### Sprint 1.2: Frontend Integration (Sequential after 1.1)
 
-## ~~FASE 2: CQRS Critical Fixes~~ ✅ COMPLETATA
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 4 | #3163 | 🔴🎯 GST-004: Generic Toolkit Routes | P0 | #3162 | ⏳ |
+| 5 | #3164 | 🟠🎯 GST-005: Game-Specific Integration | P1 | #3163 | ⏳ |
+| 6 | #3165 | 🟠📚 GST-006: Session History & Library | P1 | #3164 | ⏳ |
 
-> **Issue completate**: #3067, #3068, #3069
-> **Vedi sezione "Issue Completate" per dettagli**
+**Key UI Components**:
+- `/game-session/{id}` - Active session view con real-time updates
+- `<SessionHeader>` - Game info, participants, timer
+- `<ParticipantCard>` - Player scores, avatars, status
+- `<ScoreEntryForm>` - Quick score input con SSE sync
+- Integration con UserLibrary per session history
 
----
+### Sprint 1.3: Testing & QA
 
-## ~~FASE 3: Security Features~~ ✅ COMPLETATA
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 7 | #3166 | 🔴🧪 GST-007: MVP Testing & QA | P0 | #3165 | ⏳ |
 
-> **Issue completate**: #3070, #3075, #3071, #3076
-> **Vedi sezione "Issue Completate" per dettagli**
+**Test Coverage**:
+- Backend: Unit tests per tutti i handlers (target 90%+)
+- Frontend: Component tests + E2E flow completo
+- Real-time: SSE connection stability, reconnection logic
+- Performance: Load testing con 4+ concurrent players
 
----
-
-## ~~FASE 4: Admin Features~~ ✅ COMPLETATA
-
-> **Issue completate**: #3072, #3078, #3073, #3079, #3077
-> **Vedi sezione "Issue Completate" per dettagli**
-
----
-
-## ~~FASE 5: E2E Test Suite~~ ✅ COMPLETATA
-
-> **Issue completate**: #3082, #2862, #2877, #2883, #2891, #2897
-> **Nota**: #2870 spostata a FASE 6 (Personal Library E2E ancora pending)
-> **Vedi sezione "Issue Completate" per dettagli**
-
----
-
-## FASE 6: UI Components & Polish (Quasi Completa)
-
-> **Obiettivo**: Completare component library e UI features
-> **Stato**: 18/23 completate (78%)
-
-### Sprint 6.0: Pending E2E Tests ✅
-
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| 1 | #2870 | 🧪 [Personal Library] E2E Tests | `frontend-dev` | ✅ |
-
-### Sprint 6.1: User Dashboard Components ✅
-
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| 2 | #2857 | ⭐ LibraryQuotaWidget Component | `frontend-dev` | ✅ |
-| 3 | #2858 | ⭐ ActiveSessionsPanel Component | `frontend-dev` | ✅ |
-| 4 | #2859 | ⭐ Dashboard API Integration | `frontend-dev` | ✅ |
-| 5 | #2860 | ⭐ Responsive Navigation | `frontend-dev` | ✅ |
-
-### Sprint 6.2: Library & Catalog UI (⇄ Parallelizzabile)
-
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| 6 | #2866 | ⭐ Library Page with Search | `frontend-dev` | ⏳ OPEN |
-| 7 | #2867 | ⭐ Game Cards (Grid + List) | `frontend-dev` | ⏳ OPEN |
-| 8 | #2868 | ⭐ Bulk Selection Mode | `frontend-dev` | ✅ |
-| 9 | #2869 | ⭐ Quota Sticky Header | `frontend-dev` | ✅ |
-| 10 | #2873 | ⭐ Advanced Filter Panel | `frontend-dev` | ✅ |
-| 11 | #2874 | ⭐ Catalog Game Cards | `frontend-dev` | ✅ |
-| 12 | #2875 | ⭐ Add to Library Overlay | `frontend-dev` | ✅ |
-| 13 | #2876 | ⭐ Pagination Component | `frontend-dev` | ✅ |
-
-### Sprint 6.3: Profile & Settings ✅
-
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| 14 | #2881 | ⭐ Settings Page with 4 Tabs | `frontend-dev` | ✅ |
-| 15 | #2882 | ⭐ Avatar Upload with Crop | `frontend-dev` | ✅ |
-
-### Sprint 6.4: Admin Components
-
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| 16 | #2887 | ⭐ User Management Table | `frontend-dev` | ✅ |
-| 17 | #2888 | ⭐ Bulk Selection Action Bar | `frontend-dev` | ✅ |
-| 18 | #2890 | ⭐ User Detail Modal | `frontend-dev` | ✅ |
-| 19 | #2894 | ⭐ Editor Dashboard Page | `frontend-dev` | ✅ |
-| 20 | #2895 | ⭐ Approval Queue Items | `frontend-dev` | ✅ |
-| 21 | #2896 | ⭐ Bulk Approval UI | `frontend-dev` | ⏳ OPEN |
-
-### Backend Support (⇄ Parallelizzabile)
-
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| 22 | #2886 | ⭐ SuspendUser/UnsuspendUser Commands | `backend-dev` | ⏳ OPEN |
-| 23 | #2893 | ⭐ BulkApprove/BulkReject Commands | `backend-dev` | ⏳ OPEN |
-
-### 🚩 CHECKPOINT 6 - UI Components Merge
+### 🚩 CHECKPOINT 1 - GST MVP Launch
 ```bash
-# Backend commands
-git checkout main-dev && git merge backend-dev --no-ff -m "feat: add user management and bulk approval commands (#2886, #2893)"
+# Backend merge
+git checkout main-dev && git merge backend-dev --no-ff -m "feat(GST): complete Game Session Toolkit backend (#3160-#3162)"
 
-# Frontend UI components
-git checkout main-dev && git merge frontend-dev --no-ff -m "feat: complete UI component library (#2857-#2896)"
+# Frontend merge
+git checkout main-dev && git merge frontend-dev --no-ff -m "feat(GST): complete Game Session Toolkit UI (#3163-#3165)"
 
-git tag -a checkpoint-6-ui-components -m "UI component library complete"
+# Testing validation
+git checkout main-dev && git merge testing --no-ff -m "test(GST): MVP testing coverage (#3166)"
+
+git tag -a gst-v1.0-mvp -m "Game Session Toolkit MVP - Real-time collaborative scorekeeper"
 ```
+
+**Success Criteria**:
+- ✅ 4+ players possono gestire punteggi in tempo reale
+- ✅ SSE updates < 500ms latency
+- ✅ Session persistence e recovery
+- ✅ 90%+ backend coverage, 85%+ frontend coverage
+- ✅ E2E test completo login → create session → play → end
 
 ---
 
-## FASE 7: Analytics & Final Features (Ultima fase)
+## FASE 2: User Library & Catalog UX 🟠 HIGH PRIORITY
 
-> **Obiettivo**: AI tracking, coverage targets, final polish
+> **Obiettivo**: Completare navigazione libreria personale e catalogo condiviso
+> **Tempo stimato**: 2 settimane (3 issue + 1 bug fix)
 
-### Sprint 7.1: AI Usage Tracking
+### Sprint 2.1: Library Navigation
 
-| # | Issue | Tipo | Branch | Priorita | Dipende Da | Status |
-|---|-------|------|--------|----------|------------|--------|
-| 22 | #3074 | 🟢⭐ AI Token Usage Tracking Backend | `backend-dev` | P3 | Checkpoint 6 | ⏳ |
-| 23 | #3080 | 🟢⭐ AI Usage Dashboard Frontend | `frontend-dev` | P3 | #3074 | ⏳ |
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 8 | #2866 | 🟠🎯 Library Page with Search & Filters | P1 | - | ⏳ OPEN |
+| 9 | #2867 | 🟠🎯 Game Cards (Grid + List Views) | P1 | #2866 | ⏳ OPEN |
 
-### Sprint 7.2: Coverage Targets
+**Key Features**:
+- `/library` - Dashboard con search bar, filters sidebar
+- Grid/List toggle - Responsive layout con game cards
+- Real-time search - Debounced con loading states
+- Filters: Complexity, Players, Duration, Tags, Status
+- Sorting: Name, Added Date, Rating, Play Count
 
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| 24 | #3025 | 🧪 Reach Backend 90% Coverage | `backend-dev` | ⏳ |
-| 25 | #3026 | 🧪 Reach Frontend 85% Coverage | `frontend-dev` | ⏳ |
+### Sprint 2.2: Catalog Enhancements
 
-### Sprint 7.3: Component Library Foundation
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 10 | #3120 | 🟡⭐ Private Games & Catalog Proposal | P2 | #2867 | ⏳ OPEN |
 
-| # | Issue | Tipo | Branch | Status |
-|---|-------|------|--------|--------|
-| 26 | #2924 | ⭐ Storybook Setup | `frontend-dev` | ⏳ |
-| 27 | #2925 | ⭐ Extract Reusable Components | `frontend-dev` | ⏳ |
-| 28 | #2926 | ⭐ Design System Docs | `frontend-dev` | ⏳ |
+**Key Features**:
+- Private games toggle in UserLibrary
+- Proposal workflow per aggiungere giochi al catalogo condiviso
+- Moderation UI per editors (approve/reject proposals)
 
-### 🚩 CHECKPOINT FINALE - Production Ready Merge
+### Sprint 2.3: Critical Bug Fixes
+
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 11 | #3095 | 🔴🐛 Fix Dashboard Route `/giochi` → `/games` | P0 | - | ⏳ OPEN |
+
+**Impact**: RecentGamesSection usa URL incorretti, broken navigation
+
+### 🚩 CHECKPOINT 2 - Library UX Complete
 ```bash
-# Backend final
-git checkout main-dev && git merge backend-dev --no-ff -m "feat: add AI usage tracking, reach 90% coverage (#3074, #3025)"
+# Frontend merge
+git checkout main-dev && git merge frontend-dev --no-ff -m "feat(library): complete library navigation and catalog UX (#2866, #2867, #3120)"
 
-# Frontend final
-git checkout main-dev && git merge frontend-dev --no-ff -m "feat: add AI dashboard, reach 85% coverage, Storybook setup (#3080, #3026, #2924, #2925, #2926)"
+# Bug fix merge
+git checkout main-dev && git merge hotfix/3095 --no-ff -m "fix(dashboard): correct game routes (#3095)"
 
-# Final integration
-git checkout main && git merge main-dev --no-ff -m "release: v2.0 - full feature set with comprehensive test coverage"
-
-git tag -a v2.0.0 -m "Production release with full CQRS compliance and 90%/85% coverage"
+git tag -a library-ux-v1.0 -m "User Library UX complete with search, filters, and catalog proposals"
 ```
 
 ---
 
-## Dipendenze Consolidate
+## FASE 3: Admin & Editor UX 🟡 MEDIUM PRIORITY
 
-```
-FASE 0-2 - ✅ COMPLETATE (13/13)
-└── Tutte le issue chiuse
+> **Obiettivo**: Bulk operations per moderazione e user management
+> **Tempo stimato**: 2 settimane (3 issue)
 
-FASE 3 (Security) - ✅ PARZIALE (3/4)
-├── ✅ #3070, #3071, #3076 completate
-└── ⏳ #3075 Session Quota UI - ancora open
+### Sprint 3.1: Backend Commands (⇄ Parallelizzabile)
 
-FASE 4 (Admin) - ✅ PARZIALE (4/5)
-├── ✅ #3072, #3078, #3077, #3079 completate
-└── ⏳ #3073 Feature Flags Backend - ancora open
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 12 | #2886 | 🟡⭐ Suspend/Unsuspend User Commands | P2 | - | ⏳ OPEN |
+| 13 | #2893 | 🟡⭐ BulkApprove/BulkReject Commands | P2 | - | ⏳ OPEN |
 
-FASE 5 (E2E Tests) - ✅ PARZIALE (5/6)
-├── ✅ #2862, #2877, #2883, #2891, #2897 completate
-└── ⏳ #3082 E2E Test Flows (50 flows) - ancora open
+**CQRS Handlers**:
+- `SuspendUserCommand`, `UnsuspendUserCommand` - Admin bounded context
+- `BulkApproveGamesCommand`, `BulkRejectGamesCommand` - Editor bounded context
 
-FASE 6 (UI Components) - ✅ QUASI COMPLETA (18/23)
-├── ✅ Sprint 6.0: #2870 completato
-├── ✅ Sprint 6.1: #2857, #2858, #2859, #2860 completati
-├── Sprint 6.2: 6/8 completate
-│   ├── ✅ #2868, #2869, #2873, #2874, #2875, #2876
-│   └── ⏳ #2866, #2867 ancora open
-├── ✅ Sprint 6.3: #2881, #2882 completati
-├── Sprint 6.4: 5/6 completate
-│   ├── ✅ #2887, #2888, #2890, #2894, #2895
-│   └── ⏳ #2896 ancora open
-└── Backend: 0/2 completate
-    └── ⏳ #2886, #2893 ancora open
+### Sprint 3.2: Frontend Bulk UI
 
-FASE 7 (Analytics & Final) - ⏳ PENDING (0/7)
-├── #3074 (AI Backend) → #3080 (AI Frontend) sequenziale
-├── #3025 (Backend 90%) indipendente
-├── #3026 (Frontend 85%) indipendente
-└── #2924→#2925→#2926 (Storybook) sequenziale
-```
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 14 | #2896 | 🟠🎯 Bulk Approval Floating Action Bar | P1 | #2893 | ⏳ OPEN |
 
----
+**Key Features**:
+- Floating action bar per selezione multipla
+- Bulk approve/reject con confirmation dialog
+- Optimistic UI updates con rollback on error
+- Success/error toasts con detailed feedback
 
-## Gantt Semplificato (Settimane) - Aggiornato 2026-01-29
+### 🚩 CHECKPOINT 3 - Admin Workflows Complete
+```bash
+# Backend merge
+git checkout main-dev && git merge backend-dev --no-ff -m "feat(admin): add bulk user and game management (#2886, #2893)"
 
-```
-Settimana:  1   2   3   4   5   6   7   8   9  10  11  12  13  14
-            |   |   |   |   |   |   |   |   |   |   |   |   |   |
-FASE 0-2    ✅✅✅ COMPLETATE (13/13)
-FASE 3-5        ✅✅✅ PARZIALI (12/15)
-FASE 6              ✅✅✅✅✅🔄                                    UI (18/23)
-FASE 7                              [===]                         Final (0/7)
+# Frontend merge
+git checkout main-dev && git merge frontend-dev --no-ff -m "feat(editor): bulk approval UI with floating action bar (#2896)"
 
-CHECKPOINTS:     CP5     CP6  FINAL
-                  ✅      🔄      ↓
-main-dev:       [done] [merge][merge]
-main:                                    [release]
-
-📊 Progresso: 43/58 issue completate (74%)
-⏱️ Tempo risparmiato: FASE 0-5 quasi complete, FASE 6 al 78%
-🎯 Rimanenti: 15 issue (3 bug fix + 5 UI + 7 final features)
+git tag -a admin-workflows-v1.0 -m "Admin and Editor bulk operations complete"
 ```
 
 ---
 
-## Issue Completate (43)
+## FASE 4: Session & AI UX 🟠 HIGH PRIORITY
 
-### FASE 0 - Bug Fixes (5/5) ✅
+> **Obiettivo**: AI analytics dashboard e session quota tracking
+> **Tempo stimato**: 2 settimane (3 issue, sequenziali)
 
-| Issue | Titolo | Commit/PR |
-|-------|--------|-----------|
-| #3006 | Fix Backend Event Handler Tests (26 failures) | backend-dev |
-| #3007 | Fix Backend Repository Filter Queries | backend-dev |
-| #3008 | Fix Backend ShareRequest State Machine | backend-dev |
-| #2991 | UserLibraryRepository.GetUserGamesAsync tests | backend-dev |
-| #3009 | Fix Frontend Coverage Collection (v8 Provider) | frontend-dev |
+### Sprint 4.1: Session Quota UI
 
-### FASE 1 - Coverage Infrastructure (5/5) ✅
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 15 | #3075 | 🟠🎯🤖 Session Quota UI Frontend | P1 | Backend #3070 ✅ | ⏳ OPEN |
 
-| Issue | Titolo | Commit/PR |
-|-------|--------|-----------|
-| #3013 | Codecov Integration & CI Gates | main-dev |
-| #3010 | Increase Backend Coverage to 50% | backend-dev |
-| #3012 | Add Backend E2E Test Suite | backend-dev |
-| #3011 | Increase Frontend Coverage to 50% | frontend-dev |
-| #2861 | [User Dashboard] Component Tests | frontend-dev |
+**Key Features**:
+- Real-time quota display: `5/10 active sessions`
+- Warning states: ⚠️ approaching limit, 🚨 quota exceeded
+- Upgrade prompt per Free tier users
+- Integration con Dashboard widget
 
-### FASE 2 - CQRS (3/3) ✅
+### Sprint 4.2: AI Usage Analytics (Sequential)
 
-| Issue | Titolo | Data |
-|-------|--------|------|
-| #3067 | SharedGameCatalog Core CQRS Handlers (1/2) | 2026-01-27 |
-| #3068 | SharedGameCatalog Share Flow Handlers (2/2) | 2026-01-27 |
-| #3069 | Authentication - Migrate to Full CQRS | 2026-01-27 |
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 16 | #3074 | 🟢⭐🤖 AI Token Usage Backend | P3 | - | ⏳ OPEN |
+| 17 | #3080 | 🟢🎯🤖 AI Usage Dashboard Frontend | P3 | #3074 | ⏳ OPEN |
 
-### FASE 3 - Security Features (3/4) ✅
+**Key Features**:
+- Backend: Token tracking per user, model breakdown
+- Frontend: `/dashboard/ai-usage` con charts
+- Metrics: Total tokens, Cost estimate, Usage by model
+- Charts: Daily usage trend, Model distribution, Cost projection
 
-| Issue | Titolo | Commit/PR |
-|-------|--------|-----------|
-| #3070 | Session Limits Backend | #3102 |
-| #3071 | Email Verification Backend | #3105 |
-| #3076 | Email Verification Frontend | #3109 |
+### 🚩 CHECKPOINT 4 - Session & AI UX Complete
+```bash
+# Frontend merge
+git checkout main-dev && git merge frontend-dev --no-ff -m "feat(session): add quota UI and AI analytics dashboard (#3075, #3080)"
 
-### FASE 4 - Admin Features (4/5) ✅
+# Backend merge (if #3074 needed)
+git checkout main-dev && git merge backend-dev --no-ff -m "feat(ai): add token usage tracking (#3074)"
 
-| Issue | Titolo | Commit/PR |
-|-------|--------|-----------|
-| #3072 | PDF Upload Limits Admin API | #3111 |
-| #3078 | PDF Limits Admin UI | #3112 |
-| #3079 | Feature Flags Tier UI | #3114 |
-| #3077 | 2FA UI - Convert Placeholders | #3115 |
-
-### FASE 5 - E2E Tests (5/6) ✅
-
-| Issue | Titolo | Commit/PR |
-|-------|--------|-----------|
-| #2862 | [User Dashboard] E2E Tests | #3117 |
-| #2877 | [Shared Catalog] E2E Tests | 2026-01-29 |
-| #2883 | [Profile/Settings] E2E Tests | #3122 |
-| #2891 | [User Management] E2E Tests | #2891 |
-| #2897 | [Editor Dashboard] E2E Tests | #3124 |
-
-### FASE 6 - UI Components (18/23) ✅
-
-| Issue | Titolo | Sprint |
-|-------|--------|--------|
-| #2870 | [Personal Library] E2E Tests | 6.0 |
-| #2857 | LibraryQuotaWidget Component | 6.1 |
-| #2858 | ActiveSessionsPanel Component | 6.1 |
-| #2859 | Dashboard API Integration | 6.1 |
-| #2860 | Responsive Navigation | 6.1 |
-| #2868 | Bulk Selection Mode | 6.2 |
-| #2869 | Quota Sticky Header | 6.2 |
-| #2873 | Advanced Filter Panel | 6.2 |
-| #2874 | Catalog Game Cards | 6.2 |
-| #2875 | Add to Library Overlay | 6.2 |
-| #2876 | Pagination Component | 6.2 |
-| #2881 | Settings Page with 4 Tabs | 6.3 |
-| #2882 | Avatar Upload with Crop | 6.3 |
-| #2887 | User Management Table | 6.4 |
-| #2888 | Bulk Selection Action Bar | 6.4 |
-| #2890 | User Detail Modal | 6.4 |
-| #2894 | Editor Dashboard Page | 6.4 |
-| #2895 | Approval Queue Items | 6.4 |
+git tag -a ai-session-ux-v1.0 -m "Session quota and AI analytics UI complete"
+```
 
 ---
 
-## Issue Rimanenti (15)
+## FASE 5: Testing & Quality 🔴 CRITICAL
 
-### FASE 3 - Security (1 rimanente)
+> **Obiettivo**: Raggiungere coverage targets e validare tutti i flussi
+> **Tempo stimato**: 3 settimane (4 issue)
 
-| Issue | Titolo | Priorità |
-|-------|--------|----------|
-| #3075 | Session Quota UI Frontend | P1 |
+### Sprint 5.1: E2E Test Coverage
 
-### FASE 4 - Admin (1 rimanente)
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 18 | #3082 | 🟠🧪 Implement 50 E2E Test Flows | P1 | - | ⏳ OPEN |
 
-| Issue | Titolo | Priorità |
-|-------|--------|----------|
-| #3073 | Feature Flags Tier-Based Backend | P2 |
+**Test Categories**:
+- Authentication: Login, Register, OAuth, 2FA (8 flows)
+- Library: Add, Remove, Search, Filter, Bulk ops (12 flows)
+- Catalog: Browse, Share, Propose (6 flows)
+- Admin: User management, Suspension, Bulk approve (8 flows)
+- Session: Create, Join, Score, End (6 flows)
+- Profile: Settings, Avatar, Preferences (5 flows)
+- Editor: Approval queue, Bulk reject (5 flows)
 
-### FASE 5 - E2E Tests (1 rimanente)
+### Sprint 5.2: Coverage Targets
 
-| Issue | Titolo | Priorità |
-|-------|--------|----------|
-| #3082 | Implement Missing E2E Test Flows (50 flows) | P1 |
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 19 | #3025 | 🟡🧪 Reach Backend 90% Coverage | P2 | - | ⏳ OPEN |
+| 20 | #3026 | 🟡🧪 Reach Frontend 85% Coverage | P2 | - | ⏳ OPEN |
 
-### FASE 6 - UI Components (5 rimanenti)
+**Current vs Target**:
+- Backend: ~75% → 90% (focus: event handlers, validators)
+- Frontend: ~69% → 85% (focus: components, hooks, stores)
 
-| Issue | Titolo | Sprint |
-|-------|--------|--------|
-| #2866 | [Personal Library] Library Page with Search | 6.2 |
-| #2867 | [Personal Library] Game Cards (Grid + List) | 6.2 |
-| #2896 | Bulk Approval UI | 6.4 |
-| #2886 | SuspendUser/UnsuspendUser Commands (BE) | 6.4 |
-| #2893 | BulkApprove/BulkReject Commands (BE) | 6.4 |
+### Sprint 5.3: Epic Test Coverage
 
-### FASE 7 - Analytics & Final (7 rimanenti)
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 21 | #2759 | 🟡🧪 EPIC: Frontend Test Coverage | P2 | #3026 | ⏳ OPEN |
 
-| Issue | Titolo | Priorità |
-|-------|--------|----------|
-| #3074 | AI Token Usage Tracking Backend | P3 |
-| #3080 | AI Usage Dashboard Frontend | P3 |
-| #3025 | Reach Backend 90% Coverage | High |
-| #3026 | Reach Frontend 85% Coverage | High |
-| #2924 | Storybook Setup | Medium |
-| #2925 | Extract Reusable Components | Medium |
-| #2926 | Design System Docs | Medium |
+**Scope**: Comprehensive testing epic tracking frontend quality
+
+### 🚩 CHECKPOINT 5 - Quality Gates Met
+```bash
+# Testing validation
+git checkout main-dev && git merge testing --no-ff -m "test: complete E2E coverage and reach quality targets (#3082, #3025, #3026)"
+
+git tag -a quality-v2.0 -m "90% backend / 85% frontend coverage with 50 E2E flows"
+```
 
 ---
 
-## Issue Escluse (Bassa Priorita/Optional)
+## FASE 6: Component Library & Design System 🟢 LOW PRIORITY (Optional)
+
+> **Obiettivo**: Foundation per design system condiviso
+> **Tempo stimato**: 3 settimane (6 issue)
+> **Nota**: Può essere posposta post-MVP
+
+### Sprint 6.1: Storybook Foundation
+
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 22 | #2924 | 🟢⭐ Storybook Setup & Config | P3 | - | ⏳ OPEN |
+
+### Sprint 6.2: Component Extraction
+
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 23 | #2925 | 🟢⭐ Extract Reusable Components | P3 | #2924 | ⏳ OPEN |
+| 24 | #2930 | 🟢⭐ Extract from Admin Dashboard | P3 | #2924 | ⏳ OPEN |
+
+### Sprint 6.3: Design System Docs
+
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 25 | #2926 | 🟢⭐ Typography, Colors, Spacing | P3 | #2925 | ⏳ OPEN |
+| 26 | #2931 | 🟢⭐ Design System Documentation | P3 | #2925 | ⏳ OPEN |
+
+### Sprint 6.4: Accessibility Audit
+
+| # | Issue | Tipo | Priorità | Dependencies | Status |
+|---|-------|------|----------|--------------|--------|
+| 27 | #2929 | 🟢🧪 WCAG 2.1 AA Compliance | P3 | #2926 | ⏳ OPEN |
+
+### 🚩 CHECKPOINT 6 - Design System Foundation (Optional)
+```bash
+# Frontend merge
+git checkout main-dev && git merge frontend-dev --no-ff -m "feat(design): add Storybook, component library, and WCAG audit (#2924-#2931)"
+
+git tag -a design-system-v1.0 -m "Component library and design system foundation"
+```
+
+---
+
+## Dipendenze & Sequenzialità
+
+```
+FASE 1: Game Session Toolkit (GST) - CRITICAL PATH
+├── Sprint 1.1: Backend (parallel) → #3160 → #3161 → #3162
+├── Sprint 1.2: Frontend (sequential) → #3163 → #3164 → #3165
+└── Sprint 1.3: Testing → #3166
+
+FASE 2: Library UX - CAN START PARALLEL
+├── #2866 → #2867 (sequential)
+├── #3120 (depends on #2867)
+└── #3095 (independent bug fix - START IMMEDIATELY)
+
+FASE 3: Admin UX - PARALLEL READY
+├── Backend: #2886 ⇄ #2893 (parallel)
+└── Frontend: #2896 (depends on #2893)
+
+FASE 4: Session & AI - SEQUENTIAL
+├── #3075 (depends on backend #3070 ✅ already merged)
+└── #3074 → #3080 (sequential AI analytics)
+
+FASE 5: Testing - CAN START ANYTIME
+├── #3082 (independent - 50 E2E flows)
+├── #3025 ⇄ #3026 (parallel coverage targets)
+└── #2759 (epic tracker)
+
+FASE 6: Component Library - OPTIONAL POST-MVP
+├── #2924 → (#2925 ⇄ #2930) → (#2926 ⇄ #2931) → #2929
+└── Può essere posposta senza impatto su delivery MVP
+```
+
+---
+
+## Timeline & Gantt (10 settimane per MVP)
+
+```
+Settimana:   1    2    3    4    5    6    7    8    9   10
+             |    |    |    |    |    |    |    |    |    |
+FASE 1 (GST) [========Backend========][=====Frontend=====][T]
+FASE 2 (Lib)      [=====#3095====][======#2866-2867======][===#3120===]
+FASE 3 (Adm)           [====BE Commands====][====#2896====]
+FASE 4 (AI)                  [#3075][=====#3074-3080=====]
+FASE 5 (Test)    [===============Ongoing E2E Testing===============]
+                                                           [Coverage]
+FASE 6 (Opt)                                               [Post-MVP]
+
+CHECKPOINTS:           CP1      CP2   CP3  CP4      CP5
+                        ↓        ↓     ↓    ↓        ↓
+main-dev:         [====merge===merge=merge=merge===merge====]
+                                                            ↓
+main:                                                   [RELEASE]
+
+🎯 MVP Target: Week 9-10
+📊 Coverage Target: Week 10
+🎨 Design System: Post-MVP (Week 11+)
+```
+
+---
+
+## Risorse & Parallellismo
+
+### Work Streams (4 parallel tracks)
+
+**Stream A - Critical Path (GST)**:
+- Week 1-4: Backend + Frontend GST implementation
+- Week 5: GST testing & polish
+- **Blocca**: Nessuno - può procedere indipendentemente
+
+**Stream B - Library & Admin UX**:
+- Week 2-3: #3095 bug fix (start ASAP)
+- Week 3-5: #2866, #2867 library navigation
+- Week 4-6: #2886, #2893 backend commands
+- Week 6-7: #3120, #2896 catalog proposals & bulk UI
+- **Blocca**: Nessuno - parallel a Stream A
+
+**Stream C - AI & Session UX**:
+- Week 4-5: #3075 quota UI
+- Week 6-8: #3074 → #3080 AI analytics
+- **Blocca**: Nessuno - parallel a Stream A/B
+
+**Stream D - Testing (Ongoing)**:
+- Week 1-10: #3082 E2E flows (continuous)
+- Week 8-10: #3025, #3026 coverage push
+- **Supporta**: Tutti gli stream
+
+### Allocation Suggerita
+
+**2 Frontend Devs**:
+- Dev 1: Stream A (GST frontend) → Stream B (Library)
+- Dev 2: Stream C (AI/Session) → Stream B (Admin) → Stream D (Testing)
+
+**2 Backend Devs**:
+- Dev 3: Stream A (GST backend) → Stream C (#3074)
+- Dev 4: Stream B (Commands #2886, #2893) → Stream D (Coverage)
+
+**1 QA/Test**:
+- Stream D: E2E flows, coverage validation, regression testing
+
+---
+
+## Issue Escluse da Questa Roadmap
+
+### Infrastructure (Roadmap separata)
 
 | Issue | Motivo |
 |-------|--------|
-| #2965 | Dual-Theme Design System - Epic separata |
-| #2967 | Zero-Cost CI/CD Infrastructure - Infra separata |
-| #2968-#2976 | Oracle Cloud Setup - Infra separata |
-| #2927 | Lighthouse CI - Nice-to-have |
-| #2928 | k6 Load Testing - Nice-to-have |
-| #2929 | WCAG Accessibility Audit - Post-MVP |
-| #2852 | Chromatic Visual Regression - Post-MVP |
-| #2703 | S3 Object Storage - Infra separata |
+| #2967-#2976 | Zero-Cost CI/CD - Infrastructure EPIC separata |
+| #2703 | S3 Object Storage - Post-MVP infrastructure |
+
+### Testing Infrastructure (Post-MVP)
+
+| Issue | Motivo |
+|-------|--------|
+| #2927 | Lighthouse CI - Performance monitoring, non-blocking |
+| #2928 | k6 Load Testing - Advanced performance, post-MVP |
+| #2852 | Chromatic Visual Regression - Nice-to-have, post-MVP |
+
+### Design System (EPIC separata)
+
+| Issue | Motivo |
+|-------|--------|
+| #2965 | Dual-Theme Design System - Large EPIC, fase 2 |
+
+**Rationale**: Focus su UX funzionale prima, design system e infra dopo MVP
 
 ---
 
@@ -407,40 +478,93 @@ main:                                    [release]
 
 ### Verificare stato issue
 ```bash
-gh issue view <numero> --json state,title,labels
+# Lista issue aperte per label
+gh issue list --state open --label "game-session-toolkit" --json number,title,state
+gh issue list --state open --label "frontend" --json number,title,labels
+
+# Dettagli issue specifica
+gh issue view 3167 --json state,title,labels,body
 ```
 
-### Creare branch per issue
+### Branch workflow
 ```bash
-git checkout frontend-dev
-git pull origin frontend-dev
-git checkout -b feature/issue-<numero>-<descrizione>
+# Creare branch per nuova feature
+git checkout frontend-dev && git pull
+git checkout -b feature/issue-3160-gst-backend-schema
+
+# Creare branch per bug fix
+git checkout main-dev && git pull
+git checkout -b hotfix/issue-3095-dashboard-route
+
+# Merge con squash per features
+git checkout main-dev
+git merge --squash feature/issue-3160-gst-backend-schema
+git commit -m "feat(GST): add bounded context and database schema (#3160)"
 ```
 
-### Chiudere issue con PR
+### Testing workflow
 ```bash
-gh pr create --title "feat: <descrizione>" --body "Closes #<numero>"
+# Backend tests
+cd apps/api/src/Api
+dotnet test --filter "Category=Unit&BoundedContext=GameSessionToolkit"
+dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
+
+# Frontend tests
+cd apps/web
+pnpm test -- --coverage --run
+pnpm test:e2e -- game-session-toolkit
 ```
 
-### Verificare checkpoint
+### Checkpoint validation
 ```bash
-git log --oneline --graph main-dev..frontend-dev
+# Verificare merge readiness
+git log --oneline --graph main-dev..frontend-dev | head -20
+git diff main-dev..frontend-dev --stat
+
+# Coverage check
+cd apps/api/src/Api && dotnet test /p:CollectCoverage=true | grep "Line coverage"
+cd apps/web && pnpm test:coverage | grep "All files"
 ```
 
 ---
 
-**Ultimo aggiornamento**: 2026-01-29
-**Changelog**:
-- v6.0 (2026-01-29): Sincronizzazione completa con GitHub - 43/58 completate (74%)
-  - FASE 0-2: Tutte completate (13/13)
-  - FASE 3-5: Parzialmente completate (12/15, rimangono #3075, #3073, #3082)
-  - FASE 6: Quasi completa (18/23, rimangono #2866, #2867, #2886, #2893, #2896)
-  - Rimosso dalle completate: #3075, #3073, #3082, #2866, #2867 (ancora open)
-  - Aggiunte alle completate: 18 issue FASE 6 (#2857-#2860, #2868-#2869, #2870, #2873-#2876, #2881-#2882, #2887-#2888, #2890, #2894-#2895)
-- v5.0 (2026-01-29): FASE 5 completata (#2877, #2883, #2891, #2897 chiuse), #2870 spostata a FASE 6 (ancora open), conteggio 30/58
-- v4.0 (2026-01-28): Rimosso issue chiuse (FASE 0-4 complete, parziali 5-6), consolidato dipendenze
-- v3.0 (2026-01-27): Sincronizzato con GitHub - FASE 0/1 quasi completate
-- v2.0 (2026-01-27): Rimosso FASE 2 (già completata), rinumerato issue
-- v1.0 (2026-01-26): Versione iniziale
+## Success Metrics - MVP Definition
 
-**Prossima revisione**: Dopo ogni checkpoint
+### Funzionalità Core (Must-Have)
+
+- ✅ **GST Real-Time**: 4+ players possono gestire punteggi live con SSE
+- ✅ **Library Navigation**: Search, filters, grid/list views funzionanti
+- ✅ **Admin Workflows**: Bulk operations per user e game management
+- ✅ **Session Quota**: UI real-time per tracking limiti tier-based
+- ✅ **Bug Fixes**: #3095 dashboard route corretta
+
+### Quality Gates (Must-Meet)
+
+- ✅ **Backend Coverage**: ≥ 90%
+- ✅ **Frontend Coverage**: ≥ 85%
+- ✅ **E2E Tests**: ≥ 40/50 flows (80%)
+- ✅ **Performance**: SSE latency < 500ms, page load < 2s
+- ✅ **Accessibility**: No critical WCAG violations
+
+### Nice-to-Have (Post-MVP)
+
+- 🎨 Component Library (Storybook)
+- 📊 AI Analytics Dashboard
+- 🔐 Advanced auth features (oltre 2FA base)
+- ♿ Full WCAG 2.1 AA compliance
+- 🖼️ Visual regression testing
+
+---
+
+**Ultimo aggiornamento**: 2026-01-29 (v1.0 - Focus UX)
+
+**Prossima revisione**: Dopo Checkpoint 1 (GST MVP)
+
+**Changelog**:
+- v1.0 (2026-01-29): Versione iniziale con focus UX
+  - Nuova struttura: FASE 1 (GST) come priorità #1
+  - Rimosso issue completate (43 closed)
+  - Focus su 27 issue aperte: 14 high priority, 21 completabili Q1
+  - Gantt timeline: 10 settimane per MVP, post-MVP opzionale
+  - Work streams: 4 parallel tracks per massimizzare velocità
+  - Success metrics chiari: GST real-time + library UX + quality gates

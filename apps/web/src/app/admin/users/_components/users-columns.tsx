@@ -15,7 +15,6 @@ import {
   getUserStatus,
   type UserStatus,
 } from '@/components/ui/data-display/user-status-indicator';
-import { Button } from '@/components/ui/primitives/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
+import { Button } from '@/components/ui/primitives/button';
 
 export type User = {
   id: string;

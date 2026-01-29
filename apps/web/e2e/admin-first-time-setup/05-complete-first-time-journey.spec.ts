@@ -13,10 +13,10 @@
  */
 
 import { test, expect } from '@playwright/test';
+
 import {
   verifyServiceHealth,
   verifySharedGamesSeeded,
-  loginAsAdmin,
   navigateToWizard,
   cleanupTestData,
 } from '../utils/admin-setup-helpers';

@@ -1,0 +1,13 @@
+# Test Data Directory
+
+Place test PDF files here for E2E wizard tests.
+
+## Required Files
+
+- `pandemic_rulebook.pdf` (≤10MB)
+- `wingspan_en_rulebook.pdf` (≤10MB)
+- `azul_rulebook.pdf` (≤10MB)
+
+## Note
+
+Mock PDFs can be created for testing without real processing backend.

@@ -103,6 +103,15 @@ export function AuthModal({
         onClose();
         // Redirect admins to admin dashboard, others to specified redirect or default dashboard
         const targetUrl = response.user.role?.toLowerCase() === 'admin' ? '/admin' : redirectTo;
+
+        // Small delay to ensure session cookie is persisted before navigation
+        // This prevents race condition with middleware session validation
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Refresh router to revalidate middleware with new session cookie
+        router.refresh();
+
+        // Navigate using Next.js router for smooth client-side transition
         await router.push(targetUrl);
       } else {
         throw new Error('Login failed: No user data received');
@@ -139,6 +148,14 @@ export function AuthModal({
       onClose();
       // Redirect admins to admin dashboard, others to specified redirect or default dashboard
       const targetUrl = user.role?.toLowerCase() === 'admin' ? '/admin' : redirectTo;
+
+      // Small delay to ensure session cookie is persisted before navigation
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Refresh router to revalidate middleware with new session cookie
+      router.refresh();
+
+      // Navigate using Next.js router for smooth client-side transition
       await router.push(targetUrl);
     } catch (err) {
       const errorMessage =
@@ -168,6 +185,11 @@ export function AuthModal({
       onClose();
       // Redirect to email verification pending page with email as parameter
       // The user needs to verify their email before accessing the dashboard
+
+      // Small delay to ensure session cookie is persisted before navigation
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Navigate using Next.js router for smooth client-side transition
       await router.push(`/verification-pending?email=${encodeURIComponent(data.email)}`);
     } catch (err) {
       const errorMessage =

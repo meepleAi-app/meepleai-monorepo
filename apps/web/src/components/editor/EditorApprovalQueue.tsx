@@ -12,13 +12,16 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+
 import { Check, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { EditorApprovalQueueItem } from './EditorApprovalQueueItem';
-import { BulkRejectDialog } from './BulkRejectDialog';
+
 import { BulkActionBar, type BulkAction } from '@/components/admin/BulkActionBar';
-import type { SharedGame } from '@/lib/api/schemas/shared-games.schemas';
 import { api } from '@/lib/api';
+import type { SharedGame } from '@/lib/api/schemas/shared-games.schemas';
+
+import { BulkRejectDialog } from './BulkRejectDialog';
+import { EditorApprovalQueueItem } from './EditorApprovalQueueItem';
 
 export interface EditorApprovalQueueProps {
   /**

@@ -11,6 +11,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+
 import { loginAsAdmin, sendTestQuestion } from '../utils/admin-setup-helpers';
 
 test.describe.configure({ mode: 'serial' });

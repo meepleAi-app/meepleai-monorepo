@@ -2,10 +2,13 @@
  * EditorApprovalQueue Storybook Stories (Issue #2896)
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
-import { EditorApprovalQueue } from './EditorApprovalQueue';
+import { fn } from 'storybook/test';
+
 import type { SharedGame } from '@/lib/api/schemas/shared-games.schemas';
+
+import { EditorApprovalQueue } from './EditorApprovalQueue';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/Editor/EditorApprovalQueue',

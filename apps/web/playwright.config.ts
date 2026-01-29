@@ -107,8 +107,9 @@ export default defineConfig({
     navigationTimeout: 60000, // 60s for page.goto (increased for dev server)
 
     // Chromatic Playwright fixture options
-    disableAutoSnapshot: false, // Auto-capture at end of test
-    cropToViewport: false, // Capture full page
+    // TODO: Check if these options still exist in current Chromatic version
+    // disableAutoSnapshot: false, // Auto-capture at end of test
+    // cropToViewport: false, // Capture full page
     launchOptions: {
       args: [
         '--no-sandbox',

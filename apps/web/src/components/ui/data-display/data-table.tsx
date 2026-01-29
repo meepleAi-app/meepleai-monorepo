@@ -37,7 +37,8 @@ interface ShiftSelectionContextValue<TData> {
   handleRowClick?: (row: Row<TData>, event: React.MouseEvent) => void;
 }
 
-const ShiftSelectionContext = React.createContext<ShiftSelectionContextValue<unknown>>({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ShiftSelectionContext = React.createContext<ShiftSelectionContextValue<any>>({
   enabled: false,
 });
 

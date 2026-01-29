@@ -17,6 +17,7 @@ import Link from 'next/link';
 
 import {
   QuotaStatusBar,
+  QuotaStickyHeader,
   LibraryFilters,
   EditNotesModal,
   RemoveGameDialog,
@@ -304,8 +305,19 @@ export default function LibraryPageClient() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      {/* Page Header */}
+    <>
+      {/* Quota Sticky Header (Issue #2869) */}
+      {quota && (
+        <QuotaStickyHeader
+          currentCount={quota.currentCount}
+          maxAllowed={quota.maxAllowed}
+          percentageUsed={quota.percentageUsed}
+          userTier={quota.userTier}
+        />
+      )}
+
+      <div className="container mx-auto px-4 py-8 space-y-6">
+        {/* Page Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <h1 className="text-3xl font-bold font-quicksand">La Mia Libreria</h1>
         <div className="flex items-center gap-2">
@@ -480,6 +492,7 @@ export default function LibraryPageClient() {
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
       />
-    </div>
+      </div>
+    </>
   );
 }

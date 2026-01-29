@@ -2,12 +2,14 @@
  * CatalogPagination Component Tests
  *
  * Issue #2763: Sprint 3 - Catalog & Shared Games Components (0% → 85%)
+ * Issue #2876: Pagination Component - Results display and URL params
  *
  * Tests:
  * - Navigation (first/prev/next/last)
  * - Page number display and ellipsis logic
  * - Boundary conditions (disabled states)
  * - Accessibility (aria labels, current page)
+ * - Results info display (#2876)
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -310,6 +312,104 @@ describe('CatalogPagination', () => {
 
       // The current button and other buttons should have different classes
       expect(currentButton.className).not.toBe(otherButton.className);
+    });
+  });
+
+  // ==========================================================================
+  // Results Info Display (Issue #2876)
+  // ==========================================================================
+
+  describe('Results Info Display', () => {
+    it('displays page info without results when totalResults not provided', () => {
+      render(
+        <CatalogPagination
+          currentPage={3}
+          totalPages={10}
+          onPageChange={mockOnPageChange}
+        />
+      );
+
+      expect(screen.getByText('Pagina 3 di 10')).toBeInTheDocument();
+    });
+
+    it('displays page info with results count when totalResults provided', () => {
+      render(
+        <CatalogPagination
+          currentPage={3}
+          totalPages={10}
+          totalResults={195}
+          onPageChange={mockOnPageChange}
+        />
+      );
+
+      expect(screen.getByText(/Pagina 3 di 10/)).toBeInTheDocument();
+      expect(screen.getByText(/195 risultati/)).toBeInTheDocument();
+    });
+
+    it('formats large result numbers with locale formatting', () => {
+      render(
+        <CatalogPagination
+          currentPage={1}
+          totalPages={100}
+          totalResults={12345}
+          onPageChange={mockOnPageChange}
+        />
+      );
+
+      // Should use locale formatting (e.g., 12,345 or 12.345 depending on locale)
+      const resultsInfo = screen.getByText(/12.*345 risultati/);
+      expect(resultsInfo).toBeInTheDocument();
+    });
+
+    it('displays zero results correctly', () => {
+      render(
+        <CatalogPagination
+          currentPage={1}
+          totalPages={1}
+          totalResults={0}
+          onPageChange={mockOnPageChange}
+        />
+      );
+
+      expect(screen.getByText(/0 risultati/)).toBeInTheDocument();
+    });
+
+    it('has aria-live on results info for screen readers', () => {
+      render(
+        <CatalogPagination
+          currentPage={1}
+          totalPages={5}
+          totalResults={100}
+          onPageChange={mockOnPageChange}
+        />
+      );
+
+      const resultsInfo = screen.getByText(/Pagina 1 di 5/).closest('div');
+      expect(resultsInfo).toHaveAttribute('aria-live', 'polite');
+    });
+
+    it('updates results display when page changes', () => {
+      const { rerender } = render(
+        <CatalogPagination
+          currentPage={1}
+          totalPages={5}
+          totalResults={100}
+          onPageChange={mockOnPageChange}
+        />
+      );
+
+      expect(screen.getByText(/Pagina 1 di 5/)).toBeInTheDocument();
+
+      rerender(
+        <CatalogPagination
+          currentPage={3}
+          totalPages={5}
+          totalResults={100}
+          onPageChange={mockOnPageChange}
+        />
+      );
+
+      expect(screen.getByText(/Pagina 3 di 5/)).toBeInTheDocument();
     });
   });
 });

@@ -39,7 +39,7 @@ internal sealed class SetUserLevelCommandHandler
 
         if (user is null)
         {
-            throw new NotFoundException($"User {request.UserId} not found");
+            throw new NotFoundException("User", request.UserId.ToString());
         }
 
         var oldLevel = user.Level;

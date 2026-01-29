@@ -592,50 +592,6 @@ describe('BulkActionBar', () => {
       expect(screen.getByTestId('custom-test-id-clear')).toBeInTheDocument();
     });
   });
-});
-
-describe('EmptyBulkActionBar', () => {
-  describe('Rendering', () => {
-    it('should render with default message', () => {
-      render(<EmptyBulkActionBar itemLabel="items" />);
-
-      expect(screen.getByText('Select items to perform bulk actions')).toBeInTheDocument();
-    });
-
-    it('should render with custom message', () => {
-      render(
-        <EmptyBulkActionBar itemLabel="keys" message="Check boxes to enable bulk operations" />
-      );
-
-      expect(screen.getByText('Check boxes to enable bulk operations')).toBeInTheDocument();
-    });
-
-    it('should render with custom item label', () => {
-      render(<EmptyBulkActionBar itemLabel="documents" />);
-
-      expect(screen.getByText('Select documents to perform bulk actions')).toBeInTheDocument();
-    });
-
-    it('should have proper role and aria attributes', () => {
-      render(<EmptyBulkActionBar itemLabel="items" />);
-
-      const container = screen.getByRole('status');
-      expect(container).toHaveAttribute('aria-live', 'polite');
-    });
-
-    it('should apply custom className', () => {
-      render(<EmptyBulkActionBar itemLabel="items" className="custom-empty-class" />);
-
-      const container = screen.getByTestId('empty-bulk-action-bar');
-      expect(container).toHaveClass('custom-empty-class');
-    });
-
-    it('should use custom testId', () => {
-      render(<EmptyBulkActionBar itemLabel="items" testId="custom-empty-id" />);
-
-      expect(screen.getByTestId('custom-empty-id')).toBeInTheDocument();
-    });
-  });
 
   describe('Variant Styling (Issue #2888)', () => {
     it('should render with default variant styling', () => {
@@ -684,6 +640,50 @@ describe('EmptyBulkActionBar', () => {
 
       const container = screen.getByTestId('bulk-action-bar');
       expect(container).toHaveClass('bg-muted/50');
+    });
+  });
+});
+
+describe('EmptyBulkActionBar', () => {
+  describe('Rendering', () => {
+    it('should render with default message', () => {
+      render(<EmptyBulkActionBar itemLabel="items" />);
+
+      expect(screen.getByText('Select items to perform bulk actions')).toBeInTheDocument();
+    });
+
+    it('should render with custom message', () => {
+      render(
+        <EmptyBulkActionBar itemLabel="keys" message="Check boxes to enable bulk operations" />
+      );
+
+      expect(screen.getByText('Check boxes to enable bulk operations')).toBeInTheDocument();
+    });
+
+    it('should render with custom item label', () => {
+      render(<EmptyBulkActionBar itemLabel="documents" />);
+
+      expect(screen.getByText('Select documents to perform bulk actions')).toBeInTheDocument();
+    });
+
+    it('should have proper role and aria attributes', () => {
+      render(<EmptyBulkActionBar itemLabel="items" />);
+
+      const container = screen.getByRole('status');
+      expect(container).toHaveAttribute('aria-live', 'polite');
+    });
+
+    it('should apply custom className', () => {
+      render(<EmptyBulkActionBar itemLabel="items" className="custom-empty-class" />);
+
+      const container = screen.getByTestId('empty-bulk-action-bar');
+      expect(container).toHaveClass('custom-empty-class');
+    });
+
+    it('should use custom testId', () => {
+      render(<EmptyBulkActionBar itemLabel="items" testId="custom-empty-id" />);
+
+      expect(screen.getByTestId('custom-empty-id')).toBeInTheDocument();
     });
   });
 });

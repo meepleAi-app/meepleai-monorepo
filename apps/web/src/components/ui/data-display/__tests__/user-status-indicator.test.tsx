@@ -14,17 +14,19 @@ describe('UserStatusIndicator', () => {
     it('should render Active status with green styling', () => {
       render(<UserStatusIndicator status="Active" />);
 
-      const indicator = screen.getByText('Active');
-      expect(indicator).toBeInTheDocument();
-      expect(indicator).toHaveClass('text-green-700');
+      const text = screen.getByText('Active');
+      expect(text).toBeInTheDocument();
+      // Color class is on parent element
+      expect(text.parentElement).toHaveClass('text-green-700');
     });
 
     it('should render Inactive status with gray styling', () => {
       render(<UserStatusIndicator status="Inactive" />);
 
-      const indicator = screen.getByText('Inactive');
-      expect(indicator).toBeInTheDocument();
-      expect(indicator).toHaveClass('text-gray-500');
+      const text = screen.getByText('Inactive');
+      expect(text).toBeInTheDocument();
+      // Color class is on parent element
+      expect(text.parentElement).toHaveClass('text-gray-500');
     });
 
     it('should render Suspended status with red styling and pulsing animation', () => {

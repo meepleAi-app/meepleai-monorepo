@@ -583,9 +583,47 @@ internal static class AdminUserEndpoints
             .RequireAdminSession()
             .WithName("GetUserBadgesAdmin")
             .WithTags("Admin", "Badges")
-            .WithDescription("Retrieve all badges (including hidden) for a specific user (admin only)")
+            .WithSummary("Get all user badges (admin only)")
+            .WithDescription(@"Retrieve all badges earned by a specific user, including both visible and hidden badges.
+
+**Authorization**: Admin session required (403 for non-admins)
+
+**Behavior**:
+- Returns all badges for the user (visible + hidden)
+- Excludes revoked badges
+- Returns empty array `[]` if user has no badges
+- Returns empty array `[]` if user does not exist (no 404)
+
+**Ordering**: Badges ordered by DisplayOrder, then EarnedAt descending
+
+**Example Response**:
+```json
+[
+  {
+    ""id"": ""badge-guid-1"",
+    ""code"": ""FIRST_GAME"",
+    ""name"": ""First Game"",
+    ""description"": ""Added first game to library"",
+    ""iconUrl"": ""/badges/first-game.png"",
+    ""tier"": ""Bronze"",
+    ""earnedAt"": ""2026-01-15T10:30:00Z"",
+    ""isDisplayed"": true
+  },
+  {
+    ""id"": ""badge-guid-2"",
+    ""code"": ""SECRET_BADGE"",
+    ""name"": ""Secret Achievement"",
+    ""description"": ""Hidden badge description"",
+    ""iconUrl"": ""/badges/secret.png"",
+    ""tier"": ""Gold"",
+    ""earnedAt"": ""2026-01-20T14:00:00Z"",
+    ""isDisplayed"": false
+  }
+]
+```
+
+**Issue**: #3140 - Admin endpoint to view user badges")
             .Produces<List<UserBadgeDto>>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status403Forbidden);
     }
 

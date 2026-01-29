@@ -26,6 +26,8 @@ import {
 } from '@/components/ui/data-display/tooltip';
 import { Switch } from '@/components/ui/forms/switch';
 import { cn } from '@/lib/utils';
+
+import { BulkActionBar, type BulkAction } from './BulkActionBar';
 import {
   api,
   SystemConfigurationDto,
@@ -33,8 +35,6 @@ import {
   TIER_ORDER,
   type SubscriptionTier,
 } from '../../lib/api';
-
-import { BulkActionBar, type BulkAction } from './BulkActionBar';
 
 interface FeatureFlagsTabProps {
   configurations: SystemConfigurationDto[];

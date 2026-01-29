@@ -7,8 +7,9 @@
 
 import { fn } from 'storybook/test';
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { TwoFactorRecoveryCodes } from './TwoFactorRecoveryCodes';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const mockBackupCodes = [
   '12345678',

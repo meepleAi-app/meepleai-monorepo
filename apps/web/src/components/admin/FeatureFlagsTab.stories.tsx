@@ -7,10 +7,10 @@
 
 import { fn } from 'storybook/test';
 
-import type { Meta, StoryObj } from '@storybook/react';
-import type { SystemConfigurationDto } from '../../lib/api';
-
 import FeatureFlagsTab from './FeatureFlagsTab';
+
+import type { SystemConfigurationDto } from '../../lib/api';
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Mock API
 vi.mock('../../lib/api', async () => {

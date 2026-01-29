@@ -292,6 +292,10 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
+      // Switch to Account tab (password fields are there)
+      const accountTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
+      await user.click(accountTab);
+
       await waitFor(
         () => {
           expect(screen.getByLabelText(settingsPatterns.labels.currentPassword)).toBeInTheDocument();
@@ -459,13 +463,14 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const privacyTab = screen.getByRole('tab', { name: settingsPatterns.tabs.privacy });
-      await user.click(privacyTab);
+      // 2FA settings are in Account tab, not Privacy tab
+      const accountTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
+      await user.click(accountTab);
 
       // Wait for tab to be selected and content to be unhidden
       await waitFor(
         () => {
-          expect(privacyTab).toHaveAttribute('aria-selected', 'true');
+          expect(accountTab).toHaveAttribute('aria-selected', 'true');
         },
         { timeout: 5000 }
       );
@@ -473,7 +478,7 @@ describe('SettingsPage', () => {
       // Wait for tab panel to not have hidden attribute
       await waitFor(
         () => {
-          const tabPanel = screen.getByRole('tabpanel', { name: settingsPatterns.tabs.privacy });
+          const tabPanel = screen.getByRole('tabpanel', { name: settingsPatterns.tabs.account });
           expect(tabPanel).not.toHaveAttribute('hidden');
           // Verify content - use testid to avoid multiple matches
           expect(within(tabPanel).getByTestId('enable-2fa-button')).toBeInTheDocument();
@@ -489,8 +494,9 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const privacyTab = screen.getByRole('tab', { name: settingsPatterns.tabs.privacy });
-      await user.click(privacyTab);
+      // 2FA settings are in Account tab
+      const accountTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
+      await user.click(accountTab);
 
       await waitFor(
         () => {
@@ -520,8 +526,9 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const privacyTab = screen.getByRole('tab', { name: settingsPatterns.tabs.privacy });
-      await user.click(privacyTab);
+      // 2FA settings are in Account tab
+      const accountTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
+      await user.click(accountTab);
 
       const enable2FaButton = await screen.findByTestId('enable-2fa-button');
       await user.click(enable2FaButton);
@@ -872,8 +879,9 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const privacyTab = screen.getByRole('tab', { name: settingsPatterns.tabs.privacy });
-      await user.click(privacyTab);
+      // 2FA settings are in Account tab
+      const accountTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
+      await user.click(accountTab);
 
       await waitFor(
         () => {

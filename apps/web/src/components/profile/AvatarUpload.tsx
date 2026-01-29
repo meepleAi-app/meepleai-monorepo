@@ -155,6 +155,8 @@ export function AvatarUpload({
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  // Track blob URL for cleanup to prevent memory leaks
+  const blobUrlRef = useRef<string | null>(null);
 
   // Handlers
   const handleAvatarClick = useCallback(() => {
@@ -217,7 +219,16 @@ export function AvatarUpload({
     setError(null);
 
     try {
+      // Revoke previous blob URL to prevent memory leak
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+
       const { blob, url } = await getCroppedImg(imageRef.current, crop, AVATAR_SIZE);
+
+      // Track the new blob URL for future cleanup
+      blobUrlRef.current = url;
 
       // Create a File from the Blob
       const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });

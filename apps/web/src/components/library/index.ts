@@ -7,6 +7,7 @@
 export { AddToLibraryButton, type AddToLibraryButtonProps } from './AddToLibraryButton';
 export { FavoriteToggle, type FavoriteToggleProps } from './FavoriteToggle';
 export { QuotaStatusBar, type QuotaStatusBarProps } from './QuotaStatusBar';
+export { QuotaStickyHeader, type QuotaStickyHeaderProps } from './QuotaStickyHeader';
 export { LibraryFilters, type LibraryFiltersProps } from './LibraryFilters';
 export { EditNotesModal, type EditNotesModalProps } from './EditNotesModal';
 export { RemoveGameDialog, type RemoveGameDialogProps } from './RemoveGameDialog';

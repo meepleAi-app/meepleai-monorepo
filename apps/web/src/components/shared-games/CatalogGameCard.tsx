@@ -93,7 +93,7 @@ export function CatalogGameCard({
   game,
   communityStats,
   className,
-}: CatalogGameCardProps): JSX.Element {
+}: CatalogGameCardProps) {
   const [isAdding, setIsAdding] = useState(false);
 
   // Check if game is already in user's library

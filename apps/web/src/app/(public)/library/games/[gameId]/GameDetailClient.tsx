@@ -16,13 +16,14 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+
 import { ArrowLeft, MoreVertical } from 'lucide-react';
-import Link from 'next/link';
 import Image from 'next/image';
+import Link from 'next/link';
 
 import { AgentChatPanel, type AgentMode, type GamePdf } from '@/components/game-detail';
-import { PdfViewer } from '@/components/pdf-viewer';
 import { SplitViewLayout } from '@/components/game-detail/SplitViewLayout';
+import { PdfViewer } from '@/components/pdf-viewer';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 

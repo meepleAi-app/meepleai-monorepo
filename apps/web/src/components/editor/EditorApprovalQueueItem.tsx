@@ -11,16 +11,18 @@
  */
 
 import React from 'react';
+
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
-import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Eye, Check, X } from 'lucide-react';
-import { calculatePriority, getPriorityBadgeVariant, getPriorityLabel } from '@/lib/utils/priority';
+import Image from 'next/image';
+
+import { Badge } from '@/components/ui/data-display/badge';
+import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
 import type { SharedGame } from '@/lib/api/schemas/shared-games.schemas';
 import { cn } from '@/lib/utils';
+import { calculatePriority, getPriorityBadgeVariant, getPriorityLabel } from '@/lib/utils/priority';
 
 export interface EditorApprovalQueueItemProps {
   /**

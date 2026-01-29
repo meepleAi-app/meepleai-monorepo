@@ -8,6 +8,9 @@
 'use client';
 
 import React, { useState } from 'react';
+
+import { AlertCircle } from 'lucide-react';
+
 import {
   Dialog,
   DialogContent,
@@ -17,9 +20,8 @@ import {
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
-import { Textarea } from '@/components/ui/primitives/textarea';
 import { Label } from '@/components/ui/primitives/label';
-import { AlertCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/primitives/textarea';
 import { cn } from '@/lib/utils';
 
 export interface BulkRejectDialogProps {

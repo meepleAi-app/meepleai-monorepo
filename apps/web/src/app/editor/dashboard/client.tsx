@@ -49,6 +49,7 @@ import {
   TableRow,
 } from '@/components/ui/data-display/table';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Dialog,
   DialogContent,
@@ -59,7 +60,6 @@ import {
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { api, type SharedGame, type GameStatus } from '@/lib/api';
 
 // ========== Types ==========

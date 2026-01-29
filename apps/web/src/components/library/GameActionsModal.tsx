@@ -17,6 +17,7 @@
 'use client';
 
 import { useState } from 'react';
+
 import {
   MessageCircle,
   Play,
@@ -29,7 +30,6 @@ import {
   Share2,
   FileText,
   ChevronRight,
-  X,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -38,8 +38,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/feedback/dialog';
-import { Button } from '@/components/ui/primitives/button';
+} from '@/components/ui/overlays/dialog';
 import type { GameStateType } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';
 

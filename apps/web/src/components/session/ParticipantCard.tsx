@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
+
 import { Crown, Loader2 } from 'lucide-react';
+
 import { Participant } from './types';
 
 interface ParticipantCardProps {

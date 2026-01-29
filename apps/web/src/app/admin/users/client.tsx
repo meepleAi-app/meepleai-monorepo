@@ -2,16 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { Trash2, Eye, Download, Shield, Key, Ban, UserCheck } from 'lucide-react';
+import { Trash2, Download, Shield, Ban } from 'lucide-react';
 import Link from 'next/link';
 
 import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import type { SortingState, RowSelectionState } from '@/components/ui/data-display/data-table';
 import { type UserRole } from '@/components/ui/data-display/user-role-badge';
-import { UsersDataTable, type User as UsersTableUser, type UsersTableActions } from './_components';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+
+import { UsersDataTable, type User as UsersTableUser, type UsersTableActions } from './_components';
 
 // Types - use User from users-columns
 type User = UsersTableUser;
@@ -326,7 +327,7 @@ export function AdminPageClient() {
   }, [selectedUsers, users, addToast]);
 
   // Request password reset for selected users
-  const handleBulkPasswordReset = useCallback(() => {
+  const _handleBulkPasswordReset = useCallback(() => {
     if (selectedUsers.size === 0) return;
 
     setConfirmation({
@@ -370,7 +371,7 @@ export function AdminPageClient() {
           setSelectedUsers(new Set());
           setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} });
           fetchUsers();
-        } catch (err) {
+        } catch (_err) {
           addToast('error', 'Failed to suspend some users');
           setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} });
         } finally {
@@ -381,7 +382,7 @@ export function AdminPageClient() {
   }, [selectedUsers, addToast, fetchUsers]);
 
   // Format date
-  const formatDate = (dateString: string | null) => {
+  const _formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never';
     return new Date(dateString).toLocaleString();
   };

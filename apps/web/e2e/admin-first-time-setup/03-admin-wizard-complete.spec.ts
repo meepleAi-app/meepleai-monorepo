@@ -12,14 +12,10 @@
  */
 
 import { test, expect } from '@playwright/test';
+
 import {
   loginAsAdmin,
   navigateToWizard,
-  uploadPdfInWizard,
-  selectGameInWizard,
-  sendTestQuestion,
-  waitForPdfProcessing,
-  waitForChatThreadCreation,
   cleanupTestData,
 } from '../utils/admin-setup-helpers';
 

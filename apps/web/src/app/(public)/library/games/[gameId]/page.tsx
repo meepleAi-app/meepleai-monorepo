@@ -7,8 +7,9 @@
 
 import { notFound } from 'next/navigation';
 
-import GameDetailClient from './GameDetailClient';
 import type { AgentMode, GamePdf } from '@/components/game-detail';
+
+import GameDetailClient from './GameDetailClient';
 
 interface PageProps {
   params: Promise<{

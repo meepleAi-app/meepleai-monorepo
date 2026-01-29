@@ -23,7 +23,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/primitives/select';
+} from '@/components/ui/overlays/select';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { cn } from '@/lib/utils';
 
@@ -149,7 +149,7 @@ export function AgentChatPanel({
         content: data.answer || 'Nessuna risposta disponibile',
         timestamp: new Date(),
         agentMode: selectedAgentMode,
-        pdfReferences: data.citations?.map((c: any) => ({
+        pdfReferences: data.citations?.map((c: { documentId?: string; documentTitle?: string; pageNumber?: number }) => ({
           pdfId: c.documentId || selectedPdfIds[0] || 'pdf-1',
           pdfName: c.documentTitle || 'Regolamento',
           pageNumber: c.pageNumber || 1,

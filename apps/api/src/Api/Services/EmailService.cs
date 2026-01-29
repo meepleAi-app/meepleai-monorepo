@@ -1533,4 +1533,203 @@ internal class EmailService : IEmailService
 </html>
 ";
     }
+
+    // ISSUE-2886: User suspension notification emails
+    public async Task SendAccountSuspendedEmailAsync(
+        string toEmail,
+        string userName,
+        string? reason,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var subject = "Your MeepleAI Account Has Been Suspended";
+            var body = BuildAccountSuspendedEmailBody(userName, reason);
+
+            using var message = new MailMessage();
+            message.From = new MailAddress(_fromAddress, _fromName);
+            message.To.Add(new MailAddress(toEmail, userName));
+            message.Subject = subject;
+            message.Body = body;
+            message.IsBodyHtml = true;
+
+            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
+            smtpClient.EnableSsl = _enableSsl;
+
+            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
+            {
+                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+            }
+
+            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Account suspended email sent successfully to {Email}",
+                DataMasking.MaskEmail(toEmail));
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
+        // External service integration requires catching all SMTP exceptions to provide consistent error handling
+#pragma warning restore S125
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send account suspended email to {Email}",
+                DataMasking.MaskEmail(toEmail));
+            throw new InvalidOperationException("Failed to send account suspended email", ex);
+        }
+#pragma warning restore CA1031
+    }
+
+    public async Task SendAccountReactivatedEmailAsync(
+        string toEmail,
+        string userName,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var subject = "Your MeepleAI Account Has Been Reactivated";
+            var body = BuildAccountReactivatedEmailBody(userName);
+
+            using var message = new MailMessage();
+            message.From = new MailAddress(_fromAddress, _fromName);
+            message.To.Add(new MailAddress(toEmail, userName));
+            message.Subject = subject;
+            message.Body = body;
+            message.IsBodyHtml = true;
+
+            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
+            smtpClient.EnableSsl = _enableSsl;
+
+            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
+            {
+                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+            }
+
+            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Account reactivated email sent successfully to {Email}",
+                DataMasking.MaskEmail(toEmail));
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
+        // External service integration requires catching all SMTP exceptions to provide consistent error handling
+#pragma warning restore S125
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send account reactivated email to {Email}",
+                DataMasking.MaskEmail(toEmail));
+            throw new InvalidOperationException("Failed to send account reactivated email", ex);
+        }
+#pragma warning restore CA1031
+    }
+
+    private static string BuildAccountSuspendedEmailBody(string userName, string? reason)
+    {
+        var reasonSection = !string.IsNullOrWhiteSpace(reason)
+            ? $@"
+        <div style=""margin: 20px 0; padding: 15px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 3px;"">
+            <p style=""margin: 5px 0;""><strong>Reason for suspension:</strong></p>
+            <p style=""margin: 10px 0;"">{reason}</p>
+        </div>"
+            : string.Empty;
+
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Account Suspended</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
+        <h1 style=""color: #2c3e50; margin: 0;"">MeepleAI</h1>
+    </div>
+
+    <div style=""background-color: #f8d7da; padding: 20px; border-radius: 5px; border: 2px solid #dc3545; margin-bottom: 20px;"">
+        <h2 style=""color: #721c24; margin-top: 0;"">🚨 Account Suspended</h2>
+        <p style=""margin: 0; color: #721c24; font-weight: bold;"">Your account access has been temporarily suspended</p>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
+        <p>Hello {userName},</p>
+
+        <p>Your MeepleAI account has been suspended by an administrator. You will not be able to log in until your account is reactivated.</p>
+{reasonSection}
+        <p>If you believe this suspension was made in error or would like to appeal, please contact our support team.</p>
+
+        <div style=""text-align: center; margin: 30px 0;"">
+            <a href=""mailto:support@meepleai.dev"" style=""background-color: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">Contact Support</a>
+        </div>
+
+        <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
+            We take account security and community standards seriously. Thank you for your understanding.
+        </p>
+    </div>
+
+    <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
+        <p>This is an automated message, please do not reply to this email.</p>
+        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+    </div>
+</body>
+</html>
+";
+    }
+
+    private static string BuildAccountReactivatedEmailBody(string userName)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Account Reactivated</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
+        <h1 style=""color: #2c3e50; margin: 0;"">MeepleAI</h1>
+    </div>
+
+    <div style=""background-color: #d4edda; padding: 20px; border-radius: 5px; border: 2px solid #28a745; margin-bottom: 20px;"">
+        <h2 style=""color: #155724; margin-top: 0;"">✅ Account Reactivated</h2>
+        <p style=""margin: 0; color: #155724; font-weight: bold;"">Welcome back! Your account is now active</p>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
+        <p>Hello {userName},</p>
+
+        <p>Good news! Your MeepleAI account has been reactivated by an administrator. You can now log in and access all features again.</p>
+
+        <p>We're glad to have you back in the MeepleAI community!</p>
+
+        <div style=""margin: 20px 0; padding: 15px; background-color: #d1ecf1; border-left: 4px solid #17a2b8; border-radius: 3px;"">
+            <p style=""margin: 0;""><strong>💡 Next Steps:</strong></p>
+            <ul style=""margin: 10px 0; padding-left: 20px;"">
+                <li>Log in to your account</li>
+                <li>Review our community guidelines</li>
+                <li>Continue discovering and enjoying board games!</li>
+            </ul>
+        </div>
+
+        <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
+            Thank you for being part of the MeepleAI community!
+        </p>
+    </div>
+
+    <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
+        <p>This is an automated message, please do not reply to this email.</p>
+        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+    </div>
+</body>
+</html>
+";
+    }
 }

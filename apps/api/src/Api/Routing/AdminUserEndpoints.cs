@@ -435,11 +435,14 @@ internal static class AdminUserEndpoints
 
         logger.LogInformation("Admin {AdminId} suspending user {UserId}", session!.User!.Id, id);
 
+        // Issue #2886: Get admin ID for audit logging (session.User.Id is already Guid)
+        var requesterId = session.User.Id;
+
         try
         {
-            var command = new SuspendUserCommand(id, request?.Reason);
+            var command = new SuspendUserCommand(id, requesterId, request?.Reason);
             var user = await mediator.Send(command, ct).ConfigureAwait(false);
-            logger.LogInformation("User {UserId} suspended successfully", id);
+            logger.LogInformation("User {UserId} suspended successfully by admin {AdminId}", id, requesterId);
             return Results.Ok(user);
         }
         catch (DomainException ex)
@@ -461,11 +464,14 @@ internal static class AdminUserEndpoints
 
         logger.LogInformation("Admin {AdminId} unsuspending user {UserId}", session!.User!.Id, id);
 
+        // Issue #2886: Get admin ID for audit logging (session.User.Id is already Guid)
+        var requesterId = session.User.Id;
+
         try
         {
-            var command = new UnsuspendUserCommand(id);
+            var command = new UnsuspendUserCommand(id, requesterId);
             var user = await mediator.Send(command, ct).ConfigureAwait(false);
-            logger.LogInformation("User {UserId} unsuspended successfully", id);
+            logger.LogInformation("User {UserId} unsuspended successfully by admin {AdminId}", id, requesterId);
             return Results.Ok(user);
         }
         catch (DomainException ex)

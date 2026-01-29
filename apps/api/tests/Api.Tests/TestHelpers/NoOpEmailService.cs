@@ -116,4 +116,18 @@ internal class NoOpEmailService : IEmailService
         string libraryUrl,
         CancellationToken ct = default)
         => Task.CompletedTask;
+
+    // ISSUE-2886: User suspension emails
+    public Task SendAccountSuspendedEmailAsync(
+        string toEmail,
+        string userName,
+        string? reason,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendAccountReactivatedEmailAsync(
+        string toEmail,
+        string userName,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
 }

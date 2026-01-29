@@ -388,4 +388,50 @@ describe('QuotaStatusBar - Edge Cases', () => {
       screen.queryByText(/Stai per raggiungere il limite/)
     ).not.toBeInTheDocument();
   });
+
+  it('displays infinity symbol for admin unlimited quota', () => {
+    render(
+      <QuotaStatusBar
+        {...createQuotaProps({
+          currentCount: 42,
+          maxAllowed: 2147483647,
+          percentageUsed: 0,
+          remainingSlots: 2147483605,
+          userTier: 'premium',
+        })}
+      />
+    );
+
+    expect(screen.getByText(/42\/∞ giochi/)).toBeInTheDocument();
+  });
+
+  it('displays infinity symbol for values greater than Int32.MaxValue', () => {
+    render(
+      <QuotaStatusBar
+        {...createQuotaProps({
+          currentCount: 100,
+          maxAllowed: 9999999999,
+          percentageUsed: 0,
+          userTier: 'premium',
+        })}
+      />
+    );
+
+    expect(screen.getByText(/100\/∞ giochi/)).toBeInTheDocument();
+  });
+
+  it('displays normal number for non-admin quota', () => {
+    render(
+      <QuotaStatusBar
+        {...createQuotaProps({
+          currentCount: 15,
+          maxAllowed: 50,
+          percentageUsed: 30,
+        })}
+      />
+    );
+
+    expect(screen.getByText(/15\/50 giochi/)).toBeInTheDocument();
+    expect(screen.queryByText(/∞/)).not.toBeInTheDocument();
+  });
 });

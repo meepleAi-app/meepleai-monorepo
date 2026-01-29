@@ -353,6 +353,40 @@ describe('QuotaStickyHeader - Edge Cases', () => {
     expect(screen.getByTestId('quota-sticky-header-max')).toHaveTextContent('1000');
     expect(screen.getByTestId('quota-sticky-header-percentage')).toHaveTextContent('100%');
   });
+
+  it('displays infinity symbol for admin unlimited quota', () => {
+    render(<QuotaStickyHeader {...createQuotaProps({
+      currentCount: 42,
+      maxAllowed: 2147483647,
+      percentageUsed: 0,
+      userTier: 'premium',
+    })} />);
+
+    expect(screen.getByTestId('quota-sticky-header-current')).toHaveTextContent('42');
+    expect(screen.getByTestId('quota-sticky-header-max')).toHaveTextContent('∞');
+  });
+
+  it('displays infinity symbol for values greater than Int32.MaxValue', () => {
+    render(<QuotaStickyHeader {...createQuotaProps({
+      currentCount: 100,
+      maxAllowed: 9999999999,
+      percentageUsed: 0,
+      userTier: 'premium',
+    })} />);
+
+    expect(screen.getByTestId('quota-sticky-header-max')).toHaveTextContent('∞');
+  });
+
+  it('displays normal number for non-admin quota', () => {
+    render(<QuotaStickyHeader {...createQuotaProps({
+      currentCount: 15,
+      maxAllowed: 50,
+      percentageUsed: 30,
+    })} />);
+
+    expect(screen.getByTestId('quota-sticky-header-max')).toHaveTextContent('50');
+    expect(screen.queryByText(/∞/)).not.toBeInTheDocument();
+  });
 });
 
 // ============================================================================

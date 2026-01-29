@@ -12,7 +12,6 @@ import FeatureFlagsTab from './FeatureFlagsTab';
 import type { SystemConfigurationDto } from '../../lib/api';
 import type { Meta, StoryObj } from '@storybook/react';
 
-
 // Mock API
 vi.mock('../../lib/api', async () => {
   const actual = await vi.importActual('../../lib/api');

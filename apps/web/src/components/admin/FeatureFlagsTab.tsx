@@ -36,7 +36,6 @@ import {
   type SubscriptionTier,
 } from '../../lib/api';
 
-
 interface FeatureFlagsTabProps {
   configurations: SystemConfigurationDto[];
   onConfigurationChange: () => void;

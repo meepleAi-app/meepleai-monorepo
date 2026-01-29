@@ -19,8 +19,8 @@
  * - page.context().route() intercepts ALL requests at browser context level
  */
 
-import { test, expect } from './fixtures/chromatic';
 import { setupMockAuth } from '../fixtures/auth';
+import { test, expect } from '../fixtures/chromatic';
 import { mockApiForbidden } from '../helpers/mocks';
 
 const API_BASE =

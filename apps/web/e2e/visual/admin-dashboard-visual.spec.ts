@@ -19,7 +19,7 @@
 
 import { test as base, expect, Page } from '@playwright/test';
 
-import { AdminHelper } from './pages';
+import { AdminHelper } from '../pages';
 
 const test = base.extend<{ adminPage: Page }>({
   adminPage: async ({ page }: { page: Page }, use: (page: Page) => Promise<void>) => {

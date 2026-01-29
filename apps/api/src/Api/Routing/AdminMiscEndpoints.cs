@@ -106,6 +106,28 @@ internal static class AdminMiscEndpoints
             return Results.Json(new { success = true });
         });
 
+        // E2E Test User Seeding - Only for development/testing environments
+        group.MapPost("/seed-e2e-users", async (HttpContext context, IMediator mediator, ILogger<Program> logger, IWebHostEnvironment env, CancellationToken ct) =>
+        {
+            // Only allow in Development environment for security
+            if (!env.IsDevelopment())
+            {
+                logger.LogWarning("Attempted to seed E2E test users in non-development environment");
+                return Results.Forbid();
+            }
+
+            logger.LogInformation("Seeding E2E test users...");
+
+            await mediator.Send(new SeedE2ETestUsersCommand(), ct).ConfigureAwait(false);
+
+            logger.LogInformation("E2E test users seeded successfully");
+            return Results.Json(new
+            {
+                success = true,
+                message = "E2E test users seeded: admin@meepleai.dev, editor@meepleai.dev, user@meepleai.dev (password: Demo123!)"
+            });
+        });
+
         return group;
     }
 }

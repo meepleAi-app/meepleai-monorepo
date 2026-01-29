@@ -74,11 +74,13 @@ export class ChatPage extends BasePage implements IChatPage {
    * Login and register tabs inside the auth modal
    */
   private get loginTab(): Locator {
-    return this.page.getByRole('tab', { name: getTextMatcher('navigation.login') });
+    // AuthModal uses English text "Login" for the tab, use testId for reliability
+    return this.page.getByTestId('auth-tab-login');
   }
 
   private get registerTab(): Locator {
-    return this.page.getByRole('tab', { name: getTextMatcher('navigation.register') });
+    // AuthModal uses English text "Register" for the tab, use testId for reliability
+    return this.page.getByTestId('auth-tab-register');
   }
 
   /**

@@ -17,6 +17,10 @@ internal sealed class SuspendUserCommandValidator : AbstractValidator<SuspendUse
             .Must(BeValidGuid)
             .WithMessage("UserId must be a valid GUID format");
 
+        RuleFor(x => x.RequesterId)
+            .NotEmpty()
+            .WithMessage("RequesterId is required");
+
         RuleFor(x => x.Reason)
             .MaximumLength(500)
             .WithMessage("Suspension reason cannot exceed 500 characters");

@@ -16,6 +16,10 @@ internal sealed class UnsuspendUserCommandValidator : AbstractValidator<Unsuspen
             .WithMessage("UserId is required")
             .Must(BeValidGuid)
             .WithMessage("UserId must be a valid GUID format");
+
+        RuleFor(x => x.RequesterId)
+            .NotEmpty()
+            .WithMessage("RequesterId is required");
     }
 
     private static bool BeValidGuid(string? userId)

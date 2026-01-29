@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Middleware.Exceptions;
 using Api.Models;
@@ -10,17 +11,21 @@ namespace Api.BoundedContexts.Administration.Application.Handlers;
 
 /// <summary>
 /// Handler for suspending a user account.
+/// Issue #2886: Adds audit logging for suspension actions.
 /// </summary>
 internal class SuspendUserCommandHandler : ICommandHandler<SuspendUserCommand, UserDto>
 {
     private readonly IUserRepository _userRepository;
+    private readonly IAuditLogRepository _auditLogRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public SuspendUserCommandHandler(
         IUserRepository userRepository,
+        IAuditLogRepository auditLogRepository,
         IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _auditLogRepository = auditLogRepository ?? throw new ArgumentNullException(nameof(auditLogRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
@@ -38,6 +43,26 @@ internal class SuspendUserCommandHandler : ICommandHandler<SuspendUserCommand, U
         user.Suspend(command.Reason);
 
         await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
+
+        // Issue #2886: Create audit log entry for suspension
+        var auditLog = new Api.BoundedContexts.Administration.Domain.Entities.AuditLog(
+            id: Guid.NewGuid(),
+            userId: command.RequesterId,
+            action: "user_suspended",
+            resource: "User",
+            result: "success",
+            resourceId: userId.ToString(),
+            details: System.Text.Json.JsonSerializer.Serialize(new
+            {
+                targetUserId = userId,
+                targetEmail = user.Email.Value,
+                reason = command.Reason,
+                suspendedAt = user.SuspendedAt
+            }),
+            ipAddress: "admin-action"
+        );
+
+        await _auditLogRepository.AddAsync(auditLog, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return new UserDto(

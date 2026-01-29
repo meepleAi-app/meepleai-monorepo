@@ -101,4 +101,16 @@ internal interface IEmailService
         int remainingPending,
         string libraryUrl,
         CancellationToken ct = default);
+
+    // ISSUE-2886: User suspension emails
+    Task SendAccountSuspendedEmailAsync(
+        string toEmail,
+        string userName,
+        string? reason,
+        CancellationToken ct = default);
+
+    Task SendAccountReactivatedEmailAsync(
+        string toEmail,
+        string userName,
+        CancellationToken ct = default);
 }

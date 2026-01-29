@@ -1,5 +1,5 @@
 /**
- * Shared Games Catalog Page (Issue #2518)
+ * Shared Games Catalog Page (Issue #2518, #2876)
  *
  * Client Component for browsing shared games available to add to library.
  * Displays community-curated game catalog with advanced filtering.
@@ -10,16 +10,18 @@
  * - Responsive grid (1→2→3 columns)
  * - Search with debounce
  * - Advanced filters (complexity, players, playtime, categories, mechanics)
- * - Pagination with infinite scroll option
+ * - Pagination with results display: 'Page X of Y • N results'
+ * - URL query params for deep linking (#2876)
  * - Add to library functionality
  * - "Already in library" badges
  *
  * @see Issue #2518 User Library - Catalog, Library & Agent Configuration UI
+ * @see Issue #2876 Pagination Component enhancements
  */
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 
 import { AlertCircle, Library, Star, Clock } from 'lucide-react';
 import Link from 'next/link';
@@ -31,52 +33,34 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/al
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useSharedGames, useGameCategories, useGameMechanics } from '@/hooks/queries';
+import { useCatalogSearchParams, type SortByField } from '@/hooks/useCatalogSearchParams';
 import type { SearchSharedGamesParams } from '@/lib/api';
 
-export default function SharedGamesCatalogPage() {
-  // Filter and pagination state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(20);
-  const [sortBy, setSortBy] = useState<'title' | 'complexity' | 'playingTime'>('title');
-  const [sortDescending, setSortDescending] = useState(false);
+/**
+ * Inner component that uses useSearchParams (requires Suspense boundary)
+ */
+function CatalogContent() {
+  // URL-synced filter and pagination state (#2876)
+  const { params, setParams, resetParams, setPage } = useCatalogSearchParams();
 
-  // Advanced filters state
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedMechanics, setSelectedMechanics] = useState<string[]>([]);
-  const [minPlayers, setMinPlayers] = useState<number | undefined>(undefined);
-  const [maxPlayers, setMaxPlayers] = useState<number | undefined>(undefined);
-  const [maxPlayingTime, setMaxPlayingTime] = useState<number | undefined>(undefined);
-
-  // Build query params
+  // Build query params for API from URL params
   const queryParams = useMemo<SearchSharedGamesParams>(() => {
-    const params: SearchSharedGamesParams = {
-      page,
-      pageSize,
-      sortBy,
-      sortDescending,
+    const apiParams: SearchSharedGamesParams = {
+      page: params.page,
+      pageSize: params.pageSize,
+      sortBy: params.sortBy,
+      sortDescending: params.sortDescending,
     };
 
-    if (searchTerm) params.searchTerm = searchTerm;
-    if (selectedCategories.length > 0) params.categoryIds = selectedCategories.join(',');
-    if (selectedMechanics.length > 0) params.mechanicIds = selectedMechanics.join(',');
-    if (minPlayers !== undefined) params.minPlayers = minPlayers;
-    if (maxPlayers !== undefined) params.maxPlayers = maxPlayers;
-    if (maxPlayingTime !== undefined) params.maxPlayingTime = maxPlayingTime;
+    if (params.searchTerm) apiParams.searchTerm = params.searchTerm;
+    if (params.categoryIds.length > 0) apiParams.categoryIds = params.categoryIds.join(',');
+    if (params.mechanicIds.length > 0) apiParams.mechanicIds = params.mechanicIds.join(',');
+    if (params.minPlayers !== undefined) apiParams.minPlayers = params.minPlayers;
+    if (params.maxPlayers !== undefined) apiParams.maxPlayers = params.maxPlayers;
+    if (params.maxPlayingTime !== undefined) apiParams.maxPlayingTime = params.maxPlayingTime;
 
-    return params;
-  }, [
-    searchTerm,
-    page,
-    pageSize,
-    sortBy,
-    sortDescending,
-    selectedCategories,
-    selectedMechanics,
-    minPlayers,
-    maxPlayers,
-    maxPlayingTime,
-  ]);
+    return apiParams;
+  }, [params]);
 
   // Fetch data
   const { data: gamesData, isLoading, error } = useSharedGames(queryParams);
@@ -104,54 +88,39 @@ export default function SharedGamesCatalogPage() {
 
   const games = gamesData?.items || [];
   const total = gamesData?.total || 0;
-  const totalPages = gamesData ? Math.ceil(total / pageSize) : 0;
+  const totalPages = gamesData ? Math.ceil(total / params.pageSize) : 0;
 
-  // Reset to page 1 when filters change
-  const handleFilterChange = () => {
-    if (page !== 1) setPage(1);
-  };
-
-  // Handlers
+  // Handlers - update URL params (resets page to 1 for filter changes)
   const handleSearch = (term: string) => {
-    setSearchTerm(term);
-    handleFilterChange();
+    setParams({ searchTerm: term, page: 1 });
   };
 
   const handleCategoryChange = (categoryIds: string[]) => {
-    setSelectedCategories(categoryIds);
-    handleFilterChange();
+    setParams({ categoryIds, page: 1 });
   };
 
   const handleMechanicChange = (mechanicIds: string[]) => {
-    setSelectedMechanics(mechanicIds);
-    handleFilterChange();
+    setParams({ mechanicIds, page: 1 });
   };
 
   const handlePlayersChange = (min?: number, max?: number) => {
-    setMinPlayers(min);
-    setMaxPlayers(max);
-    handleFilterChange();
+    setParams({ minPlayers: min, maxPlayers: max, page: 1 });
   };
 
   const handlePlaytimeChange = (max?: number) => {
-    setMaxPlayingTime(max);
-    handleFilterChange();
+    setParams({ maxPlayingTime: max, page: 1 });
   };
 
-  const handleSortChange = (newSortBy: typeof sortBy, descending: boolean) => {
-    setSortBy(newSortBy);
-    setSortDescending(descending);
+  const handleSortChange = (sortBy: 'title' | 'complexity' | 'playingTime', descending: boolean) => {
+    setParams({ sortBy: sortBy as SortByField, sortDescending: descending });
   };
 
-  // Clear all filters
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedCategories([]);
-    setSelectedMechanics([]);
-    setMinPlayers(undefined);
-    setMaxPlayers(undefined);
-    setMaxPlayingTime(undefined);
-    setPage(1);
+  // Map URL sortBy to CatalogFilters expected type
+  const getFilterSortBy = (): 'title' | 'complexity' | 'playingTime' => {
+    if (params.sortBy === 'title' || params.sortBy === 'complexity' || params.sortBy === 'playingTime') {
+      return params.sortBy;
+    }
+    return 'title';
   };
 
   return (
@@ -229,23 +198,23 @@ export default function SharedGamesCatalogPage() {
           {/* Sidebar Filters */}
           <aside className="w-full lg:w-64 flex-shrink-0">
             <CatalogFilters
-              searchTerm={searchTerm}
+              searchTerm={params.searchTerm}
               onSearchChange={handleSearch}
               categories={categories}
-              selectedCategories={selectedCategories}
+              selectedCategories={params.categoryIds}
               onCategoryChange={handleCategoryChange}
               mechanics={mechanics}
-              selectedMechanics={selectedMechanics}
+              selectedMechanics={params.mechanicIds}
               onMechanicChange={handleMechanicChange}
-              minPlayers={minPlayers}
-              maxPlayers={maxPlayers}
+              minPlayers={params.minPlayers}
+              maxPlayers={params.maxPlayers}
               onPlayersChange={handlePlayersChange}
-              maxPlayingTime={maxPlayingTime}
+              maxPlayingTime={params.maxPlayingTime}
               onPlaytimeChange={handlePlaytimeChange}
-              sortBy={sortBy}
-              sortDescending={sortDescending}
+              sortBy={getFilterSortBy()}
+              sortDescending={params.sortDescending}
               onSortChange={handleSortChange}
-              onClearFilters={clearFilters}
+              onClearFilters={resetParams}
             />
           </aside>
 
@@ -279,7 +248,7 @@ export default function SharedGamesCatalogPage() {
                 <p className="text-muted-foreground mb-6">
                   Prova a modificare i filtri per trovare altri giochi.
                 </p>
-                <Button variant="outline" onClick={clearFilters}>
+                <Button variant="outline" onClick={resetParams}>
                   Rimuovi Filtri
                 </Button>
               </div>
@@ -294,11 +263,12 @@ export default function SharedGamesCatalogPage() {
                   ))}
                 </div>
 
-                {/* Pagination */}
+                {/* Pagination with results display (#2876) */}
                 {totalPages > 1 && (
                   <CatalogPagination
-                    currentPage={page}
+                    currentPage={params.page}
                     totalPages={totalPages}
+                    totalResults={total}
                     onPageChange={setPage}
                   />
                 )}
@@ -308,5 +278,29 @@ export default function SharedGamesCatalogPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Page wrapper with Suspense boundary for useSearchParams
+ */
+export default function SharedGamesCatalogPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background pb-24 md:pb-0 md:pt-16">
+          <div className="container mx-auto px-4 py-8 max-w-7xl">
+            <Skeleton className="h-12 w-64 mb-8" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-96 w-full" />
+              ))}
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <CatalogContent />
+    </Suspense>
   );
 }

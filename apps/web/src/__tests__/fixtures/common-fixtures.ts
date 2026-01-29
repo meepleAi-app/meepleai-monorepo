@@ -16,6 +16,11 @@ import type { NextRouter } from 'next/router';
 import { render, type RenderOptions } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 
+import { allTestMessages, msg } from './i18n-test-messages';
+
+// Re-export msg helper for type-safe i18n assertions in tests
+export { msg } from './i18n-test-messages';
+
 // =============================================================================
 // AUTH FIXTURES
 // =============================================================================
@@ -708,13 +713,12 @@ export const validateMockData = <T>(
 /**
  * English messages for IntlProvider in tests
  * Issue #1951: Minimal message set to support OAuthButtons and other i18n components
+ * Issue #3077: Added 2FA messages for TwoFactorDisable/TwoFactorRecoveryCodes tests
+ *
+ * Messages are centralized in i18n-test-messages.ts to avoid magic strings.
+ * Import `msg()` helper in tests for type-safe message assertions.
  */
-const testMessages = {
-  'auth.oauth.separator': 'Or continue with',
-  'auth.oauth.google': 'Continue with Google',
-  'auth.oauth.discord': 'Continue with Discord',
-  'auth.oauth.github': 'Continue with GitHub',
-};
+const testMessages = allTestMessages;
 
 /**
  * Renders a component wrapped with IntlProvider for testing i18n components

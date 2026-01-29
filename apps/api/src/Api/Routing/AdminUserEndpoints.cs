@@ -30,6 +30,8 @@ internal static class AdminUserEndpoints
         MapBulkUserEndpoints(group);
         // Get user activity timeline (ADMIN-USER-ACTIVITY-01 - Issue #911)
         MapUserActivityEndpoints(group);
+        // Get user library stats (Issue #3139)
+        MapUserLibraryStatsEndpoints(group);
 
         return group;
     }
@@ -491,6 +493,46 @@ internal static class AdminUserEndpoints
         logger.LogInformation("Activity timeline retrieved for user {UserId}: {Count} activities", userId, result.Activities.Count);
 
         return Results.Json(result);
+    }
+
+    private static void MapUserLibraryStatsEndpoints(RouteGroupBuilder group)
+    {
+        // Get user library statistics (admin only) - Issue #3139
+        group.MapGet("/admin/users/{userId:guid}/library/stats", HandleGetUserLibraryStats)
+            .RequireAdminSession()
+            .WithName("GetUserLibraryStats")
+            .WithTags("Admin", "UserLibrary")
+            .WithDescription("Retrieve library statistics for a specific user (admin only)")
+            .Produces<AdminUserLibraryStatsDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> HandleGetUserLibraryStats(
+        Guid userId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} retrieving library stats for user {UserId}", session!.User!.Id, userId);
+
+        var query = new GetUserLibraryStatsQuery(userId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        if (result is null)
+        {
+            logger.LogInformation("User {UserId} has no library entries", userId);
+            return Results.NotFound(new { error = "User has no library entries or user does not exist" });
+        }
+
+        logger.LogInformation("Admin {AdminId} retrieved library stats for user {UserId}: {TotalGames} games, {SessionsPlayed} sessions",
+            session.User.Id, userId, result.TotalGames, result.SessionsPlayed);
+
+        return Results.Ok(result);
     }
 }
 

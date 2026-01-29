@@ -300,14 +300,19 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
       setActionLoading(true);
       const response = await api.admin.impersonateUser(userId);
       // Store new session token and reload
-      document.cookie = `session=${response.sessionToken}; path=/`;
+      document.cookie = `session=${response.sessionToken}; path=/; Secure; SameSite=Strict`;
       addToast('success', `Impersonazione attiva fino a ${formatDate(response.expiresAt)}`);
       setTimeout(() => {
         window.location.href = '/';
       }, 2000);
     } catch (err) {
       console.error('Failed to impersonate user:', err);
-      addToast('error', "Errore nell'impersonazione");
+      // Handle specific error cases (Issue #2890 code review)
+      if (err instanceof Error && err.message.includes('suspended')) {
+        addToast('error', 'Impossibile impersonare: utente sospeso');
+      } else {
+        addToast('error', "Errore nell'impersonazione");
+      }
       setActionLoading(false);
     }
   };

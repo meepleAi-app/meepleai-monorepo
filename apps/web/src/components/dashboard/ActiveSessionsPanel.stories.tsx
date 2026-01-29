@@ -7,10 +7,11 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+import type { PaginatedSessionsResponse, PaginatedGamesResponse, GameSessionDto, Game } from '@/lib/api';
+
 import { ActiveSessionsPanel } from './ActiveSessionsPanel';
 
 import type { Meta, StoryObj } from '@storybook/react';
-import type { PaginatedSessionsResponse, PaginatedGamesResponse, GameSessionDto, Game } from '@/lib/api';
 
 // ============================================================================
 // Mock Data

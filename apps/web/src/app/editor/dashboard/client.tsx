@@ -36,7 +36,6 @@ import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Spinner } from '@/components/loading';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Checkbox } from '@/components/ui/primitives/checkbox';
 import {
   Table,
   TableBody,
@@ -62,6 +61,7 @@ import {
   SelectValue,
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { api, type SharedGame, type GameStatus } from '@/lib/api';
 
 // ========== Types ==========
@@ -124,6 +124,7 @@ function StatsCard({ title, count, icon, color, onClick, active }: StatsCardProp
 // ========== Status Badge Component ==========
 
 function GameStatusBadge({ status }: { status: GameStatus }) {
+  // eslint-disable-next-line security/detect-object-injection -- safe: status is typed enum
   const config = STATUS_CONFIG[status];
   return (
     <Badge className={`${config.color} flex items-center gap-1`} data-testid={`status-badge-${status.toLowerCase()}`}>
@@ -291,6 +292,7 @@ export function EditorDashboardClient() {
       Published: 2,
       Archived: 3,
     };
+    // eslint-disable-next-line security/detect-object-injection -- safe: status is typed enum
     return map[status];
   }
 

@@ -26,13 +26,12 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import { useActiveSessions } from '@/hooks/queries';
 import { useGames } from '@/hooks/queries/useGames';
-import { cn } from '@/lib/utils';
 import type { GameSessionDto, Game } from '@/lib/api';
 
 export interface ActiveSessionsPanelProps {

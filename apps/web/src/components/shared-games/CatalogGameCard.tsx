@@ -17,17 +17,17 @@
 
 import { useState } from 'react';
 
-import { Check, Clock, Library, Plus, Star, Users, UserPlus, Gamepad2 } from 'lucide-react';
+import { Check, Clock, Library, Plus, Users, UserPlus, Gamepad2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
 import { toast } from '@/components/layout/Toast';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
+import { RatingStars } from '@/components/ui/data-display/rating-stars';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
-import { RatingStars } from '@/components/ui/data-display/rating-stars';
-import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
+import { useGameInLibraryStatus, useAddGameToLibrary, useLibraryQuota } from '@/hooks/queries';
 import type { SharedGame, SharedGameDetail } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -99,6 +99,10 @@ export function CatalogGameCard({
   // Check if game is already in user's library
   const { data: status, isLoading: statusLoading } = useGameInLibraryStatus(game.id);
   const inLibrary = status?.inLibrary || false;
+
+  // Check library quota (Issue #2875)
+  const { data: quota, isLoading: quotaLoading } = useLibraryQuota();
+  const isQuotaExceeded = quota ? quota.remainingSlots <= 0 : false;
 
   // Mutation for adding game to library
   const addMutation = useAddGameToLibrary();
@@ -176,12 +180,22 @@ export function CatalogGameCard({
                 <Button
                   data-testid="add-to-library-button"
                   onClick={handleAddToLibrary}
-                  disabled={isAdding || addMutation.isPending || statusLoading}
-                  className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg"
+                  disabled={isAdding || addMutation.isPending || statusLoading || quotaLoading || isQuotaExceeded}
+                  className={cn(
+                    'text-white shadow-lg',
+                    isQuotaExceeded
+                      ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
+                      : 'bg-orange-500 hover:bg-orange-600'
+                  )}
                   size="lg"
+                  title={isQuotaExceeded ? 'Hai raggiunto il limite di giochi in libreria' : undefined}
                 >
                   <Plus className="mr-2 h-5 w-5" />
-                  {isAdding || addMutation.isPending ? 'Aggiunta...' : 'Aggiungi'}
+                  {isAdding || addMutation.isPending
+                    ? 'Aggiunta...'
+                    : isQuotaExceeded
+                      ? 'Quota esaurita'
+                      : 'Aggiungi'}
                 </Button>
               </div>
             )}

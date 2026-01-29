@@ -59,7 +59,7 @@ export function QuotaStatusBar({
       {/* Header with count */}
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-medium">
-          La tua libreria: {currentCount}/{maxAllowed} giochi
+          La tua libreria: {currentCount}/{maxAllowed >= 2147483647 ? '∞' : maxAllowed} giochi
         </h3>
         {isAtLimit && (
           <div className="flex items-center gap-1 text-xs text-destructive">

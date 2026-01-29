@@ -30,6 +30,10 @@ public sealed class User : AggregateRoot<Guid>
     public string Theme { get; private set; }
     public int DataRetentionDays { get; private set; }
 
+    // Gamification properties (Issue #3141)
+    public int Level { get; private set; }
+    public int ExperiencePoints { get; private set; }
+
     // 2FA properties (DDD Value Objects)
     public TotpSecret? TotpSecret { get; private set; }
     public bool IsTwoFactorEnabled { get; private set; }
@@ -79,6 +83,10 @@ public sealed class User : AggregateRoot<Guid>
         EmailNotifications = true;
         Theme = "system";
         DataRetentionDays = 90;
+
+        // Default gamification (Issue #3141)
+        Level = 1;
+        ExperiencePoints = 0;
 
         IsTwoFactorEnabled = false;
     }
@@ -219,6 +227,41 @@ public sealed class User : AggregateRoot<Guid>
         var oldRole = Role;
         Role = newRole;
         AddDomainEvent(new RoleChangedEvent(Id, oldRole, newRole));
+    }
+
+    /// <summary>
+    /// Sets the user's level (admin-only operation).
+    /// Issue #3141: Allow admins to manually adjust user level.
+    /// </summary>
+    /// <param name="level">New level value (must be 0-100)</param>
+    /// <exception cref="ArgumentException">Thrown when level is out of range</exception>
+    public void SetLevel(int level)
+    {
+        if (level < 0)
+            throw new ArgumentException("Level cannot be negative", nameof(level));
+        if (level > 100)
+            throw new ArgumentException("Level cannot exceed 100", nameof(level));
+
+        if (Level == level)
+            return; // No change
+
+        var oldLevel = Level;
+        Level = level;
+        AddDomainEvent(new UserLevelChangedEvent(Id, oldLevel, level));
+    }
+
+    /// <summary>
+    /// Adds experience points to the user (future gamification).
+    /// Issue #3141: Foundation for XP-based level progression.
+    /// </summary>
+    /// <param name="points">Experience points to add (must be >= 0)</param>
+    /// <exception cref="ArgumentException">Thrown when points is negative</exception>
+    public void AddExperience(int points)
+    {
+        if (points < 0)
+            throw new ArgumentException("Experience points cannot be negative", nameof(points));
+
+        ExperiencePoints += points;
     }
 
     /// <summary>
@@ -497,6 +540,17 @@ public sealed class User : AggregateRoot<Guid>
         IsSuspended = isSuspended;
         SuspendedAt = suspendedAt;
         SuspendReason = suspendReason;
+    }
+
+    /// <summary>
+    /// Restores gamification state (Level/XP) from persistence layer.
+    /// Issue #3141: Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreGamificationState(int level, int experiencePoints)
+    {
+        Level = level;
+        ExperiencePoints = experiencePoints;
     }
 
     #endregion

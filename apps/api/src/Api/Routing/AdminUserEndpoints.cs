@@ -26,10 +26,14 @@ internal static class AdminUserEndpoints
         MapUserCrudEndpoints(group);
         // ADMIN-TIER-01: Update user subscription tier
         MapUserTierEndpoints(group);
+        // ISSUE-3141: Set user level endpoint
+        MapUserLevelEndpoints(group);
         // BULK OPERATIONS - Issue #905
         MapBulkUserEndpoints(group);
         // Get user activity timeline (ADMIN-USER-ACTIVITY-01 - Issue #911)
         MapUserActivityEndpoints(group);
+        // Get user library stats (Issue #3139)
+        MapUserLibraryStatsEndpoints(group);
 
         return group;
     }
@@ -492,12 +496,92 @@ internal static class AdminUserEndpoints
 
         return Results.Json(result);
     }
+
+    private static void MapUserLibraryStatsEndpoints(RouteGroupBuilder group)
+    {
+        // Get user library statistics (admin only) - Issue #3139
+        group.MapGet("/admin/users/{userId:guid}/library/stats", HandleGetUserLibraryStats)
+            .RequireAdminSession()
+            .WithName("GetUserLibraryStats")
+            .WithTags("Admin", "UserLibrary")
+            .WithDescription("Retrieve library statistics for a specific user (admin only)")
+            .Produces<AdminUserLibraryStatsDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> HandleGetUserLibraryStats(
+        Guid userId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} retrieving library stats for user {UserId}", session!.User!.Id, userId);
+
+        var query = new GetUserLibraryStatsQuery(userId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        if (result is null)
+        {
+            logger.LogInformation("User {UserId} has no library entries", userId);
+            return Results.NotFound(new { error = "User has no library entries or user does not exist" });
+        }
+
+        logger.LogInformation("Admin {AdminId} retrieved library stats for user {UserId}: {TotalGames} games, {SessionsPlayed} sessions",
+            session.User.Id, userId, result.TotalGames, result.SessionsPlayed);
+
+        return Results.Ok(result);
+    }
+
+    private static void MapUserLevelEndpoints(RouteGroupBuilder group)
+    {
+        // Set user level (admin only) - Issue #3141
+        group.MapPatch("/admin/users/{userId:guid}/level", HandleSetUserLevel)
+            .WithName("SetUserLevel")
+            .WithTags("Admin", "Users")
+            .WithDescription("Set user level (admin only)")
+            .Produces<Api.BoundedContexts.Authentication.Application.DTOs.UserDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> HandleSetUserLevel(
+        Guid userId,
+        SetUserLevelRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} setting level for user {UserId} to {Level}",
+            session!.User!.Id, userId, request.Level);
+
+        var command = new SetUserLevelCommand(userId, request.Level);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation("User {UserId} level set to {Level} by admin {AdminId}",
+            userId, request.Level, session.User.Id);
+
+        return Results.Ok(result);
+    }
 }
 
 /// <summary>
 /// Request payload for updating user tier.
 /// </summary>
 internal record UpdateUserTierRequest(string Tier);
+
+/// <summary>
+/// Request payload for setting user level.
+/// </summary>
+internal record SetUserLevelRequest(int Level);
 
 /// <summary>
 /// Request payload for bulk password reset.

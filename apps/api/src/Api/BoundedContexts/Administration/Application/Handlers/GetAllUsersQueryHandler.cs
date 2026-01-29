@@ -92,7 +92,9 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
             CreatedAt: user.CreatedAt,
             LastSeenAt: lastSeenAt,
             IsSuspended: user.IsSuspended,
-            SuspendReason: user.SuspendReason
+            SuspendReason: user.SuspendReason,
+            Level: user.Level,
+            ExperiencePoints: user.ExperiencePoints
         );
     }
 }

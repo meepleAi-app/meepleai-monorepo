@@ -52,7 +52,9 @@ internal class LoginWithApiKeyCommandHandler : ICommandHandler<LoginWithApiKeyCo
             Tier: user.Tier.Value,
             CreatedAt: user.CreatedAt,
             IsTwoFactorEnabled: user.IsTwoFactorEnabled,
-            TwoFactorEnabledAt: user.TwoFactorEnabledAt
+            TwoFactorEnabledAt: user.TwoFactorEnabledAt,
+            Level: user.Level,
+            ExperiencePoints: user.ExperiencePoints
         );
 
         return new ApiKeyLoginResponse(

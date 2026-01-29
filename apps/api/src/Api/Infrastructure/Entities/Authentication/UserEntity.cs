@@ -35,6 +35,10 @@ public class UserEntity
     public DateTime? SuspendedAt { get; set; }
     public string? SuspendReason { get; set; }
 
+    // ISSUE-3141: Gamification (Level/XP)
+    public int Level { get; set; } = 1;
+    public int ExperiencePoints { get; set; }
+
     // Navigation properties
     public ICollection<UserSessionEntity> Sessions { get; set; } = new List<UserSessionEntity>();
     public ICollection<UserBackupCodeEntity> BackupCodes { get; set; } = new List<UserBackupCodeEntity>();

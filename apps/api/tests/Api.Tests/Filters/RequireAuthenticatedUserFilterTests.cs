@@ -186,7 +186,9 @@ public class RequireAuthenticatedUserFilterTests
             Tier: "normal",
             CreatedAt: DateTime.UtcNow,
             IsTwoFactorEnabled: false,
-            TwoFactorEnabledAt: null
+            TwoFactorEnabledAt: null,
+            Level: 1,
+            ExperiencePoints: 0
         );
         return new SessionStatusDto(
             IsValid: true,

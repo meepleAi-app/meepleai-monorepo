@@ -35,6 +35,10 @@ internal class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
         builder.Property(e => e.EmailVerified).IsRequired().HasDefaultValue(false);
         builder.Property(e => e.EmailVerifiedAt);
 
+        // ISSUE-3141: Gamification (Level/XP)
+        builder.Property(e => e.Level).IsRequired().HasDefaultValue(1);
+        builder.Property(e => e.ExperiencePoints).IsRequired().HasDefaultValue(0);
+
         // Relationships
         builder.HasMany(e => e.Sessions)
             .WithOne(s => s.User)

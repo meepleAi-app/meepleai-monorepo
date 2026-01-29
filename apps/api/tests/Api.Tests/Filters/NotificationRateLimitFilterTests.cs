@@ -249,7 +249,9 @@ public class NotificationRateLimitFilterTests
                     Tier: "normal",
                     CreatedAt: DateTime.UtcNow,
                     IsTwoFactorEnabled: false,
-                    TwoFactorEnabledAt: null
+                    TwoFactorEnabledAt: null,
+                    Level: 1,
+                    ExperiencePoints: 0
                 );
                 var session = new SessionStatusDto(
                     IsValid: true,

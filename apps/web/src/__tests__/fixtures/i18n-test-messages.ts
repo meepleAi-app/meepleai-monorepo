@@ -227,7 +227,7 @@ export const settingsPatterns = {
     system: /system|sistema/i,
   },
   twoFactor: {
-    savedCodes: /i've saved my codes|ho salvato i codici/i,
+    savedCodes: /i've saved my codes|ho salvato i miei codici/i,
   },
   text: {
     error: /error|failed|errore/i,

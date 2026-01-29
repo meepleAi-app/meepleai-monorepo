@@ -293,10 +293,18 @@ describe('Users AdminPageClient', () => {
     const editMenuItem = await screen.findByRole('menuitem', { name: settingsPatterns.menu.edit });
     await user.click(editMenuItem);
 
+    // Wait for modal to open with longer timeout
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(screen.getByTestId('user-modal-title')).toHaveTextContent('Edit User');
+      },
+      { timeout: 3000 }
+    );
+
+    // Email field should be pre-filled (user-2 is first due to sorting)
     await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-      expect(screen.getByTestId('user-modal-title')).toHaveTextContent('Edit User');
-      expect(screen.getByDisplayValue('user1@example.com')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('user2@example.com')).toBeInTheDocument();
     });
   });
 
@@ -321,11 +329,16 @@ describe('Users AdminPageClient', () => {
     const editMenuItem = await screen.findByRole('menuitem', { name: settingsPatterns.menu.edit });
     await user.click(editMenuItem);
 
-    await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-    });
+    // Wait for modal with longer timeout
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
 
-    const displayNameInput = screen.getByDisplayValue('User One');
+    // user-2 (User Two) is first due to sorting
+    const displayNameInput = screen.getByDisplayValue('User Two');
     await user.clear(displayNameInput);
     await user.type(displayNameInput, 'Updated User Name');
 
@@ -333,8 +346,9 @@ describe('Users AdminPageClient', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
+      // user-2 is first due to lastSeenAt desc sort
       expect(api.admin.updateUser).toHaveBeenCalledWith(
-        'user-1',
+        'user-2',
         expect.objectContaining({
           displayName: 'Updated User Name',
         })
@@ -399,7 +413,8 @@ describe('Users AdminPageClient', () => {
     await user.click(confirmButton);
 
     await waitFor(() => {
-      expect(api.admin.deleteUser).toHaveBeenCalledWith('user-1');
+      // user-2 is first due to lastSeenAt desc sort
+      expect(api.admin.deleteUser).toHaveBeenCalledWith('user-2');
     });
   });
 

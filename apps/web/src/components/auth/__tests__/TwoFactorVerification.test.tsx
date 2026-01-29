@@ -5,7 +5,7 @@
 
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithIntl } from '../../../__tests__/fixtures/common-fixtures';
+import { renderWithIntl, msg } from '../../../__tests__/fixtures/common-fixtures';
 import { TwoFactorVerification } from '../TwoFactorVerification';
 
 describe('TwoFactorVerification', () => {
@@ -21,9 +21,8 @@ describe('TwoFactorVerification', () => {
     it('renders default title and subtitle', () => {
       renderWithIntl(<TwoFactorVerification {...defaultProps} />);
 
-      // Uses i18n keys as fallback text in test environment
-      expect(screen.getByText('auth.2fa.verificationTitle')).toBeInTheDocument();
-      expect(screen.getByText('auth.2fa.verificationSubtitle')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.verificationTitle'))).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.verificationSubtitle'))).toBeInTheDocument();
     });
 
     it('renders custom title and subtitle', () => {

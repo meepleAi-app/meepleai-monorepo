@@ -163,6 +163,8 @@ export const UserProfileSchema = z.object({
   theme: z.string().min(1),
   emailNotifications: z.boolean(),
   dataRetentionDays: z.number().int().positive(),
+  // Avatar URL (Issue #2882)
+  avatarUrl: z.string().url().nullable().optional(),
 });
 
 export type UserProfile = z.infer<typeof UserProfileSchema>;
@@ -173,6 +175,17 @@ export const UpdateProfileResponseSchema = z.object({
 });
 
 export type UpdateProfileResponse = z.infer<typeof UpdateProfileResponseSchema>;
+
+/**
+ * Schema for avatar upload response (Issue #2882)
+ */
+export const UploadAvatarResponseSchema = z.object({
+  ok: z.boolean(),
+  avatarUrl: z.string().url(),
+  message: z.string().optional(),
+});
+
+export type UploadAvatarResponse = z.infer<typeof UploadAvatarResponseSchema>;
 
 export const ChangePasswordResponseSchema = z.object({
   ok: z.boolean(),

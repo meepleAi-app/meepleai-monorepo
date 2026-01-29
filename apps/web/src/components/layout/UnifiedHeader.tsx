@@ -18,7 +18,6 @@
 import { useState, useEffect, useTransition } from 'react';
 
 import {
-  Home,
   Gamepad2,
   BookOpen,
   LayoutDashboard,

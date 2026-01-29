@@ -17,11 +17,11 @@ import React, { useEffect, useState } from 'react';
 import { AlertCircle, BookOpen, ChevronRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/primitives/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Progress } from '@/components/ui/feedback/progress';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { Button } from '@/components/ui/primitives/button';
 import { useLibraryQuota } from '@/hooks/queries/useLibrary';
 import { cn } from '@/lib/utils';
 

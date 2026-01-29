@@ -1,10 +1,11 @@
 /**
- * CatalogPagination Component (Issue #2518)
+ * CatalogPagination Component (Issue #2518, #2876)
  *
  * Pagination controls for shared games catalog with:
  * - Previous/Next buttons
- * - Page numbers
+ * - Page numbers with active state (purple)
  * - First/Last page buttons
+ * - Results count display: 'Page X of Y • N results'
  * - Responsive design
  */
 
@@ -18,12 +19,15 @@ interface CatalogPaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  /** Total number of results (optional, for displaying "N results") */
+  totalResults?: number;
 }
 
 export function CatalogPagination({
   currentPage,
   totalPages,
   onPageChange,
+  totalResults,
 }: CatalogPaginationProps) {
   // Calculate visible page numbers
   const getPageNumbers = () => {
@@ -68,8 +72,25 @@ export function CatalogPagination({
 
   const pageNumbers = getPageNumbers();
 
+  // Format results count display
+  const resultsText = totalResults !== undefined ? `${totalResults.toLocaleString()} risultati` : null;
+  const pageInfoText = `Pagina ${currentPage} di ${totalPages}`;
+
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex flex-col items-center gap-2">
+      {/* Results info */}
+      <div className="text-sm text-muted-foreground" aria-live="polite">
+        {resultsText ? (
+          <span>
+            {pageInfoText} • {resultsText}
+          </span>
+        ) : (
+          <span>{pageInfoText}</span>
+        )}
+      </div>
+
+      {/* Pagination controls */}
+      <div className="flex items-center justify-center gap-2">
       {/* First Page */}
       <Button
         variant="outline"
@@ -142,6 +163,7 @@ export function CatalogPagination({
       >
         <ChevronsRight className="h-4 w-4" />
       </Button>
+      </div>
     </div>
   );
 }

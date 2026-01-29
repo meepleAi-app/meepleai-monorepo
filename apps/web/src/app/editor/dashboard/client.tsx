@@ -61,7 +61,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/primitives/select';
+} from '@/components/ui/overlays/select';
 import { api, type SharedGame, type GameStatus } from '@/lib/api';
 
 // ========== Types ==========

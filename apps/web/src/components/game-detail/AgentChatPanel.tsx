@@ -149,7 +149,7 @@ export function AgentChatPanel({
         content: data.answer || 'Nessuna risposta disponibile',
         timestamp: new Date(),
         agentMode: selectedAgentMode,
-        pdfReferences: data.citations?.map((c: { documentId?: string; documentTitle?: string; pageNumber?: number }) => ({
+        pdfReferences: data.citations?.map((c: { documentId?: string; documentTitle?: string; pageNumber?: number; excerpt?: string; score?: number }) => ({
           pdfId: c.documentId || selectedPdfIds[0] || 'pdf-1',
           pdfName: c.documentTitle || 'Regolamento',
           pageNumber: c.pageNumber || 1,

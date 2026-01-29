@@ -156,8 +156,11 @@ export function useCatalogSearchParams(): UseCatalogSearchParamsReturn {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Parse current URL params
-  const params = useMemo(() => parseSearchParams(searchParams), [searchParams]);
+  // Parse current URL params (handle null case from useSearchParams)
+  const params = useMemo(
+    () => (searchParams ? parseSearchParams(searchParams) : DEFAULT_PARAMS),
+    [searchParams]
+  );
 
   // Update URL with new params
   const setParams = useCallback(

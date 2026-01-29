@@ -6,3 +6,4 @@
 
 export { QuickActions, type QuickActionsProps, type QuickAction } from './QuickActions';
 export { QuickActionCard, type QuickActionCardProps } from './QuickActionCard';
+export { LibraryQuotaWidget, type LibraryQuotaWidgetProps } from './LibraryQuotaWidget';

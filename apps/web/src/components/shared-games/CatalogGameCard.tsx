@@ -264,7 +264,7 @@ export function CatalogGameCard({
 /**
  * CatalogGameCard Skeleton for loading state
  */
-export function CatalogGameCardSkeleton(): JSX.Element {
+export function CatalogGameCardSkeleton() {
   return (
     <Card className="flex flex-col h-full overflow-hidden">
       {/* Cover Skeleton */}

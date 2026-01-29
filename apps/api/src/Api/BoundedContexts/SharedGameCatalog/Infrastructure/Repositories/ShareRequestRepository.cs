@@ -48,6 +48,31 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         return entity is null ? null : MapToDomain(entity);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, ShareRequest>> GetByIdsForUpdateAsync(
+        IEnumerable<Guid> ids,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
+        var idList = ids.ToList();
+        if (idList.Count == 0)
+        {
+            return new Dictionary<Guid, ShareRequest>();
+        }
+
+        // Batch query with tracking enabled for updates
+        var entities = await _context.Set<ShareRequestEntity>()
+            .Include(e => e.AttachedDocuments)
+            .Where(e => idList.Contains(e.Id))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // Map to dictionary for O(1) lookup by ID
+        return entities.ToDictionary(
+            e => e.Id,
+            e => MapToDomain(e));
+    }
+
     public void Update(ShareRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

@@ -32,6 +32,18 @@ public interface IShareRequestRepository
     Task<ShareRequest?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets multiple share requests by IDs with tracking enabled for updates.
+    /// Optimized for bulk operations to avoid N+1 query problem.
+    /// Issue #2893: Performance optimization for bulk approve/reject operations.
+    /// </summary>
+    /// <param name="ids">Collection of share request IDs to retrieve.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Dictionary mapping found IDs to their share requests. Missing IDs are omitted.</returns>
+    Task<IReadOnlyDictionary<Guid, ShareRequest>> GetByIdsForUpdateAsync(
+        IEnumerable<Guid> ids,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Updates an existing share request.
     /// </summary>
     /// <param name="request">The share request to update.</param>

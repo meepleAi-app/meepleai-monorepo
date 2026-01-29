@@ -233,14 +233,21 @@ public sealed class User : AggregateRoot<Guid>
     /// Sets the user's level (admin-only operation).
     /// Issue #3141: Allow admins to manually adjust user level.
     /// </summary>
-    /// <param name="level">New level value (must be >= 0)</param>
-    /// <exception cref="ArgumentException">Thrown when level is negative</exception>
+    /// <param name="level">New level value (must be 0-100)</param>
+    /// <exception cref="ArgumentException">Thrown when level is out of range</exception>
     public void SetLevel(int level)
     {
         if (level < 0)
             throw new ArgumentException("Level cannot be negative", nameof(level));
+        if (level > 100)
+            throw new ArgumentException("Level cannot exceed 100", nameof(level));
 
+        if (Level == level)
+            return; // No change
+
+        var oldLevel = Level;
         Level = level;
+        AddDomainEvent(new UserLevelChangedEvent(Id, oldLevel, level));
     }
 
     /// <summary>
@@ -533,6 +540,17 @@ public sealed class User : AggregateRoot<Guid>
         IsSuspended = isSuspended;
         SuspendedAt = suspendedAt;
         SuspendReason = suspendReason;
+    }
+
+    /// <summary>
+    /// Restores gamification state (Level/XP) from persistence layer.
+    /// Issue #3141: Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreGamificationState(int level, int experiencePoints)
+    {
+        Level = level;
+        ExperiencePoints = experiencePoints;
     }
 
     #endregion

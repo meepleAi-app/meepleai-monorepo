@@ -100,4 +100,87 @@ public sealed class UserEntityLevelTests
         // Act & Assert
         Assert.Throws<ArgumentException>(() => user.AddExperience(-10));
     }
+
+    [Fact]
+    public void SetLevel_WithLevelAbove100_ThrowsArgumentException()
+    {
+        // Arrange
+        var user = new User(
+            id: Guid.NewGuid(),
+            email: new Email("test@test.com"),
+            displayName: "Test User",
+            passwordHash: PasswordHash.Create("Password123!"),
+            role: Role.User
+        );
+
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => user.SetLevel(101));
+        exception.Message.Should().Contain("cannot exceed 100");
+    }
+
+    [Fact]
+    public void SetLevel_WithMaxLevel_UpdatesSuccessfully()
+    {
+        // Arrange
+        var user = new User(
+            id: Guid.NewGuid(),
+            email: new Email("test@test.com"),
+            displayName: "Test User",
+            passwordHash: PasswordHash.Create("Password123!"),
+            role: Role.User
+        );
+
+        // Act
+        user.SetLevel(100);
+
+        // Assert
+        user.Level.Should().Be(100);
+    }
+
+    [Fact]
+    public void SetLevel_WithSameLevel_DoesNotEmitEvent()
+    {
+        // Arrange
+        var user = new User(
+            id: Guid.NewGuid(),
+            email: new Email("test@test.com"),
+            displayName: "Test User",
+            passwordHash: PasswordHash.Create("Password123!"),
+            role: Role.User
+        );
+        user.SetLevel(5);
+        user.ClearDomainEvents(); // Clear the event from first SetLevel
+
+        // Act
+        user.SetLevel(5); // Same level
+
+        // Assert
+        user.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SetLevel_WithDifferentLevel_EmitsDomainEvent()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var user = new User(
+            id: userId,
+            email: new Email("test@test.com"),
+            displayName: "Test User",
+            passwordHash: PasswordHash.Create("Password123!"),
+            role: Role.User
+        );
+        user.ClearDomainEvents(); // Clear any initial events
+
+        // Act
+        user.SetLevel(10);
+
+        // Assert
+        user.DomainEvents.Should().HaveCount(1);
+        var levelEvent = user.DomainEvents.First() as Api.BoundedContexts.Authentication.Domain.Events.UserLevelChangedEvent;
+        levelEvent.Should().NotBeNull();
+        levelEvent!.UserId.Should().Be(userId);
+        levelEvent.OldLevel.Should().Be(1); // Default level
+        levelEvent.NewLevel.Should().Be(10);
+    }
 }

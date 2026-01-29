@@ -2,12 +2,15 @@
  * Unit tests for BottomNav component
  * Issue #1829 [UI-002] BottomNav Component (Mobile-First)
  * Updated: Issue #3104 - Reduced to 4 items (Settings moved to header)
+ * Updated: Issue #2860 - 5 items (Home, Library, Catalog, Chat, Profile)
+ *                       Purple active state, Orange hover
  *
  * Coverage:
- * - Rendering (4 nav items, correct icons/labels)
+ * - Rendering (5 nav items, correct icons/labels)
  * - Active state logic (path matching)
  * - Accessibility (ARIA labels, keyboard nav, touch targets)
  * - Responsive (hidden on desktop)
+ * - Color states (purple active, orange hover)
  */
 
 import { render, screen } from '@testing-library/react';
@@ -24,27 +27,29 @@ const mockUsePathname = usePathname as ReturnType<typeof vi.fn>;
 
 describe('BottomNav', () => {
   beforeEach(() => {
-    mockUsePathname.mockReturnValue('/dashboard');
+    mockUsePathname.mockReturnValue('/');
   });
 
   describe('Rendering', () => {
-    it('should render all 4 navigation items', () => {
+    it('should render all 5 navigation items', () => {
       render(<BottomNav />);
 
-      // Check all labels are present (Issue #3104: reduced to 4 items)
+      // Check all labels are present (Issue #2860: 5 items)
+      expect(screen.getByText('Home')).toBeInTheDocument();
+      expect(screen.getByText('Libreria')).toBeInTheDocument();
       expect(screen.getByText('Catalogo')).toBeInTheDocument();
-      expect(screen.getByText('I Miei Giochi')).toBeInTheDocument();
-      expect(screen.getByText('Dashboard')).toBeInTheDocument();
       expect(screen.getByText('Chat')).toBeInTheDocument();
+      expect(screen.getByText('Profilo')).toBeInTheDocument();
     });
 
     it('should render correct ARIA labels', () => {
       render(<BottomNav />);
 
-      expect(screen.getByLabelText('Navigate to games catalog')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to home page')).toBeInTheDocument();
       expect(screen.getByLabelText('Navigate to your game library')).toBeInTheDocument();
-      expect(screen.getByLabelText('Navigate to dashboard')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to games catalog')).toBeInTheDocument();
       expect(screen.getByLabelText('Navigate to chat interface')).toBeInTheDocument();
+      expect(screen.getByLabelText('Navigate to your profile')).toBeInTheDocument();
     });
 
     it('should have primary navigation landmark', () => {
@@ -67,21 +72,14 @@ describe('BottomNav', () => {
   });
 
   describe('Active State Logic', () => {
-    it('should mark /dashboard as active when pathname is /dashboard', () => {
-      mockUsePathname.mockReturnValue('/dashboard');
-      render(<BottomNav />);
-
-      const dashboardLink = screen.getByLabelText('Navigate to dashboard');
-      expect(dashboardLink).toHaveAttribute('aria-current', 'page');
-      expect(dashboardLink).toHaveClass('text-primary', 'font-semibold');
-    });
-
-    it('should mark /dashboard as active when pathname is / (root)', () => {
+    it('should mark Home as active when pathname is / (root)', () => {
       mockUsePathname.mockReturnValue('/');
       render(<BottomNav />);
 
-      const dashboardLink = screen.getByLabelText('Navigate to dashboard');
-      expect(dashboardLink).toHaveAttribute('aria-current', 'page');
+      const homeLink = screen.getByLabelText('Navigate to home page');
+      expect(homeLink).toHaveAttribute('aria-current', 'page');
+      // Purple active state (Issue #2860)
+      expect(homeLink).toHaveClass('text-[hsl(262_83%_62%)]', 'font-semibold');
     });
 
     it('should mark /games as active for /games/* routes', () => {
@@ -90,7 +88,8 @@ describe('BottomNav', () => {
 
       const gamesLink = screen.getByLabelText('Navigate to games catalog');
       expect(gamesLink).toHaveAttribute('aria-current', 'page');
-      expect(gamesLink).toHaveClass('text-primary', 'font-semibold');
+      // Purple active state (Issue #2860)
+      expect(gamesLink).toHaveClass('text-[hsl(262_83%_62%)]', 'font-semibold');
     });
 
     it('should mark /library as active for /library/* routes', () => {
@@ -99,7 +98,8 @@ describe('BottomNav', () => {
 
       const libraryLink = screen.getByLabelText('Navigate to your game library');
       expect(libraryLink).toHaveAttribute('aria-current', 'page');
-      expect(libraryLink).toHaveClass('text-primary', 'font-semibold');
+      // Purple active state (Issue #2860)
+      expect(libraryLink).toHaveClass('text-[hsl(262_83%_62%)]', 'font-semibold');
     });
 
     it('should mark /chat as active for /chat/* routes', () => {
@@ -108,6 +108,16 @@ describe('BottomNav', () => {
 
       const chatLink = screen.getByLabelText('Navigate to chat interface');
       expect(chatLink).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('should mark /profile as active for /profile routes', () => {
+      mockUsePathname.mockReturnValue('/profile');
+      render(<BottomNav />);
+
+      const profileLink = screen.getByLabelText('Navigate to your profile');
+      expect(profileLink).toHaveAttribute('aria-current', 'page');
+      // Purple active state (Issue #2860)
+      expect(profileLink).toHaveClass('text-[hsl(262_83%_62%)]', 'font-semibold');
     });
 
     it('should not mark multiple items as active', () => {
@@ -124,10 +134,10 @@ describe('BottomNav', () => {
       mockUsePathname.mockReturnValue('/chat');
       render(<BottomNav />);
 
-      const dashboardLink = screen.getByLabelText('Navigate to dashboard');
-      expect(dashboardLink).not.toHaveAttribute('aria-current');
-      expect(dashboardLink).toHaveClass('text-muted-foreground');
-      expect(dashboardLink).not.toHaveClass('text-primary', 'font-semibold');
+      const homeLink = screen.getByLabelText('Navigate to home page');
+      expect(homeLink).not.toHaveAttribute('aria-current');
+      expect(homeLink).toHaveClass('text-muted-foreground');
+      expect(homeLink).not.toHaveClass('text-[hsl(262_83%_62%)]', 'font-semibold');
     });
   });
 
@@ -141,12 +151,13 @@ describe('BottomNav', () => {
       });
     });
 
-    it('should have keyboard focus indicators', () => {
+    it('should have keyboard focus indicators with purple ring', () => {
       render(<BottomNav />);
 
       const links = screen.getAllByRole('link');
       links.forEach(link => {
-        expect(link).toHaveClass('focus-visible:ring-2', 'focus-visible:ring-primary');
+        // Purple focus ring (Issue #2860)
+        expect(link).toHaveClass('focus-visible:ring-2', 'focus-visible:ring-[hsl(262_83%_62%)]');
       });
     });
 
@@ -155,7 +166,7 @@ describe('BottomNav', () => {
 
       // Lucide icons render as <svg> with aria-hidden
       const icons = container.querySelectorAll('svg');
-      expect(icons.length).toBe(4); // Updated: 4 items now
+      expect(icons.length).toBe(5); // Updated: 5 items now (Issue #2860)
       icons.forEach(icon => {
         expect(icon).toHaveAttribute('aria-hidden', 'true');
       });
@@ -175,10 +186,11 @@ describe('BottomNav', () => {
     it('should render correct href attributes', () => {
       render(<BottomNav />);
 
-      expect(screen.getByLabelText('Navigate to games catalog')).toHaveAttribute('href', '/games');
+      expect(screen.getByLabelText('Navigate to home page')).toHaveAttribute('href', '/');
       expect(screen.getByLabelText('Navigate to your game library')).toHaveAttribute('href', '/library');
-      expect(screen.getByLabelText('Navigate to dashboard')).toHaveAttribute('href', '/dashboard');
+      expect(screen.getByLabelText('Navigate to games catalog')).toHaveAttribute('href', '/games');
       expect(screen.getByLabelText('Navigate to chat interface')).toHaveAttribute('href', '/chat');
+      expect(screen.getByLabelText('Navigate to your profile')).toHaveAttribute('href', '/profile');
     });
 
     it('should use Next.js Link component for client-side navigation', () => {
@@ -186,25 +198,35 @@ describe('BottomNav', () => {
 
       // Next.js Link renders as <a> with href
       const links = container.querySelectorAll('a[href^="/"]');
-      expect(links.length).toBe(4); // Updated: 4 items now
+      expect(links.length).toBe(5); // Updated: 5 items now (Issue #2860)
     });
   });
 
-  describe('Design System Compliance (Playful Boardroom)', () => {
-    it('should use primary color for active state', () => {
-      mockUsePathname.mockReturnValue('/dashboard');
+  describe('Design System Compliance (Issue #2860)', () => {
+    it('should use purple color for active state', () => {
+      mockUsePathname.mockReturnValue('/');
       render(<BottomNav />);
 
-      const activeLink = screen.getByLabelText('Navigate to dashboard');
-      expect(activeLink).toHaveClass('text-primary'); // Orange #F97316
+      const activeLink = screen.getByLabelText('Navigate to home page');
+      // Purple #8b5cf6 = hsl(262 83% 62%) for active state
+      expect(activeLink).toHaveClass('text-[hsl(262_83%_62%)]');
     });
 
     it('should use muted-foreground for inactive state', () => {
-      mockUsePathname.mockReturnValue('/dashboard');
+      mockUsePathname.mockReturnValue('/');
       render(<BottomNav />);
 
       const inactiveLink = screen.getByLabelText('Navigate to games catalog');
       expect(inactiveLink).toHaveClass('text-muted-foreground');
+    });
+
+    it('should use primary (orange) color on hover for inactive items', () => {
+      mockUsePathname.mockReturnValue('/');
+      render(<BottomNav />);
+
+      const inactiveLink = screen.getByLabelText('Navigate to games catalog');
+      // Orange hover state (Issue #2860)
+      expect(inactiveLink).toHaveClass('hover:text-primary');
     });
 
     it('should use card background color', () => {
@@ -245,7 +267,7 @@ describe('BottomNav', () => {
     it('should use correct label font size (10px)', () => {
       render(<BottomNav />);
 
-      const labels = screen.getAllByText(/Catalogo|I Miei Giochi|Dashboard|Chat/);
+      const labels = screen.getAllByText(/Home|Libreria|Catalogo|Chat|Profilo/);
       labels.forEach(label => {
         expect(label).toHaveClass('text-[10px]');
       });
@@ -254,7 +276,7 @@ describe('BottomNav', () => {
     it('should use Inter font for labels', () => {
       render(<BottomNav />);
 
-      const labels = screen.getAllByText(/Catalogo|I Miei Giochi|Dashboard|Chat/);
+      const labels = screen.getAllByText(/Home|Libreria|Catalogo|Chat|Profilo/);
       labels.forEach(label => {
         expect(label).toHaveClass('font-[Inter]');
       });

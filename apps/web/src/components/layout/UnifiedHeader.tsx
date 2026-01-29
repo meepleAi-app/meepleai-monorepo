@@ -27,6 +27,7 @@ import {
   Shield,
   LogOut,
   UserIcon,
+  User,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -57,20 +58,15 @@ interface NavItem {
 
 /**
  * Navigation items for the header
- * Order: Home, Catalogo, I Miei Giochi, Dashboard, Chat, Impostazioni, Admin
+ * Order: Dashboard, Library, Catalog, Chat, Profile (Issue #2860)
+ * Settings moved to user dropdown menu
  */
 const NAV_ITEMS: NavItem[] = [
   {
-    href: '/',
-    icon: Home,
-    label: 'Home',
-    ariaLabel: 'Navigate to home page',
-  },
-  {
-    href: '/games',
-    icon: Gamepad2,
-    label: 'Catalogo',
-    ariaLabel: 'Navigate to games catalog',
+    href: '/dashboard',
+    icon: LayoutDashboard,
+    label: 'Dashboard',
+    ariaLabel: 'Navigate to dashboard',
   },
   {
     href: '/library',
@@ -79,10 +75,10 @@ const NAV_ITEMS: NavItem[] = [
     ariaLabel: 'Navigate to your game library',
   },
   {
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    label: 'Dashboard',
-    ariaLabel: 'Navigate to dashboard',
+    href: '/games',
+    icon: Gamepad2,
+    label: 'Catalogo',
+    ariaLabel: 'Navigate to games catalog',
   },
   {
     href: '/chat',
@@ -91,10 +87,10 @@ const NAV_ITEMS: NavItem[] = [
     ariaLabel: 'Navigate to chat interface',
   },
   {
-    href: '/settings',
-    icon: Settings,
-    label: 'Impostazioni',
-    ariaLabel: 'Navigate to settings',
+    href: '/profile',
+    icon: User,
+    label: 'Profilo',
+    ariaLabel: 'Navigate to your profile',
   },
   {
     href: '/admin',
@@ -138,6 +134,9 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
     if (href === '/dashboard') {
       return pathname === '/dashboard';
     }
+    if (href === '/profile') {
+      return pathname === '/profile' || pathname?.startsWith('/profile/');
+    }
     return pathname?.startsWith(href) ?? false;
   };
 
@@ -172,10 +171,10 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
             className={cn(
               'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium',
               'transition-colors duration-200',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
               active
-                ? 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary/90 font-semibold'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-muted/70'
+                ? 'bg-[hsl(262_83%_62%/0.1)] dark:bg-[hsl(262_83%_62%/0.2)] text-[hsl(262_83%_62%)] font-semibold'
+                : 'text-muted-foreground hover:text-primary hover:bg-muted dark:hover:bg-muted/70'
             )}
           >
             <Icon className="h-4 w-4" aria-hidden="true" />

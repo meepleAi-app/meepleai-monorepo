@@ -396,15 +396,15 @@ export function useToggleLibraryFavorite(): UseMutationResult<
         }
       );
 
-      // Optimistically update stats (favoriteCount)
+      // Optimistically update stats (favoriteGames)
       if (previousStats) {
         queryClient.setQueryData<UserLibraryStats>(libraryKeys.stats(), (old) => {
           if (!old) return old;
           return {
             ...old,
-            favoriteCount: isFavorite
-              ? old.favoriteCount + 1
-              : Math.max(0, old.favoriteCount - 1),
+            favoriteGames: isFavorite
+              ? old.favoriteGames + 1
+              : Math.max(0, old.favoriteGames - 1),
           };
         });
       }

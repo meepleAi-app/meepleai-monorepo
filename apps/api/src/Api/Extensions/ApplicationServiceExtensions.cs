@@ -267,6 +267,10 @@ internal static class ApplicationServiceExtensions
         services.AddValidatorsFromAssemblyContaining<BoundedContexts.KnowledgeBase.Application.Validators.SuggestPlayerMoveCommandValidator>(
             includeInternalTypes: true);
 
+        // Issue #3139: Register validators from Administration bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.Administration.Application.Validators.GetUserLibraryStatsQueryValidator>(
+            includeInternalTypes: true);
+
         return services;
     }
 }

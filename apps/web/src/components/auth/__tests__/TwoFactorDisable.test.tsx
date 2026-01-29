@@ -5,7 +5,7 @@
 
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithIntl } from '../../../__tests__/fixtures/common-fixtures';
+import { renderWithIntl, msg } from '../../../__tests__/fixtures/common-fixtures';
 import { TwoFactorDisable } from '../TwoFactorDisable';
 
 describe('TwoFactorDisable', () => {
@@ -21,34 +21,30 @@ describe('TwoFactorDisable', () => {
     it('renders title and subtitle', () => {
       renderWithIntl(<TwoFactorDisable {...defaultProps} />);
 
-      // Uses i18n keys as fallback text in test environment
-      expect(screen.getByText('auth.2fa.disableTitle')).toBeInTheDocument();
-      expect(screen.getByText('auth.2fa.disableSubtitle')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.disableTitle'))).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.disableSubtitle'))).toBeInTheDocument();
     });
 
     it('renders security warning', () => {
       renderWithIntl(<TwoFactorDisable {...defaultProps} />);
 
       expect(screen.getByTestId('disable-warning')).toBeInTheDocument();
-      // Warning texts are i18n keys in test environment
-      expect(screen.getByText('auth.2fa.disableWarningTitle')).toBeInTheDocument();
-      expect(screen.getByText('auth.2fa.disableWarning')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.disableWarningTitle'))).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.disableWarning'))).toBeInTheDocument();
     });
 
     it('renders password input', () => {
       renderWithIntl(<TwoFactorDisable {...defaultProps} />);
 
       expect(screen.getByTestId('disable-password-input')).toBeInTheDocument();
-      // Label text is i18n key
-      expect(screen.getByText('auth.2fa.currentPassword')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.currentPassword'))).toBeInTheDocument();
     });
 
     it('renders code input', () => {
       renderWithIntl(<TwoFactorDisable {...defaultProps} />);
 
       expect(screen.getByTestId('disable-code-input')).toBeInTheDocument();
-      // Label text is i18n key
-      expect(screen.getByText('auth.2fa.codeOrBackup')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.codeOrBackup'))).toBeInTheDocument();
     });
 
     it('renders disable button with destructive variant', () => {
@@ -56,8 +52,7 @@ describe('TwoFactorDisable', () => {
 
       const disableButton = screen.getByTestId('confirm-disable-button');
       expect(disableButton).toBeInTheDocument();
-      // Button text is i18n key
-      expect(disableButton).toHaveTextContent('auth.2fa.disableButton');
+      expect(disableButton).toHaveTextContent(msg('auth.2fa.disableButton'));
     });
 
     it('renders cancel button when onCancel is provided', () => {
@@ -79,8 +74,8 @@ describe('TwoFactorDisable', () => {
       );
 
       expect(screen.getByTestId('low-backup-codes-warning')).toBeInTheDocument();
-      // Warning text is i18n key with interpolated value
-      expect(screen.getByText('auth.2fa.lowBackupCodesWarning')).toBeInTheDocument();
+      // Warning text with default message including the count
+      expect(screen.getByText(/You only have 2 backup codes remaining/)).toBeInTheDocument();
     });
 
     it('does not show low backup codes warning when remainingBackupCodes >= 3', () => {
@@ -212,8 +207,7 @@ describe('TwoFactorDisable', () => {
       await user.click(disableButton);
 
       await waitFor(() => {
-        // Validation error uses i18n key
-        expect(screen.getByText('validation.passwordRequired')).toBeInTheDocument();
+        expect(screen.getByText(msg('validation.passwordRequired'))).toBeInTheDocument();
       });
 
       expect(onDisable).not.toHaveBeenCalled();
@@ -235,8 +229,7 @@ describe('TwoFactorDisable', () => {
       await user.click(disableButton);
 
       await waitFor(() => {
-        // Validation error uses i18n key
-        expect(screen.getByText('auth.2fa.codeRequired')).toBeInTheDocument();
+        expect(screen.getByText(msg('auth.2fa.codeRequired'))).toBeInTheDocument();
       });
 
       expect(onDisable).not.toHaveBeenCalled();
@@ -321,7 +314,7 @@ describe('TwoFactorDisable', () => {
       await user.click(disableButton);
 
       await waitFor(() => {
-        const errorMessage = screen.getByText('validation.passwordRequired');
+        const errorMessage = screen.getByText(msg('validation.passwordRequired'));
         expect(errorMessage).toHaveAttribute('role', 'alert');
       });
     });
@@ -361,8 +354,8 @@ describe('TwoFactorDisable', () => {
       );
 
       expect(screen.getByTestId('low-backup-codes-warning')).toBeInTheDocument();
-      // i18n key displayed in test environment
-      expect(screen.getByText('auth.2fa.lowBackupCodesWarning')).toBeInTheDocument();
+      // Warning text with default message for singular case
+      expect(screen.getByText(/You only have 1 backup code remaining/)).toBeInTheDocument();
     });
 
     it('handles async onDisable errors gracefully', async () => {

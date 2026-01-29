@@ -146,7 +146,9 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
             Tier: user.Tier.Value,
             CreatedAt: user.CreatedAt,
             IsTwoFactorEnabled: user.IsTwoFactorEnabled,
-            TwoFactorEnabledAt: user.TwoFactorEnabledAt
+            TwoFactorEnabledAt: user.TwoFactorEnabledAt,
+            Level: user.Level,
+            ExperiencePoints: user.ExperiencePoints
         );
     }
 }

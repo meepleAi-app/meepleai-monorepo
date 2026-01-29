@@ -26,6 +26,8 @@ internal static class AdminUserEndpoints
         MapUserCrudEndpoints(group);
         // ADMIN-TIER-01: Update user subscription tier
         MapUserTierEndpoints(group);
+        // ISSUE-3141: Set user level endpoint
+        MapUserLevelEndpoints(group);
         // BULK OPERATIONS - Issue #905
         MapBulkUserEndpoints(group);
         // Get user activity timeline (ADMIN-USER-ACTIVITY-01 - Issue #911)
@@ -534,12 +536,52 @@ internal static class AdminUserEndpoints
 
         return Results.Ok(result);
     }
+
+    private static void MapUserLevelEndpoints(RouteGroupBuilder group)
+    {
+        // Set user level (admin only) - Issue #3141
+        group.MapPatch("/admin/users/{userId:guid}/level", HandleSetUserLevel)
+            .WithName("SetUserLevel")
+            .WithTags("Admin", "Users")
+            .WithDescription("Set user level (admin only)")
+            .Produces<Api.BoundedContexts.Authentication.Application.DTOs.UserDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> HandleSetUserLevel(
+        Guid userId,
+        SetUserLevelRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} setting level for user {UserId} to {Level}",
+            session!.User!.Id, userId, request.Level);
+
+        var command = new SetUserLevelCommand(userId, request.Level);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation("User {UserId} level set to {Level} by admin {AdminId}",
+            userId, request.Level, session.User.Id);
+
+        return Results.Ok(result);
+    }
 }
 
 /// <summary>
 /// Request payload for updating user tier.
 /// </summary>
 internal record UpdateUserTierRequest(string Tier);
+
+/// <summary>
+/// Request payload for setting user level.
+/// </summary>
+internal record SetUserLevelRequest(int Level);
 
 /// <summary>
 /// Request payload for bulk password reset.

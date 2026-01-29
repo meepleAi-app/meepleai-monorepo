@@ -1,26 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Trash2, Eye, Download, Shield, Key, Ban, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 
 import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
+import type { SortingState, RowSelectionState } from '@/components/ui/data-display/data-table';
+import { type UserRole } from '@/components/ui/data-display/user-role-badge';
+import { UsersDataTable, type User as UsersTableUser, type UsersTableActions } from './_components';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
-// Types
-type User = {
-  id: string;
-  email: string;
-  displayName: string;
-  role: string;
-  createdAt: string;
-  lastSeenAt: string | null;
-  isSuspended?: boolean;
-  suspendReason?: string | null;
-};
+// Types - use User from users-columns
+type User = UsersTableUser;
 
 type CreateUserRequest = {
   email: string;
@@ -71,8 +65,7 @@ export function AdminPageClient() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'lastSeenAt', desc: true }]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -93,6 +86,17 @@ export function AdminPageClient() {
   });
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
+  // Row selection conversion helpers
+  const rowSelection = useMemo<RowSelectionState>(() =>
+    Object.fromEntries(Array.from(selectedUsers).map(id => [id, true])),
+    [selectedUsers]
+  );
+
+  const handleRowSelectionChange = useCallback((updater: RowSelectionState | ((old: RowSelectionState) => RowSelectionState)) => {
+    const newSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+    setSelectedUsers(new Set(Object.keys(newSelection).filter(id => newSelection[id])));
+  }, [rowSelection]);
+
   // Toast management
   const addToast = useCallback((type: 'success' | 'error' | 'info', message: string) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
@@ -111,6 +115,10 @@ export function AdminPageClient() {
     try {
       setDataLoading(true);
       setError(null);
+
+      // Extract sort from TanStack sorting state
+      const sortBy = sorting[0]?.id || 'lastSeenAt';
+      const sortOrder = sorting[0]?.desc ? 'desc' : 'asc';
 
       const queryParams = new URLSearchParams({
         page: page.toString(),
@@ -144,7 +152,7 @@ export function AdminPageClient() {
       addToast('error', 'Failed to load users');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- addToast is stable (defined with useCallback and empty deps)
-  }, [page, pageSize, search, roleFilter, statusFilter, sortBy, sortOrder]);
+  }, [page, pageSize, search, roleFilter, statusFilter, sorting]);
 
   useEffect(() => {
     fetchUsers();
@@ -342,48 +350,49 @@ export function AdminPageClient() {
     });
   }, [selectedUsers, addToast]);
 
-  // Toggle user selection
-  const toggleUserSelection = useCallback((userId: string) => {
-    setSelectedUsers(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(userId)) {
-        newSet.delete(userId);
-      } else {
-        newSet.add(userId);
-      }
-      return newSet;
-    });
-  }, []);
+  // Bulk suspend users
+  const handleBulkSuspend = useCallback(() => {
+    if (selectedUsers.size === 0) return;
 
-  // Toggle all users
-  const toggleAllUsers = useCallback(() => {
-    if (selectedUsers.size === users.length) {
-      setSelectedUsers(new Set());
-    } else {
-      setSelectedUsers(new Set(users.map(u => u.id)));
-    }
-  }, [users, selectedUsers.size]);
-
-  // Handle sort
-  const handleSort = useCallback((field: string) => {
-    setSortBy(prevSortBy => {
-      if (prevSortBy === field) {
-        // Toggling same column - toggle order and keep same field
-        setSortOrder(prevOrder => (prevOrder === 'asc' ? 'desc' : 'asc'));
-        return prevSortBy;
-      } else {
-        // New column - reset to ascending
-        setSortOrder('asc');
-        return field;
-      }
+    setConfirmation({
+      isOpen: true,
+      title: 'Suspend Multiple Users',
+      message: `Are you sure you want to suspend ${selectedUsers.size} user(s)? They will not be able to login.`,
+      onConfirm: async () => {
+        try {
+          setIsBulkProcessing(true);
+          await Promise.all(
+            Array.from(selectedUsers).map(id =>
+              api.admin.suspendUser(id, 'Bulk suspended by admin')
+            )
+          );
+          addToast('success', `${selectedUsers.size} user(s) suspended successfully`);
+          setSelectedUsers(new Set());
+          setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+          fetchUsers();
+        } catch (err) {
+          addToast('error', 'Failed to suspend some users');
+          setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+        } finally {
+          setIsBulkProcessing(false);
+        }
+      },
     });
-  }, []);
+  }, [selectedUsers, addToast, fetchUsers]);
 
   // Format date
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never';
     return new Date(dateString).toLocaleString();
   };
+
+  // Table actions for UsersDataTable
+  const tableActions: UsersTableActions = useMemo(() => ({
+    onEdit: (user) => setModal({ isOpen: true, mode: 'edit', user }),
+    onSuspend: (user) => handleSuspend(user.id, user.email),
+    onUnsuspend: (user) => handleUnsuspend(user.id, user.email),
+    onDelete: (user) => handleDelete(user.id, user.email),
+  }), [handleSuspend, handleUnsuspend, handleDelete]);
 
   if (dataLoading) {
     return (
@@ -477,6 +486,7 @@ export function AdminPageClient() {
 
         {/* Bulk Action Bar */}
         <BulkActionBar
+          variant="floating"
           selectedCount={selectedUsers.size}
           totalCount={users.length}
           itemLabel="users"
@@ -484,181 +494,55 @@ export function AdminPageClient() {
           actions={[
             {
               id: 'change-role',
-              label: 'Cambia Ruolo',
+              label: 'Change Role',
               icon: Shield,
               variant: 'outline',
               onClick: () => setBulkRoleModal({ isOpen: true, newRole: 'User' }),
-              tooltip: 'Cambia il ruolo degli utenti selezionati',
+              tooltip: 'Change role for selected users',
               disabled: isBulkProcessing,
             },
             {
               id: 'export',
-              label: 'Esporta CSV',
+              label: 'Export CSV',
               icon: Download,
               variant: 'outline',
               onClick: () => handleExportCSV(),
-              tooltip: 'Esporta gli utenti selezionati in CSV',
+              tooltip: 'Export selected users to CSV',
               showCount: false,
             },
             {
-              id: 'reset-password',
-              label: 'Reset Password',
-              icon: Key,
+              id: 'suspend',
+              label: 'Suspend',
+              icon: Ban,
               variant: 'secondary',
-              onClick: () => handleBulkPasswordReset(),
-              tooltip: 'Invia email di reset password agli utenti selezionati',
+              onClick: () => handleBulkSuspend(),
+              tooltip: 'Suspend selected users',
               disabled: isBulkProcessing,
             },
             {
               id: 'delete',
-              label: 'Elimina',
+              label: 'Delete',
               icon: Trash2,
               variant: 'destructive',
               onClick: () => handleBulkDelete(),
-              tooltip: 'Elimina gli utenti selezionati',
+              tooltip: 'Delete selected users',
               disabled: isBulkProcessing,
             },
           ]}
           onClearSelection={() => setSelectedUsers(new Set())}
         />
 
-        {/* User Table */}
-        <div className="overflow-x-auto mb-4">
-          <table className="w-full border-collapse border border-gray-300">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="p-3 border-b-2 border-gray-300 w-10">
-                  <input
-                    type="checkbox"
-                    checked={selectedUsers.size === users.length && users.length > 0}
-                    onChange={toggleAllUsers}
-                    aria-label="Select all users"
-                  />
-                </th>
-                <th
-                  className="p-3 border-b-2 border-gray-300 cursor-pointer text-left"
-                  onClick={() => handleSort('email')}
-                >
-                  Email {sortBy === 'email' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </th>
-                <th
-                  className="p-3 border-b-2 border-gray-300 cursor-pointer text-left"
-                  onClick={() => handleSort('displayName')}
-                >
-                  Display Name {sortBy === 'displayName' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </th>
-                <th
-                  className="p-3 border-b-2 border-gray-300 cursor-pointer text-left"
-                  onClick={() => handleSort('role')}
-                >
-                  Role {sortBy === 'role' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </th>
-                <th className="p-3 border-b-2 border-gray-300 text-left">Status</th>
-                <th
-                  className="p-3 border-b-2 border-gray-300 cursor-pointer text-left"
-                  onClick={() => handleSort('createdAt')}
-                >
-                  Created {sortBy === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </th>
-                <th className="p-3 border-b-2 border-gray-300 text-left">Last Seen</th>
-                <th className="p-3 border-b-2 border-gray-300 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="p-8 text-center text-gray-600">
-                    No users found
-                  </td>
-                </tr>
-              ) : (
-                users.map(user => (
-                  <tr key={user.id} className="border-b border-gray-300">
-                    <td className="p-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedUsers.has(user.id)}
-                        onChange={() => toggleUserSelection(user.id)}
-                        aria-label={`Select ${user.email}`}
-                      />
-                    </td>
-                    <td className="p-3">{user.email}</td>
-                    <td className="p-3">{user.displayName}</td>
-                    <td className="p-3">
-                      <span
-                        className={cn(
-                          'px-2 py-1 rounded text-sm',
-                          user.role === 'Admin' && 'bg-red-600 text-white',
-                          user.role === 'Editor' && 'bg-yellow-400 text-black',
-                          user.role === 'User' && 'bg-green-600 text-white'
-                        )}
-                      >
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <span
-                        className={cn(
-                          'px-2 py-1 rounded text-sm',
-                          user.isSuspended
-                            ? 'bg-orange-500 text-white'
-                            : 'bg-green-100 text-green-800'
-                        )}
-                        data-testid={`status-badge-${user.id}`}
-                      >
-                        {user.isSuspended ? 'Suspended' : 'Active'}
-                      </span>
-                    </td>
-                    <td className="p-3 text-sm text-gray-600">{formatDate(user.createdAt)}</td>
-                    <td className="p-3 text-sm text-gray-600">{formatDate(user.lastSeenAt)}</td>
-                    <td className="p-3 text-center">
-                      <Link
-                        href={`/admin/users/${user.id}`}
-                        className="inline-flex items-center px-3 py-1 mr-2 bg-gray-600 text-white border-none rounded cursor-pointer text-sm hover:bg-gray-700"
-                        title="Visualizza dettagli e attività"
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        View
-                      </Link>
-                      <button
-                        onClick={() => setModal({ isOpen: true, mode: 'edit', user })}
-                        className="px-3 py-1 mr-2 bg-blue-600 text-white border-none rounded cursor-pointer text-sm hover:bg-blue-700"
-                      >
-                        Edit
-                      </button>
-                      {user.isSuspended ? (
-                        <button
-                          onClick={() => handleUnsuspend(user.id, user.email)}
-                          className="inline-flex items-center px-3 py-1 mr-2 bg-green-600 text-white border-none rounded cursor-pointer text-sm hover:bg-green-700"
-                          data-testid={`unsuspend-${user.id}`}
-                          title="Reactivate user"
-                        >
-                          <UserCheck className="h-3 w-3 mr-1" />
-                          Activate
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleSuspend(user.id, user.email)}
-                          className="inline-flex items-center px-3 py-1 mr-2 bg-orange-500 text-white border-none rounded cursor-pointer text-sm hover:bg-orange-600"
-                          data-testid={`suspend-${user.id}`}
-                          title="Suspend user"
-                        >
-                          <Ban className="h-3 w-3 mr-1" />
-                          Suspend
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(user.id, user.email)}
-                        className="px-3 py-1 bg-red-600 text-white border-none rounded cursor-pointer text-sm hover:bg-red-700"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        {/* User Table - TanStack Table */}
+        <div className="mb-4">
+          <UsersDataTable
+            users={users}
+            isLoading={dataLoading}
+            sorting={sorting}
+            onSortingChange={setSorting}
+            rowSelection={rowSelection}
+            onRowSelectionChange={handleRowSelectionChange}
+            actions={tableActions}
+          />
         </div>
 
         {/* Pagination */}
@@ -978,7 +862,7 @@ function UserModal({ mode, user, onClose, onCreate, onUpdate }: UserModalProps) 
             <select
               id="role"
               value={role}
-              onChange={e => setRole(e.target.value)}
+              onChange={e => setRole(e.target.value as UserRole)}
               className="w-full p-2 border border-gray-300 rounded"
               required
             >

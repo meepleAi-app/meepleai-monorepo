@@ -426,7 +426,9 @@ internal record UserDto(
     DateTime CreatedAt,
     DateTime? LastSeenAt,
     bool IsSuspended = false,
-    string? SuspendReason = null
+    string? SuspendReason = null,
+    int Level = 1,
+    int ExperiencePoints = 0
 );
 
 /// <summary>

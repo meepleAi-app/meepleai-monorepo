@@ -69,7 +69,11 @@ describe('useAuth', () => {
     it('should login successfully', async () => {
       const mockUser = { id: '1', email: 'test@test.com', role: 'User' };
       vi.mocked(api.auth.getMe).mockResolvedValueOnce(null);
-      vi.mocked(api.auth.login).mockResolvedValueOnce(mockUser);
+      // Login now returns { user, requiresTwoFactor }
+      vi.mocked(api.auth.login).mockResolvedValueOnce({
+        user: mockUser,
+        requiresTwoFactor: false,
+      });
 
       const { result } = renderHook(() => useAuth());
 
@@ -78,11 +82,14 @@ describe('useAuth', () => {
       });
 
       await act(async () => {
-        const user = await result.current.login({
+        const loginResult = await result.current.login({
           email: 'test@test.com',
           password: 'password',
         });
-        expect(user).toEqual(mockUser);
+        expect(loginResult).toEqual({
+          user: mockUser,
+          requiresTwoFactor: false,
+        });
       });
 
       expect(result.current.user).toEqual(mockUser);

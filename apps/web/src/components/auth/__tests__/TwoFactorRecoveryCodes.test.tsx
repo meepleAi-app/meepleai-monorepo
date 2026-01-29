@@ -5,7 +5,7 @@
 
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithIntl } from '../../../__tests__/fixtures/common-fixtures';
+import { renderWithIntl, msg } from '../../../__tests__/fixtures/common-fixtures';
 import { TwoFactorRecoveryCodes } from '../TwoFactorRecoveryCodes';
 
 describe('TwoFactorRecoveryCodes', () => {
@@ -32,8 +32,7 @@ describe('TwoFactorRecoveryCodes', () => {
     it('renders default title', () => {
       renderWithIntl(<TwoFactorRecoveryCodes {...defaultProps} />);
 
-      // i18n mock returns keys as fallback text
-      expect(screen.getByText('auth.2fa.backupCodesTitle')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.backupCodesTitle'))).toBeInTheDocument();
     });
 
     it('renders custom title when provided', () => {
@@ -48,8 +47,7 @@ describe('TwoFactorRecoveryCodes', () => {
       renderWithIntl(<TwoFactorRecoveryCodes {...defaultProps} />);
 
       expect(screen.getByTestId('backup-codes-warning')).toBeInTheDocument();
-      // i18n mock returns keys as fallback
-      expect(screen.getByText('auth.2fa.backupCodesWarningTitle')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.backupCodesWarningTitle'))).toBeInTheDocument();
     });
 
     it('renders all backup codes in grid', () => {
@@ -67,16 +65,14 @@ describe('TwoFactorRecoveryCodes', () => {
       renderWithIntl(<TwoFactorRecoveryCodes {...defaultProps} />);
 
       expect(screen.getByTestId('copy-codes-button')).toBeInTheDocument();
-      // i18n mock returns keys as fallback
-      expect(screen.getByText('auth.2fa.copyCodes')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.copyCodes'))).toBeInTheDocument();
     });
 
     it('renders download button', () => {
       renderWithIntl(<TwoFactorRecoveryCodes {...defaultProps} />);
 
       expect(screen.getByTestId('download-codes-button')).toBeInTheDocument();
-      // i18n mock returns keys as fallback
-      expect(screen.getByText('auth.2fa.downloadCodes')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.downloadCodes'))).toBeInTheDocument();
     });
 
     it('renders acknowledgment button by default when onContinue is provided', () => {
@@ -86,8 +82,7 @@ describe('TwoFactorRecoveryCodes', () => {
       );
 
       expect(screen.getByTestId('acknowledge-codes-button')).toBeInTheDocument();
-      // i18n mock returns keys as fallback
-      expect(screen.getByText('auth.2fa.savedCodes')).toBeInTheDocument();
+      expect(screen.getByText(msg('auth.2fa.savedCodes'))).toBeInTheDocument();
     });
 
     it('hides acknowledgment button when showAcknowledgment is false', () => {
@@ -161,8 +156,7 @@ describe('TwoFactorRecoveryCodes', () => {
       await user.click(copyButton);
 
       await waitFor(() => {
-        // i18n mock returns keys as fallback
-        expect(screen.getByText('common.copied')).toBeInTheDocument();
+        expect(screen.getByText(msg('common.copied'))).toBeInTheDocument();
       });
 
       vi.unstubAllGlobals();
@@ -201,8 +195,7 @@ describe('TwoFactorRecoveryCodes', () => {
       await user.click(downloadButton);
 
       await waitFor(() => {
-        // i18n mock returns keys as fallback
-        expect(screen.getByText('common.downloaded')).toBeInTheDocument();
+        expect(screen.getByText(msg('common.downloaded'))).toBeInTheDocument();
       });
     });
 
@@ -242,8 +235,7 @@ describe('TwoFactorRecoveryCodes', () => {
       renderWithIntl(<TwoFactorRecoveryCodes {...defaultProps} />);
 
       const grid = screen.getByTestId('backup-codes-grid');
-      // i18n mock returns the key as aria-label
-      expect(grid).toHaveAttribute('aria-label', 'auth.2fa.backupCodesList');
+      expect(grid).toHaveAttribute('aria-label', msg('auth.2fa.backupCodesList'));
     });
 
     it('uses monospace font for codes', () => {

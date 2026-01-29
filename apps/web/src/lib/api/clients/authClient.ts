@@ -26,6 +26,7 @@ import {
   UserPreferencesSchema,
   ApiKeyLoginResponseSchema,
   UserSearchResultSchema,
+  UploadAvatarResponseSchema,
   type AuthUser,
   type LoginResponse,
   type RequestPasswordResetResponse,
@@ -47,6 +48,7 @@ import {
   type CreateApiKeyRequest,
   type CreateApiKeyResponse,
   type ListApiKeysResponse,
+  type UploadAvatarResponse,
   CreateApiKeyResponseSchema,
   ListApiKeysResponseSchema,
   ApiKeyDtoSchema,
@@ -373,6 +375,30 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
         request,
         ChangePasswordResponseSchema
       );
+    },
+
+    /**
+     * Upload user avatar (Issue #2882)
+     * Uses FormData for multipart/form-data upload
+     */
+    async uploadAvatar(file: File): Promise<UploadAvatarResponse> {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      // Use fetch directly for multipart/form-data
+      const response = await fetch('/api/v1/users/profile/avatar', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => 'Upload failed');
+        throw new Error(errorBody || `Upload failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      return UploadAvatarResponseSchema.parse(data);
     },
 
     // ========== User Preferences ==========

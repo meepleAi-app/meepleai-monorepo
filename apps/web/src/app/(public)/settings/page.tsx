@@ -17,12 +17,12 @@
 
 import { useEffect, useState } from 'react';
 
-import { User, Settings, Shield, Key, Camera } from 'lucide-react';
+import { User, Settings, Shield, Key } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 
 import { LoadingButton } from '@/components/loading/LoadingButton';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/data-display/avatar';
+import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import {
   Card,
   CardContent,
@@ -109,7 +109,7 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
-  const [avatarUrl, _setAvatarUrl] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Badges and stats
   const [badges, setBadges] = useState<UserBadgeDto[]>([]);
@@ -683,15 +683,6 @@ export default function SettingsPage() {
     return diffMinutes < 5;
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   const getBadgeTierColor = (tier: string) => {
     const colors: Record<string, string> = {
       Bronze: 'bg-amber-600',
@@ -769,21 +760,24 @@ export default function SettingsPage() {
               <CardContent className="space-y-6">
                 {/* Avatar section */}
                 <div className="flex items-center gap-6">
-                  <div className="relative">
-                    <Avatar className="h-24 w-24">
-                      <AvatarImage src={avatarUrl || undefined} alt={displayName} />
-                      <AvatarFallback className="text-2xl bg-orange-100 text-orange-600">
-                        {getInitials(displayName || 'U')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <button
-                      className="absolute bottom-0 right-0 p-1.5 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors"
-                      onClick={() => setSuccess('Avatar upload coming soon!')}
-                      aria-label="Change avatar"
-                    >
-                      <Camera className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <AvatarUpload
+                    currentAvatarUrl={avatarUrl}
+                    displayName={displayName || 'User'}
+                    onUpload={async (file, previewUrl) => {
+                      // Optimistic UI update
+                      setAvatarUrl(previewUrl);
+                      try {
+                        // TODO: Upload to backend when API is available
+                        // await api.auth.uploadAvatar(file);
+                        setSuccess('Avatar aggiornato con successo!');
+                      } catch (err) {
+                        // Revert on error
+                        setAvatarUrl(avatarUrl);
+                        setError(getErrorMessage(err));
+                      }
+                    }}
+                    disabled={loading}
+                  />
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold">{displayName || 'User'}</h3>
                     <p className="text-muted-foreground">{email}</p>

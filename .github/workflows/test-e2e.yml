@@ -154,12 +154,22 @@ jobs:
         working-directory: apps/api/src/Api
         run: dotnet build --no-restore --configuration Release
 
+      - name: Run Database Migrations
+        working-directory: apps/api/src/Api
+        run: dotnet ef database update
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5432"
+          POSTGRES_DB: meepleai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_test_password
+
       - name: Start Backend API
         working-directory: apps/api/src/Api
         run: |
           dotnet run --no-build --configuration Release --no-launch-profile &
           echo $! > api.pid
-          sleep 30  # Wait for migrations and startup
+          sleep 15  # Wait for startup (migrations already done)
         env:
           ASPNETCORE_ENVIRONMENT: Testing
           ASPNETCORE_URLS: "http://localhost:8080"
@@ -428,12 +438,22 @@ jobs:
         working-directory: apps/api/src/Api
         run: dotnet build --no-restore --configuration Release
 
+      - name: Run Database Migrations
+        working-directory: apps/api/src/Api
+        run: dotnet ef database update
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5432"
+          POSTGRES_DB: meepleai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_test_password
+
       - name: Start Backend API
         working-directory: apps/api/src/Api
         run: |
           dotnet run --no-build --configuration Release --no-launch-profile &
           echo $! > api.pid
-          sleep 30
+          sleep 15  # Wait for startup (migrations already done)
         env:
           ASPNETCORE_ENVIRONMENT: Testing
           ASPNETCORE_URLS: "http://localhost:8080"

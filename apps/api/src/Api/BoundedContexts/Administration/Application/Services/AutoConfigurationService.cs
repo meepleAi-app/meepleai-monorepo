@@ -62,13 +62,19 @@ internal sealed class AutoConfigurationService : IAutoConfigurationService
                 _logger.LogInformation("Seeding test user...");
                 await _mediator.Send(new SeedTestUserCommand(), cancellationToken).ConfigureAwait(false);
 
+                // Seed E2E test users (admin, editor, user with Demo123! password)
+                _logger.LogInformation("Seeding E2E test users...");
+                await _mediator.Send(new SeedE2ETestUsersCommand(), cancellationToken).ConfigureAwait(false);
+
                 // Seed AI models (OpenRouter + Ollama)
                 _logger.LogInformation("Seeding AI models...");
                 await _mediator.Send(new SeedAiModelsCommand(), cancellationToken).ConfigureAwait(false);
             }
             else
             {
-                _logger.LogInformation("Users already exist. Skipping user seeding.");
+                _logger.LogInformation("Users already exist. Checking E2E test users...");
+                // Always ensure E2E test users exist (idempotent - handler checks each user)
+                await _mediator.Send(new SeedE2ETestUsersCommand(), cancellationToken).ConfigureAwait(false);
             }
 
             // Always check and seed games, badges, and rate limits if missing

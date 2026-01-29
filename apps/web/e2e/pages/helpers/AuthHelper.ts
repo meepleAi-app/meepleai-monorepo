@@ -45,27 +45,36 @@ export const USER_FIXTURES = {
   },
 };
 
+/**
+ * E2E Test User Credentials
+ * These users should exist in the database with these credentials.
+ * Use npm run e2e:seed to create them if they don't exist.
+ */
+export const E2E_CREDENTIALS = {
+  admin: {
+    email: 'admin@meepleai.dev',
+    password: 'pVKOMQNK0tFNgGlX', // From admin.secret - real admin password
+  },
+  editor: {
+    email: 'editor@meepleai.dev',
+    password: 'Demo123!',
+  },
+  user: {
+    email: 'user@meepleai.dev',
+    password: 'Demo123!',
+  },
+};
+
 export class AuthHelper {
   constructor(private readonly page: Page) {}
 
   /**
    * Mock authenticated session for a user
    * Sets both API mock and cookies for middleware compatibility
+   * Also mocks common API endpoints that authenticated pages need
    */
   async mockAuthenticatedSession(user: UserFixture): Promise<void> {
-    // Mock API response for /api/v1/auth/me
-    await this.page.route(`${apiBase}/api/v1/auth/me`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          user,
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        }),
-      });
-    });
-
-    // Set cookies for middleware (server-side) to work
+    // Set cookies FIRST (before any routes, so middleware works)
     await this.page.context().addCookies([
       {
         name: 'meepleai_session',
@@ -86,6 +95,293 @@ export class AuthHelper {
         sameSite: 'Lax',
       },
     ]);
+
+    const userResponse = {
+      user,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    };
+
+    // Mock API response for /api/v1/auth/me
+    await this.page.route(`${apiBase}/api/v1/auth/me`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(userResponse),
+      });
+    });
+
+    // Mock login endpoint (in case it's called)
+    await this.page.route(`${apiBase}/api/v1/auth/login`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(userResponse),
+      });
+    });
+
+    // Mock user profile endpoints
+    await this.page.route(`${apiBase}/api/v1/users/me`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: user.id,
+          email: user.email,
+          displayName: user.displayName,
+          role: user.role,
+          createdAt: new Date().toISOString(),
+        }),
+      });
+    });
+
+    await this.page.route(`${apiBase}/api/v1/users/profile`, async route => {
+      if (route.request().method() === 'PUT') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true, message: 'Profile updated' }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: user.id,
+            email: user.email,
+            displayName: user.displayName,
+            role: user.role,
+          }),
+        });
+      }
+    });
+
+    // Mock password change endpoint
+    await this.page.route(`${apiBase}/api/v1/users/profile/password`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, message: 'Password changed' }),
+      });
+    });
+
+    // Mock games endpoint (commonly needed by authenticated pages)
+    await this.page.route(`${apiBase}/api/v1/games**`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 'game-1', title: 'Test Game', description: 'A test game' },
+        ]),
+      });
+    });
+
+    // Mock 2FA status endpoint
+    await this.page.route(`${apiBase}/api/v1/auth/2fa/status`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ enabled: false, backupCodesRemaining: 0 }),
+      });
+    });
+
+    // Mock 2FA enable/disable endpoints
+    await this.page.route(`${apiBase}/api/v1/auth/2fa/enable`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          secret: 'JBSWY3DPEHPK3PXP',
+          qrCode: 'data:image/png;base64,mock',
+          backupCodes: ['code1', 'code2', 'code3', 'code4', 'code5'],
+        }),
+      });
+    });
+
+    await this.page.route(`${apiBase}/api/v1/auth/2fa/disable`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true }),
+      });
+    });
+
+    // Mock sessions endpoint
+    await this.page.route(`${apiBase}/api/v1/users/me/sessions`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'session-1',
+            deviceInfo: 'Chrome on Windows',
+            lastActiveAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            isCurrent: true,
+          },
+        ]),
+      });
+    });
+
+    // Mock session revoke endpoint
+    await this.page.route(`${apiBase}/api/v1/auth/sessions/revoke**`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true }),
+      });
+    });
+
+    // Mock OAuth accounts endpoint
+    await this.page.route(`${apiBase}/api/v1/users/me/oauth-accounts`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+
+    // Mock API keys endpoint
+    await this.page.route(`${apiBase}/api/v1/auth/api-keys**`, async route => {
+      if (route.request().method() === 'DELETE') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true }),
+        });
+      } else if (route.request().method() === 'POST') {
+        await route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'key-1',
+            name: 'Test Key',
+            key: 'meeple_test_key_123',
+            createdAt: new Date().toISOString(),
+          }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([
+            {
+              id: 'key-1',
+              name: 'Production Key',
+              lastUsedAt: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              usage: { calls: 100 },
+            },
+            {
+              id: 'key-2',
+              name: 'Development Key',
+              lastUsedAt: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              usage: { calls: 50 },
+            },
+          ]),
+        });
+      }
+    });
+
+    // Mock chat/threads endpoint
+    await this.page.route(`${apiBase}/api/v1/chat/threads**`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+
+    // Mock settings endpoints
+    await this.page.route(`${apiBase}/api/v1/settings/**`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true }),
+      });
+    });
+
+    // Mock RuleSpec/editor endpoints (for Editor and Admin roles)
+    if (user.role === 'Editor' || user.role === 'Admin') {
+      await this.page.route(`${apiBase}/api/v1/rulespecs**`, async route => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+      });
+
+      await this.page.route(`${apiBase}/api/v1/versions**`, async route => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+      });
+    }
+
+    // Mock admin endpoints (for Admin role only)
+    if (user.role === 'Admin') {
+      await this.page.route(`${apiBase}/api/v1/admin/**`, async route => {
+        const url = route.request().url();
+        if (url.includes('/stats')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              totalUsers: 100,
+              totalGames: 50,
+              totalQuestions: 1000,
+              activeUsers: 25,
+            }),
+          });
+        } else if (url.includes('/users')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              users: [
+                { id: '1', email: 'user1@test.com', role: 'User', status: 'Active' },
+                { id: '2', email: 'user2@test.com', role: 'Editor', status: 'Active' },
+              ],
+              total: 2,
+              page: 1,
+              pageSize: 20,
+            }),
+          });
+        } else {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ data: [] }),
+          });
+        }
+      });
+
+      await this.page.route(`${apiBase}/api/v1/configuration**`, async route => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+      });
+
+      await this.page.route(`${apiBase}/api/v1/users**`, async route => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+      });
+
+      await this.page.route(`${apiBase}/api/v1/analytics**`, async route => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ metrics: [] }),
+        });
+      });
+    }
   }
 
   /**
@@ -276,5 +572,51 @@ export class AuthHelper {
   async verifyAuthenticated(): Promise<boolean> {
     const cookies = await this.getSessionCookies();
     return cookies.some(c => c.name === 'meepleai_session');
+  }
+
+  /**
+   * Login with real API credentials (for tests requiring real session)
+   * This creates a real session in the backend that passes middleware validation.
+   *
+   * @param role - Which test user to login as
+   * @returns true if login successful, false otherwise
+   */
+  async loginWithRealCredentials(role: 'admin' | 'editor' | 'user'): Promise<boolean> {
+    const credentials = E2E_CREDENTIALS[role];
+
+    try {
+      const response = await this.page.request.post(`${apiBase}/api/v1/auth/login`, {
+        data: {
+          email: credentials.email,
+          password: credentials.password,
+        },
+      });
+
+      if (response.ok()) {
+        console.log(`✅ Real login successful for ${role}: ${credentials.email}`);
+        return true;
+      } else {
+        const body = await response.text();
+        console.error(`❌ Real login failed for ${role}:`, response.status(), body);
+        return false;
+      }
+    } catch (error) {
+      console.error(`❌ Real login error for ${role}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Setup real authenticated session for tests that need to pass middleware validation
+   * This performs actual API login and stores the session cookies.
+   *
+   * @param role - Which test user to login as
+   * @throws Error if login fails
+   */
+  async setupRealSession(role: 'admin' | 'editor' | 'user'): Promise<void> {
+    const success = await this.loginWithRealCredentials(role);
+    if (!success) {
+      throw new Error(`Failed to login as ${role}. Make sure E2E test users exist in the database.`);
+    }
   }
 }

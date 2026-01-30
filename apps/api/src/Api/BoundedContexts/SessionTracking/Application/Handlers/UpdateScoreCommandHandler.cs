@@ -1,7 +1,10 @@
 using MediatR;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
+using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -12,15 +15,18 @@ public class UpdateScoreCommandHandler : IRequestHandler<UpdateScoreCommand, Upd
     private readonly ISessionRepository _sessionRepository;
     private readonly IScoreEntryRepository _scoreEntryRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISessionSyncService _syncService;
 
     public UpdateScoreCommandHandler(
         ISessionRepository sessionRepository,
         IScoreEntryRepository scoreEntryRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ISessionSyncService syncService)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _scoreEntryRepository = scoreEntryRepository ?? throw new ArgumentNullException(nameof(scoreEntryRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _syncService = syncService ?? throw new ArgumentNullException(nameof(syncService));
     }
 
     public async Task<UpdateScoreResult> Handle(UpdateScoreCommand request, CancellationToken cancellationToken)
@@ -73,6 +79,18 @@ public class UpdateScoreCommandHandler : IRequestHandler<UpdateScoreCommand, Upd
             .First(x => x.ParticipantId == request.ParticipantId)
             .Rank;
 
+        // GST-003: Publish SSE event for real-time score updates
+        var evt = new ScoreUpdatedEvent
+        {
+            SessionId = request.SessionId,
+            ParticipantId = request.ParticipantId,
+            ScoreEntryId = scoreEntry.Id,
+            NewScore = request.ScoreValue,
+            RoundNumber = request.RoundNumber,
+            Category = request.Category,
+            Timestamp = DateTime.UtcNow
+        };
+        await _syncService.PublishEventAsync(request.SessionId, evt, cancellationToken).ConfigureAwait(false);
 
         return new UpdateScoreResult(
             scoreEntry.Id,

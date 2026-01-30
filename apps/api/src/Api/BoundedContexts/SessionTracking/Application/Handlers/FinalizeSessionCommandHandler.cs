@@ -1,7 +1,9 @@
 using MediatR;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
+using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -12,15 +14,18 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
     private readonly ISessionRepository _sessionRepository;
     private readonly IScoreEntryRepository _scoreEntryRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISessionSyncService _syncService;
 
     public FinalizeSessionCommandHandler(
         ISessionRepository sessionRepository,
         IScoreEntryRepository scoreEntryRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ISessionSyncService syncService)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _scoreEntryRepository = scoreEntryRepository ?? throw new ArgumentNullException(nameof(scoreEntryRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _syncService = syncService ?? throw new ArgumentNullException(nameof(syncService));
     }
 
     public async Task<FinalizeSessionResult> Handle(FinalizeSessionCommand request, CancellationToken cancellationToken)
@@ -75,6 +80,18 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
             // CreateGamesPlayedCommand integration
         }
 
+        // GST-003: Publish SSE event for session finalization
+        var durationMinutes = (int)(DateTime.UtcNow - session.SessionDate).TotalMinutes;
+
+        var evt = new SessionFinalizedEvent
+        {
+            SessionId = request.SessionId,
+            WinnerId = winnerId != Guid.Empty ? winnerId : null,
+            FinalRanks = request.FinalRanks,
+            DurationMinutes = durationMinutes,
+            Timestamp = DateTime.UtcNow
+        };
+        await _syncService.PublishEventAsync(request.SessionId, evt, cancellationToken).ConfigureAwait(false);
 
         return new FinalizeSessionResult(
             winnerId != Guid.Empty ? winnerId : null,

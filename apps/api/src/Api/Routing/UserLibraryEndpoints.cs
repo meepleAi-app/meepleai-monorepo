@@ -31,6 +31,7 @@ internal static class UserLibraryEndpoints
         MapGetGameAgentConfigEndpoint(group);
         MapConfigureGameAgentEndpoint(group);
         MapResetGameAgentEndpoint(group);
+        MapSaveAgentConfigEndpoint(group); // Issue #3212
 
         // Custom PDF endpoints
         MapUploadCustomGamePdfEndpoint(group);
@@ -931,6 +932,59 @@ internal static class UserLibraryEndpoints
 
         return false;
     }
+
+    /// <summary>
+    /// Maps POST endpoint for saving simplified agent configuration (Issue #3212).
+    /// </summary>
+    private static void MapSaveAgentConfigEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/library/games/{gameId:guid}/agent-config", async (
+            Guid gameId,
+            [FromBody] SaveAgentConfigRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new SaveAgentConfigCommand(
+                userId,
+                gameId,
+                request.TypologyId,
+                request.ModelName,
+                request.CostEstimate
+            );
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (ConflictException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<SaveAgentConfigResponse>(200)
+        .Produces<ProblemDetails>(400)
+        .Produces<ProblemDetails>(401)
+        .Produces<ProblemDetails>(404)
+        .Produces<ProblemDetails>(409)
+        .WithName("SaveAgentConfig")
+        .WithDescription("Save simplified agent configuration for a game (Issue #3212)")
+        .WithOpenApi();
+    }
 }
 
 /// <summary>
@@ -1000,4 +1054,14 @@ public record RecordGameSessionRequest(
 /// </summary>
 public record SendLoanReminderRequest(
     string? CustomMessage = null
+);
+
+/// <summary>
+/// Request body for saving agent configuration (Issue #3212).
+/// Simplified version of AgentConfigDto for frontend modal.
+/// </summary>
+public record SaveAgentConfigRequest(
+    Guid TypologyId,
+    string ModelName,
+    double CostEstimate
 );

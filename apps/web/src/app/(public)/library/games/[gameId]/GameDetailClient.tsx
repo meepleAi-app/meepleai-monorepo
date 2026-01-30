@@ -15,9 +15,9 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
-import { ArrowLeft, MoreVertical } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Settings } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -26,6 +26,8 @@ import { SplitViewLayout } from '@/components/game-detail/SplitViewLayout';
 import { PdfViewer } from '@/components/pdf-viewer';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
+import { AgentConfigModal } from '@/components/agent/AgentConfigModal'; // Issue #3186
+import { useAgentConfig } from '@/hooks/queries/useAgentConfig'; // Issue #3213
 
 export interface GameDetailClientProps {
   gameId: string;
@@ -45,12 +47,15 @@ export default function GameDetailClient({
   gameImageUrl,
   agentModes,
   availablePdfs,
-}: GameDetailClientProps) {
+}: GameDetailClientProps): JSX.Element {
   const [currentPdfUrl, setCurrentPdfUrl] = useState<string>(
-    availablePdfs[0]?.id || '' // TODO: Map to actual URL
+    availablePdfs[0]?.id || ''
   );
   const [highlightedPage, setHighlightedPage] = useState<number | undefined>();
   const [mobileView, setMobileView] = useState<'chat' | 'pdf'>('chat');
+
+  // Query existing agent config (Issue #3213)
+  const { data: existingConfig } = useAgentConfig(gameId);
 
   // Handle PDF reference click from chat
   const handlePdfReferenceClick = useCallback((pageNumber: number, pdfId: string) => {
@@ -66,6 +71,12 @@ export default function GameDetailClient({
     // On mobile, switch to PDF view
     setMobileView('pdf');
   }, [currentPdfUrl]);
+
+  // Config saved handler (Issue #3213)
+  const handleConfigSaved = useCallback(() => {
+    // Note: Chat sidebar auto-visible, no explicit state management needed
+    // Future: Could add explicit open logic when sidebar becomes toggleable
+  }, []);
 
   return (
     <div className="flex flex-col h-screen">
@@ -99,9 +110,37 @@ export default function GameDetailClient({
         </div>
 
         {/* Actions Menu */}
-        <Button variant="ghost" size="sm">
-          <MoreVertical className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Agent Config - Conditional display (Issue #3213) */}
+          {existingConfig ? (
+            // Edit Config button when config exists
+            <AgentConfigModal
+              gameId={gameId}
+              trigger={
+                <Button variant="outline" size="sm">
+                  <Settings className="h-4 w-4 mr-1" />
+                  Edit Config
+                </Button>
+              }
+              onConfigSaved={handleConfigSaved}
+            />
+          ) : (
+            // Initial Config button when no config
+            <AgentConfigModal
+              gameId={gameId}
+              trigger={
+                <Button variant="outline" size="sm">
+                  AI Config
+                </Button>
+              }
+              onConfigSaved={handleConfigSaved}
+            />
+          )}
+
+          <Button variant="ghost" size="sm">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </div>
       </header>
 
       {/* Mobile View Toggle */}

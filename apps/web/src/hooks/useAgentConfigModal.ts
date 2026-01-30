@@ -202,13 +202,9 @@ export function useAgentConfigModal({
     error: saveError,
   } = useMutation({
     mutationFn: async (request: AgentConfigRequest) => {
-      // Note: Backend POST endpoint pending implementation (Issue #3186)
-      // Simulated save for frontend-first development
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Once backend ready: return api.library.saveAgentConfig(gameId, request);
-
-      return request;
+      // Issue #3212: Backend POST endpoint now implemented
+      const response = await api.library.saveAgentConfig(gameId, request);
+      return { ...request, configId: response.configId };
     },
     onSuccess: (data) => {
       // Save to localStorage

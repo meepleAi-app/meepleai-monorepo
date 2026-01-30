@@ -4,6 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
+using Api.BoundedContexts.SessionTracking.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.UserLibrary.Infrastructure.DependencyInjection;
@@ -65,6 +66,9 @@ internal static class ApplicationServiceExtensions
 
         // UserLibrary bounded context
         services.AddUserLibraryContext();
+
+        // GST-003: SessionTracking bounded context
+        services.AddSessionTrackingContext();
 
         // ISSUE-2370: SharedGameCatalog bounded context
         // ISSUE-2454: Background processing configuration
@@ -269,6 +273,10 @@ internal static class ApplicationServiceExtensions
 
         // Issue #3139: Register validators from Administration bounded context
         services.AddValidatorsFromAssemblyContaining<BoundedContexts.Administration.Application.Validators.GetUserLibraryStatsQueryValidator>(
+            includeInternalTypes: true);
+
+        // GST-003: Register validators from SessionTracking bounded context
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.SessionTracking.Application.Commands.CreateSessionCommandValidator>(
             includeInternalTypes: true);
 
         return services;

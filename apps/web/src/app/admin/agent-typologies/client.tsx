@@ -39,10 +39,18 @@ export function TypologiesClient() {
               Manage AI agent typologies and review community proposals
             </p>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create New
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => router.push('/admin/agent-typologies/pending')}
+            >
+              Pending Approvals
+            </Button>
+            <Button onClick={handleCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create New
+            </Button>
+          </div>
         </div>
 
         <TypologyTable />

@@ -207,35 +207,44 @@ internal static class KnowledgeBaseEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
+        logger.LogDebug("[KnowledgeBase.Ask] HandleAsk ENTRY - gameId: {GameId}, query: {Query}", 
+            req.gameId, req.query?.Substring(0, Math.Min(50, req.query?.Length ?? 0)));
+
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        logger.LogDebug("[KnowledgeBase.Ask] Session retrieved - UserId: {UserId}", session?.User?.Id);
 
         if (!Guid.TryParse(req.gameId, out var gameId))
         {
+            logger.LogWarning("[KnowledgeBase.Ask] Invalid gameId format: {GameId}", req.gameId);
             return Results.BadRequest(new { error = "Invalid gameId format" });
         }
 
         var queryError = QueryValidator.ValidateQuery(req.query);
         if (queryError != null)
         {
+            logger.LogWarning("[KnowledgeBase.Ask] Query validation failed: {Error}", queryError);
             return Results.BadRequest(new { error = queryError });
         }
 
         logger.LogInformation(
-            "KnowledgeBase Q&amp;A request from user {UserId} for game {GameId}: {Query}",
+            "[KnowledgeBase.Ask] Q&A request from user {UserId} for game {GameId}: {Query}",
             session!.User!.Id, gameId, req.query);
 
         var query = new AskQuestionQuery(
             GameId: gameId,
-            Question: req.query,
+            Question: req.query!,  // Already validated by QueryValidator above
             Language: req.language ?? "en",
             BypassCache: req.bypassCache ?? false
         );
 
+        logger.LogDebug("[KnowledgeBase.Ask] Sending AskQuestionQuery to mediator...");
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var response = await mediator.Send(query, ct).ConfigureAwait(false);
-
+        stopwatch.Stop();
+        
         logger.LogInformation(
-            "KnowledgeBase Q&amp;A completed: Confidence={Confidence}, IsLowQuality={IsLowQuality}",
-            response.OverallConfidence, response.IsLowQuality);
+            "[KnowledgeBase.Ask] Q&A completed in {ElapsedMs}ms: Confidence={Confidence}, IsLowQuality={IsLowQuality}",
+            stopwatch.ElapsedMilliseconds, response.OverallConfidence, response.IsLowQuality);
 
         return Results.Ok(new
         {

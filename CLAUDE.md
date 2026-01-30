@@ -98,6 +98,19 @@ cd infra && docker compose restart redis
 
 ## Development
 
+### PowerShell Preference
+
+**CRITICAL**: Always use `pwsh -c "command"` for Docker operations on Windows, NOT bash directly.
+
+```bash
+# ✅ CORRECT
+pwsh -c "docker logs meepleai-api --tail=50"
+pwsh -c "cd infra; docker compose ps"
+
+# ❌ WRONG
+docker logs meepleai-api | grep pattern  # bash pipe issues on Windows
+```
+
 ### Quick Start
 
 ```bash

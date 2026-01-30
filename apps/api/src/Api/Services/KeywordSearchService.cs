@@ -18,8 +18,9 @@ internal class KeywordSearchService : IKeywordSearchService
     private readonly ILogger<KeywordSearchService> _logger;
 
     // PostgreSQL full-text search configuration
-    // ADR-016 Phase 3: Default to Italian for MeepleAI board game rules
-    private const string DefaultTextSearchConfig = "meepleai_italian";
+    // Issue #3228: Use built-in config (custom meepleai_italian never created)
+    // Note: ADR-016 planned custom FTS with game synonyms - tracked in follow-up issue
+    private const string DefaultTextSearchConfig = "italian";
     private const string EnglishTextSearchConfig = "english";
     private const int DefaultNormalization = 1; // ts_rank_cd normalization method (1 = divide by document length)
 
@@ -28,8 +29,8 @@ internal class KeywordSearchService : IKeywordSearchService
     /// </summary>
     private static readonly Dictionary<string, string> LanguageToFtsConfig = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
-        { "it", "meepleai_italian" },
-        { "italian", "meepleai_italian" },
+        { "it", "italian" },  // Issue #3228: Use built-in (meepleai_italian not created)
+        { "italian", "italian" },
         { "en", "english" },
         { "english", "english" }
     };

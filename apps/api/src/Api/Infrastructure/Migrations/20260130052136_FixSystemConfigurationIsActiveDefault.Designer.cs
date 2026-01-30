@@ -3,17 +3,20 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Api.Migrations
+namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260130052136_FixSystemConfigurationIsActiveDefault")]
+    partial class FixSystemConfigurationIsActiveDefault
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1482,137 +1485,6 @@ namespace Api.Migrations
                             t.HasCheckConstraint("ck_agent_configurations_max_tokens", "max_tokens > 0 AND max_tokens <= 32000");
 
                             t.HasCheckConstraint("ck_agent_configurations_temperature", "temperature >= 0.0 AND temperature <= 2.0");
-                        });
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("approved_at");
-
-                    b.Property<Guid?>("ApprovedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("approved_by");
-
-                    b.Property<string>("BasePrompt")
-                        .IsRequired()
-                        .HasMaxLength(5000)
-                        .HasColumnType("character varying(5000)")
-                        .HasColumnName("base_prompt");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by");
-
-                    b.Property<string>("DefaultStrategyJson")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("default_strategy_json");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("description");
-
-                    b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_deleted");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("name");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer")
-                        .HasColumnName("status");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedBy")
-                        .HasDatabaseName("ix_agent_typologies_created_by");
-
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasDatabaseName("ix_agent_typologies_name")
-                        .HasFilter("is_deleted = false");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("ix_agent_typologies_status");
-
-                    b.ToTable("agent_typologies", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.TypologyPromptTemplateEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(10000)
-                        .HasColumnType("character varying(10000)")
-                        .HasColumnName("content");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by");
-
-                    b.Property<bool>("IsCurrent")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_current");
-
-                    b.Property<Guid>("TypologyId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("typology_id");
-
-                    b.Property<int>("Version")
-                        .HasColumnType("integer")
-                        .HasColumnName("version");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TypologyId")
-                        .HasDatabaseName("ix_typology_prompt_templates_typology_id");
-
-                    b.HasIndex("TypologyId", "IsCurrent")
-                        .IsUnique()
-                        .HasDatabaseName("ix_typology_prompt_templates_current")
-                        .HasFilter("is_current = true");
-
-                    b.HasIndex("TypologyId", "Version")
-                        .IsUnique()
-                        .HasDatabaseName("ix_typology_prompt_templates_typology_version");
-
-                    b.ToTable("typology_prompt_templates", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_typology_prompt_templates_version", "version >= 1");
                         });
                 });
 
@@ -5065,17 +4937,6 @@ namespace Api.Migrations
                     b.Navigation("Agent");
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.TypologyPromptTemplateEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity", "Typology")
-                        .WithMany("TypologyPromptTemplates")
-                        .HasForeignKey("TypologyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Typology");
-                });
-
             modelBuilder.Entity("Api.Infrastructure.Entities.LlmCostLogEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
@@ -5675,11 +5536,6 @@ namespace Api.Migrations
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameSessionStateEntity", b =>
                 {
                     b.Navigation("Snapshots");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity", b =>
-                {
-                    b.Navigation("TypologyPromptTemplates");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PromptTemplateEntity", b =>

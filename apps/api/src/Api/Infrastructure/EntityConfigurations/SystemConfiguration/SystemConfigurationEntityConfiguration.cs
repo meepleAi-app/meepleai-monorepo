@@ -17,7 +17,7 @@ internal class SystemConfigurationEntityConfiguration : IEntityTypeConfiguration
         builder.Property(e => e.ValueType).IsRequired().HasMaxLength(50);
         builder.Property(e => e.Description).HasMaxLength(1000);
         builder.Property(e => e.Category).IsRequired().HasMaxLength(100);
-        builder.Property(e => e.IsActive).IsRequired();
+        builder.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
         builder.Property(e => e.RequiresRestart).IsRequired();
         builder.Property(e => e.Environment).IsRequired().HasMaxLength(50);
         builder.Property(e => e.Version).IsRequired();

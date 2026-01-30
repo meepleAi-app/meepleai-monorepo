@@ -407,3 +407,172 @@ describe('UserGameCard - Edge Cases', () => {
     expect(notesElement).toHaveClass('line-clamp-2');
   });
 });
+
+// ============================================================================
+// Ask Agent Button Tests (Issue #3190 - AGT-016)
+// ============================================================================
+
+describe('UserGameCard - Ask Agent Button', () => {
+  const mockOnAskAgent = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should render Ask Agent button when game has PDFs', () => {
+    const gameWithPdf: UserLibraryEntry = {
+      ...mockGameComplete,
+      hasPdfDocuments: true,
+    };
+
+    render(
+      <UserGameCard game={gameWithPdf} onAskAgent={mockOnAskAgent} {...mockCallbacks} />,
+      { wrapper: createWrapper() }
+    );
+
+    const askAgentButton = screen.getByRole('button', { name: /ask agent/i });
+    expect(askAgentButton).toBeInTheDocument();
+    expect(askAgentButton).toBeEnabled();
+  });
+
+  it('should render Ask Agent button when game has no PDFs', () => {
+    const gameWithoutPdf: UserLibraryEntry = {
+      ...mockGameComplete,
+      hasPdfDocuments: false,
+    };
+
+    render(
+      <UserGameCard game={gameWithoutPdf} onAskAgent={mockOnAskAgent} {...mockCallbacks} />,
+      { wrapper: createWrapper() }
+    );
+
+    const askAgentButton = screen.getByRole('button', { name: /ask agent/i });
+    expect(askAgentButton).toBeInTheDocument();
+  });
+
+  it('should disable Ask Agent button when game has no PDFs', () => {
+    const gameWithoutPdf: UserLibraryEntry = {
+      ...mockGameComplete,
+      hasPdfDocuments: false,
+    };
+
+    render(
+      <UserGameCard game={gameWithoutPdf} onAskAgent={mockOnAskAgent} {...mockCallbacks} />,
+      { wrapper: createWrapper() }
+    );
+
+    const askAgentButton = screen.getByRole('button', { name: /ask agent/i });
+    expect(askAgentButton).toBeDisabled();
+  });
+
+  it('should show tooltip when Ask Agent button is disabled', async () => {
+    const gameWithoutPdf: UserLibraryEntry = {
+      ...mockGameComplete,
+      hasPdfDocuments: false,
+    };
+
+    render(
+      <UserGameCard game={gameWithoutPdf} onAskAgent={mockOnAskAgent} {...mockCallbacks} />,
+      { wrapper: createWrapper() }
+    );
+
+    const askAgentButton = screen.getByRole('button', { name: /ask agent/i });
+
+    // Hover to trigger tooltip
+    fireEvent.mouseEnter(askAgentButton);
+
+    // Tooltip should show "No rulebook available"
+    await screen.findByText(/no rulebook available/i);
+  });
+
+  it('should NOT show tooltip when Ask Agent button is enabled', () => {
+    const gameWithPdf: UserLibraryEntry = {
+      ...mockGameComplete,
+      hasPdfDocuments: true,
+    };
+
+    render(
+      <UserGameCard game={gameWithPdf} onAskAgent={mockOnAskAgent} {...mockCallbacks} />,
+      { wrapper: createWrapper() }
+    );
+
+    const askAgentButton = screen.getByRole('button', { name: /ask agent/i });
+    fireEvent.mouseEnter(askAgentButton);
+
+    // Tooltip should NOT appear
+    expect(screen.queryByText(/no rulebook available/i)).not.toBeInTheDocument();
+  });
+
+  it('should call onAskAgent callback with gameId when clicked', () => {
+    const gameWithPdf: UserLibraryEntry = {
+      ...mockGameComplete,
+      hasPdfDocuments: true,
+    };
+
+    render(
+      <UserGameCard game={gameWithPdf} onAskAgent={mockOnAskAgent} {...mockCallbacks} />,
+      { wrapper: createWrapper() }
+    );
+
+    const askAgentButton = screen.getByRole('button', { name: /ask agent/i });
+    fireEvent.click(askAgentButton);
+
+    expect(mockOnAskAgent).toHaveBeenCalledWith(gameWithPdf.gameId);
+    expect(mockOnAskAgent).toHaveBeenCalledTimes(1);
+  });
+
+  it('should NOT call onAskAgent when disabled button is clicked', () => {
+    const gameWithoutPdf: UserLibraryEntry = {
+      ...mockGameComplete,
+      hasPdfDocuments: false,
+    };
+
+    render(
+      <UserGameCard game={gameWithoutPdf} onAskAgent={mockOnAskAgent} {...mockCallbacks} />,
+      { wrapper: createWrapper() }
+    );
+
+    const askAgentButton = screen.getByRole('button', { name: /ask agent/i });
+    fireEvent.click(askAgentButton);
+
+    expect(mockOnAskAgent).not.toHaveBeenCalled();
+  });
+
+  it('should render Bot icon in Ask Agent button', () => {
+    const gameWithPdf: UserLibraryEntry = {
+      ...mockGameComplete,
+      hasPdfDocuments: true,
+    };
+
+    render(
+      <UserGameCard game={gameWithPdf} onAskAgent={mockOnAskAgent} {...mockCallbacks} />,
+      { wrapper: createWrapper() }
+    );
+
+    const askAgentButton = screen.getByRole('button', { name: /ask agent/i });
+    const botIcon = askAgentButton.querySelector('svg');
+    expect(botIcon).toBeInTheDocument();
+  });
+
+  it('should stop event propagation to prevent card navigation', () => {
+    const gameWithPdf: UserLibraryEntry = {
+      ...mockGameComplete,
+      hasPdfDocuments: true,
+    };
+
+    const onClickCard = vi.fn();
+
+    render(
+      <div onClick={onClickCard}>
+        <UserGameCard game={gameWithPdf} onAskAgent={mockOnAskAgent} {...mockCallbacks} />
+      </div>,
+      { wrapper: createWrapper() }
+    );
+
+    const askAgentButton = screen.getByRole('button', { name: /ask agent/i });
+    fireEvent.click(askAgentButton);
+
+    expect(mockOnAskAgent).toHaveBeenCalled();
+    expect(onClickCard).not.toHaveBeenCalled(); // Event should not propagate
+  });
+});

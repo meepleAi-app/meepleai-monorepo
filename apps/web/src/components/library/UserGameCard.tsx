@@ -29,6 +29,7 @@ import {
   RefreshCw,
   Zap,
   Bot,
+  Dice6,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -343,6 +344,13 @@ export function UserGameCard({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href={`/library/games/${game.gameId}/toolkit`}>
+                      <Dice6 className="mr-2 h-4 w-4" />
+                      Toolkit Punteggi
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => onEditNotes(game.gameId, game.gameTitle, game.notes)}>
                     <Edit2 className="mr-2 h-4 w-4" />
                     Modifica Note
@@ -534,7 +542,7 @@ export function UserGameCard({
           </p>
         )}
 
-        {/* Action Buttons (Issue #3151, #3185) */}
+        {/* Action Buttons (Issue #3151, #3185, #3164) */}
         {!selectionMode && (
           <div className="flex gap-2 pt-2">
             <Button
@@ -544,9 +552,9 @@ export function UserGameCard({
               className="flex-1"
               onClick={(e: React.MouseEvent) => e.stopPropagation()}
             >
-              <Link href={`/library/games/${game.gameId}`}>
-                <MessageCircle className="mr-1 h-3 w-3" />
-                Chatta
+              <Link href={`/library/games/${game.gameId}/toolkit`}>
+                <Dice6 className="mr-1 h-3 w-3" />
+                Toolkit
               </Link>
             </Button>
             <Tooltip>

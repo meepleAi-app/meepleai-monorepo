@@ -58,6 +58,7 @@ export interface LibraryClient {
   // Agent Configuration (Issue #2518)
   getAgentConfig(gameId: string): Promise<AgentConfigDto | null>;
   updateAgentConfig(gameId: string, request: UpdateAgentConfigRequest): Promise<AgentConfigDto>;
+  saveAgentConfig(gameId: string, request: { typologyId: string; modelName: string; costEstimate: number }): Promise<{ success: boolean; configId: string; message: string }>;
   // Library Sharing (Issue #2614)
   getShareLink(): Promise<LibraryShareLink | null>;
   createShareLink(request: CreateLibraryShareLinkRequest): Promise<LibraryShareLink>;

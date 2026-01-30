@@ -27,6 +27,7 @@ import {
   LogOut,
   UserIcon,
   User,
+  Dice6,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -84,6 +85,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: MessageSquare,
     label: 'Chat',
     ariaLabel: 'Navigate to chat interface',
+  },
+  {
+    href: '/toolkit',
+    icon: Dice6,
+    label: 'Toolkit',
+    ariaLabel: 'Navigate to game session toolkit',
   },
   {
     href: '/profile',

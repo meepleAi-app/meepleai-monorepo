@@ -18,15 +18,13 @@ import { create } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
-import { createConfigSlice, ConfigSlice } from './slices/configSlice';
-import { createSessionSlice, SessionSlice } from './slices/sessionSlice';
-import { createConversationSlice, ConversationSlice } from './slices/conversationSlice';
+import { createConfigSlice } from './slices/configSlice';
+import { createSessionSlice } from './slices/sessionSlice';
+import { createConversationSlice } from './slices/conversationSlice';
+import type { AgentStore } from './types/store.types';
 
-// ============================================================================
-// Combined Store Type
-// ============================================================================
-
-export type AgentStore = ConfigSlice & SessionSlice & ConversationSlice;
+// Re-export AgentStore type for external consumers
+export type { AgentStore };
 
 // ============================================================================
 // Store Creation with Middleware Stack

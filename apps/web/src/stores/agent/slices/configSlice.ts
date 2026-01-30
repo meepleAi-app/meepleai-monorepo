@@ -14,6 +14,7 @@ import { StateCreator } from 'zustand';
 
 import { AgentConfig, AgentStoreError } from '../types';
 import { retryWithBackoff } from '../utils/retry';
+import type { AgentStore } from '../types/store.types';
 
 export interface ConfigSlice {
   // ============================================================================
@@ -48,7 +49,7 @@ export interface ConfigSlice {
 }
 
 export const createConfigSlice: StateCreator<
-  ConfigSlice,
+  AgentStore,
   [['zustand/immer', never]],
   [],
   ConfigSlice

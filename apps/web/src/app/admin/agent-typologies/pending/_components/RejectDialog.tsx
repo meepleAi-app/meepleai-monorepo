@@ -10,11 +10,9 @@
  */
 
 import { useState } from 'react';
+
 import { XCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
-import { Label } from '@/components/ui/primitives/label';
-import { Textarea } from '@/components/ui/primitives/textarea';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +21,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
+import { Label } from '@/components/ui/primitives/label';
+import { Textarea } from '@/components/ui/primitives/textarea';
 
 interface RejectDialogProps {
   isOpen: boolean;

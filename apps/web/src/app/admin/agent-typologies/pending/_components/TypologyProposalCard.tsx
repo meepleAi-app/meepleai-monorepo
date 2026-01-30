@@ -12,22 +12,22 @@
  * Part of Epic #3174 (AI Agent System).
  */
 
-import { CheckCircle, Eye, XCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { CheckCircle, Eye, XCircle } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/primitives/card';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
-import type { AgentTypology } from '@/lib/api/schemas/agent-typologies.schemas';
+import type { Typology } from '@/lib/api/schemas/agent-typologies.schemas';
 
 interface TypologyProposalCardProps {
-  typology: AgentTypology;
+  typology: Typology;
   isSelected: boolean;
   onToggleSelect: (id: string) => void;
-  onApprove: (typology: AgentTypology) => void;
-  onReject: (typology: AgentTypology) => void;
-  onViewDetails: (typology: AgentTypology) => void;
+  onApprove: (typology: Typology) => void;
+  onReject: (typology: Typology) => void;
+  onViewDetails: (typology: Typology) => void;
 }
 
 export function TypologyProposalCard({
@@ -39,9 +39,9 @@ export function TypologyProposalCard({
   onViewDetails,
 }: TypologyProposalCardProps) {
   const promptPreview =
-    typology.systemMessage.length > 100
-      ? `${typology.systemMessage.substring(0, 100)}...`
-      : typology.systemMessage;
+    typology.basePrompt.length > 100
+      ? `${typology.basePrompt.substring(0, 100)}...`
+      : typology.basePrompt;
 
   const createdAtDistance = formatDistanceToNow(new Date(typology.createdAt), {
     addSuffix: true,
@@ -84,7 +84,7 @@ export function TypologyProposalCard({
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>
             <span className="font-medium">Proposed by:</span>{' '}
-            {typology.createdByDisplayName}
+            {typology.createdBy}
           </span>
           <span>{createdAtDistance}</span>
         </div>

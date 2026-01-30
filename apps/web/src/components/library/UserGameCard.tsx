@@ -28,6 +28,7 @@ import {
   MoreVertical,
   RefreshCw,
   Zap,
+  Bot,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -45,6 +46,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { useAgentConfig } from '@/hooks/queries';
@@ -59,6 +66,8 @@ interface UserGameCardProps {
   onUploadPdf: (gameId: string, gameTitle: string) => void;
   onEditNotes: (gameId: string, gameTitle: string, currentNotes?: string | null) => void;
   onRemove: (gameId: string, gameTitle: string) => void;
+  /** Ask AI Agent about game (Issue #3185) */
+  onAskAgent: (gameId: string) => void;
   /** Change game state callback (Issue #2867) */
   onChangeState?: (gameId: string, gameTitle: string, newState: GameStateType) => void;
   /** Share game with community (Issue #2743) */
@@ -121,6 +130,7 @@ export function UserGameCard({
   onUploadPdf,
   onEditNotes,
   onRemove,
+  onAskAgent,
   onChangeState,
   onShare,
   selectionMode = false,
@@ -192,6 +202,7 @@ export function UserGameCard({
   // List view rendering (Issue #2866, #2867)
   if (isListView) {
     return (
+      <TooltipProvider>
       <motion.div
         variants={cardVariants}
         initial="hidden"
@@ -303,6 +314,26 @@ export function UserGameCard({
                   <MessageCircle className="h-3 w-3" />
                 </Link>
               </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      onAskAgent(game.gameId);
+                    }}
+                    disabled={!game.hasPdfDocuments}
+                  >
+                    <Bot className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                {!game.hasPdfDocuments && (
+                  <TooltipContent>
+                    <p>No rulebook available</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
 
               {/* Quick Actions Dropdown (Issue #2867) */}
               <DropdownMenu>
@@ -364,11 +395,13 @@ export function UserGameCard({
           </CardContent>
         </Card>
       </motion.div>
+    </TooltipProvider>
     );
   }
 
   // Grid view rendering (default)
   return (
+    <TooltipProvider>
     <motion.div
       variants={cardVariants}
       initial="hidden"
@@ -438,6 +471,15 @@ export function UserGameCard({
             </div>
           )}
 
+          {/* Agent Configuration Indicator (Issue #3185) */}
+          {agentConfigured && !selectionMode && (
+            <div className="absolute bottom-2 left-2 z-10">
+              <div className="bg-secondary text-secondary-foreground rounded-full p-1.5 shadow-md">
+                <Settings className="h-3 w-3" />
+              </div>
+            </div>
+          )}
+
           {/* Favorite Toggle - hide in selection mode (Issue #3151) */}
           {!selectionMode && (
             <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
@@ -492,7 +534,7 @@ export function UserGameCard({
           </p>
         )}
 
-        {/* Action Buttons (Issue #3151 - Simplified to 2 buttons) */}
+        {/* Action Buttons (Issue #3151, #3185) */}
         {!selectionMode && (
           <div className="flex gap-2 pt-2">
             <Button
@@ -507,6 +549,28 @@ export function UserGameCard({
                 Chatta
               </Link>
             </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    onAskAgent(game.gameId);
+                  }}
+                  disabled={!game.hasPdfDocuments}
+                >
+                  <Bot className="mr-1 h-3 w-3" />
+                  Ask Agent
+                </Button>
+              </TooltipTrigger>
+              {!game.hasPdfDocuments && (
+                <TooltipContent>
+                  <p>No rulebook available</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
             <Button
               variant="outline"
               size="sm"
@@ -549,5 +613,6 @@ export function UserGameCard({
         }}
       />
     </motion.div>
+    </TooltipProvider>
   );
 }

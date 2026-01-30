@@ -11,7 +11,6 @@
 
 import { CheckCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 
 interface ApproveConfirmDialogProps {
   isOpen: boolean;

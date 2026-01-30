@@ -95,6 +95,15 @@ export default function LibraryPageClient() {
     gameTitle: '',
   });
 
+  // Ask Agent modal state (Issue #3185)
+  const [askAgentModal, setAskAgentModal] = useState<{
+    isOpen: boolean;
+    gameId: string;
+  }>({
+    isOpen: false,
+    gameId: '',
+  });
+
   // Share library modal state (Issue #2614)
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
@@ -203,6 +212,17 @@ export default function LibraryPageClient() {
       isOpen: true,
       gameId,
       gameTitle,
+    });
+  };
+
+  // Handle Ask Agent (Issue #3185)
+  // TODO: Replace placeholder with AgentConfigModal or dedicated AskAgentModal when AGT-012 available
+  const handleAskAgent = (gameId: string) => {
+    // Temporary: Open agent config modal until AGT-012 modal is ready
+    setAgentConfigModal({
+      isOpen: true,
+      gameId,
+      gameTitle: '', // Title not critical for config modal
     });
   };
 
@@ -400,6 +420,7 @@ export default function LibraryPageClient() {
                     onUploadPdf={handleUploadPdf}
                     onEditNotes={handleEditNotes}
                     onRemove={handleRemoveGame}
+                    onAskAgent={handleAskAgent}
                     selectionMode={selectionMode}
                     isSelected={isSelected(game.gameId)}
                     onSelect={handleGameSelect}

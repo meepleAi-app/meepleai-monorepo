@@ -251,10 +251,18 @@ public class Session
     private static string GenerateSessionCode()
     {
         const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Exclude 0, O, I, 1
-        var random = new Random();
-        return new string(Enumerable.Repeat(chars, 6)
-            .Select(s => s[random.Next(s.Length)])
-            .ToArray());
+        var code = new char[6];
+
+        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+        var randomBytes = new byte[6];
+        rng.GetBytes(randomBytes);
+
+        for (int i = 0; i < 6; i++)
+        {
+            code[i] = chars[randomBytes[i] % chars.Length];
+        }
+
+        return new string(code);
     }
 }
 

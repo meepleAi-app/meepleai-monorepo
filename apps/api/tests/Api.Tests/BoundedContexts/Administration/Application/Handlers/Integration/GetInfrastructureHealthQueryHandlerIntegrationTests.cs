@@ -194,7 +194,7 @@ public sealed class GetInfrastructureHealthQueryHandlerIntegrationTests : IAsync
     {
         // Arrange
         var query = new GetInfrastructureHealthQuery();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         // Configure mock to throw OperationCanceledException

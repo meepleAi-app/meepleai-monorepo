@@ -19,7 +19,9 @@ namespace Api.Tests.BoundedContexts.UserNotifications.Application.EventHandlers;
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "UserNotifications")]
+#pragma warning disable S3881 // Simplified dispose pattern sufficient for test class
 public class UserSuspendedEventHandlerTests : IDisposable
+#pragma warning restore S3881
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<IEmailService> _mockEmailService;

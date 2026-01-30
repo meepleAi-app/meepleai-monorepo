@@ -43,7 +43,7 @@ public class PdfExtractionRealBackendValidationTests : IAsyncLifetime
     private readonly Action<string> _output;
     private UnstructuredPdfTextExtractor? _unstructuredExtractor;
     private SmolDoclingPdfTextExtractor? _smoldoclingExtractor;
-    private Dictionary<string, GoldStandard> _goldStandards = new();
+    private readonly Dictionary<string, GoldStandard> _goldStandards = new();
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 

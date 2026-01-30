@@ -484,14 +484,4 @@ public sealed class AgentEndpointsSmokeTests : IAsyncLifetime
         double Confidence,
         int ResultCount
     );
-
-    private record GameResponse(
-        Guid Id,
-        string Name,
-        int? BggId
-    );
-
-    private record GamesListResponse(
-        List<GameResponse>? Games
-    );
 }

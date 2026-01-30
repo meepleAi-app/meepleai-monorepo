@@ -317,6 +317,7 @@ public static class TestcontainersConfiguration
         var warnings = new List<string>();
         var errors = new List<string>();
 
+#pragma warning disable CS0162 // Unreachable code - intentional validation for future config changes
         // Validate connection pool settings
         if (ConnectionPoolMaxSize * 100 > PostgresMaxConnections) // Assuming ~100 test classes max
         {
@@ -349,6 +350,7 @@ public static class TestcontainersConfiguration
         {
             errors.Add($"DatabaseOperationMaxRetries ({DatabaseOperationMaxRetries}) must be >= 1");
         }
+#pragma warning restore CS0162
 
         return (errors.Count == 0, warnings.ToArray(), errors.ToArray());
     }

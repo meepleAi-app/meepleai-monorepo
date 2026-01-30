@@ -18,7 +18,6 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 public class GetSharedGameByIdQueryHandlerTests
 {
     private readonly Mock<ISharedGameRepository> _repositoryMock;
-    private readonly Mock<ICacheMetricsRecorder> _cacheMetricsMock;
     private readonly HybridCache _cache;
     private readonly Mock<ILogger<GetSharedGameByIdQueryHandler>> _loggerMock;
     private readonly GetSharedGameByIdQueryHandler _handler;
@@ -26,7 +25,6 @@ public class GetSharedGameByIdQueryHandlerTests
     public GetSharedGameByIdQueryHandlerTests()
     {
         _repositoryMock = new Mock<ISharedGameRepository>();
-        _cacheMetricsMock = new Mock<ICacheMetricsRecorder>();
         _loggerMock = new Mock<ILogger<GetSharedGameByIdQueryHandler>>();
 
         // Use real HybridCache for tests (with in-memory backend)

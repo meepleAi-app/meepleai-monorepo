@@ -11,26 +11,27 @@
 import * as React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 
+import { AlertCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+import { Spinner } from '@/components/loading/Spinner';
 import {
   DataTable,
   type SortingState,
 } from '@/components/ui/data-display/data-table';
-import { Spinner } from '@/components/loading/Spinner';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { AlertCircle } from 'lucide-react';
-import { useApiClient } from '@/lib/api/context';
 import type { AgentTypology } from '@/lib/api/clients/adminClient';
+import { useApiClient } from '@/lib/api/context';
 
 import {
   createTypologyColumns,
-  type TypologyTableActions,
 } from './typology-columns';
 import { TypologyFilters } from './TypologyFilters';
 
 export function TypologyTable() {
   const { admin } = useApiClient();
+  const router = useRouter();
 
   // State
   const [typologies, setTypologies] = useState<AgentTypology[]>([]);
@@ -88,10 +89,12 @@ export function TypologyTable() {
   }, [status, createdBy, search]);
 
   // Action handlers
-  const handleEdit = useCallback((typology: AgentTypology) => {
-    // TODO: Navigate to edit page when implemented
-    toast.info(`Edit typology: ${typology.name} (not yet implemented)`);
-  }, []);
+  const handleEdit = useCallback(
+    (typology: AgentTypology) => {
+      router.push(`/admin/agent-typologies/${typology.id}/edit`);
+    },
+    [router]
+  );
 
   const handleApprove = useCallback(
     async (typology: AgentTypology) => {

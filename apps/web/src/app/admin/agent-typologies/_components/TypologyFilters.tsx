@@ -6,10 +6,9 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+
 import { Search } from 'lucide-react';
 
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
 import {
   Select,
   SelectContent,
@@ -18,6 +17,8 @@ import {
   SelectValue,
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import type { AgentTypology } from '@/lib/api/clients/adminClient';
 
 interface TypologyFiltersProps {

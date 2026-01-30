@@ -22,6 +22,349 @@ namespace Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.CardDraw", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CardValue")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("card_value");
+
+                    b.Property<Guid?>("DeckId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deck_id");
+
+                    b.Property<string>("DeckType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("deck_type");
+
+                    b.Property<Guid>("ParticipantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("participant_id");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("timestamp");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParticipantId");
+
+                    b.HasIndex("SessionId", "Timestamp")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("idx_cards_session");
+
+                    b.ToTable("session_tracking_card_draws", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.DiceRoll", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("DiceType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("dice_type");
+
+                    b.Property<Guid>("ParticipantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("participant_id");
+
+                    b.Property<string>("Results")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("results");
+
+                    b.Property<int>("RollCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("roll_count");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("timestamp");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParticipantId");
+
+                    b.HasIndex("SessionId", "Timestamp")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("idx_dice_session");
+
+                    b.ToTable("session_tracking_dice_rolls", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.Participant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("display_name");
+
+                    b.Property<int?>("FinalRank")
+                        .HasColumnType("integer")
+                        .HasColumnName("final_rank");
+
+                    b.Property<bool>("IsOwner")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_owner");
+
+                    b.Property<int>("JoinOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("join_order");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<Guid?>("SessionId1")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("idx_participants_session");
+
+                    b.HasIndex("SessionId1");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("session_tracking_participants", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.PlayerNote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsHidden")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_hidden");
+
+                    b.Property<string>("NoteType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("note_type");
+
+                    b.Property<Guid>("ParticipantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("participant_id");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<string>("TemplateKey")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("template_key");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParticipantId");
+
+                    b.HasIndex("SessionId", "ParticipantId")
+                        .HasDatabaseName("idx_notes_session_participant");
+
+                    b.ToTable("session_tracking_notes", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.ScoreEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("category");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("ParticipantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("participant_id");
+
+                    b.Property<int?>("RoundNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("round_number");
+
+                    b.Property<decimal>("ScoreValue")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("score_value");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("timestamp");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParticipantId");
+
+                    b.HasIndex("SessionId", "ParticipantId")
+                        .HasDatabaseName("idx_scores_session_participant");
+
+                    b.HasIndex("SessionId", "RoundNumber")
+                        .HasDatabaseName("idx_scores_round");
+
+                    b.ToTable("session_tracking_score_entries", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.Session", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<DateTime?>("FinalizedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("finalized_at");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("location");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("SessionCode")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasColumnName("session_code");
+
+                    b.Property<DateTime>("SessionDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("session_date");
+
+                    b.Property<string>("SessionType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("session_type");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionCode")
+                        .IsUnique()
+                        .HasDatabaseName("idx_sessions_code")
+                        .HasFilter("is_deleted = false");
+
+                    b.HasIndex("GameId", "SessionDate")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("idx_sessions_game_date")
+                        .HasFilter("is_deleted = false");
+
+                    b.HasIndex("UserId", "Status")
+                        .HasDatabaseName("idx_sessions_user_status")
+                        .HasFilter("is_deleted = false");
+
+                    b.ToTable("session_tracking_sessions", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.AdminReportEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -353,6 +696,71 @@ namespace Api.Migrations
                         .IsUnique();
 
                     b.ToTable("agent_feedback", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.AgentSessionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AgentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CurrentGameStateJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("{}");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("GameSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("TypologyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentId");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("GameSessionId")
+                        .HasDatabaseName("IX_AgentSessions_GameSessionId");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("IX_AgentSessions_IsActive");
+
+                    b.HasIndex("TypologyId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_AgentSessions_UserId");
+
+                    b.HasIndex("GameSessionId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_AgentSessions_GameSessionId_UserId_Unique");
+
+                    b.HasIndex("UserId", "IsActive")
+                        .HasDatabaseName("IX_AgentSessions_UserId_IsActive");
+
+                    b.ToTable("agent_sessions", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AiRequestLogEntity", b =>
@@ -4801,11 +5209,146 @@ namespace Api.Migrations
                     b.ToTable("shared_game_publishers", (string)null);
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.CardDraw", b =>
+                {
+                    b.HasOne("Api.BoundedContexts.SessionTracking.Domain.Entities.Participant", null)
+                        .WithMany()
+                        .HasForeignKey("ParticipantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.BoundedContexts.SessionTracking.Domain.Entities.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.DiceRoll", b =>
+                {
+                    b.HasOne("Api.BoundedContexts.SessionTracking.Domain.Entities.Participant", null)
+                        .WithMany()
+                        .HasForeignKey("ParticipantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.BoundedContexts.SessionTracking.Domain.Entities.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.Participant", b =>
+                {
+                    b.HasOne("Api.BoundedContexts.SessionTracking.Domain.Entities.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.BoundedContexts.SessionTracking.Domain.Entities.Session", null)
+                        .WithMany("Participants")
+                        .HasForeignKey("SessionId1");
+
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.PlayerNote", b =>
+                {
+                    b.HasOne("Api.BoundedContexts.SessionTracking.Domain.Entities.Participant", null)
+                        .WithMany()
+                        .HasForeignKey("ParticipantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.BoundedContexts.SessionTracking.Domain.Entities.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.ScoreEntry", b =>
+                {
+                    b.HasOne("Api.BoundedContexts.SessionTracking.Domain.Entities.Participant", null)
+                        .WithMany()
+                        .HasForeignKey("ParticipantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.BoundedContexts.SessionTracking.Domain.Entities.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.Session", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameEntity", null)
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.AgentEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.GameEntity", null)
                         .WithMany("Agents")
                         .HasForeignKey("GameEntityId");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.AgentSessionEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.AgentEntity", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.GameSessionEntity", "GameSession")
+                        .WithMany()
+                        .HasForeignKey("GameSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity", "Typology")
+                        .WithMany()
+                        .HasForeignKey("TypologyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Agent");
+
+                    b.Navigation("Game");
+
+                    b.Navigation("GameSession");
+
+                    b.Navigation("Typology");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ApiKeyEntity", b =>
@@ -5646,6 +6189,11 @@ namespace Api.Migrations
                         .HasForeignKey("shared_game_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.Session", b =>
+                {
+                    b.Navigation("Participants");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AdminReportEntity", b =>

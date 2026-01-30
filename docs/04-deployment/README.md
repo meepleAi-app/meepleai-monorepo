@@ -905,7 +905,12 @@ curl https://api.meepleai.com/health
 - [PostgreSQL Backup Guide](https://www.postgresql.org/docs/current/backup.html)
 - [Grafana Dashboards](https://grafana.com/grafana/dashboards/)
 
-### MeepleAI Deployment Guides (New 2026-01-18)
+### Docker & Deployment Workflows (New 2026-01-30)
+- **[Docker Versioning Guide](./docker-versioning-guide.md)** - Complete guide to Docker image versioning, tagging strategies, and GitHub Container Registry
+- **[Deployment Workflows Guide](./deployment-workflows-guide.md)** - Staging → Production workflows, blue-green deployment, rollback procedures
+- **[Docker Volume Management](./docker-volume-management.md)** - Volume management, backup strategies, disaster recovery
+
+### MeepleAI Deployment Guides (2026-01-18)
 - [NEW-GUIDES-INDEX.md](./NEW-GUIDES-INDEX.md) - Complete deployment guide index
 - [Infrastructure Cost Summary](./infrastructure-cost-summary.md) - Budget planning (Alpha → Release 10K)
 - [Domain Setup Guide](./domain-setup-guide.md) - Domain acquisition and DNS configuration
@@ -923,6 +928,15 @@ curl https://api.meepleai.com/health
 
 ---
 
-**Version**: 1.0
-**Last Updated**: 2026-01-01
+**Version**: 1.1
+**Last Updated**: 2026-01-30
 **Maintainers**: DevOps Team
+
+---
+
+## Changelog
+
+### 2026-01-30: Docker & Deployment Workflows
+- ✅ Added **Docker Versioning Guide** - Image tagging, registry management
+- ✅ Added **Deployment Workflows Guide** - Staging → Production pipeline
+- ✅ Added **Docker Volume Management** - Backup strategies, disaster recovery

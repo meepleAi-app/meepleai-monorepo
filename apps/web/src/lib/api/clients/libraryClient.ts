@@ -9,6 +9,7 @@
  * - Check if game is in library
  */
 
+import { z } from 'zod';
 import {
   AgentConfigDtoSchema,
   type AgentConfigDto,
@@ -252,6 +253,35 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
       );
       if (!data) {
         throw new Error('Failed to update agent configuration');
+      }
+      return data;
+    },
+
+    /**
+     * Save simplified agent configuration from modal (Issue #3212)
+     * @param gameId - Game UUID
+     * @param request - Simplified agent config (typology + model + cost)
+     * @returns Save response with config ID
+     */
+    async saveAgentConfig(
+      gameId: string,
+      request: { typologyId: string; modelName: string; costEstimate: number }
+    ): Promise<{ success: boolean; configId: string; message: string }> {
+      const data = await httpClient.post<{
+        success: boolean;
+        configId: string;
+        message: string;
+      }>(
+        `/api/v1/library/games/${gameId}/agent-config`,
+        request,
+        z.object({
+          success: z.boolean(),
+          configId: z.string().uuid(),
+          message: z.string(),
+        })
+      );
+      if (!data) {
+        throw new Error('Failed to save agent configuration');
       }
       return data;
     },

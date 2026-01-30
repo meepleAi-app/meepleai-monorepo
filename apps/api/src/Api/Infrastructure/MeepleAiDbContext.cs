@@ -102,6 +102,14 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ShareRequestLimitConfigEntity> ShareRequestLimitConfigs => Set<ShareRequestLimitConfigEntity>(); // ISSUE-2730: Rate limit config
     public DbSet<UserRateLimitOverrideEntity> UserRateLimitOverrides => Set<UserRateLimitOverrideEntity>(); // ISSUE-2730: User overrides
 
+    // GST-001: SessionTracking bounded context (persistence entities)
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.ParticipantEntity> SessionTrackingParticipants => Set<Api.Infrastructure.Entities.SessionTracking.ParticipantEntity>();
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.ScoreEntryEntity> SessionTrackingScoreEntries => Set<Api.Infrastructure.Entities.SessionTracking.ScoreEntryEntity>();
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.PlayerNoteEntity> SessionTrackingPlayerNotes => Set<Api.Infrastructure.Entities.SessionTracking.PlayerNoteEntity>();
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.DiceRollEntity> SessionTrackingDiceRolls => Set<Api.Infrastructure.Entities.SessionTracking.DiceRollEntity>();
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.CardDrawEntity> SessionTrackingCardDraws => Set<Api.Infrastructure.Entities.SessionTracking.CardDrawEntity>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         ArgumentNullException.ThrowIfNull(optionsBuilder);
@@ -153,6 +161,14 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.AgentTypology>(); // ISSUE-3175
         modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.TypologyPromptTemplate>(); // ISSUE-3175
         modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.AgentSession>(); // ISSUE-3183
+
+        // GST-001: SessionTracking domain entities
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.Session>(); // ISSUE-3160
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.Participant>(); // ISSUE-3160
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.ScoreEntry>(); // ISSUE-3160
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.PlayerNote>(); // ISSUE-3160
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.DiceRoll>(); // ISSUE-3160
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.CardDraw>(); // ISSUE-3160
     }
 
     /// <summary>

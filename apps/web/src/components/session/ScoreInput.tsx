@@ -168,7 +168,7 @@ export function ScoreInput({
               </Label>
               <Select
                 value={roundNumber?.toString() ?? 'final'}
-                onValueChange={(v) => setRoundNumber(v === 'final' ? null : parseInt(v))}
+                onValueChange={(v: string) => setRoundNumber(v === 'final' ? null : parseInt(v))}
               >
                 <SelectTrigger
                   id="round"
@@ -194,7 +194,7 @@ export function ScoreInput({
               <Label htmlFor="category" className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                 Category
               </Label>
-              <Select value={category ?? 'none'} onValueChange={(v) => setCategory(v === 'none' ? null : v)}>
+              <Select value={category ?? 'none'} onValueChange={(v: string) => setCategory(v === 'none' ? null : v)}>
                 <SelectTrigger
                   id="category"
                   className="h-12 border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-semibold"
@@ -251,7 +251,7 @@ export function ScoreInput({
               type="number"
               step="0.01"
               value={scoreValue}
-              onChange={(e) => setScoreValue(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setScoreValue(e.target.value)}
               placeholder="0"
               className="h-14 flex-1 border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-center font-mono text-2xl font-bold tabular-nums focus:border-amber-600 focus:ring-amber-600"
             />

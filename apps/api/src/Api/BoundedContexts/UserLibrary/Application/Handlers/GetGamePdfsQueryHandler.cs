@@ -62,9 +62,6 @@ internal class GetGamePdfsQueryHandler : IRequestHandler<GetGamePdfsQuery, List<
         }
 
         // FUTURE: Issue #3152 - Add shared catalog PDFs from DocumentProcessing context
-        // Query DocumentProcessing bounded context for standard PDFs
-        // var catalogPdfs = await _documentRepository.GetByGameIdAsync(request.GameId, cancellationToken);
-        // pdfs.AddRange(catalogPdfs.Select(ToCatalogPdfDto));
 
         // TEMPORARY: Add mock standard PDF for development
         if (pdfs.Count == 0)

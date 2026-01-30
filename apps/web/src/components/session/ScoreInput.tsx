@@ -1,11 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+
 import { Plus, Minus, Undo2, Check, Loader2, AlertCircle } from 'lucide-react';
-import { Participant, SyncStatus } from './types';
-import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
+
 import {
   Select,
   SelectContent,
@@ -13,6 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+
+import { Participant, SyncStatus } from './types';
 
 interface ScoreInputProps {
   participants: Participant[];

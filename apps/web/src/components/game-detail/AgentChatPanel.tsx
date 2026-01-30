@@ -16,7 +16,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 
 import { Send, Paperclip, Mic, Bot, User, FileText } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import {
   Select,
   SelectContent,
@@ -24,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { cn } from '@/lib/utils';
 

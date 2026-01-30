@@ -12,9 +12,10 @@
  * Critical: This test validates the core RAG infrastructure before EPIC 1.
  */
 
-import { test, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
+
+import { test, expect } from '@playwright/test';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 const QDRANT_URL = 'http://localhost:6333';

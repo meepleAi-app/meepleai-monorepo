@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+
 import { TrendingUp, TrendingDown, Minus, Trophy } from 'lucide-react';
-import { ScoreboardData, ScoreEntry, Participant } from './types';
+
 import { ParticipantCard } from './ParticipantCard';
+import { ScoreboardData } from './types';
 
 interface ScoreboardProps {
   data: ScoreboardData;

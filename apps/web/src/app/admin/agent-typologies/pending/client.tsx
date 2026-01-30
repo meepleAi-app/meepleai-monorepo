@@ -16,14 +16,19 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+
 import { toast } from 'sonner';
 
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { Spinner } from '@/components/loading/Spinner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
-import { admin } from '@/lib/api/clients/adminClient';
-import type { AgentTypology } from '@/lib/api/schemas/agent-typologies.schemas';
+import { agentTypologiesApi } from '@/lib/api/agent-typologies.api';
+import { createAdminClient } from '@/lib/api/clients/adminClient';
+import { HttpClient } from '@/lib/api/core/httpClient';
+import type { Typology } from '@/lib/api/schemas/agent-typologies.schemas';
+
+const admin = createAdminClient({ httpClient: new HttpClient() });
 
 import { ApproveConfirmDialog } from './_components/ApproveConfirmDialog';
 import { BulkActionBar } from './_components/BulkActionBar';
@@ -32,7 +37,7 @@ import { TypologyProposalCard } from './_components/TypologyProposalCard';
 
 export function PendingTypologiesClient() {
   const { user, loading: authLoading } = useAuth();
-  const [typologies, setTypologies] = useState<AgentTypology[]>([]);
+  const [typologies, setTypologies] = useState<Typology[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -40,7 +45,7 @@ export function PendingTypologiesClient() {
   // Dialog states
   const [approveDialog, setApproveDialog] = useState<{
     isOpen: boolean;
-    typology: AgentTypology | null;
+    typology: Typology | null;
     isBulk: boolean;
   }>({
     isOpen: false,
@@ -50,7 +55,7 @@ export function PendingTypologiesClient() {
 
   const [rejectDialog, setRejectDialog] = useState<{
     isOpen: boolean;
-    typology: AgentTypology | null;
+    typology: Typology | null;
     isBulk: boolean;
   }>({
     isOpen: false,
@@ -63,12 +68,9 @@ export function PendingTypologiesClient() {
     try {
       setLoading(true);
       setError(null);
-      const response = await admin.getAgentTypologies({
-        status: 'PendingReview',
-        page: 1,
-        pageSize: 100, // Get all pending for simplicity
-      });
-      setTypologies(response.typologies);
+      const allTypologies = await agentTypologiesApi.getAll();
+      const pending = allTypologies.filter(t => t.status === 'PendingReview');
+      setTypologies(pending);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to fetch pending typologies';
@@ -85,7 +87,7 @@ export function PendingTypologiesClient() {
 
   // Single approve
   const handleApprove = useCallback(
-    (typology: AgentTypology) => {
+    (typology: Typology) => {
       setApproveDialog({ isOpen: true, typology, isBulk: false });
     },
     []
@@ -119,7 +121,7 @@ export function PendingTypologiesClient() {
 
   // Single reject
   const handleReject = useCallback(
-    (typology: AgentTypology) => {
+    (typology: Typology) => {
       setRejectDialog({ isOpen: true, typology, isBulk: false });
     },
     []
@@ -155,7 +157,7 @@ export function PendingTypologiesClient() {
   );
 
   // View details
-  const handleViewDetails = useCallback((typology: AgentTypology) => {
+  const handleViewDetails = useCallback((typology: Typology) => {
     // TODO: Navigate to details page or open modal
     toast.info(`View details for: ${typology.name}`);
   }, []);

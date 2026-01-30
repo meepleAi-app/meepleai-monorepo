@@ -1138,14 +1138,8 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
 
       const url = `/admin/agent-typologies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const response = await httpClient.get(url);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch agent typologies');
-      }
-
-      const data = await response.json();
-      return data as AgentTypologyListResponse;
+      const result = await httpClient.get<AgentTypologyListResponse>(url);
+      return result || { typologies: [], total: 0, page: 1, pageSize: 20 };
     },
 
     /**
@@ -1153,14 +1147,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * AGT-005: View typology details
      */
     async getAgentTypologyById(id: string) {
-      const response = await httpClient.get(`/admin/agent-typologies/${id}`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch agent typology');
-      }
-
-      const data = await response.json();
-      return data as AgentTypology;
+      return httpClient.get<AgentTypology>(`/admin/agent-typologies/${id}`);
     },
 
     /**
@@ -1168,13 +1155,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * AGT-005: Admin typology management
      */
     async deleteAgentTypology(id: string) {
-      const response = await httpClient.delete(`/admin/agent-typologies/${id}`);
-
-      if (!response.ok) {
-        throw new Error('Failed to delete agent typology');
-      }
-
-      return true;
+      await httpClient.delete(`/admin/agent-typologies/${id}`);
     },
 
     /**
@@ -1182,14 +1163,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      * AGT-005: Admin typology approval workflow
      */
     async approveAgentTypology(id: string) {
-      const response = await httpClient.post(`/admin/agent-typologies/${id}/approve`, {});
-
-      if (!response.ok) {
-        throw new Error('Failed to approve agent typology');
-      }
-
-      const data = await response.json();
-      return data as AgentTypology;
+      return httpClient.post<AgentTypology>(`/admin/agent-typologies/${id}/approve`, {});
     },
   };
 }

@@ -43,6 +43,7 @@ export const UserLibraryEntrySchema = z.object({
   currentState: GameStateTypeWithFallbackSchema,
   stateChangedAt: z.string().datetime().nullable().optional(),
   stateNotes: z.string().nullable().optional(),
+  hasPdfDocuments: z.boolean().default(false),
 });
 
 export type UserLibraryEntry = z.infer<typeof UserLibraryEntrySchema>;

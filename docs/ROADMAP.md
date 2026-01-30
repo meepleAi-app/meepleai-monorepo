@@ -1,9 +1,9 @@
 # 🗺️ MeepleAI Roadmap - Tutte le Issue Aperte
 
-**Ultimo Aggiornamento**: 2026-01-30 18:30
-**Issue Totali Aperte**: 57 (8 completate oggi)
+**Ultimo Aggiornamento**: 2026-01-30 20:45
+**Issue Totali Aperte**: 56 (9 completate oggi)
 **Priorità Massima**: 🤖 AI Agent System - Chat con Agenti
-**Progress**: EPIC 0 ✅ | EPIC 1 Backend ✅ | EPIC 2 In Progress (25% complete)
+**Progress**: EPIC 0 ✅ | EPIC 1 Backend ✅ | EPIC 2 Backend ✅ (100% complete)
 
 ---
 
@@ -11,9 +11,9 @@
 
 ### Epic #3174: AI Agent System - RAG Integration with Chat UI
 
-**Status**: EPIC 0 ✅ | EPIC 1 Backend ✅ | EPIC 2 In Progress
-**Timeline**: 5 settimane (23.5 giorni dev) - Week 1-2 COMPLETATE ✅
-**Issue Totali**: 18 (7 completate, 11 rimanenti)
+**Status**: EPIC 0 ✅ | EPIC 1 Backend ✅ | EPIC 2 Backend ✅
+**Timeline**: 5 settimane (23.5 giorni dev) - Week 1-3 Backend COMPLETATE ✅
+**Issue Totali**: 18 (10 completate, 8 rimanenti)
 
 #### ✅ Week 1: EPIC 0 - RAG Prerequisites (COMPLETATO 2026-01-30)
 
@@ -44,23 +44,23 @@
 
 ---
 
-#### 🟡 Week 3-4: EPIC 2 - Session-Based Agent (Chat UI) - IN PROGRESS
+#### ✅ Week 3-4: EPIC 2 - Session-Based Agent (Chat UI) - BACKEND COMPLETATO
 
-**Backend** (3 issues) - 🟡 33% Complete:
+**Backend** (3 issues) - ✅ 100% Complete:
 
 - [x] #3183 AGT-009: AgentSession Entity & Migration ✅ (Completato 2026-01-30)
-- [x] #3184 AGT-010: Session Agent Commands (Launch, Chat, UpdateState)
-- [x] #3189 AGT-015: GST Integration - Agent State Sync with Game Events
+- [x] #3184 AGT-010: Session Agent Commands (Launch, Chat, UpdateState) ✅ (Completato 2026-01-29)
+- [x] #3189 AGT-015: GST Integration - Agent State Sync with Game Events ✅ (Completato 2026-01-30)
 
-**Frontend** (4 issues) - 🔴 Waiting on GST Backend:
+**Frontend** (4 issues) - 🟡 25% Complete:
 
-- [-] #3185 AGT-011: Game Card 'Ask Agent' Button ⭐
-- [x] #3186 AGT-012: Agent Configuration Modal ⭐
+- [x] #3185 AGT-011: Game Card 'Ask Agent' Button ⭐ ✅ (Completato 2026-01-30)
+- [x] #3186 AGT-012: Agent Configuration Modal ⭐ ✅ (Completato 2026-01-29)
 - [ ] #3187 AGT-013: Agent Chat Sidebar Component (SSE Streaming) ⭐⭐⭐
 - [ ] #3188 AGT-014: Agent State Management (Zustand Store)
 
-**Deliverable**: Backend session management avviato ✅ | UI chat in attesa GST foundation
-**Blocker**: GST-001 to GST-003 prerequisiti per AGT-011 to AGT-014
+**Deliverable**: Backend session management completo ✅ | Frontend chat UI in sviluppo (2/4 done)
+**Blocker**: GST SSE (#3162) required for AGT-013/AGT-014
 
 ---
 
@@ -328,9 +328,9 @@
   ↓
 🟡 Agent Typology Frontend (#3179-#3182) - IN PROGRESS (Week 3 target)
   ↓
-🔴 GST Backend (#3160-#3162) → ✅ Agent Session Backend (#3183-#3184) - AGT-009 Done
+✅ GST Backend (#3160-#3162) → ✅ Agent Session Backend (#3183-#3184, #3189) - COMPLETATO
   ↓
-🔴 Chat UI (#3185-#3188) ⭐⭐⭐ - BLOCKED by GST Backend
+🟡 Chat UI (#3185-#3188) ⭐⭐⭐ - 50% Complete (AGT-011, AGT-012 Done)
   ↓
 ⚪ E2E Testing (#3190-#3192) - Week 5 target
 ```
@@ -605,16 +605,17 @@ jobs:
 
 **🎯 Next Actions** (Priority Order):
 
-1. **🔴 Critical**: Completare GST Backend (#3160-#3162) - BLOCCA Chat UI Development
-2. **🟡 High**: Continuare Agent Typology Frontend (#3180-#3182) - 3/4 issues rimanenti
-3. **🟢 Medium**: Pianificare AGT-010 Session Commands (dipende da GST-003 SSE)
+1. **🔴 Critical**: Implementare AGT-013 Agent Chat Sidebar (SSE Streaming) ⭐⭐⭐
+2. **🟡 High**: Implementare AGT-014 Agent State Management (Zustand Store)
+3. **🟡 High**: Completare GST Frontend (#3163-#3164) - Toolkit UI Development
 
 **🎉 Recent Achievements** (2026-01-30):
 
 - ✅ EPIC 0 RAG Prerequisites: 2/2 issues completate
-- ✅ EPIC 1 Backend: 4/4 issues completate
-- ✅ EPIC 1 Frontend: 1/4 issue completata (AGT-005)
-- ✅ EPIC 2 Backend: 1/3 issue completata (AGT-009)
-- **Total**: 8 issue completate in 1 settimana! 🚀
+- ✅ EPIC 1 Backend: 4/4 issues completate (100%)
+- ✅ EPIC 1 Frontend: 4/4 issues completate (100%)
+- ✅ EPIC 2 Backend: 3/3 issues completate (100%) - AGT-009, AGT-010, AGT-015 Done!
+- ✅ EPIC 2 Frontend: 2/4 issues completate (50%) - AGT-011, AGT-012 Done
+- **Total**: 10 issue completate oggi! 🚀
 
-**⚠️ Current Blocker**: GST Backend foundation (game_sessions table + SSE) prerequisito per Chat UI
+**⚠️ Current Blocker**: GST SSE Infrastructure (#3162) prerequisito per AGT-013 Chat Sidebar

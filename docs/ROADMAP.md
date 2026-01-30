@@ -37,8 +37,8 @@
 
 - [x] #3179 AGT-005: Admin Typologies List Page
 - [x] #3180 AGT-006: Create/Edit Typology Form
-- [ ] #3181 AGT-007: Typology Approval Queue
-- [ ] #3182 AGT-008: Editor Proposal Form & Test Sandbox
+- [x] #3181 AGT-007: Typology Approval Queue
+- [x] #3182 AGT-008: Editor Proposal Form & Test Sandbox
 
 **Deliverable**: Backend API completo ✅ | Frontend UI in sviluppo (Week 3 target)
 
@@ -86,7 +86,7 @@
 **Issue Totali**: 7
 **Dipendenze**: Bloccante per EPIC 2 dell'AI Agent System
 
-- [ ] #3160 GST-001: Backend - Bounded Context & Database Schema
+- [x] #3160 GST-001: Backend - Bounded Context & Database Schema
 - [ ] #3161 GST-002: Backend - CQRS Commands & Queries
 - [ ] #3162 GST-003: Backend - Real-Time SSE Infrastructure
 - [ ] #3163 GST-004: Frontend - Generic Toolkit Routes & Integration

@@ -24,7 +24,7 @@ internal sealed record GameState
 
     public int CurrentTurn { get; init; }
     public Guid ActivePlayer { get; init; }
-    public IReadOnlyDictionary<Guid, int> PlayerScores { get; init; }
+    public IReadOnlyDictionary<Guid, decimal> PlayerScores { get; init; }
     public string GamePhase { get; init; }
     public string LastAction { get; init; }
 
@@ -32,13 +32,13 @@ internal sealed record GameState
     private GameState(
         int currentTurn,
         Guid activePlayer,
-        IReadOnlyDictionary<Guid, int> playerScores,
+        IReadOnlyDictionary<Guid, decimal> playerScores,
         string gamePhase,
         string lastAction)
     {
         CurrentTurn = currentTurn;
         ActivePlayer = activePlayer;
-        PlayerScores = playerScores ?? new Dictionary<Guid, int>();
+        PlayerScores = playerScores ?? new Dictionary<Guid, decimal>();
         GamePhase = gamePhase ?? string.Empty;
         LastAction = lastAction ?? string.Empty;
     }
@@ -49,7 +49,7 @@ internal sealed record GameState
     public static GameState Create(
         int currentTurn,
         Guid activePlayer,
-        IDictionary<Guid, int> playerScores,
+        IDictionary<Guid, decimal> playerScores,
         string gamePhase,
         string lastAction)
     {
@@ -72,7 +72,7 @@ internal sealed record GameState
         return new GameState(
             currentTurn,
             activePlayer,
-            playerScores is Dictionary<Guid, int> dict ? dict : new Dictionary<Guid, int>(playerScores),
+            playerScores is Dictionary<Guid, decimal> dict ? dict : new Dictionary<Guid, decimal>(playerScores),
             gamePhase.Trim(),
             lastAction.Trim());
     }
@@ -96,7 +96,7 @@ internal sealed record GameState
             return Create(
                 state.CurrentTurn,
                 state.ActivePlayer,
-                state.PlayerScores as IDictionary<Guid, int> ?? new Dictionary<Guid, int>(),
+                state.PlayerScores as IDictionary<Guid, decimal> ?? new Dictionary<Guid, decimal>(),
                 state.GamePhase,
                 state.LastAction);
         }
@@ -119,7 +119,7 @@ internal sealed record GameState
         => Create(
             currentTurn: 1,
             activePlayer: activePlayer,
-            playerScores: new Dictionary<Guid, int>(),
+            playerScores: new Dictionary<Guid, decimal>(),
             gamePhase: "setup",
             lastAction: "session started");
 }

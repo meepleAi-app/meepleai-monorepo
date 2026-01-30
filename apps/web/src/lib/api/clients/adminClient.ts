@@ -1116,10 +1116,106 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       }
       return result;
     },
+
+    // ========== Agent Typologies Management (Issue #3179) ==========
+
+    /**
+     * Get all agent typologies (Admin/Editor)
+     * AGT-005: Admin typologies list page
+     */
+    async getAgentTypologies(params?: {
+      status?: string;
+      createdBy?: string;
+      search?: string;
+      page?: number;
+      pageSize?: number;
+    }) {
+      const queryParams = new URLSearchParams();
+      if (params?.status && params.status !== 'All') queryParams.set('status', params.status);
+      if (params?.createdBy && params.createdBy !== 'All') queryParams.set('createdBy', params.createdBy);
+      if (params?.search) queryParams.set('search', params.search);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
+
+      const url = `/admin/agent-typologies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await httpClient.get(url);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch agent typologies');
+      }
+
+      const data = await response.json();
+      return data as AgentTypologyListResponse;
+    },
+
+    /**
+     * Get agent typology by ID (Admin/Editor)
+     * AGT-005: View typology details
+     */
+    async getAgentTypologyById(id: string) {
+      const response = await httpClient.get(`/admin/agent-typologies/${id}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch agent typology');
+      }
+
+      const data = await response.json();
+      return data as AgentTypology;
+    },
+
+    /**
+     * Delete agent typology (soft delete, Admin only)
+     * AGT-005: Admin typology management
+     */
+    async deleteAgentTypology(id: string) {
+      const response = await httpClient.delete(`/admin/agent-typologies/${id}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to delete agent typology');
+      }
+
+      return true;
+    },
+
+    /**
+     * Approve agent typology (Admin only)
+     * AGT-005: Admin typology approval workflow
+     */
+    async approveAgentTypology(id: string) {
+      const response = await httpClient.post(`/admin/agent-typologies/${id}/approve`, {});
+
+      if (!response.ok) {
+        throw new Error('Failed to approve agent typology');
+      }
+
+      const data = await response.json();
+      return data as AgentTypology;
+    },
   };
 }
 
 export type AdminClient = ReturnType<typeof createAdminClient>;
+
+// ========== Agent Typology Types (Issue #3179) ==========
+
+export type AgentTypology = {
+  id: string;
+  name: string;
+  description: string;
+  systemMessage: string;
+  status: 'Draft' | 'PendingReview' | 'Approved' | 'Rejected';
+  createdBy: string;
+  createdByDisplayName: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AgentTypologyListResponse = {
+  typologies: AgentTypology[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
 
 // ========== Additional Types for Issue #2890 ==========
 

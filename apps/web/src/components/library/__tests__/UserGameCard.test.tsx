@@ -121,6 +121,7 @@ const mockCallbacks = {
   onUploadPdf: vi.fn(),
   onEditNotes: vi.fn(),
   onRemove: vi.fn(),
+  onAskAgent: vi.fn(),
 };
 
 // ============================================================================
@@ -299,6 +300,15 @@ describe('UserGameCard - Action Buttons', () => {
       mockGameComplete.gameId,
       mockGameComplete.gameTitle
     );
+  });
+
+  it('calls onAskAgent when "Ask Agent" button clicked (Issue #3185)', () => {
+    render(<UserGameCard game={mockGameComplete} {...mockCallbacks} />, { wrapper: createWrapper() });
+
+    const button = screen.getByText('Ask Agent');
+    fireEvent.click(button);
+
+    expect(mockCallbacks.onAskAgent).toHaveBeenCalledWith(mockGameComplete.gameId);
   });
 });
 

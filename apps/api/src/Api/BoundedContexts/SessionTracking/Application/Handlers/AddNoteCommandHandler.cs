@@ -1,7 +1,9 @@
 using MediatR;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
+using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
@@ -14,15 +16,18 @@ public class AddNoteCommandHandler : IRequestHandler<AddNoteCommand, AddNoteResu
     private readonly ISessionRepository _sessionRepository;
     private readonly MeepleAiDbContext _context;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISessionSyncService _syncService;
 
     public AddNoteCommandHandler(
         ISessionRepository sessionRepository,
         MeepleAiDbContext context,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ISessionSyncService syncService)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _syncService = syncService ?? throw new ArgumentNullException(nameof(syncService));
     }
 
     public async Task<AddNoteResult> Handle(AddNoteCommand request, CancellationToken cancellationToken)
@@ -64,6 +69,22 @@ public class AddNoteCommandHandler : IRequestHandler<AddNoteCommand, AddNoteResu
 
         _context.SessionTrackingPlayerNotes.Add(noteEntity);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // GST-003: Publish SSE event ONLY for Shared notes (not Private)
+        if (noteType == NoteType.Shared)
+        {
+            var evt = new NoteAddedEvent
+            {
+                SessionId = request.SessionId,
+                NoteId = note.Id,
+                ParticipantId = request.ParticipantId,
+                NoteType = noteType,
+                Content = request.Content,
+                IsHidden = request.IsHidden,
+                Timestamp = DateTime.UtcNow
+            };
+            await _syncService.PublishEventAsync(request.SessionId, evt, cancellationToken).ConfigureAwait(false);
+        }
 
         return new AddNoteResult(note.Id);
     }

@@ -19,5 +19,6 @@ internal record UserLibraryEntryDto(
     DateTime? StateChangedAt = null,
     string? StateNotes = null,
     AgentConfigDto? CustomAgentConfig = null,
-    CustomPdfDto? CustomPdf = null
+    CustomPdfDto? CustomPdf = null,
+    bool HasPdfDocuments = false
 );

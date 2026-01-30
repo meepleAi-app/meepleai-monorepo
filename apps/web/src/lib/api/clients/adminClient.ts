@@ -1116,10 +1116,90 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       }
       return result;
     },
+
+    // ========== Agent Typologies Management (Issue #3179) ==========
+
+    /**
+     * Get all agent typologies (Admin/Editor)
+     * AGT-005: Admin typologies list page
+     */
+    async getAgentTypologies(params?: {
+      status?: string;
+      createdBy?: string;
+      search?: string;
+      page?: number;
+      pageSize?: number;
+    }) {
+      const queryParams = new URLSearchParams();
+      if (params?.status && params.status !== 'All') queryParams.set('status', params.status);
+      if (params?.createdBy && params.createdBy !== 'All') queryParams.set('createdBy', params.createdBy);
+      if (params?.search) queryParams.set('search', params.search);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
+
+      const url = `/admin/agent-typologies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const result = await httpClient.get<AgentTypologyListResponse>(url);
+      return result || { typologies: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Get agent typology by ID (Admin/Editor)
+     * AGT-005: View typology details
+     */
+    async getAgentTypologyById(id: string) {
+      return httpClient.get<AgentTypology>(`/admin/agent-typologies/${id}`);
+    },
+
+    /**
+     * Delete agent typology (soft delete, Admin only)
+     * AGT-005: Admin typology management
+     */
+    async deleteAgentTypology(id: string) {
+      await httpClient.delete(`/admin/agent-typologies/${id}`);
+    },
+
+    /**
+     * Approve agent typology (Admin only)
+     * AGT-005: Admin typology approval workflow
+     */
+    async approveAgentTypology(id: string) {
+      return httpClient.post<AgentTypology>(`/admin/agent-typologies/${id}/approve`, {});
+    },
+
+    /**
+     * Reject agent typology (Admin only)
+     * AGT-007: Admin typology rejection workflow
+     */
+    async rejectAgentTypology(id: string, reason: string) {
+      return httpClient.post<AgentTypology>(`/admin/agent-typologies/${id}/reject`, {
+        reason,
+      });
+    },
   };
 }
 
 export type AdminClient = ReturnType<typeof createAdminClient>;
+
+// ========== Agent Typology Types (Issue #3179) ==========
+
+export type AgentTypology = {
+  id: string;
+  name: string;
+  description: string;
+  systemMessage: string;
+  status: 'Draft' | 'PendingReview' | 'Approved' | 'Rejected';
+  createdBy: string;
+  createdByDisplayName: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AgentTypologyListResponse = {
+  typologies: AgentTypology[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
 
 // ========== Additional Types for Issue #2890 ==========
 

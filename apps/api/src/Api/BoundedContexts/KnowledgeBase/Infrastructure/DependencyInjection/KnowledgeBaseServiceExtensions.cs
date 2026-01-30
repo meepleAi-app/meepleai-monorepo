@@ -19,6 +19,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 using Api.Services;
 using Api.Services.LlmClients;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 
@@ -129,12 +130,17 @@ internal static class KnowledgeBaseServiceExtensions
 
     private static void AddInfrastructureServices(IServiceCollection services)
     {
+        // Infrastructure - Unit of Work (Scoped - tied to DbContext lifetime)
+        // Issue #3177: AGT-003 - Required by AgentTypology command handlers
+        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
+
         // Infrastructure - Repositories (Scoped - tied to DbContext lifetime)
         services.AddScoped<IVectorDocumentRepository, VectorDocumentRepository>();
         services.AddScoped<IEmbeddingRepository, EmbeddingRepository>();
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>(); // Issue #924: ChatThread support
         services.AddScoped<ILlmCostLogRepository, LlmCostLogRepository>(); // ISSUE-960: Cost tracking
         services.AddScoped<IAgentRepository, AgentRepository>(); // Issue #866: Agent management
+        services.AddScoped<IAgentTypologyRepository, AgentTypologyRepository>(); // Issue #3175, #3177: AgentTypology CRUD
 
         // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
         services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();

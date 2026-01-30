@@ -342,4 +342,59 @@ internal static class KnowledgeBaseMappers
         };
         return System.Text.Json.JsonSerializer.Serialize(data);
     }
+
+    /// <summary>
+    /// Maps persistence AgentSessionEntity to domain AgentSession.
+    /// Issue #3184 (AGT-010): Session-Based Agent Lifecycle.
+    /// </summary>
+    public static AgentSession ToDomain(AgentSessionEntity entity)
+    {
+        var gameState = GameState.FromJson(entity.CurrentGameStateJson);
+
+        var session = new AgentSession(
+            id: entity.Id,
+            agentId: entity.AgentId,
+            gameSessionId: entity.GameSessionId,
+            userId: entity.UserId,
+            gameId: entity.GameId,
+            typologyId: entity.TypologyId,
+            initialState: gameState
+        );
+
+        // Use reflection to restore read-only properties (StartedAt, EndedAt, IsActive)
+        var startedAtProp = typeof(AgentSession).GetProperty(nameof(AgentSession.StartedAt));
+        startedAtProp?.SetValue(session, entity.StartedAt);
+
+        if (entity.EndedAt.HasValue)
+        {
+            var endedAtProp = typeof(AgentSession).GetProperty(nameof(AgentSession.EndedAt));
+            endedAtProp?.SetValue(session, entity.EndedAt);
+        }
+
+        var isActiveProp = typeof(AgentSession).GetProperty(nameof(AgentSession.IsActive));
+        isActiveProp?.SetValue(session, entity.IsActive);
+
+        return session;
+    }
+
+    /// <summary>
+    /// Maps domain AgentSession to persistence AgentSessionEntity.
+    /// Issue #3184 (AGT-010): Session-Based Agent Lifecycle.
+    /// </summary>
+    public static AgentSessionEntity ToEntity(AgentSession session)
+    {
+        return new AgentSessionEntity
+        {
+            Id = session.Id,
+            AgentId = session.AgentId,
+            GameSessionId = session.GameSessionId,
+            UserId = session.UserId,
+            GameId = session.GameId,
+            TypologyId = session.TypologyId,
+            CurrentGameStateJson = session.CurrentGameState.ToJson(),
+            StartedAt = session.StartedAt,
+            EndedAt = session.EndedAt,
+            IsActive = session.IsActive
+        };
+    }
 }

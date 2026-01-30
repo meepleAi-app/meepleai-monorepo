@@ -36,7 +36,7 @@
 **Frontend** (4 issues) - 🟡 IN PROGRESS:
 
 - [x] #3179 AGT-005: Admin Typologies List Page
-- [ ] #3180 AGT-006: Create/Edit Typology Form
+- [x] #3180 AGT-006: Create/Edit Typology Form
 - [ ] #3181 AGT-007: Typology Approval Queue
 - [ ] #3182 AGT-008: Editor Proposal Form & Test Sandbox
 
@@ -49,7 +49,7 @@
 **Backend** (3 issues) - 🟡 33% Complete:
 
 - [x] #3183 AGT-009: AgentSession Entity & Migration ✅ (Completato 2026-01-30)
-- [ ] #3184 AGT-010: Session Agent Commands (Launch, Chat, UpdateState)
+- [x] #3184 AGT-010: Session Agent Commands (Launch, Chat, UpdateState)
 - [ ] #3189 AGT-015: GST Integration - Agent State Sync with Game Events
 
 **Frontend** (4 issues) - 🔴 Waiting on GST Backend:
@@ -610,6 +610,7 @@ jobs:
 3. **🟢 Medium**: Pianificare AGT-010 Session Commands (dipende da GST-003 SSE)
 
 **🎉 Recent Achievements** (2026-01-30):
+
 - ✅ EPIC 0 RAG Prerequisites: 2/2 issues completate
 - ✅ EPIC 1 Backend: 4/4 issues completate
 - ✅ EPIC 1 Frontend: 1/4 issue completata (AGT-005)

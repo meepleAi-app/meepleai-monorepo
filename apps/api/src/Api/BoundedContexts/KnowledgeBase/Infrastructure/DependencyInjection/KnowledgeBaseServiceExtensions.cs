@@ -50,6 +50,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ChatContextDomainService>(); // Issue #857: Chat history context
         services.AddSingleton<AgentOrchestrationService>(); // Issue #867: Agent invocation orchestration
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
+        services.AddSingleton<IAgentPromptBuilder, AgentPromptBuilder>(); // Issue #3184 (AGT-010): Session agent prompt building
 
         // Issue #2404: Agent Mode Handlers (Scoped - use repositories and LLM services)
         services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.PlayerModeHandler>();
@@ -141,6 +142,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<ILlmCostLogRepository, LlmCostLogRepository>(); // ISSUE-960: Cost tracking
         services.AddScoped<IAgentRepository, AgentRepository>(); // Issue #866: Agent management
         services.AddScoped<IAgentTypologyRepository, AgentTypologyRepository>(); // Issue #3175, #3177: AgentTypology CRUD
+        services.AddScoped<IAgentSessionRepository, AgentSessionRepository>(); // Issue #3184 (AGT-010): Agent session lifecycle
 
         // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
         services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();

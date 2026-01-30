@@ -50,6 +50,8 @@ export interface TypologyFormProps {
   onCancel: () => void;
   /** Whether to show loading state */
   isLoading?: boolean;
+  /** Whether this is an editor proposal (uses /propose endpoint) - Issue #3182 */
+  isProposal?: boolean;
 }
 
 // ========== Component ==========
@@ -59,6 +61,7 @@ export function TypologyForm({
   onSubmit,
   onCancel,
   isLoading = false,
+  isProposal = false,
 }: TypologyFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvancedParams, setShowAdvancedParams] = useState(!!typology?.defaultStrategyParameters);
@@ -123,17 +126,20 @@ export function TypologyForm({
       if (isEditMode) {
         await agentTypologiesApi.update(typology.id, data);
         typologyId = typology.id;
-        toast.success('Tipologia aggiornata con successo');
+        toast.success(isProposal ? 'Proposta aggiornata con successo' : 'Tipologia aggiornata con successo');
       } else {
-        const result = await agentTypologiesApi.create(data);
+        // Issue #3182: Use propose endpoint for editor proposals
+        const result = isProposal
+          ? await agentTypologiesApi.propose(data)
+          : await agentTypologiesApi.create(data);
         typologyId = result.id;
-        toast.success('Tipologia creata con successo');
+        toast.success(isProposal ? 'Proposta creata come Draft' : 'Tipologia creata con successo');
       }
 
       onSubmit(typologyId);
     } catch (error) {
       console.error('Failed to save typology:', error);
-      toast.error('Errore nel salvataggio della tipologia', {
+      toast.error(isProposal ? 'Errore nel salvataggio della proposta' : 'Errore nel salvataggio della tipologia', {
         description: error instanceof Error ? error.message : 'Errore sconosciuto',
       });
     } finally {

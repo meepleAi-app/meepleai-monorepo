@@ -50,12 +50,12 @@
 
 - [x] #3183 AGT-009: AgentSession Entity & Migration ✅ (Completato 2026-01-30)
 - [x] #3184 AGT-010: Session Agent Commands (Launch, Chat, UpdateState)
-- [ ] #3189 AGT-015: GST Integration - Agent State Sync with Game Events
+- [x] #3189 AGT-015: GST Integration - Agent State Sync with Game Events
 
 **Frontend** (4 issues) - 🔴 Waiting on GST Backend:
 
 - [-] #3185 AGT-011: Game Card 'Ask Agent' Button ⭐
-- [ ] #3186 AGT-012: Agent Configuration Modal ⭐
+- [x] #3186 AGT-012: Agent Configuration Modal ⭐
 - [ ] #3187 AGT-013: Agent Chat Sidebar Component (SSE Streaming) ⭐⭐⭐
 - [ ] #3188 AGT-014: Agent State Management (Zustand Store)
 

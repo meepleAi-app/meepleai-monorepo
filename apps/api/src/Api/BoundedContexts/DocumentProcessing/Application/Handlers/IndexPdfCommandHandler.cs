@@ -1,11 +1,13 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using PdfIndexingErrorCode = Api.BoundedContexts.DocumentProcessing.Application.DTOs.PdfIndexingErrorCode;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
@@ -24,6 +26,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     private readonly MeepleAiDbContext _db;
     private readonly ITextChunkingService _chunkingService;
     private readonly IEmbeddingService _embeddingService;
+    private readonly IndexingSettings _indexingSettings;
     private readonly IQdrantService _qdrantService;
     private readonly ILogger<IndexPdfCommandHandler> _logger;
     private readonly TimeProvider _timeProvider;
@@ -34,6 +37,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
         ILogger<IndexPdfCommandHandler> logger,
+        IOptions<IndexingSettings> indexingSettings,
         TimeProvider? timeProvider = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
@@ -41,6 +45,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _indexingSettings = indexingSettings?.Value ?? throw new ArgumentNullException(nameof(indexingSettings));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -206,37 +211,56 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
 
         _logger.LogInformation("Created {ChunkCount} chunks for PDF {PdfId}", textChunks.Count, pdfId);
 
-        // Generate embeddings
-        _logger.LogInformation("Generating embeddings for {ChunkCount} chunks", textChunks.Count);
+        // Generate embeddings in batches to reduce memory footprint
+        var embeddingBatchSize = _indexingSettings.EmbeddingBatchSize;
+        var documentChunks = new List<DocumentChunk>(textChunks.Count);
 
-        var texts = textChunks.Select(c => c.Text).ToList();
-        var embeddingResult = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken).ConfigureAwait(false);
+        _logger.LogInformation("Generating embeddings for {ChunkCount} chunks in batches of {BatchSize}",
+            textChunks.Count, embeddingBatchSize);
 
-        if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+        for (int i = 0; i < textChunks.Count; i += embeddingBatchSize)
         {
-            _logger.LogError("Failed to generate embeddings for PDF {PdfId}: {Error}",
-                pdfId, embeddingResult.ErrorMessage);
-            return (false, null, $"Embedding generation failed: {embeddingResult.ErrorMessage}", PdfIndexingErrorCode.EmbeddingFailed);
-        }
+            var batchSize = Math.Min(embeddingBatchSize, textChunks.Count - i);
 
-        if (embeddingResult.Embeddings.Count != textChunks.Count)
-        {
-            _logger.LogError("Embedding count mismatch: expected {Expected}, got {Actual}",
-                textChunks.Count, embeddingResult.Embeddings.Count);
-            return (false, null, "Embedding count mismatch", PdfIndexingErrorCode.EmbeddingFailed);
-        }
+            _logger.LogDebug("Processing embedding batch {BatchNumber}/{TotalBatches} ({BatchSize} chunks)",
+                (i / embeddingBatchSize) + 1,
+                (int)Math.Ceiling((double)textChunks.Count / embeddingBatchSize),
+                batchSize);
 
-        // Prepare document chunks with embeddings
-        var documentChunks = textChunks
-            .Select((chunk, index) => new DocumentChunk
+            var texts = textChunks.Skip(i).Take(batchSize).Select(c => c.Text).ToList();
+            var embeddingResult = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken).ConfigureAwait(false);
+
+            if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
             {
-                Text = chunk.Text,
-                Embedding = embeddingResult.Embeddings[index],
-                Page = chunk.Page,
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd
-            })
-            .ToList();
+                _logger.LogError("Failed to generate embeddings for PDF {PdfId}: {Error}",
+                    pdfId, embeddingResult.ErrorMessage);
+                return (false, null, $"Embedding generation failed: {embeddingResult.ErrorMessage}", PdfIndexingErrorCode.EmbeddingFailed);
+            }
+
+            if (embeddingResult.Embeddings.Count != batchSize)
+            {
+                _logger.LogError("Embedding count mismatch: expected {Expected}, got {Actual}",
+                    batchSize, embeddingResult.Embeddings.Count);
+                return (false, null, "Embedding count mismatch", PdfIndexingErrorCode.EmbeddingFailed);
+            }
+
+            // Prepare document chunks with embeddings
+            var batchChunks = textChunks.Skip(i).Take(batchSize)
+                .Select((chunk, index) => new DocumentChunk
+                {
+                    Text = chunk.Text,
+                    Embedding = embeddingResult.Embeddings[index],
+                    Page = chunk.Page,
+                    CharStart = chunk.CharStart,
+                    CharEnd = chunk.CharEnd
+                })
+                .ToList();
+
+            documentChunks.AddRange(batchChunks);
+
+            _logger.LogDebug("Completed batch {BatchNumber}, total chunks processed: {ProcessedCount}/{TotalCount}",
+                (i / embeddingBatchSize) + 1, documentChunks.Count, textChunks.Count);
+        }
 
         return (true, documentChunks, null, null);
     }
@@ -332,4 +356,3 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         return IndexingResultDto.CreateFailure(errorMessage, errorCode);
     }
 }
-

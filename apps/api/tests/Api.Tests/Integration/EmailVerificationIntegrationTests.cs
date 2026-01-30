@@ -34,10 +34,6 @@ public class EmailVerificationIntegrationTests : IAsyncLifetime
     private readonly Action<string> _output;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
-
-    // Test data constants
-    private const string TestUserEmail = "verification-test@test.meepleai.dev";
-
     public EmailVerificationIntegrationTests(SharedTestcontainersFixture fixture)
     {
         _fixture = fixture;

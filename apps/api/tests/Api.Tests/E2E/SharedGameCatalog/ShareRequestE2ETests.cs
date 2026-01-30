@@ -27,7 +27,6 @@ namespace Api.Tests.E2E.SharedGameCatalog;
 public sealed class ShareRequestE2ETests : E2ETestBase
 {
     private Guid _testGameId;
-    private Guid _testUserId;
 
     public ShareRequestE2ETests(E2ETestFixture fixture) : base(fixture) { }
 
@@ -68,7 +67,7 @@ public sealed class ShareRequestE2ETests : E2ETestBase
         var email = $"share_user_{Guid.NewGuid():N}@example.com";
         var (sessionToken, userId) = await RegisterUserAsync(email, "ValidPassword123!");
         SetSessionCookie(sessionToken);
-        _testUserId = userId;
+        // userId stored in database for test assertions
 
         // First add game to user's library
         var addToLibraryResponse = await Client.PostAsJsonAsync($"/api/v1/library/games/{_testGameId}", new { });

@@ -487,7 +487,7 @@ public sealed class MonthlyOptimizationReportServiceTests
     public async Task GenerateReportAsync_PassesCancellationToken()
     {
         // Arrange
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var token = cts.Token;
         SetupDefaultMocks();
 

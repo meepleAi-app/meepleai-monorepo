@@ -251,7 +251,7 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
         // Arrange
         var userId = Guid.NewGuid();
         var query = new GetUserActivityQuery(userId);
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         // Act & Assert

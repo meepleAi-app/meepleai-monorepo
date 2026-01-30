@@ -215,11 +215,13 @@ public class UploadGameImageCommandHandlerTests
         public override bool CanWrite => false;
         public override long Length => _length;
 
+#pragma warning disable S2292 // Test stream requires explicit backing field for mutable position
         public override long Position
         {
             get => _position;
             set => _position = value;
         }
+#pragma warning restore S2292
 
         public override void Flush() { }
 

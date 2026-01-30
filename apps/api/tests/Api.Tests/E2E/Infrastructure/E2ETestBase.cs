@@ -54,7 +54,9 @@ namespace Api.Tests.E2E.Infrastructure;
 /// </summary>
 public abstract class E2ETestBase : IAsyncLifetime
 {
+#pragma warning disable S4487 // Field is stored for potential future fixture access patterns
     private readonly E2ETestFixture _fixture;
+#pragma warning restore S4487
     private HttpClient? _client;
     private MeepleAiDbContext? _dbContext;
 
@@ -362,7 +364,6 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly string _connectionString;
     private readonly string _redisConnectionString;
-    private bool _isDisposed;
 
     public E2EWebApplicationFactory(string connectionString, string redisConnectionString)
     {
@@ -379,7 +380,7 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
         // Intentionally do NOT call base.Dispose() to prevent TestServer disposal.
         // The TestServer will be cleaned up when the process terminates.
         // This is the fix for ObjectDisposedException in E2E tests.
-        _isDisposed = true;
+        // Disposal state not tracked - intentional for static factory pattern
     }
 
     /// <summary>
@@ -390,7 +391,7 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
     {
         // Intentionally do NOT call base.DisposeAsync() to prevent TestServer disposal.
         // The TestServer will be cleaned up when the process terminates.
-        _isDisposed = true;
+        // Disposal state not tracked - intentional for static factory pattern
         return ValueTask.CompletedTask;
     }
 

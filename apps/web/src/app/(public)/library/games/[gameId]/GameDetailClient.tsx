@@ -26,6 +26,7 @@ import { SplitViewLayout } from '@/components/game-detail/SplitViewLayout';
 import { PdfViewer } from '@/components/pdf-viewer';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
+import { AgentConfigModal } from '@/components/agent/AgentConfigModal'; // Issue #3186
 
 export interface GameDetailClientProps {
   gameId: string;
@@ -99,9 +100,25 @@ export default function GameDetailClient({
         </div>
 
         {/* Actions Menu */}
-        <Button variant="ghost" size="sm">
-          <MoreVertical className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Agent Config Modal - Issue #3186 */}
+          <AgentConfigModal
+            gameId={gameId}
+            trigger={
+              <Button variant="outline" size="sm">
+                AI Config
+              </Button>
+            }
+            onConfigSaved={() => {
+              // Note: Chat sidebar integration pending (Issue #3186)
+              console.log('Agent config saved');
+            }}
+          />
+
+          <Button variant="ghost" size="sm">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </div>
       </header>
 
       {/* Mobile View Toggle */}

@@ -1165,6 +1165,16 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     async approveAgentTypology(id: string) {
       return httpClient.post<AgentTypology>(`/admin/agent-typologies/${id}/approve`, {});
     },
+
+    /**
+     * Reject agent typology (Admin only)
+     * AGT-007: Admin typology rejection workflow
+     */
+    async rejectAgentTypology(id: string, reason: string) {
+      return httpClient.post<AgentTypology>(`/admin/agent-typologies/${id}/reject`, {
+        reason,
+      });
+    },
   };
 }
 

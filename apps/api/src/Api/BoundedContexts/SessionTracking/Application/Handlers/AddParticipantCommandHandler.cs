@@ -1,7 +1,9 @@
 using MediatR;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
+using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -12,13 +14,16 @@ public class AddParticipantCommandHandler : IRequestHandler<AddParticipantComman
 {
     private readonly ISessionRepository _sessionRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISessionSyncService _syncService;
 
     public AddParticipantCommandHandler(
         ISessionRepository sessionRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ISessionSyncService syncService)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _syncService = syncService ?? throw new ArgumentNullException(nameof(syncService));
     }
 
     public async Task<AddParticipantResult> Handle(AddParticipantCommand request, CancellationToken cancellationToken)
@@ -59,6 +64,17 @@ public class AddParticipantCommandHandler : IRequestHandler<AddParticipantComman
         // Get the newly created participant ID
         var newParticipant = session.Participants.First(p => p.JoinOrder == joinOrder);
 
+        // GST-003: Publish SSE event for real-time participant updates
+        var evt = new ParticipantAddedEvent
+        {
+            SessionId = request.SessionId,
+            ParticipantId = newParticipant.Id,
+            DisplayName = request.DisplayName,
+            IsOwner = false,
+            JoinOrder = joinOrder,
+            Timestamp = DateTime.UtcNow
+        };
+        await _syncService.PublishEventAsync(request.SessionId, evt, cancellationToken).ConfigureAwait(false);
 
         return new AddParticipantResult(
             newParticipant.Id,

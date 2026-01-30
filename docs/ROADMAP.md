@@ -54,7 +54,7 @@
 
 **Frontend** (4 issues) - 🔴 Waiting on GST Backend:
 
-- [x] #3185 AGT-011: Game Card 'Ask Agent' Button ⭐
+- [-] #3185 AGT-011: Game Card 'Ask Agent' Button ⭐
 - [ ] #3186 AGT-012: Agent Configuration Modal ⭐
 - [ ] #3187 AGT-013: Agent Chat Sidebar Component (SSE Streaming) ⭐⭐⭐
 - [ ] #3188 AGT-014: Agent State Management (Zustand Store)
@@ -88,7 +88,7 @@
 
 - [x] #3160 GST-001: Backend - Bounded Context & Database Schema
 - [x] #3161 GST-002: Backend - CQRS Commands & Queries
-- [ ] #3162 GST-003: Backend - Real-Time SSE Infrastructure
+- [x] #3162 GST-003: Backend - Real-Time SSE Infrastructure
 - [ ] #3163 GST-004: Frontend - Generic Toolkit Routes & Integration
 - [ ] #3164 GST-005: Frontend - Game-Specific Toolkit Integration
 - [ ] #3165 GST-006: Session History & UserLibrary Integration

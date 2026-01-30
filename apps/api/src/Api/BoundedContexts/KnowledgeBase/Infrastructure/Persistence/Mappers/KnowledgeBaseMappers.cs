@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Services;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
@@ -228,5 +229,117 @@ internal static class KnowledgeBaseMappers
     {
         var parametersJson = System.Text.Json.JsonSerializer.Serialize(strategy.Parameters);
         return (strategy.Name, parametersJson);
+    }
+
+    /// <summary>
+    /// Maps persistence AgentTypologyEntity to domain AgentTypology.
+    /// Issue #3176: AGT-002, #3177: AGT-003
+    /// </summary>
+    public static AgentTypology ToDomain(AgentTypologyEntity entity)
+    {
+        var status = (TypologyStatus)entity.Status;
+        var strategy = DeserializeStrategy(entity.DefaultStrategyJson);
+
+        var typology = new AgentTypology(
+            id: entity.Id,
+            name: entity.Name,
+            description: entity.Description,
+            basePrompt: entity.BasePrompt,
+            defaultStrategy: strategy,
+            createdBy: entity.CreatedBy,
+            status: status
+        );
+
+        // Use reflection to set read-only properties (ApprovedBy, ApprovedAt, CreatedAt, IsDeleted)
+        if (entity.ApprovedBy.HasValue)
+        {
+            var approvedByProp = typeof(AgentTypology).GetProperty(nameof(AgentTypology.ApprovedBy));
+            approvedByProp?.SetValue(typology, entity.ApprovedBy);
+        }
+
+        if (entity.ApprovedAt.HasValue)
+        {
+            var approvedAtProp = typeof(AgentTypology).GetProperty(nameof(AgentTypology.ApprovedAt));
+            approvedAtProp?.SetValue(typology, entity.ApprovedAt);
+        }
+
+        var createdAtProp = typeof(AgentTypology).GetProperty(nameof(AgentTypology.CreatedAt));
+        createdAtProp?.SetValue(typology, entity.CreatedAt);
+
+        var isDeletedProp = typeof(AgentTypology).GetProperty(nameof(AgentTypology.IsDeleted));
+        isDeletedProp?.SetValue(typology, entity.IsDeleted);
+
+        return typology;
+    }
+
+    /// <summary>
+    /// Maps domain AgentTypology to persistence AgentTypologyEntity.
+    /// Issue #3176: AGT-002, #3177: AGT-003
+    /// </summary>
+    public static AgentTypologyEntity ToEntity(AgentTypology typology)
+    {
+        var strategyJson = SerializeStrategyToJson(typology.DefaultStrategy);
+
+        return new AgentTypologyEntity
+        {
+            Id = typology.Id,
+            Name = typology.Name,
+            Description = typology.Description,
+            BasePrompt = typology.BasePrompt,
+            DefaultStrategyJson = strategyJson,
+            Status = (int)typology.Status,
+            CreatedBy = typology.CreatedBy,
+            ApprovedBy = typology.ApprovedBy,
+            CreatedAt = typology.CreatedAt,
+            ApprovedAt = typology.ApprovedAt,
+            IsDeleted = typology.IsDeleted
+        };
+    }
+
+    /// <summary>
+    /// Deserializes AgentStrategy from JSON string.
+    /// </summary>
+    private static AgentStrategy DeserializeStrategy(string strategyJson)
+    {
+        var strategyData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(strategyJson)
+            ?? throw new InvalidOperationException("Failed to deserialize strategy JSON");
+
+        if (!strategyData.TryGetValue("Name", out var nameElement))
+            throw new InvalidOperationException("Strategy JSON missing 'Name' property");
+
+        var name = nameElement.GetString() ?? throw new InvalidOperationException("Strategy name is null");
+
+        var parameters = new Dictionary<string, object>(StringComparer.Ordinal);
+        if (strategyData.TryGetValue("Parameters", out var paramsElement))
+        {
+            foreach (var prop in paramsElement.EnumerateObject())
+            {
+                parameters[prop.Name] = prop.Value.ValueKind switch
+                {
+                    System.Text.Json.JsonValueKind.Number => prop.Value.GetDouble(),
+                    System.Text.Json.JsonValueKind.String => prop.Value.GetString() ?? "",
+                    System.Text.Json.JsonValueKind.True => true,
+                    System.Text.Json.JsonValueKind.False => false,
+                    System.Text.Json.JsonValueKind.Array => prop.Value.EnumerateArray()
+                        .Select(e => e.GetString() ?? "").ToArray(),
+                    _ => prop.Value.ToString()
+                };
+            }
+        }
+
+        return AgentStrategy.Custom(name, parameters);
+    }
+
+    /// <summary>
+    /// Serializes AgentStrategy to JSON string.
+    /// </summary>
+    private static string SerializeStrategyToJson(AgentStrategy strategy)
+    {
+        var data = new
+        {
+            Name = strategy.Name,
+            Parameters = strategy.Parameters
+        };
+        return System.Text.Json.JsonSerializer.Serialize(data);
     }
 }

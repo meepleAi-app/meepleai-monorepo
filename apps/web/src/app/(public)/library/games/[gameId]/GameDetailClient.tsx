@@ -15,7 +15,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 import { ArrowLeft, MoreVertical, Settings } from 'lucide-react';
 import Image from 'next/image';
@@ -47,7 +47,7 @@ export default function GameDetailClient({
   gameImageUrl,
   agentModes,
   availablePdfs,
-}: GameDetailClientProps): JSX.Element {
+}: GameDetailClientProps) {
   const [currentPdfUrl, setCurrentPdfUrl] = useState<string>(
     availablePdfs[0]?.id || ''
   );

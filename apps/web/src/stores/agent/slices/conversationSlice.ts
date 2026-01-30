@@ -15,6 +15,7 @@ import { StateCreator } from 'zustand';
 
 import { AgentMessage } from '@/types/agent';
 import { ConversationCache, AgentStoreError } from '../types';
+import type { AgentStore } from '../types/store.types';
 
 const MAX_CACHED_CONVERSATIONS = 5;
 
@@ -57,7 +58,7 @@ export interface ConversationSlice {
 }
 
 export const createConversationSlice: StateCreator<
-  ConversationSlice,
+  AgentStore,
   [['zustand/immer', never]],
   [],
   ConversationSlice

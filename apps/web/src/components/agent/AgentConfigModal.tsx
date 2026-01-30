@@ -12,6 +12,7 @@
 
 'use client';
 
+import React from 'react';
 import { AlertCircle } from 'lucide-react';
 
 import { useAgentConfigModal } from '@/hooks/useAgentConfigModal';
@@ -47,7 +48,7 @@ export function AgentConfigModal({
   gameId,
   trigger,
   onConfigSaved,
-}: AgentConfigModalProps): JSX.Element {
+}: AgentConfigModalProps) {
   const {
     selectedTypologyId,
     setSelectedTypologyId,

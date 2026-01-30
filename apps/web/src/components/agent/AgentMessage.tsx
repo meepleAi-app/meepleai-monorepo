@@ -85,10 +85,10 @@ export const AgentMessage = React.memo(function AgentMessage({ message }: AgentM
             <ReactMarkdown
               className="prose prose-sm max-w-none"
               components={{
-                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
-                code: ({ children, className }) => {
+                p: ({ children }: { children?: React.ReactNode }) => <p className="mb-2 last:mb-0">{children}</p>,
+                ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
+                code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
                   const isInline = !className;
                   return isInline ? (
                     <code className="bg-[#e5e7eb] px-1 py-0.5 rounded text-xs font-mono">
@@ -118,14 +118,14 @@ export const AgentMessage = React.memo(function AgentMessage({ message }: AgentM
                 <button
                   key={index}
                   className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-[#dadce0] rounded text-xs hover:bg-[#f8f9fa] transition-colors"
-                  title={citation.snippet}
+                  title={citation.snippet ?? undefined}
                   onClick={() => {
                     // TODO: Future integration with PDF viewer
                     console.log('Citation clicked:', citation);
                   }}
                 >
                   <span className="text-[#1a73e8]">
-                    {citation.documentName || 'Source'}
+                    {citation.source || 'Source'}
                   </span>
                   {citation.pageNumber && (
                     <span className="text-[#5f6368]">p.{citation.pageNumber}</span>

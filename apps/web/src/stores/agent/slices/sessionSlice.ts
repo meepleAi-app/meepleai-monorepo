@@ -14,6 +14,7 @@ import { StateCreator } from 'zustand';
 
 import { AgentSession, AgentStoreError } from '../types';
 import { AgentMode } from '@/components/agent';
+import type { AgentStore } from '../types/store.types';
 
 export interface SessionSlice {
   // ============================================================================
@@ -50,7 +51,7 @@ export interface SessionSlice {
 }
 
 export const createSessionSlice: StateCreator<
-  SessionSlice,
+  AgentStore,
   [['zustand/immer', never]],
   [],
   SessionSlice

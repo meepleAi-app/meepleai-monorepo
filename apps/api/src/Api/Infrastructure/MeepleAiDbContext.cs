@@ -51,6 +51,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AgentConfigurationEntity> AgentConfigurations => Set<AgentConfigurationEntity>(); // ISSUE-2391 Sprint 2
     public DbSet<AgentTypologyEntity> AgentTypologies => Set<AgentTypologyEntity>(); // ISSUE-3175: Agent typology domain model
     public DbSet<TypologyPromptTemplateEntity> TypologyPromptTemplates => Set<TypologyPromptTemplateEntity>(); // ISSUE-3175: Typology prompt templates
+    public DbSet<AgentSessionEntity> AgentSessions => Set<AgentSessionEntity>(); // ISSUE-3183: Agent session state persistence
     public DbSet<N8NConfigEntity> N8NConfigs => Set<N8NConfigEntity>();
     public DbSet<RuleSpecCommentEntity> RuleSpecComments => Set<RuleSpecCommentEntity>();
     public DbSet<PromptTemplateEntity> PromptTemplates => Set<PromptTemplateEntity>();
@@ -151,6 +152,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.RulebookAnalysis>(); // ISSUE-2402
         modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.AgentTypology>(); // ISSUE-3175
         modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.TypologyPromptTemplate>(); // ISSUE-3175
+        modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.AgentSession>(); // ISSUE-3183
     }
 
     /// <summary>

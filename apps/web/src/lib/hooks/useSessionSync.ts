@@ -11,7 +11,7 @@
  * - Error handling and recovery
  *
  * Backend endpoint (GST-003):
- * - GET /api/v1/sessions/{sessionId}/stream
+ * - GET /api/v1/game-sessions/{sessionId}/stream
  *
  * @example
  * ```typescript
@@ -164,7 +164,7 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
    */
   const connect = useCallback(() => {
     const baseUrl = apiBaseUrl || process.env.NEXT_PUBLIC_API_BASE || '';
-    const endpoint = `${baseUrl}/api/v1/sessions/${sessionId}/stream`;
+    const endpoint = `${baseUrl}/api/v1/game-sessions/${sessionId}/stream`;
 
     try {
       const eventSource = new EventSource(endpoint, {

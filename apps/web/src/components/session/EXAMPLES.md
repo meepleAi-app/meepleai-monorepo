@@ -31,7 +31,7 @@ export default function GenericToolkitPage() {
 
   // Create new generic session
   const handleCreateSession = async () => {
-    const response = await fetch('/api/v1/sessions', {
+    const response = await fetch('/api/v1/game-sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -53,7 +53,7 @@ export default function GenericToolkitPage() {
 
   // Join existing session by code
   const handleJoinSession = async (code: string) => {
-    const response = await fetch(`/api/v1/sessions/join/${code}`, {
+    const response = await fetch(`/api/v1/game-sessions/join/${code}`, {
       method: 'POST'
     });
     const data = await response.json();
@@ -138,7 +138,7 @@ export default function ActiveSessionPage() {
   // Initialize session data
   useEffect(() => {
     const fetchSession = async () => {
-      const response = await fetch(`/api/v1/sessions/${sessionId}/details`);
+      const response = await fetch(`/api/v1/game-sessions/${sessionId}/details`);
       const data = await response.json();
 
       setSession(data.session);
@@ -151,7 +151,7 @@ export default function ActiveSessionPage() {
 
   // Real-time SSE subscription
   useEffect(() => {
-    const eventSource = new EventSource(`/api/v1/sessions/${sessionId}/stream`);
+    const eventSource = new EventSource(`/api/v1/game-sessions/${sessionId}/stream`);
 
     eventSource.addEventListener('ScoreUpdatedEvent', (e) => {
       const event = JSON.parse(e.data);
@@ -182,7 +182,7 @@ export default function ActiveSessionPage() {
     setSyncStatus('saving');
 
     try {
-      const response = await fetch(`/api/v1/sessions/${sessionId}/scores`, {
+      const response = await fetch(`/api/v1/game-sessions/${sessionId}/scores`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -209,7 +209,7 @@ export default function ActiveSessionPage() {
     if (scores.length === 0) return;
 
     const lastScore = scores[scores.length - 1];
-    await fetch(`/api/v1/sessions/${sessionId}/scores/${lastScore.id}`, {
+    await fetch(`/api/v1/game-sessions/${sessionId}/scores/${lastScore.id}`, {
       method: 'DELETE'
     });
 
@@ -223,7 +223,7 @@ export default function ActiveSessionPage() {
       return acc;
     }, {} as Record<string, number>);
 
-    await fetch(`/api/v1/sessions/${sessionId}/finalize`, {
+    await fetch(`/api/v1/game-sessions/${sessionId}/finalize`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ finalRanks: ranks })
@@ -347,7 +347,7 @@ export default function GameSpecificToolkitPage() {
   const handleCreateSession = async () => {
     const template = GAME_TEMPLATES[game.slug] || { rounds: [], categories: [] };
 
-    const response = await fetch('/api/v1/sessions', {
+    const response = await fetch('/api/v1/game-sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -417,7 +417,7 @@ export default function GameSpecificToolkitPage() {
         rounds={template.rounds}
         categories={template.categories}
         onSubmit={async (data) => {
-          await fetch(`/api/v1/sessions/${session.id}/scores`, {
+          await fetch(`/api/v1/game-sessions/${session.id}/scores`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -457,7 +457,7 @@ export default function SessionHistoryPage() {
 
   useEffect(() => {
     const fetchHistory = async () => {
-      const response = await fetch('/api/v1/sessions/history?limit=20');
+      const response = await fetch('/api/v1/game-sessions/history?limit=20');
       const data = await response.json();
       setHistory(data.sessions);
     };
@@ -553,7 +553,7 @@ export default function SessionHistoryPage() {
 // After finalizing a session, create games_played entry
 async function finalizeSessionAndUpdateStats(sessionId: string) {
   // 1. Finalize session (calculate final ranks)
-  const finalizeResponse = await fetch(`/api/v1/sessions/${sessionId}/finalize`, {
+  const finalizeResponse = await fetch(`/api/v1/game-sessions/${sessionId}/finalize`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ finalRanks })
@@ -597,7 +597,7 @@ export function useSessionSync(sessionId: string) {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const eventSource = new EventSource(`/api/v1/sessions/${sessionId}/stream`);
+    const eventSource = new EventSource(`/api/v1/game-sessions/${sessionId}/stream`);
 
     eventSource.onopen = () => setIsConnected(true);
     eventSource.onerror = () => setIsConnected(false);

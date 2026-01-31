@@ -72,7 +72,7 @@ async function setupSessionLimitsMocks(
   });
 
   // Mock sessions list endpoint
-  await page.route(`${API_BASE}/api/v1/sessions`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/game-sessions`, async (route) => {
     const method = route.request().method();
 
     if (method === 'GET') {
@@ -290,7 +290,7 @@ test.describe('SESS-07: Session Limits Enforcement', () => {
       await setupSessionLimitsMocks(page, { tier: 'Free', currentSessions: 2, allowCreate: true });
 
       // Override to simulate server error
-      await page.route(`${API_BASE}/api/v1/sessions`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/game-sessions`, async (route) => {
         const method = route.request().method();
         if (method === 'POST') {
           await route.fulfill({
@@ -323,7 +323,7 @@ test.describe('SESS-07: Session Limits Enforcement', () => {
       await setupSessionLimitsMocks(page, { tier: 'Free', currentSessions: 2, allowCreate: true });
 
       // Override to simulate race condition (another device created session)
-      await page.route(`${API_BASE}/api/v1/sessions`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/game-sessions`, async (route) => {
         const method = route.request().method();
         if (method === 'POST') {
           await route.fulfill({
@@ -361,7 +361,7 @@ test.describe('SESS-07: Session Limits Enforcement', () => {
       await setupSessionLimitsMocks(page, { tier: 'Free', currentSessions: 3 });
 
       // Mock session end endpoint
-      await page.route(`${API_BASE}/api/v1/sessions/*/end`, async (route) => {
+      await page.route(`${API_BASE}/api/v1/game-sessions/*/end`, async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',

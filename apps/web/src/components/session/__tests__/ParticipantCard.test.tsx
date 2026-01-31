@@ -26,12 +26,16 @@ describe('ParticipantCard', () => {
 
   it('should display total score', () => {
     render(<ParticipantCard participant={mockParticipant} />);
-    expect(screen.getByText('87')).toBeInTheDocument();
+    // Score appears multiple times (shadow + main), check container has the value
+    const scoreElements = screen.getAllByText('87');
+    expect(scoreElements.length).toBeGreaterThan(0);
   });
 
   it('should show rank badge', () => {
     render(<ParticipantCard participant={mockParticipant} />);
-    expect(screen.getByText('#1')).toBeInTheDocument();
+    // Rank badge splits # and number across elements in full variant
+    expect(screen.getByText('#')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
   });
 
   it('should render owner participant', () => {

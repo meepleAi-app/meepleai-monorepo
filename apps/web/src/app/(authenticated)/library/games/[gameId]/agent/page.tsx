@@ -14,13 +14,18 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import type { Game } from '@/lib/types';
+import { AgentConfigSheet } from '@/components/agent/config/AgentConfigSheet';
+import { useAgentStore } from '@/stores/agentStore';
+import { Button } from '@/components/ui/primitives/button';
+import type { Game } from '@/types/domain';
 
 export default function AgentPage() {
   const params = useParams();
-  const gameId = params.gameId as string;
+  const gameId = (params?.gameId as string) || '';
   const [game, setGame] = useState<Game | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const { isConfigOpen, openConfig, closeConfig } = useAgentStore();
 
   useEffect(() => {
     const fetchGame = async () => {
@@ -69,18 +74,31 @@ export default function AgentPage() {
         </div>
       </header>
 
-      {/* Main Content - Placeholder */}
+      {/* Main Content */}
       <main className="flex flex-1 items-center justify-center">
         <div className="text-center">
-          <h2 className="mb-4 text-3xl font-bold text-cyan-400">Agent Page Foundation</h2>
-          <p className="text-slate-400">
-            Base routing established. UI components coming in next issues.
+          <h2 className="mb-4 text-3xl font-bold text-cyan-400">Agent Page</h2>
+          <p className="mb-6 text-slate-400">
+            Configure your AI assistant
           </p>
+          <Button onClick={openConfig} size="lg">
+            Configure Agent
+          </Button>
           <div className="mt-8 text-sm text-slate-500">
-            Issue #3237 (FRONT-001) - Base Setup Complete
+            Issue #3238 (FRONT-002) - Config Sheet Container
           </div>
         </div>
       </main>
+
+      {/* Config Sheet */}
+      {game && (
+        <AgentConfigSheet
+          isOpen={isConfigOpen}
+          onClose={closeConfig}
+          gameId={gameId}
+          gameName={game.name}
+        />
+      )}
     </div>
   );
 }

@@ -66,9 +66,9 @@ export default function AgentPage() {
       {/* Header */}
       <header className="border-b border-slate-800 bg-slate-900 px-6 py-4">
         <div className="flex items-center gap-4">
-          <div className="text-4xl">{game.icon || '🎲'}</div>
+          <div className="text-4xl">🤖</div>
           <div>
-            <h1 className="text-2xl font-bold text-white">{game.name}</h1>
+            <h1 className="text-2xl font-bold text-white">{game.title}</h1>
             <p className="text-sm text-slate-400">AI Assistant</p>
           </div>
         </div>
@@ -96,7 +96,7 @@ export default function AgentPage() {
           isOpen={isConfigOpen}
           onClose={closeConfig}
           gameId={gameId}
-          gameName={game.name}
+          gameTitle={game.title}
         />
       )}
     </div>

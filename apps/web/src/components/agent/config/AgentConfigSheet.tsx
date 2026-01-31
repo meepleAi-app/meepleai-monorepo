@@ -28,12 +28,12 @@ interface AgentConfigSheetProps {
   isOpen: boolean;
   onClose: () => void;
   gameId: string;
-  gameName: string;
+  gameTitle: string;
 }
 
 type ViewState = 'config' | 'template-info' | 'model-pricing';
 
-export function AgentConfigSheet({ isOpen, onClose, gameId, gameName }: AgentConfigSheetProps) {
+export function AgentConfigSheet({ isOpen, onClose, gameId, gameTitle }: AgentConfigSheetProps) {
   const [view, setView] = useState<ViewState>('config');
 
   const handleBack = () => {
@@ -82,7 +82,7 @@ export function AgentConfigSheet({ isOpen, onClose, gameId, gameName }: AgentCon
               <HelpCircle className="h-4 w-4 text-slate-400" />
             </Button>
           </div>
-          <p className="text-sm text-slate-400 mt-1">{gameName}</p>
+          <p className="text-sm text-slate-400 mt-1">{gameTitle}</p>
         </SheetHeader>
 
         {/* Content Area - Scrollable */}

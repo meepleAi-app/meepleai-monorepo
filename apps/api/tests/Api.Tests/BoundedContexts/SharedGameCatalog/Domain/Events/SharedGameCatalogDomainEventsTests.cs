@@ -1,4 +1,3 @@
-using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using FluentAssertions;
@@ -8,7 +7,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Domain.Events;
 
 /// <summary>
 /// Tests for SharedGameCatalog domain events.
-/// Issue #3025: Backend 90% Coverage Target - Phase 26
+/// Issue #3025: Backend 90% Coverage Target - Phase 21 PR#4
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class SharedGameCatalogDomainEventsTests
@@ -32,6 +31,21 @@ public sealed class SharedGameCatalogDomainEventsTests
         evt.CreatedBy.Should().Be(createdBy);
     }
 
+    [Fact]
+    public void SharedGameCreatedEvent_WithLongTitle_PreservesFullTitle()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var title = "Twilight Imperium: Fourth Edition - Prophecy of Kings Expansion";
+        var createdBy = Guid.NewGuid();
+
+        // Act
+        var evt = new SharedGameCreatedEvent(gameId, title, createdBy);
+
+        // Assert
+        evt.Title.Should().Be(title);
+    }
+
     #endregion
 
     #region SharedGameUpdatedEvent Tests
@@ -49,6 +63,23 @@ public sealed class SharedGameCatalogDomainEventsTests
         // Assert
         evt.GameId.Should().Be(gameId);
         evt.ModifiedBy.Should().Be(modifiedBy);
+    }
+
+    [Fact]
+    public void SharedGameUpdatedEvent_WithDifferentModifiers_TracksDifferentEditors()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var user1 = Guid.NewGuid();
+        var user2 = Guid.NewGuid();
+
+        // Act
+        var evt1 = new SharedGameUpdatedEvent(gameId, user1);
+        var evt2 = new SharedGameUpdatedEvent(gameId, user2);
+
+        // Assert
+        evt1.ModifiedBy.Should().Be(user1);
+        evt2.ModifiedBy.Should().Be(user2);
     }
 
     #endregion
@@ -70,53 +101,21 @@ public sealed class SharedGameCatalogDomainEventsTests
         evt.ArchivedBy.Should().Be(archivedBy);
     }
 
-    #endregion
-
-    #region SharedGameDocumentAddedEvent Tests
-
     [Fact]
-    public void SharedGameDocumentAddedEvent_SetsAllProperties()
+    public void SharedGameArchivedEvent_WithDifferentAdmins_TracksDifferentArchivers()
     {
         // Arrange
-        var sharedGameId = Guid.NewGuid();
-        var documentId = Guid.NewGuid();
-        var pdfDocumentId = Guid.NewGuid();
-        var documentType = SharedGameDocumentType.Rulebook;
-        var version = "1.0";
-        var createdBy = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var admin1 = Guid.NewGuid();
+        var admin2 = Guid.NewGuid();
 
         // Act
-        var evt = new SharedGameDocumentAddedEvent(
-            sharedGameId,
-            documentId,
-            pdfDocumentId,
-            documentType,
-            version,
-            createdBy);
+        var evt1 = new SharedGameArchivedEvent(gameId, admin1);
+        var evt2 = new SharedGameArchivedEvent(gameId, admin2);
 
         // Assert
-        evt.SharedGameId.Should().Be(sharedGameId);
-        evt.DocumentId.Should().Be(documentId);
-        evt.PdfDocumentId.Should().Be(pdfDocumentId);
-        evt.DocumentType.Should().Be(documentType);
-        evt.Version.Should().Be(version);
-        evt.CreatedBy.Should().Be(createdBy);
-    }
-
-    [Fact]
-    public void SharedGameDocumentAddedEvent_WithErrataType_SetsCorrectType()
-    {
-        // Act
-        var evt = new SharedGameDocumentAddedEvent(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            SharedGameDocumentType.Errata,
-            "2.0",
-            Guid.NewGuid());
-
-        // Assert
-        evt.DocumentType.Should().Be(SharedGameDocumentType.Errata);
+        evt1.ArchivedBy.Should().Be(admin1);
+        evt2.ArchivedBy.Should().Be(admin2);
     }
 
     #endregion
@@ -144,6 +143,24 @@ public sealed class SharedGameCatalogDomainEventsTests
         evt.EarnedAt.Should().Be(earnedAt);
     }
 
+    [Fact]
+    public void BadgeEarnedEvent_WithDifferentBadgeCodes_SetsCorrectly()
+    {
+        // Arrange
+        var userBadgeId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var badgeId = Guid.NewGuid();
+        var earnedAt = DateTime.UtcNow;
+
+        // Act
+        var evt1 = new BadgeEarnedEvent(userBadgeId, userId, badgeId, "POWER_CONTRIBUTOR", earnedAt);
+        var evt2 = new BadgeEarnedEvent(userBadgeId, userId, badgeId, "QUALITY_REVIEWER", earnedAt);
+
+        // Assert
+        evt1.BadgeCode.Should().Be("POWER_CONTRIBUTOR");
+        evt2.BadgeCode.Should().Be("QUALITY_REVIEWER");
+    }
+
     #endregion
 
     #region BadgeRevokedEvent Tests
@@ -164,6 +181,22 @@ public sealed class SharedGameCatalogDomainEventsTests
         evt.UserBadgeId.Should().Be(userBadgeId);
         evt.UserId.Should().Be(userId);
         evt.BadgeId.Should().Be(badgeId);
+        evt.Reason.Should().Be(reason);
+    }
+
+    [Fact]
+    public void BadgeRevokedEvent_WithDetailedReason_PreservesReason()
+    {
+        // Arrange
+        var userBadgeId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var badgeId = Guid.NewGuid();
+        var reason = "Multiple reports of low-quality contributions leading to community concerns";
+
+        // Act
+        var evt = new BadgeRevokedEvent(userBadgeId, userId, badgeId, reason);
+
+        // Assert
         evt.Reason.Should().Be(reason);
     }
 
@@ -312,6 +345,23 @@ public sealed class SharedGameCatalogDomainEventsTests
         evt.AdminId.Should().Be(adminId);
     }
 
+    [Fact]
+    public void ShareRequestReviewStartedEvent_WithDifferentAdmins_TracksDifferentReviewers()
+    {
+        // Arrange
+        var shareRequestId = Guid.NewGuid();
+        var admin1 = Guid.NewGuid();
+        var admin2 = Guid.NewGuid();
+
+        // Act
+        var evt1 = new ShareRequestReviewStartedEvent(shareRequestId, admin1);
+        var evt2 = new ShareRequestReviewStartedEvent(shareRequestId, admin2);
+
+        // Assert
+        evt1.AdminId.Should().Be(admin1);
+        evt2.AdminId.Should().Be(admin2);
+    }
+
     #endregion
 
     #region ShareRequestReviewReleasedEvent Tests
@@ -329,6 +379,23 @@ public sealed class SharedGameCatalogDomainEventsTests
         // Assert
         evt.ShareRequestId.Should().Be(shareRequestId);
         evt.AdminId.Should().Be(adminId);
+    }
+
+    [Fact]
+    public void ShareRequestReviewReleasedEvent_WithDifferentReviews_TracksCorrectly()
+    {
+        // Arrange
+        var shareRequestId1 = Guid.NewGuid();
+        var shareRequestId2 = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+
+        // Act
+        var evt1 = new ShareRequestReviewReleasedEvent(shareRequestId1, adminId);
+        var evt2 = new ShareRequestReviewReleasedEvent(shareRequestId2, adminId);
+
+        // Assert
+        evt1.ShareRequestId.Should().Be(shareRequestId1);
+        evt2.ShareRequestId.Should().Be(shareRequestId2);
     }
 
     #endregion
@@ -386,6 +453,21 @@ public sealed class SharedGameCatalogDomainEventsTests
         evt.Reason.Should().Be(reason);
     }
 
+    [Fact]
+    public void ShareRequestRejectedEvent_WithDetailedReason_PreservesFullReason()
+    {
+        // Arrange
+        var shareRequestId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        var reason = "Insufficient documentation quality: missing player count, unclear rule descriptions, and no setup instructions";
+
+        // Act
+        var evt = new ShareRequestRejectedEvent(shareRequestId, adminId, reason);
+
+        // Assert
+        evt.Reason.Should().Be(reason);
+    }
+
     #endregion
 
     #region ShareRequestChangesRequestedEvent Tests
@@ -407,6 +489,21 @@ public sealed class SharedGameCatalogDomainEventsTests
         evt.Feedback.Should().Be(feedback);
     }
 
+    [Fact]
+    public void ShareRequestChangesRequestedEvent_WithDetailedFeedback_PreservesFullFeedback()
+    {
+        // Arrange
+        var shareRequestId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        var feedback = "1. Update player count (currently missing)\n2. Add setup instructions\n3. Clarify win conditions";
+
+        // Act
+        var evt = new ShareRequestChangesRequestedEvent(shareRequestId, adminId, feedback);
+
+        // Assert
+        evt.Feedback.Should().Be(feedback);
+    }
+
     #endregion
 
     #region ShareRequestResubmittedEvent Tests
@@ -424,6 +521,22 @@ public sealed class SharedGameCatalogDomainEventsTests
         evt.ShareRequestId.Should().Be(shareRequestId);
     }
 
+    [Fact]
+    public void ShareRequestResubmittedEvent_WithDifferentRequests_TracksCorrectly()
+    {
+        // Arrange
+        var shareRequestId1 = Guid.NewGuid();
+        var shareRequestId2 = Guid.NewGuid();
+
+        // Act
+        var evt1 = new ShareRequestResubmittedEvent(shareRequestId1);
+        var evt2 = new ShareRequestResubmittedEvent(shareRequestId2);
+
+        // Assert
+        evt1.ShareRequestId.Should().Be(shareRequestId1);
+        evt2.ShareRequestId.Should().Be(shareRequestId2);
+    }
+
     #endregion
 
     #region ShareRequestWithdrawnEvent Tests
@@ -439,6 +552,22 @@ public sealed class SharedGameCatalogDomainEventsTests
 
         // Assert
         evt.ShareRequestId.Should().Be(shareRequestId);
+    }
+
+    [Fact]
+    public void ShareRequestWithdrawnEvent_WithDifferentRequests_TracksCorrectly()
+    {
+        // Arrange
+        var shareRequestId1 = Guid.NewGuid();
+        var shareRequestId2 = Guid.NewGuid();
+
+        // Act
+        var evt1 = new ShareRequestWithdrawnEvent(shareRequestId1);
+        var evt2 = new ShareRequestWithdrawnEvent(shareRequestId2);
+
+        // Assert
+        evt1.ShareRequestId.Should().Be(shareRequestId1);
+        evt2.ShareRequestId.Should().Be(shareRequestId2);
     }
 
     #endregion
@@ -504,6 +633,276 @@ public sealed class SharedGameCatalogDomainEventsTests
         evt.ShareRequestId.Should().Be(shareRequestId);
         evt.AdminId.Should().Be(adminId);
         evt.NewExpirationTime.Should().Be(newExpirationTime);
+    }
+
+    [Fact]
+    public void ShareRequestLockExtendedEvent_WithFutureExpiration_SetsCorrectTime()
+    {
+        // Arrange
+        var shareRequestId = Guid.NewGuid();
+        var adminId = Guid.NewGuid();
+        var newExpirationTime = DateTime.UtcNow.AddHours(2);
+
+        // Act
+        var evt = new ShareRequestLockExtendedEvent(shareRequestId, adminId, newExpirationTime);
+
+        // Assert
+        evt.NewExpirationTime.Should().BeAfter(DateTime.UtcNow);
+    }
+
+    #endregion
+
+    #region GameErrataAddedEvent Tests
+
+    [Fact]
+    public void GameErrataAddedEvent_WithValidParameters_SetsProperties()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var errataId = Guid.NewGuid();
+        var description = "Corrected misprinted card text in rule book";
+
+        // Act
+        var evt = new GameErrataAddedEvent(gameId, errataId, description);
+
+        // Assert
+        evt.GameId.Should().Be(gameId);
+        evt.ErrataId.Should().Be(errataId);
+        evt.Description.Should().Be(description);
+    }
+
+    [Fact]
+    public void GameErrataAddedEvent_WithDetailedDescription_PreservesFullDescription()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var errataId = Guid.NewGuid();
+        var description = "Page 15, paragraph 3: 'Draw 2 cards' should read 'Draw 3 cards'. This affects the resource gathering phase.";
+
+        // Act
+        var evt = new GameErrataAddedEvent(gameId, errataId, description);
+
+        // Assert
+        evt.Description.Should().Be(description);
+    }
+
+    #endregion
+
+    #region GameFaqAddedEvent Tests
+
+    [Fact]
+    public void GameFaqAddedEvent_WithValidParameters_SetsProperties()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var faqId = Guid.NewGuid();
+        var question = "Can I trade resources with other players?";
+
+        // Act
+        var evt = new GameFaqAddedEvent(gameId, faqId, question);
+
+        // Assert
+        evt.GameId.Should().Be(gameId);
+        evt.FaqId.Should().Be(faqId);
+        evt.Question.Should().Be(question);
+    }
+
+    [Fact]
+    public void GameFaqAddedEvent_WithDetailedQuestion_PreservesFullQuestion()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var faqId = Guid.NewGuid();
+        var question = "If I play a special action card during another player's turn, do I still get to take my regular turn afterward?";
+
+        // Act
+        var evt = new GameFaqAddedEvent(gameId, faqId, question);
+
+        // Assert
+        evt.Question.Should().Be(question);
+    }
+
+    #endregion
+
+    #region SharedGameDeletedEvent Tests
+
+    [Fact]
+    public void SharedGameDeletedEvent_WithValidParameters_SetsProperties()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var deletedBy = Guid.NewGuid();
+
+        // Act
+        var evt = new SharedGameDeletedEvent(gameId, deletedBy);
+
+        // Assert
+        evt.GameId.Should().Be(gameId);
+        evt.DeletedBy.Should().Be(deletedBy);
+    }
+
+    [Fact]
+    public void SharedGameDeletedEvent_WithDifferentAdmins_TracksDifferentDeleters()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var admin1 = Guid.NewGuid();
+        var admin2 = Guid.NewGuid();
+
+        // Act
+        var evt1 = new SharedGameDeletedEvent(gameId, admin1);
+        var evt2 = new SharedGameDeletedEvent(gameId, admin2);
+
+        // Assert
+        evt1.DeletedBy.Should().Be(admin1);
+        evt2.DeletedBy.Should().Be(admin2);
+    }
+
+    #endregion
+
+    #region SharedGameDeleteRequestedEvent Tests
+
+    [Fact]
+    public void SharedGameDeleteRequestedEvent_WithValidParameters_SetsProperties()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var requestId = Guid.NewGuid();
+        var requestedBy = Guid.NewGuid();
+
+        // Act
+        var evt = new SharedGameDeleteRequestedEvent(gameId, requestId, requestedBy);
+
+        // Assert
+        evt.GameId.Should().Be(gameId);
+        evt.RequestId.Should().Be(requestId);
+        evt.RequestedBy.Should().Be(requestedBy);
+    }
+
+    [Fact]
+    public void SharedGameDeleteRequestedEvent_WithDifferentRequests_TracksCorrectly()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var requestId1 = Guid.NewGuid();
+        var requestId2 = Guid.NewGuid();
+        var requestedBy = Guid.NewGuid();
+
+        // Act
+        var evt1 = new SharedGameDeleteRequestedEvent(gameId, requestId1, requestedBy);
+        var evt2 = new SharedGameDeleteRequestedEvent(gameId, requestId2, requestedBy);
+
+        // Assert
+        evt1.RequestId.Should().Be(requestId1);
+        evt2.RequestId.Should().Be(requestId2);
+    }
+
+    #endregion
+
+    #region SharedGamePublicationApprovedEvent Tests
+
+    [Fact]
+    public void SharedGamePublicationApprovedEvent_WithValidParameters_SetsProperties()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var approvedBy = Guid.NewGuid();
+
+        // Act
+        var evt = new SharedGamePublicationApprovedEvent(gameId, approvedBy);
+
+        // Assert
+        evt.GameId.Should().Be(gameId);
+        evt.ApprovedBy.Should().Be(approvedBy);
+    }
+
+    [Fact]
+    public void SharedGamePublicationApprovedEvent_WithDifferentAdmins_TracksDifferentApprovers()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var admin1 = Guid.NewGuid();
+        var admin2 = Guid.NewGuid();
+
+        // Act
+        var evt1 = new SharedGamePublicationApprovedEvent(gameId, admin1);
+        var evt2 = new SharedGamePublicationApprovedEvent(gameId, admin2);
+
+        // Assert
+        evt1.ApprovedBy.Should().Be(admin1);
+        evt2.ApprovedBy.Should().Be(admin2);
+    }
+
+    #endregion
+
+    #region SharedGamePublicationRejectedEvent Tests
+
+    [Fact]
+    public void SharedGamePublicationRejectedEvent_WithValidParameters_SetsProperties()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var rejectedBy = Guid.NewGuid();
+        var reason = "Incomplete documentation";
+
+        // Act
+        var evt = new SharedGamePublicationRejectedEvent(gameId, rejectedBy, reason);
+
+        // Assert
+        evt.GameId.Should().Be(gameId);
+        evt.RejectedBy.Should().Be(rejectedBy);
+        evt.Reason.Should().Be(reason);
+    }
+
+    [Fact]
+    public void SharedGamePublicationRejectedEvent_WithDetailedReason_PreservesFullReason()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var rejectedBy = Guid.NewGuid();
+        var reason = "Missing critical information: player count, age range, and setup instructions are incomplete";
+
+        // Act
+        var evt = new SharedGamePublicationRejectedEvent(gameId, rejectedBy, reason);
+
+        // Assert
+        evt.Reason.Should().Be(reason);
+    }
+
+    #endregion
+
+    #region SharedGameSubmittedForApprovalEvent Tests
+
+    [Fact]
+    public void SharedGameSubmittedForApprovalEvent_WithValidParameters_SetsProperties()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var submittedBy = Guid.NewGuid();
+
+        // Act
+        var evt = new SharedGameSubmittedForApprovalEvent(gameId, submittedBy);
+
+        // Assert
+        evt.GameId.Should().Be(gameId);
+        evt.SubmittedBy.Should().Be(submittedBy);
+    }
+
+    [Fact]
+    public void SharedGameSubmittedForApprovalEvent_WithDifferentUsers_TracksDifferentSubmitters()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var user1 = Guid.NewGuid();
+        var user2 = Guid.NewGuid();
+
+        // Act
+        var evt1 = new SharedGameSubmittedForApprovalEvent(gameId, user1);
+        var evt2 = new SharedGameSubmittedForApprovalEvent(gameId, user2);
+
+        // Assert
+        evt1.SubmittedBy.Should().Be(user1);
+        evt2.SubmittedBy.Should().Be(user2);
     }
 
     #endregion

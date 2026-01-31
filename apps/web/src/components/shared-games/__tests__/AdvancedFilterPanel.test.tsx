@@ -131,8 +131,9 @@ describe('AdvancedFilterPanel', () => {
     it('closes panel after applying filters', async () => {
       render(<AdvancedFilterPanel {...defaultProps} />);
 
+      // Wait for loading to complete (button is disabled while loading)
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Applica Filtri/i })).toBeInTheDocument();
+        expect(screen.queryByText('Caricamento filtri...')).not.toBeInTheDocument();
       });
 
       const applyButton = screen.getByRole('button', { name: /Applica Filtri/i });

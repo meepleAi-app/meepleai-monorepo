@@ -35,14 +35,16 @@ internal class MultiModelValidationService : IMultiModelValidationService
     public const double MinimumConsensusThreshold = 0.90;
 
     /// <summary>
-    /// GPT-4 model identifier
+    /// GPT-4 model identifier (Issue #3231: Use free models)
+    /// Free alternative: Llama 3.3 70B (GPT-4 level performance)
     /// </summary>
-    private const string Gpt4Model = "openai/gpt-4o";
+    private const string Gpt4Model = "meta-llama/llama-3.3-70b-instruct:free";
 
     /// <summary>
-    /// Claude model identifier
+    /// Claude model identifier (Issue #3231: Use free models)
+    /// Free alternative: Gemini 2.0 Flash (1M context, fast reasoning)
     /// </summary>
-    private const string ClaudeModel = "anthropic/claude-3.5-sonnet";
+    private const string ClaudeModel = "google/gemini-2.0-flash-exp:free";
 
     public MultiModelValidationService(
         IEnumerable<ILlmClient> llmClients,

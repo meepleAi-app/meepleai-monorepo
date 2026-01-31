@@ -1,0 +1,69 @@
+/**
+ * Agent Typography - Font System
+ * Issue #3237 (FRONT-001)
+ *
+ * Fonts:
+ * - JetBrains Mono: Code/terminal elements
+ * - Chakra Petch: Headers (industrial/gaming vibe)
+ * - Inter: Body text (readability)
+ */
+
+/* Google Fonts Import */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Chakra+Petch:wght@600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  /* Font Families */
+  --agent-font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  --agent-font-display: 'Chakra Petch', 'Impact', sans-serif;
+  --agent-font-body: 'Inter', 'Segoe UI', sans-serif;
+
+  /* Font Sizes - Modular Scale (1.25 ratio) */
+  --agent-text-xs: 0.75rem;    /* 12px */
+  --agent-text-sm: 0.875rem;   /* 14px */
+  --agent-text-base: 1rem;     /* 16px */
+  --agent-text-lg: 1.25rem;    /* 20px */
+  --agent-text-xl: 1.5rem;     /* 24px */
+  --agent-text-2xl: 2rem;      /* 32px */
+  --agent-text-3xl: 2.5rem;    /* 40px */
+
+  /* Line Heights */
+  --agent-leading-tight: 1.25;
+  --agent-leading-normal: 1.5;
+  --agent-leading-relaxed: 1.75;
+
+  /* Letter Spacing */
+  --agent-tracking-tight: -0.025em;
+  --agent-tracking-normal: 0;
+  --agent-tracking-wide: 0.025em;
+  --agent-tracking-wider: 0.05em;
+}
+
+/* Typography Utility Classes */
+.agent-font-mono {
+  font-family: var(--agent-font-mono);
+}
+
+.agent-font-display {
+  font-family: var(--agent-font-display);
+  letter-spacing: var(--agent-tracking-wide);
+}
+
+.agent-font-body {
+  font-family: var(--agent-font-body);
+}
+
+/* Text Styles */
+.agent-terminal-text {
+  font-family: var(--agent-font-mono);
+  font-size: var(--agent-text-sm);
+  color: var(--agent-accent-cyan);
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.agent-heading {
+  font-family: var(--agent-font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--agent-tracking-wider);
+  color: var(--agent-text-primary);
+}

@@ -1,0 +1,130 @@
+/**
+ * Agent Animations - Keyframes & Transitions
+ * Issue #3237 (FRONT-001)
+ *
+ * Animations:
+ * - Neon pulse effects
+ * - Terminal cursor blink
+ * - Glitch effects (subtle)
+ * - Loading states
+ */
+
+/* Neon Pulse - Breathing glow effect */
+@keyframes agent-pulse-cyan {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+  }
+}
+
+@keyframes agent-pulse-purple {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.6);
+  }
+}
+
+/* Terminal Cursor Blink */
+@keyframes agent-cursor-blink {
+  0%, 49% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0;
+  }
+}
+
+/* Typing Indicator */
+@keyframes agent-typing-dots {
+  0%, 20% {
+    content: '.';
+  }
+  40% {
+    content: '..';
+  }
+  60%, 100% {
+    content: '...';
+  }
+}
+
+/* Slide In from Bottom */
+@keyframes agent-slide-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Fade In */
+@keyframes agent-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Glitch Effect (Subtle) */
+@keyframes agent-glitch {
+  0% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-2px, 2px);
+  }
+  40% {
+    transform: translate(-2px, -2px);
+  }
+  60% {
+    transform: translate(2px, 2px);
+  }
+  80% {
+    transform: translate(2px, -2px);
+  }
+  100% {
+    transform: translate(0);
+  }
+}
+
+/* Utility Classes */
+.agent-pulse-cyan {
+  animation: agent-pulse-cyan 2s ease-in-out infinite;
+}
+
+.agent-pulse-purple {
+  animation: agent-pulse-purple 2s ease-in-out infinite;
+}
+
+.agent-cursor {
+  animation: agent-cursor-blink 1s step-end infinite;
+}
+
+.agent-slide-up {
+  animation: agent-slide-up 0.3s ease-out;
+}
+
+.agent-fade-in {
+  animation: agent-fade-in 0.3s ease-out;
+}
+
+/* Transitions */
+.agent-transition {
+  transition: all 0.2s ease-in-out;
+}
+
+.agent-transition-slow {
+  transition: all 0.4s ease-in-out;
+}

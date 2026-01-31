@@ -1,0 +1,86 @@
+/**
+ * Agent Page - Main AI Assistant Interface
+ * Issue #3237 (FRONT-001): Base Setup & Routing
+ *
+ * Features:
+ * - Agent configuration and launch
+ * - Real-time chat with SSE streaming
+ * - PDF viewer with citation links
+ * - Session management and history
+ */
+
+'use client';
+
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+import type { Game } from '@/lib/types';
+
+export default function AgentPage() {
+  const params = useParams();
+  const gameId = params.gameId as string;
+  const [game, setGame] = useState<Game | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchGame = async () => {
+      try {
+        const response = await fetch(`/api/v1/games/${gameId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setGame(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch game:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchGame();
+  }, [gameId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-lg">Loading agent...</div>
+      </div>
+    );
+  }
+
+  if (!game) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-lg text-red-500">Game not found</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen flex-col bg-slate-950">
+      {/* Header */}
+      <header className="border-b border-slate-800 bg-slate-900 px-6 py-4">
+        <div className="flex items-center gap-4">
+          <div className="text-4xl">{game.icon || '🎲'}</div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">{game.name}</h1>
+            <p className="text-sm text-slate-400">AI Assistant</p>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content - Placeholder */}
+      <main className="flex flex-1 items-center justify-center">
+        <div className="text-center">
+          <h2 className="mb-4 text-3xl font-bold text-cyan-400">Agent Page Foundation</h2>
+          <p className="text-slate-400">
+            Base routing established. UI components coming in next issues.
+          </p>
+          <div className="mt-8 text-sm text-slate-500">
+            Issue #3237 (FRONT-001) - Base Setup Complete
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

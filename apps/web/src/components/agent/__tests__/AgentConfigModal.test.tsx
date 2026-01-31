@@ -31,47 +31,10 @@ vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ user: { id: 'user-1', email: 'test@example.com' } }),
 }));
 
+// Mock useAgentConfigModal with factory function
+const mockUseAgentConfigModal = vi.fn();
 vi.mock('@/hooks/useAgentConfigModal', () => ({
-  useAgentConfigModal: ({ gameId }: { gameId: string }) => ({
-    selectedTypologyId: null,
-    setSelectedTypologyId: vi.fn(),
-    selectedModelName: 'GPT-4o',
-    setSelectedModelName: vi.fn(),
-    typologies: [
-      {
-        id: 'typo-1',
-        name: 'Tutor',
-        description: 'Guida passo-passo per imparare le regole',
-      },
-      {
-        id: 'typo-2',
-        name: 'Strategia',
-        description: 'Consigli strategici avanzati',
-      },
-    ],
-    typologiesLoading: false,
-    typologiesError: null,
-    availableModels: [
-      { name: 'Claude-3.5-Haiku', cost: 0.003 },
-      { name: 'GPT-4o', cost: 0.005, recommended: true },
-    ],
-    userTier: 'Premium' as const,
-    estimatedCost: 0.005,
-    quota: {
-      currentSessions: 5,
-      maxSessions: 10,
-      remainingSlots: 5,
-      percentageUsed: 50,
-      canCreateNew: true,
-      isUnlimited: false,
-    },
-    quotaLoading: false,
-    showWarning: false,
-    saveConfig: vi.fn(),
-    saving: false,
-    saveError: null,
-    isValid: true,
-  }),
+  useAgentConfigModal: (props: any) => mockUseAgentConfigModal(props),
 }));
 
 describe('AgentConfigModal', () => {
@@ -85,6 +48,40 @@ describe('AgentConfigModal', () => {
       },
     });
     vi.clearAllMocks();
+    
+    // Reset mock to default return value
+    mockUseAgentConfigModal.mockReturnValue({
+      selectedTypologyId: null,
+      setSelectedTypologyId: vi.fn(),
+      selectedModelName: 'GPT-4o',
+      setSelectedModelName: vi.fn(),
+      typologies: [
+        { id: 'typo-1', name: 'Tutor', description: 'Guida passo-passo per imparare le regole' },
+        { id: 'typo-2', name: 'Strategia', description: 'Consigli strategici avanzati' },
+      ],
+      typologiesLoading: false,
+      typologiesError: null,
+      availableModels: [
+        { name: 'Claude-3.5-Haiku', cost: 0.003 },
+        { name: 'GPT-4o', cost: 0.005, recommended: true },
+      ],
+      userTier: 'Premium' as const,
+      estimatedCost: 0.005,
+      quota: {
+        currentSessions: 5,
+        maxSessions: 10,
+        remainingSlots: 5,
+        percentageUsed: 50,
+        canCreateNew: true,
+        isUnlimited: false,
+      },
+      quotaLoading: false,
+      showWarning: false,
+      saveConfig: vi.fn(),
+      saving: false,
+      saveError: null,
+      isValid: true,
+    });
   });
 
   const renderModal = (props = {}) => {
@@ -100,31 +97,52 @@ describe('AgentConfigModal', () => {
   // =========================================================================
 
   describe('Rendering', () => {
-    it('should render modal with default state', () => {
+    it('should render modal with default state', async () => {
+      const user = userEvent.setup();
       renderModal();
 
-      expect(screen.getByText('Configurazione Agente AI')).toBeInTheDocument();
-      expect(
-        screen.getByText('Seleziona la tipologia di agente e il modello AI da utilizzare per le sessioni di gioco.')
-      ).toBeInTheDocument();
+      // Open dialog
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Configurazione Agente AI')).toBeInTheDocument();
+        expect(
+          screen.getByText('Seleziona la tipologia di agente e il modello AI da utilizzare per le sessioni di gioco.')
+        ).toBeInTheDocument();
+      });
     });
 
-    it('should render typology dropdown', () => {
+    it('should render typology dropdown', async () => {
+      const user = userEvent.setup();
       renderModal();
 
-      expect(screen.getByLabelText(/tipologia agente/i)).toBeInTheDocument();
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/tipologia agente/i)).toBeInTheDocument();
+      });
     });
 
-    it('should render model dropdown', () => {
+    it('should render model dropdown', async () => {
+      const user = userEvent.setup();
       renderModal();
 
-      expect(screen.getByLabelText(/modello ai/i)).toBeInTheDocument();
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/modello ai/i)).toBeInTheDocument();
+      });
     });
 
-    it('should render save button', () => {
+    it('should render save button', async () => {
+      const user = userEvent.setup();
       renderModal();
 
-      expect(screen.getByRole('button', { name: /salva e lancia agente/i })).toBeInTheDocument();
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /salva e lancia agente/i })).toBeInTheDocument();
+      });
     });
   });
 
@@ -137,19 +155,37 @@ describe('AgentConfigModal', () => {
       const user = userEvent.setup();
       renderModal();
 
+      // Open dialog first
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        const dropdown = screen.getByRole('combobox', { name: /tipologia agente/i });
+        expect(dropdown).toBeInTheDocument();
+      });
+
+      // Now open the dropdown
       const dropdown = screen.getByRole('combobox', { name: /tipologia agente/i });
       await user.click(dropdown);
 
       await waitFor(() => {
-        expect(screen.getByText('Tutor')).toBeInTheDocument();
+        // Typology names may appear multiple times
+        expect(screen.getAllByText('Tutor').length).toBeGreaterThan(0);
         expect(screen.getByText('Guida passo-passo per imparare le regole')).toBeInTheDocument();
-        expect(screen.getByText('Strategia')).toBeInTheDocument();
+        expect(screen.getAllByText('Strategia').length).toBeGreaterThan(0);
       });
     });
 
     it('should show typology description in dropdown', async () => {
       const user = userEvent.setup();
       renderModal();
+
+      // Open dialog first
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        const dropdown = screen.getByRole('combobox', { name: /tipologia agente/i });
+        expect(dropdown).toBeInTheDocument();
+      });
 
       const dropdown = screen.getByRole('combobox', { name: /tipologia agente/i });
       await user.click(dropdown);
@@ -166,28 +202,54 @@ describe('AgentConfigModal', () => {
   // =========================================================================
 
   describe('Model Filtering by Tier', () => {
-    it('should display Premium tier badge', () => {
+    it('should display Premium tier badge', async () => {
+      const user = userEvent.setup();
       renderModal();
 
-      expect(screen.getByText('Premium')).toBeInTheDocument();
+      // Open dialog to see tier badge
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        // Premium may appear multiple times in UI
+        expect(screen.getAllByText('Premium').length).toBeGreaterThan(0);
+      });
     });
 
     it('should show tier-filtered models in dropdown', async () => {
       const user = userEvent.setup();
       renderModal();
 
+      // Open dialog first
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        const dropdown = screen.getByRole('combobox', { name: /modello ai/i });
+        expect(dropdown).toBeInTheDocument();
+      });
+
       const dropdown = screen.getByRole('combobox', { name: /modello ai/i });
       await user.click(dropdown);
 
       await waitFor(() => {
-        expect(screen.getByText('Claude-3.5-Haiku')).toBeInTheDocument();
-        expect(screen.getByText('GPT-4o')).toBeInTheDocument();
+        // Models appear in dropdown, may have duplicates (selected + options)
+        const haiku = screen.getAllByText('Claude-3.5-Haiku');
+        const gpt4o = screen.getAllByText('GPT-4o');
+        expect(haiku.length).toBeGreaterThan(0);
+        expect(gpt4o.length).toBeGreaterThan(0);
       });
     });
 
     it('should mark recommended model', async () => {
       const user = userEvent.setup();
       renderModal();
+
+      // Open dialog first
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        const dropdown = screen.getByRole('combobox', { name: /modello ai/i });
+        expect(dropdown).toBeInTheDocument();
+      });
 
       const dropdown = screen.getByRole('combobox', { name: /modello ai/i });
       await user.click(dropdown);
@@ -200,6 +262,14 @@ describe('AgentConfigModal', () => {
     it('should show model cost per query', async () => {
       const user = userEvent.setup();
       renderModal();
+
+      // Open dialog first
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        const dropdown = screen.getByRole('combobox', { name: /modello ai/i });
+        expect(dropdown).toBeInTheDocument();
+      });
 
       const dropdown = screen.getByRole('combobox', { name: /modello ai/i });
       await user.click(dropdown);
@@ -216,21 +286,31 @@ describe('AgentConfigModal', () => {
   // =========================================================================
 
   describe('Cost Estimation', () => {
-    it('should display cost estimation for selected model', () => {
+    it('should display cost estimation for selected model', async () => {
+      const user = userEvent.setup();
       renderModal();
 
-      expect(screen.getByText('Costo stimato per query')).toBeInTheDocument();
-      expect(screen.getByText('$0.0050')).toBeInTheDocument();
+      // Open dialog to see cost display
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Costo stimato per query')).toBeInTheDocument();
+        expect(screen.getByText('$0.0050')).toBeInTheDocument();
+      });
     });
 
     it('should update cost when model changes', async () => {
       const user = userEvent.setup();
       renderModal();
 
-      // Initial cost
-      expect(screen.getByText('$0.0050')).toBeInTheDocument();
+      // Open dialog first
+      await user.click(screen.getByText('Configura AI'));
 
-      // Select different model (in real implementation, hook would update)
+      await waitFor(() => {
+        expect(screen.getByText('$0.0050')).toBeInTheDocument();
+      });
+
+      // Select different model
       const dropdown = screen.getByRole('combobox', { name: /modello ai/i });
       await user.click(dropdown);
 
@@ -245,30 +325,48 @@ describe('AgentConfigModal', () => {
   // =========================================================================
 
   describe('Quota Display', () => {
-    it('should show quota usage with progress bar', () => {
+    it('should show quota usage with progress bar', async () => {
+      const user = userEvent.setup();
       renderModal();
 
-      expect(screen.getByText('Utilizzo Quota')).toBeInTheDocument();
-      expect(screen.getByText('5 / 10')).toBeInTheDocument();
-      expect(screen.getByText('5 slot disponibili')).toBeInTheDocument();
+      // Open dialog to see quota
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Utilizzo Quota')).toBeInTheDocument();
+        expect(screen.getByText('5 / 10')).toBeInTheDocument();
+        expect(screen.getByText('5 slot disponibili')).toBeInTheDocument();
+      });
     });
 
-    it('should display quota percentage', () => {
+    it('should display quota percentage', async () => {
+      const user = userEvent.setup();
       renderModal();
 
-      const progress = screen.getByRole('progressbar');
-      expect(progress).toHaveAttribute('aria-valuenow', '50');
+      // Open dialog
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        const progress = screen.getByRole('progressbar');
+        expect(progress).toHaveAttribute('aria-valuenow', '50');
+      });
     });
 
-    it('should not show quota for unlimited users', () => {
-      vi.mocked(require('@/hooks/useAgentConfigModal').useAgentConfigModal).mockReturnValue({
-        ...require('@/hooks/useAgentConfigModal').useAgentConfigModal({ gameId: 'game-123' }),
+    it('should not show quota for unlimited users', async () => {
+      const user = userEvent.setup();
+      mockUseAgentConfigModal.mockReturnValueOnce({
+        ...mockUseAgentConfigModal(),
         quota: { isUnlimited: true, canCreateNew: true },
       });
 
       renderModal();
 
-      expect(screen.queryByText('Utilizzo Quota')).not.toBeInTheDocument();
+      // Open dialog
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        expect(screen.queryByText('Utilizzo Quota')).not.toBeInTheDocument();
+      });
     });
   });
 
@@ -277,9 +375,10 @@ describe('AgentConfigModal', () => {
   // =========================================================================
 
   describe('Quota Warning Triggers', () => {
-    it('should show warning alert when quota >90%', () => {
-      vi.mocked(require('@/hooks/useAgentConfigModal').useAgentConfigModal).mockReturnValue({
-        ...require('@/hooks/useAgentConfigModal').useAgentConfigModal({ gameId: 'game-123' }),
+    it('should show warning alert when quota >90%', async () => {
+      const user = userEvent.setup();
+      mockUseAgentConfigModal.mockReturnValueOnce({
+        ...mockUseAgentConfigModal(),
         quota: {
           currentSessions: 95,
           maxSessions: 100,
@@ -293,12 +392,18 @@ describe('AgentConfigModal', () => {
 
       renderModal();
 
-      expect(screen.getByText(/stai utilizzando oltre il 95% della tua quota/i)).toBeInTheDocument();
+      // Open dialog
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        expect(screen.getByText(/stai utilizzando oltre il 95% della tua quota/i)).toBeInTheDocument();
+      });
     });
 
-    it('should show red progress bar when quota >90%', () => {
-      vi.mocked(require('@/hooks/useAgentConfigModal').useAgentConfigModal).mockReturnValue({
-        ...require('@/hooks/useAgentConfigModal').useAgentConfigModal({ gameId: 'game-123' }),
+    it('should show red progress bar when quota >90%', async () => {
+      const user = userEvent.setup();
+      mockUseAgentConfigModal.mockReturnValueOnce({
+        ...mockUseAgentConfigModal(),
         quota: {
           percentageUsed: 95,
           currentSessions: 95,
@@ -311,13 +416,19 @@ describe('AgentConfigModal', () => {
 
       renderModal();
 
-      const progress = screen.getByRole('progressbar');
-      expect(progress).toHaveClass(/\[&>\*\]:bg-destructive/);
+      // Open dialog
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        const progress = screen.getByRole('progressbar');
+        expect(progress).toHaveClass(/\[&>\*\]:bg-destructive/);
+      });
     });
 
-    it('should show amber progress bar when quota 75-89%', () => {
-      vi.mocked(require('@/hooks/useAgentConfigModal').useAgentConfigModal).mockReturnValue({
-        ...require('@/hooks/useAgentConfigModal').useAgentConfigModal({ gameId: 'game-123' }),
+    it('should show amber progress bar when quota 75-89%', async () => {
+      const user = userEvent.setup();
+      mockUseAgentConfigModal.mockReturnValueOnce({
+        ...mockUseAgentConfigModal(),
         quota: {
           percentageUsed: 80,
           currentSessions: 80,
@@ -330,13 +441,19 @@ describe('AgentConfigModal', () => {
 
       renderModal();
 
-      const progress = screen.getByRole('progressbar');
-      expect(progress).toHaveClass(/\[&>\*\]:bg-amber-500/);
+      // Open dialog
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        const progress = screen.getByRole('progressbar');
+        expect(progress).toHaveClass(/\[&>\*\]:bg-amber-500/);
+      });
     });
 
-    it('should disable save button when quota is full', () => {
-      vi.mocked(require('@/hooks/useAgentConfigModal').useAgentConfigModal).mockReturnValue({
-        ...require('@/hooks/useAgentConfigModal').useAgentConfigModal({ gameId: 'game-123' }),
+    it('should disable save button when quota is full', async () => {
+      const user = userEvent.setup();
+      mockUseAgentConfigModal.mockReturnValueOnce({
+        ...mockUseAgentConfigModal(),
         quota: {
           percentageUsed: 100,
           currentSessions: 100,
@@ -349,13 +466,19 @@ describe('AgentConfigModal', () => {
 
       renderModal();
 
-      const saveButton = screen.getByRole('button', { name: /salva e lancia agente/i });
-      expect(saveButton).toBeDisabled();
+      // Open dialog
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        const saveButton = screen.getByRole('button', { name: /salva e lancia agente/i });
+        expect(saveButton).toBeDisabled();
+      });
     });
 
-    it('should show quota full alert', () => {
-      vi.mocked(require('@/hooks/useAgentConfigModal').useAgentConfigModal).mockReturnValue({
-        ...require('@/hooks/useAgentConfigModal').useAgentConfigModal({ gameId: 'game-123' }),
+    it('should show quota full alert', async () => {
+      const user = userEvent.setup();
+      mockUseAgentConfigModal.mockReturnValueOnce({
+        ...mockUseAgentConfigModal(),
         quota: {
           percentageUsed: 100,
           currentSessions: 100,
@@ -368,9 +491,14 @@ describe('AgentConfigModal', () => {
 
       renderModal();
 
-      expect(
-        screen.getByText(/hai raggiunto il limite massimo di sessioni attive/i)
-      ).toBeInTheDocument();
+      // Open dialog
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/hai raggiunto il limite massimo di sessioni attive/i)
+        ).toBeInTheDocument();
+      });
     });
   });
 
@@ -383,12 +511,20 @@ describe('AgentConfigModal', () => {
       const user = userEvent.setup();
       const mockSaveConfig = vi.fn();
 
-      vi.mocked(require('@/hooks/useAgentConfigModal').useAgentConfigModal).mockReturnValue({
-        ...require('@/hooks/useAgentConfigModal').useAgentConfigModal({ gameId: 'game-123' }),
+      mockUseAgentConfigModal.mockReturnValueOnce({
+        ...mockUseAgentConfigModal(),
         saveConfig: mockSaveConfig,
       });
 
       renderModal();
+
+      // Open dialog
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        const saveButton = screen.getByRole('button', { name: /salva e lancia agente/i });
+        expect(saveButton).toBeInTheDocument();
+      });
 
       const saveButton = screen.getByRole('button', { name: /salva e lancia agente/i });
       await user.click(saveButton);
@@ -398,27 +534,39 @@ describe('AgentConfigModal', () => {
       });
     });
 
-    it('should disable save button while saving', () => {
-      vi.mocked(require('@/hooks/useAgentConfigModal').useAgentConfigModal).mockReturnValue({
-        ...require('@/hooks/useAgentConfigModal').useAgentConfigModal({ gameId: 'game-123' }),
+    it('should disable save button while saving', async () => {
+      const user = userEvent.setup();
+      mockUseAgentConfigModal.mockReturnValueOnce({
+        ...mockUseAgentConfigModal(),
         saving: true,
       });
 
       renderModal();
 
-      const saveButton = screen.getByRole('button', { name: /salvataggio/i });
-      expect(saveButton).toBeDisabled();
+      // Open dialog
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        const saveButton = screen.getByRole('button', { name: /salvataggio/i });
+        expect(saveButton).toBeDisabled();
+      });
     });
 
-    it('should show loading state during save', () => {
-      vi.mocked(require('@/hooks/useAgentConfigModal').useAgentConfigModal).mockReturnValue({
-        ...require('@/hooks/useAgentConfigModal').useAgentConfigModal({ gameId: 'game-123' }),
+    it('should show loading state during save', async () => {
+      const user = userEvent.setup();
+      mockUseAgentConfigModal.mockReturnValueOnce({
+        ...mockUseAgentConfigModal(),
         saving: true,
       });
 
       renderModal();
 
-      expect(screen.getByText('Salvataggio...')).toBeInTheDocument();
+      // Open dialog
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Salvataggio...')).toBeInTheDocument();
+      });
     });
 
     it('should call onConfigSaved callback after successful save', async () => {
@@ -426,12 +574,20 @@ describe('AgentConfigModal', () => {
       const mockOnConfigSaved = vi.fn();
       const mockSaveConfig = vi.fn().mockResolvedValue(undefined);
 
-      vi.mocked(require('@/hooks/useAgentConfigModal').useAgentConfigModal).mockReturnValue({
-        ...require('@/hooks/useAgentConfigModal').useAgentConfigModal({ gameId: 'game-123' }),
+      mockUseAgentConfigModal.mockReturnValueOnce({
+        ...mockUseAgentConfigModal(),
         saveConfig: mockSaveConfig,
       });
 
       renderModal({ onConfigSaved: mockOnConfigSaved });
+
+      // Open dialog
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        const saveButton = screen.getByRole('button', { name: /salva e lancia agente/i });
+        expect(saveButton).toBeInTheDocument();
+      });
 
       const saveButton = screen.getByRole('button', { name: /salva e lancia agente/i });
       await user.click(saveButton);
@@ -441,16 +597,22 @@ describe('AgentConfigModal', () => {
       });
     });
 
-    it('should disable save button when form is invalid', () => {
-      vi.mocked(require('@/hooks/useAgentConfigModal').useAgentConfigModal).mockReturnValue({
-        ...require('@/hooks/useAgentConfigModal').useAgentConfigModal({ gameId: 'game-123' }),
+    it('should disable save button when form is invalid', async () => {
+      const user = userEvent.setup();
+      mockUseAgentConfigModal.mockReturnValueOnce({
+        ...mockUseAgentConfigModal(),
         isValid: false,
       });
 
       renderModal();
 
-      const saveButton = screen.getByRole('button', { name: /salva e lancia agente/i });
-      expect(saveButton).toBeDisabled();
+      // Open dialog
+      await user.click(screen.getByText('Configura AI'));
+
+      await waitFor(() => {
+        const saveButton = screen.getByRole('button', { name: /salva e lancia agente/i });
+        expect(saveButton).toBeDisabled();
+      });
     });
   });
 

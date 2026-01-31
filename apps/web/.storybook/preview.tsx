@@ -6,10 +6,14 @@ import React from 'react';
 import { withThemeByClassName } from '@storybook/addon-themes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
+import { initialize, mswLoader } from 'msw-storybook-addon';
 
 import '../src/styles/globals.css'; // Import Tailwind CSS
 import { AuthContext } from '../src/components/auth/AuthProvider';
 import { TooltipProvider } from '../src/components/ui/overlays/tooltip';
+
+// Initialize MSW for API mocking in stories
+initialize();
 
 // Create QueryClient for React Query
 const queryClient = new QueryClient({
@@ -69,6 +73,7 @@ const AllProviders = ({ children }: { children: React.ReactNode }) => {
 };
 
 const preview: Preview = {
+  loaders: [mswLoader],
   parameters: {
     controls: {
       matchers: {

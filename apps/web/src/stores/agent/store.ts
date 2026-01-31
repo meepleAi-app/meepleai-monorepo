@@ -19,9 +19,10 @@ import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
 import { createConfigSlice } from './slices/configSlice';
-import { createSessionSlice } from './slices/sessionSlice';
 import { createConversationSlice } from './slices/conversationSlice';
+import { createSessionSlice } from './slices/sessionSlice';
 import { createUISlice } from './slices/uiSlice';
+
 import type { AgentStore } from './types/store.types';
 
 // Re-export AgentStore type for external consumers

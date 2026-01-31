@@ -5,8 +5,8 @@
  * Manages ephemeral UI state (not persisted)
  */
 
-import type { StateCreator } from 'zustand';
 import type { AgentStore } from '../types/store.types';
+import type { StateCreator } from 'zustand';
 
 export interface UISlice {
   // UI State

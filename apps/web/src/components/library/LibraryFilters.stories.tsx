@@ -5,13 +5,14 @@
  * Tests all filter states and interactions.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { within, userEvent, expect } from '@storybook/test';
+import { within, userEvent } from '@storybook/test';
 import { fn } from '@storybook/test';
 
 import type { GameStateType } from '@/lib/api/schemas/library.schemas';
 
 import { LibraryFilters } from './LibraryFilters';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof LibraryFilters> = {
   title: 'Components/Library/LibraryFilters',

@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Calendar, Filter, Trophy } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Calendar, Filter, Trophy } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+import { SessionDetailModal } from '@/components/session/SessionDetailModal';
+import type { Session } from '@/components/session/types';
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import {
   Select,
   SelectContent,
@@ -16,8 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-import { SessionDetailModal } from '@/components/session/SessionDetailModal';
-import type { Session, ScoreboardData, Participant } from '@/components/session/types';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 
 /**
  * Toolkit History Page

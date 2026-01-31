@@ -5,12 +5,13 @@
  * Tests favorites, timestamps, and hover states.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { within, userEvent } from '@storybook/test';
 
 import type { UserLibraryEntry } from '@/lib/api';
 
 import { RecentLibraryCard } from './RecentLibraryCard';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof RecentLibraryCard> = {
   title: 'Components/Library/RecentLibraryCard',

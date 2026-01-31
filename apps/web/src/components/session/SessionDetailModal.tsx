@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
+
 import { Calendar, Users, Trophy } from 'lucide-react';
 
+import { Badge } from '@/components/ui/data-display/badge';
 import {
   Dialog,
   DialogContent,
@@ -10,8 +12,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/overlays/dialog';
-import { Badge } from '@/components/ui/data-display/badge';
+
 import { Scoreboard } from './Scoreboard';
+
 import type { Session, ScoreboardData, Participant } from './types';
 
 interface SessionDetailModalProps {

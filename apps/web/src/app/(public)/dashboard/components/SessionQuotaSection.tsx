@@ -74,7 +74,7 @@ export function SessionQuotaSection() {
 
   return (
     <Link
-      href="/games"
+      href="/sessions"
       className="block transition-transform hover:scale-[1.02]"
       data-testid="session-quota-link"
     >

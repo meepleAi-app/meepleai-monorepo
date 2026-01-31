@@ -17,11 +17,13 @@
  * - Responsive layout across devices
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { EditorClient } from './editor-client';
 import type { RuleSpec } from '@/lib/api/schemas';
+
+import { EditorClient } from './editor-client';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // ============================================================================
 // MOCK DATA

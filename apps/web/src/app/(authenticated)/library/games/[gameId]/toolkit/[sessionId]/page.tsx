@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+
 import { Loader2 } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 import {
@@ -13,9 +14,9 @@ import {
   type SyncStatus,
 } from '@/components/session';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { useSessionStore } from '@/lib/stores/sessionStore';
-import { useSessionSync } from '@/lib/hooks/useSessionSync';
 import { getGameTemplateByName } from '@/lib/config/game-templates';
+import { useSessionSync } from '@/lib/hooks/useSessionSync';
+import { useSessionStore } from '@/lib/stores/sessionStore';
 
 /**
  * Game-Specific Active Session Page

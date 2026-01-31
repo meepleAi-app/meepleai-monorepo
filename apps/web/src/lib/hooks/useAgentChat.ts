@@ -26,10 +26,8 @@
  * ```
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
-import { useAgentChatStore } from '@/store/agent/store';
-import { AgentMessage, AgentMessageType } from '@/types/agent';
 import {
   StreamingEventType,
   parseEventData,
@@ -38,6 +36,8 @@ import {
   type TypedStreamingEvent,
 } from '@/lib/api/schemas/streaming.schemas';
 import { SSEParser } from '@/lib/utils/sseParser';
+import { useAgentChatStore } from '@/store/agent/store';
+import { AgentMessage } from '@/types/agent';
 
 /**
  * Hook options

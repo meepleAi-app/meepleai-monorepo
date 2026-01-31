@@ -21,11 +21,11 @@ import { Sheet, SheetContent, SheetHeader } from '@/components/ui/navigation/she
 import { Button } from '@/components/ui/primitives/button';
 import { useApprovedTypologies, useSwitchTypology } from '@/hooks/queries/useAgentTypologies';
 import type { Typology } from '@/lib/api/schemas/agent-typologies.schemas';
-
-import { ActionBar } from '../shared/ActionBar';
-import { AgentTypeSwitcher } from './AgentTypeSwitcher';
-
 import { useAgentStore } from '@/stores/agentStore';
+
+import { AgentTypeSwitcher } from './AgentTypeSwitcher';
+import { ActionBar } from '../shared/ActionBar';
+
 
 interface AgentChatSheetProps {
   /** Game title to display in header */

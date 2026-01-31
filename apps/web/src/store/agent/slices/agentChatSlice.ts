@@ -13,8 +13,8 @@
 
 import { StateCreator } from 'zustand';
 
-import { AgentMessage } from '@/types/agent';
 import { Citation } from '@/lib/api/schemas/streaming.schemas';
+import { AgentMessage } from '@/types/agent';
 
 export interface AgentChatSlice {
   // ============================================================================

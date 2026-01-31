@@ -5,6 +5,8 @@
 
 'use client';
 
+import { Sparkles } from 'lucide-react';
+
 import {
   Select,
   SelectContent,
@@ -13,7 +15,6 @@ import {
   SelectValue,
 } from '@/components/ui/overlays/select';
 import { useAgentStore } from '@/stores/agentStore';
-import { Sparkles } from 'lucide-react';
 
 interface Model {
   id: string;

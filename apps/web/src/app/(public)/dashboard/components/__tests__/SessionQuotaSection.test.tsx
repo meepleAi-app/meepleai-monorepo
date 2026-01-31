@@ -278,7 +278,7 @@ describe('SessionQuotaSection', () => {
       expect(statusElement.textContent).toContain('3');
     });
 
-    it('links to games page', () => {
+    it('links to sessions page', () => {
       vi.mocked(useSessionQuotaModule.useSessionQuotaWithStatus).mockReturnValue({
         data: mockQuotaNormal,
         isLoading: false,
@@ -288,7 +288,7 @@ describe('SessionQuotaSection', () => {
       renderComponent();
 
       const link = screen.getByTestId('session-quota-link');
-      expect(link).toHaveAttribute('href', '/games');
+      expect(link).toHaveAttribute('href', '/sessions');
     });
 
     it('renders ChevronRight icon', () => {

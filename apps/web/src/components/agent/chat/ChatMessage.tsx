@@ -15,9 +15,9 @@ import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
+import type { Citation } from '@/lib/api/schemas/streaming.schemas';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/utils/timeUtils';
-import type { Citation } from '@/lib/api/schemas/streaming.schemas';
 import { AgentMessage as AgentMessageType } from '@/types/agent';
 
 import { CitationBadge } from './CitationBadge';

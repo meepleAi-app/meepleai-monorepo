@@ -10,6 +10,8 @@
 
 'use client';
 
+import { BookOpen } from 'lucide-react';
+
 import {
   Select,
   SelectContent,
@@ -18,7 +20,6 @@ import {
   SelectValue,
 } from '@/components/ui/overlays/select';
 import { useAgentStore } from '@/stores/agentStore';
-import { BookOpen } from 'lucide-react';
 
 interface Game {
   id: string;

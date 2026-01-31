@@ -7,11 +7,13 @@
  * Covers: model configuration, primary model selection, cost tracking, responsive design
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { AiModelsClient } from './client';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+
+import { AiModelsClient } from './client';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof AiModelsClient> = {
   title: 'Pages/Admin/AIModels',

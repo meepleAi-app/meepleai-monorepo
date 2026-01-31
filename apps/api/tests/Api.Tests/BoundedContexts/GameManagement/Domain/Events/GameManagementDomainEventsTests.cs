@@ -7,7 +7,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Domain.Events;
 
 /// <summary>
 /// Tests for GameManagement domain events.
-/// Issue #3025: Backend 90% Coverage Target - Phase 22
+/// Issue #3025: Backend 90% Coverage Target - Phase 21 PR#2
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class GameManagementDomainEventsTests
@@ -100,6 +100,34 @@ public sealed class GameManagementDomainEventsTests
         evt.PlayerCount.Should().Be(4);
     }
 
+    [Fact]
+    public void GameSessionCreatedEvent_WithSinglePlayer_SetsCorrectCount()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        // Act
+        var evt = new GameSessionCreatedEvent(sessionId, gameId, 1);
+
+        // Assert
+        evt.PlayerCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void GameSessionCreatedEvent_WithMaxPlayers_SetsCorrectCount()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        // Act
+        var evt = new GameSessionCreatedEvent(sessionId, gameId, 8);
+
+        // Assert
+        evt.PlayerCount.Should().Be(8);
+    }
+
     #endregion
 
     #region GameSessionStartedEvent Tests
@@ -182,6 +210,38 @@ public sealed class GameManagementDomainEventsTests
         evt.Duration.Should().Be(duration);
     }
 
+    [Fact]
+    public void GameSessionCompletedEvent_WithShortDuration_SetsCorrectDuration()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var completedAt = DateTime.UtcNow;
+        var duration = TimeSpan.FromMinutes(15);
+
+        // Act
+        var evt = new GameSessionCompletedEvent(sessionId, gameId, completedAt, duration);
+
+        // Assert
+        evt.Duration.Should().Be(duration);
+    }
+
+    [Fact]
+    public void GameSessionCompletedEvent_WithLongDuration_SetsCorrectDuration()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var completedAt = DateTime.UtcNow;
+        var duration = TimeSpan.FromHours(5);
+
+        // Act
+        var evt = new GameSessionCompletedEvent(sessionId, gameId, completedAt, duration);
+
+        // Assert
+        evt.Duration.Should().Be(duration);
+    }
+
     #endregion
 
     #region GameSessionAbandonedEvent Tests
@@ -237,6 +297,19 @@ public sealed class GameManagementDomainEventsTests
         evt.PlayerNumber.Should().Be(1);
     }
 
+    [Fact]
+    public void PlayerAddedToSessionEvent_WithHigherPlayerNumber_SetsCorrectNumber()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+
+        // Act
+        var evt = new PlayerAddedToSessionEvent(sessionId, "Bob", 4);
+
+        // Assert
+        evt.PlayerNumber.Should().Be(4);
+    }
+
     #endregion
 
     #region GameSessionStateCreatedEvent Tests
@@ -255,6 +328,20 @@ public sealed class GameManagementDomainEventsTests
         evt.StateId.Should().Be(stateId);
         evt.SessionId.Should().Be(sessionId);
         evt.PlayerCount.Should().Be(4);
+    }
+
+    [Fact]
+    public void GameSessionStateCreatedEvent_WithMinPlayers_SetsCorrectCount()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+
+        // Act
+        var evt = new GameSessionStateCreatedEvent(stateId, sessionId, 1);
+
+        // Assert
+        evt.PlayerCount.Should().Be(1);
     }
 
     #endregion
@@ -300,6 +387,21 @@ public sealed class GameManagementDomainEventsTests
         evt.UpdatedAt.Should().Be(updatedAt);
     }
 
+    [Fact]
+    public void GameStateUpdatedEvent_WithFirstVersion_SetsCorrectVersion()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var updatedAt = DateTime.UtcNow;
+
+        // Act
+        var evt = new GameStateUpdatedEvent(stateId, sessionId, 1, updatedAt);
+
+        // Assert
+        evt.NewVersion.Should().Be(1);
+    }
+
     #endregion
 
     #region GameStateSnapshotCreatedEvent Tests
@@ -320,6 +422,20 @@ public sealed class GameManagementDomainEventsTests
         evt.TurnNumber.Should().Be(10);
     }
 
+    [Fact]
+    public void GameStateSnapshotCreatedEvent_WithInitialTurn_SetsCorrectTurnNumber()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var snapshotId = Guid.NewGuid();
+
+        // Act
+        var evt = new GameStateSnapshotCreatedEvent(stateId, snapshotId, 0);
+
+        // Assert
+        evt.TurnNumber.Should().Be(0);
+    }
+
     #endregion
 
     #region GameStateRestoredEvent Tests
@@ -338,6 +454,20 @@ public sealed class GameManagementDomainEventsTests
         evt.StateId.Should().Be(stateId);
         evt.SnapshotId.Should().Be(snapshotId);
         evt.TurnNumber.Should().Be(7);
+    }
+
+    [Fact]
+    public void GameStateRestoredEvent_WithFirstTurn_SetsCorrectTurnNumber()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var snapshotId = Guid.NewGuid();
+
+        // Act
+        var evt = new GameStateRestoredEvent(stateId, snapshotId, 1);
+
+        // Assert
+        evt.TurnNumber.Should().Be(1);
     }
 
     #endregion
@@ -361,6 +491,63 @@ public sealed class GameManagementDomainEventsTests
         evt.SessionId.Should().Be(sessionId);
         evt.OldPhase.Should().Be(GamePhase.Setup);
         evt.NewPhase.Should().Be(GamePhase.InProgress);
+    }
+
+    [Fact]
+    public void GamePhaseChangedEvent_FromInProgressToScoring_SetsCorrectPhases()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+
+        // Act
+        var evt = new GamePhaseChangedEvent(
+            stateId,
+            sessionId,
+            GamePhase.InProgress,
+            GamePhase.Scoring);
+
+        // Assert
+        evt.OldPhase.Should().Be(GamePhase.InProgress);
+        evt.NewPhase.Should().Be(GamePhase.Scoring);
+    }
+
+    [Fact]
+    public void GamePhaseChangedEvent_FromScoringToCompleted_SetsCorrectPhases()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+
+        // Act
+        var evt = new GamePhaseChangedEvent(
+            stateId,
+            sessionId,
+            GamePhase.Scoring,
+            GamePhase.Completed);
+
+        // Assert
+        evt.OldPhase.Should().Be(GamePhase.Scoring);
+        evt.NewPhase.Should().Be(GamePhase.Completed);
+    }
+
+    [Fact]
+    public void GamePhaseChangedEvent_ToCustomPhase_SetsCorrectPhases()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+
+        // Act
+        var evt = new GamePhaseChangedEvent(
+            stateId,
+            sessionId,
+            GamePhase.InProgress,
+            GamePhase.Custom);
+
+        // Assert
+        evt.OldPhase.Should().Be(GamePhase.InProgress);
+        evt.NewPhase.Should().Be(GamePhase.Custom);
     }
 
     #endregion
@@ -401,6 +588,21 @@ public sealed class GameManagementDomainEventsTests
         evt.CurrentPlayer.Should().Be("Alice");
     }
 
+    [Fact]
+    public void TurnAdvancedEvent_BetweenPlayers_SetsCorrectValues()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+
+        // Act
+        var evt = new TurnAdvancedEvent(stateId, sessionId, "Charlie", "Diana");
+
+        // Assert
+        evt.PreviousPlayer.Should().Be("Charlie");
+        evt.CurrentPlayer.Should().Be("Diana");
+    }
+
     #endregion
 
     #region RoundAdvancedEvent Tests
@@ -420,6 +622,36 @@ public sealed class GameManagementDomainEventsTests
         evt.SessionId.Should().Be(sessionId);
         evt.OldRound.Should().Be(2);
         evt.NewRound.Should().Be(3);
+    }
+
+    [Fact]
+    public void RoundAdvancedEvent_FromInitial_SetsCorrectValues()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+
+        // Act
+        var evt = new RoundAdvancedEvent(stateId, sessionId, 0, 1);
+
+        // Assert
+        evt.OldRound.Should().Be(0);
+        evt.NewRound.Should().Be(1);
+    }
+
+    [Fact]
+    public void RoundAdvancedEvent_ToHigherRound_SetsCorrectValues()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+
+        // Act
+        var evt = new RoundAdvancedEvent(stateId, sessionId, 5, 6);
+
+        // Assert
+        evt.OldRound.Should().Be(5);
+        evt.NewRound.Should().Be(6);
     }
 
     #endregion
@@ -444,6 +676,36 @@ public sealed class GameManagementDomainEventsTests
         evt.NewScore.Should().Be(15);
     }
 
+    [Fact]
+    public void PlayerScoreUpdatedEvent_WithScoreDecrease_SetsCorrectValues()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+
+        // Act
+        var evt = new PlayerScoreUpdatedEvent(stateId, sessionId, "Bob", 20, 18);
+
+        // Assert
+        evt.OldScore.Should().Be(20);
+        evt.NewScore.Should().Be(18);
+    }
+
+    [Fact]
+    public void PlayerScoreUpdatedEvent_FromZero_SetsCorrectValues()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+
+        // Act
+        var evt = new PlayerScoreUpdatedEvent(stateId, sessionId, "Charlie", 0, 7);
+
+        // Assert
+        evt.OldScore.Should().Be(0);
+        evt.NewScore.Should().Be(7);
+    }
+
     #endregion
 
     #region PlayerResourceUpdatedEvent Tests
@@ -465,6 +727,36 @@ public sealed class GameManagementDomainEventsTests
         evt.ResourceName.Should().Be("gold");
         evt.OldValue.Should().Be(5);
         evt.NewValue.Should().Be(8);
+    }
+
+    [Fact]
+    public void PlayerResourceUpdatedEvent_WithResourceDecrease_SetsCorrectValues()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+
+        // Act
+        var evt = new PlayerResourceUpdatedEvent(stateId, sessionId, "Alice", "wood", 10, 3);
+
+        // Assert
+        evt.OldValue.Should().Be(10);
+        evt.NewValue.Should().Be(3);
+    }
+
+    [Fact]
+    public void PlayerResourceUpdatedEvent_FromZero_SetsCorrectValues()
+    {
+        // Arrange
+        var stateId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+
+        // Act
+        var evt = new PlayerResourceUpdatedEvent(stateId, sessionId, "Charlie", "stone", 0, 5);
+
+        // Assert
+        evt.OldValue.Should().Be(0);
+        evt.NewValue.Should().Be(5);
     }
 
     #endregion

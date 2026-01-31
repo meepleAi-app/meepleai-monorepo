@@ -26,6 +26,8 @@ import { Button } from '@/components/ui/primitives/button';
 import { GameSelector } from './GameSelector';
 import { TemplateCarousel } from './TemplateCarousel';
 import { ModelSelector } from './ModelSelector';
+import { TokenQuotaDisplay } from './TokenQuotaDisplay';
+import { SlotCards } from './SlotCards';
 
 interface AgentConfigSheetProps {
   isOpen: boolean;
@@ -101,21 +103,11 @@ export function AgentConfigSheet({ isOpen, onClose, gameId, gameTitle }: AgentCo
               {/* Model Selection - Issue #3239 */}
               <ModelSelector />
 
-              {/* Token Quota - Placeholder for #3240 */}
-              <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-6">
-                <h3 className="mb-2 font-semibold text-slate-200">Token Quota</h3>
-                <p className="text-sm text-slate-400">
-                  Component from #3240 (FRONT-004)
-                </p>
-              </div>
+              {/* Token Quota - Issue #3240 */}
+              <TokenQuotaDisplay />
 
-              {/* Slot Cards - Placeholder for #3240 */}
-              <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-6">
-                <h3 className="mb-2 font-semibold text-slate-200">Slot Cards</h3>
-                <p className="text-sm text-slate-400">
-                  Component from #3240 (FRONT-004)
-                </p>
-              </div>
+              {/* Slot Cards - Issue #3240 */}
+              <SlotCards />
             </div>
           )}
 

@@ -8,3 +8,5 @@ export { GameSelector } from './GameSelector';
 export { TemplateCarousel } from './TemplateCarousel';
 export { ModelSelector } from './ModelSelector';
 export { TemplateInfoModal } from './TemplateInfoModal';
+export { TokenQuotaDisplay } from './TokenQuotaDisplay';
+export { SlotCards } from './SlotCards';

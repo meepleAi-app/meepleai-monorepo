@@ -1,6 +1,6 @@
 # RAG Quality Report - Issue #3192
 
-**Generated**: 2026-01-31 00:41:23
+**Generated**: 2026-01-31 01:08:47
 **Test Cases**: 20
 **API**: http://localhost:8080
 
@@ -11,12 +11,12 @@
 | Metric | Value | Threshold | Status |
 |--------|-------|-----------|--------|
 | **Accuracy** | 0/20 (0%) | ≥90% | ❌ FAIL |
-| **Avg Confidence** | 0,00 | ≥0.70 | ❌ FAIL |
-| **Confidence ≥0.7 Rate** | 0/20 (0%) | ≥90% | ❌ FAIL |
-| **Citation Rate** | 0/20 (0%) | ≥95% | ❌ FAIL |
+| **Avg Confidence** | 0,70 | ≥0.70 | ❌ FAIL |
+| **Confidence ≥0.7 Rate** | 20/20 (100%) | ≥90% | ✅ PASS |
+| **Citation Rate** | 20/20 (100%) | ≥95% | ✅ PASS |
 | **Hallucination Rate** | 0/20 (0%) | <3% | ✅ PASS |
 | **Latency <5s Rate** | 20/20 (100%) | ≥95% | ✅ PASS |
-| **Avg Latency** | 0ms | <5000ms | - |
+| **Avg Latency** | 2476ms | <5000ms | - |
 
 ---
 
@@ -37,7 +37,7 @@
 ## Failed Questions
 
 | ID | Difficulty | Question | Issues |
-|----|------------|----------|--------| | Q001 | easy | How do pawns move in chess?... | Keywords 0%, Confidence 0,00, No citations | | Q002 | easy | How many squares can a knight move?... | Keywords 0%, Confidence 0,00, No citations | | Q003 | easy | What is check in chess?... | Keywords 0%, Confidence 0,00, No citations | | Q004 | easy | What is checkmate?... | Keywords 0%, Confidence 0,00, No citations | | Q005 | easy | Can the queen move diagonally?... | Keywords 0%, Confidence 0,00, No citations | | Q006 | easy | How many pieces does each player start with?... | Keywords 0%, Confidence 0,00, No citations | | Q007 | easy | Can bishops move horizontally?... | Keywords 0%, Confidence 0,00, No citations | | Q008 | easy | How does the rook move?... | Keywords 0%, Confidence 0,00, No citations | | Q009 | easy | What is stalemate?... | Keywords 0%, Confidence 0,00, No citations | | Q010 | easy | How many squares can the king move?... | Keywords 0%, Confidence 0,00, No citations | | Q011 | medium | Can I castle if my king is in check?... | Keywords 0%, Confidence 0,00, No citations | | Q012 | medium | Can I castle if my king has moved earlier in the g... | Keywords 0%, Confidence 0,00, No citations | | Q013 | medium | What is en passant?... | Keywords 0%, Confidence 0,00, No citations | | Q014 | medium | What happens when a pawn reaches the opposite end?... | Keywords 0%, Confidence 0,00, No citations | | Q015 | medium | Can a pawn capture on its first move?... | Keywords 0%, Confidence 0,00, No citations | | Q016 | hard | If I'm in check, can I castle to escape?... | Keywords 0%, Confidence 0,00, No citations | | Q017 | hard | Can I castle if a square the king passes through i... | Keywords 0%, Confidence 0,00, No citations | | Q018 | hard | Can I perform en passant if I wait a turn after th... | Keywords 0%, Confidence 0,00, No citations | | Q019 | hard | What is the fifty-move rule?... | Keywords 0%, Confidence 0,00, No citations | | Q020 | hard | What happens if the same position occurs three tim... | Keywords 0%, Confidence 0,00, No citations |
+|----|------------|----------|--------| | Q001 | easy | How do pawns move in chess?... | Keywords 0% | | Q002 | easy | How many squares can a knight move?... | Keywords 0% | | Q003 | easy | What is check in chess?... | Keywords 0% | | Q004 | easy | What is checkmate?... | Keywords 0% | | Q005 | easy | Can the queen move diagonally?... | Keywords 0% | | Q006 | easy | How many pieces does each player start with?... | Keywords 0% | | Q007 | easy | Can bishops move horizontally?... | Keywords 0% | | Q008 | easy | How does the rook move?... | Keywords 0% | | Q009 | easy | What is stalemate?... | Keywords 0% | | Q010 | easy | How many squares can the king move?... | Keywords 0% | | Q011 | medium | Can I castle if my king is in check?... | Keywords 0% | | Q012 | medium | Can I castle if my king has moved earlier in the g... | Keywords 0% | | Q013 | medium | What is en passant?... | Keywords 0% | | Q014 | medium | What happens when a pawn reaches the opposite end?... | Keywords 0% | | Q015 | medium | Can a pawn capture on its first move?... | Keywords 0% | | Q016 | hard | If I'm in check, can I castle to escape?... | Keywords 0% | | Q017 | hard | Can I castle if a square the king passes through i... | Keywords 0% | | Q018 | hard | Can I perform en passant if I wait a turn after th... | Keywords 0% | | Q019 | hard | What is the fifty-move rule?... | Keywords 0% | | Q020 | hard | What happens if the same position occurs three tim... | Keywords 0% |
 
 ---
 

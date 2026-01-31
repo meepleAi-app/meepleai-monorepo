@@ -29,6 +29,27 @@ TOMAC-RAG combines best practices from 36 analyzed RAG variants into a unified 6
 
 ---
 
+## 🎓 How TOMAC-RAG Works
+
+**New to the system?** Start here: **[How It Works - Complete Explanation](HOW-IT-WORKS.md)**
+
+### Quick Summary
+
+TOMAC-RAG intelligently routes queries through 6 layers:
+
+1. **Routing**: User tier + Template (rule/strategy) + Complexity (0-5) → Strategy selection
+2. **Cache**: Semantic similarity matching → 80% hit rate (50-986 tokens)
+3. **Retrieval**: Adaptive depth (Vector → Hybrid → Multi-hop based on strategy)
+4. **CRAG**: T5 evaluator gates quality (Correct/Ambiguous/Incorrect), web search augmentation
+5. **Generation**: Template-specific (Direct → Structured → Multi-agent)
+6. **Validation**: Self-checking (Citation → Alignment → Reflection)
+
+**Result**: Right strategy for each query type. Simple questions stay simple (50-2,060t), complex strategic queries get premium analysis (12,900t).
+
+**Key Insight**: Adding quality features (CRAG, Self-RAG) **reduces** total cost through aggressive optimization (cache 80%, contextual embeddings -30%, CRAG filtering -40-70%).
+
+---
+
 ## 🏗️ 6-Layer Architecture
 
 ```

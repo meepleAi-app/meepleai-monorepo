@@ -2,6 +2,7 @@
  * Agent Chat Components - Barrel Exports
  * Issue #3242 (FRONT-006)
  * Issue #3243 (FRONT-007)
+ * Issue #3244 (FRONT-008)
  */
 
 export { AgentChatSheet } from './AgentChatSheet';
@@ -10,3 +11,7 @@ export { AgentChatSheet } from './AgentChatSheet';
 export { ChatMessage } from './ChatMessage';
 export { ChatMessageList } from './ChatMessageList';
 export { TypingIndicator } from './TypingIndicator';
+
+// Issue #3244: Citations and confidence display
+export { CitationBadge } from './CitationBadge';
+export { ConfidenceBar } from './ConfidenceBar';

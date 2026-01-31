@@ -104,6 +104,7 @@
         <a href="#variants" class="nav-link" onclick="showSection(event, 'variants')">36 Variants</a>
         <a href="#architecture" class="nav-link" onclick="showSection(event, 'architecture')">Architecture</a>
         <a href="#calculator" class="nav-link" onclick="showSection(event, 'calculator')">Token Calculator</a>
+        <a href="#agent-roles" class="nav-link" onclick="showSection(event, 'agent-roles')">Agent Roles</a>
         <a href="#docs" class="nav-link" onclick="showSection(event, 'docs')">Documentation</a>
         <a href="#flows" class="nav-link" onclick="showSection(event, 'flows')">Flow Diagrams</a>
         <a href="#sources" class="nav-link" onclick="showSection(event, 'sources')">Sources</a>
@@ -259,6 +260,443 @@
                         <span></span>
                     </div>
                     <div class="calculator-result" id="result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Roles Section -->
+        <div id="agent-roles" class="section">
+            <div class="card">
+                <h2>🤖 Strategie RAG per Ruolo dell'Agente</h2>
+                <p>Mappatura ottimale strategie RAG basata sul ruolo funzionale e tipo di interazione dell'agente.</p>
+
+                <h3>Matrice Decisionale: Ruolo × Strategia</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ruolo Agent</th>
+                            <th>Primary Template</th>
+                            <th>Top Strategy</th>
+                            <th>Avg Tokens</th>
+                            <th>Latency</th>
+                            <th>Accuracy Need</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background: rgba(16, 185, 129, 0.1);">
+                            <td><strong>Rules Agent</strong></td>
+                            <td>rule_lookup</td>
+                            <td><strong>BALANCED + CRAG</strong></td>
+                            <td><strong>900t</strong></td>
+                            <td>&lt;2s</td>
+                            <td>&gt;92% (high)</td>
+                        </tr>
+                        <tr style="background: rgba(37, 99, 235, 0.1);">
+                            <td><strong>Strategy Agent</strong></td>
+                            <td>resource_planning</td>
+                            <td><strong>PRECISE + Self-RAG</strong></td>
+                            <td><strong>4,200t</strong></td>
+                            <td>&lt;10s</td>
+                            <td>&gt;88% (medium)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Setup Agent</strong></td>
+                            <td>rule_lookup (proc)</td>
+                            <td><strong>Memory + Hierarchical</strong></td>
+                            <td><strong>400t</strong></td>
+                            <td>&lt;500ms</td>
+                            <td>&gt;85% (medium)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Q&A Agent</strong></td>
+                            <td>rule_lookup (fast)</td>
+                            <td><strong>Memory + FAST</strong></td>
+                            <td><strong>600t</strong></td>
+                            <td>&lt;500ms</td>
+                            <td>&gt;78% (acceptable)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Educational Agent</strong></td>
+                            <td>rule_lookup (deep)</td>
+                            <td><strong>Hierarchical + CoT</strong></td>
+                            <td><strong>4,500t</strong></td>
+                            <td>&lt;5s</td>
+                            <td>&gt;90% (high)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Assistant Agent</strong></td>
+                            <td>rule_lookup (realtime)</td>
+                            <td><strong>Memory + FAST only</strong></td>
+                            <td><strong>300t</strong></td>
+                            <td>&lt;200ms</td>
+                            <td>&gt;75% (acceptable)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Conversational</strong></td>
+                            <td>mixed</td>
+                            <td><strong>Memory + BALANCED</strong></td>
+                            <td><strong>1,800t</strong></td>
+                            <td>&lt;2s</td>
+                            <td>&gt;85% (medium)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 style="margin-top: 3rem;">Rules Agent (MeepleAI Focus) - Stack Dettagliato</h3>
+                <div class="card" style="background: rgba(16, 185, 129, 0.05); border-color: var(--secondary);">
+                    <p><strong>Profilo</strong>: 70% rule_lookup + 30% resource_planning queries</p>
+
+                    <h4>Strategie per Scenario</h4>
+                    <table style="margin-top: 1rem;">
+                        <thead>
+                            <tr>
+                                <th>Scenario</th>
+                                <th>Strategia RAG</th>
+                                <th>Tokens</th>
+                                <th>Rationale</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>FAQ comuni</td>
+                                <td><a href="variants/memory-cache.md" class="doc-link">Memory Cache</a></td>
+                                <td>50</td>
+                                <td>80% hit rate, instant response</td>
+                            </tr>
+                            <tr>
+                                <td>Regole semplici</td>
+                                <td><a href="variants/02-contextual-embeddings.md" class="doc-link">FAST + Contextual</a></td>
+                                <td>1,950</td>
+                                <td>Quick lookup, precision migliorata</td>
+                            </tr>
+                            <tr>
+                                <td>Regole complesse/ambigue</td>
+                                <td><a href="variants/crag-corrective.md" class="doc-link">BALANCED + CRAG</a></td>
+                                <td>2,625</td>
+                                <td>Evaluator + web search augmentation</td>
+                            </tr>
+                            <tr>
+                                <td>Conflitti regole</td>
+                                <td><a href="variants/self-rag.md" class="doc-link">PRECISE + Self-RAG</a></td>
+                                <td>7,420</td>
+                                <td>Conflict resolution + confidence</td>
+                            </tr>
+                            <tr>
+                                <td>Strategic optimization</td>
+                                <td><a href="variants/12-multi-agent-rag.md" class="doc-link">PRECISE + Multi-Agent</a></td>
+                                <td>12,900</td>
+                                <td>3-agent collaboration (Analyzer, Strategist, Validator)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4 style="margin-top: 1.5rem;">Layer Stack</h4>
+                    <pre style="background: var(--bg); padding: 1rem; border-radius: 6px; font-size: 0.85rem;">
+L1: Adaptive Routing (complexity scoring)
+L2: Memory → Semantic Cache (80% combined hit)
+L3: FAST (vector) → BALANCED (hybrid) → PRECISE (multi-hop)
+L4: CRAG Evaluator (critical per evitare hallucinations)
+L5: Direct extraction → Synthesis → Conflict resolution
+L6: Citation validation mandatory</pre>
+
+                    <p style="margin-top: 1rem;"><strong>Token Budget</strong>: 60% cached (50-986t), 30% FAST (2,060t), 8% BALANCED (2,820t), 2% PRECISE (7,420t)</p>
+                    <p><strong>Average</strong>: ~900 tokens/query</p>
+                    <p><strong>Monthly Cost</strong>: ~$300 (for 100K queries, Rules Agent focused)</p>
+                </div>
+
+                <h3 style="margin-top: 3rem;">Strategy Agent - Stack Dettagliato</h3>
+                <div class="card" style="background: rgba(37, 99, 235, 0.05); border-color: var(--primary);">
+                    <p><strong>Profilo</strong>: 100% resource_planning (strategic advice, decision support)</p>
+
+                    <table style="margin-top: 1rem;">
+                        <thead>
+                            <tr><th>Scenario</th><th>Strategia RAG</th><th>Tokens</th><th>Features</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Decisioni semplici</td>
+                                <td><a href="variants/06-advanced-rag.md" class="doc-link">BALANCED + Structured</a></td>
+                                <td>2,820</td>
+                                <td>Pros/cons analysis</td>
+                            </tr>
+                            <tr>
+                                <td>Ottimizzazione risorse</td>
+                                <td>BALANCED + Tool-Calling</td>
+                                <td>3,200</td>
+                                <td>Calculator integration</td>
+                            </tr>
+                            <tr>
+                                <td>Multi-step planning</td>
+                                <td><a href="variants/self-rag.md" class="doc-link">PRECISE + Self-RAG</a></td>
+                                <td>7,420</td>
+                                <td>Confidence scoring</td>
+                            </tr>
+                            <tr>
+                                <td>Strategic optimization</td>
+                                <td><a href="variants/12-multi-agent-rag.md" class="doc-link">PRECISE + Multi-Agent</a></td>
+                                <td>12,900</td>
+                                <td>Collaborative analysis</td>
+                            </tr>
+                            <tr>
+                                <td>Critical/Tournament</td>
+                                <td><a href="variants/ensemble-rag.md" class="doc-link">Ensemble RAG</a></td>
+                                <td>11,550</td>
+                                <td>Multi-model consensus</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <p style="margin-top: 1rem;"><strong>Token Budget</strong>: 40% BALANCED (2,820t), 30% Self-RAG (7,420t), 25% cached (986t), 5% Multi-Agent (12,900t)</p>
+                    <p><strong>Average</strong>: ~4,200 tokens/query</p>
+                </div>
+
+                <h3 style="margin-top: 3rem;">Token Budget per Agent Type</h3>
+                <svg width="100%" height="300" viewBox="0 0 800 300">
+                    <defs>
+                        <linearGradient id="rulesGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="strategyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="setupGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Y-axis labels -->
+                    <text x="5" y="280" style="fill: var(--text-muted); font-size: 11px;">0</text>
+                    <text x="5" y="180" style="fill: var(--text-muted); font-size: 11px;">2.5K</text>
+                    <text x="5" y="80" style="fill: var(--text-muted); font-size: 11px;">5K</text>
+
+                    <!-- Assistant Agent (300t) -->
+                    <rect x="50" y="268" width="80" height="12" fill="url(#setupGrad)" rx="4">
+                        <title>Assistant Agent: 300 tokens avg</title>
+                    </rect>
+                    <text x="90" y="295" text-anchor="middle" style="fill: var(--text); font-size: 11px;">Assistant</text>
+                    <text x="90" y="263" text-anchor="middle" style="fill: var(--warning); font-size: 10px; font-weight: 600;">300t</text>
+
+                    <!-- Setup Agent (400t) -->
+                    <rect x="150" y="264" width="80" height="16" fill="url(#setupGrad)" rx="4">
+                        <title>Setup Agent: 400 tokens avg</title>
+                    </rect>
+                    <text x="190" y="295" text-anchor="middle" style="fill: var(--text); font-size: 11px;">Setup</text>
+                    <text x="190" y="258" text-anchor="middle" style="fill: var(--warning); font-size: 10px; font-weight: 600;">400t</text>
+
+                    <!-- Q&A Agent (600t) -->
+                    <rect x="250" y="256" width="80" height="24" fill="url(#setupGrad)" rx="4">
+                        <title>Q&A Agent: 600 tokens avg</title>
+                    </rect>
+                    <text x="290" y="295" text-anchor="middle" style="fill: var(--text); font-size: 11px;">Q&A</text>
+                    <text x="290" y="248" text-anchor="middle" style="fill: var(--warning); font-size: 10px; font-weight: 600;">600t</text>
+
+                    <!-- Rules Agent (900t) -->
+                    <rect x="350" y="244" width="80" height="36" fill="url(#rulesGrad)" rx="4">
+                        <title>Rules Agent: 900 tokens avg</title>
+                    </rect>
+                    <text x="390" y="295" text-anchor="middle" style="fill: var(--text); font-size: 11px; font-weight: 700;">Rules ⭐</text>
+                    <text x="390" y="235" text-anchor="middle" style="fill: var(--secondary); font-size: 11px; font-weight: 700;">900t</text>
+
+                    <!-- Conversational (1,800t) -->
+                    <rect x="450" y="208" width="80" height="72" fill="url(#rulesGrad)" rx="4">
+                        <title>Conversational Agent: 1,800 tokens avg</title>
+                    </rect>
+                    <text x="490" y="295" text-anchor="middle" style="fill: var(--text); font-size: 11px;">Conv</text>
+                    <text x="490" y="195" text-anchor="middle" style="fill: var(--secondary); font-size: 10px; font-weight: 600;">1.8K</text>
+
+                    <!-- Strategy Agent (4,200t) -->
+                    <rect x="550" y="112" width="80" height="168" fill="url(#strategyGrad)" rx="4">
+                        <title>Strategy Agent: 4,200 tokens avg</title>
+                    </rect>
+                    <text x="590" y="295" text-anchor="middle" style="fill: var(--text); font-size: 11px; font-weight: 700;">Strategy</text>
+                    <text x="590" y="90" text-anchor="middle" style="fill: var(--primary); font-size: 12px; font-weight: 700;">4.2K</text>
+
+                    <!-- Educational Agent (4,500t) -->
+                    <rect x="650" y="100" width="80" height="180" fill="url(#strategyGrad)" rx="4">
+                        <title>Educational Agent: 4,500 tokens avg</title>
+                    </rect>
+                    <text x="690" y="295" text-anchor="middle" style="fill: var(--text); font-size: 11px;">Educational</text>
+                    <text x="690" y="80" text-anchor="middle" style="fill: var(--primary); font-size: 11px; font-weight: 600;">4.5K</text>
+
+                    <!-- Baseline reference line -->
+                    <line x1="40" y1="240" x2="750" y2="240" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4"/>
+                    <text x="755" y="245" style="fill: var(--text-muted); font-size: 10px;">Baseline: 2K</text>
+                </svg>
+
+                <h3 style="margin-top: 3rem;">MeepleAI Rules Agent - Distribuzione Query</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div>
+                        <h4>Per Template (Query Type)</h4>
+                        <svg width="100%" height="250" viewBox="0 0 300 250">
+                            <!-- Pie chart segments -->
+                            <!-- rule_lookup: 70% -->
+                            <path d="M 150 130 L 150 30 A 100 100 0 1 1 70 195 Z" fill="#10b981" opacity="0.8">
+                                <title>rule_lookup: 70%</title>
+                            </path>
+                            <text x="115" y="90" style="fill: white; font-weight: 700; font-size: 18px;">70%</text>
+                            <text x="100" y="110" style="fill: white; font-size: 12px;">rule_lookup</text>
+
+                            <!-- resource_planning: 30% -->
+                            <path d="M 150 130 L 70 195 A 100 100 0 0 1 150 30 Z" fill="#3b82f6" opacity="0.8">
+                                <title>resource_planning: 30%</title>
+                            </path>
+                            <text x="180" y="170" style="fill: white; font-weight: 700; font-size: 16px;">30%</text>
+                            <text x="165" y="188" style="fill: white; font-size: 11px;">resource</text>
+                        </svg>
+                    </div>
+
+                    <div>
+                        <h4>Per Strategy (con Cache)</h4>
+                        <svg width="100%" height="250" viewBox="0 0 300 250">
+                            <!-- Cache: 60% -->
+                            <path d="M 150 130 L 150 30 A 100 100 0 1 1 45 110 Z" fill="#10b981" opacity="0.9">
+                                <title>Cache Hit: 60%</title>
+                            </path>
+                            <text x="105" y="80" style="fill: white; font-weight: 700; font-size: 18px;">60%</text>
+                            <text x="95" y="98" style="fill: white; font-size: 11px;">Cache</text>
+
+                            <!-- FAST: 25% -->
+                            <path d="M 150 130 L 45 110 A 100 100 0 0 1 90 220 Z" fill="#3b82f6" opacity="0.8">
+                                <title>FAST: 25%</title>
+                            </path>
+                            <text x="75" y="165" style="fill: white; font-weight: 600; font-size: 14px;">25%</text>
+                            <text x="70" y="180" style="fill: white; font-size: 10px;">FAST</text>
+
+                            <!-- BALANCED: 13% -->
+                            <path d="M 150 130 L 90 220 A 100 100 0 0 1 200 220 Z" fill="#f59e0b" opacity="0.8">
+                                <title>BALANCED: 13%</title>
+                            </path>
+                            <text x="155" y="210" style="fill: white; font-weight: 600; font-size: 12px;">13%</text>
+                            <text x="145" y="224" style="fill: white; font-size: 9px;">BALANCED</text>
+
+                            <!-- PRECISE: 2% -->
+                            <path d="M 150 130 L 200 220 A 100 100 0 0 1 150 30 Z" fill="#ef4444" opacity="0.8">
+                                <title>PRECISE: 2%</title>
+                            </path>
+                            <text x="205" y="155" style="fill: white; font-weight: 600; font-size: 11px;">2%</text>
+                            <text x="195" y="168" style="fill: white; font-size: 9px;">PRECISE</text>
+                        </svg>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 3rem;">Modalità Disponibili per User Tier</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User Tier</th>
+                            <th>Modalità Disponibili</th>
+                            <th>Limitazioni</th>
+                            <th>Avg Tokens</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Anonymous</strong></td>
+                            <td>
+                                <span class="badge" style="background: #10b981;">FAST × rule_lookup</span>
+                                <span class="badge" style="background: #10b981; opacity: 0.6;">FAST × resource* (limitato)</span>
+                            </td>
+                            <td>BALANCED/PRECISE denied</td>
+                            <td>440t</td>
+                        </tr>
+                        <tr>
+                            <td><strong>User</strong></td>
+                            <td>
+                                <span class="badge" style="background: #10b981;">FAST × 2</span>
+                                <span class="badge" style="background: #3b82f6;">BALANCED × 2</span>
+                                <span class="badge" style="background: #ef4444; opacity: 0.7;">PRECISE (5/day)</span>
+                            </td>
+                            <td>PRECISE quota: 5 query/giorno</td>
+                            <td>1,350t</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Editor</strong></td>
+                            <td>
+                                <span class="badge" style="background: #10b981;">FAST × 2</span>
+                                <span class="badge" style="background: #3b82f6;">BALANCED × 2</span>
+                                <span class="badge" style="background: #ef4444;">PRECISE × 2</span>
+                            </td>
+                            <td>Nessuna, full access</td>
+                            <td>2,150t</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Admin</strong></td>
+                            <td>
+                                <span class="badge" style="background: #10b981;">FAST × 2</span>
+                                <span class="badge" style="background: #3b82f6;">BALANCED × 2</span>
+                                <span class="badge" style="background: #ef4444;">PRECISE × 2</span>
+                                <span class="badge" style="background: #7c3aed;">Multi-Agent</span>
+                                <span class="badge" style="background: #64748b;">Ensemble*</span>
+                            </td>
+                            <td>Nessuna + opzioni avanzate</td>
+                            <td>7,250t</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">
+                    * resource_planning con FAST ha reasoning limitato (no multi-step)<br>
+                    * Ensemble su richiesta esplicita per dispute critiche
+                </p>
+
+                <h3 style="margin-top: 3rem;">Query Routing Automatico</h3>
+                <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; font-family: monospace; font-size: 0.85rem;">
+                    <div style="margin-bottom: 1rem;">
+                        <strong style="color: var(--secondary);">Example 1: Simple FAQ</strong><br>
+                        Query: "How many food tokens in Wingspan?"<br>
+                        ↓ Template: <span style="color: #10b981;">rule_lookup</span> (auto)<br>
+                        ↓ Complexity: <span style="color: #3b82f6;">1</span> (simple)<br>
+                        ↓ Strategy: <span style="color: #10b981; font-weight: 600;">FAST</span> (auto)<br>
+                        ↓ Cache Check: <span style="color: #10b981;">HIT</span> (80% probability)<br>
+                        → <strong>Result: 50 tokens, <50ms, $0.0002</strong>
+                    </div>
+
+                    <div style="margin-bottom: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                        <strong style="color: var(--secondary);">Example 2: Complex Rule</strong><br>
+                        Query: "Can I trade before building in Catan setup phase?"<br>
+                        ↓ Template: <span style="color: #10b981;">rule_lookup</span><br>
+                        ↓ Complexity: <span style="color: #f59e0b;">3</span> (multi-concept + conditional)<br>
+                        ↓ Strategy: <span style="color: #3b82f6; font-weight: 600;">BALANCED</span><br>
+                        ↓ CRAG: <span style="color: #f59e0b;">AMBIGUOUS</span> → Web search<br>
+                        → <strong>Result: 3,750 tokens, 2s, $0.013</strong>
+                    </div>
+
+                    <div style="border-top: 1px solid var(--border); padding-top: 1rem;">
+                        <strong style="color: var(--secondary);">Example 3: Strategic Planning</strong><br>
+                        Query: "Optimal opening for 4-player Catan with wheat-heavy starting position?"<br>
+                        ↓ Template: <span style="color: #3b82f6;">resource_planning</span><br>
+                        ↓ Complexity: <span style="color: #ef4444;">5</span> (multi-step + optimization)<br>
+                        ↓ Strategy: <span style="color: #ef4444; font-weight: 600;">PRECISE</span><br>
+                        ↓ User: Admin → <span style="color: #7c3aed;">Multi-Agent</span> enabled<br>
+                        → <strong>Result: 12,900 tokens, 8s, $0.095</strong>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 2rem;">Variant Links per Agent Type</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
+                    <div class="card" style="background: rgba(16, 185, 129, 0.05);">
+                        <h4 style="color: var(--secondary); margin-bottom: 0.8rem;">Rules Agent (Top 5)</h4>
+                        <ol style="margin-left: 1.5rem; line-height: 2;">
+                            <li><a href="variants/memory-cache.md" class="doc-link">Memory Cache</a> (50t)</li>
+                            <li><a href="variants/01-semantic-cache.md" class="doc-link">Semantic Cache</a> (986t)</li>
+                            <li><a href="variants/02-contextual-embeddings.md" class="doc-link">Contextual Embeddings</a> (1,950t)</li>
+                            <li><a href="variants/crag-corrective.md" class="doc-link">CRAG</a> (2,625t)</li>
+                            <li><a href="variants/03-metadata-filtering.md" class="doc-link">Metadata Filtering</a> (3,100t)</li>
+                        </ol>
+                    </div>
+
+                    <div class="card" style="background: rgba(37, 99, 235, 0.05);">
+                        <h4 style="color: var(--primary); margin-bottom: 0.8rem;">Strategy Agent (Top 5)</h4>
+                        <ol style="margin-left: 1.5rem; line-height: 2;">
+                            <li><a href="variants/06-advanced-rag.md" class="doc-link">Advanced RAG</a> (3,700t)</li>
+                            <li><a href="variants/self-rag.md" class="doc-link">Self-RAG</a> (7,420t)</li>
+                            <li><a href="variants/12-multi-agent-rag.md" class="doc-link">Multi-Agent</a> (12,900t)</li>
+                            <li><a href="variants/09-cot-rag.md" class="doc-link">Chain-of-Thought</a> (3,650t)</li>
+                            <li><a href="variants/11-iterative-rag.md" class="doc-link">Iterative RAG</a> (6,736t)</li>
+                        </ol>
+                    </div>
                 </div>
             </div>
         </div>

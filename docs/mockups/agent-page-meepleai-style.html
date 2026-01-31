@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Page - MeepleAI Style (Base)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --meeple-orange: hsl(25, 95%, 38%);
+      --meeple-purple: hsl(271, 91%, 55%);
+      --meeple-green: hsl(142, 76%, 28%);
+      --meeple-warm-bg: hsl(30, 25%, 97%);
+      --meeple-border: hsl(30, 15%, 85%);
+      --text-primary: hsl(30, 15%, 15%);
+      --text-secondary: hsl(30, 12%, 45%);
+      --text-muted: hsl(30, 12%, 60%);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--meeple-warm-bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(210, 105, 30, 0.015) 2px, rgba(210, 105, 30, 0.015) 4px),
+        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(139, 90, 60, 0.02) 2px, rgba(139, 90, 60, 0.02) 4px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.6;
+    }
+
+    .container { max-width: 480px; margin: 0 auto; padding: 1rem; position: relative; z-index: 1; }
+    .card { background: white; border: 1px solid var(--meeple-border); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s; }
+    .card:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.1); transform: translateY(-2px); }
+
+    .demo-nav { position: fixed; top: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--meeple-border); padding: 0.75rem; z-index: 1000; display: flex; gap: 0.5rem; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .demo-nav button { font-family: 'Quicksand', sans-serif; font-weight: 600; font-size: 14px; padding: 8px 16px; background: white; border: 2px solid var(--meeple-border); color: var(--text-secondary); cursor: pointer; border-radius: 8px; transition: all 0.2s; }
+    .demo-nav button.active { border-color: var(--meeple-orange); color: var(--meeple-orange); background: hsl(25, 95%, 95%); font-weight: 700; }
+    .demo-nav button:hover { border-color: var(--meeple-orange); transform: translateY(-1px); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    .screen { display: none; padding-top: 70px; padding-bottom: 100px; }
+    .screen.active { display: block; animation: fadeIn 0.3s; }
+
+    .btn { font-family: 'Quicksand', sans-serif; font-weight: 600; padding: 12px 24px; border-radius: 8px; cursor: pointer; transition: all 0.2s; width: 100%; }
+    .btn-primary { background: var(--meeple-orange); color: white; border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .btn-primary:hover { background: hsl(25, 95%, 35%); transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .btn-outline { background: white; border: 2px solid var(--meeple-border); color: var(--text-primary); }
+    .btn-outline:hover { background: var(--meeple-warm-bg); border-color: var(--meeple-orange); }
+
+    .section-title { font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px; }
+    .custom-select { width: 100%; padding: 12px; background: white; border: 2px solid var(--meeple-border); color: var(--text-primary); font-family: 'Nunito', sans-serif; font-size: 15px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+    .custom-select:hover { border-color: var(--meeple-orange); }
+    .custom-select:focus { outline: none; border-color: var(--meeple-orange); box-shadow: 0 0 0 3px hsl(25, 95%, 90%); }
+
+    .template-carousel { display: flex; gap: 0.75rem; overflow-x: auto; padding: 0.5rem 0; scroll-snap-type: x mandatory; }
+    .template-card { flex-shrink: 0; width: 90px; padding: 1rem; border: 2px solid var(--meeple-border); border-radius: 12px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: all 0.2s; scroll-snap-align: start; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .template-card:hover { border-color: var(--meeple-orange); transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .template-card.active { border-color: var(--meeple-orange); background: hsl(25, 95%, 95%); box-shadow: 0 0 0 3px hsl(25, 95%, 90%); }
+    .template-card .icon { font-size: 32px; margin-bottom: 0.5rem; }
+    .template-card .name { font-size: 12px; text-align: center; font-family: 'Quicksand', sans-serif; font-weight: 600; }
+
+    .progress-container { height: 12px; background: hsl(30, 20%, 90%); border-radius: 6px; overflow: hidden; margin-bottom: 0.75rem; }
+    .progress-bar { height: 100%; transition: width 0.5s ease-in-out; border-radius: 6px; }
+    .progress-bar.normal { background: linear-gradient(90deg, var(--meeple-orange), hsl(25, 95%, 50%)); }
+    .progress-bar.warning { background: linear-gradient(90deg, hsl(36, 100%, 50%), hsl(36, 100%, 60%)); }
+
+    .action-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.98); backdrop-filter: blur(10px); border-top: 1px solid var(--meeple-border); padding: 1rem; display: flex; gap: 0.75rem; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); z-index: 100; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    @media (min-width: 768px) { .container { max-width: 600px; } .action-bar { max-width: 600px; margin: 0 auto; } }
+  </style>
+</head>
+<body>
+
+  <nav class="demo-nav">
+    <button onclick="showScreen('config')" class="active" id="nav-config">📋 Configurazione</button>
+    <button onclick="showScreen('chat')" id="nav-chat">💬 Chat</button>
+    <button onclick="showScreen('slots')" id="nav-slots">🎰 Slot</button>
+  </nav>
+
+  <!-- CONFIG SCREEN -->
+  <div id="screen-config" class="screen active">
+    <div class="container">
+      <h1 style="font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 28px; margin-bottom: 1.5rem; color: var(--meeple-orange); display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 32px;">🤖</span>Configura Agente AI
+      </h1>
+
+      <div class="card">
+        <div class="section-title">🎮 Seleziona Gioco</div>
+        <select class="custom-select"><option selected>Chess</option><option>Settlers of Catan</option><option>Wingspan</option></select>
+        <p style="font-size: 11px; color: var(--meeple-orange); margin-top: 8px;">📚 Regolamento disponibile</p>
+      </div>
+
+      <div class="card">
+        <div class="section-title">🤖 Tipo di Agente <span style="font-size: 18px; color: var(--text-muted); cursor: pointer;">ℹ️</span></div>
+        <div class="template-carousel">
+          <div class="template-card active"><div class="icon">🎲</div><div class="name">Esperto<br>Regole</div></div>
+          <div class="template-card"><div class="icon">📚</div><div class="name">Guida<br>Rapida</div></div>
+          <div class="template-card"><div class="icon">🧠</div><div class="name">Coach<br>Strategia</div></div>
+          <div class="template-card"><div class="icon">📝</div><div class="name">Segna<br>Punteggio</div></div>
+        </div>
+        <p style="margin-top: 0.75rem; font-size: 14px; color: var(--text-secondary);"><strong>Esperto Regole:</strong> Spiega le regole, risolve dubbi e chiarisce le meccaniche.</p>
+      </div>
+
+      <div class="card">
+        <div class="section-title">⚡ Modello AI</div>
+        <select class="custom-select"><option selected>GPT-4o-mini (Gratuito)</option><option>Llama-3.3-70b (Gratuito)</option><option disabled>Claude-3.5-Haiku (Premium) 👑</option></select>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">Costo stimato: <strong>$0.001</strong> per domanda</p>
+      </div>
+
+      <div class="card">
+        <div class="section-title">📊 Utilizzo Token Questa Settimana</div>
+        <div class="progress-container"><div class="progress-bar warning" style="width: 90%;"></div></div>
+        <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 0.75rem;"><span style="font-weight: 700;">450 / 500 token</span><span style="color: var(--text-muted);">Reset tra 2g 14h</span></div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 10px; background: hsl(36, 100%, 95%); border: 1px solid hsl(36, 100%, 50%); border-radius: 8px; font-size: 13px; color: hsl(36, 100%, 30%);">
+          <span style="font-size: 18px;">⚠️</span><span><strong>50 token</strong> al limite</span>
+        </div>
+      </div>
+
+      <div style="height: 80px;"></div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-outline" style="flex: 1;">Annulla</button>
+      <button class="btn btn-primary" style="flex: 1.5;" onclick="showScreen('chat')"><span style="font-size: 18px;">🚀</span> Avvia Chat</button>
+    </div>
+  </div>
+
+  <!-- CHAT SCREEN -->
+  <div id="screen-chat" class="screen">
+    <div class="container">
+      <div style="background: white; border: 1px solid var(--meeple-border); border-radius: 1rem; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--meeple-green); animation: pulseMeeple 2s infinite;"></div>
+          <span style="font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 16px;">Chess - Esperto Regole</span>
+        </div>
+        <div style="display: flex; gap: 12px; font-size: 12px; color: var(--text-muted);"><span>⚡ GPT-4o-mini</span><span>•</span><span><strong>445/500</strong> token</span></div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 200px;">
+        <div style="animation: slideUp 0.3s;"><div style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">TU • 2 min fa</div><div style="max-width: 85%; margin-left: auto; padding: 1rem; border-radius: 1rem; background: var(--meeple-orange); color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">Come si muovono i pedoni?</div></div>
+
+        <div style="animation: slideUp 0.3s;"><div style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">AGENTE • 2 min fa</div><div style="max-width: 85%; padding: 1rem; border-radius: 1rem; background: white; border: 1px solid var(--meeple-border); box-shadow: 0 1px 3px rgba(0,0,0,0.1);"><p>I pedoni si muovono in avanti di una casella. Alla prima mossa possono avanzare di due caselle.</p><div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--meeple-border);"><div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px;"><span>Affidabilità:</span><span style="font-weight: 700;">95%</span></div><div style="height: 6px; background: hsl(30, 20%, 90%); border-radius: 3px; margin-bottom: 12px;"><div style="height: 100%; width: 95%; background: linear-gradient(90deg, var(--meeple-orange), hsl(25, 95%, 50%)); border-radius: 3px;"></div></div><span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: hsl(25, 95%, 95%); border: 1px solid var(--meeple-orange); border-radius: 6px; font-size: 12px; color: var(--meeple-orange); font-weight: 600;">📄 Regolamento p.5</span></div></div></div>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-outline" style="flex: 1; font-size: 13px;">⚙️ Impostazioni</button>
+      <button class="btn btn-outline" style="flex: 1; font-size: 13px;">📤 Esporta</button>
+      <button class="btn btn-outline" style="flex: 1;" onclick="showScreen('config')">Riduci ▼</button>
+    </div>
+  </div>
+
+  <!-- SLOTS SCREEN -->
+  <div id="screen-slots" class="screen">
+    <div class="container">
+      <h1 style="font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 28px; margin-bottom: 1.5rem; color: var(--meeple-orange); display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 32px;">🎰</span>Gestione Slot
+      </h1>
+
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;"><span style="font-family: 'Quicksand', sans-serif; font-weight: 700;">Piano Gratuito</span><span style="padding: 4px 10px; background: hsl(25, 95%, 95%); border: 1px solid var(--meeple-orange); border-radius: 6px; font-size: 12px; font-weight: 700; color: var(--meeple-orange);">GRATUITO</span></div>
+        <div class="progress-container"><div class="progress-bar normal" style="width: 40%;"></div></div>
+        <p style="font-size: 14px; color: var(--text-secondary);"><strong>2 / 5</strong> slot attivi</p>
+      </div>
+
+      <h2 style="font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 20px; margin: 1.5rem 0 1rem;">Agenti Attivi</h2>
+
+      <div class="card" style="border-left: 4px solid var(--meeple-orange);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;"><div style="display: flex; gap: 0.75rem;"><div style="width: 14px; height: 14px; border-radius: 50%; background: var(--meeple-orange); margin-top: 4px; animation: pulseMeeple 2s infinite;"></div><div><h3 style="font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 17px;">Esperto Regole</h3><p style="font-size: 14px; color: var(--text-secondary);">Chess</p><p style="font-size: 12px; color: var(--text-muted);">GPT-4o-mini</p></div></div><span style="font-size: 12px; color: var(--text-muted);">2 ore fa</span></div>
+        <div style="display: flex; gap: 8px;"><button class="btn btn-primary" style="flex: 1; font-size: 14px;" onclick="showScreen('chat')">Apri Chat</button><button class="btn btn-outline" style="font-size: 14px; padding: 12px 16px;">Termina</button></div>
+      </div>
+
+      <div style="height: 80px;"></div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-outline" style="flex: 1;">📊 Statistiche</button>
+      <button class="btn btn-primary" style="flex: 1;" onclick="showScreen('config')">◄ Indietro</button>
+    </div>
+  </div>
+
+  <script>
+    function showScreen(name) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.demo-nav button').forEach(b => b.classList.remove('active'));
+      document.getElementById('screen-' + name).classList.add('active');
+      document.getElementById('nav-' + name).classList.add('active');
+      window.scrollTo(0, 0);
+    }
+  </script>
+
+</body>
+</html>

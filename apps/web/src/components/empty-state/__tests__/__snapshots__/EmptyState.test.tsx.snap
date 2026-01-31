@@ -1,0 +1,301 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`EmptyState > Snapshot tests > should match snapshot for default variant 1`] = `
+<div
+  aria-live="polite"
+  class="flex flex-col items-center justify-center py-12 px-6 text-center rounded-lg"
+  data-testid="empty-state"
+  role="status"
+>
+  <div
+    aria-hidden="true"
+    class="mb-4 p-4 rounded-full bg-slate-100 dark:bg-slate-800 transition-transform duration-200 hover:scale-105"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-inbox w-8 h-8 text-slate-400 dark:text-slate-500"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="1.5"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <polyline
+        points="22 12 16 12 14 15 10 15 8 12 2 12"
+      />
+      <path
+        d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"
+      />
+    </svg>
+  </div>
+  <h3
+    class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2"
+  >
+    No items
+  </h3>
+  <p
+    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+  >
+    Add your first item
+  </p>
+  <span
+    class="sr-only"
+  >
+    No items
+    . 
+    Add your first item
+     
+  </span>
+</div>
+`;
+
+exports[`EmptyState > Snapshot tests > should match snapshot for error variant 1`] = `
+<div
+  aria-live="polite"
+  class="flex flex-col items-center justify-center py-12 px-6 text-center rounded-lg"
+  data-testid="empty-state"
+  role="status"
+>
+  <div
+    aria-hidden="true"
+    class="mb-4 p-4 rounded-full bg-slate-100 dark:bg-slate-800 transition-transform duration-200 hover:scale-105"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-circle-alert w-8 h-8 text-red-400 dark:text-red-500"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="1.5"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+      />
+      <line
+        x1="12"
+        x2="12"
+        y1="8"
+        y2="12"
+      />
+      <line
+        x1="12"
+        x2="12.01"
+        y1="16"
+        y2="16"
+      />
+    </svg>
+  </div>
+  <h3
+    class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2"
+  >
+    Something went wrong
+  </h3>
+  <p
+    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+  >
+    Please try again later
+  </p>
+  <button
+    class="mt-2 px-4 py-2 rounded-md font-medium text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 focus:ring-blue-500"
+    type="button"
+  >
+    Retry
+  </button>
+  <span
+    class="sr-only"
+  >
+    Something went wrong
+    . 
+    Please try again later
+     
+    Action available: Retry
+  </span>
+</div>
+`;
+
+exports[`EmptyState > Snapshot tests > should match snapshot for noAccess variant 1`] = `
+<div
+  aria-live="polite"
+  class="flex flex-col items-center justify-center py-12 px-6 text-center rounded-lg"
+  data-testid="empty-state"
+  role="status"
+>
+  <div
+    aria-hidden="true"
+    class="mb-4 p-4 rounded-full bg-slate-100 dark:bg-slate-800 transition-transform duration-200 hover:scale-105"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-lock w-8 h-8 text-yellow-400 dark:text-yellow-500"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="1.5"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect
+        height="11"
+        rx="2"
+        ry="2"
+        width="18"
+        x="3"
+        y="11"
+      />
+      <path
+        d="M7 11V7a5 5 0 0 1 10 0v4"
+      />
+    </svg>
+  </div>
+  <h3
+    class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2"
+  >
+    Access denied
+  </h3>
+  <p
+    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+  >
+    You do not have permission
+  </p>
+  <span
+    class="sr-only"
+  >
+    Access denied
+    . 
+    You do not have permission
+     
+  </span>
+</div>
+`;
+
+exports[`EmptyState > Snapshot tests > should match snapshot for noResults variant with action 1`] = `
+<div
+  aria-live="polite"
+  class="flex flex-col items-center justify-center py-12 px-6 text-center rounded-lg"
+  data-testid="empty-state"
+  role="status"
+>
+  <div
+    aria-hidden="true"
+    class="mb-4 p-4 rounded-full bg-slate-100 dark:bg-slate-800 transition-transform duration-200 hover:scale-105"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-search w-8 h-8 text-blue-400 dark:text-blue-500"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="1.5"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m21 21-4.34-4.34"
+      />
+      <circle
+        cx="11"
+        cy="11"
+        r="8"
+      />
+    </svg>
+  </div>
+  <h3
+    class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2"
+  >
+    No results found
+  </h3>
+  <p
+    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+  >
+    Try adjusting your search
+  </p>
+  <button
+    class="mt-2 px-4 py-2 rounded-md font-medium text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 focus:ring-blue-500"
+    type="button"
+  >
+    Clear filters
+  </button>
+  <span
+    class="sr-only"
+  >
+    No results found
+    . 
+    Try adjusting your search
+     
+    Action available: Clear filters
+  </span>
+</div>
+`;
+
+exports[`EmptyState > Snapshot tests > should match snapshot with custom icon 1`] = `
+<div
+  aria-live="polite"
+  class="flex flex-col items-center justify-center py-12 px-6 text-center rounded-lg"
+  data-testid="empty-state"
+  role="status"
+>
+  <div
+    aria-hidden="true"
+    class="mb-4 p-4 rounded-full bg-slate-100 dark:bg-slate-800 transition-transform duration-200 hover:scale-105"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-upload w-8 h-8 text-slate-400 dark:text-slate-500"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="1.5"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12 3v12"
+      />
+      <path
+        d="m17 8-5-5-5 5"
+      />
+      <path
+        d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+      />
+    </svg>
+  </div>
+  <h3
+    class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2"
+  >
+    Upload files
+  </h3>
+  <p
+    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+  >
+    Drag and drop files here
+  </p>
+  <span
+    class="sr-only"
+  >
+    Upload files
+    . 
+    Drag and drop files here
+     
+  </span>
+</div>
+`;

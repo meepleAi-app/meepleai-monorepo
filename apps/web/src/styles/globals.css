@@ -1,0 +1,465 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+/* Import design system tokens */
+@import "./design-tokens.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* Remove all brand color shade references - migrating to semantic tokens */
+
+  --animate-fade-in: fadeIn 0.5s ease-in;
+  --animate-slide-up: slideUp 0.6s ease-out;
+  --animate-scale-in: scaleIn 0.4s ease-out;
+  --animate-bounce-subtle: bounceSubtle 0.35s ease-out;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-pulse-meeple: pulseMeeple 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bounceSubtle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes pulseMeeple {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-nunito, var(--font-sans));
+    position: relative;
+  }
+
+  /* MeepleAI Background Texture System - Issue #2905 */
+  /* Subtle Wood/Paper Texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(210, 105, 30, 0.015) 2px, rgba(210, 105, 30, 0.015) 4px),
+      repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(139, 90, 60, 0.02) 2px, rgba(139, 90, 60, 0.02) 4px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  /* Subtle warm gradient overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(210, 105, 30, 0.03), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-quicksand, var(--font-sans));
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-primary-foreground font-semibold py-3 px-6 rounded-lg
+           transition-all duration-200 hover:opacity-90 hover:shadow-lg
+           active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground font-semibold py-3 px-6
+           rounded-lg transition-all duration-200 hover:opacity-90
+           active:scale-95;
+  }
+
+  .card {
+    @apply bg-card text-card-foreground border border-border rounded-2xl p-6
+           transition-all duration-200 hover:shadow-md;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent;
+  }
+
+  /* Accessible version with WCAG 2.1 AA compliant contrast (Issue #841) */
+  .gradient-text-accessible {
+    @apply bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent;
+  }
+
+  .btn-secondary-accessible {
+    @apply border-2 border-blue-400 text-blue-300 font-semibold py-3 px-6
+           rounded-lg transition-all duration-200 hover:border-blue-300
+           hover:bg-blue-400/10 active:scale-95;
+  }
+
+  .glass {
+    @apply bg-background/80 backdrop-blur-lg border border-border;
+  }
+
+  .bg-gradient-primary {
+    @apply bg-gradient-to-br from-primary to-primary/80;
+  }
+
+  .bg-gradient-hero {
+    @apply bg-gradient-to-r from-primary via-secondary to-accent;
+  }
+
+  .bg-gradient-cta {
+    @apply bg-gradient-to-br from-primary to-secondary;
+  }
+
+  /* Navigation Active/Hover States - Issue #2860 */
+  .nav-item-active {
+    color: hsl(var(--color-meeple-purple, 262 83% 62%));
+  }
+
+  .nav-item-active-bg {
+    background-color: hsl(262 83% 62% / 0.1);
+  }
+
+  .dark .nav-item-active-bg {
+    background-color: hsl(262 83% 62% / 0.2);
+  }
+
+  .nav-item-hover:hover {
+    color: hsl(var(--primary));
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* MeepleAI Hover Effects - Issue #2848 */
+  .hover-card {
+    @apply transition-all duration-300;
+  }
+
+  .hover-card:hover {
+    @apply -translate-y-1 shadow-lg;
+  }
+
+  .hover-button {
+    @apply transition-all duration-200;
+  }
+
+  .hover-button:hover {
+    @apply -translate-y-0.5 shadow-md;
+  }
+
+  .hover-lift-sm {
+    @apply transition-transform duration-200;
+  }
+
+  .hover-lift-sm:hover {
+    @apply -translate-y-1;
+  }
+
+  .hover-lift-md {
+    @apply transition-transform duration-300;
+  }
+
+  .hover-lift-md:hover {
+    @apply -translate-y-2;
+  }
+
+  .hover-shadow-meeple {
+    @apply transition-shadow duration-200;
+  }
+
+  .hover-shadow-meeple:hover {
+    box-shadow: 0 8px 20px rgba(139, 90, 60, 0.12);
+  }
+}
+
+/* Accessibility - Reduce Motion Support (Issue #2848, #2905) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .animate-pulse-meeple,
+  .animate-pulse-slow,
+  .animate-bounce-slow {
+    animation: none !important;
+  }
+
+  .hover-card:hover,
+  .hover-button:hover,
+  .hover-lift-sm:hover,
+  .hover-lift-md:hover {
+    transform: none !important;
+  }
+
+  /* Disable texture overlay for reduced motion (Issue #2905) */
+  body::before,
+  body::after {
+    opacity: 0 !important;
+  }
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  /* MeepleAI brand colors for Tailwind usage */
+  --color-meeple-orange: hsl(25 85% 45%);
+  --color-meeple-purple: hsl(262 83% 62%);
+  --color-meeple-warm-bg: hsl(30 25% 97%);
+  --color-meeple-dark: hsl(0 0% 18%);
+  --color-meeple-border: hsl(30 12% 90%);
+  --color-meeple-light-orange: hsl(30 100% 94%);
+}
+
+:root {
+  /* Base theme tokens - Opzione A: Playful Boardroom */
+  --radius: 0.625rem;
+  --background: 30 25% 97%;         /* Beige chiaro - warm background */
+  --foreground: 30 15% 15%;         /* Marrone scuro - readable text */
+
+  /* shadcn/ui semantic tokens - Opzione A */
+  --card: 0 0% 100%;                /* White cards for contrast */
+  --card-foreground: 30 15% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 30 15% 15%;
+  --primary: 25 95% 38%;            /* WCAG AA: Darkened to 38% for 4.5:1 contrast with white (Issue #2234) */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 142 76% 28%;         /* WCAG AA: Darkened to 28% for 4.5:1 contrast on light bg (Issue #2234) */
+  --secondary-foreground: 0 0% 100%;
+  --muted: 30 20% 90%;              /* Beige medio - muted backgrounds */
+  --muted-foreground: 30 12% 35%;   /* WCAG AA: Darkened to 35% for guaranteed 4.5:1 contrast (Issue #2234) */
+  --accent: 271 91% 55%;            /* WCAG AA: Darkened to 55% for 4.5:1 contrast with white (Issue #2234) */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 30 15% 85%;             /* Bordi beige */
+  --input: 30 15% 90%;
+  --ring: 25 95% 53%;               /* Primary orange for focus */
+  --chart-1: 25 95% 53%;            /* Orange */
+  --chart-2: 142 76% 36%;           /* Green */
+  --chart-3: 271 91% 65%;           /* Purple */
+  --chart-4: 45 93% 47%;            /* Gold/Yellow */
+  --chart-5: 0 72% 51%;             /* Red */
+
+  /* Sidebar tokens - Warm beige theme */
+  --sidebar: 30 22% 94%;            /* Light beige sidebar */
+  --sidebar-foreground: 30 15% 20%;
+  --sidebar-primary: 25 95% 53%;    /* Primary orange */
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 30 20% 88%;
+  --sidebar-accent-foreground: 30 15% 15%;
+  --sidebar-border: 30 15% 82%;
+  --sidebar-ring: 25 95% 53%;
+
+  /* Playful Boardroom alias tokens for redesigned components */
+  --color-primary-200: hsl(25 92% 88%);
+  --color-primary-300: hsl(25 92% 75%);
+  --color-primary-500: hsl(var(--primary));
+  --color-primary-600: hsl(25 95% 38%);   /* Adjusted for consistency */
+  --color-primary-700: hsl(25 95% 32%);   /* Darker for high contrast needs */
+  --color-secondary-200: hsl(142 45% 82%);
+  --color-secondary-500: hsl(var(--secondary));
+  --color-secondary-600: hsl(142 76% 24%); /* WCAG AA: Extra dark for high contrast needs */
+  --color-blue: hsl(221 83% 53%);
+  --color-green: hsl(142 76% 36%);
+  --color-yellow: hsl(45 93% 47%);
+  --color-red: hsl(var(--destructive));
+  --color-neutral-300: hsl(30 15% 85%);
+  --color-neutral-400: hsl(30 12% 72%);
+  --color-neutral-600: hsl(30 12% 45%);
+
+  --bg-primary: hsl(var(--background));
+  --bg-secondary: hsl(30 20% 94%);
+  --bg-tertiary: hsl(30 18% 90%);
+  --bg-elevated: hsl(var(--card));
+
+  --border-primary: hsl(var(--border));
+  --border-secondary: hsl(30 12% 75%);
+
+  --text-primary: hsl(var(--foreground));
+  --text-secondary: hsl(var(--muted-foreground));
+  --text-tertiary: hsl(30 10% 55%);
+  --text-inverse: hsl(var(--primary-foreground));
+
+  --font-display: var(--font-quicksand, var(--font-sans));
+  --font-body: var(--font-inter, var(--font-sans));
+  --font-size-xs: var(--text-xs);
+  --font-size-sm: var(--text-sm);
+  --font-size-base: var(--text-base);
+  --font-size-lg: var(--text-lg);
+  --font-size-xl: var(--text-xl);
+  --font-size-2xl: var(--text-2xl);
+  --font-size-3xl: var(--text-3xl);
+  --font-size-4xl: var(--text-4xl);
+  --font-weight-medium: var(--font-medium);
+  --font-weight-semibold: var(--font-semibold);
+  --font-weight-bold: var(--font-bold);
+}
+
+.dark {
+  /* Base theme tokens - Dark Professional (Issue #2965) */
+  --background: 0 0% 10%;           /* #1a1a1a - Neutral dark gray */
+  --foreground: 30 25% 90%;         /* #e8e4d8 - Warm beige text */
+
+  /* shadcn/ui semantic tokens - Dark Professional */
+  --card: 0 0% 18%;                 /* #2d2d2d - Neutral medium gray */
+  --card-foreground: 30 25% 90%;
+  --popover: 0 0% 18%;
+  --popover-foreground: 30 25% 90%;
+  --primary: 25 95% 60%;            /* #d2691e lighter - Orange for visibility */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 142 76% 45%;         /* Green for visibility */
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 20%;                /* Neutral muted background */
+  --muted-foreground: 0 0% 60%;     /* #999999 - Neutral muted text */
+  --accent: 45 93% 56%;             /* #fbbf24 - Amber for visibility */
+  --accent-foreground: 0 0% 10%;
+  --destructive: 0 72% 51%;         /* Red for errors */
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 25%;               /* Neutral border */
+  --input: 0 0% 25%;                /* Neutral input border */
+  --ring: 45 93% 56%;               /* Amber for focus ring */
+  --chart-1: 25 95% 60%;            /* Orange (lighter) */
+  --chart-2: 142 76% 50%;           /* Green (lighter) */
+  --chart-3: 271 91% 70%;           /* Purple (lighter) */
+  --chart-4: 45 93% 56%;            /* Amber (lighter) */
+  --chart-5: 0 72% 60%;             /* Red (lighter) */
+
+  /* Sidebar tokens - Dark Professional */
+  --sidebar: 0 0% 15%;              /* Neutral dark sidebar */
+  --sidebar-foreground: 30 25% 90%;
+  --sidebar-primary: 25 95% 60%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 22%;
+  --sidebar-accent-foreground: 30 25% 90%;
+  --sidebar-border: 0 0% 25%;
+  --sidebar-ring: 45 93% 56%;       /* Amber for focus */
+
+  --color-primary-200: hsl(25 92% 70%);
+  --color-primary-300: hsl(25 92% 62%);
+  --color-primary-500: hsl(var(--primary));
+  --color-primary-600: hsl(25 95% 52%);
+  --color-primary-700: hsl(25 95% 45%);
+  --color-secondary-200: hsl(142 35% 65%);
+  --color-secondary-500: hsl(var(--secondary));
+  --color-secondary-600: hsl(142 76% 38%);
+  --color-blue: hsl(221 83% 65%);
+  --color-green: hsl(142 76% 50%);
+  --color-yellow: hsl(45 93% 56%);  /* Amber accent */
+  --color-red: hsl(0 72% 60%);
+  --color-neutral-300: hsl(0 0% 26%);  /* Neutral gray */
+  --color-neutral-400: hsl(0 0% 34%);
+  --color-neutral-600: hsl(0 0% 46%);
+
+  --bg-primary: hsl(var(--background));       /* #1a1a1a */
+  --bg-secondary: hsl(0 0% 15%);              /* Slightly lighter than bg */
+  --bg-tertiary: hsl(0 0% 20%);               /* Lighter variant */
+  --bg-elevated: hsl(var(--card));            /* #2d2d2d */
+
+  --border-primary: hsl(var(--border));
+  --border-secondary: hsl(0 0% 30%);          /* Lighter border variant */
+
+  --text-primary: hsl(var(--foreground));     /* #e8e4d8 */
+  --text-secondary: hsl(0 0% 60%);            /* #999999 - Muted text */
+  --text-tertiary: hsl(0 0% 50%);             /* Dimmer text */
+  --text-inverse: hsl(var(--primary-foreground));
+
+  --font-display: var(--font-quicksand, var(--font-sans));
+  --font-body: var(--font-inter, var(--font-sans));
+  --font-size-xs: var(--text-xs);
+  --font-size-sm: var(--text-sm);
+  --font-size-base: var(--text-base);
+  --font-size-lg: var(--text-lg);
+  --font-size-xl: var(--text-xl);
+  --font-size-2xl: var(--text-2xl);
+  --font-size-3xl: var(--text-3xl);
+  --font-size-4xl: var(--text-4xl);
+  --font-weight-medium: var(--font-medium);
+  --font-weight-semibold: var(--font-semibold);
+  --font-weight-bold: var(--font-bold);
+}

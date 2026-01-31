@@ -1,0 +1,175 @@
+{
+  "id": "user-onboarding",
+  "name": "Welcome Email Sequence",
+  "version": "1.0.0",
+  "description": "Automated welcome email sequence for new users with getting started guides and tips",
+  "category": "automation",
+  "author": "MeepleAI",
+  "tags": ["email", "onboarding", "automation", "welcome"],
+  "icon": "👋",
+  "screenshot": null,
+  "documentation": "docs/n8n-templates/user-onboarding.md",
+  "parameters": [
+    {
+      "name": "webhookPath",
+      "type": "string",
+      "label": "Webhook Path",
+      "description": "Path to receive new user events",
+      "required": true,
+      "default": "/webhook/new-user",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "smtpHost",
+      "type": "string",
+      "label": "SMTP Server",
+      "description": "SMTP server hostname",
+      "required": true,
+      "default": "smtp.gmail.com",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "smtpUser",
+      "type": "string",
+      "label": "SMTP Username",
+      "description": "Email account username",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "smtpPassword",
+      "type": "string",
+      "label": "SMTP Password",
+      "description": "Email account password",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": true
+    },
+    {
+      "name": "email1Delay",
+      "type": "number",
+      "label": "Email 1 Delay (minutes)",
+      "description": "Delay before welcome email",
+      "required": true,
+      "default": "5",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "email2Delay",
+      "type": "number",
+      "label": "Email 2 Delay (hours)",
+      "description": "Delay before getting started email",
+      "required": true,
+      "default": "24",
+      "options": null,
+      "sensitive": false
+    }
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "webhook",
+        "name": "New User Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [250, 300],
+        "parameters": {
+          "path": "{{webhookPath}}",
+          "httpMethod": "POST"
+        }
+      },
+      {
+        "id": "wait-1",
+        "name": "Wait Before Welcome",
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1,
+        "position": [450, 300],
+        "parameters": {
+          "amount": "{{email1Delay}}",
+          "unit": "minutes"
+        }
+      },
+      {
+        "id": "send-welcome",
+        "name": "Send Welcome Email",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2,
+        "position": [650, 300],
+        "parameters": {
+          "transport": "smtp",
+          "fromEmail": "{{smtpUser}}",
+          "toEmail": "={{ $json.email }}",
+          "subject": "Welcome to MeepleAI!",
+          "message": "Hi {{ $json.displayName }},\\n\\nWelcome to MeepleAI! We're excited to help you master board game rules with AI-powered assistance.\\n\\nYour account is ready to use. Start by uploading your first rulebook PDF!\\n\\nBest regards,\\nThe MeepleAI Team"
+        },
+        "credentials": {
+          "smtp": {
+            "host": "{{smtpHost}}",
+            "port": 587,
+            "secure": true,
+            "user": "{{smtpUser}}",
+            "password": "{{smtpPassword}}"
+          }
+        }
+      },
+      {
+        "id": "wait-2",
+        "name": "Wait Before Tips",
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1,
+        "position": [850, 300],
+        "parameters": {
+          "amount": "{{email2Delay}}",
+          "unit": "hours"
+        }
+      },
+      {
+        "id": "send-tips",
+        "name": "Send Getting Started",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2,
+        "position": [1050, 300],
+        "parameters": {
+          "transport": "smtp",
+          "fromEmail": "{{smtpUser}}",
+          "toEmail": "={{ $json.email }}",
+          "subject": "Getting Started with MeepleAI",
+          "message": "Hi {{ $json.displayName }},\\n\\nHere are some tips to get the most out of MeepleAI:\\n\\n1. Upload PDFs: Add your rulebooks in the Upload section\\n2. Ask Questions: Use natural language to ask about rules\\n3. Get Citations: Every answer includes page references\\n4. Edit Rules: Contribute improvements via the editor\\n\\nNeed help? Contact support@meepleai.dev\\n\\nHappy gaming!"
+        },
+        "credentials": {
+          "smtp": {
+            "host": "{{smtpHost}}",
+            "port": 587,
+            "secure": true,
+            "user": "{{smtpUser}}",
+            "password": "{{smtpPassword}}"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "webhook": {
+        "main": [[{"node": "wait-1", "type": "main", "index": 0}]]
+      },
+      "wait-1": {
+        "main": [[{"node": "send-welcome", "type": "main", "index": 0}]]
+      },
+      "send-welcome": {
+        "main": [[{"node": "wait-2", "type": "main", "index": 0}]]
+      },
+      "wait-2": {
+        "main": [[{"node": "send-tips", "type": "main", "index": 0}]]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null
+  }
+}

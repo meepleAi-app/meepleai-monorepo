@@ -1,0 +1,144 @@
+name: Dependabot Auto-merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Ensure only one auto-merge workflow runs per PR
+concurrency:
+  group: dependabot-automerge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Auto-merge Dependabot PRs
+    runs-on: ubuntu-latest
+    # Only run for Dependabot PRs with automerge label
+    if: |
+      github.actor == 'dependabot[bot]' &&
+      contains(github.event.pull_request.labels.*.name, 'automerge')
+    steps:
+      - name: Check PR Status
+        id: check_status
+        uses: actions/github-script@v8
+        with:
+          script: |
+            // Get PR details
+            const pr = context.payload.pull_request;
+
+            // Check if CI is passing
+            const { data: statuses } = await github.rest.repos.getCombinedStatusForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pr.head.sha
+            });
+
+            // Get check runs (for GitHub Actions)
+            const { data: checkRuns } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pr.head.sha
+            });
+
+            // Check if statuses exist and if so, they must all pass
+            const hasStatuses = statuses.statuses.length > 0;
+            const statusesPassed = hasStatuses ? statuses.state === 'success' : true;
+
+            // Check if check runs exist and if so, they must all pass
+            const hasCheckRuns = checkRuns.check_runs.length > 0;
+            const checkRunsPassed = hasCheckRuns
+              ? checkRuns.check_runs.every(check =>
+                  check.conclusion === 'success' ||
+                  check.conclusion === 'skipped' ||
+                  check.conclusion === null
+                )
+              : true;
+
+            // Some checks might still be pending
+            const hasPendingChecks = checkRuns.check_runs.some(
+              check => check.status === 'in_progress' || check.status === 'queued'
+            );
+
+            // At least one type of check must exist
+            const hasAnyChecks = hasStatuses || hasCheckRuns;
+
+            console.log(`Has statuses: ${hasStatuses}, Statuses passed: ${statusesPassed}`);
+            console.log(`Has check runs: ${hasCheckRuns}, Check runs passed: ${checkRunsPassed}`);
+            console.log(`Has any checks: ${hasAnyChecks}`);
+            console.log(`Has pending checks: ${hasPendingChecks}`);
+            console.log(`Status state: ${statuses.state}`);
+            console.log(`Check runs details:`, checkRuns.check_runs.map(c => ({
+              name: c.name,
+              status: c.status,
+              conclusion: c.conclusion
+            })));
+
+            // Only auto-merge if:
+            // 1. At least one type of check exists (statuses or check runs)
+            // 2. All existing checks are complete (not pending)
+            // 3. All existing checks passed (AND logic - both must pass if both exist)
+            // 4. PR is from Dependabot
+            // 5. PR has automerge label
+
+            const shouldMerge = !hasPendingChecks && statusesPassed && checkRunsPassed && hasAnyChecks;
+            core.setOutput('should_merge', shouldMerge);
+            core.setOutput('has_pending', hasPendingChecks);
+
+      - name: Wait for CI
+        if: steps.check_status.outputs.has_pending == 'true'
+        run: |
+          echo "⏳ CI checks are still pending. Workflow will re-run when checks complete."
+          echo "This auto-merge will trigger again once all checks pass."
+          exit 0
+
+      - name: Auto-merge PR
+        if: steps.check_status.outputs.should_merge == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+
+            try {
+              // Enable auto-merge with squash strategy
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                merge_method: 'squash',
+                commit_title: pr.title,
+                commit_message: `Automated merge of Dependabot security patch\n\n${pr.body || ''}`
+              });
+
+              console.log('✅ PR auto-merged successfully');
+
+              // Add comment to PR
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: `🤖 **Auto-merged by Dependabot Auto-merge Workflow**\n\nThis security patch update passed all CI checks and has been automatically merged.\n\n✅ All checks passed\n🔒 Security update\n🚀 Deployed automatically`
+              });
+
+            } catch (error) {
+              console.log(`⚠️ Auto-merge failed: ${error.message}`);
+
+              // Comment on PR about the failure
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: `⚠️ **Auto-merge Failed**\n\nThis PR could not be automatically merged. Please review and merge manually.\n\nError: ${error.message}`
+              });
+
+              core.setFailed(`Auto-merge failed: ${error.message}`);
+            }
+
+      - name: Skip Auto-merge
+        if: steps.check_status.outputs.should_merge != 'true' && steps.check_status.outputs.has_pending != 'true'
+        run: |
+          echo "❌ Auto-merge skipped: Not all CI checks passed"
+          echo "Please review the PR and merge manually after fixing any issues"

@@ -1,0 +1,11 @@
+# Auto-generated files - DO NOT COMMIT
+# These files are generated from the OpenAPI specification
+
+# Generated TypeScript types and API client
+api-client.ts
+zod-schemas.ts
+openapi.json
+
+# Keep only README.md and this .gitignore
+!README.md
+!.gitignore

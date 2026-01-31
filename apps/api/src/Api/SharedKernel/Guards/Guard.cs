@@ -1,0 +1,218 @@
+using Api.SharedKernel.Domain.Exceptions;
+
+namespace Api.SharedKernel.Guards;
+
+/// <summary>
+/// Guard clauses for fail-fast validation in Value Objects and Domain Entities.
+/// Throws exceptions immediately on validation failure (fail-fast pattern).
+/// For Result-based validation flows, use ValidationExtensions instead.
+/// </summary>
+internal static class Guard
+{
+    /// <summary>
+    /// Ensures value is not negative (domain business rule).
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <exception cref="ValidationException">Value is negative</exception>
+    public static void AgainstNegative(decimal value, string paramName)
+    {
+        if (value < 0)
+            throw new ValidationException($"{paramName} cannot be negative");
+    }
+
+    /// <summary>
+    /// Ensures integer value is not negative (domain business rule).
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <exception cref="ValidationException">Value is negative</exception>
+    public static void AgainstNegative(int value, string paramName)
+    {
+        if (value < 0)
+            throw new ValidationException($"{paramName} cannot be negative");
+    }
+
+    /// <summary>
+    /// Ensures long value is not negative (domain business rule).
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <exception cref="ValidationException">Value is negative</exception>
+    public static void AgainstNegative(long value, string paramName)
+    {
+        if (value < 0)
+            throw new ValidationException($"{paramName} cannot be negative");
+    }
+
+    /// <summary>
+    /// Ensures value is within specified range (inclusive, domain business rule).
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <param name="min">Minimum allowed value (inclusive)</param>
+    /// <param name="max">Maximum allowed value (inclusive)</param>
+    /// <exception cref="ValidationException">Value outside range</exception>
+    public static void AgainstOutOfRange(decimal value, string paramName, decimal min, decimal max)
+    {
+        if (value < min || value > max)
+            throw new ValidationException($"{paramName} must be between {min} and {max}");
+    }
+
+    /// <summary>
+    /// Ensures integer value is within specified range (inclusive, domain business rule).
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <param name="min">Minimum allowed value (inclusive)</param>
+    /// <param name="max">Maximum allowed value (inclusive)</param>
+    /// <exception cref="ValidationException">Value outside range</exception>
+    public static void AgainstOutOfRange(int value, string paramName, int min, int max)
+    {
+        if (value < min || value > max)
+            throw new ValidationException($"{paramName} must be between {min} and {max}");
+    }
+
+    /// <summary>
+    /// Ensures value is not null (domain business rule).
+    /// </summary>
+    /// <typeparam name="T">Value type</typeparam>
+    /// <param name="value">Value to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <exception cref="ValidationException">Value is null</exception>
+    public static void AgainstNull<T>(T? value, string paramName) where T : class
+    {
+        if (value is null)
+            throw new ValidationException($"{paramName} cannot be null");
+    }
+
+    /// <summary>
+    /// Ensures string is not null, empty, or whitespace (domain business rule).
+    /// </summary>
+    /// <param name="value">String to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <exception cref="ValidationException">String is null, empty, or whitespace</exception>
+    public static void AgainstNullOrWhiteSpace(string value, string paramName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ValidationException($"{paramName} cannot be empty");
+    }
+
+    /// <summary>
+    /// Ensures value is less than maximum (exclusive, domain business rule).
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <param name="max">Maximum allowed value (exclusive)</param>
+    /// <exception cref="ValidationException">Thrown when value is greater than or equal to max</exception>
+    public static void AgainstTooLarge(int value, string paramName, int max)
+    {
+        if (value >= max)
+            throw new ValidationException($"{paramName} must be less than {max}");
+    }
+
+    /// <summary>
+    /// Ensures value is greater than minimum (exclusive).
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <param name="min">Minimum allowed value (exclusive)</param>
+    /// <exception cref="ValidationException">Thrown when value is less than or equal to min</exception>
+    public static void AgainstTooSmall(int value, string paramName, int min)
+    {
+        if (value < min)
+            throw new ValidationException($"{paramName} must be at least {min}");
+    }
+
+    /// <summary>
+    /// Ensures value is greater than minimum (exclusive).
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <param name="min">Minimum allowed value (exclusive)</param>
+    /// <exception cref="ValidationException">Thrown when value is less than or equal to min</exception>
+    public static void AgainstTooSmall(long value, string paramName, long min)
+    {
+        if (value < min)
+            throw new ValidationException($"{paramName} must be at least {min}");
+    }
+
+    /// <summary>
+    /// Ensures first value does not exceed second value.
+    /// </summary>
+    /// <param name="min">Minimum value</param>
+    /// <param name="max">Maximum value</param>
+    /// <param name="minParamName">Parameter name for minimum value</param>
+    /// <param name="maxParamName">Parameter name for maximum value</param>
+    /// <exception cref="ValidationException">Thrown when min exceeds max</exception>
+    public static void AgainstInvalidRange(int min, int max, string minParamName, string maxParamName)
+    {
+        if (min > max)
+            throw new ValidationException($"{minParamName} cannot exceed {maxParamName}");
+    }
+
+    /// <summary>
+    /// Ensures Guid is not empty (domain business rule).
+    /// </summary>
+    /// <param name="value">Guid to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <exception cref="ValidationException">Guid is empty</exception>
+    public static void AgainstEmptyGuid(Guid value, string paramName)
+    {
+        if (value == Guid.Empty)
+            throw new ValidationException($"{paramName} cannot be empty");
+    }
+
+    /// <summary>
+    /// Ensures value is one of the allowed values.
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="allowedValues">Collection of allowed values</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <exception cref="ValidationException">Value is not in allowed values</exception>
+    public static void AgainstInvalidValue(string value, IEnumerable<string> allowedValues, string paramName)
+    {
+        if (!allowedValues.Contains(value, StringComparer.OrdinalIgnoreCase))
+            throw new ValidationException($"{paramName} must be one of: {string.Join(", ", allowedValues)}");
+    }
+
+    /// <summary>
+    /// Ensures double value is within specified range (inclusive, domain business rule).
+    /// </summary>
+    /// <param name="value">Value to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <param name="min">Minimum allowed value (inclusive)</param>
+    /// <param name="max">Maximum allowed value (inclusive)</param>
+    /// <exception cref="ValidationException">Value outside range</exception>
+    public static void AgainstOutOfRange(double value, string paramName, double min, double max)
+    {
+        if (value < min || value > max)
+            throw new ValidationException($"{paramName} must be between {min} and {max}");
+    }
+
+    /// <summary>
+    /// Ensures collection is not null or empty (domain business rule).
+    /// </summary>
+    /// <typeparam name="T">Collection element type</typeparam>
+    /// <param name="collection">Collection to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <exception cref="ValidationException">Collection is null or empty</exception>
+    public static void AgainstEmptyCollection<T>(IEnumerable<T>? collection, string paramName)
+    {
+        if (collection == null || !collection.Any())
+            throw new ValidationException($"{paramName} cannot be empty");
+    }
+
+    /// <summary>
+    /// Ensures string has minimum length (domain business rule).
+    /// </summary>
+    /// <param name="value">String to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <param name="minLength">Minimum required length</param>
+    /// <exception cref="ValidationException">String is shorter than minimum length</exception>
+    public static void AgainstTooShort(string value, string paramName, int minLength)
+    {
+        if (value == null || value.Length < minLength)
+            throw new ValidationException($"{paramName} must be at least {minLength} characters");
+    }
+}

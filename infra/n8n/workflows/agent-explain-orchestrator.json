@@ -1,0 +1,284 @@
+{
+  "name": "Agent Explain Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "explain",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Explain",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "agent-explain"
+    },
+    {
+      "parameters": {
+        "functionCode": "// N8N-01: Validate incoming request\nconst gameId = $input.item.json.body?.gameId;\nconst topic = $input.item.json.body?.topic || \"\";\nconst sessionToken = $input.item.json.body?.sessionToken;\n\n// Validate required fields\nif (!gameId) {\n  return {\n    json: {\n      statusCode: 400,\n      headers: {\n        'Content-Type': 'application/json'\n      },\n      body: {\n        success: false,\n        error: {\n          code: \"INVALID_REQUEST\",\n          message: \"gameId is required\",\n          details: {\n            missingFields: [\"gameId\"]\n          }\n        },\n        timestamp: new Date().toISOString(),\n        version: \"1.0\"\n      }\n    }\n  };\n}\n\n// Pass validated data to next node\nreturn {\n  json: {\n    gameId,\n    topic,\n    sessionToken,\n    valid: true\n  }\n};"
+      },
+      "id": "validate-input",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.valid}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-validation",
+      "name": "Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.MEEPLEAI_API_URL || 'http://api:8080'}}/agents/explain",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Cookie",
+              "value": "={{$env.N8N_SERVICE_SESSION ? 'session=' + $env.N8N_SERVICE_SESSION : ($json.sessionToken ? 'session=' + $json.sessionToken : '')}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "gameId",
+              "value": "={{$json.gameId}}"
+            },
+            {
+              "name": "topic",
+              "value": "={{$json.topic}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": true,
+              "maxRedirects": 5
+            }
+          }
+        }
+      },
+      "id": "call-api",
+      "name": "Call MeepleAI API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// N8N-01: Transform API response to standardized payload\nconst apiResponse = $input.item.json;\n\n// Build standardized response\nconst standardResponse = {\n  success: true,\n  data: {\n    outline: apiResponse.outline || {\n      mainTopic: \"\",\n      sections: []\n    },\n    script: apiResponse.script || \"\",\n    citations: apiResponse.citations || [],\n    estimatedReadingTimeMinutes: apiResponse.estimatedReadingTimeMinutes || 0,\n    metadata: {\n      promptTokens: apiResponse.promptTokens || 0,\n      completionTokens: apiResponse.completionTokens || 0,\n      totalTokens: apiResponse.totalTokens || 0,\n      confidence: apiResponse.confidence || null\n    }\n  },\n  timestamp: new Date().toISOString(),\n  version: \"1.0\"\n};\n\nreturn {\n  json: {\n    statusCode: 200,\n    headers: {\n      'Content-Type': 'application/json'\n    },\n    body: standardResponse\n  }\n};"
+      },
+      "id": "transform-response",
+      "name": "Transform Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// N8N-01: Handle API errors\nconst error = $input.item.json.error || {};\nconst httpCode = $input.item.json.httpCode || 500;\nconst message = $input.item.json.message || error.message || \"An unexpected error occurred\";\n\n// Map HTTP codes to error codes\nlet errorCode = \"INTERNAL_ERROR\";\nif (httpCode === 400) {\n  errorCode = \"INVALID_REQUEST\";\n} else if (httpCode === 401) {\n  errorCode = \"UNAUTHORIZED\";\n} else if (httpCode === 403) {\n  errorCode = \"FORBIDDEN\";\n} else if (httpCode === 404) {\n  errorCode = \"NOT_FOUND\";\n} else if (httpCode >= 500) {\n  errorCode = \"SERVER_ERROR\";\n}\n\nreturn {\n  json: {\n    statusCode: httpCode,\n    headers: {\n      'Content-Type': 'application/json'\n    },\n    body: {\n      success: false,\n      error: {\n        code: errorCode,\n        message: message,\n        details: error.details || {}\n      },\n      timestamp: new Date().toISOString(),\n      version: \"1.0\"\n    }\n  }\n};"
+      },
+      "id": "handle-error",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json.body}}",
+        "options": {
+          "responseCode": "={{$json.statusCode}}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-success",
+      "name": "Respond - Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json.body}}",
+        "options": {
+          "responseCode": "={{$json.statusCode}}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-error",
+      "name": "Respond - Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json.body}}",
+        "options": {
+          "responseCode": "={{$json.statusCode}}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-validation-error",
+      "name": "Respond - Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "Webhook - Explain": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Call MeepleAI API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond - Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call MeepleAI API": {
+      "main": [
+        [
+          {
+            "node": "Transform Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform Response": {
+      "main": [
+        [
+          {
+            "node": "Respond - Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          {
+            "node": "Respond - Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-10-11T00:00:00.000Z",
+      "updatedAt": "2025-10-11T00:00:00.000Z",
+      "id": "1",
+      "name": "meepleai"
+    },
+    {
+      "createdAt": "2025-10-11T00:00:00.000Z",
+      "updatedAt": "2025-10-11T00:00:00.000Z",
+      "id": "2",
+      "name": "webhook"
+    },
+    {
+      "createdAt": "2025-10-11T00:00:00.000Z",
+      "updatedAt": "2025-10-11T00:00:00.000Z",
+      "id": "3",
+      "name": "N8N-01"
+    }
+  ],
+  "pinData": {},
+  "versionId": "1.0.0",
+  "triggerCount": 1,
+  "meta": {
+    "instanceId": "meepleai-monorepo"
+  }
+}

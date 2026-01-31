@@ -1,0 +1,350 @@
+using System;
+using System.Collections.Concurrent;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
+
+namespace Api.Infrastructure.BackgroundTasks;
+
+/// <summary>
+/// Redis-backed implementation of background task orchestration with distributed coordination.
+/// Uses Redis for distributed locking and task status tracking.
+/// </summary>
+internal class RedisBackgroundTaskOrchestrator : IBackgroundTaskOrchestrator
+{
+    private readonly IConnectionMultiplexer _redis;
+    private readonly ILogger<RedisBackgroundTaskOrchestrator> _logger;
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _runningTasks;
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _scheduledTasks;
+    private const string TaskStatusKeyPrefix = "meepleai:tasks:status:";
+    private const string TaskLockKeyPrefix = "meepleai:tasks:lock:";
+
+    public RedisBackgroundTaskOrchestrator(
+        IConnectionMultiplexer redis,
+        ILogger<RedisBackgroundTaskOrchestrator> logger)
+    {
+
+
+        ArgumentNullException.ThrowIfNull(redis);
+        _redis = redis;
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
+        _runningTasks = new ConcurrentDictionary<string, CancellationTokenSource>(StringComparer.Ordinal);
+        _scheduledTasks = new ConcurrentDictionary<string, CancellationTokenSource>(StringComparer.Ordinal);
+    }
+
+    public async Task ScheduleAsync(
+        string taskId,
+        string taskName,
+        Func<CancellationToken, Task> taskFactory,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(taskId))
+            throw new ArgumentException("Task ID cannot be null or empty", nameof(taskId));
+        ArgumentNullException.ThrowIfNull(taskFactory);
+
+        _logger.LogInformation("Scheduling task {TaskId} ({TaskName})", taskId, taskName);
+
+        await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled).ConfigureAwait(false);
+
+        // Create a linked cancellation token source for this scheduled task
+        // S2930: CancellationTokenSource stored in dictionary for lifecycle management.
+        // Disposed explicitly in CancelAsync() or ExecuteTaskAsync() finally block.
+        // Cannot use 'using var' as disposal must occur when task completes or is cancelled.
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _scheduledTasks.TryAdd(taskId, cts);
+
+        _ = Task.Run(async () => await ExecuteTaskAsync(taskId, taskName, taskFactory, isRecurring: false, cts.Token).ConfigureAwait(false), cts.Token).ConfigureAwait(false);
+    }
+
+    public async Task ScheduleDelayedAsync(
+        string taskId,
+        string taskName,
+        TimeSpan delay,
+        Func<CancellationToken, Task> taskFactory,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(taskId))
+            throw new ArgumentException("Task ID cannot be null or empty", nameof(taskId));
+        ArgumentNullException.ThrowIfNull(taskFactory);
+        if (delay < TimeSpan.Zero)
+            throw new ArgumentException("Delay cannot be negative", nameof(delay));
+
+        _logger.LogInformation("Scheduling delayed task {TaskId} ({TaskName}) with delay {Delay}",
+            taskId, taskName, delay);
+
+        await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled).ConfigureAwait(false);
+
+        // Create a linked cancellation token source for this scheduled task
+        // S2930: CancellationTokenSource stored in dictionary for lifecycle management.
+        // Disposed explicitly in CancelAsync() or ExecuteTaskAsync() finally block.
+        // Cannot use 'using var' as disposal must occur when task completes or is cancelled.
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _scheduledTasks.TryAdd(taskId, cts);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(delay, cts.Token).ConfigureAwait(false);
+                if (!cts.Token.IsCancellationRequested)
+                {
+                    await ExecuteTaskAsync(taskId, taskName, taskFactory, isRecurring: false, cts.Token).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException ex)
+            {
+                // Task was cancelled during delay - cleanup handled by CancelAsync
+                _logger.LogInformation(ex, "Delayed task {TaskId} ({TaskName}) was cancelled before execution", taskId, taskName);
+            }
+        }, cts.Token);
+    }
+
+    public async Task ScheduleRecurringAsync(
+        string taskId,
+        string taskName,
+        TimeSpan interval,
+        Func<CancellationToken, Task> taskFactory,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(taskId))
+            throw new ArgumentException("Task ID cannot be null or empty", nameof(taskId));
+        ArgumentNullException.ThrowIfNull(taskFactory);
+        if (interval <= TimeSpan.Zero)
+            throw new ArgumentException("Interval must be positive", nameof(interval));
+
+        _logger.LogInformation("Scheduling recurring task {TaskId} ({TaskName}) with interval {Interval}",
+            taskId, taskName, interval);
+
+        await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Scheduled).ConfigureAwait(false);
+
+        // Create a linked cancellation token source for this scheduled task
+        // S2930: CancellationTokenSource stored in dictionary for lifecycle management.
+        // Disposed explicitly in CancelAsync() or ExecuteTaskAsync() finally block.
+        // Cannot use 'using var' as disposal must occur when task completes or is cancelled.
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _scheduledTasks.TryAdd(taskId, cts);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (!cts.Token.IsCancellationRequested)
+                {
+                    await ExecuteTaskAsync(taskId, taskName, taskFactory, isRecurring: true, cts.Token).ConfigureAwait(false);
+
+                    if (!cts.Token.IsCancellationRequested)
+                    {
+                        await Task.Delay(interval, cts.Token).ConfigureAwait(false);
+                    }
+                }
+            }
+            catch (OperationCanceledException ex)
+            {
+                // Task was cancelled during execution or delay - cleanup handled by CancelAsync
+                _logger.LogInformation(ex, "Recurring task {TaskId} ({TaskName}) was cancelled", taskId, taskName);
+            }
+            finally
+            {
+                // Remove from scheduled tasks when recurring loop exits
+                _scheduledTasks.TryRemove(taskId, out _);
+            }
+        }, cts.Token);
+    }
+
+    public async Task<bool> CancelAsync(string taskId)
+    {
+        if (string.IsNullOrWhiteSpace(taskId))
+            throw new ArgumentException("Task ID cannot be null or empty", nameof(taskId));
+
+        // First, try to cancel a scheduled task (not yet executing)
+        if (_scheduledTasks.TryRemove(taskId, out var scheduledCts))
+        {
+            _logger.LogInformation("Cancelling scheduled task {TaskId}", taskId);
+            await scheduledCts.CancelAsync().ConfigureAwait(false);
+            scheduledCts.Dispose();
+            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled).ConfigureAwait(false);
+            return true;
+        }
+
+        // If not scheduled, try to cancel a running task
+        if (_runningTasks.TryRemove(taskId, out var runningCts))
+        {
+            _logger.LogInformation("Cancelling running task {TaskId}", taskId);
+            await runningCts.CancelAsync().ConfigureAwait(false);
+            runningCts.Dispose();
+            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled).ConfigureAwait(false);
+            return true;
+        }
+
+        _logger.LogWarning("Task {TaskId} not found for cancellation", taskId);
+        return false;
+    }
+
+    public async Task<BackgroundTaskStatus?> GetStatusAsync(string taskId)
+    {
+        if (string.IsNullOrWhiteSpace(taskId))
+            throw new ArgumentException("Task ID cannot be null or empty", nameof(taskId));
+
+        try
+        {
+            var db = _redis.GetDatabase();
+            var statusValue = await db.StringGetAsync(TaskStatusKeyPrefix + taskId).ConfigureAwait(false);
+
+            if (!statusValue.HasValue)
+                return null;
+
+            if (Enum.TryParse<BackgroundTaskStatus>(statusValue!, out var status))
+                return status;
+
+            _logger.LogWarning("Invalid task status value for {TaskId}: {StatusValue}", taskId, statusValue);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving status for task {TaskId}", taskId);
+            return null;
+        }
+    }
+
+    public async Task<bool> ExecuteWithDistributedLockAsync(
+        string lockKey,
+        Func<CancellationToken, Task> taskFactory,
+        TimeSpan lockTimeout,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(lockKey))
+            throw new ArgumentException("Lock key cannot be null or empty", nameof(lockKey));
+        ArgumentNullException.ThrowIfNull(taskFactory);
+        if (lockTimeout <= TimeSpan.Zero)
+            throw new ArgumentException("Lock timeout must be positive", nameof(lockTimeout));
+
+        var fullLockKey = TaskLockKeyPrefix + lockKey;
+        var lockValue = Guid.NewGuid().ToString(); // Unique value to identify this lock holder
+
+        try
+        {
+            var db = _redis.GetDatabase();
+
+            // Try to acquire distributed lock
+            var lockAcquired = await db.StringSetAsync(
+                fullLockKey,
+                lockValue,
+                lockTimeout,
+                When.NotExists).ConfigureAwait(false);
+
+            if (!lockAcquired)
+            {
+                _logger.LogDebug("Failed to acquire distributed lock for {LockKey}", lockKey);
+                return false;
+            }
+
+            _logger.LogInformation("Acquired distributed lock for {LockKey}", lockKey);
+
+            try
+            {
+                // Execute task while holding the lock
+                await taskFactory(cancellationToken).ConfigureAwait(false);
+                return true;
+            }
+            finally
+            {
+                // Release lock only if we still hold it (verify by value)
+                await ReleaseLockAsync(db, fullLockKey, lockValue).ConfigureAwait(false);
+            }
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        // INFRASTRUCTURE LOGGING PATTERN: Log distributed lock failures before propagating.
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error executing task with distributed lock {LockKey}", lockKey);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    private async Task ExecuteTaskAsync(
+        string taskId,
+        string taskName,
+        Func<CancellationToken, Task> taskFactory,
+        bool isRecurring,
+        CancellationToken cancellationToken)
+    {
+        // For one-time tasks, remove from scheduled tasks as we're now executing
+        // For recurring tasks, keep in scheduled tasks so they can be cancelled between iterations
+        if (!isRecurring)
+        {
+            _scheduledTasks.TryRemove(taskId, out _);
+        }
+
+        // S2930: CancellationTokenSource stored in dictionary for lifecycle management.
+        // Disposed explicitly in finally block below (line 298).
+        // Cannot use 'using var' as disposal must occur in finally after task execution.
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _runningTasks.TryAdd(taskId, cts);
+
+        try
+        {
+            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Running).ConfigureAwait(false);
+            _logger.LogInformation("Executing task {TaskId} ({TaskName})", taskId, taskName);
+
+            await taskFactory(cts.Token).ConfigureAwait(false);
+
+            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Completed).ConfigureAwait(false);
+            _logger.LogInformation("Task {TaskId} ({TaskName}) completed successfully", taskId, taskName);
+        }
+        catch (OperationCanceledException ex)
+        {
+            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Cancelled).ConfigureAwait(false);
+            _logger.LogInformation(ex, "Task {TaskId} ({TaskName}) was cancelled", taskId, taskName);
+        }
+        catch (Exception ex)
+        {
+            await SetTaskStatusAsync(taskId, BackgroundTaskStatus.Failed).ConfigureAwait(false);
+            _logger.LogError(ex, "Task {TaskId} ({TaskName}) failed with error", taskId, taskName);
+        }
+        finally
+        {
+            _runningTasks.TryRemove(taskId, out _);
+            cts.Dispose();
+        }
+    }
+
+    private async Task SetTaskStatusAsync(string taskId, BackgroundTaskStatus status)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            await db.StringSetAsync(
+                TaskStatusKeyPrefix + taskId,
+                status.ToString(),
+                TimeSpan.FromHours(24)).ConfigureAwait(false); // Status TTL: 24 hours
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting status for task {TaskId} to {Status}", taskId, status);
+        }
+    }
+
+    private async Task ReleaseLockAsync(IDatabase db, string lockKey, string lockValue)
+    {
+        try
+        {
+            // Lua script to atomically check and delete lock only if we still hold it
+            var script = @"
+                if redis.call('get', KEYS[1]) == ARGV[1] then
+                    return redis.call('del', KEYS[1])
+                else
+                    return 0
+                end";
+
+            await db.ScriptEvaluateAsync(script, new RedisKey[] { lockKey }, new RedisValue[] { lockValue }).ConfigureAwait(false);
+            _logger.LogDebug("Released distributed lock {LockKey}", lockKey);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error releasing distributed lock {LockKey}", lockKey);
+        }
+    }
+}

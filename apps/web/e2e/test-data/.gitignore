@@ -1,0 +1,8 @@
+# Ignore all PDF files (copyrighted content or large test files)
+*.pdf
+
+# Ignore all test data except this .gitignore
+*
+!.gitignore
+!.gitkeep
+!README.md

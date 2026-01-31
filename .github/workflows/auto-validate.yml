@@ -1,0 +1,32 @@
+name: Validate Workflows
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - 'scripts/validate-workflows.js'
+  push:
+    branches:
+      - main
+      - main-dev
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - 'scripts/validate-workflows.js'
+
+jobs:
+  validate-workflow-patterns:
+    name: Validate pnpm Cache Patterns
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate workflow files
+        run: node scripts/validate-workflows.js

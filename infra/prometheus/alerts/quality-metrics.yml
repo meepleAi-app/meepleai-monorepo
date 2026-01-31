@@ -1,0 +1,198 @@
+# AI Quality Metrics Monitoring Rules
+# AI-11.2: Quality monitoring and alerting
+# Tracks overall confidence, RAG quality, and LLM performance
+
+groups:
+  # ========================================
+  # Recording Rules
+  # Pre-computed quality metrics
+  # ========================================
+
+  - name: meepleai_quality_recording_rules
+    interval: 15s
+    rules:
+      # Average overall confidence score (5-minute window)
+      - record: meepleai:quality:overall_confidence:5m
+        expr: |
+          avg(meepleai_quality_score{dimension="overall_confidence"}) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: quality
+
+      # Low-quality response rate (percentage)
+      - record: meepleai:quality:low_quality_rate:5m
+        expr: |
+          (
+            sum(rate(meepleai_quality_low_quality_responses_total[5m]))
+            /
+            sum(rate(meepleai_quality_score_count{dimension="overall_confidence"}[5m]))
+          ) * 100 OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: quality
+
+      # RAG confidence average
+      - record: meepleai:quality:rag_confidence:5m
+        expr: |
+          avg(meepleai_quality_score{dimension="rag_confidence"}) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: quality
+
+      # LLM confidence average
+      - record: meepleai:quality:llm_confidence:5m
+        expr: |
+          avg(meepleai_quality_score{dimension="llm_confidence"}) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: quality
+
+  # ========================================
+  # Critical Alert Rules
+  # ========================================
+
+  - name: meepleai_quality_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: Average overall confidence < 0.60 for 1 hour
+      - alert: LowOverallConfidence
+        expr: |
+          meepleai:quality:overall_confidence:5m < 0.60
+        for: 1h
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "AI response quality is critically low"
+          description: |
+            Average overall confidence is {{ $value | humanizePercentage }} (threshold: 60%).
+            AI responses have been consistently low quality for 1 hour.
+            This indicates systematic issues with RAG, LLM, or citation quality.
+            Check Qdrant connection, embedding service, and LLM API health.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+      # CRITICAL: Low-quality response rate > 30% for 1 hour
+      - alert: HighLowQualityRate
+        expr: |
+          meepleai:quality:low_quality_rate:5m > 30
+        for: 1h
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "High rate of low-quality responses"
+          description: |
+            {{ $value | humanize }}% of responses are low quality (threshold: 30%).
+            More than 1 in 3 AI responses are failing quality standards.
+            Investigate RAG retrieval, LLM performance, and citation extraction.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+      # CRITICAL: RAG confidence < 0.50 for 30 minutes
+      - alert: LowRagConfidence
+        expr: |
+          meepleai:quality:rag_confidence:5m < 0.50
+        for: 30m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "RAG retrieval quality is critically low"
+          description: |
+            RAG confidence is {{ $value | humanizePercentage }} (threshold: 50%).
+            Semantic search is not finding relevant context consistently.
+            Check Qdrant vector DB health, embedding service, and index quality.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+      # CRITICAL: LLM confidence < 0.50 for 30 minutes
+      - alert: LowLlmConfidence
+        expr: |
+          meepleai:quality:llm_confidence:5m < 0.50
+        for: 30m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "LLM response quality is critically low"
+          description: |
+            LLM confidence is {{ $value | humanizePercentage }} (threshold: 50%).
+            Language model is producing low-quality responses consistently.
+            Check OpenRouter API health, prompt quality, and model selection.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+      # CRITICAL: Zero quality metrics for 15 minutes (service health check)
+      - alert: QualityMetricsUnavailable
+        expr: |
+          absent(meepleai_quality_score{dimension="overall_confidence"})
+          or
+          (
+            rate(meepleai_quality_score_count{dimension="overall_confidence"}[5m]) == 0
+            and
+            rate(http_server_request_duration_count[5m]) > 0
+          )
+        for: 15m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "Quality metrics are not being recorded"
+          description: |
+            No quality metrics have been recorded for 15 minutes.
+            This indicates either:
+            1. No AI requests are being processed
+            2. Quality scoring service is failing
+            3. Metrics collection is broken
+            Check AI service health and quality scoring pipeline.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+  # ========================================
+  # Warning Alert Rules
+  # ========================================
+
+  - name: meepleai_quality_warning_alerts
+    interval: 1m
+    rules:
+      # WARNING: Overall confidence dropping (< 0.70 for 30 minutes)
+      - alert: DegradedOverallConfidence
+        expr: |
+          meepleai:quality:overall_confidence:5m < 0.70
+        for: 30m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "AI response quality is degraded"
+          description: |
+            Average overall confidence is {{ $value | humanizePercentage }} (threshold: 70%).
+            Response quality is below normal levels but not critical yet.
+            Monitor closely and investigate if trend continues.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+      # WARNING: Low-quality rate elevated (> 15% for 30 minutes)
+      - alert: ElevatedLowQualityRate
+        expr: |
+          meepleai:quality:low_quality_rate:5m > 15
+        for: 30m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "Elevated rate of low-quality responses"
+          description: |
+            {{ $value | humanize }}% of responses are low quality (threshold: 15%).
+            More responses than usual are failing quality standards.
+            Review recent changes and monitor for escalation.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"

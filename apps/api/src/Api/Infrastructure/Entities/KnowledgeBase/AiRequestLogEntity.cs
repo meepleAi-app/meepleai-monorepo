@@ -1,0 +1,35 @@
+namespace Api.Infrastructure.Entities;
+
+public class AiRequestLogEntity
+{
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid Id { get; set; } = Guid.NewGuid();
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid? UserId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid? ApiKeyId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid? GameId { get; set; }
+    public string Endpoint { get; set; } = string.Empty; // "qa", "explain", "setup"
+    public string? Query { get; set; }
+    public string? ResponseSnippet { get; set; }
+    public int LatencyMs { get; set; }
+    public int TokenCount { get; set; }
+    public int PromptTokens { get; set; }
+    public int CompletionTokens { get; set; }
+    public double? Confidence { get; set; }
+    public string Status { get; set; } = string.Empty; // "Success", "Error"
+    public string? ErrorMessage { get; set; }
+    public string? IpAddress { get; set; }
+    public string? UserAgent { get; set; }
+    public string? Model { get; set; }
+    public string? FinishReason { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // AI-11: Quality Scoring fields
+    public double? RagConfidence { get; set; }
+    public double? LlmConfidence { get; set; }
+    public double? CitationQuality { get; set; }
+    public double? OverallConfidence { get; set; }
+    public bool IsLowQuality { get; set; }
+}

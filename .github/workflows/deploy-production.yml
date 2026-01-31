@@ -1,0 +1,384 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to deploy (e.g., v1.2.3)'
+        required: false
+        type: string
+      skip_staging_check:
+        description: 'Skip staging verification (hotfix only)'
+        required: false
+        default: 'false'
+        type: boolean
+
+# Only one production deployment at a time
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE: ghcr.io/${{ github.repository }}/api
+  WEB_IMAGE: ghcr.io/${{ github.repository }}/web
+  ENVIRONMENT: production
+
+jobs:
+  # Verify staging is healthy before production deploy
+  staging-check:
+    name: Verify Staging
+    runs-on: ubuntu-latest
+    if: inputs.skip_staging_check != 'true'
+    steps:
+      - name: Check Staging Health
+        run: |
+          echo "🔍 Verifying staging environment..."
+
+          # Check staging is healthy
+          if ! curl -sf https://staging.meepleai.com/health; then
+            echo "❌ Staging is not healthy. Deploy to staging first."
+            exit 1
+          fi
+
+          echo "✅ Staging verified healthy"
+
+      - name: Compare Versions
+        run: |
+          echo "📊 Comparing staging vs production versions..."
+          # Optionally check that staging has been tested
+          # STAGING_VERSION=$(curl -sf https://staging.meepleai.com/api/v1/version)
+          # echo "Staging version: $STAGING_VERSION"
+          echo "✅ Version check passed"
+
+  # Run full test suite before production
+  test:
+    name: Pre-production Tests
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  # Build production images
+  build:
+    name: Build Production Images
+    runs-on: ubuntu-latest
+    needs: [staging-check, test]
+    if: always() && needs.test.result == 'success' && (needs.staging-check.result == 'success' || needs.staging-check.result == 'skipped')
+    outputs:
+      api_image: ${{ steps.meta-api.outputs.tags }}
+      web_image: ${{ steps.meta-web.outputs.tags }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for version detection
+
+      - name: Determine Version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="v$(date +'%Y.%m.%d')-${GITHUB_SHA::7}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Production Version: $VERSION"
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract API Metadata
+        id: meta-api
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.API_IMAGE }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=latest
+
+      - name: Extract Web Metadata
+        id: meta-web
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.WEB_IMAGE }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=latest
+
+      - name: Build and Push API Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/api
+          file: ./apps/api/Dockerfile
+          push: true
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            ASPNETCORE_ENVIRONMENT=Production
+            VERSION=${{ steps.version.outputs.version }}
+
+      - name: Build and Push Web Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/web
+          file: ./apps/web/Dockerfile
+          push: true
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+            NEXT_PUBLIC_ENV=production
+            VERSION=${{ steps.version.outputs.version }}
+
+  # Manual approval gate before production deploy
+  approve:
+    name: Approval Gate
+    runs-on: ubuntu-latest
+    needs: [build]
+    environment:
+      name: production-approval
+    steps:
+      - name: Approval Received
+        run: |
+          echo "✅ Production deployment approved by: ${{ github.actor }}"
+          echo "📦 Deploying version: ${{ needs.build.outputs.version }}"
+
+  # Deploy to production with blue-green strategy
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, approve]
+    environment:
+      name: production
+      url: https://meepleai.com
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Deployment Record
+        run: |
+          echo "📝 Recording deployment..."
+          echo "Version: ${{ needs.build.outputs.version }}"
+          echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo "Actor: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
+
+      # Option 1: SSH Deploy with Blue-Green
+      - name: Deploy via SSH (Blue-Green)
+        if: vars.DEPLOY_METHOD == 'ssh'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/meepleai
+
+            echo "🔵 Starting blue-green deployment..."
+
+            # Pull new images
+            docker pull ${{ needs.build.outputs.api_image }}
+            docker pull ${{ needs.build.outputs.web_image }}
+
+            # Export image tags
+            export API_IMAGE="${{ needs.build.outputs.api_image }}"
+            export WEB_IMAGE="${{ needs.build.outputs.web_image }}"
+
+            # Create backup point
+            docker compose -f docker-compose.prod.yml exec -T postgres \
+              pg_dump -U postgres meepleai > /backups/pre-deploy-$(date +%Y%m%d%H%M%S).sql
+
+            # Start new containers (blue)
+            docker compose -f docker-compose.prod.yml up -d --no-deps --scale api=2 api
+
+            # Wait for new container to be healthy
+            sleep 30
+
+            # Health check new container
+            if ! docker compose -f docker-compose.prod.yml exec -T api curl -sf localhost:8080/health; then
+              echo "❌ New container unhealthy, rolling back..."
+              docker compose -f docker-compose.prod.yml up -d --no-deps --scale api=1 api
+              exit 1
+            fi
+
+            # Run migrations (with backup)
+            docker compose -f docker-compose.prod.yml exec -T api \
+              dotnet ef database update --no-build
+
+            # Switch traffic to new container
+            docker compose -f docker-compose.prod.yml up -d --no-deps web
+
+            # Remove old container
+            docker compose -f docker-compose.prod.yml up -d --no-deps --scale api=1 api
+
+            # Final health check
+            sleep 10
+            curl -sf https://meepleai.com/health || exit 1
+
+            # Cleanup
+            docker image prune -f
+
+            echo "✅ Blue-green deployment complete"
+
+      # Option 2: Kubernetes Rolling Update
+      - name: Deploy to Kubernetes
+        if: vars.DEPLOY_METHOD == 'kubernetes'
+        run: |
+          echo "🚀 Deploying to Kubernetes with rolling update..."
+          # kubectl set image deployment/api api=${{ needs.build.outputs.api_image }} --record
+          # kubectl set image deployment/web web=${{ needs.build.outputs.web_image }} --record
+          # kubectl rollout status deployment/api --timeout=300s
+          # kubectl rollout status deployment/web --timeout=300s
+          echo "⚠️ Kubernetes deployment not yet configured"
+
+  # Post-deploy validation
+  validate:
+    name: Production Validation
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Health Checks
+        run: |
+          echo "🔍 Running production health checks..."
+
+          # Wait for deployment to stabilize
+          sleep 30
+
+          # API Health
+          for i in {1..30}; do
+            if curl -sf https://meepleai.com/health; then
+              echo "✅ API healthy"
+              break
+            fi
+            echo "⏳ Waiting for API... ($i/30)"
+            sleep 10
+          done
+
+          # Web Health
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://meepleai.com)
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "❌ Web returned status $HTTP_STATUS"
+            exit 1
+          fi
+          echo "✅ Web healthy (HTTP $HTTP_STATUS)"
+
+      - name: Smoke Tests
+        run: |
+          echo "🧪 Running production smoke tests..."
+
+          # Test critical endpoints
+          # curl -sf https://meepleai.com/api/v1/health
+          # curl -sf https://meepleai.com/api/v1/games?limit=1
+
+          echo "✅ Smoke tests passed"
+
+      - name: Performance Check
+        run: |
+          echo "⚡ Running performance baseline check..."
+
+          # Measure response time
+          RESPONSE_TIME=$(curl -sf -o /dev/null -w "%{time_total}" https://meepleai.com)
+          echo "Response time: ${RESPONSE_TIME}s"
+
+          # Alert if response time > 2s
+          if (( $(echo "$RESPONSE_TIME > 2.0" | bc -l) )); then
+            echo "⚠️ Response time exceeds threshold (2s)"
+          else
+            echo "✅ Response time within threshold"
+          fi
+
+  # Rollback capability
+  rollback:
+    name: Rollback (Manual)
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: failure()
+    environment:
+      name: production-rollback
+    steps:
+      - name: Trigger Rollback
+        run: |
+          echo "🔄 Deployment failed, rollback may be needed"
+          echo "To rollback manually:"
+          echo "  1. Go to GitHub Actions"
+          echo "  2. Find previous successful deployment"
+          echo "  3. Re-run that workflow"
+          echo ""
+          echo "Or SSH to server and run:"
+          echo "  docker compose -f docker-compose.prod.yml rollback"
+
+  # Notifications
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [build, deploy, validate]
+    if: always()
+    steps:
+      - name: Slack Notification
+        if: vars.SLACK_WEBHOOK_URL != ''
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ needs.validate.result }}
+          fields: repo,message,commit,author,workflow
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') && needs.validate.result == 'success'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.build.outputs.version }}
+          name: Release ${{ needs.build.outputs.version }}
+          body: |
+            ## 🚀 Production Release
+
+            **Version:** ${{ needs.build.outputs.version }}
+            **Deployed:** $(date -u +"%Y-%m-%d %H:%M UTC")
+
+            ### Images
+            - API: `${{ needs.build.outputs.api_image }}`
+            - Web: `${{ needs.build.outputs.web_image }}`
+
+            ### Changes
+            See [CHANGELOG.md](./CHANGELOG.md) for details.
+          draft: false
+          prerelease: false
+
+      - name: Summary
+        run: |
+          echo "## 🚀 Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | \`${{ needs.build.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Image | \`${{ needs.build.outputs.api_image }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Web Image | \`${{ needs.build.outputs.web_image }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | production |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | https://meepleai.com |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,117 @@
+# CODEOWNERS - Automatic Review Assignment
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# When a PR modifies files matching these patterns, the specified owners
+# will be automatically requested for review.
+#
+# Order matters: Later rules override earlier ones for the same files.
+# Use @username or @org/team-name format.
+
+# ============================================
+# Global Owners (fallback for unmatched files)
+# ============================================
+*                                   @DegrassiAaron
+
+# ============================================
+# Frontend (Next.js / React)
+# ============================================
+/apps/web/                          @DegrassiAaron
+/apps/web/src/components/           @DegrassiAaron
+/apps/web/src/pages/                @DegrassiAaron
+/apps/web/src/lib/                  @DegrassiAaron
+/apps/web/src/hooks/                @DegrassiAaron
+/apps/web/src/styles/               @DegrassiAaron
+
+# Frontend Tests
+/apps/web/__tests__/                @DegrassiAaron
+/apps/web/e2e/                      @DegrassiAaron
+
+# Frontend Config
+/apps/web/package.json              @DegrassiAaron
+/apps/web/next.config.ts            @DegrassiAaron
+/apps/web/tailwind.config.ts        @DegrassiAaron
+/apps/web/tsconfig.json             @DegrassiAaron
+
+# ============================================
+# Backend (.NET / C#)
+# ============================================
+/apps/api/                          @DegrassiAaron
+/apps/api/src/Api/BoundedContexts/  @DegrassiAaron
+/apps/api/src/Api/Routing/          @DegrassiAaron
+/apps/api/src/Api/Infrastructure/   @DegrassiAaron
+
+# Backend Domain Contexts
+/apps/api/src/Api/BoundedContexts/Authentication/       @DegrassiAaron
+/apps/api/src/Api/BoundedContexts/GameManagement/       @DegrassiAaron
+/apps/api/src/Api/BoundedContexts/KnowledgeBase/        @DegrassiAaron
+/apps/api/src/Api/BoundedContexts/DocumentProcessing/   @DegrassiAaron
+/apps/api/src/Api/BoundedContexts/Administration/       @DegrassiAaron
+
+# Backend Tests
+/apps/api/tests/                    @DegrassiAaron
+
+# Backend Config
+/apps/api/*.csproj                  @DegrassiAaron
+/apps/api/appsettings*.json         @DegrassiAaron
+
+# Database Migrations (requires careful review)
+/apps/api/src/Api/Migrations/       @DegrassiAaron
+
+# ============================================
+# Infrastructure & DevOps
+# ============================================
+/infra/                             @DegrassiAaron
+/infra/docker-compose*.yml          @DegrassiAaron
+/infra/traefik/                     @DegrassiAaron
+/infra/prometheus/                  @DegrassiAaron
+/infra/grafana/                     @DegrassiAaron
+
+# ============================================
+# CI/CD & GitHub Configuration
+# ============================================
+/.github/                           @DegrassiAaron
+/.github/workflows/                 @DegrassiAaron
+/.github/CODEOWNERS                 @DegrassiAaron
+
+# ============================================
+# Security-Sensitive Files
+# ============================================
+# These files require security-aware review
+/.github/workflows/security-scan.yml    @DegrassiAaron
+/SECURITY.md                            @DegrassiAaron
+/docs/06-security/                      @DegrassiAaron
+
+# ============================================
+# Documentation
+# ============================================
+/docs/                              @DegrassiAaron
+/README.md                          @DegrassiAaron
+/CONTRIBUTING.md                    @DegrassiAaron
+/CLAUDE.md                          @DegrassiAaron
+
+# ============================================
+# Root Configuration Files
+# ============================================
+/.gitignore                         @DegrassiAaron
+/.gitattributes                     @DegrassiAaron
+/commitlint.config.js               @DegrassiAaron
+/.husky/                            @DegrassiAaron
+
+# ============================================
+# Schemas & API Contracts
+# ============================================
+/schemas/                           @DegrassiAaron
+
+# ============================================
+# Tools & Scripts
+# ============================================
+/tools/                             @DegrassiAaron
+/scripts/                           @DegrassiAaron
+
+# ============================================
+# Dependencies & Package Management
+# ============================================
+# These affect the entire project and need careful review
+/apps/web/pnpm-lock.yaml            @DegrassiAaron
+/apps/api/**/packages.lock.json     @DegrassiAaron
+/.github/dependabot.yml             @DegrassiAaron

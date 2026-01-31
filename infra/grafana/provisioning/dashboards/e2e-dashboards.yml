@@ -1,0 +1,40 @@
+# =============================================================================
+# Grafana Dashboard Provisioning - E2E Testing
+# =============================================================================
+# Issue #2009 - Phase 3: Production-Grade Infrastructure
+#
+# This file tells Grafana where to find dashboard JSON files
+# Dashboards are automatically loaded and kept in sync
+# =============================================================================
+
+apiVersion: 1
+
+providers:
+  # ---------------------------------------------------------------------------
+  # E2E Testing Dashboards
+  # ---------------------------------------------------------------------------
+  - name: 'E2E Testing'
+    orgId: 1
+    folder: 'Testing'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
+
+# =============================================================================
+# Configuration Notes
+# =============================================================================
+#
+# - name: Display name in Grafana UI
+# - folder: Dashboard folder name (created automatically if not exists)
+# - type: 'file' means load from JSON files
+# - disableDeletion: false allows deleting dashboards from UI
+# - updateIntervalSeconds: 30 checks for file changes every 30 seconds
+# - allowUiUpdates: true allows editing dashboards from UI
+#   (changes will be lost on container restart unless saved to file)
+# - path: Directory containing dashboard JSON files
+#
+# =============================================================================

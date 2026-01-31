@@ -1,0 +1,100 @@
+# .wslconfig - WSL2 Configuration for Docker Desktop on Windows
+#
+# Purpose: Allocate sufficient memory for MeepleAI test environment
+# Location: Copy to C:\Users\<YourUsername>\.wslconfig
+# Issue: Test suite crashes with insufficient memory (exit -1073741819)
+#
+# Installation:
+#   1. Copy this file to: C:\Users\<YourUsername>\.wslconfig
+#   2. Edit the memory value based on your system:
+#      - 16GB system RAM → memory=12GB
+#      - 32GB system RAM → memory=16GB  (recommended for tests)
+#      - 64GB system RAM → memory=24GB  (comfortable for development)
+#   3. Run: wsl --shutdown  (PowerShell as Admin)
+#   4. Restart Docker Desktop
+#   5. Verify: docker system info | grep Memory
+#
+# Documentation:
+#   https://learn.microsoft.com/en-us/windows/wsl/wsl-config
+#
+# Last Updated: 2026-01-19
+
+[wsl2]
+# Memory allocation for WSL2 VM (used by Docker Desktop)
+# Test environment needs: ~10.5GB (services) + 2-4GB (OS overhead) = 12-16GB total
+# Recommended: 16GB for comfortable test execution
+memory=16GB
+
+# CPU cores for WSL2
+# More cores = faster parallel test execution
+# Recommended: 4-8 cores (half of your total cores)
+processors=4
+
+# Swap space (disk-based memory overflow)
+# Helps prevent OOM but impacts performance
+# Recommended: 4GB for emergency overflow
+swap=4GB
+
+# Allow localhost forwarding (required for Docker port mapping)
+localhostForwarding=true
+
+# OPTIONAL: Additional performance tuning
+# Uncomment if needed
+
+# Limit swap usage (percentage, 0-100)
+# Lower = more aggressive RAM usage, higher performance
+# swapFilePath=C:\\Users\\<YourUsername>\\wsl-swap.vhdx
+
+# Kernel command line options (advanced)
+# kernelCommandLine=
+
+# Network mode (NAT or mirrored)
+# networkingMode=NAT
+
+---
+
+# System RAM Recommendations:
+
+# 16GB System RAM:
+#   memory=12GB     # 75% allocation, leaves 4GB for Windows
+#   processors=4
+#   swap=2GB
+#   Status: Minimum for test suite, tight for development
+
+# 32GB System RAM (Recommended):
+#   memory=16GB     # 50% allocation, comfortable margin
+#   processors=6
+#   swap=4GB
+#   Status: Comfortable for test + development + Docker services
+
+# 64GB System RAM:
+#   memory=24GB     # 37.5% allocation, plenty of headroom
+#   processors=8
+#   swap=4GB
+#   Status: Ideal for development + multiple Docker environments
+
+---
+
+# Troubleshooting:
+
+# If tests still crash after applying:
+#   1. Check actual WSL2 memory:
+#      powershell: Get-Process vmmem | Select-Object WorkingSet64
+#   2. Verify Docker sees the memory:
+#      docker system info | grep "Total Memory"
+#   3. Monitor during tests:
+#      docker stats
+#   4. Check for other memory consumers:
+#      Task Manager → Performance → Memory
+
+# If Docker won't start after changes:
+#   1. Reduce memory value (try memory=12GB)
+#   2. Ensure you have enough free RAM (check Task Manager)
+#   3. Restart Windows if WSL2 doesn't release memory
+#   4. Check Docker Desktop logs for specific errors
+
+# If system becomes sluggish:
+#   1. Reduce memory allocation (balance with test needs)
+#   2. Close other applications during tests
+#   3. Consider upgrading system RAM
+#   4. Use docker-compose profiles to run only needed services

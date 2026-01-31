@@ -1,0 +1,131 @@
+# Docker Compose - Staging Environment
+# Extends docker-compose.yml with staging-specific configurations
+# Production-like environment for pre-release testing
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f compose.staging.yml up -d
+#   docker compose -f docker-compose.yml -f compose.staging.yml down
+
+services:
+  # ============================================================================
+  # Core Infrastructure - Staging Configuration
+  # ============================================================================
+
+  postgres:
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}
+      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+    volumes:
+      - pgdata-staging:/var/lib/postgresql/data
+      - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    restart: unless-stopped
+    command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password)"]
+    volumes:
+      - redisdata-staging:/data
+    secrets:
+      - redis-password
+
+  qdrant:
+    restart: unless-stopped
+    volumes:
+      - qdrantdata-staging:/qdrant/storage
+
+  # ============================================================================
+  # Application Services - Staging Configuration
+  # ============================================================================
+
+  api:
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      # Connection string using secrets
+      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      POSTGRES_DB: ${POSTGRES_DB:-meepleai_staging}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  web:
+    restart: unless-stopped
+    environment:
+      NODE_ENV: staging
+      NEXT_PUBLIC_API_BASE: ${STAGING_API_URL:-http://api:8080}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================================================
+  # Observability Stack - Full Enabled for Staging
+  # ============================================================================
+
+  grafana:
+    restart: unless-stopped
+    volumes:
+      - grafana-staging:/var/lib/grafana
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./dashboards:/var/lib/grafana/dashboards:ro
+
+  prometheus:
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=60d'  # Longer retention for staging
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
+      - prometheus-staging:/prometheus
+
+  jaeger:
+    restart: unless-stopped
+
+  seq:
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_ADMINPASSWORDHASH: ${SEQ_PASSWORD_HASH:-}
+    volumes:
+      - seqdata-staging:/data
+
+  alertmanager:
+    restart: unless-stopped
+
+  n8n:
+    restart: unless-stopped
+
+# ============================================================================
+# Staging-specific Volumes
+# ============================================================================
+volumes:
+  pgdata-staging:
+    name: meepleai-pgdata-staging
+  qdrantdata-staging:
+    name: meepleai-qdrantdata-staging
+  redisdata-staging:
+    name: meepleai-redisdata-staging
+  seqdata-staging:
+    name: meepleai-seqdata-staging
+  prometheus-staging:
+    name: meepleai-prometheus-staging
+  grafana-staging:
+    name: meepleai-grafana-staging
+
+secrets:
+  redis-password:
+    file: ./secrets/staging/redis-password.txt

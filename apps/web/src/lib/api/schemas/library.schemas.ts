@@ -1,0 +1,190 @@
+/**
+ * User Library API Schemas
+ *
+ * Zod schemas for validating user game library responses.
+ * User library management for personal game collections.
+ *
+ * Updated: Issue #2868 - Added UpdateGameStateRequest schema
+ */
+
+import { z } from 'zod';
+
+// Game state types for library filtering (Issue #2866)
+// Valid enum values - strict parsing
+const VALID_GAME_STATES = ['Nuovo', 'InPrestito', 'Wishlist', 'Owned'] as const;
+export const GameStateTypeSchema = z.enum(VALID_GAME_STATES);
+export type GameStateType = z.infer<typeof GameStateTypeSchema>;
+
+// Defensive schema that falls back to 'Owned' for unknown values (prevents API breaking on new states)
+export const GameStateTypeWithFallbackSchema = z
+  .string()
+  .transform((val) => {
+    if (VALID_GAME_STATES.includes(val as GameStateType)) {
+      return val as GameStateType;
+    }
+    // Log unknown state for debugging, fallback to 'Owned'
+    console.warn(`Unknown GameStateType received: "${val}", falling back to "Owned"`);
+    return 'Owned' as GameStateType;
+  });
+
+// User library entry DTO matching backend contract
+export const UserLibraryEntrySchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  gameId: z.string().uuid(),
+  gameTitle: z.string(),
+  gamePublisher: z.string().nullable().optional(),
+  gameYearPublished: z.number().nullable().optional(),
+  gameIconUrl: z.string().nullable().optional(),
+  gameImageUrl: z.string().nullable().optional(),
+  addedAt: z.string().datetime(),
+  notes: z.string().nullable().optional(),
+  isFavorite: z.boolean(),
+  currentState: GameStateTypeWithFallbackSchema,
+  stateChangedAt: z.string().datetime().nullable().optional(),
+  stateNotes: z.string().nullable().optional(),
+  hasPdfDocuments: z.boolean().default(false),
+});
+
+export type UserLibraryEntry = z.infer<typeof UserLibraryEntrySchema>;
+
+// Library statistics DTO
+export const UserLibraryStatsSchema = z.object({
+  totalGames: z.number().int().nonnegative(),
+  favoriteGames: z.number().int().nonnegative(),
+  oldestAddedAt: z.string().datetime().nullable().optional(),
+  newestAddedAt: z.string().datetime().nullable().optional(),
+});
+
+export type UserLibraryStats = z.infer<typeof UserLibraryStatsSchema>;
+
+// Paginated library response
+export const PaginatedLibraryResponseSchema = z.object({
+  items: z.array(UserLibraryEntrySchema),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+  totalCount: z.number().int().nonnegative(),
+  totalPages: z.number().int().nonnegative(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean(),
+});
+
+export type PaginatedLibraryResponse = z.infer<typeof PaginatedLibraryResponseSchema>;
+
+// Game in library status
+export const GameInLibraryStatusSchema = z.object({
+  inLibrary: z.boolean(),
+  isFavorite: z.boolean(),
+});
+
+export type GameInLibraryStatus = z.infer<typeof GameInLibraryStatusSchema>;
+
+// Request schemas for mutations
+export const AddGameToLibraryRequestSchema = z.object({
+  notes: z.string().max(500).nullable().optional(),
+  isFavorite: z.boolean().optional().default(false),
+});
+
+export type AddGameToLibraryRequest = z.infer<typeof AddGameToLibraryRequestSchema>;
+
+export const UpdateLibraryEntryRequestSchema = z.object({
+  notes: z.string().max(500).nullable().optional(),
+  isFavorite: z.boolean().nullable().optional(),
+});
+
+export type UpdateLibraryEntryRequest = z.infer<typeof UpdateLibraryEntryRequestSchema>;
+
+// Update game state request (Issue #2868)
+export const UpdateGameStateRequestSchema = z.object({
+  newState: GameStateTypeSchema,
+  stateNotes: z.string().max(500).nullable().optional(),
+});
+
+export type UpdateGameStateRequest = z.infer<typeof UpdateGameStateRequestSchema>;
+
+// Query parameters for getting library
+export interface GetUserLibraryParams {
+  page?: number;
+  pageSize?: number;
+  favoritesOnly?: boolean;
+  stateFilter?: GameStateType[];
+  sortBy?: 'addedAt' | 'title' | 'favorite';
+  sortDescending?: boolean;
+}
+
+// Library quota response - tier-based limits
+export const LibraryQuotaResponseSchema = z.object({
+  currentCount: z.number().int().nonnegative(),
+  maxAllowed: z.number().int().positive(),
+  userTier: z.enum(['free', 'normal', 'premium']),
+  remainingSlots: z.number().int().nonnegative(),
+  percentageUsed: z.number().min(0).max(100),
+});
+
+export type LibraryQuotaResponse = z.infer<typeof LibraryQuotaResponseSchema>;
+
+// ========================================
+// Library Share Link Schemas (Issue #2614)
+// ========================================
+
+// Library share link response DTO
+export const LibraryShareLinkSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  shareToken: z.string().length(32),
+  shareUrl: z.string().url(),
+  privacyLevel: z.enum(['public', 'unlisted']),
+  includeNotes: z.boolean(),
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime().nullable(),
+  revokedAt: z.string().datetime().nullable(),
+  viewCount: z.number().int().nonnegative(),
+  lastAccessedAt: z.string().datetime().nullable(),
+  isActive: z.boolean(),
+});
+
+export type LibraryShareLink = z.infer<typeof LibraryShareLinkSchema>;
+
+// Create share link request
+export const CreateLibraryShareLinkRequestSchema = z.object({
+  privacyLevel: z.enum(['public', 'unlisted']).default('unlisted'),
+  includeNotes: z.boolean().default(false),
+  expiresAt: z.string().datetime().nullable().optional(),
+});
+
+export type CreateLibraryShareLinkRequest = z.infer<typeof CreateLibraryShareLinkRequestSchema>;
+
+// Update share link request
+export const UpdateLibraryShareLinkRequestSchema = z.object({
+  privacyLevel: z.enum(['public', 'unlisted']).optional(),
+  includeNotes: z.boolean().optional(),
+  expiresAt: z.string().datetime().nullable().optional(),
+});
+
+export type UpdateLibraryShareLinkRequest = z.infer<typeof UpdateLibraryShareLinkRequestSchema>;
+
+// Shared library public view response
+export const SharedLibraryGameSchema = z.object({
+  gameId: z.string().uuid(),
+  title: z.string(),
+  publisher: z.string().nullable(),
+  yearPublished: z.number().nullable(),
+  iconUrl: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  isFavorite: z.boolean(),
+  notes: z.string().nullable(),
+  addedAt: z.string().datetime(),
+});
+
+export type SharedLibraryGame = z.infer<typeof SharedLibraryGameSchema>;
+
+export const SharedLibrarySchema = z.object({
+  ownerDisplayName: z.string(),
+  games: z.array(SharedLibraryGameSchema),
+  totalGames: z.number().int().nonnegative(),
+  favoritesCount: z.number().int().nonnegative(),
+  privacyLevel: z.enum(['public', 'unlisted']),
+  sharedAt: z.string().datetime(),
+});
+
+export type SharedLibrary = z.infer<typeof SharedLibrarySchema>;

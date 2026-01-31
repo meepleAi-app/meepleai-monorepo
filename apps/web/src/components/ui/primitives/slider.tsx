@@ -1,0 +1,36 @@
+import * as React from 'react';
+
+import * as SliderPrimitive from '@radix-ui/react-slider';
+
+import { cn } from '@/lib/utils';
+
+const Slider = React.forwardRef<
+  React.ElementRef<typeof SliderPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root>
+>(({ className, value, defaultValue, ...props }, ref) => {
+  // Determine number of thumbs based on value or defaultValue array length
+  const thumbCount = value?.length ?? defaultValue?.length ?? 1;
+
+  return (
+    <SliderPrimitive.Root
+      ref={ref}
+      className={cn('relative flex w-full touch-none select-none items-center', className)}
+      value={value}
+      defaultValue={defaultValue}
+      {...props}
+    >
+      <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-primary/20 dark:bg-primary/30">
+        <SliderPrimitive.Range className="absolute h-full bg-primary dark:bg-primary/90" />
+      </SliderPrimitive.Track>
+      {Array.from({ length: thumbCount }).map((_, index) => (
+        <SliderPrimitive.Thumb
+          key={index}
+          className="block h-4 w-4 rounded-full border border-primary/50 dark:border-primary/70 bg-background dark:bg-card shadow transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50"
+        />
+      ))}
+    </SliderPrimitive.Root>
+  );
+});
+Slider.displayName = SliderPrimitive.Root.displayName;
+
+export { Slider };

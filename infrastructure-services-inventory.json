@@ -1,0 +1,398 @@
+﻿[
+    {
+        "Name":  "RagService",
+        "Path":  "apps\\api\\src\\Api\\Services\\RagService.cs",
+        "Category":  "KnowledgeBase",
+        "References":  21,
+        "DIRegistrations":  0,
+        "LineCount":  852,
+        "FileSizeKB":  39.12,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "QdrantService",
+        "Path":  "apps\\api\\src\\Api\\Services\\QdrantService.cs",
+        "Category":  "KnowledgeBase",
+        "References":  19,
+        "DIRegistrations":  0,
+        "LineCount":  524,
+        "FileSizeKB":  21.87,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "AlertingService",
+        "Path":  "apps\\api\\src\\Api\\Services\\AlertingService.cs",
+        "Category":  "Alerting",
+        "References":  18,
+        "DIRegistrations":  0,
+        "LineCount":  287,
+        "FileSizeKB":  9.61,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "EmbeddingService",
+        "Path":  "apps\\api\\src\\Api\\Services\\EmbeddingService.cs",
+        "Category":  "KnowledgeBase",
+        "References":  17,
+        "DIRegistrations":  0,
+        "LineCount":  208,
+        "FileSizeKB":  7.96,
+        "LastModified":  "2025-12-03"
+    },
+    {
+        "Name":  "RateLimitService",
+        "Path":  "apps\\api\\src\\Api\\Services\\RateLimitService.cs",
+        "Category":  "Uncategorized",
+        "References":  15,
+        "DIRegistrations":  0,
+        "LineCount":  384,
+        "FileSizeKB":  16.07,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "EncryptionService",
+        "Path":  "apps\\api\\src\\Api\\Services\\EncryptionService.cs",
+        "Category":  "Authentication",
+        "References":  11,
+        "DIRegistrations":  0,
+        "LineCount":  83,
+        "FileSizeKB":  3.36,
+        "LastModified":  "2025-12-01"
+    },
+    {
+        "Name":  "PromptTemplateService",
+        "Path":  "apps\\api\\src\\Api\\Services\\PromptTemplateService.cs",
+        "Category":  "Uncategorized",
+        "References":  11,
+        "DIRegistrations":  0,
+        "LineCount":  509,
+        "FileSizeKB":  20.19,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "HybridSearchService",
+        "Path":  "apps\\api\\src\\Api\\Services\\HybridSearchService.cs",
+        "Category":  "KnowledgeBase",
+        "References":  10,
+        "DIRegistrations":  0,
+        "LineCount":  403,
+        "FileSizeKB":  15.93,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "AuditService",
+        "Path":  "apps\\api\\src\\Api\\Services\\AuditService.cs",
+        "Category":  "Administration",
+        "References":  10,
+        "DIRegistrations":  0,
+        "LineCount":  91,
+        "FileSizeKB":  3.03,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "KeywordSearchService",
+        "Path":  "apps\\api\\src\\Api\\Services\\KeywordSearchService.cs",
+        "Category":  "KnowledgeBase",
+        "References":  9,
+        "DIRegistrations":  0,
+        "LineCount":  379,
+        "FileSizeKB":  15.22,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "ApiKeyCookieService",
+        "Path":  "apps\\api\\src\\Api\\Services\\ApiKeyCookieService.cs",
+        "Category":  "Authentication",
+        "References":  9,
+        "DIRegistrations":  0,
+        "LineCount":  52,
+        "FileSizeKB":  1.53,
+        "LastModified":  "2025-12-01"
+    },
+    {
+        "Name":  "PasswordHashingService",
+        "Path":  "apps\\api\\src\\Api\\Services\\PasswordHashingService.cs",
+        "Category":  "Authentication",
+        "References":  9,
+        "DIRegistrations":  0,
+        "LineCount":  144,
+        "FileSizeKB":  4.83,
+        "LastModified":  "2025-12-01"
+    },
+    {
+        "Name":  "ConfigurationService",
+        "Path":  "apps\\api\\src\\Api\\Services\\ConfigurationService.cs",
+        "Category":  "SystemConfiguration",
+        "References":  9,
+        "DIRegistrations":  0,
+        "LineCount":  150,
+        "FileSizeKB":  5.55,
+        "LastModified":  "2025-12-07"
+    },
+    {
+        "Name":  "QualityReportService",
+        "Path":  "apps\\api\\src\\Api\\Services\\QualityReportService.cs",
+        "Category":  "Uncategorized",
+        "References":  7,
+        "DIRegistrations":  0,
+        "LineCount":  193,
+        "FileSizeKB":  7.91,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "PromptEvaluationService",
+        "Path":  "apps\\api\\src\\Api\\Services\\PromptEvaluationService.cs",
+        "Category":  "Uncategorized",
+        "References":  7,
+        "DIRegistrations":  0,
+        "LineCount":  969,
+        "FileSizeKB":  42.53,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "N8nConfigService",
+        "Path":  "apps\\api\\src\\Api\\Services\\N8nConfigService.cs",
+        "Category":  "WorkflowIntegration",
+        "References":  6,
+        "DIRegistrations":  0,
+        "LineCount":  329,
+        "FileSizeKB":  10.46,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "CacheWarmingService",
+        "Path":  "apps\\api\\src\\Api\\Services\\CacheWarmingService.cs",
+        "Category":  "SystemConfiguration",
+        "References":  6,
+        "DIRegistrations":  0,
+        "LineCount":  269,
+        "FileSizeKB":  11.2,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "AdminStatsService",
+        "Path":  "apps\\api\\src\\Api\\Services\\AdminStatsService.cs",
+        "Category":  "Administration",
+        "References":  6,
+        "DIRegistrations":  0,
+        "LineCount":  417,
+        "FileSizeKB":  15.42,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "ChatExportService",
+        "Path":  "apps\\api\\src\\Api\\Services\\ChatExportService.cs",
+        "Category":  "Utilities",
+        "References":  6,
+        "DIRegistrations":  0,
+        "LineCount":  111,
+        "FileSizeKB":  4.07,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "AiResponseCacheService",
+        "Path":  "apps\\api\\src\\Api\\Services\\AiResponseCacheService.cs",
+        "Category":  "SystemConfiguration",
+        "References":  6,
+        "DIRegistrations":  0,
+        "LineCount":  239,
+        "FileSizeKB":  9.13,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "BackgroundTaskService",
+        "Path":  "apps\\api\\src\\Api\\Services\\BackgroundTaskService.cs",
+        "Category":  "WorkflowIntegration",
+        "References":  6,
+        "DIRegistrations":  0,
+        "LineCount":  99,
+        "FileSizeKB":  3.44,
+        "LastModified":  "2025-12-01"
+    },
+    {
+        "Name":  "BggApiService",
+        "Path":  "apps\\api\\src\\Api\\Services\\BggApiService.cs",
+        "Category":  "GameManagement",
+        "References":  6,
+        "DIRegistrations":  0,
+        "LineCount":  367,
+        "FileSizeKB":  14.19,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "EmailService",
+        "Path":  "apps\\api\\src\\Api\\Services\\EmailService.cs",
+        "Category":  "Alerting",
+        "References":  6,
+        "DIRegistrations":  0,
+        "LineCount":  241,
+        "FileSizeKB":  9.99,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "ApiKeyAuthenticationService",
+        "Path":  "apps\\api\\src\\Api\\Services\\ApiKeyAuthenticationService.cs",
+        "Category":  "Authentication",
+        "References":  6,
+        "DIRegistrations":  0,
+        "LineCount":  290,
+        "FileSizeKB":  11.78,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "FeatureFlagService",
+        "Path":  "apps\\api\\src\\Api\\Services\\FeatureFlagService.cs",
+        "Category":  "SystemConfiguration",
+        "References":  6,
+        "DIRegistrations":  0,
+        "LineCount":  203,
+        "FileSizeKB":  7.53,
+        "LastModified":  "2025-12-07"
+    },
+    {
+        "Name":  "SessionAutoRevocationService",
+        "Path":  "apps\\api\\src\\Api\\Services\\SessionAutoRevocationService.cs",
+        "Category":  "Authentication",
+        "References":  5,
+        "DIRegistrations":  0,
+        "LineCount":  111,
+        "FileSizeKB":  4.18,
+        "LastModified":  "2025-12-01"
+    },
+    {
+        "Name":  "TempSessionService",
+        "Path":  "apps\\api\\src\\Api\\Services\\TempSessionService.cs",
+        "Category":  "Authentication",
+        "References":  5,
+        "DIRegistrations":  0,
+        "LineCount":  140,
+        "FileSizeKB":  4.96,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "SessionCacheService",
+        "Path":  "apps\\api\\src\\Api\\Services\\SessionCacheService.cs",
+        "Category":  [
+                         "Authentication",
+                         "SystemConfiguration"
+                     ],
+        "References":  5,
+        "DIRegistrations":  0,
+        "LineCount":  183,
+        "FileSizeKB":  7.15,
+        "LastModified":  "2025-12-01"
+    },
+    {
+        "Name":  "WeeklyEvaluationService",
+        "Path":  "apps\\api\\src\\Api\\Services\\WeeklyEvaluationService.cs",
+        "Category":  "Uncategorized",
+        "References":  5,
+        "DIRegistrations":  0,
+        "LineCount":  375,
+        "FileSizeKB":  14.54,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "WorkflowErrorLoggingService",
+        "Path":  "apps\\api\\src\\Api\\Services\\WorkflowErrorLoggingService.cs",
+        "Category":  "WorkflowIntegration",
+        "References":  5,
+        "DIRegistrations":  0,
+        "LineCount":  189,
+        "FileSizeKB":  7.03,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "TotpService",
+        "Path":  "apps\\api\\src\\Api\\Services\\TotpService.cs",
+        "Category":  "Authentication",
+        "References":  5,
+        "DIRegistrations":  0,
+        "LineCount":  718,
+        "FileSizeKB":  30.98,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "LanguageDetectionService",
+        "Path":  "apps\\api\\src\\Api\\Services\\LanguageDetectionService.cs",
+        "Category":  "Utilities",
+        "References":  5,
+        "DIRegistrations":  0,
+        "LineCount":  213,
+        "FileSizeKB":  7.78,
+        "LastModified":  "2025-12-01"
+    },
+    {
+        "Name":  "OAuthService",
+        "Path":  "apps\\api\\src\\Api\\Services\\OAuthService.cs",
+        "Category":  "Authentication",
+        "References":  5,
+        "DIRegistrations":  0,
+        "LineCount":  541,
+        "FileSizeKB":  21.73,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "N8nTemplateService",
+        "Path":  "apps\\api\\src\\Api\\Services\\N8nTemplateService.cs",
+        "Category":  "WorkflowIntegration",
+        "References":  5,
+        "DIRegistrations":  0,
+        "LineCount":  583,
+        "FileSizeKB":  22.43,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "RagEvaluationService",
+        "Path":  "apps\\api\\src\\Api\\Services\\RagEvaluationService.cs",
+        "Category":  "KnowledgeBase",
+        "References":  5,
+        "DIRegistrations":  0,
+        "LineCount":  616,
+        "FileSizeKB":  24.45,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "PasswordResetService",
+        "Path":  "apps\\api\\src\\Api\\Services\\PasswordResetService.cs",
+        "Category":  "Authentication",
+        "References":  5,
+        "DIRegistrations":  0,
+        "LineCount":  297,
+        "FileSizeKB":  9.26,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "HybridCacheService",
+        "Path":  "apps\\api\\src\\Api\\Services\\HybridCacheService.cs",
+        "Category":  [
+                         "KnowledgeBase",
+                         "SystemConfiguration"
+                     ],
+        "References":  5,
+        "DIRegistrations":  0,
+        "LineCount":  489,
+        "FileSizeKB":  19,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "TextChunkingService",
+        "Path":  "apps\\api\\src\\Api\\Services\\TextChunkingService.cs",
+        "Category":  "KnowledgeBase",
+        "References":  4,
+        "DIRegistrations":  0,
+        "LineCount":  310,
+        "FileSizeKB":  11,
+        "LastModified":  "2025-12-06"
+    },
+    {
+        "Name":  "ResponseQualityService",
+        "Path":  "apps\\api\\src\\Api\\Services\\ResponseQualityService.cs",
+        "Category":  "Uncategorized",
+        "References":  2,
+        "DIRegistrations":  0,
+        "LineCount":  203,
+        "FileSizeKB":  6.83,
+        "LastModified":  "2025-12-01"
+    }
+]

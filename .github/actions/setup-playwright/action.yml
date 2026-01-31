@@ -1,0 +1,35 @@
+name: 'Setup Playwright'
+description: 'Installs Playwright browsers with caching'
+inputs:
+  working-directory:
+    description: 'Working directory where Playwright is installed'
+    required: false
+    default: 'apps/web'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get Playwright version
+      shell: bash
+      id: playwright-version
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        PLAYWRIGHT_VERSION=$(node -p "require('./package.json').devDependencies['@playwright/test']")
+        echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+        echo "Playwright version: $PLAYWRIGHT_VERSION"
+
+    - name: Cache Playwright browsers
+      uses: actions/cache@v4
+      id: playwright-cache
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+
+    # Issue #1951: Always install browsers to prevent "Executable doesn't exist" errors
+    # Cache may be corrupted or incomplete, so we always run install (it's idempotent)
+    - name: Install Playwright browsers
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: pnpm exec playwright install --with-deps chromium firefox webkit

@@ -1,0 +1,126 @@
+{
+  "id": "cache-warming",
+  "name": "Nightly Cache Warming",
+  "version": "1.0.0",
+  "description": "Pre-cache popular queries and game data nightly to improve response times during peak usage",
+  "category": "automation",
+  "author": "MeepleAI",
+  "tags": ["cache", "performance", "optimization", "automation"],
+  "icon": "⚡",
+  "screenshot": null,
+  "documentation": "docs/n8n-templates/cache-warming.md",
+  "parameters": [
+    {
+      "name": "warmingSchedule",
+      "type": "select",
+      "label": "Warming Schedule",
+      "description": "When to run cache warming",
+      "required": true,
+      "default": "0 4 * * *",
+      "options": ["0 2 * * *", "0 4 * * *", "0 6 * * *"],
+      "sensitive": false
+    },
+    {
+      "name": "apiBaseUrl",
+      "type": "string",
+      "label": "API Base URL",
+      "description": "MeepleAI API URL",
+      "required": true,
+      "default": "http://api:8080",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "popularQueriesCount",
+      "type": "number",
+      "label": "Popular Queries Count",
+      "description": "Number of popular queries to pre-cache",
+      "required": true,
+      "default": "50",
+      "options": null,
+      "sensitive": false
+    }
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "schedule",
+        "name": "Cache Warming Schedule",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [250, 300],
+        "parameters": {
+          "rule": {
+            "interval": [{"cronExpression": "{{warmingSchedule}}"}]
+          }
+        }
+      },
+      {
+        "id": "fetch-popular-queries",
+        "name": "Get Popular Queries",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [450, 300],
+        "parameters": {
+          "url": "={{apiBaseUrl}}/api/v1/admin/popular-queries?limit={{popularQueriesCount}}",
+          "method": "GET"
+        }
+      },
+      {
+        "id": "split-queries",
+        "name": "Process Each Query",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [650, 300],
+        "parameters": {
+          "batchSize": 5
+        }
+      },
+      {
+        "id": "warm-cache",
+        "name": "Execute Query to Warm Cache",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [850, 300],
+        "parameters": {
+          "url": "={{apiBaseUrl}}/api/v1/qa/ask",
+          "method": "POST",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {"name": "question", "value": "={{ $json.query }}"},
+              {"name": "gameId", "value": "={{ $json.gameId }}"},
+              {"name": "warmCache", "value": "true"}
+            ]
+          }
+        }
+      },
+      {
+        "id": "log-complete",
+        "name": "Log Completion",
+        "type": "n8n-nodes-base.noOp",
+        "typeVersion": 1,
+        "position": [1050, 300],
+        "parameters": {}
+      }
+    ],
+    "connections": {
+      "schedule": {
+        "main": [[{"node": "fetch-popular-queries", "type": "main", "index": 0}]]
+      },
+      "fetch-popular-queries": {
+        "main": [[{"node": "split-queries", "type": "main", "index": 0}]]
+      },
+      "split-queries": {
+        "main": [[{"node": "warm-cache", "type": "main", "index": 0}]]
+      },
+      "warm-cache": {
+        "main": [[{"node": "log-complete", "type": "main", "index": 0}]]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null
+  }
+}

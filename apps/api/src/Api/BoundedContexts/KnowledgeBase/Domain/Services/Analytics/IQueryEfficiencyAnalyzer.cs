@@ -1,0 +1,71 @@
+
+
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
+namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
+
+/// <summary>
+/// ISSUE-1725: Analyzes LLM query efficiency by token usage patterns.
+/// Identifies inefficient queries and provides optimization recommendations.
+/// </summary>
+internal interface IQueryEfficiencyAnalyzer
+{
+    /// <summary>
+    /// Analyze query efficiency metrics for a date range
+    /// </summary>
+    /// <param name="startDate">Start date (inclusive)</param>
+    /// <param name="endDate">End date (inclusive)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Efficiency analysis report</returns>
+    Task<QueryEfficiencyReport> AnalyzeEfficiencyAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Identify top N most expensive query types by total cost
+    /// </summary>
+    Task<List<QueryTypeCost>> GetTopCostlyQueriesAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        int topN = 10,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Calculate average tokens per query by operation type
+    /// </summary>
+    Task<Dictionary<string, double>> GetAverageTokensByOperationAsync(
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Query efficiency analysis report
+/// </summary>
+internal record QueryEfficiencyReport
+{
+    public required DateOnly StartDate { get; init; }
+    public required DateOnly EndDate { get; init; }
+    public required int TotalQueries { get; init; }
+    public required decimal TotalCost { get; init; }
+    public required int TotalTokens { get; init; }
+    public required double AverageTokensPerQuery { get; init; }
+    public required decimal AverageCostPerQuery { get; init; }
+    public required List<QueryTypeCost> TopCostlyQueries { get; init; }
+    public required Dictionary<string, double> AverageTokensByOperation { get; init; }
+    public required List<string> OptimizationRecommendations { get; init; }
+}
+
+/// <summary>
+/// Cost breakdown by query type
+/// </summary>
+internal record QueryTypeCost
+{
+    public required string QueryType { get; init; }
+    public required int QueryCount { get; init; }
+    public required decimal TotalCost { get; init; }
+    public required int TotalTokens { get; init; }
+    public required double AverageTokens { get; init; }
+    public required decimal AverageCost { get; init; }
+}
+

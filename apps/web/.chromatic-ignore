@@ -1,0 +1,55 @@
+# Chromatic Ignore File
+# Files and directories that should not trigger Chromatic builds
+
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+
+# Build outputs
+.next/
+storybook-static/
+dist/
+build/
+
+# Tests
+coverage/
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Config files (unless they affect visual output)
+.env*
+.eslintrc*
+.prettierrc*
+tsconfig.json
+jest.config.*
+
+# Documentation
+README.md
+CHANGELOG.md
+**/*.md
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

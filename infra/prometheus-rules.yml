@@ -1,0 +1,673 @@
+# OPS-05: Prometheus Recording and Alert Rules
+# Error monitoring and alerting for MeepleAI
+
+groups:
+  # ========================================
+  # Recording Rules
+  # Pre-computed metrics for fast querying
+  # ========================================
+
+  - name: meepleai_error_recording_rules
+    interval: 15s
+    rules:
+      # Error rate by endpoint (errors per second)
+      - record: meepleai:api:error_rate:5m
+        expr: |
+          rate(
+            http_server_request_duration_count{
+              http_response_status_code=~"5.."
+            }[5m]
+          )
+        labels:
+          service: meepleai-api
+
+      # Total request rate (all status codes)
+      - record: meepleai:api:request_rate:5m
+        expr: |
+          rate(http_server_request_duration_count[5m])
+        labels:
+          service: meepleai-api
+
+      # Error ratio (percentage of requests that fail)
+      - record: meepleai:api:error_ratio:5m
+        expr: |
+          (
+            rate(
+              http_server_request_duration_count{
+                http_response_status_code=~"5.."
+              }[5m]
+            )
+            /
+            rate(http_server_request_duration_count[5m])
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+
+      # RAG error rate (from custom metrics)
+      - record: meepleai:rag:error_rate:5m
+        expr: |
+          rate(meepleai_rag_errors_total[5m]) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: rag
+
+      # Critical error spike detection (current rate vs 1-hour historical average)
+      - record: meepleai:api:error_spike_ratio
+        expr: |
+          (
+            rate(
+              http_server_request_duration_count{
+                http_response_status_code="500"
+              }[5m]
+            )
+            /
+            (
+              avg_over_time(
+                rate(
+                  http_server_request_duration_count{
+                    http_response_status_code="500"
+                  }[5m]
+                )[1h:5m]
+              ) > 0
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+
+      # API response time p95 by endpoint (global)
+      - record: meepleai:api:response_time_p95:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            rate(http_server_request_duration_bucket[5m])
+          )
+        labels:
+          service: meepleai-api
+
+      # BGAI-082: P95 latency for RAG chat endpoint (primary target)
+      - record: meepleai:rag:chat:p95:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            rate(http_server_request_duration_bucket{http_route=~"/api/v1/chat.*"}[5m])
+          )
+        labels:
+          service: meepleai-api
+          category: rag
+          endpoint: chat
+
+      # BGAI-082: P95 latency for search endpoint
+      - record: meepleai:rag:search:p95:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            rate(http_server_request_duration_bucket{http_route=~"/api/v1/search.*"}[5m])
+          )
+        labels:
+          service: meepleai-api
+          category: rag
+          endpoint: search
+
+      # BGAI-082: P95 latency for game explain endpoint
+      - record: meepleai:rag:explain:p95:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            rate(http_server_request_duration_bucket{http_route=~"/api/v1/games/.*/explain.*"}[5m])
+          )
+        labels:
+          service: meepleai-api
+          category: rag
+          endpoint: explain
+
+  # ========================================
+  # Alert Rules
+  # Conditions that trigger notifications
+  # ========================================
+
+  - name: meepleai_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: High error rate (> 1 error/sec for 2 minutes)
+      - alert: HighErrorRate
+        expr: |
+          meepleai:api:error_rate:5m > 1
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: errors
+        annotations:
+          summary: "API error rate is critically high"
+          description: |
+            Error rate is {{ $value | humanize }} errors/sec (threshold: 1/sec).
+            This indicates a significant issue affecting multiple requests.
+            Check logs at http://localhost:8081 with CorrelationId filter.
+          runbook_url: "https://docs.meepleai.dev/runbooks/high-error-rate"
+          dashboard_url: "http://localhost:3001/d/error-monitoring"
+
+      # CRITICAL: Error spike (3x historical average)
+      - alert: ErrorSpike
+        expr: |
+          meepleai:api:error_spike_ratio > 3
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: errors
+        annotations:
+          summary: "Sudden spike in error rate detected"
+          description: |
+            Current error rate is {{ $value | humanize }}x higher than 1-hour average.
+            This may indicate a recent deployment issue or external dependency failure.
+            Check recent changes and dependency health.
+          runbook_url: "https://docs.meepleai.dev/runbooks/error-spike"
+          dashboard_url: "http://localhost:3001/d/error-monitoring"
+
+      # CRITICAL: All database connections are down
+      - alert: DatabaseDown
+        expr: |
+          up{job="meepleai-api"} == 0
+          OR
+          (pg_up{} == 0)
+        for: 1m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: dependency
+        annotations:
+          summary: "PostgreSQL database is unreachable"
+          description: |
+            The API cannot connect to PostgreSQL database.
+            All API operations are likely failing.
+            Check database health and network connectivity.
+          runbook_url: "https://docs.meepleai.dev/runbooks/dependency-down"
+
+      # CRITICAL: Redis cache is down
+      - alert: RedisDown
+        expr: |
+          redis_up{} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: dependency
+        annotations:
+          summary: "Redis cache is unreachable"
+          description: |
+            The API cannot connect to Redis.
+            Caching, session management, and rate limiting are affected.
+            Check Redis container health.
+          runbook_url: "https://docs.meepleai.dev/runbooks/dependency-down"
+
+      # CRITICAL: Qdrant vector DB is down
+      - alert: QdrantDown
+        expr: |
+          up{job="qdrant"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: dependency
+        annotations:
+          summary: "Qdrant vector database is unreachable"
+          description: |
+            The API cannot connect to Qdrant.
+            RAG operations and semantic search are failing.
+            Check Qdrant container health at http://localhost:6333/healthz
+          runbook_url: "https://docs.meepleai.dev/runbooks/dependency-down"
+
+  - name: meepleai_warning_alerts
+    interval: 1m
+    rules:
+      # WARNING: Elevated error ratio (> 5% for 5 minutes)
+      - alert: HighErrorRatio
+        expr: |
+          meepleai:api:error_ratio:5m > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: errors
+        annotations:
+          summary: "Error ratio exceeds 5%"
+          description: |
+            {{ $value | humanizePercentage }} of requests are failing.
+            While not critical yet, this indicates degraded service quality.
+            Monitor closely and investigate root cause.
+          runbook_url: "https://docs.meepleai.dev/runbooks/high-error-rate"
+          dashboard_url: "http://localhost:3001/d/error-monitoring"
+
+      # WARNING: RAG errors occurring
+      - alert: RagErrorsDetected
+        expr: |
+          meepleai:rag:error_rate:5m > 0.5
+        for: 3m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: rag
+        annotations:
+          summary: "RAG operations are experiencing errors"
+          description: |
+            RAG error rate: {{ $value | humanize }} errors/sec.
+            This may affect Q&A accuracy and semantic search.
+            Check Qdrant connection and embedding service health.
+          runbook_url: "https://docs.meepleai.dev/runbooks/rag-errors"
+          dashboard_url: "http://localhost:3001/d/ai-rag-operations"
+
+      # WARNING: Slow API response times (BGAI-082: P95 <3s target)
+      - alert: SlowResponseTime
+        expr: |
+          meepleai:api:response_time_p95:5m > 3
+        for: 5m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: performance
+        annotations:
+          summary: "API response time is degraded"
+          description: |
+            P95 response time: {{ $value | humanize }}s (threshold: 3s).
+            Users are experiencing slow responses. BGAI-082 target: P95 <3s.
+            Check database query performance, RAG pipeline, and LLM API latency.
+          runbook_url: "https://docs.meepleai.dev/runbooks/slow-performance"
+          dashboard_url: "http://localhost:3001/d/api-performance"
+
+      # WARNING: Slow RAG chat endpoint (BGAI-082: P95 <3s)
+      - alert: SlowRagChatEndpoint
+        expr: |
+          meepleai:rag:chat:p95:5m > 3
+        for: 5m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: performance
+          endpoint: chat
+        annotations:
+          summary: "RAG chat endpoint P95 latency exceeds 3s"
+          description: |
+            Chat endpoint P95: {{ $value | humanize }}s (BGAI-082 target: <3s).
+            This is the primary RAG endpoint - check LLM API, vector search, and embedding service.
+          runbook_url: "https://docs.meepleai.dev/runbooks/slow-performance"
+          dashboard_url: "http://localhost:3001/d/api-performance"
+
+      # WARNING: High memory usage
+      - alert: HighMemoryUsage
+        expr: |
+          process_working_set_bytes / process_memory_limit_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: resources
+        annotations:
+          summary: "API memory usage is high"
+          description: |
+            Memory usage: {{ $value | humanizePercentage }}.
+            The API may be approaching memory limits.
+            Check for memory leaks or increase container resources.
+          dashboard_url: "http://localhost:3001/d/infrastructure"
+
+  - name: meepleai_info_alerts
+    interval: 5m
+    rules:
+      # INFO: New error type detected (for tracking)
+      - alert: NewErrorTypeDetected
+        expr: |
+          changes(
+            meepleai:api:error_rate:5m[10m]
+          ) > 0
+          and
+          meepleai:api:error_rate:5m > 0.1
+        for: 5m
+        labels:
+          severity: info
+          service: meepleai-api
+          category: errors
+        annotations:
+          summary: "New error pattern detected"
+          description: |
+            A new type of error has appeared in the system.
+            Error rate: {{ $value | humanize }} errors/sec.
+            Review logs to identify the new error type.
+          dashboard_url: "http://localhost:3001/d/error-monitoring"
+
+  # ========================================
+  # AI Quality Alert Rules
+  # AI-11.2: Quality monitoring and alerting
+  # ========================================
+
+  - name: meepleai_quality_recording_rules
+    interval: 15s
+    rules:
+      # Average overall confidence score (5-minute window)
+      - record: meepleai:quality:overall_confidence:5m
+        expr: |
+          avg(meepleai_quality_score{dimension="overall_confidence"}) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: quality
+
+      # Low-quality response rate (percentage)
+      - record: meepleai:quality:low_quality_rate:5m
+        expr: |
+          (
+            rate(meepleai_quality_low_quality_responses_total[5m])
+            /
+            rate(meepleai_quality_score_count{dimension="overall_confidence"}[5m])
+          ) * 100 OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: quality
+
+      # RAG confidence average
+      - record: meepleai:quality:rag_confidence:5m
+        expr: |
+          avg(meepleai_quality_score{dimension="rag_confidence"}) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: quality
+
+      # LLM confidence average
+      - record: meepleai:quality:llm_confidence:5m
+        expr: |
+          avg(meepleai_quality_score{dimension="llm_confidence"}) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: quality
+
+  - name: meepleai_quality_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: Average overall confidence < 0.60 for 1 hour
+      - alert: LowOverallConfidence
+        expr: |
+          meepleai:quality:overall_confidence:5m < 0.60
+        for: 1h
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "AI response quality is critically low"
+          description: |
+            Average overall confidence is {{ $value | humanizePercentage }} (threshold: 60%).
+            AI responses have been consistently low quality for 1 hour.
+            This indicates systematic issues with RAG, LLM, or citation quality.
+            Check Qdrant connection, embedding service, and LLM API health.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+      # CRITICAL: Low-quality response rate > 30% for 1 hour
+      - alert: HighLowQualityRate
+        expr: |
+          meepleai:quality:low_quality_rate:5m > 30
+        for: 1h
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "High rate of low-quality responses"
+          description: |
+            {{ $value | humanize }}% of responses are low quality (threshold: 30%).
+            More than 1 in 3 AI responses are failing quality standards.
+            Investigate RAG retrieval, LLM performance, and citation extraction.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+      # CRITICAL: RAG confidence < 0.50 for 30 minutes
+      - alert: LowRagConfidence
+        expr: |
+          meepleai:quality:rag_confidence:5m < 0.50
+        for: 30m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "RAG retrieval quality is critically low"
+          description: |
+            RAG confidence is {{ $value | humanizePercentage }} (threshold: 50%).
+            Semantic search is not finding relevant context consistently.
+            Check Qdrant vector DB health, embedding service, and index quality.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+      # CRITICAL: LLM confidence < 0.50 for 30 minutes
+      - alert: LowLlmConfidence
+        expr: |
+          meepleai:quality:llm_confidence:5m < 0.50
+        for: 30m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "LLM response quality is critically low"
+          description: |
+            LLM confidence is {{ $value | humanizePercentage }} (threshold: 50%).
+            Language model is producing low-quality responses consistently.
+            Check OpenRouter API health, prompt quality, and model selection.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+      # CRITICAL: Zero quality metrics for 15 minutes (service health check)
+      - alert: QualityMetricsUnavailable
+        expr: |
+          absent(meepleai_quality_score{dimension="overall_confidence"})
+          or
+          (
+            rate(meepleai_quality_score_count{dimension="overall_confidence"}[5m]) == 0
+            and
+            rate(http_server_request_duration_count[5m]) > 0
+          )
+        for: 15m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "Quality metrics are not being recorded"
+          description: |
+            No quality metrics have been recorded for 15 minutes.
+            This indicates either:
+            1. No AI requests are being processed
+            2. Quality scoring service is failing
+            3. Metrics collection is broken
+            Check AI service health and quality scoring pipeline.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+  - name: meepleai_quality_warning_alerts
+    interval: 1m
+    rules:
+      # WARNING: Overall confidence dropping (< 0.70 for 30 minutes)
+      - alert: DegradedOverallConfidence
+        expr: |
+          meepleai:quality:overall_confidence:5m < 0.70
+        for: 30m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "AI response quality is degraded"
+          description: |
+            Average overall confidence is {{ $value | humanizePercentage }} (threshold: 70%).
+            Response quality is below normal levels but not critical yet.
+            Monitor closely and investigate if trend continues.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+      # WARNING: Low-quality rate elevated (> 15% for 30 minutes)
+      - alert: ElevatedLowQualityRate
+        expr: |
+          meepleai:quality:low_quality_rate:5m > 15
+        for: 30m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: quality
+        annotations:
+          summary: "Elevated rate of low-quality responses"
+          description: |
+            {{ $value | humanize }}% of responses are low quality (threshold: 15%).
+            More responses than usual are failing quality standards.
+            Review recent changes and monitor for escalation.
+          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
+          dashboard_url: "http://localhost:3001/d/quality-metrics"
+
+  # ========================================
+  # P3-705: Infrastructure Monitoring Rules
+  # Container and host metrics alerts
+  # ========================================
+
+  - name: container_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: Container high memory usage (>90% of limit)
+      - alert: ContainerHighMemory
+        expr: |
+          (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9
+          and container_spec_memory_limit_bytes > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: container
+        annotations:
+          summary: "Container {{ $labels.name }} memory usage > 90%"
+          description: |
+            Container {{ $labels.name }} is using {{ $value | humanizePercentage }} of its memory limit.
+            Current usage may lead to OOM kills.
+            Check container logs and consider increasing memory limits.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+      # WARNING: Container high CPU usage (>80%)
+      - alert: ContainerHighCPU
+        expr: |
+          rate(container_cpu_usage_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: container
+        annotations:
+          summary: "Container {{ $labels.name }} CPU usage > 80%"
+          description: |
+            Container {{ $labels.name }} CPU usage is {{ $value | humanizePercentage }}.
+            High CPU usage may affect performance.
+            Check for CPU-intensive operations or consider resource optimization.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+      # WARNING: Container restart detected
+      - alert: ContainerRestarted
+        expr: |
+          increase(container_start_time_seconds[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: container
+        annotations:
+          summary: "Container {{ $labels.name }} has restarted"
+          description: |
+            Container {{ $labels.name }} has been restarted.
+            Check container logs for crash reasons or OOM kills.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+
+  - name: host_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: Host high CPU usage (>80%)
+      - alert: HostHighCPU
+        expr: |
+          100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: host
+        annotations:
+          summary: "Host CPU usage > 80%"
+          description: |
+            Host {{ $labels.instance }} CPU usage is {{ $value | humanize }}%.
+            High CPU usage may affect all containers performance.
+            Check for resource-intensive processes or scale infrastructure.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+      # CRITICAL: Host low disk space (<10%)
+      - alert: HostLowDiskSpace
+        expr: |
+          ((node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs"}) * 100) < 10
+        for: 5m
+        labels:
+          severity: critical
+          service: infrastructure
+          category: host
+        annotations:
+          summary: "Host disk space < 10% on {{ $labels.mountpoint }}"
+          description: |
+            Host {{ $labels.instance }} has only {{ $value | humanize }}% free disk space on {{ $labels.mountpoint }}.
+            Critical disk space may cause service failures.
+            Clean up old logs, backups, or expand disk capacity immediately.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+      # WARNING: Host low disk space (<20%)
+      - alert: HostLowDiskSpaceWarning
+        expr: |
+          ((node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs"}) * 100) < 20
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: host
+        annotations:
+          summary: "Host disk space < 20% on {{ $labels.mountpoint }}"
+          description: |
+            Host {{ $labels.instance }} has {{ $value | humanize }}% free disk space on {{ $labels.mountpoint }}.
+            Plan disk cleanup or expansion to prevent critical state.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+      # WARNING: Host high memory usage (>85%)
+      - alert: HostHighMemory
+        expr: |
+          ((node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: host
+        annotations:
+          summary: "Host memory usage > 85%"
+          description: |
+            Host {{ $labels.instance }} memory usage is {{ $value | humanize }}%.
+            High memory usage may lead to swapping and performance degradation.
+            Check for memory leaks or consider adding more RAM.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+      # WARNING: Host high load average
+      - alert: HostHighLoadAverage
+        expr: |
+          node_load15 / count(node_cpu_seconds_total{mode="idle"}) without (cpu, mode) > 2
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+          category: host
+        annotations:
+          summary: "Host load average is high"
+          description: |
+            Host {{ $labels.instance }} 15-minute load average is {{ $value | humanize }}x CPU cores.
+            High load may indicate resource saturation.
+            Check for CPU-bound processes or I/O bottlenecks.
+          runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+          dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"

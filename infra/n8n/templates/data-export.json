@@ -1,0 +1,137 @@
+{
+  "id": "data-export",
+  "name": "Weekly Analytics Export to Google Sheets",
+  "version": "1.0.0",
+  "description": "Export weekly analytics and usage metrics to Google Sheets for analysis and reporting",
+  "category": "integration",
+  "author": "MeepleAI",
+  "tags": ["export", "google-sheets", "analytics", "automation"],
+  "icon": "📊",
+  "screenshot": null,
+  "documentation": "docs/n8n-templates/data-export.md",
+  "parameters": [
+    {
+      "name": "exportSchedule",
+      "type": "select",
+      "label": "Export Schedule",
+      "description": "When to export data",
+      "required": true,
+      "default": "0 9 * * 1",
+      "options": ["0 9 * * 1", "0 9 1 * *", "0 9 * * 0"],
+      "sensitive": false
+    },
+    {
+      "name": "googleSheetId",
+      "type": "string",
+      "label": "Google Sheet ID",
+      "description": "ID from Google Sheets URL",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "sheetName",
+      "type": "string",
+      "label": "Sheet Name",
+      "description": "Name of the worksheet tab",
+      "required": true,
+      "default": "Weekly Analytics",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "apiBaseUrl",
+      "type": "string",
+      "label": "API Base URL",
+      "description": "MeepleAI API URL",
+      "required": true,
+      "default": "http://api:8080",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "googleCredentials",
+      "type": "string",
+      "label": "Google Service Account JSON",
+      "description": "Service account credentials JSON",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": true
+    }
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "schedule",
+        "name": "Weekly Export Schedule",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [250, 300],
+        "parameters": {
+          "rule": {
+            "interval": [{"cronExpression": "{{exportSchedule}}"}]
+          }
+        }
+      },
+      {
+        "id": "fetch-analytics",
+        "name": "Fetch Weekly Analytics",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [450, 300],
+        "parameters": {
+          "url": "={{apiBaseUrl}}/api/v1/admin/analytics/export?format=json&period=week",
+          "method": "GET"
+        }
+      },
+      {
+        "id": "transform-data",
+        "name": "Transform for Sheets",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [650, 300],
+        "parameters": {
+          "functionCode": "const data = items[0].json;\\nconst rows = [];\\n\\n// Header row\\nrows.push(['Metric', 'Value', 'Week', 'Date']);\\n\\n// Data rows\\nfor (const [key, value] of Object.entries(data)) {\\n  rows.push([key, value, data.week, new Date().toISOString()]);\\n}\\n\\nreturn [{ json: { values: rows } }];"
+        }
+      },
+      {
+        "id": "append-sheets",
+        "name": "Append to Google Sheets",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4,
+        "position": [850, 300],
+        "parameters": {
+          "operation": "append",
+          "documentId": "{{googleSheetId}}",
+          "sheetName": "{{sheetName}}",
+          "range": "A:D",
+          "options": {
+            "valueInputMode": "USER_ENTERED"
+          }
+        },
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "serviceAccount": "{{googleCredentials}}"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "schedule": {
+        "main": [[{"node": "fetch-analytics", "type": "main", "index": 0}]]
+      },
+      "fetch-analytics": {
+        "main": [[{"node": "transform-data", "type": "main", "index": 0}]]
+      },
+      "transform-data": {
+        "main": [[{"node": "append-sheets", "type": "main", "index": 0}]]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null
+  }
+}

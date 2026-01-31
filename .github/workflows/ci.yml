@@ -1,0 +1,334 @@
+name: CI
+
+on:
+  push:
+    branches: [main, main-dev]
+  pull_request:
+    branches: [main, main-dev]
+  workflow_dispatch:
+
+# Cancel in-progress runs for same PR/branch
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Minimal required permissions
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  # Quick path filtering to skip unchanged areas
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'apps/web/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+            backend:
+              - 'apps/api/**'
+              - 'global.json'
+            infra:
+              - 'infra/**'
+              - 'docker-compose*.yml'
+
+  # Frontend: Lint, Typecheck, Test (Unit + E2E subset)
+  frontend:
+    name: Frontend - Build & Test
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      # Stage 1: Lint + TypeCheck (fail fast)
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # Stage 3: Frontend Unit Tests (includes integration tests with MSW)
+      # MSW (Mock Service Worker) is configured globally in vitest.setup.tsx
+      # Tests can use MSW to simulate API responses for both unit and integration testing
+      - name: Unit & Integration Tests
+        run: pnpm test:coverage
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:8080
+
+      - name: Upload Coverage
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: apps/web/coverage/lcov.info
+          flags: frontend
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
+
+  # Backend: Build, Unit Tests, Integration Tests
+  backend:
+    name: Backend - Build & Test
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: meepleai_test
+        # Issue #2693: Increase max_connections from 100 (default) to 500 for parallel tests
+        # --shm-size=512mb provides shared memory for the increased connection pool
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+          --shm-size=512mb
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 10
+        ports:
+          - 6379:6379
+
+      qdrant:
+        image: qdrant/qdrant:v1.12.4
+        # Note: wget/curl not available in Qdrant image, use bash TCP health check
+        # Removed --start-period (unsupported in GH Actions Docker), increased retries instead
+        options: >-
+          --health-cmd "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /readyz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n\" >&3 && grep -q \"HTTP/1.1 200\" <&3'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+        ports:
+          - 6333:6333
+          - 6334:6334  # gRPC port for Qdrant client
+
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PDF Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+
+      - name: Setup Backend
+        uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '9.0.x'
+          working-directory: apps/api
+
+      - name: Cache Docker Images
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-${{ hashFiles('**/Dockerfile', 'docker-compose*.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+
+      - name: Pull Test Container Images
+        run: |
+          echo "📦 Pulling test container images for cache..."
+          docker pull postgres:16-alpine || true
+          docker pull redis:7-alpine || true
+          echo "✅ Test images pulled and cached"
+
+      - name: Pre-Test Cleanup
+        shell: pwsh
+        run: |
+          Write-Host "🧹 Cleaning up orphaned Testcontainers..." -ForegroundColor Cyan
+          $containers = docker ps -a --filter "label=org.testcontainers=true" -q 2>$null
+          if ($containers) {
+            $containers | ForEach-Object { docker rm -f $_ 2>$null } | Out-Null
+            Write-Host "✅ Cleaned up orphaned containers" -ForegroundColor Green
+          } else {
+            Write-Host "✅ No orphaned containers found" -ForegroundColor Green
+          }
+
+      - name: Install Redis CLI
+        run: sudo apt-get update && sudo apt-get install -y redis-tools
+
+      - name: Wait for Services
+        timeout-minutes: 3
+        run: |
+          echo "⏳ Waiting for PostgreSQL..."
+          until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
+          echo "✅ PostgreSQL ready"
+
+          echo "⏳ Waiting for Redis..."
+          until redis-cli -h localhost -p 6379 ping > /dev/null 2>&1; do sleep 1; done
+          echo "✅ Redis ready"
+
+          echo "⏳ Waiting for Qdrant..."
+          # Health check configured with 150s retries (30×5s)
+          # Manual wait as backup with extended timeout (120s)
+          for i in {1..60}; do
+            if curl -sf http://localhost:6333/healthz > /dev/null 2>&1; then
+              echo "✅ Qdrant ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "⚠️ Qdrant health check timeout - relying on container health check"
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      # Stage 2: Backend Unit Tests
+      # Stage 4: Backend Integration Tests (Testcontainers)
+      # Both stages run sequentially in this job with service containers
+      - name: Run Tests
+        # Issue #3102: Increased from 20 to 30 minutes - integration tests with Testcontainers are slow
+        timeout-minutes: 30
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: meepleai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpass
+          ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass
+          QDRANT_URL: http://localhost:6333
+          REDIS_URL: localhost:6379
+          OPENROUTER_API_KEY: test-key
+          CI: true
+          # Issue #3102: Disable rate limiting middleware for integration tests to prevent 429 errors
+          DISABLE_RATE_LIMITING: "true"
+        run: |
+          # Run Unit tests
+          dotnet test \
+            --filter "Category=Unit" \
+            --logger "console;verbosity=minimal" \
+            --no-build \
+            --configuration Release \
+            -p:CollectCoverage=true \
+            -p:CoverletOutputFormat=cobertura \
+            -p:CoverletOutput=./coverage/unit-coverage.xml || true
+
+          # Run Integration tests
+          # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
+          # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
+          # - FrontendSdk tests: Use FrontendSdkTestFactory with own containers
+          # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
+          dotnet test \
+            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk" \
+            --logger "console;verbosity=minimal" \
+            --no-build \
+            --configuration Release \
+            -p:CollectCoverage=true \
+            -p:CoverletOutputFormat=cobertura \
+            -p:CoverletOutput=./coverage/integration-coverage.xml || true
+
+      - name: Upload Coverage
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: |
+            apps/api/coverage/unit-coverage.xml
+            apps/api/coverage/integration-coverage.xml
+          flags: backend
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
+
+  # Stage 6: E2E Tests (Critical paths only)
+  # Full E2E suite with 4-shard parallel execution runs separately in e2e-tests.yml
+  e2e:
+    name: E2E - Critical Paths
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Setup Playwright
+        uses: ./.github/actions/setup-playwright
+        with:
+          working-directory: apps/web
+
+      - name: Build App
+        run: pnpm build
+
+      - name: Setup Test Environment
+        run: cp .env.test.example .env.test
+
+      - name: Run E2E Tests
+        timeout-minutes: 10
+        run: pnpm test:e2e
+        env:
+          CI: true
+
+      - name: Upload Playwright Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_number }}
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+  # Final status check
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [frontend, backend, e2e]
+    if: always()
+    steps:
+      - name: Check Status
+        run: |
+          if [ "${{ needs.frontend.result }}" == "failure" ] || \
+             [ "${{ needs.backend.result }}" == "failure" ] || \
+             [ "${{ needs.e2e.result }}" == "failure" ]; then
+            echo "❌ CI Failed"
+            exit 1
+          fi
+          echo "✅ CI Passed"

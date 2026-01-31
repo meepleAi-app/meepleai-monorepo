@@ -1,0 +1,54 @@
+
+
+#pragma warning disable MA0048 // File name must match type name - Contains related Request/Response DTOs
+namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+
+/// <summary>
+/// DTO for chat thread information.
+/// </summary>
+internal record ChatThreadDto(
+    Guid Id,
+    Guid UserId,
+    Guid? GameId,
+    Guid? AgentId, // Issue #2030 - Track which agent was used
+    string? Title,
+    string Status,
+    DateTime CreatedAt,
+    DateTime LastMessageAt,
+    int MessageCount,
+    IReadOnlyList<ChatMessageDto> Messages
+);
+
+/// <summary>
+/// DTO for chat message.
+/// Enhanced to support update/delete operations (Issue #1184).
+/// </summary>
+internal record ChatMessageDto(
+    Guid Id,
+    string Content,
+    string Role,
+    DateTime Timestamp,
+    int SequenceNumber,
+    DateTime? UpdatedAt = null,
+    bool IsDeleted = false,
+    DateTime? DeletedAt = null,
+    Guid? DeletedByUserId = null,
+    bool IsInvalidated = false
+);
+
+/// <summary>
+/// DTO for creating a chat thread.
+/// </summary>
+internal record CreateChatThreadRequest(
+    Guid? GameId = null,
+    string? Title = null,
+    string? InitialMessage = null
+);
+
+/// <summary>
+/// DTO for adding a message to thread.
+/// </summary>
+internal record AddMessageRequest(
+    string Content,
+    string Role
+);

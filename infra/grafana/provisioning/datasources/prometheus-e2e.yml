@@ -1,0 +1,82 @@
+# =============================================================================
+# Grafana Datasource Provisioning - Prometheus E2E Testing
+# =============================================================================
+# Issue #2009 - Phase 3: Production-Grade Infrastructure
+#
+# This file is automatically loaded by Grafana on startup
+# Datasources are configured and ready to use in dashboards
+# =============================================================================
+
+apiVersion: 1
+
+# Delete datasources from database that are not in config files
+deleteDatasources:
+  - name: Prometheus-E2E
+    orgId: 1
+
+datasources:
+  # ---------------------------------------------------------------------------
+  # Prometheus - E2E Testing Metrics
+  # ---------------------------------------------------------------------------
+  - name: Prometheus-E2E
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+      prometheusVersion: 2.48.0
+      cacheLevel: 'High'
+      disableMetricsLookup: false
+      incrementalQuerying: false
+      incrementalQueryOverlapWindow: 10m
+
+      # Query timeout
+      timeInterval: 15s
+
+      # Custom query parameters
+      customQueryParameters: ''
+
+      # TLS/SSL settings (disabled for local development)
+      tlsAuth: false
+      tlsAuthWithCACert: false
+      tlsSkipVerify: true
+
+    # Basic auth (disabled)
+    basicAuth: false
+
+    # API key auth (disabled)
+    withCredentials: false
+
+    # Read-only access
+    editable: true
+
+    # Organization ID
+    orgId: 1
+
+    # Version
+    version: 1
+
+    # UID for referencing in dashboards
+    uid: prometheus-e2e
+
+# =============================================================================
+# Additional Datasource Configuration Notes
+# =============================================================================
+#
+# - Access mode 'proxy': Grafana server proxies requests to Prometheus
+#   (recommended for security and CORS handling)
+#
+# - isDefault: true makes this the default datasource for new panels
+#
+# - cacheLevel: 'High' enables aggressive caching for better performance
+#
+# - incrementalQuerying: false disables incremental loading
+#   (can be enabled for very large time ranges)
+#
+# - timeInterval: 15s matches Prometheus scrape interval
+#   for optimal query performance
+#
+# =============================================================================

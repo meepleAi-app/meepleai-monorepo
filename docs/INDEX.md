@@ -310,9 +310,11 @@ export async function askQuestion(
 
 ### For Product/QA
 1. **User Flows**: [User Flows Documentation](11-user-flows/README.md)
-2. **API Testing**: [API Documentation](03-api/README.md)
-3. **E2E Testing**: [Testing Guide - E2E](05-testing/README.md#e2e-testing-playwright)
-4. **System Overview**: [Architecture](01-architecture/overview/system-architecture.md)
+2. **Quality Validation**: [Quality Documentation](quality/README.md)
+3. **API Testing**: [API Documentation](03-api/README.md)
+4. **E2E Testing**: [Testing Guide - E2E](05-testing/README.md#e2e-testing-playwright)
+5. **Project Roadmap**: [Roadmap & Epics](roadmap/)
+6. **System Overview**: [Architecture](01-architecture/overview/system-architecture.md)
 
 ---
 

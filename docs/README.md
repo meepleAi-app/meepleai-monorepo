@@ -32,7 +32,8 @@ docs/
 ├── 09-bounded-contexts/      # DDD Bounded Contexts guides
 ├── 10-user-guides/           # Admin and user guides
 ├── 11-user-flows/            # User flow documentation
-└── roadmap/                  # Project roadmap
+├── quality/                  # Quality validation & metrics
+└── roadmap/                  # Project roadmap & epics
 ```
 
 ---
@@ -146,7 +147,7 @@ docs/
 
 ## Documentation Statistics
 
-**After Consolidation (2026-01-26)**:
+**After Consolidation (2026-01-31)**:
 
 | Section | Description |
 |---------|-------------|
@@ -161,7 +162,8 @@ docs/
 | **09-bounded-contexts** | DDD context guides |
 | **10-user-guides** | Admin and user guides |
 | **11-user-flows** | User flow documentation |
-| **roadmap** | Project roadmap |
+| **quality** | Quality validation & metrics |
+| **roadmap** | Project roadmap & epics |
 
 ---
 
@@ -237,6 +239,23 @@ oauth_testing.md
 
 ## Consolidation History
 
+### 2026-01-31: Quality & Roadmap Organization
+
+**Actions Taken**:
+- Created `docs/quality/` for validation metrics (#3192 RAG quality)
+- Created `docs/roadmap/` for epic documentation (#3167 Game Session Toolkit)
+- Removed obsolete `TODOS.md` (outdated notes)
+- Cleaned archive/legacy references in ADRs (bgai-016, wiki paths)
+- Moved active quality docs from claudedocs/ to docs/quality/
+- Moved epic planning from claudedocs/ to docs/roadmap/
+- Removed session HTML mockups from claudedocs/
+
+**Results**:
+- Quality validation properly documented (#3192, #3231 blocker)
+- Epic roadmap centralized in docs/roadmap/
+- claudedocs/ cleaned (only active agent validation)
+- No obsolete references in ADRs
+
 ### 2026-01-26: Documentation Cleanup
 
 **Actions Taken**:
@@ -263,6 +282,6 @@ oauth_testing.md
 
 ---
 
-**Last Updated**: 2026-01-26
+**Last Updated**: 2026-01-31
 **Maintainer**: Documentation Team
 **Status**: Clean and Organized

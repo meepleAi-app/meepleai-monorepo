@@ -234,11 +234,10 @@ services.AddScoped<ILlmService, HybridLlmService>();
 
 ## References
 
-- **Test Results**: `docs/archive/bgai-implementations/bgai-016-ollama-quality-findings.md`
-- **Model Reference**: `docs/wiki/openrouter-models-reference.wiki`
+- **Model Reference**: [OpenRouter Guide](../components/agent-lightning/openrouter-guide.md)
 - **Issue**: #958 - BGAI-016 LLM Strategy Evaluation
 - **ADR-003**: 3-Stage PDF Processing Pipeline (quality threshold precedent)
-- **Solo Developer Plan**: Week 5 - LLM Integration
+- **Related**: [ADR-004b: Hybrid LLM](adr-004b-hybrid-llm.md) - Multi-model consensus implementation
 
 ---
 

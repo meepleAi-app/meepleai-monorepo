@@ -64,6 +64,33 @@
         a.doc-link { color: var(--secondary); text-decoration: none; border-bottom: 1px dashed var(--secondary); transition: all 0.2s; }
         a.doc-link:hover { color: var(--primary); border-bottom-style: solid; }
         .footer { margin-top: 4rem; padding: 2rem; text-align: center; color: var(--text-muted); border-top: 1px solid var(--border); }
+
+        /* Flow Diagram Styles */
+        .flow-container { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0; }
+        @media (max-width: 1024px) { .flow-container { grid-template-columns: 1fr; } }
+
+        .flow-diagram-svg { background: var(--bg); border: 2px solid var(--border); border-radius: 8px; padding: 1.5rem; }
+        .flow-box { fill: var(--bg-card); stroke: var(--primary); stroke-width: 2; rx: 8; }
+        .flow-box:hover { fill: var(--bg-hover); stroke: var(--secondary); }
+        .flow-text { fill: var(--text); font-family: 'Segoe UI', sans-serif; font-size: 13px; }
+        .flow-arrow { stroke: var(--secondary); stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+        .flow-label { fill: var(--warning); font-size: 11px; font-weight: 600; }
+        .token-bar { transition: all 0.3s ease; }
+        .token-bar:hover { opacity: 0.8; stroke-width: 3; }
+
+        .strategy-selector { display: flex; gap: 1rem; margin: 1.5rem 0; justify-content: center; }
+        .strategy-btn { background: var(--bg-card); border: 2px solid var(--border); color: var(--text); padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .strategy-btn:hover { border-color: var(--primary); background: var(--bg-hover); }
+        .strategy-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+
+        .token-flow-chart { margin: 2rem 0; }
+        .flow-stage { display: flex; align-items: center; margin: 1rem 0; gap: 1rem; }
+        .stage-label { width: 180px; font-weight: 600; }
+        .stage-bar-container { flex: 1; background: var(--bg); border-radius: 8px; height: 40px; position: relative; overflow: hidden; }
+        .stage-bar { height: 100%; display: flex; align-items: center; padding: 0 1rem; color: white; font-weight: 600; font-size: 0.9rem; transition: width 0.5s ease; }
+        .stage-bar.input { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+        .stage-bar.output { background: linear-gradient(90deg, #10b981, #059669); }
+        .stage-tokens { width: 100px; text-align: right; font-family: monospace; }
     </style>
 </head>
 <body>
@@ -78,6 +105,7 @@
         <a href="#architecture" class="nav-link" onclick="showSection(event, 'architecture')">Architecture</a>
         <a href="#calculator" class="nav-link" onclick="showSection(event, 'calculator')">Token Calculator</a>
         <a href="#docs" class="nav-link" onclick="showSection(event, 'docs')">Documentation</a>
+        <a href="#flows" class="nav-link" onclick="showSection(event, 'flows')">Flow Diagrams</a>
         <a href="#sources" class="nav-link" onclick="showSection(event, 'sources')">Sources</a>
     </nav>
 
@@ -253,6 +281,438 @@
             </div>
         </div>
 
+        <!-- Flow Diagrams Section -->
+        <div id="flows" class="section">
+            <div class="card">
+                <h2>📊 Strategy Flow Diagrams</h2>
+                <p>Interactive visualizations of token flows and processing stages for each strategy.</p>
+
+                <div class="strategy-selector">
+                    <button class="strategy-btn active" onclick="showFlow('fast')">FAST Strategy</button>
+                    <button class="strategy-btn" onclick="showFlow('balanced')">BALANCED Strategy</button>
+                    <button class="strategy-btn" onclick="showFlow('precise')">PRECISE Strategy</button>
+                </div>
+
+                <div id="flowFast" class="token-flow-chart">
+                    <h3>FAST Strategy - Token Flow (Total: ~2,060 tokens)</h3>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 1: Routing</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 15.5%">320 tokens (input)</div>
+                        </div>
+                        <div class="stage-tokens">320t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 2: Cache Check</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 15%">310 tokens (input)</div>
+                        </div>
+                        <div class="stage-tokens">310t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 3: Retrieval</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 72.8%">1,500 tokens (docs)</div>
+                        </div>
+                        <div class="stage-tokens">1,500t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 4: CRAG</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar" style="width: 0%; background: #64748b;">SKIPPED (FAST)</div>
+                        </div>
+                        <div class="stage-tokens">0t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 5: Generation</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 14.6%">300 tokens (input)</div>
+                        </div>
+                        <div class="stage-tokens">300t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 5: Output</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar output" style="width: 9.7%">200 tokens (answer)</div>
+                        </div>
+                        <div class="stage-tokens">200t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 6: Validation</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar" style="width: 0%; background: #64748b;">Rule-based (0t)</div>
+                        </div>
+                        <div class="stage-tokens">0t</div>
+                    </div>
+
+                    <div class="flow-stage" style="margin-top: 1.5rem; border-top: 2px solid var(--border); padding-top: 1rem;">
+                        <div class="stage-label"><strong>TOTAL</strong></div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar" style="width: 90%; background: linear-gradient(90deg, #8b5cf6, #7c3aed);">2,060 tokens</div>
+                        </div>
+                        <div class="stage-tokens"><strong>2,060t</strong></div>
+                    </div>
+                </div>
+
+                <div id="flowBalanced" class="token-flow-chart" style="display: none;">
+                    <h3>BALANCED Strategy - Token Flow with CRAG (Total: ~2,820 tokens)</h3>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 1: Routing</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 11.3%">320 tokens</div>
+                        </div>
+                        <div class="stage-tokens">320t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 2: Cache Miss</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 11%">310 tokens</div>
+                        </div>
+                        <div class="stage-tokens">310t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 3: Hybrid Retrieval</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 124%">3,500 tokens (Vector+BM25+Metadata)</div>
+                        </div>
+                        <div class="stage-tokens">3,500t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 4: CRAG Filter</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar" style="width: 63.8%; background: linear-gradient(90deg, #f59e0b, #d97706);">
+                                FILTERED: 3,500 → 1,800t (49% reduction)
+                            </div>
+                        </div>
+                        <div class="stage-tokens">1,800t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 5: Generation In</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 67.4%">1,900 tokens</div>
+                        </div>
+                        <div class="stage-tokens">1,900t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 5: Generation Out</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar output" style="width: 10.6%">300 tokens</div>
+                        </div>
+                        <div class="stage-tokens">300t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 6: Validation</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar" style="width: 0%; background: #64748b;">Cross-Encoder (0 LLM tokens)</div>
+                        </div>
+                        <div class="stage-tokens">0t</div>
+                    </div>
+
+                    <div class="flow-stage" style="margin-top: 1.5rem; border-top: 2px solid var(--border); padding-top: 1rem;">
+                        <div class="stage-label"><strong>TOTAL EFFECTIVE</strong></div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar" style="width: 100%; background: linear-gradient(90deg, #8b5cf6, #7c3aed);">2,820 tokens (after CRAG filter)</div>
+                        </div>
+                        <div class="stage-tokens"><strong>2,820t</strong></div>
+                    </div>
+
+                    <p style="margin-top: 1rem; color: var(--warning); font-size: 0.9rem;">
+                        ⚡ <strong>CRAG Magic</strong>: Retrieves 3,500 tokens but filters to 1,800 (49% reduction) while improving accuracy +12%
+                    </p>
+                </div>
+
+                <div id="flowPrecise" class="token-flow-chart" style="display: none;">
+                    <h3>PRECISE Strategy - Multi-Agent Token Flow (Total: ~22,396 tokens)</h3>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layers 1-2-3</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 38.5%">8,630 tokens (routing + multi-hop)</div>
+                        </div>
+                        <div class="stage-tokens">8,630t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 4: LLM Grading</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 37.3%">8,350 tokens (in)</div>
+                        </div>
+                        <div class="stage-tokens">8,350t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 4: Grading Out</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar output" style="width: 0.4%">100 tokens (rankings)</div>
+                        </div>
+                        <div class="stage-tokens">100t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 5: Agent 1 (Analyzer)</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 11.4%">2,550 tokens (in)</div>
+                        </div>
+                        <div class="stage-tokens">2,550t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Agent 1: Output</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar output" style="width: 1.8%">400 tokens (analysis)</div>
+                        </div>
+                        <div class="stage-tokens">400t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 5: Agent 2 (Strategist)</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 13.6%">3,050 tokens (in)</div>
+                        </div>
+                        <div class="stage-tokens">3,050t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Agent 2: Output</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar output" style="width: 2.2%">500 tokens (recommendation)</div>
+                        </div>
+                        <div class="stage-tokens">500t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 5: Agent 3 (Validator)</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 13.2%">2,950 tokens (in)</div>
+                        </div>
+                        <div class="stage-tokens">2,950t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Agent 3: Output</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar output" style="width: 1.3%">300 tokens (validation)</div>
+                        </div>
+                        <div class="stage-tokens">300t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 6: Self-Reflection</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar input" style="width: 19.6%">4,400 tokens (in)</div>
+                        </div>
+                        <div class="stage-tokens">4,400t</div>
+                    </div>
+
+                    <div class="flow-stage">
+                        <div class="stage-label">Layer 6: Reflection Out</div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar output" style="width: 0.9%">200 tokens (confidence)</div>
+                        </div>
+                        <div class="stage-tokens">200t</div>
+                    </div>
+
+                    <div class="flow-stage" style="margin-top: 1.5rem; border-top: 2px solid var(--border); padding-top: 1rem;">
+                        <div class="stage-label"><strong>TOTAL</strong></div>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar" style="width: 100%; background: linear-gradient(90deg, #ef4444, #dc2626);">22,396 tokens (Multi-Agent + Reflection)</div>
+                        </div>
+                        <div class="stage-tokens"><strong>22,396t</strong></div>
+                    </div>
+
+                    <p style="margin-top: 1rem; color: var(--danger); font-size: 0.9rem;">
+                        ⚠️ <strong>High Cost</strong>: 11x FAST strategy - use only for critical strategic queries (5-10% of total)
+                    </p>
+                </div>
+
+                <h3 style="margin-top: 3rem;">Input vs Output Token Distribution</h3>
+                <div class="flow-container">
+                    <div>
+                        <h4>FAST Strategy (2,060 total)</h4>
+                        <svg width="100%" height="200" viewBox="0 0 400 200">
+                            <defs>
+                                <linearGradient id="inputGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+                                </linearGradient>
+                                <linearGradient id="outputGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <!-- Input (1,860 tokens = 90.3%) -->
+                            <rect x="10" y="50" width="361" height="60" fill="url(#inputGrad)" rx="8" class="token-bar">
+                                <title>Input: 1,860 tokens (90.3%)</title>
+                            </rect>
+                            <text x="200" y="85" text-anchor="middle" class="flow-text" style="fill: white; font-weight: 600;">
+                                INPUT: 1,860t (90.3%)
+                            </text>
+                            <!-- Output (200 tokens = 9.7%) -->
+                            <rect x="10" y="130" width="39" height="60" fill="url(#outputGrad)" rx="8" class="token-bar">
+                                <title>Output: 200 tokens (9.7%)</title>
+                            </rect>
+                            <text x="60" y="165" text-anchor="start" class="flow-text" style="fill: white; font-weight: 600;">
+                                OUTPUT: 200t (9.7%)
+                            </text>
+                        </svg>
+                    </div>
+
+                    <div>
+                        <h4>BALANCED Strategy (2,820 total)</h4>
+                        <svg width="100%" height="200" viewBox="0 0 400 200">
+                            <!-- Input (2,520 tokens = 89.4%) -->
+                            <rect x="10" y="50" width="358" height="60" fill="url(#inputGrad)" rx="8" class="token-bar">
+                                <title>Input: 2,520 tokens (89.4%)</title>
+                            </rect>
+                            <text x="200" y="85" text-anchor="middle" class="flow-text" style="fill: white; font-weight: 600;">
+                                INPUT: 2,520t (89.4%)
+                            </text>
+                            <!-- Output (300 tokens = 10.6%) -->
+                            <rect x="10" y="130" width="42" height="60" fill="url(#outputGrad)" rx="8" class="token-bar">
+                                <title>Output: 300 tokens (10.6%)</title>
+                            </rect>
+                            <text x="65" y="165" text-anchor="start" class="flow-text" style="fill: white; font-weight: 600;">
+                                OUTPUT: 300t (10.6%)
+                            </text>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="flow-container" style="margin-top: 2rem;">
+                    <div>
+                        <h4>PRECISE Strategy (22,396 total)</h4>
+                        <svg width="100%" height="200" viewBox="0 0 400 200">
+                            <!-- Input (21,196 tokens = 94.6%) -->
+                            <rect x="10" y="50" width="378" height="60" fill="url(#inputGrad)" rx="8" class="token-bar">
+                                <title>Input: 21,196 tokens (94.6%)</title>
+                            </rect>
+                            <text x="200" y="85" text-anchor="middle" class="flow-text" style="fill: white; font-weight: 600;">
+                                INPUT: 21,196t (94.6%)
+                            </text>
+                            <!-- Output (1,200 tokens = 5.4%) -->
+                            <rect x="10" y="130" width="22" height="60" fill="url(#outputGrad)" rx="8" class="token-bar">
+                                <title>Output: 1,200 tokens (5.4%)</title>
+                            </rect>
+                            <text x="45" y="165" text-anchor="start" class="flow-text" style="fill: white; font-weight: 600; font-size: 12px;">
+                                OUT: 1,200t (5.4%)
+                            </text>
+                        </svg>
+                    </div>
+
+                    <div>
+                        <h4>Strategy Comparison</h4>
+                        <svg width="100%" height="200" viewBox="0 0 400 200">
+                            <!-- FAST (2,060) -->
+                            <rect x="20" y="30" width="42" height="40" fill="#3b82f6" rx="4">
+                                <title>FAST: 2,060 tokens</title>
+                            </rect>
+                            <text x="41" y="85" text-anchor="middle" style="fill: var(--text); font-size: 11px;">FAST</text>
+                            <text x="41" y="100" text-anchor="middle" style="fill: var(--text); font-size: 11px;">2.1K</text>
+
+                            <!-- BALANCED (2,820) -->
+                            <rect x="90" y="20" width="57" height="50" fill="#10b981" rx="4">
+                                <title>BALANCED: 2,820 tokens</title>
+                            </rect>
+                            <text x="118" y="85" text-anchor="middle" style="fill: var(--text); font-size: 11px;">BAL</text>
+                            <text x="118" y="100" text-anchor="middle" style="fill: var(--text); font-size: 11px;">2.8K</text>
+
+                            <!-- PRECISE (22,396) -->
+                            <rect x="180" y="10" width="200" height="60" fill="#ef4444" rx="4">
+                                <title>PRECISE: 22,396 tokens</title>
+                            </rect>
+                            <text x="280" y="45" text-anchor="middle" style="fill: white; font-size: 13px; font-weight: 600;">PRECISE</text>
+                            <text x="280" y="62" text-anchor="middle" style="fill: white; font-size: 13px; font-weight: 600;">22.4K</text>
+
+                            <!-- Baseline -->
+                            <line x1="10" y1="90" x2="390" y2="90" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4"/>
+                            <text x="390" y="105" text-anchor="end" style="fill: var(--text-muted); font-size: 10px;">Baseline: 2K</text>
+                        </svg>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 3rem;">Architecture Flow Diagram (SVG)</h3>
+                <svg width="100%" height="600" viewBox="0 0 800 600" id="architectureSvg">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#10b981" />
+                        </marker>
+                    </defs>
+
+                    <!-- Layer 1: Routing -->
+                    <rect x="50" y="20" width="700" height="70" class="flow-box" />
+                    <text x="400" y="45" text-anchor="middle" class="flow-text" style="font-weight: 700; font-size: 16px;">LAYER 1: INTELLIGENT ROUTING</text>
+                    <text x="400" y="65" text-anchor="middle" class="flow-label">User Tier + Template + Complexity → Strategy</text>
+                    <text x="750" y="45" text-anchor="end" class="flow-label">~320 tokens</text>
+
+                    <!-- Arrow -->
+                    <path d="M 400 90 L 400 130" class="flow-arrow" />
+
+                    <!-- Layer 2: Cache -->
+                    <rect x="50" y="130" width="700" height="70" class="flow-box" />
+                    <text x="400" y="155" text-anchor="middle" class="flow-text" style="font-weight: 700; font-size: 16px;">LAYER 2: SEMANTIC CACHE</text>
+                    <text x="400" y="175" text-anchor="middle" class="flow-label">80% Hit Rate → Return Cached | 20% Miss → Continue</text>
+                    <text x="750" y="155" text-anchor="end" class="flow-label">~50-310 tokens</text>
+
+                    <!-- Arrow with branch -->
+                    <path d="M 400 200 L 400 240" class="flow-arrow" />
+                    <text x="420" y="225" class="flow-label" style="font-size: 13px;">Cache Miss (20%)</text>
+
+                    <!-- Layer 3: Retrieval -->
+                    <rect x="50" y="240" width="700" height="70" class="flow-box" />
+                    <text x="400" y="265" text-anchor="middle" class="flow-text" style="font-weight: 700; font-size: 16px;">LAYER 3: MODULAR RETRIEVAL</text>
+                    <text x="400" y="285" text-anchor="middle" class="flow-label">FAST: Vector (1.5K) | BAL: Hybrid (3.5K) | PRECISE: Multi-hop (8K)</text>
+                    <text x="750" y="265" text-anchor="end" class="flow-label">1.5K-8K tokens</text>
+
+                    <!-- Arrow -->
+                    <path d="M 400 310 L 400 350" class="flow-arrow" />
+
+                    <!-- Layer 4: CRAG -->
+                    <rect x="50" y="350" width="700" height="70" class="flow-box" />
+                    <text x="400" y="375" text-anchor="middle" class="flow-text" style="font-weight: 700; font-size: 16px;">LAYER 4: CRAG EVALUATION</text>
+                    <text x="400" y="395" text-anchor="middle" class="flow-label">T5 Evaluator → Correct/Ambiguous/Bad → Filter (40-70% reduction)</text>
+                    <text x="750" y="375" text-anchor="end" class="flow-label">~0 LLM tokens</text>
+
+                    <!-- Arrow -->
+                    <path d="M 400 420 L 400 460" class="flow-arrow" />
+
+                    <!-- Layer 5: Generation -->
+                    <rect x="50" y="460" width="330" height="60" class="flow-box" style="stroke: #f59e0b;" />
+                    <text x="215" y="480" text-anchor="middle" class="flow-text" style="font-weight: 700;">LAYER 5A: GENERATION</text>
+                    <text x="215" y="500" text-anchor="middle" class="flow-label" style="font-size: 11px;">Template-Specific</text>
+                    <text x="370" y="480" text-anchor="end" class="flow-label">1.9K-8.5K</text>
+
+                    <rect x="420" y="460" width="330" height="60" class="flow-box" style="stroke: #f59e0b;" />
+                    <text x="585" y="480" text-anchor="middle" class="flow-text" style="font-weight: 700;">LAYER 5B: OUTPUT</text>
+                    <text x="585" y="500" text-anchor="middle" class="flow-label" style="font-size: 11px;">Answer Generation</text>
+                    <text x="740" y="480" text-anchor="end" class="flow-label">200-1.2K</text>
+
+                    <!-- Arrow -->
+                    <path d="M 400 520 L 400 550" class="flow-arrow" />
+
+                    <!-- Layer 6: Validation -->
+                    <rect x="50" y="550" width="700" height="50" class="flow-box" style="stroke: #10b981;" />
+                    <text x="400" y="570" text-anchor="middle" class="flow-text" style="font-weight: 700; font-size: 16px;">LAYER 6: VALIDATION & AUTO-ESCALATION</text>
+                    <text x="400" y="588" text-anchor="middle" class="flow-label">Citation Check | Alignment | Self-Reflection</text>
+                    <text x="750" y="570" text-anchor="end" class="flow-label">0-4.4K tokens</text>
+                </svg>
+
+            </div>
+        </div>
+
         <div id="sources" class="section">
             <div class="card">
                 <h2>📖 Research Sources (53)</h2>
@@ -391,6 +851,22 @@
                 div.innerHTML = `<span>${k}:</span><strong>${v}</strong>`;
                 result.appendChild(div);
             });
+        }
+
+        // Flow diagram switching
+        function showFlow(strategy) {
+            // Hide all flows
+            document.getElementById('flowFast').style.display = 'none';
+            document.getElementById('flowBalanced').style.display = 'none';
+            document.getElementById('flowPrecise').style.display = 'none';
+
+            // Show selected flow
+            const flowId = 'flow' + strategy.charAt(0).toUpperCase() + strategy.slice(1).toLowerCase();
+            document.getElementById(flowId).style.display = 'block';
+
+            // Update button states
+            document.querySelectorAll('.strategy-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
         }
 
         populateTable();

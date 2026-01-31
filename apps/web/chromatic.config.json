@@ -5,8 +5,8 @@
   "onlyChanged": true,
   "exitZeroOnChanges": true,
   "exitOnceUploaded": true,
-  "autoAcceptChanges": "main",
-  "ignoreLastBuildOnBranch": "main",
+  "autoAcceptChanges": "main-dev",
+  "ignoreLastBuildOnBranch": "main-dev",
   "skip": "dependabot/**",
   "externals": [
     "public/**"
@@ -19,5 +19,7 @@
     "coverage-e2e/**",
     ".storybook/public/**"
   ],
-  "zip": true
+  "zip": true,
+  "diffThreshold": 0.05,
+  "diffIncludeAntiAliasing": true
 }

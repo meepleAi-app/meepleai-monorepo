@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeepleAI RAG Strategy Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #2563eb; --primary-dark: #1e40af; --secondary: #10b981;
+            --danger: #ef4444; --warning: #f59e0b; --bg: #0f172a; --bg-card: #1e293b;
+            --bg-hover: #334155; --text: #f1f5f9; --text-muted: #94a3b8; --border: #334155;
+        }
+
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+        header { background: linear-gradient(135deg, var(--primary-dark), var(--primary)); padding: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .subtitle { color: rgba(255,255,255,0.9); font-size: 1.1rem; }
+
+        nav { background: var(--bg-card); padding: 1rem 2rem; border-bottom: 2px solid var(--border); position: sticky; top: 0; z-index: 100; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+        nav a { color: var(--text); text-decoration: none; padding: 0.5rem 1rem; border-radius: 6px; transition: all 0.2s; }
+        nav a:hover { background: var(--bg-hover); color: var(--secondary); }
+        nav a.active { background: var(--primary); color: white; }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        .section { display: none; animation: fadeIn 0.3s; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .card h2 { color: var(--secondary); margin-bottom: 1rem; font-size: 1.8rem; }
+        .card h3 { color: var(--text); margin: 1.5rem 0 0.8rem; font-size: 1.3rem; }
+
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+        thead { background: var(--primary-dark); color: white; }
+        th { padding: 0.8rem; text-align: left; font-weight: 600; cursor: pointer; user-select: none; }
+        th:hover { background: var(--primary); }
+        td { padding: 0.8rem; border-bottom: 1px solid var(--border); }
+        tbody tr { transition: background 0.2s; }
+        tbody tr:hover { background: var(--bg-hover); }
+
+        .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+        .badge-p0 { background: var(--danger); }
+        .badge-p1 { background: var(--warning); }
+        .badge-p2 { background: var(--secondary); }
+        .badge-p3 { background: var(--text-muted); }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card { background: linear-gradient(135deg, var(--bg-card), var(--bg-hover)); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; text-align: center; }
+        .stat-value { font-size: 2.5rem; font-weight: 700; color: var(--secondary); margin-bottom: 0.5rem; }
+        .stat-label { color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .filter-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .filter-bar input, .filter-bar select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1rem; border-radius: 6px; font-size: 0.9rem; }
+
+        .calculator { background: var(--bg-card); border: 2px solid var(--primary); border-radius: 8px; padding: 2rem; margin-top: 2rem; }
+        .calculator-row { display: grid; grid-template-columns: 200px 1fr 150px; gap: 1rem; margin-bottom: 1rem; align-items: center; }
+        .calculator input { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.6rem; border-radius: 4px; width: 100%; }
+        .calculator-result { background: var(--primary-dark); padding: 1.5rem; border-radius: 6px; margin-top: 1.5rem; }
+        .result-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+
+        .architecture-diagram { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 2rem; font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.8; overflow-x: auto; white-space: pre; }
+        a.doc-link { color: var(--secondary); text-decoration: none; border-bottom: 1px dashed var(--secondary); transition: all 0.2s; }
+        a.doc-link:hover { color: var(--primary); border-bottom-style: solid; }
+        .footer { margin-top: 4rem; padding: 2rem; text-align: center; color: var(--text-muted); border-top: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🎲 MeepleAI RAG Strategy Dashboard</h1>
+        <p class="subtitle">Token-Optimized Modular Adaptive Corrective RAG (TOMAC-RAG)</p>
+    </header>
+
+    <nav>
+        <a href="#overview" class="nav-link active" onclick="showSection(event, 'overview')">Overview</a>
+        <a href="#variants" class="nav-link" onclick="showSection(event, 'variants')">36 Variants</a>
+        <a href="#architecture" class="nav-link" onclick="showSection(event, 'architecture')">Architecture</a>
+        <a href="#calculator" class="nav-link" onclick="showSection(event, 'calculator')">Token Calculator</a>
+        <a href="#docs" class="nav-link" onclick="showSection(event, 'docs')">Documentation</a>
+        <a href="#sources" class="nav-link" onclick="showSection(event, 'sources')">Sources</a>
+    </nav>
+
+    <div class="container">
+        <div id="overview" class="section active">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value">36</div><div class="stat-label">RAG Variants</div></div>
+                <div class="stat-card"><div class="stat-value">1,310</div><div class="stat-label">Avg Tokens/Query</div></div>
+                <div class="stat-card"><div class="stat-value">-35%</div><div class="stat-label">Token Reduction</div></div>
+                <div class="stat-card"><div class="stat-value">95%</div><div class="stat-label">Target Accuracy</div></div>
+                <div class="stat-card"><div class="stat-value">$419</div><div class="stat-label">Monthly Cost</div></div>
+                <div class="stat-card"><div class="stat-value">80%</div><div class="stat-label">Cache Hit Rate</div></div>
+            </div>
+
+            <div class="card">
+                <h2>🎯 TOMAC-RAG System</h2>
+                <ul>
+                    <li><strong>3D Routing</strong>: User tier + Query complexity + Template</li>
+                    <li><strong>Token-Optimized</strong>: 36 variants, 10 techniques, 80-95% reduction potential</li>
+                    <li><strong>Quality-First</strong>: CRAG + Self-RAG for high accuracy</li>
+                    <li><strong>Adaptive</strong>: FAST (60-70%) → BALANCED (25-30%) → PRECISE (5-10%)</li>
+                </ul>
+
+                <h3>Performance Targets</h3>
+                <table>
+                    <thead><tr><th>Metric</th><th>Target</th><th>Current</th><th>Gain</th></tr></thead>
+                    <tbody>
+                        <tr><td>Accuracy (rule)</td><td><strong>95%</strong></td><td>80%</td><td>+15%</td></tr>
+                        <tr><td>Accuracy (strategy)</td><td><strong>90%</strong></td><td>75%</td><td>+15%</td></tr>
+                        <tr><td>Avg Tokens</td><td><strong>1,310</strong></td><td>2,000</td><td>-35%</td></tr>
+                        <tr><td>Cost/Query</td><td><strong>$0.012</strong></td><td>$0.008</td><td>+50%</td></tr>
+                        <tr><td>Cache Hit</td><td><strong>80%</strong></td><td>40%</td><td>+100%</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Documentation</h3>
+                <ul>
+                    <li><a href="00-overview.md" class="doc-link">Executive Summary</a></li>
+                    <li><a href="01-tomac-rag-architecture.md" class="doc-link">Architecture Spec</a></li>
+                    <li><a href="08-token-optimization.md" class="doc-link">Token Optimization</a></li>
+                    <li><a href="appendix/B-variant-comparison.md" class="doc-link">36 Variants Matrix</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="variants" class="section">
+            <div class="card">
+                <h2>📊 36 RAG Variants Catalog</h2>
+                <div class="filter-bar">
+                    <input type="text" id="variantSearch" placeholder="Search..." onkeyup="filterVariants()">
+                    <select id="priorityFilter" onchange="filterVariants()">
+                        <option value="">All Priorities</option>
+                        <option value="P0">P0 Critical</option>
+                        <option value="P1">P1 High</option>
+                        <option value="P2">P2 Medium</option>
+                        <option value="P3">P3 Low</option>
+                    </select>
+                </div>
+                <table id="variantsTable"><thead><tr>
+                    <th>#</th><th>Variant</th><th>Tokens</th><th>Mult</th><th>Cost</th><th>Accuracy</th><th>Latency</th><th>Priority</th>
+                </tr></thead><tbody id="variantsTableBody"></tbody></table>
+            </div>
+        </div>
+
+        <div id="architecture" class="section">
+            <div class="card">
+                <h2>🏗️ Architecture</h2>
+                <div class="architecture-diagram">
+┌───────────────────────────────────────┐
+│      USER QUERY + CONTEXT             │
+└───────────────────────────────────────┘
+              ↓
+┌───────────────────────────────────────┐
+│ L1: ROUTING (~320 tokens)             │
+│  User Tier → Template → Complexity    │
+│  Strategy: FAST|BALANCED|PRECISE      │
+└───────────────────────────────────────┘
+              ↓
+┌───────────────────────────────────────┐
+│ L2: CACHE (~50-310 tokens)            │
+│  80% hit → return cached              │
+└───────────────────────────────────────┘
+              ↓
+┌───────────────────────────────────────┐
+│ L3: RETRIEVAL (~1.5K-8K tokens)       │
+│  FAST: Vector-only, Top-3             │
+│  BALANCED: Hybrid + Metadata          │
+│  PRECISE: Multi-hop (3-5)             │
+└───────────────────────────────────────┘
+              ↓
+┌───────────────────────────────────────┐
+│ L4: CRAG EVAL (~0 LLM tokens)         │
+│  T5 Evaluator: Correct/Ambiguous/Bad  │
+│  Decompose-Recompose: -40-70% context │
+└───────────────────────────────────────┘
+              ↓
+┌───────────────────────────────────────┐
+│ L5: GENERATION (~1.9K-8.5K tokens)    │
+│  rule: Extract/Synthesize/Resolve     │
+│  strategy: Pros-cons/Multi-agent      │
+└───────────────────────────────────────┘
+              ↓
+┌───────────────────────────────────────┐
+│ L6: VALIDATION (~0-4.4K tokens)       │
+│  FAST: Citations | BAL: Alignment     │
+│  PRECISE: Self-RAG reflection         │
+└───────────────────────────────────────┘
+              ↓
+        FINAL RESPONSE
+                </div>
+            </div>
+        </div>
+
+        <div id="calculator" class="section">
+            <div class="card">
+                <h2>🧮 Token & Cost Calculator</h2>
+                <div class="calculator">
+                    <div class="calculator-row">
+                        <label>Monthly Queries</label>
+                        <input type="number" id="monthlyQueries" value="100000" oninput="calc()">
+                        <span id="qDisp">100K</span>
+                    </div>
+                    <div class="calculator-row">
+                        <label>Cache Hit %</label>
+                        <input type="range" id="cacheRate" value="80" min="0" max="95" oninput="calc()">
+                        <span id="cDisp">80%</span>
+                    </div>
+                    <div class="calculator-row">
+                        <label>FAST %</label>
+                        <input type="range" id="fastPct" value="65" min="0" max="100" oninput="calc()">
+                        <span id="fDisp">65%</span>
+                    </div>
+                    <div class="calculator-row">
+                        <label>BALANCED %</label>
+                        <input type="range" id="balPct" value="28" min="0" max="100" oninput="calc()">
+                        <span id="bDisp">28%</span>
+                    </div>
+                    <div class="calculator-row">
+                        <label>PRECISE %</label>
+                        <input type="range" id="precPct" value="7" min="0" max="100" oninput="calc()">
+                        <span id="pDisp">7%</span>
+                    </div>
+                    <div class="calculator-row">
+                        <label>Model</label>
+                        <select id="model" onchange="calc()">
+                            <option value="0.25,1.25">Haiku ($0.25/$1.25)</option>
+                            <option value="3,15" selected>Sonnet ($3/$15)</option>
+                            <option value="15,75">Opus ($15/$75)</option>
+                            <option value="0.15,0.60">GPT-4o-mini</option>
+                        </select>
+                        <span></span>
+                    </div>
+                    <div class="calculator-result" id="result"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="docs" class="section">
+            <div class="card">
+                <h2>📚 Documentation Index</h2>
+                <h3>Core Docs</h3>
+                <ul>
+                    <li><a href="00-overview.md" class="doc-link">00-overview.md</a> - Executive Summary</li>
+                    <li><a href="01-tomac-rag-architecture.md" class="doc-link">01-tomac-rag-architecture.md</a> - System Design</li>
+                    <li><a href="08-token-optimization.md" class="doc-link">08-token-optimization.md</a> - Optimization Techniques</li>
+                </ul>
+                <h3>Appendices</h3>
+                <ul>
+                    <li><a href="appendix/A-research-sources.md" class="doc-link">Appendix A</a> - 53 Research Sources</li>
+                    <li><a href="appendix/B-variant-comparison.md" class="doc-link">Appendix B</a> - 36 Variants Comparison</li>
+                    <li><a href="appendix/C-token-cost-breakdown.md" class="doc-link">Appendix C</a> - Token Cost Breakdown</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="sources" class="section">
+            <div class="card">
+                <h2>📖 Research Sources (53)</h2>
+                <h3>Academic (10)</h3>
+                <ul>
+                    <li><a href="https://arxiv.org/html/2407.21059v1" target="_blank" class="doc-link">Modular RAG Framework</a></li>
+                    <li><a href="https://arxiv.org/html/2501.09136v1" target="_blank" class="doc-link">Agentic RAG Survey</a></li>
+                    <li><a href="https://arxiv.org/html/2601.14224" target="_blank" class="doc-link">Reranking Tradeoffs</a></li>
+                </ul>
+                <h3>Board Game Agents (7)</h3>
+                <ul>
+                    <li><a href="https://nbelle1.github.io/agents-of-change/" target="_blank" class="doc-link">Belle - HexMachina</a></li>
+                    <li><a href="https://arxiv.org/abs/2412.12119" target="_blank" class="doc-link">DeepMind - External/Internal Planning</a></li>
+                </ul>
+                <h3>Industry (30+)</h3>
+                <ul>
+                    <li><a href="https://www.datacamp.com/tutorial/corrective-rag-crag" target="_blank" class="doc-link">DataCamp CRAG Tutorial</a></li>
+                    <li><a href="https://app.ailog.fr/en/blog/guides/rag-cost-optimization" target="_blank" class="doc-link">Cost Optimization Guide</a></li>
+                </ul>
+                <p><a href="appendix/A-research-sources.md" class="doc-link"><strong>→ Full Bibliography</strong></a></p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>MeepleAI RAG Research</strong> | 2026-01-31</p>
+            <p>36 variants, 53 sources, 6-layer architecture</p>
+        </div>
+    </div>
+
+    <script>
+        const variants = [
+            {i:1,n:"Memory Cache",t:50,m:"0.025x",c:"$0.0002",a:"Same",l:"<50ms",p:"P0"},
+            {i:2,n:"Semantic Cache",t:986,m:"0.5x",c:"$0.004",a:"Same",l:"<200ms",p:"P0"},
+            {i:3,n:"Contextual Embed",t:1950,m:"0.98x",c:"$0.007",a:"+5%",l:"Same",p:"P0"},
+            {i:4,n:"Naive RAG",t:2000,m:"1.0x",c:"$0.008",a:"Base",l:"50-200ms",p:"Base"},
+            {i:5,n:"Compression",t:1950,m:"0.98x",c:"$0.008",a:"-3%",l:"200-500ms",p:"P2"},
+            {i:6,n:"CRAG",t:2625,m:"1.3x",c:"$0.010",a:"+12%",l:"1-3s",p:"P1"},
+            {i:7,n:"RQ-RAG",t:3020,m:"1.5x",c:"$0.012",a:"+8%",l:"500ms-1s",p:"P2"},
+            {i:8,n:"Metadata Filter",t:3100,m:"1.6x",c:"$0.012",a:"+6%",l:"300-800ms",p:"P0"},
+            {i:9,n:"Sentence Window",t:3250,m:"1.6x",c:"$0.012",a:"+7%",l:"500ms-1s",p:"P1"},
+            {i:10,n:"Cross-Encoder",t:3250,m:"1.6x",c:"$0.013",a:"+8%",l:"500ms-1s",p:"P0"},
+            {i:11,n:"Advanced RAG",t:3700,m:"1.85x",c:"$0.013",a:"+10%",l:"500ms-2s",p:"P0"},
+            {i:12,n:"CoT-RAG",t:3650,m:"1.8x",c:"$0.016",a:"+18%",l:"1-2s",p:"P1"},
+            {i:13,n:"HyDE",t:3950,m:"2.0x",c:"$0.018",a:"+5%",l:"500ms-2s",p:"P3"},
+            {i:14,n:"Query Expansion",t:4110,m:"2.1x",c:"$0.016",a:"+7%",l:"500ms-1s",p:"P2"},
+            {i:15,n:"Graph RAG",t:4180,m:"2.1x",c:"$0.016",a:"+10%",l:"1-5s",p:"P3"},
+            {i:16,n:"Hybrid Search",t:4250,m:"2.1x",c:"$0.016",a:"+11%",l:"500ms-1s",p:"P0"},
+            {i:17,n:"Few-Shot",t:4150,m:"2.1x",c:"$0.016",a:"+5%",l:"500ms-1s",p:"P2"},
+            {i:18,n:"ColBERT",t:3250,m:"1.6x",c:"$0.014",a:"+12%",l:"500ms-1s",p:"P1"},
+            {i:19,n:"Hierarchical",t:5750,m:"2.9x",c:"$0.021",a:"+9%",l:"1-2s",p:"P2"},
+            {i:20,n:"Step-Back",t:5740,m:"2.9x",c:"$0.022",a:"+10%",l:"1-3s",p:"P2"},
+            {i:21,n:"Multi-Query",t:6250,m:"3.1x",c:"$0.024",a:"+9%",l:"1-3s",p:"P2"},
+            {i:22,n:"Decomposition",t:6550,m:"3.3x",c:"$0.026",a:"+12%",l:"2-4s",p:"P1"},
+            {i:23,n:"Iterative",t:6736,m:"3.4x",c:"$0.025",a:"+14%",l:"2-5s",p:"P1"},
+            {i:24,n:"Self-RAG",t:7420,m:"3.7x",c:"$0.028",a:"+13%",l:"2-5s",p:"P1"},
+            {i:25,n:"LLM Rerank",t:8700,m:"4.4x",c:"$0.033",a:"+14%",l:"1-2s",p:"P2"},
+            {i:26,n:"Multimodal",t:8550,m:"4.3x",c:"$0.034",a:"+8%",l:"2-4s",p:"P2"},
+            {i:27,n:"Adv RAG Full",t:9000,m:"4.5x",c:"$0.032",a:"+12%",l:"1-2s",p:"P1"},
+            {i:28,n:"RAG-Fusion",t:11550,m:"5.8x",c:"$0.041",a:"+11%",l:"2-4s",p:"P2"},
+            {i:29,n:"Multi-Agent",t:12900,m:"6.5x",c:"$0.043",a:"+20%",l:"5-10s",p:"P2"},
+            {i:30,n:"Ensemble",t:11550,m:"5.8x",c:"$0.091",a:"+15%",l:"3-8s",p:"P3"},
+        ];
+
+        function showSection(e, id) {
+            e.preventDefault();
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            e.target.classList.add('active');
+        }
+
+        function populateTable() {
+            const tbody = document.getElementById('variantsTableBody');
+            tbody.textContent = '';
+            variants.forEach(v => {
+                const tr = document.createElement('tr');
+                tr.dataset.priority = v.p;
+                tr.dataset.tokens = v.t;
+                tr.innerHTML = `<td>${v.i}</td><td><strong>${v.n}</strong></td><td>${v.t}</td><td>${v.m}</td><td>${v.c}</td><td>${v.a}</td><td>${v.l}</td><td><span class="badge badge-${v.p.toLowerCase()}">${v.p}</span></td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterVariants() {
+            const search = (document.getElementById('variantSearch').value || '').toLowerCase();
+            const priority = document.getElementById('priorityFilter').value;
+            document.querySelectorAll('#variantsTableBody tr').forEach(row => {
+                const match = row.textContent.toLowerCase().includes(search) &&
+                             (!priority || row.dataset.priority === priority);
+                row.style.display = match ? '' : 'none';
+            });
+        }
+
+        function calc() {
+            const q = parseInt(document.getElementById('monthlyQueries').value) || 100000;
+            const cRate = parseInt(document.getElementById('cacheRate').value) / 100;
+            const fPct = parseInt(document.getElementById('fastPct').value) / 100;
+            const bPct = parseInt(document.getElementById('balPct').value) / 100;
+            const pPct = parseInt(document.getElementById('precPct').value) / 100;
+
+            document.getElementById('qDisp').textContent = (q/1000).toFixed(0) + 'K';
+            document.getElementById('cDisp').textContent = (cRate*100) + '%';
+            document.getElementById('fDisp').textContent = (fPct*100) + '%';
+            document.getElementById('bDisp').textContent = (bPct*100) + '%';
+            document.getElementById('pDisp').textContent = (pPct*100) + '%';
+
+            const cHits = q * cRate;
+            const cMiss = q * (1 - cRate);
+            const fast = cMiss * fPct;
+            const bal = cMiss * bPct;
+            const prec = cMiss * pPct;
+
+            const totTok = (cHits * 50) + (fast * 2060) + (bal * 2820) + (prec * 22396);
+            const avgTok = totTok / q;
+            const inTok = totTok * 0.97;
+            const outTok = totTok * 0.03;
+
+            const [inPrice, outPrice] = document.getElementById('model').value.split(',').map(parseFloat);
+            const cost = (inTok/1000000)*inPrice + (outTok/1000000)*outPrice;
+
+            const result = document.getElementById('result');
+            result.textContent = '';
+            const rows = [
+                ['Queries', q.toLocaleString()],
+                ['Cache Hits', Math.round(cHits).toLocaleString()],
+                ['FAST', Math.round(fast).toLocaleString()],
+                ['BALANCED', Math.round(bal).toLocaleString()],
+                ['PRECISE', Math.round(prec).toLocaleString()],
+                ['Total Tokens', (totTok/1000000).toFixed(1) + 'M'],
+                ['Avg Tokens', Math.round(avgTok).toLocaleString()],
+                ['MONTHLY COST', '$' + cost.toFixed(2)]
+            ];
+            rows.forEach(([k,v]) => {
+                const div = document.createElement('div');
+                div.className = 'result-row';
+                div.innerHTML = `<span>${k}:</span><strong>${v}</strong>`;
+                result.appendChild(div);
+            });
+        }
+
+        populateTable();
+        calc();
+    </script>
+</body>
+</html>

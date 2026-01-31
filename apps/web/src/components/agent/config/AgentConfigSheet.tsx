@@ -23,6 +23,9 @@ import {
   SheetFooter,
 } from '@/components/ui/navigation/sheet';
 import { Button } from '@/components/ui/primitives/button';
+import { GameSelector } from './GameSelector';
+import { TemplateCarousel } from './TemplateCarousel';
+import { ModelSelector } from './ModelSelector';
 
 interface AgentConfigSheetProps {
   isOpen: boolean;
@@ -89,28 +92,16 @@ export function AgentConfigSheet({ isOpen, onClose, gameId, gameTitle }: AgentCo
         <div className="flex-1 overflow-y-auto py-6 px-1">
           {view === 'config' && (
             <div className="space-y-6">
-              {/* Placeholder for child components */}
-              <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-6">
-                <h3 className="mb-2 font-semibold text-slate-200">Game Selection</h3>
-                <p className="text-sm text-slate-400">
-                  Component from #3239 (FRONT-003)
-                </p>
-              </div>
+              {/* Game Selection - Issue #3239 */}
+              <GameSelector />
 
-              <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-6">
-                <h3 className="mb-2 font-semibold text-slate-200">Template Carousel</h3>
-                <p className="text-sm text-slate-400">
-                  Component from #3239 (FRONT-003)
-                </p>
-              </div>
+              {/* Template Carousel - Issue #3239 */}
+              <TemplateCarousel />
 
-              <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-6">
-                <h3 className="mb-2 font-semibold text-slate-200">Model Selector</h3>
-                <p className="text-sm text-slate-400">
-                  Component from #3239 (FRONT-003)
-                </p>
-              </div>
+              {/* Model Selection - Issue #3239 */}
+              <ModelSelector />
 
+              {/* Token Quota - Placeholder for #3240 */}
               <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-6">
                 <h3 className="mb-2 font-semibold text-slate-200">Token Quota</h3>
                 <p className="text-sm text-slate-400">
@@ -118,6 +109,7 @@ export function AgentConfigSheet({ isOpen, onClose, gameId, gameTitle }: AgentCo
                 </p>
               </div>
 
+              {/* Slot Cards - Placeholder for #3240 */}
               <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-6">
                 <h3 className="mb-2 font-semibold text-slate-200">Slot Cards</h3>
                 <p className="text-sm text-slate-400">

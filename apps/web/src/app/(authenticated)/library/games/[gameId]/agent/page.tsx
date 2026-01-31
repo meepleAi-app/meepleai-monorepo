@@ -15,6 +15,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { AgentConfigSheet } from '@/components/agent/config/AgentConfigSheet';
+import { AgentChatSheet } from '@/components/agent/chat';
 import { useAgentStore } from '@/stores/agentStore';
 import { Button } from '@/components/ui/primitives/button';
 import type { Game } from '@/types/domain';
@@ -99,6 +100,15 @@ export default function AgentPage() {
           gameTitle={game.title}
         />
       )}
+
+      {/* Chat Sheet */}
+      <AgentChatSheet
+        gameTitle={game?.title || 'Game'}
+        agentTypeName="Rules Helper"
+        modelName="GPT-4o-mini"
+        tokensUsed={445}
+        tokensLimit={500}
+      />
     </div>
   );
 }

@@ -28,6 +28,7 @@ import { TemplateCarousel } from './TemplateCarousel';
 import { ModelSelector } from './ModelSelector';
 import { TokenQuotaDisplay } from './TokenQuotaDisplay';
 import { SlotCards } from './SlotCards';
+import { ActionBar } from '../shared/ActionBar';
 
 interface AgentConfigSheetProps {
   isOpen: boolean;
@@ -132,13 +133,12 @@ export function AgentConfigSheet({ isOpen, onClose, gameId, gameTitle }: AgentCo
 
         {/* Footer - Action Bar */}
         <SheetFooter className="border-t border-slate-800 pt-4">
-          <div className="w-full space-y-2">
-            {/* Placeholder for #3241 (Action Bar) */}
-            <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
-              <p className="text-center text-sm text-slate-400">
-                Contextual Action Bar (Issue #3241)
-              </p>
-            </div>
+          <div className="w-full">
+            <ActionBar
+              state="config"
+              onLaunch={() => console.log('Launch agent')}
+              onCancel={onClose}
+            />
           </div>
         </SheetFooter>
       </SheetContent>

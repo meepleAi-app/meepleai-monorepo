@@ -24,4 +24,7 @@ export interface AgentMessage {
 
   /** Citations (for agent messages) */
   citations?: Citation[];
+
+  /** Confidence score 0.0-1.0 (for agent messages) - Issue #3244 */
+  confidence?: number;
 }

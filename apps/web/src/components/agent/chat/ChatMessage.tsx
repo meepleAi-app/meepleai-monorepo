@@ -17,7 +17,11 @@ import ReactMarkdown from 'react-markdown';
 
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/utils/timeUtils';
+import type { Citation } from '@/lib/api/schemas/streaming.schemas';
 import { AgentMessage as AgentMessageType } from '@/types/agent';
+
+import { CitationBadge } from './CitationBadge';
+import { ConfidenceBar } from './ConfidenceBar';
 
 interface ChatMessageProps {
   message: AgentMessageType;
@@ -44,6 +48,12 @@ export const ChatMessage = React.memo(function ChatMessage({
     } catch (error) {
       console.error('Failed to copy message:', error);
     }
+  };
+
+  // Citation click handler (MVP: logs, future: PDF viewer)
+  const handleCitationClick = (citation: Citation) => {
+    console.log('Citation clicked:', citation);
+    // TODO: Future integration with PDF viewer scroll
   };
 
   // System message (center-aligned)
@@ -138,31 +148,24 @@ export const ChatMessage = React.memo(function ChatMessage({
           )}
         </div>
 
-        {/* Citations (agent only) */}
+        {/* Confidence Bar (agent only) - Issue #3244 */}
+        {isAgent && message.confidence !== undefined && (
+          <div className="mt-3">
+            <ConfidenceBar confidence={message.confidence} />
+          </div>
+        )}
+
+        {/* Citations (agent only) - Issue #3244 */}
         {isAgent && message.citations && message.citations.length > 0 && (
           <div className="mt-3 pt-3 border-t border-gray-700">
             <div className="text-xs text-gray-400 mb-1.5">Fonti:</div>
             <div className="flex flex-wrap gap-1.5">
               {message.citations.map((citation, index) => (
-                <button
+                <CitationBadge
                   key={index}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-xs hover:bg-gray-600 transition-colors"
-                  title={citation.snippet ?? undefined}
-                  onClick={() => {
-                    // TODO: Future integration with PDF viewer
-                    console.log('Citation clicked:', citation);
-                  }}
-                >
-                  <span className="text-cyan-400">{citation.source || 'Source'}</span>
-                  {citation.pageNumber && (
-                    <span className="text-gray-400">p.{citation.pageNumber}</span>
-                  )}
-                  {citation.score && (
-                    <span className="text-gray-500 text-[10px]">
-                      ({(citation.score * 100).toFixed(0)}%)
-                    </span>
-                  )}
-                </button>
+                  citation={citation}
+                  onClick={handleCitationClick}
+                />
               ))}
             </div>
           </div>

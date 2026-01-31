@@ -113,6 +113,7 @@ export default function ToolkitLandingPage() {
    */
   const updateParticipant = (index: number, value: string) => {
     const updated = [...participantNames];
+    // eslint-disable-next-line security/detect-object-injection -- index is validated function parameter for array update
     updated[index] = value;
     setParticipantNames(updated);
   };

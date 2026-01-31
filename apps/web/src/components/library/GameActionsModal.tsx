@@ -31,6 +31,7 @@ import {
   FileText,
   ChevronRight,
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import {
@@ -104,10 +105,12 @@ export function GameActionsModal({
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               {gameImageUrl && (
-                <img
+                <Image
                   src={gameImageUrl}
                   alt={gameTitle}
-                  className="w-12 h-12 rounded-lg object-cover shadow-sm"
+                  width={48}
+                  height={48}
+                  className="rounded-lg object-cover shadow-sm"
                 />
               )}
               <div>

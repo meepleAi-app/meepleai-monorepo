@@ -5,9 +5,9 @@
  * Tests character counter, validation, and save states.
  */
 
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import { EditNotesModal } from './EditNotesModal';
 

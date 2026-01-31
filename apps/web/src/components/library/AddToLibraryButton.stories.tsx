@@ -5,9 +5,9 @@
  * Tests in/out of library states, loading, disabled, and quota limits.
  */
 
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import { AddToLibraryButton } from './AddToLibraryButton';
 

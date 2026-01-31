@@ -5,9 +5,9 @@
  * Tests destructive action patterns and loading states.
  */
 
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import { RemoveGameDialog } from './RemoveGameDialog';
 

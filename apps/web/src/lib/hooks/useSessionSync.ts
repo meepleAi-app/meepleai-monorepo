@@ -175,7 +175,7 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
         setIsConnected(true);
         setError(null);
         reconnectAttemptsRef.current = 0;
-        console.log('[useSessionSync] Connected to SSE stream');
+        console.warn('[useSessionSync] Connected to SSE stream');
       };
 
       eventSource.onerror = err => {
@@ -191,7 +191,7 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
           const delay = Math.min(Math.pow(2, reconnectAttemptsRef.current) * 1000, 30000);
           reconnectAttemptsRef.current += 1;
 
-          console.log(
+          console.warn(
             `[useSessionSync] Reconnecting in ${delay / 1000}s (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
           );
 

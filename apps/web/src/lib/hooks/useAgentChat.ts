@@ -110,6 +110,7 @@ export function useAgentChat(
   // Zustand store
   const { messages, addMessage, updateLastMessage, clearMessages: storeClearMessages } =
     useAgentChatStore(state => ({
+      // eslint-disable-next-line security/detect-object-injection -- sessionId is typed prop with ?? fallback
       messages: state.messagesBySession[sessionId] ?? [],
       addMessage: state.addMessage,
       updateLastMessage: state.updateLastMessage,

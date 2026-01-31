@@ -5,9 +5,9 @@
  * Tests model selection, sliders, radio groups, and form states.
  */
 
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import { DEFAULT_AGENT_CONFIG } from '@/lib/api';
 

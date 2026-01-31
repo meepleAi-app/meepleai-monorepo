@@ -29,7 +29,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 // MOCK DATA
 // ============================================================================
 
-const mockRuleSpec: RuleSpec = {
+const _mockRuleSpec: RuleSpec = {
   gameId: 'demo-chess',
   version: '1.2.3',
   createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -66,7 +66,7 @@ const mockRuleSpec: RuleSpec = {
   ],
 };
 
-const mockAuthUser = {
+const _mockAuthUser = {
   id: 'editor-user-123',
   email: 'editor@example.com',
   displayName: 'Editor User',
@@ -96,9 +96,9 @@ const createMockQueryClient = () => {
 /**
  * Mock search params for gameId
  */
-const setupSearchParams = (gameId: string = 'demo-chess') => {
+const _setupSearchParams = (gameId: string = 'demo-chess') => {
   // Mock next/navigation's useSearchParams
-  const searchParamsUrl = new URLSearchParams({ gameId });
+  const _searchParamsUrl = new URLSearchParams({ gameId });
   global.URLSearchParams = URLSearchParams as any;
 };
 

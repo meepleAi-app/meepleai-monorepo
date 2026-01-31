@@ -5,9 +5,9 @@
  * Tests privacy settings, link management, and revoke flow.
  */
 
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import { ShareLibraryModal } from './ShareLibraryModal';
 

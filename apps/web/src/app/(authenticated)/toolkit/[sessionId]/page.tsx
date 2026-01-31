@@ -131,7 +131,7 @@ export default function ActiveSessionPage() {
   /**
    * Handle resume session
    */
-  const handleResume = async () => {
+  const _handleResume = async () => {
     try {
       await resumeSession();
       // Toast shown by SSE callback to avoid duplicates

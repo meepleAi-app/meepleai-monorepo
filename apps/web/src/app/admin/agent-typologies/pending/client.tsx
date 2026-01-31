@@ -96,18 +96,20 @@ export function PendingTypologiesClient() {
   const handleApproveConfirm = useCallback(async () => {
     if (!approveDialog.typology) return;
 
+    const { typology } = approveDialog;
+
     try {
       // Optimistic update
       setTypologies((prev) =>
-        prev.filter((t) => t.id !== approveDialog.typology!.id)
+        prev.filter((t) => t.id !== typology.id)
       );
       setSelectedIds((prev) => {
         const next = new Set(prev);
-        next.delete(approveDialog.typology!.id);
+        next.delete(typology.id);
         return next;
       });
 
-      await admin.approveAgentTypology(approveDialog.typology.id);
+      await admin.approveAgentTypology(typology.id);
       toast.success(`Approved typology: ${approveDialog.typology.name}`);
       setApproveDialog({ isOpen: false, typology: null, isBulk: false });
     } catch (err) {
@@ -117,7 +119,7 @@ export function PendingTypologiesClient() {
         err instanceof Error ? err.message : 'Failed to approve typology';
       toast.error(errorMessage);
     }
-  }, [approveDialog.typology, fetchPendingTypologies]);
+  }, [approveDialog, fetchPendingTypologies]);
 
   // Single reject
   const handleReject = useCallback(
@@ -131,18 +133,20 @@ export function PendingTypologiesClient() {
     async (reason: string) => {
       if (!rejectDialog.typology) return;
 
+      const { typology } = rejectDialog;
+
       try {
         // Optimistic update
         setTypologies((prev) =>
-          prev.filter((t) => t.id !== rejectDialog.typology!.id)
+          prev.filter((t) => t.id !== typology.id)
         );
         setSelectedIds((prev) => {
           const next = new Set(prev);
-          next.delete(rejectDialog.typology!.id);
+          next.delete(typology.id);
           return next;
         });
 
-        await admin.rejectAgentTypology(rejectDialog.typology.id, reason);
+        await admin.rejectAgentTypology(typology.id, reason);
         toast.success(`Rejected typology: ${rejectDialog.typology.name}`);
         setRejectDialog({ isOpen: false, typology: null, isBulk: false });
       } catch (err) {
@@ -153,7 +157,7 @@ export function PendingTypologiesClient() {
         toast.error(errorMessage);
       }
     },
-    [rejectDialog.typology, fetchPendingTypologies]
+    [rejectDialog, fetchPendingTypologies]
   );
 
   // View details

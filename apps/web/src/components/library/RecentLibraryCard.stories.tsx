@@ -5,7 +5,7 @@
  * Tests favorites, timestamps, and hover states.
  */
 
-import { within, userEvent } from '@storybook/test';
+import { within, userEvent } from 'storybook/test';
 
 import type { UserLibraryEntry } from '@/lib/api';
 

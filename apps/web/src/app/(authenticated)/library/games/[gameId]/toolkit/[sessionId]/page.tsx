@@ -44,7 +44,7 @@ export default function GameSpecificSessionPage() {
     loadSession,
     updateScore,
     pauseSession,
-    resumeSession,
+    resumeSession: _resumeSession,
     finalizeSession,
     addScoreFromSSE,
     isLoading,

@@ -5,9 +5,9 @@
  * Tests selection states, dropdown menus, and responsive layouts.
  */
 
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 

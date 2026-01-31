@@ -21,7 +21,7 @@ interface Template {
 
 export function TemplateCarousel() {
   const { selectedTypologyId, setSelectedTypology } = useAgentStore();
-  const [showInfo, setShowInfo] = useState<string | null>(null);
+  const [_showInfo, _setShowInfo] = useState<string | null>(null);
 
   const templates: Template[] = [
     { id: '1', name: 'Rules Helper', icon: '📖', description: 'Answer rules questions' },
@@ -60,7 +60,7 @@ export function TemplateCarousel() {
                 className="absolute top-1 right-1 h-6 w-6"
                 onClick={e => {
                   e.stopPropagation();
-                  setShowInfo(template.id);
+                  _setShowInfo(template.id);
                 }}
               >
                 <Info className="h-3 w-3" />

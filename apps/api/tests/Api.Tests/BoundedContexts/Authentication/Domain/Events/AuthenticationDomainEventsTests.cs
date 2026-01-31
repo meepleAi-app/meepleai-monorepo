@@ -424,4 +424,102 @@ public sealed class AuthenticationDomainEventsTests
     }
 
     #endregion
+
+    #region UserLevelChangedEvent Tests
+
+    [Fact]
+    public void UserLevelChangedEvent_SetsProperties()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var oldLevel = 5;
+        var newLevel = 10;
+
+        // Act
+        var evt = new UserLevelChangedEvent(userId, oldLevel, newLevel);
+
+        // Assert
+        evt.UserId.Should().Be(userId);
+        evt.OldLevel.Should().Be(oldLevel);
+        evt.NewLevel.Should().Be(newLevel);
+    }
+
+    [Fact]
+    public void UserLevelChangedEvent_WithLevelDecrease_SetsCorrectValues()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+
+        // Act
+        var evt = new UserLevelChangedEvent(userId, oldLevel: 15, newLevel: 10);
+
+        // Assert
+        evt.OldLevel.Should().Be(15);
+        evt.NewLevel.Should().Be(10);
+    }
+
+    [Fact]
+    public void UserLevelChangedEvent_WithZeroLevels_SetsProperties()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+
+        // Act
+        var evt = new UserLevelChangedEvent(userId, oldLevel: 0, newLevel: 1);
+
+        // Assert
+        evt.OldLevel.Should().Be(0);
+        evt.NewLevel.Should().Be(1);
+    }
+
+    #endregion
+
+    #region UserSuspendedEvent Tests
+
+    [Fact]
+    public void UserSuspendedEvent_WithReason_SetsProperties()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+
+        // Act
+        var evt = new UserSuspendedEvent(userId, "Policy violation");
+
+        // Assert
+        evt.UserId.Should().Be(userId);
+        evt.Reason.Should().Be("Policy violation");
+    }
+
+    [Fact]
+    public void UserSuspendedEvent_WithoutReason_SetsNullReason()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+
+        // Act
+        var evt = new UserSuspendedEvent(userId);
+
+        // Assert
+        evt.UserId.Should().Be(userId);
+        evt.Reason.Should().BeNull();
+    }
+
+    #endregion
+
+    #region UserUnsuspendedEvent Tests
+
+    [Fact]
+    public void UserUnsuspendedEvent_SetsProperties()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+
+        // Act
+        var evt = new UserUnsuspendedEvent(userId);
+
+        // Assert
+        evt.UserId.Should().Be(userId);
+    }
+
+    #endregion
 }

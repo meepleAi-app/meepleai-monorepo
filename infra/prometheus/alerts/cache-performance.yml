@@ -1,0 +1,24 @@
+# Redis Cache Performance Monitoring Rules
+# Tracks cache availability and performance
+
+groups:
+  - name: redis_critical_alerts
+    interval: 30s
+    rules:
+      # CRITICAL: Redis cache is down
+      - alert: RedisDown
+        expr: |
+          redis_up{} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: dependency
+          component: cache
+        annotations:
+          summary: "Redis cache is unreachable"
+          description: |
+            The API cannot connect to Redis.
+            Caching, session management, and rate limiting are affected.
+            Check Redis container health.
+          runbook_url: "https://docs.meepleai.dev/runbooks/dependency-down"

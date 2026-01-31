@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <RunConfiguration>
+    <!-- Maximum time for entire test session: 30 minutes -->
+    <TestSessionTimeout>1800000</TestSessionTimeout>
+
+    <!-- Results directory -->
+    <ResultsDirectory>./TestResults</ResultsDirectory>
+
+    <!-- Parallel execution settings -->
+    <MaxCpuCount>1</MaxCpuCount>
+    <DisableParallelization>false</DisableParallelization>
+  </RunConfiguration>
+
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <!-- Code coverage data collector -->
+      <DataCollector friendlyName="Code Coverage" uri="datacollector://Microsoft/CodeCoverage/2.0" assemblyQualifiedName="Microsoft.VisualStudio.Coverage.DynamicCoverageDataCollector, Microsoft.VisualStudio.TraceCollector, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+        <Configuration>
+          <CodeCoverage>
+            <ModulePaths>
+              <Include>
+                <ModulePath>.*\\Api\\.dll$</ModulePath>
+              </Include>
+              <Exclude>
+                <ModulePath>.*Tests\\.dll$</ModulePath>
+                <ModulePath>.*TestAdapter\\.dll$</ModulePath>
+              </Exclude>
+            </ModulePaths>
+          </CodeCoverage>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+
+  <LoggerRunSettings>
+    <Loggers>
+      <Logger friendlyName="console" enabled="True">
+        <Configuration>
+          <Verbosity>detailed</Verbosity>
+        </Configuration>
+      </Logger>
+      <Logger friendlyName="trx" enabled="True">
+        <Configuration>
+          <LogFileName>integration-test-results.trx</LogFileName>
+        </Configuration>
+      </Logger>
+    </Loggers>
+  </LoggerRunSettings>
+
+  <!-- xUnit specific settings -->
+  <xUnit>
+    <!-- Maximum time per test: 60 seconds (for health checks with 10s+ warmup) -->
+    <MaxParallelThreads>1</MaxParallelThreads>
+    <DiagnosticMessages>true</DiagnosticMessages>
+    <AppDomain>denied</AppDomain>
+  </xUnit>
+</RunSettings>

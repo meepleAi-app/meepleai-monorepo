@@ -1,0 +1,83 @@
+
+
+#pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
+namespace Api.Services;
+
+/// <summary>
+/// Service for TOTP-based two-factor authentication
+/// </summary>
+internal interface ITotpService
+{
+    /// <summary>
+    /// Generate TOTP secret, QR code URL, and backup codes for 2FA enrollment
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="userEmail">User email for QR code</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Setup response with secret, QR URL, and backup codes</returns>
+    Task<TotpSetupResponse> GenerateSetupAsync(Guid userId, string userEmail, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Enable two-factor authentication after verifying TOTP code
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="totpCode">6-digit TOTP code from authenticator app</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if code valid and 2FA enabled, false otherwise</returns>
+    Task<bool> EnableTwoFactorAsync(Guid userId, string totpCode, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verify TOTP code during login
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="code">6-digit TOTP code</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if code valid, false otherwise</returns>
+    Task<bool> VerifyCodeAsync(Guid userId, string code, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verify backup code and mark as used
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="backupCode">8-character backup code</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if code valid and unused, false otherwise</returns>
+    Task<bool> VerifyBackupCodeAsync(Guid userId, string backupCode, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Disable two-factor authentication with password and code verification
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="password">User password</param>
+    /// <param name="totpOrBackupCode">TOTP code or backup code</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task DisableTwoFactorAsync(Guid userId, string password, string totpOrBackupCode, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get two-factor authentication status for user
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>2FA status including enabled state and backup codes count</returns>
+    Task<TwoFactorStatusResponse> GetTwoFactorStatusAsync(Guid userId, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Response for TOTP setup containing secret and backup codes
+/// </summary>
+internal class TotpSetupResponse
+{
+    public string Secret { get; set; } = string.Empty;
+    public string QrCodeUrl { get; set; } = string.Empty;
+    public List<string> BackupCodes { get; set; } = new();
+}
+
+/// <summary>
+/// Response for 2FA status
+/// </summary>
+internal class TwoFactorStatusResponse
+{
+    public bool IsEnabled { get; set; }
+    public DateTime? EnabledAt { get; set; }
+    public int UnusedBackupCodesCount { get; set; }
+}

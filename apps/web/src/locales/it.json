@@ -1,0 +1,951 @@
+{
+  "accessibility": {
+    "close": "Chiudi",
+    "closeNotification": "Chiudi notifica",
+    "dismissBanner": "Chiudi banner",
+    "errorOccurred": "Si è verificato un errore",
+    "loading": "Caricamento in corso, attendere prego",
+    "mainNavigation": "Navigazione principale",
+    "menu": "Menu",
+    "openInNewTab": "Apri in una nuova scheda",
+    "quickActions": "Azioni rapide",
+    "recentGames": "Giochi recenti",
+    "selectAllUsers": "Seleziona tutti gli utenti",
+    "skipToMain": "Salta al contenuto principale"
+  },
+  "admin": {
+    "analytics": {
+      "activeSessions": "Sessioni Attive",
+      "apiRequests": "Richieste API",
+      "apiRequestsToday": "Richieste API Oggi",
+      "avgConfidence": "Punteggio Confidenza Medio",
+      "backToUsers": "Torna agli Utenti",
+      "chatMessages": "Messaggi Chat",
+      "dashboard": "Pannello Analisi",
+      "pdfDocuments": "Documenti PDF Totali",
+      "pdfUploads": "Caricamenti PDF",
+      "ragRequests": "Richieste RAG Totali",
+      "sessionCreations": "Creazione Sessioni",
+      "tokensUsed": "Token Utilizzati Totali",
+      "totalUsers": "Utenti Totali",
+      "userRegistrations": "Registrazioni Utenti"
+    },
+    "cache": {
+      "hitRate": "Tasso di hit della cache",
+      "invalidateByTag": "Invalida cache per tag",
+      "refreshStats": "Aggiorna statistiche cache",
+      "tagPlaceholder": "Inserisci tag (es. qa, setup)",
+      "tagToInvalidate": "Tag da invalidare",
+      "title": "Cache"
+    },
+    "configuration": {
+      "aiLlm": "Configurazione AI / LLM",
+      "rag": "Configurazione RAG",
+      "rateLimit": "Configurazione Limiti di Frequenza",
+      "tabs": "Schede configurazione",
+      "title": "Configurazione"
+    },
+    "games": "Giochi",
+    "logs": {
+      "filterPlaceholder": "Filtra per query, endpoint, ID utente o ID gioco...",
+      "title": "Log"
+    },
+    "title": "Pannello amministrazione",
+    "users": {
+      "closeNotification": "Chiudi notifica",
+      "createUser": "Crea Utente",
+      "deleteConfirm": "Sei sicuro di voler eliminare",
+      "deleteMultiple": "Elimina Più Utenti",
+      "deleteSelected": "Elimina Selezionati",
+      "deleteUser": "Elimina Utente",
+      "displayName": "Nome Visualizzato *",
+      "editUser": "Modifica Utente",
+      "email": "Email *",
+      "management": "Gestione Utenti",
+      "of": "di",
+      "page": "Pagina",
+      "password": "Password *",
+      "role": "Ruolo *",
+      "saveChanges": "Salva Modifiche",
+      "searchPlaceholder": "Cerca per email o nome...",
+      "selectAll": "Seleziona tutti gli utenti",
+      "showing": "Mostrando",
+      "to": "a",
+      "users": "utenti",
+      "validationDisplayName": "Nome visualizzato richiesto",
+      "validationEmail": "Email valida richiesta",
+      "validationPassword": "La password deve essere di almeno 8 caratteri"
+    },
+    "workflows": "Flussi di lavoro"
+  },
+  "app": {
+    "description": "Mai più discussioni sulle regole. Ottieni risposte istantanee e accurate da qualsiasi regolamento con la ricerca semantica basata su AI.",
+    "tagline": "Il tuo assistente intelligente per i giochi da tavolo",
+    "title": "MeepleAI - Assistente AI per Regolamenti di Giochi da Tavolo"
+  },
+  "auth": {
+    "login": {
+      "emailLabel": "Email",
+      "emailPlaceholder": "tu@esempio.com",
+      "loggingIn": "Accesso in corso...",
+      "loginButton": "Accedi",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "••••••••",
+      "signInTo": "Accedi a MeepleAI"
+    },
+    "oauth": {
+      "discord": "Continua con Discord",
+      "github": "Continua con GitHub",
+      "google": "Continua con Google",
+      "separator": "Oppure continua con"
+    },
+    "register": {
+      "confirmPassword": "Conferma password",
+      "confirmPasswordPlaceholder": "••••••••",
+      "createAccount": "Crea Account",
+      "creatingAccount": "Creazione account in corso...",
+      "loadingMessage": "Creazione account in corso...",
+      "displayName": "Nome visualizzato",
+      "displayNameOptional": "Nome Visualizzato (Opzionale)",
+      "displayNamePlaceholder": "Mario Rossi",
+      "email": "Email",
+      "emailPlaceholder": "tu@esempio.com",
+      "error": "Registrazione fallita. Riprova.",
+      "hasAccount": "Hai già un account?",
+      "password": "Password",
+      "passwordHelp": "Deve contenere maiuscole, minuscole e numeri (min 8 caratteri)",
+      "passwordPlaceholder": "••••••••",
+      "role": "Ruolo",
+      "selectRole": "Seleziona un ruolo",
+      "signIn": "Accedi",
+      "submit": "Registrati",
+      "success": "Registrazione completata! Puoi ora accedere.",
+      "title": "Registrati"
+    },
+    "resetPassword": {
+      "email": "Email",
+      "error": "Impossibile inviare il link di reimpostazione. Riprova.",
+      "submit": "Invia link di reimpostazione",
+      "success": "Link di reimpostazione inviato! Controlla la tua email.",
+      "title": "Reimposta password"
+    },
+    "session": {
+      "expired": "La tua sessione è scaduta. Accedi nuovamente.",
+      "expiringSoon": "La tua sessione scadrà tra {minutes} minuti.",
+      "logOut": "Esci",
+      "pause": "Pausa sessione",
+      "resume": "Riprendi sessione",
+      "stayLoggedIn": "Rimani connesso"
+    },
+    "twoFactor": {
+      "backupCode": "Usa un codice di backup",
+      "code": "Codice di verifica",
+      "error": "Codice non valido. Riprova.",
+      "submit": "Verifica",
+      "title": "Autenticazione a due fattori"
+    },
+    "emailVerification": {
+      "verifying": "Verifica email in corso...",
+      "pending": {
+        "title": "Controlla la tua email",
+        "description": "Ti abbiamo inviato un link di verifica al tuo indirizzo email.",
+        "sentTo": "Email di verifica inviata a:",
+        "instructions": "Clicca sul link nell'email per verificare il tuo account.",
+        "spamHint": "Se non la trovi, controlla la cartella spam.",
+        "resendButton": "Reinvia email di verifica",
+        "resending": "Invio in corso...",
+        "resendCooldown": "Reinvia tra {seconds}s",
+        "cooldownMessage": "Puoi richiedere una nuova email tra {seconds} secondi.",
+        "noEmail": "Nessun indirizzo email trovato. Registrati prima.",
+        "goToRegister": "Vai alla registrazione"
+      },
+      "success": {
+        "title": "Email verificata!",
+        "description": "La tua email è stata verificata con successo.",
+        "continueButton": "Continua alla Dashboard",
+        "redirectCountdown": "Reindirizzamento tra {seconds} secondi...",
+        "welcomeMessage": "Benvenuto su MeepleAI! Ora puoi utilizzare tutte le funzionalità."
+      },
+      "error": {
+        "noToken": "Nessun token di verifica fornito. Usa il link dalla tua email.",
+        "resendButton": "Reinvia email di verifica",
+        "goToLogin": "Vai al Login",
+        "tryAgain": "Riprova",
+        "helpText": "Se continui ad avere problemi, contatta il supporto.",
+        "expired": {
+          "title": "Link scaduto",
+          "description": "Questo link di verifica è scaduto. Richiedi un nuovo link."
+        },
+        "invalid": {
+          "title": "Link non valido",
+          "description": "Questo link di verifica non è valido o è già stato utilizzato."
+        },
+        "already_verified": {
+          "title": "Già verificato",
+          "description": "La tua email è già stata verificata. Puoi effettuare l'accesso."
+        },
+        "not_found": {
+          "title": "Link non trovato",
+          "description": "Questo link di verifica non è stato trovato. Potrebbe essere stato eliminato."
+        },
+        "rate_limited": {
+          "title": "Troppe richieste",
+          "description": "Attendi prima di richiedere un'altra email di verifica."
+        },
+        "unknown": {
+          "title": "Verifica fallita",
+          "description": "Si è verificato un errore durante la verifica. Riprova."
+        }
+      }
+    }
+  },
+  "chat": {
+    "askAdvice": "Chiedi consigli o analisi della posizione...",
+    "chatHistory": "Cronologia chat",
+    "citation": "Citazione",
+    "clearHistory": "Cancella cronologia",
+    "confidence": "Confidenza",
+    "error": "Si è verificato un errore. Riprova.",
+    "gameSelected": "Gioco selezionato: {gameName}",
+    "goToLogin": "Vai al Login",
+    "greeting": "Saluto",
+    "history": "Cronologia",
+    "loginRequired": "Accesso richiesto",
+    "loginRequiredMessage": "Devi effettuare l'accesso per utilizzare la chat",
+    "newChat": "Nuova chat",
+    "noMessages": "Nessun messaggio ancora. Inizia una conversazione!",
+    "page": "Pagina",
+    "placeholder": "Chiedi qualcosa sul regolamento...",
+    "retry": "Riprova",
+    "selectGame": "Seleziona un gioco",
+    "send": "Invia",
+    "sources": "Fonti",
+    "thinking": "Sto pensando...",
+    "title": "Chat AI"
+  },
+  "common": {
+    "all": "Tutti",
+    "back": "Indietro",
+    "cancel": "Annulla",
+    "clear": "Cancella",
+    "close": "Chiudi",
+    "confirm": "Conferma",
+    "copy": "Copia",
+    "cut": "Taglia",
+    "delete": "Elimina",
+    "deselect": "Deseleziona",
+    "deselectAll": "Deseleziona tutto",
+    "download": "Scarica",
+    "edit": "Modifica",
+    "error": "Errore",
+    "export": "Esporta",
+    "filter": "Filtra",
+    "import": "Importa",
+    "loading": "Caricamento...",
+    "loginRequired": "Accesso richiesto per continuare.",
+    "next": "Avanti",
+    "no": "No",
+    "none": "Nessuno",
+    "ok": "OK",
+    "paste": "Incolla",
+    "permissionDenied": "Accesso negato. Non hai i permessi necessari.",
+    "previous": "Precedente",
+    "refresh": "Aggiorna",
+    "reset": "Reimposta",
+    "save": "Salva",
+    "search": "Cerca",
+    "select": "Seleziona",
+    "selectAll": "Seleziona tutto",
+    "submit": "Invia",
+    "success": "Successo",
+    "upload": "Carica",
+    "yes": "Sì"
+  },
+  "comments": {
+    "addComment": "Aggiungi Commento",
+    "createError": "Impossibile creare il commento",
+    "placeholder": "Scrivi un commento...",
+    "submitting": "Invio in corso..."
+  },
+  "dashboard": {
+    "greeting": {
+      "afternoon": "Buon pomeriggio",
+      "evening": "Buona sera",
+      "morning": "Buongiorno"
+    },
+    "quickActions": "Azioni rapide",
+    "recentGames": "Giochi recenti"
+  },
+  "dates": {
+    "ago": "{time} fa",
+    "day": "giorno",
+    "days": "giorni",
+    "hour": "ora",
+    "hours": "ore",
+    "in": "tra {time}",
+    "minute": "minuto",
+    "minutes": "minuti",
+    "month": "mese",
+    "months": "mesi",
+    "now": "Ora",
+    "today": "Oggi",
+    "tomorrow": "Domani",
+    "week": "settimana",
+    "weeks": "settimane",
+    "year": "anno",
+    "years": "anni",
+    "yesterday": "Ieri"
+  },
+  "editor": {
+    "missingGameId": "Parametro gameId mancante.",
+    "notFound": "RuleSpec non trovata.",
+    "redo": "Ripeti (Ctrl+Y)",
+    "ruleCount": "Regole",
+    "save": "Salva",
+    "undo": "Annulla (Ctrl+Z)",
+    "validJson": "JSON valido"
+  },
+  "errors": {
+    "forbidden": "Accesso negato.",
+    "generic": "Si è verificato un errore. Riprova più tardi.",
+    "network": "Errore di rete. Controlla la tua connessione.",
+    "notFound": "Pagina non trovata.",
+    "serverError": "Errore del server. Riprova più tardi.",
+    "unauthorized": "Non autorizzato. Accedi per continuare.",
+    "validation": "Errore di validazione. Controlla i campi del modulo."
+  },
+  "games": {
+    "addGame": "Aggiungi gioco",
+    "details": {
+      "category": "Categoria",
+      "description": "Descrizione",
+      "designer": "Designer",
+      "difficulty": "Difficoltà",
+      "duration": "Durata",
+      "players": "Giocatori",
+      "publisher": "Editore",
+      "rules": "Regolamento",
+      "title": "Dettagli gioco",
+      "yearPublished": "Anno di pubblicazione"
+    },
+    "filterByCategory": "Filtra per categoria",
+    "grid": "Griglia",
+    "list": "Lista",
+    "noGames": "Nessun gioco trovato",
+    "searchGames": "Cerca giochi...",
+    "sortBy": "Ordina per",
+    "title": "I miei giochi"
+  },
+  "home": {
+    "cta": {
+      "subtitle": "Unisciti agli appassionati di giochi da tavolo che usano l'AI per comprendere meglio le regole",
+      "title": "Pronto a Non Discutere Più sulle Regole?"
+    },
+    "features": {
+      "ask": {
+        "description": "Fai domande sulle regole",
+        "title": "Chiedi"
+      },
+      "play": {
+        "description": "Ottieni risposte istantanee e accurate",
+        "title": "Gioca"
+      },
+      "title": "Come Funziona",
+      "upload": {
+        "description": "Carica il PDF del regolamento del tuo gioco",
+        "title": "Carica"
+      }
+    },
+    "footer": {
+      "copyright": "© 2025 MeepleAI. Progetto open source.",
+      "demoAccounts": "Account Demo",
+      "product": "Prodotto",
+      "resources": "Risorse",
+      "tagline": "Assistenza AI per regolamenti di giochi da tavolo"
+    },
+    "getStartedButton": "Inizia",
+    "hero": {
+      "cta": {
+        "getStarted": "Inizia Gratis",
+        "goToChat": "Vai alla Chat",
+        "learnMore": "Scopri di più",
+        "seeHow": "Scopri Come Funziona",
+        "startChatting": "Inizia a Chattare",
+        "tryDemo": "Prova Account Demo"
+      },
+      "scrollToFeatures": "Scorri alla sezione caratteristiche",
+      "subtitle": "Mai più discussioni sulle regole. Ottieni risposte istantanee e accurate da qualsiasi regolamento con la ricerca semantica basata su AI.",
+      "title": "Il tuo Assistente AI per Regolamenti di Giochi da Tavolo",
+      "trustIndicators": {
+        "accuracy": "95% accuratezza",
+        "users": "Oltre 1.250 utenti"
+      }
+    }
+  },
+  "n8n": {
+    "namePlaceholder": "n8n Produzione",
+    "title": "Flussi di lavoro n8n"
+  },
+  "nav": {
+    "home": "Home"
+  },
+  "navigation": {
+    "admin": "Amministrazione",
+    "chat": "Chat",
+    "games": "Giochi",
+    "home": "Home",
+    "login": "Accedi",
+    "logout": "Esci",
+    "logoutFrom": "Esci da MeepleAI",
+    "profile": "Profilo",
+    "register": "Registrati",
+    "settings": "Impostazioni",
+    "upload": "Carica"
+  },
+  "questionInput": {
+    "attachFile": "Allega file",
+    "charCount": "{count} di {max} caratteri",
+    "completeResponse": "Risposta completa",
+    "fastResponse": "Risposta veloce",
+    "placeholder": "Scrivi domanda...",
+    "responseModeLabel": "Modalità risposta",
+    "searchLabel": "Domanda sul gioco",
+    "sendQuestion": "Invia domanda",
+    "sending": "Invio in corso..."
+  },
+  "roles": {
+    "admin": "Amministratore",
+    "editor": "Editor",
+    "user": "Utente"
+  },
+  "settings": {
+    "advanced": {
+      "apiKeys": "Chiavi API",
+      "dangerZone": "Zona pericolosa",
+      "dataRetention": "Conservazione dati",
+      "deleteAccount": "Elimina account",
+      "exportData": "Esporta i miei dati",
+      "generateKey": "Genera nuova chiave",
+      "revokeKey": "Revoca chiave",
+      "sessions": "Sessioni attive",
+      "terminateAll": "Termina tutte le sessioni",
+      "terminateSession": "Termina sessione",
+      "title": "Impostazioni avanzate"
+    },
+    "preferences": {
+      "emailNotifications": "Notifiche email",
+      "language": "Lingua",
+      "notifications": "Notifiche",
+      "pushNotifications": "Notifiche push",
+      "theme": "Tema",
+      "themeDark": "Scuro",
+      "themeLight": "Chiaro",
+      "themeSystem": "Sistema",
+      "title": "Preferenze"
+    },
+    "privacy": {
+      "backupCodes": "Codici di backup",
+      "disable2FA": "Disabilita 2FA",
+      "enable2FA": "Abilita 2FA",
+      "generateCodes": "Genera nuovi codici",
+      "linkAccount": "Collega account",
+      "linkedAccounts": "Account collegati",
+      "title": "Privacy e sicurezza",
+      "twoFactor": "Autenticazione a due fattori",
+      "unlinkAccount": "Scollega account"
+    },
+    "profile": {
+      "avatar": "Avatar",
+      "changePassword": "Cambia password",
+      "confirmPassword": "Conferma nuova password",
+      "currentPassword": "Password attuale",
+      "displayName": "Nome visualizzato",
+      "email": "Email",
+      "newPassword": "Nuova password",
+      "title": "Informazioni profilo"
+    },
+    "tabs": {
+      "advanced": "Avanzate",
+      "preferences": "Preferenze",
+      "privacy": "Privacy",
+      "profile": "Profilo"
+    },
+    "title": "Impostazioni"
+  },
+  "setup": {
+    "aiConfidence": "Confidenza AI:",
+    "backToHome": "← Torna alla Home",
+    "closeButton": "Chiudi",
+    "closeReferences": "Chiudi finestra riferimenti",
+    "estimatedTime": "Tempo stimato di setup:",
+    "gameLabel": "Gioco:",
+    "generateButton": "Genera Guida Setup",
+    "generateForGame": "Genera guida di setup per il gioco selezionato",
+    "generating": "Generazione...",
+    "generatingMessage": "Generazione della guida di setup...",
+    "generatingSubMessage": "Potrebbe richiedere alcuni istanti",
+    "goToLogin": "Vai al Login",
+    "heading": "Guida Setup Gioco",
+    "loginRequired": "Accesso Richiesto",
+    "loginRequiredMessage": "Devi effettuare l'accesso per usare la guida di setup.",
+    "noGuideMessage": "Seleziona un gioco e clicca \"Genera Guida Setup\"",
+    "noGuideYet": "Nessuna Guida di Setup",
+    "optional": "OPZIONALE",
+    "progress": "Progresso:",
+    "readyToPlay": "Il tuo gioco è pronto per giocare",
+    "references": "Riferimenti",
+    "resetProgress": "Reimposta Progresso",
+    "selectGame": "Seleziona Gioco",
+    "selectGamePlaceholder": "Seleziona un gioco...",
+    "setupComplete": "Setup Completato!",
+    "viewButton": "Visualizza"
+  },
+  "timeline": {
+    "details": "Dettagli",
+    "eventDetails": "Dettagli Evento",
+    "eventType": "Tipo Evento",
+    "events": "Eventi",
+    "filters": "Filtri",
+    "heading": "Timeline Eventi RAG",
+    "message": "Messaggio",
+    "noEvents": "Nessun evento da visualizzare",
+    "ragSearch": "Ricerca RAG",
+    "reset": "Reimposta",
+    "searchPlaceholder": "Cerca...",
+    "status": "Stato"
+  },
+  "upload": {
+    "dragDrop": "Trascina e rilascia il PDF qui, oppure clicca per selezionare",
+    "error": "Errore durante il caricamento. Riprova.",
+    "maxSize": "Dimensione massima: {size}MB",
+    "metadata": {
+      "gameName": "Nome del gioco",
+      "language": "Lingua",
+      "notes": "Note",
+      "title": "Metadati",
+      "version": "Versione regolamento"
+    },
+    "processing": "Elaborazione in corso...",
+    "requirements": {
+      "pages": "Massimo {max} pagine",
+      "quality": "PDF di alta qualità (non scansioni)",
+      "text": "Testo selezionabile",
+      "title": "Requisiti"
+    },
+    "selectFile": "Seleziona file",
+    "success": "PDF caricato ed elaborato con successo!",
+    "title": "Carica regolamento PDF",
+    "uploading": "Caricamento in corso...",
+    "validFormats": "Formati supportati: PDF"
+  },
+  "validation": {
+    "email": "Inserisci un'email valida",
+    "emailRequired": "Email richiesta",
+    "invalidEmail": "Inserisci un indirizzo email valido",
+    "invalidFormat": "Formato non valido",
+    "maxLength": "Non può superare {max} caratteri",
+    "minLength": "Deve contenere almeno {min} caratteri",
+    "passwordComplexity": "La password deve contenere almeno una lettera maiuscola, una minuscola e un numero",
+    "passwordConfirmRequired": "Conferma la tua password",
+    "passwordMatch": "Le password non coincidono",
+    "passwordMax": "La password non può superare 100 caratteri",
+    "passwordMin": "La password deve essere di almeno 8 caratteri",
+    "required": "Questo campo è obbligatorio"
+  },
+  "wizard": {
+    "actions": {
+      "confirmGame": "Conferma Selezione Gioco",
+      "importAnother": "Importa un Altro PDF",
+      "parsePdf": "Elabora PDF",
+      "publishRuleSpec": "Pubblica RuleSpec"
+    },
+    "description": "Carica, elabora, rivedi e pubblica regolamenti di gioco",
+    "status": {
+      "publishedSuccess": "Pubblicato con Successo!"
+    },
+    "steps": {
+      "parse": "Elabora",
+      "publish": "Pubblica",
+      "review": "Rivedi",
+      "upload": "Carica"
+    },
+    "title": "Wizard Importazione PDF"
+  },
+  "legal": {
+    "tableOfContents": "Indice",
+    "lastUpdated": "Ultimo aggiornamento: {date}",
+    "terms": {
+      "title": "Termini e Condizioni",
+      "description": "Termini e condizioni di utilizzo del servizio MeepleAI",
+      "sections": {
+        "acceptance": {
+          "title": "1. Accettazione dei Termini",
+          "content": "Accedendo e utilizzando MeepleAI, accetti di essere vincolato dai presenti Termini e Condizioni. Se non accetti questi termini, ti preghiamo di non utilizzare il servizio. L'utilizzo del servizio è riservato a utenti di almeno 16 anni di età."
+        },
+        "serviceDescription": {
+          "title": "2. Descrizione del Servizio",
+          "content": "MeepleAI è un assistente basato su intelligenza artificiale progettato per aiutare gli utenti a comprendere le regole dei giochi da tavolo. Il servizio include: elaborazione di PDF di regolamenti, risposte a domande sulle regole tramite AI, gestione di una libreria personale di giochi, e accesso a un catalogo condiviso dalla community."
+        },
+        "freemiumModel": {
+          "title": "3. Modello Freemium",
+          "content": "MeepleAI offre funzionalità base gratuite e funzionalità premium a pagamento. Le funzionalità gratuite includono un numero limitato di query giornaliere e l'accesso al catalogo. Le funzionalità premium includono query illimitate, elaborazione prioritaria e funzionalità avanzate. I dettagli specifici sono disponibili nella pagina dei prezzi."
+        },
+        "userAccount": {
+          "title": "4. Account Utente",
+          "content": "Per utilizzare MeepleAI devi creare un account fornendo informazioni accurate e complete. Sei responsabile della sicurezza delle tue credenziali e di tutte le attività che avvengono sul tuo account. Devi notificarci immediatamente qualsiasi uso non autorizzato del tuo account."
+        },
+        "userContent": {
+          "title": "5. Contenuti Caricati dagli Utenti",
+          "content": "Caricando PDF o altri contenuti su MeepleAI, dichiari e garantisci di avere il diritto di utilizzare tali contenuti e di concedere a MeepleAI una licenza limitata per elaborarli al fine di fornirti il servizio. I contenuti vengono elaborati esclusivamente per il tuo uso personale e non vengono condivisi con altri utenti senza il tuo consenso."
+        },
+        "aiUsage": {
+          "title": "6. Utilizzo dell'Intelligenza Artificiale",
+          "content": "Le risposte fornite dall'AI di MeepleAI sono generate automaticamente e includono sempre un riferimento alla fonte (pagina e sezione del regolamento). Tuttavia, l'AI può commettere errori di interpretazione. Ti consigliamo sempre di verificare le risposte con il regolamento originale. MeepleAI non garantisce l'accuratezza assoluta delle risposte e non si assume responsabilità per decisioni prese basandosi esclusivamente sulle risposte dell'AI."
+        },
+        "intellectualProperty": {
+          "title": "7. Proprietà Intellettuale",
+          "content": "MeepleAI e tutti i suoi contenuti originali, funzionalità e funzionalità sono di proprietà di MeepleAI e sono protetti da copyright, marchi e altre leggi sulla proprietà intellettuale. I regolamenti dei giochi elaborati rimangono di proprietà dei rispettivi editori."
+        },
+        "limitations": {
+          "title": "8. Limitazioni di Responsabilità",
+          "content": "MeepleAI viene fornito \"così com'è\" senza garanzie di alcun tipo. Non garantiamo che il servizio sarà ininterrotto, sicuro o privo di errori. In nessun caso MeepleAI sarà responsabile per danni indiretti, incidentali, speciali o consequenziali derivanti dall'uso o dall'impossibilità di utilizzare il servizio."
+        },
+        "termination": {
+          "title": "9. Sospensione e Terminazione",
+          "content": "Possiamo sospendere o terminare il tuo accesso al servizio immediatamente, senza preavviso, per qualsiasi violazione di questi Termini. Puoi terminare il tuo account in qualsiasi momento dalle impostazioni del profilo. In caso di terminazione, il tuo diritto di utilizzare il servizio cesserà immediatamente."
+        },
+        "modifications": {
+          "title": "10. Modifiche ai Termini",
+          "content": "Ci riserviamo il diritto di modificare questi termini in qualsiasi momento. Ti notificheremo le modifiche via email o tramite un avviso sul servizio. L'uso continuato del servizio dopo tali modifiche costituisce accettazione dei nuovi termini."
+        },
+        "governingLaw": {
+          "title": "11. Legge Applicabile",
+          "content": "Questi Termini sono regolati dalle leggi italiane e dell'Unione Europea. Per qualsiasi controversia derivante da questi Termini, il foro competente è quello di [Città], Italia."
+        },
+        "contact": {
+          "title": "12. Contatti",
+          "content": "Per domande riguardanti questi Termini e Condizioni, puoi contattarci all'indirizzo email: legal@meepleai.com"
+        }
+      }
+    },
+    "privacy": {
+      "title": "Informativa sulla Privacy",
+      "description": "Come raccogliamo, utilizziamo e proteggiamo i tuoi dati personali",
+      "sections": {
+        "introduction": {
+          "title": "1. Introduzione",
+          "content": "La tua privacy è importante per noi. Questa Informativa sulla Privacy spiega come MeepleAI raccoglie, utilizza, conserva e protegge le tue informazioni personali in conformità con il Regolamento Generale sulla Protezione dei Dati (GDPR) e altre leggi applicabili sulla protezione dei dati."
+        },
+        "dataController": {
+          "title": "2. Titolare del Trattamento",
+          "content": "Il titolare del trattamento dei tuoi dati personali è MeepleAI. Per qualsiasi domanda relativa al trattamento dei tuoi dati, puoi contattarci all'indirizzo: privacy@meepleai.com"
+        },
+        "dataCollected": {
+          "title": "3. Dati Raccolti",
+          "content": "Raccogliamo le seguenti categorie di dati: Dati di registrazione (email, nome visualizzato, password criptata); Dati di utilizzo (query all'AI, giochi nella libreria, preferenze); Dati tecnici (indirizzo IP, tipo di browser, sistema operativo); Contenuti caricati (PDF di regolamenti per elaborazione). Non raccogliamo dati sensibili né dati di minori di 16 anni."
+        },
+        "purposes": {
+          "title": "4. Finalità del Trattamento",
+          "content": "Utilizziamo i tuoi dati per: fornirti il servizio MeepleAI e le sue funzionalità; migliorare e personalizzare la tua esperienza; comunicare con te riguardo aggiornamenti e novità del servizio; garantire la sicurezza e prevenire abusi; adempiere a obblighi legali."
+        },
+        "legalBasis": {
+          "title": "5. Base Giuridica",
+          "content": "Il trattamento dei tuoi dati si basa su: Esecuzione del contratto (fornitura del servizio); Consenso (per comunicazioni marketing opzionali); Legittimo interesse (miglioramento del servizio, sicurezza); Obbligo legale (conformità normativa)."
+        },
+        "dataSharing": {
+          "title": "6. Condivisione dei Dati",
+          "content": "Condividiamo i tuoi dati solo con: fornitori di servizi AI per l'elaborazione delle query (in forma anonimizzata); fornitori di hosting e infrastruttura; autorità competenti se richiesto dalla legge. Non vendiamo mai i tuoi dati personali a terzi."
+        },
+        "retention": {
+          "title": "7. Conservazione dei Dati",
+          "content": "Conserviamo i tuoi dati per il tempo necessario a fornirti il servizio. I dati dell'account vengono conservati fino alla cancellazione dell'account. I log di utilizzo vengono conservati per 12 mesi. I PDF caricati vengono elaborati ed eliminati entro 30 giorni dall'elaborazione."
+        },
+        "userRights": {
+          "title": "8. I Tuoi Diritti",
+          "content": "Ai sensi del GDPR, hai diritto di: accedere ai tuoi dati personali; rettificare dati inesatti; cancellare i tuoi dati (diritto all'oblio); limitare il trattamento; portabilità dei dati; opporti al trattamento; revocare il consenso in qualsiasi momento. Per esercitare questi diritti, contatta: privacy@meepleai.com"
+        },
+        "cookies": {
+          "title": "9. Cookie e Tecnologie Simili",
+          "content": "Utilizziamo cookie tecnici essenziali per il funzionamento del servizio e cookie analitici (con il tuo consenso) per migliorare l'esperienza utente. Puoi gestire le tue preferenze sui cookie dalle impostazioni del browser o dal banner dei cookie."
+        },
+        "security": {
+          "title": "10. Sicurezza dei Dati",
+          "content": "Implementiamo misure di sicurezza tecniche e organizzative appropriate per proteggere i tuoi dati, tra cui: crittografia dei dati in transito e a riposo; controlli di accesso rigorosi; monitoraggio continuo della sicurezza; backup regolari."
+        },
+        "transfers": {
+          "title": "11. Trasferimenti Internazionali",
+          "content": "I tuoi dati potrebbero essere trasferiti e elaborati in paesi al di fuori dello Spazio Economico Europeo. In tal caso, garantiamo che vengano applicate salvaguardie appropriate, come le Clausole Contrattuali Standard approvate dalla Commissione Europea."
+        },
+        "changes": {
+          "title": "12. Modifiche all'Informativa",
+          "content": "Potremmo aggiornare questa Informativa sulla Privacy periodicamente. Ti notificheremo eventuali modifiche significative via email o tramite un avviso sul servizio. Ti invitiamo a consultare regolarmente questa pagina per rimanere informato."
+        },
+        "contact": {
+          "title": "13. Contatti e Reclami",
+          "content": "Per domande sulla privacy o per esercitare i tuoi diritti, contatta: privacy@meepleai.com. Hai inoltre il diritto di presentare un reclamo all'Autorità Garante per la Protezione dei Dati Personali se ritieni che il trattamento dei tuoi dati violi il GDPR."
+        }
+      }
+    },
+    "cookies": {
+      "title": "Cookie Policy",
+      "description": "Come utilizziamo i cookie e tecnologie simili",
+      "sections": {
+        "whatAreCookies": {
+          "title": "1. Cosa sono i Cookie",
+          "content": "I cookie sono piccoli file di testo che vengono memorizzati sul tuo dispositivo quando visiti un sito web. Servono a ricordare le tue preferenze, migliorare la tua esperienza di navigazione e fornirci informazioni su come utilizzi il nostro servizio."
+        },
+        "typesOfCookies": {
+          "title": "2. Tipi di Cookie che Utilizziamo",
+          "content": "Utilizziamo diverse categorie di cookie: Cookie Tecnici (essenziali per il funzionamento del sito), Cookie di Preferenza (ricordano le tue scelte come lingua e tema), Cookie Analitici (ci aiutano a capire come usi il servizio), Cookie di Sessione (temporanei, eliminati alla chiusura del browser)."
+        },
+        "essentialCookies": {
+          "title": "3. Cookie Essenziali",
+          "content": "Questi cookie sono necessari per il funzionamento del sito e non possono essere disattivati. Includono cookie per l'autenticazione, la sicurezza e il mantenimento della sessione utente. Senza questi cookie, il servizio non può funzionare correttamente."
+        },
+        "analyticsCookies": {
+          "title": "4. Cookie Analitici",
+          "content": "Con il tuo consenso, utilizziamo cookie analitici per raccogliere informazioni anonime su come utilizzi MeepleAI. Questi dati ci aiutano a migliorare il servizio e a identificare eventuali problemi tecnici."
+        },
+        "thirdPartyCookies": {
+          "title": "5. Cookie di Terze Parti",
+          "content": "Alcuni cookie possono essere impostati da servizi di terze parti che utilizziamo, come provider di autenticazione OAuth (Google, Discord, GitHub). Questi cookie sono soggetti alle rispettive privacy policy dei provider."
+        },
+        "manageCookies": {
+          "title": "6. Come Gestire i Cookie",
+          "content": "Puoi gestire le tue preferenze sui cookie in diversi modi: tramite il banner dei cookie che appare alla prima visita, dalle impostazioni del tuo browser, o dalle impostazioni del tuo account MeepleAI. Nota che disabilitare alcuni cookie potrebbe influire sulla funzionalità del servizio."
+        },
+        "browserSettings": {
+          "title": "7. Impostazioni del Browser",
+          "content": "La maggior parte dei browser ti permette di controllare i cookie attraverso le impostazioni. Puoi bloccare tutti i cookie, accettare solo alcuni tipi, o ricevere una notifica quando un sito vuole impostare un cookie. Consulta la guida del tuo browser per istruzioni specifiche."
+        },
+        "updates": {
+          "title": "8. Aggiornamenti alla Cookie Policy",
+          "content": "Potremmo aggiornare questa Cookie Policy periodicamente per riflettere cambiamenti nelle nostre pratiche o per altri motivi operativi, legali o normativi. Ti invitiamo a consultare regolarmente questa pagina."
+        },
+        "contact": {
+          "title": "9. Contatti",
+          "content": "Per domande sulla nostra Cookie Policy, contattaci all'indirizzo: privacy@meepleai.com"
+        }
+      }
+    }
+  },
+  "pages": {
+    "about": {
+      "title": "Chi Siamo",
+      "subtitle": "La storia di MeepleAI",
+      "description": "Scopri la missione e il team dietro MeepleAI",
+      "mission": {
+        "title": "La Nostra Missione",
+        "content": "MeepleAI nasce dalla passione per i giochi da tavolo e dalla frustrazione di dover interrompere le partite per cercare chiarimenti sulle regole. La nostra missione è rendere ogni partita più fluida, divertente e senza discussioni."
+      },
+      "story": {
+        "title": "La Nostra Storia",
+        "content": "Tutto è iniziato durante una serata di giochi tra amici, quando l'ennesima discussione su una regola ambigua ha rovinato il divertimento. Da quel momento è nata l'idea: perché non creare un assistente AI che possa rispondere istantaneamente a qualsiasi dubbio sulle regole?"
+      },
+      "values": {
+        "title": "I Nostri Valori",
+        "accuracy": {
+          "title": "Precisione",
+          "content": "Ogni risposta è basata sui regolamenti ufficiali con citazione della fonte"
+        },
+        "accessibility": {
+          "title": "Accessibilità",
+          "content": "Regole complesse spiegate in modo semplice e comprensibile"
+        },
+        "community": {
+          "title": "Community",
+          "content": "Un catalogo condiviso costruito insieme agli appassionati"
+        },
+        "innovation": {
+          "title": "Innovazione",
+          "content": "Tecnologia AI all'avanguardia al servizio del divertimento"
+        }
+      },
+      "team": {
+        "title": "Il Team",
+        "content": "MeepleAI è sviluppato da un team di appassionati di giochi da tavolo e tecnologia, uniti dalla voglia di migliorare l'esperienza di gioco per tutti."
+      }
+    },
+    "howItWorks": {
+      "title": "Come Funziona",
+      "subtitle": "Tre semplici passaggi per non litigare più sulle regole",
+      "description": "Scopri come MeepleAI può trasformare le tue serate di gioco",
+      "steps": {
+        "upload": {
+          "title": "1. Carica il Regolamento",
+          "content": "Carica il PDF del regolamento del tuo gioco da tavolo. Il nostro sistema lo analizza e lo indicizza utilizzando tecnologie avanzate di elaborazione del linguaggio naturale."
+        },
+        "ask": {
+          "title": "2. Fai una Domanda",
+          "content": "Scrivi la tua domanda in linguaggio naturale, come faresti con un amico esperto. Ad esempio: 'Posso muovere il cavaliere dopo aver lanciato i dadi?' oppure 'Come funziona il commercio tra giocatori?'"
+        },
+        "answer": {
+          "title": "3. Ottieni la Risposta",
+          "content": "L'AI analizza il regolamento e ti fornisce una risposta precisa, sempre con il riferimento alla pagina e sezione del manuale originale, così puoi verificare tu stesso."
+        }
+      },
+      "features": {
+        "title": "Caratteristiche Principali",
+        "rag": {
+          "title": "Ricerca Semantica RAG",
+          "content": "Tecnologia avanzata che comprende il significato delle tue domande, non solo le parole chiave"
+        },
+        "multilingual": {
+          "title": "Supporto Multilingua",
+          "content": "Carica regolamenti in qualsiasi lingua e fai domande nella tua lingua preferita"
+        },
+        "citations": {
+          "title": "Citazioni Precise",
+          "content": "Ogni risposta include il riferimento esatto alla fonte nel regolamento"
+        },
+        "library": {
+          "title": "Libreria Personale",
+          "content": "Gestisci la tua collezione di giochi e accedi rapidamente ai regolamenti"
+        }
+      },
+      "cta": {
+        "title": "Pronto a Iniziare?",
+        "content": "Registrati gratuitamente e scopri quanto può essere semplice capire le regole"
+      }
+    },
+    "blog": {
+      "title": "Blog",
+      "subtitle": "Novità, guide e approfondimenti",
+      "description": "Resta aggiornato sulle ultime novità di MeepleAI e del mondo dei giochi da tavolo",
+      "noPosts": "Nessun articolo disponibile al momento. Torna presto per nuovi contenuti!",
+      "readMore": "Leggi di più",
+      "categories": {
+        "news": "Novità",
+        "guides": "Guide",
+        "tips": "Consigli",
+        "updates": "Aggiornamenti"
+      },
+      "comingSoon": {
+        "title": "Coming Soon",
+        "content": "Il blog di MeepleAI è in arrivo! Presto troverai qui guide, consigli strategici, recensioni di giochi e aggiornamenti sulle nuove funzionalità."
+      }
+    },
+    "contact": {
+      "title": "Contattaci",
+      "subtitle": "Siamo qui per aiutarti",
+      "description": "Hai domande, suggerimenti o feedback? Scrivici!",
+      "form": {
+        "name": "Nome",
+        "namePlaceholder": "Il tuo nome",
+        "email": "Email",
+        "emailPlaceholder": "la.tua@email.com",
+        "subject": "Oggetto",
+        "subjectPlaceholder": "Di cosa vuoi parlarci?",
+        "message": "Messaggio",
+        "messagePlaceholder": "Scrivi il tuo messaggio...",
+        "submit": "Invia Messaggio",
+        "sending": "Invio in corso...",
+        "success": "Messaggio inviato con successo! Ti risponderemo il prima possibile.",
+        "error": "Si è verificato un errore. Riprova più tardi."
+      },
+      "info": {
+        "title": "Altre modalità di contatto",
+        "email": {
+          "title": "Email",
+          "value": "support@meepleai.com"
+        },
+        "social": {
+          "title": "Social",
+          "content": "Seguici sui social per aggiornamenti e novità"
+        },
+        "response": {
+          "title": "Tempi di Risposta",
+          "content": "Rispondiamo solitamente entro 24-48 ore lavorative"
+        }
+      },
+      "subjects": {
+        "general": "Domanda generale",
+        "support": "Supporto tecnico",
+        "feedback": "Feedback e suggerimenti",
+        "bug": "Segnalazione bug",
+        "partnership": "Partnership e collaborazioni",
+        "other": "Altro"
+      }
+    },
+    "faq": {
+      "title": "Domande Frequenti",
+      "subtitle": "Trova risposte alle domande più comuni",
+      "description": "Tutto quello che devi sapere su MeepleAI",
+      "categories": {
+        "general": {
+          "title": "Generale",
+          "questions": {
+            "whatIs": {
+              "question": "Cos'è MeepleAI?",
+              "answer": "MeepleAI è un assistente basato su intelligenza artificiale che ti aiuta a comprendere le regole dei giochi da tavolo. Puoi caricare i PDF dei regolamenti e fare domande in linguaggio naturale, ricevendo risposte precise con citazione della fonte."
+            },
+            "free": {
+              "question": "MeepleAI è gratuito?",
+              "answer": "MeepleAI offre un piano gratuito con funzionalità base, incluso un numero limitato di query giornaliere. Per funzionalità avanzate e query illimitate, sono disponibili piani premium."
+            },
+            "languages": {
+              "question": "Quali lingue sono supportate?",
+              "answer": "Puoi caricare regolamenti in qualsiasi lingua e fare domande in italiano o inglese. L'interfaccia è disponibile in italiano e inglese."
+            }
+          }
+        },
+        "usage": {
+          "title": "Utilizzo",
+          "questions": {
+            "howToUpload": {
+              "question": "Come carico un regolamento?",
+              "answer": "Dalla sezione 'Carica' puoi trascinare o selezionare un file PDF del regolamento. Il sistema lo elaborerà automaticamente e sarà disponibile per le tue domande in pochi minuti."
+            },
+            "accuracy": {
+              "question": "Quanto sono accurate le risposte?",
+              "answer": "Le risposte sono generate analizzando il regolamento ufficiale e includono sempre il riferimento alla fonte. Tuttavia, consigliamo sempre di verificare con il regolamento originale per decisioni importanti durante le partite."
+            },
+            "limits": {
+              "question": "Ci sono limiti alle domande?",
+              "answer": "Il piano gratuito ha un limite giornaliero di query. I piani premium offrono query illimitate e funzionalità aggiuntive."
+            }
+          }
+        },
+        "technical": {
+          "title": "Tecnico",
+          "questions": {
+            "pdfFormat": {
+              "question": "Quali formati PDF sono supportati?",
+              "answer": "Supportiamo PDF con testo selezionabile (non scansioni di immagini). Per risultati ottimali, usa PDF di alta qualità con testo nativo."
+            },
+            "dataPrivacy": {
+              "question": "I miei dati sono al sicuro?",
+              "answer": "Sì, la sicurezza dei tuoi dati è la nostra priorità. I PDF caricati vengono elaborati e non condivisi con altri utenti. Consulta la nostra Privacy Policy per maggiori dettagli."
+            },
+            "offline": {
+              "question": "Posso usare MeepleAI offline?",
+              "answer": "MeepleAI richiede una connessione internet per funzionare, poiché l'elaborazione avviene sui nostri server cloud."
+            }
+          }
+        },
+        "account": {
+          "title": "Account",
+          "questions": {
+            "deleteAccount": {
+              "question": "Come cancello il mio account?",
+              "answer": "Puoi richiedere la cancellazione del tuo account dalle Impostazioni > Avanzate > Elimina Account, oppure contattando il supporto."
+            },
+            "changeEmail": {
+              "question": "Posso cambiare la mia email?",
+              "answer": "Al momento il cambio email non è supportato direttamente. Contatta il supporto per assistenza."
+            },
+            "twoFactor": {
+              "question": "Come attivo l'autenticazione a due fattori?",
+              "answer": "Vai in Impostazioni > Privacy e Sicurezza > Autenticazione a due fattori e segui le istruzioni per configurare la 2FA con un'app authenticator."
+            }
+          }
+        }
+      },
+      "stillHaveQuestions": {
+        "title": "Hai ancora domande?",
+        "content": "Non hai trovato quello che cercavi? Contattaci e saremo felici di aiutarti.",
+        "cta": "Contattaci"
+      }
+    }
+  }
+}

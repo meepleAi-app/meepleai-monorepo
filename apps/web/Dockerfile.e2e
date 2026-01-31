@@ -1,0 +1,139 @@
+# =============================================================================
+# Dockerfile.e2e - Production-Grade E2E Testing Environment
+# =============================================================================
+# Issue #2009 - Phase 3: Production-Grade Infrastructure
+# Multi-stage build for optimized Docker image size and build time
+# Based on official Microsoft Playwright image v1.57.0-noble (Ubuntu 24.04 LTS)
+#
+# Build: docker build -f Dockerfile.e2e -t meepleai-e2e:latest .
+# Run:   docker run --shm-size=2g -m 4g meepleai-e2e:latest
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage 1: Dependencies
+# Install only production dependencies for runtime
+# -----------------------------------------------------------------------------
+FROM mcr.microsoft.com/playwright:v1.57.0-noble AS dependencies
+
+WORKDIR /app
+
+# Install pnpm globally (faster than npm, monorepo support)
+RUN npm install -g pnpm@10
+
+# Copy dependency manifests
+COPY package.json pnpm-lock.yaml ./
+
+# Install production dependencies only
+# --frozen-lockfile: Ensure reproducible builds
+# --prefer-offline: Use cache when available
+RUN pnpm install --frozen-lockfile --prefer-offline --prod
+
+# -----------------------------------------------------------------------------
+# Stage 2: Build
+# Install all dependencies (dev + prod) and build Next.js application
+# -----------------------------------------------------------------------------
+FROM dependencies AS build
+
+WORKDIR /app
+
+# Install all dependencies (including devDependencies for build)
+RUN pnpm install --frozen-lockfile --prefer-offline
+
+# Copy application source code
+# Exclude: node_modules (already installed), .next (build output), test-results
+COPY . .
+
+# Build Next.js application
+# Production build is 50-70% faster and more stable than dev server
+RUN pnpm build
+
+# -----------------------------------------------------------------------------
+# Stage 3: Test Runtime
+# Final optimized image for running E2E tests
+# -----------------------------------------------------------------------------
+FROM mcr.microsoft.com/playwright:v1.57.0-noble AS test
+
+WORKDIR /app
+
+# Install pnpm globally
+RUN npm install -g pnpm@10
+
+# Copy ALL dependencies from stage 2 (includes devDependencies like dotenv-cli, playwright)
+# Issue #2009: Test execution requires dev dependencies (dotenv-cli, playwright-prometheus-reporter)
+COPY --from=build /app/node_modules ./node_modules
+
+# Copy build output from stage 2
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/public ./public
+
+# Copy test configuration and test files
+COPY playwright.config.ts .
+COPY e2e/ ./e2e/
+COPY .env.test.example .env.test
+
+# Copy package.json for scripts
+COPY package.json .
+
+# Set environment variables for optimization
+ENV CI=true
+ENV NODE_ENV=production
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# Memory optimization for Node.js V8 engine
+# 4GB heap size prevents OOM errors during intensive test suites
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+# Playwright configuration
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
+# Create directories for test output
+RUN mkdir -p test-results playwright-report
+
+# Health check endpoint (optional, for Kubernetes readiness probes)
+# Checks if the test server can start successfully
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD pnpm --version > /dev/null || exit 1
+
+# Expose port for debugging (if running in UI mode)
+EXPOSE 3000
+
+# Default command: Run all E2E tests
+# Override with --shard flag for parallel execution
+# Example: docker run meepleai-e2e:latest --shard=1/4
+ENTRYPOINT ["pnpm", "test:e2e"]
+
+# Default args (can be overridden)
+CMD ["--project=desktop-chrome"]
+
+# =============================================================================
+# Usage Examples:
+# =============================================================================
+#
+# 1. Build image:
+#    docker build -f Dockerfile.e2e -t meepleai-e2e:latest .
+#
+# 2. Run all tests:
+#    docker run --shm-size=2g -m 4g meepleai-e2e:latest
+#
+# 3. Run specific shard:
+#    docker run --shm-size=2g -m 4g meepleai-e2e:latest --shard=1/4
+#
+# 4. Run with custom browser:
+#    docker run --shm-size=2g -m 4g meepleai-e2e:latest --project=mobile-chrome
+#
+# 5. Mount test results:
+#    docker run --shm-size=2g -m 4g \
+#      -v $(pwd)/test-results:/app/test-results \
+#      meepleai-e2e:latest
+#
+# 6. Debug mode (headed browser):
+#    docker run --shm-size=2g -m 4g -e HEADLESS=false meepleai-e2e:latest
+#
+# =============================================================================
+# Resource Requirements:
+# =============================================================================
+# - Memory: 4GB recommended (2GB minimum)
+# - Shared Memory (shm_size): 2GB (critical for Chromium)
+# - CPU: 2 cores recommended (1 core minimum)
+# - Disk: 5GB for image + 2GB for test results
+# =============================================================================

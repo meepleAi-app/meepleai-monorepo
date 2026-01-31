@@ -1,0 +1,54 @@
+using Api.Services;
+using Api.SharedKernel.Application.Interfaces;
+using Microsoft.Extensions.Logging;
+
+namespace Api.BoundedContexts.Authentication.Application.Queries.PasswordReset;
+
+/// <summary>
+/// Handles password reset token validation with CQRS pattern.
+/// Business logic: Token format validation → Token existence check → Expiry check.
+/// Infrastructure delegation: Database access via password reset service.
+/// </summary>
+internal sealed class ValidatePasswordResetTokenQueryHandler : IQueryHandler<ValidatePasswordResetTokenQuery, ValidatePasswordResetTokenResult>
+{
+    private readonly IPasswordResetService _passwordResetService;
+    private readonly ILogger<ValidatePasswordResetTokenQueryHandler> _logger;
+
+    public ValidatePasswordResetTokenQueryHandler(
+        IPasswordResetService passwordResetService,
+        ILogger<ValidatePasswordResetTokenQueryHandler> logger)
+    {
+        _passwordResetService = passwordResetService ?? throw new ArgumentNullException(nameof(passwordResetService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    public async Task<ValidatePasswordResetTokenResult> Handle(ValidatePasswordResetTokenQuery query, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        try
+        {
+            // Validate token format (basic business logic)
+            if (string.IsNullOrWhiteSpace(query.Token))
+            {
+                return new ValidatePasswordResetTokenResult { IsValid = false };
+            }
+
+            // Delegate to infrastructure service for token validation
+            var isValid = await _passwordResetService.ValidateResetTokenAsync(query.Token, cancellationToken).ConfigureAwait(false);
+
+            return new ValidatePasswordResetTokenResult { IsValid = isValid };
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+        // HANDLER BOUNDARY: QUERY HANDLER PATTERN - CQRS query boundary
+        // Generic catch handles unexpected infrastructure failures (DB, network)
+        // to prevent exception propagation to API layer. Returns Result pattern.
+#pragma warning restore S125
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating password reset token");
+            return new ValidatePasswordResetTokenResult { IsValid = false };
+        }
+#pragma warning restore CA1031
+    }
+}

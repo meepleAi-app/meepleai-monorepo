@@ -1,0 +1,370 @@
+{
+  "title": "MeepleAI - Cache Optimization",
+  "tags": [
+    "meepleai",
+    "cache",
+    "performance"
+  ],
+  "timezone": "utc",
+  "editable": true,
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Cache Hit Rate",
+      "type": "graph",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "rate(meepleai_cache_hits_total[5m]) / (rate(meepleai_cache_hits_total[5m]) + rate(meepleai_cache_misses_total[5m])) * 100",
+          "legendFormat": "Hit Rate %",
+          "refId": "A"
+        }
+      ],
+      "yaxes": [
+        {
+          "format": "percent",
+          "min": 0,
+          "max": 100
+        },
+        {
+          "format": "short"
+        }
+      ],
+      "legend": {
+        "show": true
+      },
+      "tooltip": {
+        "shared": true
+      }
+    },
+    {
+      "id": 2,
+      "title": "Cache Operations Rate",
+      "type": "graph",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "rate(meepleai_cache_hits_total[5m])",
+          "legendFormat": "Hits/sec ({{operation}}, {{cache_type}})",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(meepleai_cache_misses_total[5m])",
+          "legendFormat": "Misses/sec ({{operation}}, {{cache_type}})",
+          "refId": "B"
+        }
+      ],
+      "yaxes": [
+        {
+          "format": "ops",
+          "min": 0
+        },
+        {
+          "format": "short"
+        }
+      ],
+      "legend": {
+        "show": true
+      }
+    },
+    {
+      "id": 3,
+      "title": "Cache Evictions Rate",
+      "type": "graph",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "rate(meepleai_cache_evictions_total[5m])",
+          "legendFormat": "Evictions/sec ({{reason}})",
+          "refId": "A"
+        }
+      ],
+      "yaxes": [
+        {
+          "format": "ops",
+          "min": 0
+        },
+        {
+          "format": "short"
+        }
+      ],
+      "legend": {
+        "show": true
+      }
+    },
+    {
+      "id": 4,
+      "title": "Total Cache Operations",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(meepleai_cache_hits_total[5m]) + rate(meepleai_cache_misses_total[5m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "blue"
+              },
+              {
+                "value": 10,
+                "color": "green"
+              },
+              {
+                "value": 50,
+                "color": "yellow"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Cache Hits by Cache Type",
+      "type": "piechart",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum by (cache_type) (rate(meepleai_cache_hits_total[5m]))",
+          "legendFormat": "{{cache_type}}",
+          "refId": "A"
+        }
+      ],
+      "legend": {
+        "show": true,
+        "placement": "right"
+      }
+    },
+    {
+      "id": 6,
+      "title": "Cache Misses by Cache Type",
+      "type": "piechart",
+      "gridPos": {
+        "x": 8,
+        "y": 16,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum by (cache_type) (rate(meepleai_cache_misses_total[5m]))",
+          "legendFormat": "{{cache_type}}",
+          "refId": "A"
+        }
+      ],
+      "legend": {
+        "show": true,
+        "placement": "right"
+      }
+    },
+    {
+      "id": 7,
+      "title": "Cache Operations by Operation Type",
+      "type": "graph",
+      "gridPos": {
+        "x": 16,
+        "y": 16,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum by (operation) (rate(meepleai_cache_hits_total[5m]))",
+          "legendFormat": "Hits: {{operation}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (operation) (rate(meepleai_cache_misses_total[5m]))",
+          "legendFormat": "Misses: {{operation}}",
+          "refId": "B"
+        }
+      ],
+      "yaxes": [
+        {
+          "format": "ops",
+          "min": 0
+        },
+        {
+          "format": "short"
+        }
+      ],
+      "legend": {
+        "show": true
+      }
+    },
+    {
+      "id": 8,
+      "title": "Cache Evictions by Reason",
+      "type": "graph",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum by (reason) (rate(meepleai_cache_evictions_total[5m]))",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
+      ],
+      "yaxes": [
+        {
+          "format": "ops",
+          "min": 0
+        },
+        {
+          "format": "short"
+        }
+      ],
+      "legend": {
+        "show": true
+      }
+    },
+    {
+      "id": 9,
+      "title": "Top 10 Cache Types by Hit Count (Last Hour)",
+      "type": "table",
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "topk(10, sum by (cache_type) (increase(meepleai_cache_hits_total[1h])))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "cache_type": 0,
+              "Value": 1
+            },
+            "renameByName": {
+              "cache_type": "Cache Type",
+              "Value": "Hit Count"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Redis Memory Usage (MB)",
+      "type": "graph",
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "redis_memory_used_bytes / 1024 / 1024",
+          "legendFormat": "Used Memory (MB)",
+          "refId": "A"
+        },
+        {
+          "expr": "redis_memory_max_bytes / 1024 / 1024",
+          "legendFormat": "Max Memory (MB)",
+          "refId": "B"
+        }
+      ],
+      "yaxes": [
+        {
+          "format": "mbytes",
+          "min": 0
+        },
+        {
+          "format": "short"
+        }
+      ],
+      "legend": {
+        "show": true
+      },
+      "alert": {
+        "conditions": [
+          {
+            "evaluator": {
+              "params": [
+                0.8
+              ],
+              "type": "gt"
+            },
+            "operator": {
+              "type": "and"
+            },
+            "query": {
+              "params": [
+                "A",
+                "5m",
+                "now"
+              ]
+            },
+            "reducer": {
+              "params": [],
+              "type": "avg"
+            },
+            "type": "query"
+          }
+        ],
+        "executionErrorState": "alerting",
+        "frequency": "60s",
+        "handler": 1,
+        "name": "Redis Memory High",
+        "noDataState": "no_data",
+        "notifications": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,299 @@
+# Docker Compose - Production Environment
+# Extends docker-compose.yml with production-specific configurations
+# Production configuration with security hardening and high availability
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f compose.prod.yml up -d
+#   docker compose -f docker-compose.yml -f compose.prod.yml down
+#
+# IMPORTANT: Ensure all secrets are properly configured before deployment
+
+services:
+  # ============================================================================
+  # Core Infrastructure - Production Configuration
+  # ============================================================================
+
+  postgres:
+    restart: always
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      POSTGRES_DB: ${POSTGRES_DB:-meepleai_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+    volumes:
+      - pgdata-prod:/var/lib/postgresql/data
+      - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  redis:
+    restart: always
+    command: ["sh","-c","redis-server --appendonly yes --requirepass $(cat /run/secrets/redis-password)"]
+    volumes:
+      - redisdata-prod:/data
+    secrets:
+      - redis-password
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  qdrant:
+    restart: always
+    volumes:
+      - qdrantdata-prod:/qdrant/storage
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 8G
+        reservations:
+          cpus: '1'
+          memory: 4G
+
+  # ============================================================================
+  # Application Services - Production Configuration
+  # ============================================================================
+
+  api:
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: https://+:8080;http://+:8081
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /run/secrets/api-cert.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password__FILE: /run/secrets/api-cert-password
+      # Issue #2460: Database connection configuration (two options)
+      # Option 1 (Default): POSTGRES_* vars - SecretsHelper builds connection string automatically
+      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      POSTGRES_DB: ${POSTGRES_DB:-meepleai_prod}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      # Option 2 (Advanced): Full connection string with SSL/TLS and optimized pooling
+      # Uncomment below and comment Option 1 if using managed PostgreSQL (RDS, Azure, GCP)
+      # See infra/secrets/postgres-connection-string-production.example.txt for template
+      # ConnectionStrings__Postgres: "Host=HOST;Database=DB;Username=USER;Password=PASS;Pooling=true;Minimum Pool Size=5;Maximum Pool Size=50;SSL Mode=Require;Trust Server Certificate=false;Command Timeout=30;Timeout=15"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+
+  web:
+    restart: always
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE: ${PRODUCTION_API_URL:?PRODUCTION_API_URL is required}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  # ============================================================================
+  # AI/ML Services - Production Configuration
+  # ============================================================================
+
+  ollama:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+
+  embedding-service:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  unstructured-service:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  smoldocling-service:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+
+  # ============================================================================
+  # Observability Stack - Production Settings
+  # ============================================================================
+
+  grafana:
+    restart: always
+    environment:
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:?GRAFANA_ROOT_URL is required}
+      GF_SECURITY_ADMIN_PASSWORD_FILE: /run/secrets/grafana-admin-password
+    volumes:
+      - grafana-prod:/var/lib/grafana
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./dashboards:/var/lib/grafana/dashboards:ro
+    secrets:
+      - grafana-admin-password
+
+  prometheus:
+    restart: always
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=90d'  # 90 days retention for production
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.size=50GB'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
+      - prometheus-prod:/prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  jaeger:
+    restart: always
+    environment:
+      SPAN_STORAGE_TYPE: "badger"
+      BADGER_EPHEMERAL: "false"  # Use persistent storage in production
+      BADGER_DIRECTORY_VALUE: /badger/data
+      BADGER_DIRECTORY_KEY: /badger/key
+    volumes:
+      - jaeger-prod:/badger
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  seq:
+    restart: always
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_ADMINPASSWORDHASH: ${SEQ_PASSWORD_HASH:?SEQ_PASSWORD_HASH is required}
+      SEQ_CACHE_SYSTEMRAMTARGET: "0.5"
+    volumes:
+      - seqdata-prod:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  alertmanager:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  n8n:
+    restart: always
+
+# ============================================================================
+# Production-specific Volumes
+# ============================================================================
+volumes:
+  pgdata-prod:
+    name: meepleai-pgdata-prod
+  qdrantdata-prod:
+    name: meepleai-qdrantdata-prod
+  redisdata-prod:
+    name: meepleai-redisdata-prod
+  seqdata-prod:
+    name: meepleai-seqdata-prod
+  prometheus-prod:
+    name: meepleai-prometheus-prod
+  grafana-prod:
+    name: meepleai-grafana-prod
+  jaeger-prod:
+    name: meepleai-jaeger-prod
+
+# ============================================================================
+# Production Secrets (must be configured)
+# ============================================================================
+secrets:
+  grafana-admin-password:
+    file: ./secrets/prod/grafana-admin-password.txt
+  postgres-password:
+    file: ./secrets/prod/postgres-password.txt
+  openrouter-api-key:
+    file: ./secrets/prod/openrouter-api-key.txt
+  redis-password:
+    file: ./secrets/prod/redis-password.txt
+  n8n-encryption-key:
+    file: ./secrets/prod/n8n-encryption-key.txt
+  n8n-basic-auth-password:
+    file: ./secrets/prod/n8n-basic-auth-password.txt
+  gmail-app-password:
+    file: ./secrets/prod/gmail-app-password.txt
+  initial-admin-password:
+    file: ./secrets/prod/initial-admin-password.txt
+  api-cert-password:
+    file: ./secrets/prod/api-cert-password.txt
+  api-cert.pfx:
+    file: ./secrets/prod/api-cert.pfx

@@ -1,0 +1,511 @@
+{
+  "info": {
+    "_postman_id": "editor-content-collection-008",
+    "name": "08 - Editor: Content Management",
+    "description": "MeepleAI Editor API endpoints for managing quick questions, FAQ, errata, and state templates.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "gameId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "questionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "faqId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "errataId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "templateId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Quick Questions",
+      "item": [
+        {
+          "name": "Generate Quick Questions (AI)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/quick-questions/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "quick-questions", "generate"]
+            },
+            "description": "Generate quick questions using AI from indexed PDFs"
+          }
+        },
+        {
+          "name": "List Quick Questions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.items && jsonData.items.length > 0) {",
+                  "        pm.collectionVariables.set('questionId', jsonData.items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/quick-questions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "quick-questions"]
+            },
+            "description": "List all quick questions for a game"
+          }
+        },
+        {
+          "name": "Add Quick Question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"How do I set up the game for 4 players?\",\n  \"answer\": \"Place the board in the center. Each player takes one set of colored pieces...\",\n  \"category\": \"Setup\",\n  \"order\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/quick-questions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "quick-questions"]
+            },
+            "description": "Manually add a quick question"
+          }
+        },
+        {
+          "name": "Update Quick Question",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"How do I set up the game?\",\n  \"answer\": \"Updated answer with more details...\",\n  \"category\": \"Setup\",\n  \"order\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/quick-questions/{{questionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "quick-questions", "{{questionId}}"]
+            },
+            "description": "Update a quick question"
+          }
+        },
+        {
+          "name": "Delete Quick Question",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/quick-questions/{{questionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "quick-questions", "{{questionId}}"]
+            },
+            "description": "Delete a quick question"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FAQ",
+      "item": [
+        {
+          "name": "List FAQ",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.items && jsonData.items.length > 0) {",
+                  "        pm.collectionVariables.set('faqId', jsonData.items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/faq",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "faq"]
+            },
+            "description": "List all FAQ entries for a game"
+          }
+        },
+        {
+          "name": "Add FAQ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Can I trade on another player's turn?\",\n  \"answer\": \"No, trading is only allowed during your own turn. However, you can negotiate future trades.\",\n  \"category\": \"Trading\",\n  \"tags\": [\"trading\", \"turns\", \"rules\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/faq",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "faq"]
+            },
+            "description": "Add a new FAQ entry"
+          }
+        },
+        {
+          "name": "Update FAQ",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Can I trade on another player's turn?\",\n  \"answer\": \"Updated: Trading is only allowed during your own turn...\",\n  \"category\": \"Trading\",\n  \"tags\": [\"trading\", \"turns\", \"rules\", \"updated\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/faq/{{faqId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "faq", "{{faqId}}"]
+            },
+            "description": "Update an FAQ entry"
+          }
+        },
+        {
+          "name": "Delete FAQ",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/faq/{{faqId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "faq", "{{faqId}}"]
+            },
+            "description": "Delete an FAQ entry"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Errata",
+      "item": [
+        {
+          "name": "List Errata",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.items && jsonData.items.length > 0) {",
+                  "        pm.collectionVariables.set('errataId', jsonData.items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/errata",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "errata"]
+            },
+            "description": "List all errata for a game"
+          }
+        },
+        {
+          "name": "Add Errata",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pageNumber\": 12,\n  \"originalText\": \"Roll two dice\",\n  \"correctedText\": \"Roll three dice\",\n  \"source\": \"Publisher FAQ 2025\",\n  \"isOfficial\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/errata",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "errata"]
+            },
+            "description": "Add a new errata entry"
+          }
+        },
+        {
+          "name": "Update Errata",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pageNumber\": 12,\n  \"originalText\": \"Roll two dice\",\n  \"correctedText\": \"Roll three dice in the advanced variant\",\n  \"source\": \"Publisher FAQ 2025 - Updated\",\n  \"isOfficial\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/errata/{{errataId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "errata", "{{errataId}}"]
+            },
+            "description": "Update an errata entry"
+          }
+        },
+        {
+          "name": "Delete Errata",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/errata/{{errataId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "errata", "{{errataId}}"]
+            },
+            "description": "Delete an errata entry"
+          }
+        }
+      ]
+    },
+    {
+      "name": "State Templates",
+      "item": [
+        {
+          "name": "Generate State Template (AI)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/state-template/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "state-template", "generate"]
+            },
+            "description": "Generate state template using AI from game rules"
+          }
+        },
+        {
+          "name": "Get Active State Template",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/state-template",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "state-template"]
+            },
+            "description": "Get the currently active state template"
+          }
+        },
+        {
+          "name": "List Template Versions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.versions && jsonData.versions.length > 0) {",
+                  "        pm.collectionVariables.set('templateId', jsonData.versions[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/state-template/versions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "state-template", "versions"]
+            },
+            "description": "List all state template versions"
+          }
+        },
+        {
+          "name": "Update State Template",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playerState\": {\n    \"resources\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"brick\": { \"type\": \"number\", \"default\": 0, \"min\": 0 },\n        \"wood\": { \"type\": \"number\", \"default\": 0, \"min\": 0 },\n        \"wheat\": { \"type\": \"number\", \"default\": 0, \"min\": 0 }\n      }\n    },\n    \"score\": { \"type\": \"number\", \"default\": 0 },\n    \"settlements\": { \"type\": \"number\", \"default\": 0, \"max\": 5 }\n  },\n  \"sharedState\": {\n    \"currentTurn\": { \"type\": \"number\", \"default\": 1 },\n    \"phase\": { \"type\": \"string\", \"enum\": [\"setup\", \"main\", \"end\"] }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/state-template/{{templateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "state-template", "{{templateId}}"]
+            },
+            "description": "Update a state template"
+          }
+        },
+        {
+          "name": "Activate Template Version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/state-template/{{templateId}}/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "state-template", "{{templateId}}", "activate"]
+            },
+            "description": "Activate a specific template version for new sessions"
+          }
+        }
+      ]
+    }
+  ]
+}

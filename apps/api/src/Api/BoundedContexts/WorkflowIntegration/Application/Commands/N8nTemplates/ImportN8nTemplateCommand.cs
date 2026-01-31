@@ -1,0 +1,15 @@
+using Api.Models;
+using Api.SharedKernel.Application.Interfaces;
+
+namespace Api.BoundedContexts.WorkflowIntegration.Application.Commands.N8NTemplates;
+
+/// <summary>
+/// Command to import an n8n workflow template by creating a new workflow with parameter substitution.
+/// Validates parameters, substitutes placeholders, and creates workflow in n8n via REST API.
+/// </summary>
+internal sealed record ImportN8NTemplateCommand : ICommand<ImportTemplateResponse>
+{
+    public string TemplateId { get; init; } = string.Empty;
+    public IDictionary<string, string> Parameters { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
+    public string UserId { get; init; } = string.Empty;
+}

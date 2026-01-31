@@ -1,0 +1,450 @@
+{
+  "info": {
+    "_postman_id": "editor-docs-collection-007",
+    "name": "07 - Editor: Document Management",
+    "description": "MeepleAI Editor API endpoints for managing game PDFs, document versions, and processing.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "gameId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pdfId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "docId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "PDF Upload",
+      "item": [
+        {
+          "name": "Upload PDF (Standard)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('pdfId', jsonData.pdfId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/rulebook.pdf"
+                },
+                {
+                  "key": "gameId",
+                  "value": "{{gameId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "documentType",
+                  "value": "rulebook",
+                  "type": "text",
+                  "description": "Options: rulebook, quickstart, reference, faq"
+                },
+                {
+                  "key": "language",
+                  "value": "en",
+                  "type": "text"
+                },
+                {
+                  "key": "version",
+                  "value": "1.0",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest/pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ingest", "pdf"]
+            },
+            "description": "Upload a PDF file (< 10MB) for processing"
+          }
+        },
+        {
+          "name": "Init Chunked Upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{gameId}}\",\n  \"fileName\": \"large-rulebook.pdf\",\n  \"fileSize\": 25000000,\n  \"documentType\": \"rulebook\",\n  \"language\": \"en\",\n  \"version\": \"1.0\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest/pdf/chunked/init",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ingest", "pdf", "chunked", "init"]
+            },
+            "description": "Initialize chunked upload for large files (> 10MB)"
+          }
+        },
+        {
+          "name": "Upload Chunk",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "sessionId",
+                  "value": "chunked-session-id",
+                  "type": "text"
+                },
+                {
+                  "key": "chunkNumber",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "chunk",
+                  "type": "file",
+                  "src": "/path/to/chunk1.bin"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest/pdf/chunked/chunk",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ingest", "pdf", "chunked", "chunk"]
+            },
+            "description": "Upload a single chunk of a large file"
+          }
+        },
+        {
+          "name": "Complete Chunked Upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"chunked-session-id\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest/pdf/chunked/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ingest", "pdf", "chunked", "complete"]
+            },
+            "description": "Complete chunked upload and start processing"
+          }
+        },
+        {
+          "name": "Get Processing Progress",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pdfs/{{pdfId}}/progress",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pdfs", "{{pdfId}}", "progress"]
+            },
+            "description": "Check PDF processing status (extraction, OCR, indexing)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Document Versions",
+      "item": [
+        {
+          "name": "List Documents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.documents && jsonData.documents.length > 0) {",
+                  "        pm.collectionVariables.set('docId', jsonData.documents[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/documents",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "documents"]
+            },
+            "description": "List all documents and versions for a game"
+          }
+        },
+        {
+          "name": "Get Active Documents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/documents/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "documents", "active"]
+            },
+            "description": "Get only active (current) document versions"
+          }
+        },
+        {
+          "name": "Set Active Version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/documents/{{docId}}/set-active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "documents", "{{docId}}", "set-active"]
+            },
+            "description": "Set a specific document version as active"
+          }
+        },
+        {
+          "name": "Delete Document",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/documents/{{docId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "documents", "{{docId}}"]
+            },
+            "description": "Delete a document version (cannot delete active version)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Processing",
+      "item": [
+        {
+          "name": "Re-index PDF",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest/pdf/{{pdfId}}/index",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ingest", "pdf", "{{pdfId}}", "index"]
+            },
+            "description": "Re-index an existing PDF (regenerate embeddings)"
+          }
+        },
+        {
+          "name": "Extract Text Only",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest/pdf/{{pdfId}}/extract",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ingest", "pdf", "{{pdfId}}", "extract"]
+            },
+            "description": "Extract text from PDF without indexing"
+          }
+        },
+        {
+          "name": "View Extracted Text",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pdfs/{{pdfId}}/text",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pdfs", "{{pdfId}}", "text"]
+            },
+            "description": "View the extracted text content of a PDF"
+          }
+        },
+        {
+          "name": "Cancel Processing",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pdfs/{{pdfId}}/processing",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pdfs", "{{pdfId}}", "processing"]
+            },
+            "description": "Cancel ongoing PDF processing"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rule Spec Generation",
+      "item": [
+        {
+          "name": "Generate Rule Spec",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ingest/pdf/{{pdfId}}/rulespec",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "ingest", "pdf", "{{pdfId}}", "rulespec"]
+            },
+            "description": "Generate structured rule specification from PDF using AI"
+          }
+        },
+        {
+          "name": "Get Rule Spec",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/rulespec",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "rulespec"]
+            },
+            "description": "Get the generated rule specification for a game"
+          }
+        },
+        {
+          "name": "Update Rule Spec",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sections\": [\n    {\n      \"title\": \"Setup\",\n      \"content\": \"Place the board in the center of the table...\",\n      \"subsections\": []\n    },\n    {\n      \"title\": \"Turn Structure\",\n      \"steps\": [\"Roll dice\", \"Collect resources\", \"Trade/Build\"]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/shared-games/{{gameId}}/rulespec",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "shared-games", "{{gameId}}", "rulespec"]
+            },
+            "description": "Manually update the rule specification"
+          }
+        }
+      ]
+    }
+  ]
+}

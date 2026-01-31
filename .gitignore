@@ -1,0 +1,201 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+**/node_modules/
+
+# Build outputs
+**/bin/
+**/obj/
+**/publish/
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+storybook-static/
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env.dev
+*.env.production
+*.env.staging
+**/.env
+**/.env.*
+# Exception: Allow .env*.example files for documentation
+!**/.env*.example
+# Secrets and passwords
+infra/secrets/*.txt
+infra/env/*.env
+tools/secrets/*.txt
+infra/traefik/certs/*.*
+
+# ISSUE-2510: Secret management system
+# Exclude actual secret files but keep templates
+infra/secrets/*.secret
+!infra/secrets/*.secret.example
+
+# Staging/Production secrets (Docker secrets format - plain text files)
+infra/secrets/staging/*.txt
+!infra/secrets/staging/*.txt.example
+infra/secrets/prod/*.txt
+infra/secrets/prod/*.pfx
+!infra/secrets/prod/*.txt.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+*.coverage
+.nyc_output/
+.pytest_cache/
+TestResults/
+# Test artifacts
+test-results.log
+test-output.log
+e2e-test-results.log
+e2e-critical-paths.log
+build-analysis.log
+# Coverage reports (keep only versioned finals)
+coverage-*.txt
+!coverage-final-*.txt
+!coverage-report-*.txt
+
+# Python
+.venv/
+.venv*/
+**/.venv/
+**/.venv*/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.temp
+.cache/
+tmpclaude*
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Data
+
+# Serena MCP
+.serena/
+
+# CodeQL
+codeql-db/
+
+# Playwright
+.playwright-mcp/
+playwright-report/
+test-results/
+
+# Misc
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Code Assistant Claude
+.claude/settings.local.json
+.claude/.mcp.local.json
+
+# Playwright MCP temp files
+tmpclaude-*-cwd
+nul
+docs/02-development/MeepleAI_Configuration_Variables.xlsx
+apps/api/test-results.txt
+
+# Development-only files with sensitive data (rotate passwords periodically)
+apps/api/src/Api/apply-migrations.ps1
+apps/api/src/Api/appsettings.Development.json
+apps/docs/screenshots/.test-output/chromatic-archives/admin-flows-approval-workflow-visual-approval-workflow-visual-documentation-admin-approval-queue-pending-submissions.stories.json
+apps/docs/screenshots/.test-output/chromatic-archives/admin-flows-approval-workflow-visual-approval-workflow-visual-documentation-admin-approve-publication-success-flow.stories.json
+apps/docs/screenshots/.test-output/chromatic-archives/admin-flows-approval-workflow-visual-approval-workflow-visual-documentation-admin-reject-submission-feedback-flow.stories.json
+apps/docs/screenshots/.test-output/chromatic-archives/admin-flows-approval-workflow-visual-approval-workflow-visual-documentation-admin-review-submission-detailed-view.stories.json
+apps/docs/screenshots/.test-output/chromatic-archives/admin-flows-monitoring-visual-monitoring-visual-documentation-admin-alert-management-view-and-acknowledge.stories.json
+apps/docs/screenshots/.test-output/chromatic-archives/admin-flows-monitoring-visual-monitoring-visual-documentation-admin-dashboard-overview-key-metrics.stories.json
+apps/docs/screenshots/.test-output/chromatic-archives/admin-flows-monitoring-visual-monitoring-visual-documentation-admin-system-health-service-status.stories.json
+apps/docs/screenshots/.test-output/chromatic-archives/archive/admin-flows-approval-workflow-visual-approval-workflow-visual-documentation-admin-approval-queue-pending-submissions-snapshot-1.w1280h720.snapshot.json
+apps/docs/screenshots/.test-output/chromatic-archives/archive/admin-flows-approval-workflow-visual-approval-workflow-visual-documentation-admin-approve-publication-success-flow-snapshot-1.w1280h720.snapshot.json
+apps/docs/screenshots/.test-output/chromatic-archives/archive/admin-flows-approval-workflow-visual-approval-workflow-visual-documentation-admin-reject-submission-feedback-flow-snapshot-1.w1280h720.snapshot.json
+apps/docs/screenshots/.test-output/chromatic-archives/archive/admin-flows-approval-workflow-visual-approval-workflow-visual-documentation-admin-review-submission-detailed-view-snapshot-1.w1280h720.snapshot.json
+apps/docs/screenshots/.test-output/chromatic-archives/archive/admin-flows-monitoring-visual-monitoring-visual-documentation-admin-alert-management-view-and-acknowledge-snapshot-1.w1280h720.snapshot.json
+apps/docs/screenshots/.test-output/chromatic-archives/archive/admin-flows-monitoring-visual-monitoring-visual-documentation-admin-dashboard-overview-key-metrics-snapshot-1.w1280h720.snapshot.json
+apps/docs/screenshots/.test-output/chromatic-archives/archive/admin-flows-monitoring-visual-monitoring-visual-documentation-admin-system-health-service-status-snapshot-1.w1280h720.snapshot.json
+apps/docs/screenshots/.test-output/chromatic-archives/archive/__nextjs_font/geist-latin.woff2
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/_a0ff3932._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/4bf98_next_9a99b127._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/4bf98_next_3096a6f6._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/4bf98_next_dist_1e1c4f9c._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/4bf98_next_dist_554bb2aa._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/4bf98_next_dist_client_9d459da0._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/4bf98_next_dist_client_components_builtin_global-error_92ca8b9c.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/4bf98_next_dist_compiled_da3c1662._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/4bf98_next_dist_compiled_next-devtools_index_571479fb.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/4bf98_next_dist_compiled_react-dom_c02ad9a3._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/4bf98_next_dist_compiled_react-server-dom-turbopack_a122da94._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/5Broot-of-the-server5D__ede13c02._.css
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/5Bturbopack5D_browser_dev_hmr-client_hmr-client_ts_51e13bbf._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/5Bturbopack5D_browser_dev_hmr-client_hmr-client_ts_71375886._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/5Bturbopack5D_browser_dev_hmr-client_hmr-client_ts_c8c997ce._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/6e317_zod_v4_9683ff70._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/080f8_40hyperdx_browser_build_index_fe696f7d.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/90df0_recharts_es6_index_c6cb2083.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/11326_axe-core_axe_fa37cd83.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/69652_40swc_helpers_cjs_679851cc._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/83754_40axe-core_react_dist_index_mjs_d1aed82d._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/a94f9_tailwind-merge_dist_bundle-mjs_mjs_f110c13e._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/d69ac_40tanstack_react-query-devtools_build_modern_index_d1aed82d.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/eef15_40tanstack_query-devtools_build_2b7d33b2._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/eef15_40tanstack_query-devtools_build_97607f63._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/eef15_40tanstack_query-devtools_build_DevtoolsComponent_7HGFFDPC_d1aed82d.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/node_modules__pnpm_914b57ca._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/node_modules__pnpm_a2a8d5b4._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/node_modules__pnpm_b78eb4b6._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/node_modules__pnpm_b203496c._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/node_modules__pnpm_d0d68c81._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/node_modules__pnpm_f7faf27f._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/src_2c26938e._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/src_app_admin_alerts_page_tsx_8507a716._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/src_app_layout_tsx_92ca8b9c._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/src_ca56679d._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/src_components_9da53036._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/src_components_admin_e082a049._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/src_components_ui_242e5b26._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/src_lib_e7213284._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/chunks/turbopack-_3fc314c9._.js
+apps/docs/screenshots/.test-output/chromatic-archives/archive/_next/static/media/4a7551bcc3548e67-s.p.717db902.woff2

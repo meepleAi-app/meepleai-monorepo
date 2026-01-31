@@ -1,0 +1,173 @@
+{
+  "id": "health-monitor",
+  "name": "System Health Monitor",
+  "version": "1.0.0",
+  "description": "Continuous health check monitoring for all services (API, Qdrant, Redis, PostgreSQL) with alerting on failures",
+  "category": "monitoring",
+  "author": "MeepleAI",
+  "tags": ["health", "monitoring", "uptime", "alerts"],
+  "icon": "💚",
+  "screenshot": null,
+  "documentation": "docs/n8n-templates/health-monitor.md",
+  "parameters": [
+    {
+      "name": "checkInterval",
+      "type": "select",
+      "label": "Check Interval",
+      "description": "How often to check health",
+      "required": true,
+      "default": "*/5 * * * *",
+      "options": ["*/1 * * * *", "*/5 * * * *", "*/15 * * * *", "*/30 * * * *"],
+      "sensitive": false
+    },
+    {
+      "name": "apiHealthUrl",
+      "type": "string",
+      "label": "API Health Endpoint",
+      "description": "MeepleAI API health check URL",
+      "required": true,
+      "default": "http://api:8080/health",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "alertWebhookUrl",
+      "type": "string",
+      "label": "Alert Webhook URL",
+      "description": "Webhook for sending health alerts",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": true
+    },
+    {
+      "name": "consecutiveFailures",
+      "type": "number",
+      "label": "Consecutive Failures",
+      "description": "Number of failed checks before alerting",
+      "required": true,
+      "default": "3",
+      "options": null,
+      "sensitive": false
+    }
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "schedule",
+        "name": "Health Check Schedule",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [250, 300],
+        "parameters": {
+          "rule": {
+            "interval": [{"cronExpression": "{{checkInterval}}"}]
+          }
+        }
+      },
+      {
+        "id": "health-check",
+        "name": "Check API Health",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [450, 300],
+        "parameters": {
+          "url": "{{apiHealthUrl}}",
+          "method": "GET",
+          "options": {
+            "timeout": 5000,
+            "redirect": {
+              "redirect": {
+                "followRedirects": false
+              }
+            }
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "parse-health",
+        "name": "Parse Health Response",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [650, 300],
+        "parameters": {
+          "functionCode": "const response = items[0].json;\\nconst isHealthy = response.status === 'Healthy';\\nconst failedServices = [];\\n\\nif (response.checks) {\\n  for (const [service, data] of Object.entries(response.checks)) {\\n    if (data.status !== 'Healthy') {\\n      failedServices.push(service);\\n    }\\n  }\\n}\\n\\nreturn [{\\n  json: {\\n    isHealthy,\\n    failedServices,\\n    timestamp: new Date().toISOString()\\n  }\\n}];"
+        }
+      },
+      {
+        "id": "check-failures",
+        "name": "Check If Should Alert",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [850, 300],
+        "parameters": {
+          "functionCode": "const staticData = $getWorkflowStaticData('node');\\nconst isHealthy = items[0].json.isHealthy;\\nconst threshold = {{consecutiveFailures}};\\n\\nif (!isHealthy) {\\n  staticData.failureCount = (staticData.failureCount || 0) + 1;\\n} else {\\n  staticData.failureCount = 0;\\n}\\n\\nconst shouldAlert = staticData.failureCount >= threshold;\\n\\nreturn [{\\n  json: {\\n    ...items[0].json,\\n    failureCount: staticData.failureCount,\\n    shouldAlert\\n  }\\n}];"
+        }
+      },
+      {
+        "id": "if-should-alert",
+        "name": "Should Alert?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [1050, 300],
+        "parameters": {
+          "conditions": {
+            "boolean": [
+              {"value1": "={{ $json.shouldAlert }}", "operation": "true"}
+            ]
+          }
+        }
+      },
+      {
+        "id": "send-alert",
+        "name": "Send Health Alert",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [1250, 300],
+        "parameters": {
+          "url": "{{alertWebhookUrl}}",
+          "method": "POST",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "text",
+                "value": "🚨 Health Alert: System unhealthy for {{ $json.failureCount }} consecutive checks"
+              },
+              {
+                "name": "failedServices",
+                "value": "={{ JSON.stringify($json.failedServices) }}"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "connections": {
+      "schedule": {
+        "main": [[{"node": "health-check", "type": "main", "index": 0}]]
+      },
+      "health-check": {
+        "main": [[{"node": "parse-health", "type": "main", "index": 0}]]
+      },
+      "parse-health": {
+        "main": [[{"node": "check-failures", "type": "main", "index": 0}]]
+      },
+      "check-failures": {
+        "main": [[{"node": "if-should-alert", "type": "main", "index": 0}]]
+      },
+      "if-should-alert": {
+        "main": [[{"node": "send-alert", "type": "main", "index": 0}]]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": {
+      "node": {
+        "failureCount": 0
+      }
+    }
+  }
+}

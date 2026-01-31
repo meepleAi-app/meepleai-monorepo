@@ -1,0 +1,306 @@
+# Grafana Alert Rules for HTTP Retry & Circuit Breaker Metrics
+# Issue #1453 - Enhancement
+
+apiVersion: 1
+
+groups:
+  - name: http_retry_alerts
+    interval: 1m
+    rules:
+      # Alert: High Retry Rate
+      - uid: http_retry_high_rate
+        title: High HTTP Retry Rate
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300  # 5 minutes
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'rate(http_client_retries_total[5m]) > 10'
+              intervalMs: 1000
+              maxDataPoints: 43200
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: 'HTTP retry rate is {{ $value }} req/s (threshold: 10 req/s). This indicates potential backend instability.'
+          summary: 'High retry rate detected'
+        labels:
+          severity: warning
+          team: platform
+
+      # Alert: High Retry Failure Rate
+      - uid: http_retry_high_failure
+        title: High Retry Failure Rate
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'rate(http_client_failed_after_retry_total[5m]) > 1'
+              intervalMs: 1000
+              maxDataPoints: 43200
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: 'HTTP requests failing after retries at {{ $value }} req/s (threshold: 1 req/s). Backend may be down.'
+          summary: 'High retry failure rate'
+        labels:
+          severity: critical
+          team: platform
+
+      # Alert: Low Retry Success Rate
+      - uid: http_retry_low_success
+        title: Low Retry Success Rate
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600  # 10 minutes
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: '(http_client_success_after_retry_total / http_client_retries_total) < 0.5'
+              intervalMs: 1000
+              maxDataPoints: 43200
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        annotations:
+          description: 'Retry success rate is {{ $value | humanizePercentage }}% (threshold: 50%). Most retries are failing.'
+          summary: 'Low retry success rate'
+        labels:
+          severity: warning
+          team: platform
+
+      # Alert: Circuit Breaker Open
+      - uid: circuit_breaker_open
+        title: Circuit Breaker Open
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 60  # 1 minute
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'http_circuit_breaker_state == 2'  # OPEN = 2
+              intervalMs: 1000
+              maxDataPoints: 43200
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: 'Circuit breaker is OPEN for endpoint {{ $labels.endpoint }}. Requests are being denied to prevent cascading failures.'
+          summary: 'Circuit breaker opened for {{ $labels.endpoint }}'
+        labels:
+          severity: critical
+          team: platform
+          endpoint: '{{ $labels.endpoint }}'
+
+      # Alert: Multiple Circuit Breakers Open
+      - uid: circuit_breaker_multiple_open
+        title: Multiple Circuit Breakers Open
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'count(http_circuit_breaker_state == 2) > 3'
+              intervalMs: 1000
+              maxDataPoints: 43200
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          description: '{{ $value }} circuit breakers are OPEN. Multiple endpoints are failing.'
+          summary: 'Multiple circuit breakers open'
+        labels:
+          severity: critical
+          team: platform
+          page: 'true'
+
+      # Alert: Circuit Breaker Flapping
+      - uid: circuit_breaker_flapping
+        title: Circuit Breaker Flapping
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900  # 15 minutes
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'changes(http_circuit_breaker_state[15m]) > 10'
+              intervalMs: 1000
+              maxDataPoints: 43200
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: 'Circuit breaker for {{ $labels.endpoint }} changed state {{ $value }} times in 15 minutes. This indicates instability.'
+          summary: 'Circuit breaker flapping for {{ $labels.endpoint }}'
+        labels:
+          severity: warning
+          team: platform
+          endpoint: '{{ $labels.endpoint }}'
+
+      # Alert: High Average Retry Delay
+      - uid: http_retry_high_delay
+        title: High Average Retry Delay
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'http_client_retry_delay_avg_ms > 5000'
+              intervalMs: 1000
+              maxDataPoints: 43200
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        annotations:
+          description: 'Average retry delay is {{ $value }}ms (threshold: 5000ms). Exponential backoff may be hitting max delays.'
+          summary: 'High retry delay detected'
+        labels:
+          severity: warning
+          team: platform
+
+      # Alert: Endpoint Retry Spike
+      - uid: endpoint_retry_spike
+        title: Endpoint Retry Spike
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'rate(http_client_retries_by_endpoint[5m]) > 5'
+              intervalMs: 1000
+              maxDataPoints: 43200
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: 'Endpoint {{ $labels.endpoint }} retry rate is {{ $value }} req/s (threshold: 5 req/s).'
+          summary: 'Retry spike for {{ $labels.endpoint }}'
+        labels:
+          severity: warning
+          team: platform
+          endpoint: '{{ $labels.endpoint }}'
+
+      # Alert: Circuit Breaker High Failure Rate
+      - uid: circuit_breaker_high_failures
+        title: Circuit Breaker High Failure Rate
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'rate(http_circuit_breaker_failures_total[5m]) > 5'
+              intervalMs: 1000
+              maxDataPoints: 43200
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: 'Failure rate for {{ $labels.endpoint }} is {{ $value }} req/s through circuit breaker (threshold: 5 req/s).'
+          summary: 'High failure rate for {{ $labels.endpoint }}'
+        labels:
+          severity: warning
+          team: platform
+          endpoint: '{{ $labels.endpoint }}'
+
+      # Alert: No Retry Metrics (Data Missing)
+      - uid: http_retry_no_data
+        title: HTTP Retry Metrics Missing
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'absent(http_client_retries_total)'
+              intervalMs: 1000
+              maxDataPoints: 43200
+        noDataState: Alerting  # Alert on no data
+        execErrState: Error
+        for: 10m
+        annotations:
+          description: 'HTTP retry metrics have not been reported for 10 minutes. Check if the application is running.'
+          summary: 'Retry metrics missing'
+        labels:
+          severity: warning
+          team: platform
+
+# Contact Points (configure these in Grafana UI)
+contactPoints:
+  - name: platform-team
+    receivers:
+      - uid: platform_slack
+        type: slack
+        settings:
+          url: '${SLACK_WEBHOOK_URL}'
+          text: |
+            **{{ .GroupLabels.alertname }}**
+            {{ .Annotations.summary }}
+
+            {{ .Annotations.description }}
+
+            **Severity:** {{ .Labels.severity }}
+            **Team:** {{ .Labels.team }}
+
+            [View in Grafana]({{ .ExternalURL }})
+
+      - uid: platform_pagerduty
+        type: pagerduty
+        settings:
+          integrationKey: '${PAGERDUTY_INTEGRATION_KEY}'
+          severity: '{{ .Labels.severity }}'
+          class: 'http_retry'
+          component: 'frontend'
+
+# Notification Policies
+policies:
+  - receiver: platform-team
+    matchers:
+      - team = platform
+    group_by: ['alertname', 'endpoint']
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+    routes:
+      # Critical alerts get paged immediately
+      - receiver: platform-team
+        matchers:
+          - severity = critical
+          - page = true
+        group_wait: 10s
+        repeat_interval: 30m
+        continue: true
+
+      # Warnings get Slack only
+      - receiver: platform-team
+        matchers:
+          - severity = warning
+        group_wait: 1m
+        repeat_interval: 12h

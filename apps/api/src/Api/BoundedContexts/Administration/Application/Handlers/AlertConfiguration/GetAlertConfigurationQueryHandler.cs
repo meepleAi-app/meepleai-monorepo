@@ -1,0 +1,50 @@
+using Api.BoundedContexts.Administration.Application.Queries.AlertConfiguration;
+using Api.BoundedContexts.Administration.Domain.Aggregates.AlertConfigurations;
+using Api.BoundedContexts.Administration.Domain.Repositories;
+using MediatR;
+
+namespace Api.BoundedContexts.Administration.Application.Handlers.AlertConfiguration;
+
+/// <summary>
+/// Handler for GetAlertConfigurationQuery (Issue #915)
+/// </summary>
+internal class GetAlertConfigurationQueryHandler : IRequestHandler<GetAlertConfigurationQuery, AlertConfigurationDto>
+{
+    private readonly IAlertConfigurationRepository _repository;
+
+    public GetAlertConfigurationQueryHandler(IAlertConfigurationRepository repository)
+    {
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+    }
+
+    public async Task<AlertConfigurationDto> Handle(GetAlertConfigurationQuery request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var category = ConfigCategoryExtensions.FromString(request.Category);
+        var configs = await _repository.GetByCategoryAsync(category, cancellationToken).ConfigureAwait(false);
+
+        if (configs.Count == 0)
+        {
+            throw new InvalidOperationException($"No configuration found for category: {request.Category}");
+        }
+
+#pragma warning disable S6608 // Prefer indexing instead of "Enumerable" methods on "IReadOnlyList" - First() is clearer here after Count check
+        var config = configs.First();
+#pragma warning restore S6608
+        return MapToDto(config);
+    }
+
+    private static AlertConfigurationDto MapToDto(Domain.Aggregates.AlertConfigurations.AlertConfiguration config)
+    {
+        return new AlertConfigurationDto(
+            config.Id,
+            config.ConfigKey,
+            config.ConfigValue,
+            config.Category.ToDisplayString(),
+            config.IsEncrypted,
+            config.Description,
+            config.UpdatedAt,
+            config.UpdatedBy);
+    }
+}
+

@@ -1,0 +1,36 @@
+{
+  "mcpServers": {
+    "github-project-manager": {
+      "command": "docker",
+      "args": ["exec", "-i", "mcp-github", "node", "/app/src/index.js"]
+    },
+    "n8n": {
+      "command": "docker",
+      "args": ["exec", "-i", "mcp-n8n", "node", "/app/src/index.js"]
+    },
+    "aakarsh-sasi-memory-bank-mcp": {
+      "command": "docker",
+      "args": ["exec", "-i", "mcp-memory", "python", "src/server.py"]
+    },
+    "sequential": {
+      "command": "docker",
+      "args": ["exec", "-i", "mcp-sequential", "python", "server.py"]
+    },
+    "playwright": {
+      "command": "docker",
+      "args": ["exec", "-i", "mcp-playwright", "python", "server.py"]
+    },
+    "magic": {
+      "command": "docker",
+      "args": ["exec", "-i", "mcp-magic", "python", "server.py"]
+    },
+    "claude-context": {
+      "command": "docker",
+      "args": ["exec", "-i", "mcp-claude-context", "python", "server.py"]
+    },
+    "knowledge-graph": {
+      "command": "docker",
+      "args": ["exec", "-i", "mcp-knowledge-graph", "python", "server.py"]
+    }
+  }
+}

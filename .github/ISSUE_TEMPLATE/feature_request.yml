@@ -1,0 +1,51 @@
+---
+name: Feature Request
+about: Suggerisci una nuova funzionalità
+title: '[FEATURE] '
+labels: enhancement, needs-discussion
+---
+
+## User Story
+Come [tipo utente]
+Voglio [funzionalità]
+Così che [beneficio]
+
+## Problema/Opportunità
+Quale problema risolve o opportunità crea?
+
+## Valore per l'utente
+- **Utenti finali**: 
+- **Business**: 
+- **Team**: 
+
+## Scenari BDD
+Scenario: Happy path
+  Given [contesto]
+  When [azione]
+  Then [risultato]
+
+Scenario: Edge case
+  Given [contesto alternativo]
+  When [azione]
+  Then [gestione]
+
+## Mockup/Design (opzionale)
+Allega o linka mockup
+
+## Acceptance Criteria
+- [ ] Criterio 1
+- [ ] Criterio 2
+- [ ] Criterio 3
+
+## Epic Correlata
+Quale Epic? (EPIC-01, EPIC-02, etc.)
+
+## Effort Stimato
+- [ ] XS (1-2 ore)
+- [ ] S (1-2 giorni)
+- [ ] M (3-5 giorni)
+- [ ] L (1-2 settimane)
+- [ ] XL (>2 settimane)
+
+## Dipendenze
+Issue o feature prerequisite

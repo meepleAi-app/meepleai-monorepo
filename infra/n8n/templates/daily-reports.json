@@ -1,0 +1,152 @@
+{
+  "id": "daily-reports",
+  "name": "Daily Usage Report Email",
+  "version": "1.0.0",
+  "description": "Generate and email daily usage reports with metrics on user activity, API calls, and system health",
+  "category": "automation",
+  "author": "MeepleAI",
+  "tags": ["report", "email", "analytics", "daily"],
+  "icon": "📈",
+  "screenshot": null,
+  "documentation": "docs/n8n-templates/daily-reports.md",
+  "parameters": [
+    {
+      "name": "reportTime",
+      "type": "select",
+      "label": "Report Time",
+      "description": "What time to send daily reports",
+      "required": true,
+      "default": "0 8 * * *",
+      "options": ["0 6 * * *", "0 8 * * *", "0 10 * * *", "0 18 * * *"],
+      "sensitive": false
+    },
+    {
+      "name": "recipientEmails",
+      "type": "string",
+      "label": "Recipients",
+      "description": "Comma-separated email addresses",
+      "required": true,
+      "default": "admin@meepleai.dev",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "apiBaseUrl",
+      "type": "string",
+      "label": "API Base URL",
+      "description": "MeepleAI API URL for fetching stats",
+      "required": true,
+      "default": "http://api:8080",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "smtpHost",
+      "type": "string",
+      "label": "SMTP Server",
+      "description": "SMTP server hostname",
+      "required": true,
+      "default": "smtp.gmail.com",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "smtpUser",
+      "type": "string",
+      "label": "SMTP Username",
+      "description": "Email account for sending",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "smtpPassword",
+      "type": "string",
+      "label": "SMTP Password",
+      "description": "Email account password",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": true
+    }
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "schedule",
+        "name": "Daily Schedule",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [250, 300],
+        "parameters": {
+          "rule": {
+            "interval": [{"cronExpression": "{{reportTime}}"}]
+          }
+        }
+      },
+      {
+        "id": "fetch-stats",
+        "name": "Fetch Usage Stats",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [450, 300],
+        "parameters": {
+          "url": "={{apiBaseUrl}}/api/v1/admin/stats?period=daily",
+          "method": "GET"
+        }
+      },
+      {
+        "id": "format-report",
+        "name": "Format HTML Report",
+        "type": "n8n-nodes-base.html",
+        "typeVersion": 1,
+        "position": [650, 300],
+        "parameters": {
+          "html": "<h2>MeepleAI Daily Report</h2>\\n<p>{{ $now.format('YYYY-MM-DD') }}</p>\\n<h3>Usage Metrics</h3>\\n<ul>\\n  <li>Total Users: {{ $json.totalUsers }}</li>\\n  <li>Active Users (24h): {{ $json.activeUsers }}</li>\\n  <li>API Requests: {{ $json.apiRequests }}</li>\\n  <li>PDF Uploads: {{ $json.pdfUploads }}</li>\\n  <li>Questions Asked: {{ $json.questionsAsked }}</li>\\n</ul>"
+        }
+      },
+      {
+        "id": "send-email",
+        "name": "Send Report Email",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2,
+        "position": [850, 300],
+        "parameters": {
+          "transport": "smtp",
+          "fromEmail": "{{smtpUser}}",
+          "toEmail": "{{recipientEmails}}",
+          "subject": "MeepleAI Daily Report - {{ $now.format('YYYY-MM-DD') }}",
+          "message": "={{ $json.html }}",
+          "options": {
+            "contentType": "html"
+          }
+        },
+        "credentials": {
+          "smtp": {
+            "host": "{{smtpHost}}",
+            "port": 587,
+            "secure": true,
+            "user": "{{smtpUser}}",
+            "password": "{{smtpPassword}}"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "schedule": {
+        "main": [[{"node": "fetch-stats", "type": "main", "index": 0}]]
+      },
+      "fetch-stats": {
+        "main": [[{"node": "format-report", "type": "main", "index": 0}]]
+      },
+      "format-report": {
+        "main": [[{"node": "send-email", "type": "main", "index": 0}]]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null
+  }
+}

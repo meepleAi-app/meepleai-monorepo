@@ -1,0 +1,36 @@
+using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.Infrastructure;
+using Api.SharedKernel.Application.EventHandlers;
+using Microsoft.Extensions.Logging;
+
+namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
+
+internal sealed class GameSessionCompletedEventHandler : DomainEventHandlerBase<GameSessionCompletedEvent>
+{
+    public GameSessionCompletedEventHandler(
+        MeepleAiDbContext dbContext,
+        ILogger<GameSessionCompletedEventHandler> logger)
+        : base(dbContext, logger)
+    {
+    }
+
+    protected override async Task HandleEventAsync(GameSessionCompletedEvent domainEvent, CancellationToken cancellationToken)
+    {
+        // Auto-audit logging is handled by base class
+        // Add additional business logic here if needed (e.g., update game statistics)
+        await Task.CompletedTask.ConfigureAwait(false);
+    }
+
+    protected override Dictionary<string, object?>? GetAuditMetadata(GameSessionCompletedEvent domainEvent)
+    {
+        return new Dictionary<string, object?>
+(StringComparer.Ordinal)
+        {
+            ["SessionId"] = domainEvent.SessionId,
+            ["GameId"] = domainEvent.GameId,
+            ["CompletedAt"] = domainEvent.CompletedAt,
+            ["Duration"] = domainEvent.Duration.ToString(),
+            ["Action"] = "GameSessionCompleted"
+        };
+    }
+}

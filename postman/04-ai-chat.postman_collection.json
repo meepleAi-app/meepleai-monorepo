@@ -1,0 +1,484 @@
+{
+  "info": {
+    "_postman_id": "ai-chat-collection-004",
+    "name": "04 - AI Chat Flows",
+    "description": "MeepleAI AI Chat API endpoints for chat threads, messages with RAG, and conversation export.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "gameId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "threadId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Chat Threads",
+      "item": [
+        {
+          "name": "List My Chat Threads",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.items && jsonData.items.length > 0) {",
+                  "        pm.collectionVariables.set('threadId', jsonData.items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat-threads?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat-threads"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get all chat threads for current user"
+          }
+        },
+        {
+          "name": "List Threads by Game",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat-threads?gameId={{gameId}}&page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat-threads"],
+              "query": [
+                {
+                  "key": "gameId",
+                  "value": "{{gameId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get chat threads filtered by specific game"
+          }
+        },
+        {
+          "name": "Create Chat Thread",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('threadId', jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{gameId}}\",\n  \"title\": \"Rules clarification for Catan\",\n  \"context\": \"setup\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat-threads",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat-threads"]
+            },
+            "description": "Create a new chat thread for a game"
+          }
+        },
+        {
+          "name": "Get Thread Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat-threads/{{threadId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat-threads", "{{threadId}}"]
+            },
+            "description": "Get thread details with message history"
+          }
+        },
+        {
+          "name": "Update Thread Title",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated: Catan Setup Questions\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat-threads/{{threadId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat-threads", "{{threadId}}"]
+            },
+            "description": "Update thread title"
+          }
+        },
+        {
+          "name": "Delete Thread",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat-threads/{{threadId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat-threads", "{{threadId}}"]
+            },
+            "description": "Delete a chat thread and all messages"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Messages",
+      "item": [
+        {
+          "name": "Send Message (SSE Streaming)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "text/event-stream"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"How do I set up the board for a 4-player game?\",\n  \"stream\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat-threads/{{threadId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat-threads", "{{threadId}}", "messages"]
+            },
+            "description": "Send message with SSE streaming response. Note: Use Postman's built-in SSE support or curl to test streaming."
+          }
+        },
+        {
+          "name": "Send Message (Non-Streaming)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"What are the victory conditions?\",\n  \"stream\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat-threads/{{threadId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat-threads", "{{threadId}}", "messages"]
+            },
+            "description": "Send message with full response (no streaming)"
+          }
+        },
+        {
+          "name": "Get Message History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat-threads/{{threadId}}/messages?page=1&pageSize=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat-threads", "{{threadId}}", "messages"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Get message history for a thread"
+          }
+        },
+        {
+          "name": "Rate Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": \"helpful\",\n  \"feedback\": \"Clear and accurate explanation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat-threads/{{threadId}}/messages/:messageId/rate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat-threads", "{{threadId}}", "messages", ":messageId", "rate"],
+              "variable": [
+                {
+                  "key": "messageId",
+                  "value": "message-uuid"
+                }
+              ]
+            },
+            "description": "Rate an AI response for quality feedback"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Knowledge Base (RAG)",
+      "item": [
+        {
+          "name": "Ask Question (Direct RAG)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{gameId}}\",\n  \"question\": \"Can I trade on another player's turn?\",\n  \"includeContext\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/knowledge-base/ask",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "knowledge-base", "ask"]
+            },
+            "description": "Direct RAG query without creating a chat thread"
+          }
+        },
+        {
+          "name": "Search Knowledge Base",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/knowledge-base/search?gameId={{gameId}}&query=trading rules&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "knowledge-base", "search"],
+              "query": [
+                {
+                  "key": "gameId",
+                  "value": "{{gameId}}"
+                },
+                {
+                  "key": "query",
+                  "value": "trading rules"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Search indexed documents for relevant content"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Export",
+      "item": [
+        {
+          "name": "Export Thread as Markdown",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Accept",
+                "value": "text/markdown"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat-threads/{{threadId}}/export?format=markdown",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat-threads", "{{threadId}}", "export"],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "markdown"
+                }
+              ]
+            },
+            "description": "Export chat thread as Markdown document"
+          }
+        },
+        {
+          "name": "Export Thread as PDF",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/pdf"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat-threads/{{threadId}}/export?format=pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat-threads", "{{threadId}}", "export"],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "pdf"
+                }
+              ]
+            },
+            "description": "Export chat thread as PDF document"
+          }
+        },
+        {
+          "name": "Export Thread as JSON",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat-threads/{{threadId}}/export?format=json",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat-threads", "{{threadId}}", "export"],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "json"
+                }
+              ]
+            },
+            "description": "Export chat thread as JSON for backup/import"
+          }
+        }
+      ]
+    }
+  ]
+}

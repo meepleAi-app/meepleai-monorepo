@@ -1,0 +1,100 @@
+
+
+#pragma warning disable MA0048 // File name must match type name - Contains related domain models
+namespace Api.Models;
+
+/// <summary>
+/// AI-07.1: Prompt template with few-shot examples for RAG responses
+/// Supports LangChain-style prompt engineering with structured examples
+/// </summary>
+internal record PromptTemplate
+{
+    /// <summary>
+    /// System prompt with instructions and guidelines
+    /// </summary>
+    public required string SystemPrompt { get; init; }
+
+    /// <summary>
+    /// User prompt template with placeholders for {context} and {query}
+    /// </summary>
+    public required string UserPromptTemplate { get; init; }
+
+    /// <summary>
+    /// Few-shot examples to improve LLM response quality
+    /// Recommended: 3-5 examples per question category
+    /// </summary>
+    public IList<FewShotExample> FewShotExamples { get; init; } = new List<FewShotExample>();
+
+    /// <summary>
+    /// Optional game-specific identifier (null for default template)
+    /// </summary>
+    public Guid? GameId { get; init; }
+
+    /// <summary>
+    /// Question type this template is optimized for
+    /// </summary>
+    public QuestionType QuestionType { get; init; } = QuestionType.General;
+}
+
+/// <summary>
+/// AI-07.1: Few-shot example for prompt engineering
+/// Demonstrates desired response format and quality to the LLM
+/// </summary>
+internal record FewShotExample
+{
+    /// <summary>
+    /// Example question
+    /// </summary>
+    public required string Question { get; init; }
+
+    /// <summary>
+    /// Example answer demonstrating desired response format
+    /// </summary>
+    public required string Answer { get; init; }
+
+    /// <summary>
+    /// Category/topic for this example (for documentation and filtering)
+    /// </summary>
+    public required string Category { get; init; }
+}
+
+/// <summary>
+/// AI-07.1: Configuration model for RAG prompts section in appsettings.json
+/// </summary>
+internal class RagPromptsConfiguration
+{
+    /// <summary>
+    /// Default template for generic board game questions
+    /// </summary>
+    public PromptTemplateConfig? Default { get; set; }
+
+    /// <summary>
+    /// Question type-specific templates
+    /// </summary>
+    public IDictionary<string, PromptTemplateConfig> Templates { get; set; } = new Dictionary<string, PromptTemplateConfig>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Game-specific template overrides (keyed by game ID)
+    /// </summary>
+    public IDictionary<string, IDictionary<string, PromptTemplateConfig>> GameTemplates { get; set; } = new Dictionary<string, IDictionary<string, PromptTemplateConfig>>(StringComparer.Ordinal);
+}
+
+/// <summary>
+/// AI-07.1: Prompt template configuration model
+/// </summary>
+internal class PromptTemplateConfig
+{
+    public required string SystemPrompt { get; set; }
+    public required string UserPromptTemplate { get; set; }
+    public IList<FewShotExampleConfig> FewShotExamples { get; set; } = new List<FewShotExampleConfig>();
+}
+
+/// <summary>
+/// AI-07.1: Few-shot example configuration model
+/// </summary>
+internal class FewShotExampleConfig
+{
+    public required string Question { get; set; }
+    public required string Answer { get; set; }
+    public required string Category { get; set; }
+}

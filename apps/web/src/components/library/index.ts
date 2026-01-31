@@ -1,0 +1,29 @@
+/**
+ * Library Components Index
+ *
+ * Components for user game library management.
+ */
+
+export { AddToLibraryButton, type AddToLibraryButtonProps } from './AddToLibraryButton';
+export { FavoriteToggle, type FavoriteToggleProps } from './FavoriteToggle';
+export { QuotaStatusBar, type QuotaStatusBarProps } from './QuotaStatusBar';
+export { QuotaStickyHeader, type QuotaStickyHeaderProps } from './QuotaStickyHeader';
+export { LibraryFilters, type LibraryFiltersProps } from './LibraryFilters';
+export { EditNotesModal, type EditNotesModalProps } from './EditNotesModal';
+export { RemoveGameDialog, type RemoveGameDialogProps } from './RemoveGameDialog';
+export { UserGameCard } from './UserGameCard';
+export { AgentConfigModal } from './AgentConfigModal';
+export { PdfUploadModal } from './PdfUploadModal';
+export { GameActionsModal, type GameActionsModalProps } from './GameActionsModal';
+export { RecentLibraryCard, type RecentLibraryCardProps } from './RecentLibraryCard';
+
+// Bulk Operations (Issue #2613)
+export { BulkActionBar, type BulkActionBarProps } from './BulkActionBar';
+export { BulkRemoveDialog, type BulkRemoveDialogProps } from './BulkRemoveDialog';
+
+// Library Sharing (Issue #2614)
+export { ShareLibraryModal } from './ShareLibraryModal';
+export { SharedLibraryGameCard } from './SharedLibraryGameCard';
+
+// View Mode Toggle (Issue #2866)
+export { ViewModeToggle, type ViewModeToggleProps, type ViewMode } from './ViewModeToggle';

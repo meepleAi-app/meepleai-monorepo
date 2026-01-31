@@ -1,0 +1,136 @@
+/**
+ * MessageInput - Message input form with send button
+ *
+ * Handles user message input and submission.
+ * Integrates with ChatProvider for state and submission.
+ * AI-14: Includes SearchModeToggle for hybrid search feature.
+ * Issue #2051: Includes DocumentSourceSelector for multi-document filtering.
+ * Migrated to shadcn/ui components.
+ */
+
+import React, { FormEvent } from 'react';
+
+import { SearchModeToggle, SearchMode, DocumentSourceSelector } from '@/components';
+import type { DocumentSource } from '@/components';
+import { Input } from '@/components/ui/primitives/input';
+import { useDocumentsByGame } from '@/hooks/queries/useDocumentsByGame';
+import { useChatWithStreaming } from '@/hooks/useChatWithStreaming';
+import { useChatStore } from '@/store/chat/store';
+
+import { LoadingButton } from '../loading/LoadingButton';
+
+export function MessageInput() {
+  // Issue #1676: Uses streaming-enabled hook (combines Zustand + SSE)
+  const {
+    inputValue,
+    setInputValue,
+    sendMessage,
+    selectedGameId,
+    selectedAgentId,
+    loading,
+    searchMode,
+    setSearchMode,
+    // Streaming state (Issue #1007)
+    isStreaming,
+    stopStreaming,
+  } = useChatWithStreaming();
+
+  // Issue #2051: Document source selection
+  const { selectedDocumentIds, setSelectedDocuments } = useChatStore(state => ({
+    selectedDocumentIds: state.selectedDocumentIds,
+    setSelectedDocuments: state.setSelectedDocuments,
+  }));
+
+  // Fetch documents for selected game
+  const { data: documents = [], isLoading: documentsLoading } = useDocumentsByGame({
+    gameId: selectedGameId,
+    enabled: selectedGameId !== null,
+  });
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || !selectedGameId || !selectedAgentId) {
+      return;
+    }
+    void sendMessage(inputValue);
+  };
+
+  const handleStop = () => {
+    stopStreaming();
+  };
+
+  const isDisabled = loading.sending || isStreaming || !selectedGameId || !selectedAgentId;
+  const isSendDisabled = !inputValue.trim() || isDisabled;
+
+  // Map PDFs to DocumentSource format
+  const documentSources: DocumentSource[] = documents.map(pdf => ({
+    id: pdf.id,
+    fileName: pdf.fileName,
+    documentType: (pdf.documentType ?? 'base') as DocumentSource['documentType'], // Issue #2051
+    uploadedAt: pdf.uploadedAt,
+    pageCount: pdf.pageCount,
+  }));
+
+  return (
+    <div className="p-4 border-t border-border/50 dark:border-border/30 bg-background/95 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none flex flex-col gap-3">
+      {/* Issue #2051: Document Source Selector */}
+      {documents.length > 0 && (
+        <DocumentSourceSelector
+          documents={documentSources}
+          selectedIds={selectedDocumentIds}
+          onSelectionChange={setSelectedDocuments}
+          disabled={isDisabled || documentsLoading}
+        />
+      )}
+
+      {/* AI-14: Search Mode Toggle */}
+      <SearchModeToggle
+        value={searchMode as SearchMode}
+        onChange={mode => setSearchMode(mode)}
+        disabled={isDisabled}
+      />
+
+      {/* Message Input Form */}
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <label htmlFor="message-input" className="sr-only">
+          Ask a question about the game
+        </label>
+        <Input
+          id="message-input"
+          data-testid="message-input"
+          type="text"
+          value={inputValue}
+          onChange={e => setInputValue(e.target.value)}
+          placeholder="Fai una domanda sul gioco..."
+          disabled={isDisabled}
+          aria-label="Message input"
+          className="flex-1"
+        />
+        {isStreaming ? (
+          <LoadingButton
+            type="button"
+            onClick={handleStop}
+            isLoading={false}
+            disabled={false}
+            aria-label="Stop streaming"
+            data-testid="stop-streaming-button"
+            className="bg-red-600 hover:bg-red-700"
+          >
+            ⏹ Stop
+          </LoadingButton>
+        ) : (
+          <LoadingButton
+            type="submit"
+            isLoading={loading.sending}
+            loadingText="Invio..."
+            disabled={isSendDisabled}
+            aria-label="Send message"
+            data-testid="send-message-button"
+          >
+            Invia
+          </LoadingButton>
+        )}
+      </form>
+    </div>
+  );
+}

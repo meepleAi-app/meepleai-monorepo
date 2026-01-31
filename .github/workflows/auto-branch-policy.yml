@@ -1,0 +1,64 @@
+name: Branch Policy
+
+on:
+  pull_request:
+    branches:
+      - main
+      - main-dev
+
+jobs:
+  validate-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR source branch
+        env:
+          BASE_BRANCH: ${{ github.base_ref }}
+          SOURCE_BRANCH: ${{ github.head_ref }}
+        run: |
+          echo "PR: $SOURCE_BRANCH -> $BASE_BRANCH"
+
+          # ============================================
+          # MAIN branch policy
+          # ============================================
+          # main can only be updated from main-dev
+          if [[ "$BASE_BRANCH" == "main" ]]; then
+            if [[ "$SOURCE_BRANCH" != "main-dev" ]]; then
+              echo "::error::Branch 'main' can only be updated from 'main-dev'"
+              echo "::error::Attempted merge from: $SOURCE_BRANCH"
+              echo ""
+              echo "Workflow: feature -> frontend-dev -> main-dev -> main"
+              exit 1
+            fi
+            echo "✅ Valid: main-dev -> main"
+          fi
+
+          # ============================================
+          # MAIN-DEV branch policy
+          # ============================================
+          # main-dev can be updated from:
+          # - frontend-dev (primary path)
+          # - feature/* branches (hotfixes, backend features)
+          # - fix/*, docs/*, refactor/*, chore/* branches
+          if [[ "$BASE_BRANCH" == "main-dev" ]]; then
+            ALLOWED_PATTERNS="^(frontend-dev|feature/|fix/|docs/|test/|refactor/|chore/|release/)"
+
+            if ! echo "$SOURCE_BRANCH" | grep -qE "$ALLOWED_PATTERNS"; then
+              echo "::error::Branch 'main-dev' can only be updated from allowed branches"
+              echo "::error::Attempted merge from: $SOURCE_BRANCH"
+              echo ""
+              echo "Allowed patterns:"
+              echo "  - frontend-dev"
+              echo "  - feature/*"
+              echo "  - fix/*"
+              echo "  - docs/*"
+              echo "  - test/*"
+              echo "  - refactor/*"
+              echo "  - chore/*"
+              echo "  - release/*"
+              exit 1
+            fi
+            echo "✅ Valid: $SOURCE_BRANCH -> main-dev"
+          fi
+
+          echo ""
+          echo "Branch policy validated successfully"

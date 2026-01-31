@@ -1,0 +1,391 @@
+using Api.Extensions;
+using Api.Models;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
+
+// DDD CQRS imports
+using DddUpdateUserProfileCommand = Api.BoundedContexts.Authentication.Application.Commands.UpdateUserProfileCommand;
+using DddChangePasswordCommand = Api.BoundedContexts.Authentication.Application.Commands.ChangePasswordCommand;
+using DddUpdatePreferencesCommand = Api.BoundedContexts.Authentication.Application.Commands.UpdatePreferencesCommand;
+using DddGetUserProfileQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserProfileQuery;
+using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+
+#pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
+namespace Api.Routing;
+
+/// <summary>
+/// User profile management endpoints.
+/// Handles profile viewing, updating display name/email, and password changes.
+/// </summary>
+internal static class UserProfileEndpoints
+{
+    public static RouteGroupBuilder MapUserProfileEndpoints(this RouteGroupBuilder group)
+    {
+        // AUTH-PROFILE-01: User profile management
+        MapProfileManagementEndpoints(group);
+        // USER-QUOTA-01: User quota management
+        MapQuotaEndpoints(group);
+        // AUTH-PROFILE-04: User preferences
+        MapPreferenceEndpoints(group);
+        // USER-ACTIVITY-01: User activity timeline
+        MapActivityEndpoints(group);
+
+        return group;
+    }
+
+    private static void MapProfileManagementEndpoints(RouteGroupBuilder group)
+    {
+        MapGetUserProfile(group);
+        MapUpdateUserProfile(group);
+        MapChangePassword(group);
+    }
+
+    private static void MapGetUserProfile(RouteGroupBuilder group)
+    {
+        // Get user profile (AUTH-PROFILE-01)
+        group.MapGet("/users/profile", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var query = new DddGetUserProfileQuery { UserId = session!.User!.Id };
+            var profile = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            if (profile == null)
+            {
+                logger.LogWarning("Profile not found for user {UserId}", session.User.Id);
+                return Results.NotFound(new { error = "Profile not found" });
+            }
+
+            return Results.Json(profile);
+        })
+        .RequireSession() // Issue #1446: Automatic session validation
+        .RequireAuthorization()
+        .WithName("GetUserProfile")
+        .WithTags("User Profile")
+        .WithSummary("Get current user's profile")
+        .WithDescription(@"Returns complete profile information for the authenticated user including email, display name, role, and 2FA status.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Response**: UserProfileDto object with profile data.")
+        .Produces(200)
+        .Produces(401)
+        .Produces(404);
+    }
+
+    private static void MapUpdateUserProfile(RouteGroupBuilder group)
+    {
+        // Update user profile (AUTH-PROFILE-02)
+        group.MapPut("/users/profile", async (
+            [FromBody] UpdateProfilePayload payload,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new DddUpdateUserProfileCommand
+            {
+                UserId = session!.User!.Id,
+                DisplayName = payload.DisplayName,
+                Email = payload.Email
+            };
+
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("Profile updated for user {UserId}", session.User.Id);
+
+            return Results.Json(new { ok = true, message = "Profile updated successfully" });
+        })
+        .RequireSession() // Issue #1446: Automatic session validation
+        .RequireAuthorization()
+        .WithName("UpdateUserProfile")
+        .WithTags("User Profile")
+        .WithSummary("Update current user's profile")
+        .WithDescription(@"Updates the authenticated user's profile information (display name and/or email).
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Request Body**: UpdateProfilePayload with optional displayName and email fields.
+
+**Validation**:
+- Display name cannot be empty
+- Email must be valid format
+- Email must not be in use by another user
+
+**Security**: Users can only update their own profile.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401);
+    }
+
+    private static void MapChangePassword(RouteGroupBuilder group)
+    {
+        // Change password (AUTH-PROFILE-03)
+        group.MapPut("/users/profile/password", async (
+            [FromBody] ChangePasswordPayload payload,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new DddChangePasswordCommand
+            {
+                UserId = session!.User!.Id,
+                CurrentPassword = payload.CurrentPassword,
+                NewPassword = payload.NewPassword
+            };
+
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("Password changed for user {UserId}", session.User.Id);
+
+            return Results.Json(new { ok = true, message = "Password changed successfully" });
+        })
+        .RequireSession() // Issue #1446: Automatic session validation
+        .RequireAuthorization()
+        .WithName("ChangePassword")
+        .WithTags("User Profile")
+        .WithSummary("Change current user's password")
+        .WithDescription(@"Changes the authenticated user's password with current password verification.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Request Body**: ChangePasswordPayload with currentPassword and newPassword.
+
+**Validation**:
+- Current password must be correct
+- New password cannot be empty
+
+**Security**:
+- Requires current password verification
+- Users can only change their own password
+- Password hash uses PBKDF2 with 210k iterations")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401);
+    }
+
+    private static void MapQuotaEndpoints(RouteGroupBuilder group)
+    {
+        // Get user's PDF upload quota (USER-QUOTA-01)
+        group.MapGet("/users/me/upload-quota", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            // session.User.Id is already a Guid from SessionStatusDto
+            var userId = session!.User!.Id;
+
+            var query = new GetUserUploadQuotaQuery(userId);
+            var quotaInfo = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Json(quotaInfo);
+        })
+        .RequireSession() // Issue #1446: Automatic session validation
+        .RequireAuthorization()
+        .WithName("GetUserUploadQuota")
+        .WithTags("User Profile")
+        .WithSummary("Get current user's PDF upload quota")
+        .WithDescription(@"Returns PDF upload quota information for the authenticated user including:
+- Daily and weekly upload limits based on user tier (free/normal/premium)
+- Current usage counts for daily and weekly periods
+- Remaining uploads before hitting limits
+- Reset times for daily and weekly quotas
+
+**User Tiers**:
+- **Free**: 5 PDF/day, 20 PDF/week
+- **Normal**: 20 PDF/day, 100 PDF/week
+- **Premium**: 100 PDF/day, 500 PDF/week
+- **Admin/Editor**: Unlimited (bypass quota checks)
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Response**: PdfUploadQuotaInfo object with quota details.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401);
+    }
+
+    private static void MapPreferenceEndpoints(RouteGroupBuilder group)
+    {
+        MapUpdateUserPreferences(group);
+        MapGetUserPreferences(group);
+    }
+
+    private static void MapUpdateUserPreferences(RouteGroupBuilder group)
+    {
+        // Update user preferences (AUTH-PROFILE-04)
+        group.MapPut("/users/preferences", async (
+            [FromBody] UpdatePreferencesPayload payload,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new DddUpdatePreferencesCommand
+            {
+                UserId = session!.User!.Id,
+                Language = payload.Language,
+                Theme = payload.Theme,
+                EmailNotifications = payload.EmailNotifications,
+                DataRetentionDays = payload.DataRetentionDays
+            };
+
+            var updatedProfile = await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("Preferences updated for user {UserId}", session.User.Id);
+
+            return Results.Json(updatedProfile);
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("UpdateUserPreferences")
+        .WithTags("User Profile")
+        .WithSummary("Update user preferences")
+        .WithDescription(@"Updates user preferences including language, theme, email notifications, and data retention settings.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Request Body**: UpdatePreferencesPayload with language, theme, emailNotifications, dataRetentionDays.
+
+**Response**: Updated UserProfileDto with all profile information including new preferences.")
+        .Produces<UserProfileDto>(200)
+        .Produces(400)
+        .Produces(401);
+    }
+
+    private static void MapGetUserPreferences(RouteGroupBuilder group)
+    {
+        // Get user preferences (AUTH-PROFILE-05)
+        group.MapGet("/users/preferences", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var query = new DddGetUserProfileQuery
+            {
+                UserId = session!.User!.Id
+            };
+
+            var userProfile = await mediator.Send(query, ct).ConfigureAwait(false);
+            logger.LogInformation("Preferences retrieved for user {UserId}", session.User.Id);
+
+            // Extract preferences from full profile
+            var preferences = new
+            {
+                language = userProfile!.Language,
+                theme = userProfile.Theme,
+                emailNotifications = userProfile.EmailNotifications,
+                dataRetentionDays = userProfile.DataRetentionDays
+            };
+
+            return Results.Json(preferences);
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetUserPreferences")
+        .WithTags("User Profile")
+        .WithSummary("Get user preferences")
+        .WithDescription(@"Retrieves user preferences including language, theme, email notifications, and data retention settings.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Response**: UserPreferences object with current settings.")
+        .Produces(200)
+        .Produces(401);
+    }
+
+    private static void MapActivityEndpoints(RouteGroupBuilder group)
+    {
+        // Get user activity timeline (USER-ACTIVITY-01 - Issue #911)
+        group.MapGet("/users/me/activity", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            string? actionFilter = null,
+            string? resourceFilter = null,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            int limit = 100,
+            CancellationToken ct = default) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var query = new Api.BoundedContexts.Administration.Application.Queries.GetUserActivityQuery(
+                UserId: session!.User!.Id,
+                ActionFilter: actionFilter,
+                ResourceFilter: resourceFilter,
+                StartDate: startDate,
+                EndDate: endDate,
+                Limit: limit
+            );
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            logger.LogInformation("Activity timeline retrieved for user {UserId}: {Count} activities", session.User.Id, result.Activities.Count);
+
+            return Results.Json(result);
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetMyActivity")
+        .WithTags("User Profile")
+        .WithSummary("Get current user's activity timeline")
+        .WithDescription(@"Retrieves audit log timeline for the authenticated user with optional filtering.
+
+**Issue**: #911 - UserActivityTimeline component backend support.
+
+**Authorization**: Requires active session (cookie-based authentication). Users can only see their own activity.
+
+**Query Parameters**:
+- `actionFilter` (optional): Comma-separated list of action types to filter (e.g., 'Login,PasswordChanged')
+- `resourceFilter` (optional): Filter by resource type (e.g., 'User', 'Game')
+- `startDate` (optional): ISO 8601 timestamp - filter logs from this date
+- `endDate` (optional): ISO 8601 timestamp - filter logs until this date
+- `limit` (optional): Maximum number of logs to return (default: 100, max: 500)
+
+**Response**: GetUserActivityResult with filtered activities and total count.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401);
+    }
+}
+
+/// <summary>
+/// Payload for updating user profile.
+/// </summary>
+internal record UpdateProfilePayload(string? DisplayName, string? Email);
+
+/// <summary>
+/// Payload for changing password.
+/// </summary>
+internal record ChangePasswordPayload(string CurrentPassword, string NewPassword);
+
+/// <summary>
+/// Payload for updating user preferences.
+/// </summary>
+internal record UpdatePreferencesPayload(
+    string Language,
+    string Theme,
+    bool EmailNotifications,
+    int DataRetentionDays);

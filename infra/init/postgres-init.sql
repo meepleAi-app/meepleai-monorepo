@@ -1,0 +1,1 @@
+-- Placeholder init script (schemas/tables managed by EF/SQL migrations later)

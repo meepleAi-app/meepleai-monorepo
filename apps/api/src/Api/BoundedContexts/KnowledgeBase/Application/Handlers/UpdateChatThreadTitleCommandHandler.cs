@@ -1,0 +1,74 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
+
+namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
+
+/// <summary>
+/// Handles chat thread title update command.
+/// Issue #2257: Updates thread title with validation and persistence.
+/// </summary>
+internal class UpdateChatThreadTitleCommandHandler : ICommandHandler<UpdateChatThreadTitleCommand, ChatThreadDto>
+{
+    private readonly IChatThreadRepository _threadRepository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public UpdateChatThreadTitleCommandHandler(
+        IChatThreadRepository threadRepository,
+        IUnitOfWork unitOfWork)
+    {
+        _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+    }
+
+    public async Task<ChatThreadDto> Handle(UpdateChatThreadTitleCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        // Retrieve thread
+        var thread = await _threadRepository.GetByIdAsync(command.ThreadId, cancellationToken).ConfigureAwait(false);
+        if (thread == null)
+            throw new InvalidOperationException($"Thread with ID {command.ThreadId} not found");
+
+        // Update title (domain validates max 200 chars, non-empty, trim)
+        thread.SetTitle(command.Title);
+
+        // Persist
+        await _threadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Map to DTO
+        return MapToDto(thread);
+    }
+
+    private static ChatThreadDto MapToDto(Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatThread thread)
+    {
+        var messageDtos = thread.Messages.Select(m => new ChatMessageDto(
+            Id: m.Id,
+            Content: m.Content,
+            Role: m.Role,
+            Timestamp: m.Timestamp,
+            SequenceNumber: m.SequenceNumber,
+            UpdatedAt: m.UpdatedAt,
+            IsDeleted: m.IsDeleted,
+            DeletedAt: m.DeletedAt,
+            DeletedByUserId: m.DeletedByUserId,
+            IsInvalidated: m.IsInvalidated
+        )).ToList();
+
+        return new ChatThreadDto(
+            Id: thread.Id,
+            UserId: thread.UserId,
+            GameId: thread.GameId,
+            AgentId: thread.AgentId,
+            Title: thread.Title,
+            Status: thread.Status.Value,
+            CreatedAt: thread.CreatedAt,
+            LastMessageAt: thread.LastMessageAt,
+            MessageCount: thread.MessageCount,
+            Messages: messageDtos
+        );
+    }
+}

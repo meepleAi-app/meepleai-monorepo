@@ -140,15 +140,21 @@ internal class OpenRouterLlmClient : ILlmClient
 
         messages.Add(new { role = "user", content = userPrompt });
 
-        var requestPayload = new
+        // Issue #3231: Use Dictionary to conditionally include 'usage' field
+        // OpenRouter rejects "usage": null, so omit field entirely when not streaming
+        var requestPayload = new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            model = model,
-            messages = messages,
-            temperature = temperature,
-            max_tokens = maxTokens,
-            stream = stream,
-            usage = stream ? new { include = true } : null
+            ["model"] = model,
+            ["messages"] = messages,
+            ["temperature"] = temperature,
+            ["max_tokens"] = maxTokens,
+            ["stream"] = stream
         };
+
+        if (stream)
+        {
+            requestPayload["usage"] = new { include = true };
+        }
 
         var json = JsonSerializer.Serialize(requestPayload);
         return new HttpRequestMessage(HttpMethod.Post, "chat/completions")

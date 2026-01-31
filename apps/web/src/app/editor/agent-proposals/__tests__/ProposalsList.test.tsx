@@ -91,7 +91,10 @@ describe('ProposalsList', () => {
 
     renderComponent();
 
-    expect(screen.getByRole('generic')).toHaveClass('animate-pulse');
+    // Multiple skeleton divs have role="generic", check any has animate-pulse
+    const loadingElements = screen.getAllByRole('generic');
+    const hasAnimatePulse = loadingElements.some(el => el.classList.contains('animate-pulse'));
+    expect(hasAnimatePulse).toBe(true);
   });
 
   it('renders proposals after loading', async () => {

@@ -10,7 +10,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
-using Api.Tests.TestUtilities;
+using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -59,8 +59,9 @@ public sealed class SaveAgentConfigCommandHandlerTests
             "Rules Expert",
             "Expert in rules",
             "You are a rules expert",
-            TypologyStatus.Approved,
-            userId
+            AgentStrategy.HybridSearch(),
+            userId,
+            TypologyStatus.Approved
         );
 
         var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), userId, gameId);
@@ -132,8 +133,9 @@ public sealed class SaveAgentConfigCommandHandlerTests
             "Draft Typology",
             "Not approved yet",
             "Draft prompt",
-            TypologyStatus.Draft,
-            Guid.NewGuid()
+            AgentStrategy.HybridSearch(),
+            Guid.NewGuid(),
+            TypologyStatus.Draft
         );
 
         _mockTypologyRepo
@@ -169,8 +171,9 @@ public sealed class SaveAgentConfigCommandHandlerTests
             "Quick Start",
             "Setup help",
             "Help with setup",
-            TypologyStatus.Approved,
-            userId
+            AgentStrategy.HybridSearch(),
+            userId,
+            TypologyStatus.Approved
         );
 
         _mockTypologyRepo
@@ -222,8 +225,9 @@ public sealed class SaveAgentConfigCommandHandlerTests
             "Test Typology",
             "Test",
             "Test prompt",
-            TypologyStatus.Approved,
-            userId
+            AgentStrategy.HybridSearch(),
+            userId,
+            TypologyStatus.Approved
         );
 
         var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), userId, gameId);

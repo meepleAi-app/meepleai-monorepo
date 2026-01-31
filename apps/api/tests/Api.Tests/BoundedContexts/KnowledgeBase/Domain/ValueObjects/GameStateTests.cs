@@ -14,7 +14,7 @@ public class GameStateTests
     {
         // Arrange
         var activePlayer = Guid.NewGuid();
-        var playerScores = new Dictionary<Guid, int> { { activePlayer, 50 } };
+        var playerScores = new Dictionary<Guid, decimal> { { activePlayer, 50m } };
 
         // Act
         var state = GameState.Create(
@@ -40,7 +40,7 @@ public class GameStateTests
         var act = () => GameState.Create(
             currentTurn: -1,
             activePlayer: Guid.NewGuid(),
-            playerScores: new Dictionary<Guid, int>(),
+            playerScores: new Dictionary<Guid, decimal>(),
             gamePhase: "setup",
             lastAction: "started");
 
@@ -56,7 +56,7 @@ public class GameStateTests
         var act = () => GameState.Create(
             currentTurn: 1,
             activePlayer: Guid.Empty,
-            playerScores: new Dictionary<Guid, int>(),
+            playerScores: new Dictionary<Guid, decimal>(),
             gamePhase: "setup",
             lastAction: "started");
 
@@ -72,7 +72,7 @@ public class GameStateTests
         var act = () => GameState.Create(
             currentTurn: 1,
             activePlayer: Guid.NewGuid(),
-            playerScores: new Dictionary<Guid, int>(),
+            playerScores: new Dictionary<Guid, decimal>(),
             gamePhase: "",
             lastAction: "started");
 
@@ -91,7 +91,7 @@ public class GameStateTests
         var act = () => GameState.Create(
             currentTurn: 1,
             activePlayer: Guid.NewGuid(),
-            playerScores: new Dictionary<Guid, int>(),
+            playerScores: new Dictionary<Guid, decimal>(),
             gamePhase: longPhase,
             lastAction: "started");
 
@@ -110,7 +110,7 @@ public class GameStateTests
         var act = () => GameState.Create(
             currentTurn: 1,
             activePlayer: Guid.NewGuid(),
-            playerScores: new Dictionary<Guid, int>(),
+            playerScores: new Dictionary<Guid, decimal>(),
             gamePhase: "setup",
             lastAction: longAction);
 
@@ -144,7 +144,7 @@ public class GameStateTests
         var state = GameState.Create(
             currentTurn: 2,
             activePlayer: activePlayer,
-            playerScores: new Dictionary<Guid, int> { { activePlayer, 30 } },
+            playerScores: new Dictionary<Guid, decimal> { { activePlayer, 30m } },
             gamePhase: "early",
             lastAction: "rolled dice");
 
@@ -211,10 +211,10 @@ public class GameStateTests
         var original = GameState.Create(
             currentTurn: 7,
             activePlayer: activePlayer,
-            playerScores: new Dictionary<Guid, int>
+            playerScores: new Dictionary<Guid, decimal>
             {
-                { activePlayer, 150 },
-                { Guid.NewGuid(), 120 }
+                { activePlayer, 150m },
+                { Guid.NewGuid(), 120m }
             },
             gamePhase: "final round",
             lastAction: "triggered end condition");

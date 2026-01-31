@@ -5,9 +5,11 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
-using Api.Tests.Fixtures;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -44,7 +46,9 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
             .UseNpgsql(connectionString)
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
         await _dbContext.Database.MigrateAsync();
 
         // Setup DI for handler
@@ -90,7 +94,7 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
         {
             SessionId = gameSessionId,
             WinnerId = Guid.NewGuid(),
-            FinalScores = new Dictionary<Guid, decimal>(),
+            FinalRanks = new Dictionary<Guid, int>(),
             Timestamp = DateTime.UtcNow
         };
 
@@ -123,7 +127,7 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
         {
             SessionId = Guid.NewGuid(), // Non-existent session
             WinnerId = Guid.NewGuid(),
-            FinalScores = new Dictionary<Guid, decimal>(),
+            FinalRanks = new Dictionary<Guid, int>(),
             Timestamp = DateTime.UtcNow
         };
 
@@ -154,7 +158,7 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
         {
             SessionId = gameSessionId,
             WinnerId = Guid.NewGuid(),
-            FinalScores = new Dictionary<Guid, decimal>(),
+            FinalRanks = new Dictionary<Guid, int>(),
             Timestamp = DateTime.UtcNow
         };
 
@@ -177,7 +181,7 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
         var initialState = GameState.Create(
             currentTurn: 1,
             activePlayer: Guid.NewGuid(),
-            playerScores: new Dictionary<Guid, int>(),
+            playerScores: new Dictionary<Guid, decimal>(),
             gamePhase: "setup",
             lastAction: "session started");
 

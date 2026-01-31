@@ -29,7 +29,7 @@ public class AgentPromptBuilderTests
         var gameState = GameState.Create(
             currentTurn: 5,
             activePlayer: aliceId,
-            playerScores: new Dictionary<Guid, int> { { aliceId, 10 }, { bobId, 8 } },
+            playerScores: new Dictionary<Guid, decimal> { { aliceId, 10m }, { bobId, 8m } },
             gamePhase: "MainPhase",
             lastAction: "Played card");
 

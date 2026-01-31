@@ -1,7 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
@@ -188,12 +186,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            Converters = { new JsonStringEnumConverter() }
-        };
-        var result = await response.Content.ReadFromJsonAsync<PagedResult<SharedGameDto>>(jsonOptions);
+        var result = await response.Content.ReadFromJsonAsync<PagedResult<SharedGameDto>>();
         Assert.NotNull(result);
     }
 
@@ -322,12 +315,7 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            Converters = { new JsonStringEnumConverter() }
-        };
-        var result = await response.Content.ReadFromJsonAsync<PagedResult<SharedGameDto>>(jsonOptions);
+        var result = await response.Content.ReadFromJsonAsync<PagedResult<SharedGameDto>>();
         Assert.NotNull(result);
         Assert.Equal(2, result.Total);
         Assert.All(result.Items, g => Assert.Equal(GameStatus.PendingApproval, g.Status));

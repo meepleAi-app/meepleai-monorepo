@@ -320,7 +320,7 @@ export function EditorDashboardClient() {
       setLoading(false);
       setIsFetching(false);
     }
-  }, [isFetching, addToast]);
+  }, [addToast]);
 
   // Initial fetch
   useEffect(() => {

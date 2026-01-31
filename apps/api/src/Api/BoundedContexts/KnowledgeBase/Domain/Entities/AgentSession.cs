@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -18,6 +19,7 @@ internal sealed class AgentSession : AggregateRoot<Guid>
     public Guid UserId { get; private set; }
     public Guid GameId { get; private set; }
     public Guid TypologyId { get; private set; }
+    public AgentConfig Config { get; private set; } // Issue #3253
     public GameState CurrentGameState { get; private set; }
     public DateTime StartedAt { get; private set; }
     public DateTime? EndedAt { get; private set; }
@@ -42,7 +44,8 @@ internal sealed class AgentSession : AggregateRoot<Guid>
         Guid userId,
         Guid gameId,
         Guid typologyId,
-        GameState initialState) : base(id)
+        GameState initialState,
+        AgentConfig? config = null) : base(id)
     {
         if (agentId == Guid.Empty)
             throw new ArgumentException("AgentId cannot be empty", nameof(agentId));
@@ -62,6 +65,7 @@ internal sealed class AgentSession : AggregateRoot<Guid>
         UserId = userId;
         GameId = gameId;
         TypologyId = typologyId;
+        Config = config ?? AgentConfig.Default(); // Issue #3253
         CurrentGameState = initialState;
         StartedAt = DateTime.UtcNow;
         IsActive = true;
@@ -77,11 +81,44 @@ internal sealed class AgentSession : AggregateRoot<Guid>
         ArgumentNullException.ThrowIfNull(newState);
 
         if (!IsActive)
-            throw new InvalidOperationException("Cannot update state of inactive agent session");
+            throw new ConflictException("Cannot update state of inactive agent session");
 
         CurrentGameState = newState;
 
         AddDomainEvent(new AgentSessionStateUpdatedEvent(Id, newState.ToJson()));
+    }
+
+    /// <summary>
+    /// Updates the agent typology during an active session.
+    /// Issue #3252 (BACK-AGT-001).
+    /// </summary>
+    public void UpdateTypology(Guid newTypologyId)
+    {
+        if (!IsActive)
+            throw new ConflictException("Cannot update typology of inactive agent session");
+
+        if (newTypologyId == Guid.Empty)
+            throw new ArgumentException("TypologyId cannot be empty", nameof(newTypologyId));
+
+        TypologyId = newTypologyId;
+
+        AddDomainEvent(new AgentSessionTypologyChangedEvent(Id, newTypologyId));
+    }
+
+    /// <summary>
+    /// Updates the agent runtime configuration during an active session.
+    /// Issue #3253 (BACK-AGT-002).
+    /// </summary>
+    public void UpdateConfig(AgentConfig newConfig)
+    {
+        ArgumentNullException.ThrowIfNull(newConfig);
+
+        if (!IsActive)
+            throw new ConflictException("Cannot update config of inactive agent session");
+
+        Config = newConfig;
+
+        AddDomainEvent(new AgentSessionConfigUpdatedEvent(Id, newConfig.ToJson()));
     }
 
     /// <summary>
@@ -90,7 +127,7 @@ internal sealed class AgentSession : AggregateRoot<Guid>
     public void End()
     {
         if (!IsActive)
-            throw new InvalidOperationException("Agent session is already ended");
+            throw new ConflictException("Agent session is already ended");
 
         IsActive = false;
         EndedAt = DateTime.UtcNow;

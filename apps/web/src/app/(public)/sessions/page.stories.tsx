@@ -7,11 +7,13 @@
  * Covers: session listing, filters, actions, pagination, responsive design
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import ActiveSessionsPage from './page';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+
+import ActiveSessionsPage from './page';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof ActiveSessionsPage> = {
   title: 'Pages/User/Sessions',

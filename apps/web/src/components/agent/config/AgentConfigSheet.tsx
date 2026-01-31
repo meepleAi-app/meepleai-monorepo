@@ -12,8 +12,9 @@
 
 'use client';
 
-import { ArrowLeft, HelpCircle } from 'lucide-react';
 import { useState } from 'react';
+
+import { ArrowLeft, HelpCircle } from 'lucide-react';
 
 import {
   Sheet,
@@ -23,11 +24,12 @@ import {
   SheetFooter,
 } from '@/components/ui/navigation/sheet';
 import { Button } from '@/components/ui/primitives/button';
+
 import { GameSelector } from './GameSelector';
-import { TemplateCarousel } from './TemplateCarousel';
 import { ModelSelector } from './ModelSelector';
-import { TokenQuotaDisplay } from './TokenQuotaDisplay';
 import { SlotCards } from './SlotCards';
+import { TemplateCarousel } from './TemplateCarousel';
+import { TokenQuotaDisplay } from './TokenQuotaDisplay';
 import { ActionBar } from '../shared/ActionBar';
 
 interface AgentConfigSheetProps {

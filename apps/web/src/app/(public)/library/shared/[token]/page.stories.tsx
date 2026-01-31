@@ -7,11 +7,13 @@
  * Covers: shared library display, game cards, owner stats, token validation, responsive design
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import SharedLibraryPage from './page';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+
+import SharedLibraryPage from './page';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof SharedLibraryPage> = {
   title: 'Pages/User/Library/Shared',

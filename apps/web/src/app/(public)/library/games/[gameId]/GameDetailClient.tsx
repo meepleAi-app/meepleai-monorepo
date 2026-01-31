@@ -15,19 +15,19 @@
 
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 
 import { ArrowLeft, MoreVertical, Settings } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
+import { AgentConfigModal } from '@/components/agent/AgentConfigModal'; // Issue #3186
 import { AgentChatPanel, type AgentMode, type GamePdf } from '@/components/game-detail';
 import { SplitViewLayout } from '@/components/game-detail/SplitViewLayout';
 import { PdfViewer } from '@/components/pdf-viewer';
 import { Button } from '@/components/ui/primitives/button';
-import { cn } from '@/lib/utils';
-import { AgentConfigModal } from '@/components/agent/AgentConfigModal'; // Issue #3186
 import { useAgentConfig } from '@/hooks/queries/useAgentConfig'; // Issue #3213
+import { cn } from '@/lib/utils';
 
 export interface GameDetailClientProps {
   gameId: string;

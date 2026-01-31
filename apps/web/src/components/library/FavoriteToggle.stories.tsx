@@ -5,12 +5,13 @@
  * Tests favorite/unfavorite states, hover, and loading.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { within, userEvent } from '@storybook/test';
 import { fn } from '@storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { FavoriteToggle } from './FavoriteToggle';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Create QueryClient for React Query
 const queryClient = new QueryClient({

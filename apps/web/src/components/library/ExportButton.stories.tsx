@@ -5,13 +5,13 @@
  * Tests dropdown menu, format/scope options, and loading states.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
 
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
 import { ExportButton } from './ExportButton';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof ExportButton> = {
   title: 'Components/Library/ExportButton',

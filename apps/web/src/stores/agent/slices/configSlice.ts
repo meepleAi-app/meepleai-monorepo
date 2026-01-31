@@ -14,6 +14,7 @@ import { StateCreator } from 'zustand';
 
 import { AgentConfig, AgentStoreError } from '../types';
 import { retryWithBackoff } from '../utils/retry';
+
 import type { AgentStore } from '../types/store.types';
 
 export interface ConfigSlice {

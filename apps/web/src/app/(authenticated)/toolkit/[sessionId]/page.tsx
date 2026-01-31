@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+
 import { Loader2 } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import {
   SessionHeader,
@@ -11,9 +13,8 @@ import {
   Scoreboard,
   type SyncStatus,
 } from '@/components/session';
-import { useSessionStore } from '@/lib/stores/sessionStore';
 import { useSessionSync } from '@/lib/hooks/useSessionSync';
-import { toast } from 'sonner';
+import { useSessionStore } from '@/lib/stores/sessionStore';
 
 /**
  * Active Session Page

@@ -5,7 +5,7 @@
  * Centralized HTTP client for agent-related endpoints
  */
 
-import type { AgentTypology, AgentSession, AgentConfig } from './types';
+import type { AgentTypology, AgentConfig } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 

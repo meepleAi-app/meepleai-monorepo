@@ -12,8 +12,9 @@
 
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/primitives/button';
+
 import { SlotCards } from '@/components/agent/config/SlotCards';
+import { Button } from '@/components/ui/primitives/button';
 
 export default function SlotManagementPage() {
   const router = useRouter();

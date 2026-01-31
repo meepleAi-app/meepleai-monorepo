@@ -6,6 +6,7 @@
 'use client';
 
 import { Settings, Download, Minimize2, BarChart } from 'lucide-react';
+
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentStore } from '@/stores/agentStore';
 

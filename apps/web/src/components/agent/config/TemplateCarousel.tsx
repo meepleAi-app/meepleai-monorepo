@@ -5,8 +5,10 @@
 
 'use client';
 
-import { Info } from 'lucide-react';
 import { useState } from 'react';
+
+import { Info } from 'lucide-react';
+
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentStore } from '@/stores/agentStore';
 

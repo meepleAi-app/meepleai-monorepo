@@ -5,8 +5,8 @@
  */
 
 import { ConfigSlice } from '../slices/configSlice';
-import { SessionSlice } from '../slices/sessionSlice';
 import { ConversationSlice } from '../slices/conversationSlice';
+import { SessionSlice } from '../slices/sessionSlice';
 import { UISlice } from '../slices/uiSlice';
 
 /**

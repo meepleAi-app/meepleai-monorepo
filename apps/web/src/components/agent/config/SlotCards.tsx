@@ -6,6 +6,7 @@
 'use client';
 
 import { Lock, CircleDot } from 'lucide-react';
+
 import { Button } from '@/components/ui/primitives/button';
 
 interface Slot {

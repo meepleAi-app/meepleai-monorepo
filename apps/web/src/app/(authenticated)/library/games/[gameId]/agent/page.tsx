@@ -13,14 +13,15 @@
 
 'use client';
 
-import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
-import { AgentConfigSheet } from '@/components/agent/config/AgentConfigSheet';
+import { useParams } from 'next/navigation';
+
 import { AgentChatSheet } from '@/components/agent/chat';
-import { useAgentStore } from '@/stores/agentStore';
+import { AgentConfigSheet } from '@/components/agent/config/AgentConfigSheet';
 import { Button } from '@/components/ui/primitives/button';
 import type { Typology } from '@/lib/api/schemas/agent-typologies.schemas';
+import { useAgentStore } from '@/stores/agentStore';
 import type { Game } from '@/types/domain';
 
 // Placeholder typology until real session management is implemented

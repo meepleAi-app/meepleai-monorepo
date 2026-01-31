@@ -5,12 +5,13 @@
  * Tests privacy settings, link management, and revoke flow.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { within, userEvent } from '@storybook/test';
 import { fn } from '@storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { ShareLibraryModal } from './ShareLibraryModal';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Create QueryClient for React Query with mock data
 const createMockQueryClient = (hasActiveLink = false) => {

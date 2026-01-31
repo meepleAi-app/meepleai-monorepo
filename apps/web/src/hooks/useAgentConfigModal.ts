@@ -10,12 +10,13 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { api } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
 import { useSessionQuotaWithStatus } from '@/hooks/queries/useSessionQuota';
+import { useAuth } from '@/hooks/useAuth';
+import { api } from '@/lib/api';
 import type { Typology } from '@/lib/api/schemas';
 
 // ========== Model Configuration ==========

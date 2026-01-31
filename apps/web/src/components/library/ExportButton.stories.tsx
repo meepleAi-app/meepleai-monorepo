@@ -5,7 +5,7 @@
  * Tests dropdown menu, format/scope options, and loading states.
  */
 
-import { within, userEvent } from '@storybook/test';
+import { within, userEvent } from 'storybook/test';
 
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 

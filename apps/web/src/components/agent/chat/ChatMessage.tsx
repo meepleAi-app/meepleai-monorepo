@@ -51,8 +51,7 @@ export const ChatMessage = React.memo(function ChatMessage({
   };
 
   // Citation click handler (MVP: logs, future: PDF viewer)
-  const handleCitationClick = (citation: Citation) => {
-    console.log('Citation clicked:', citation);
+  const handleCitationClick = (_citation: Citation) => {
     // TODO: Future integration with PDF viewer scroll
   };
 

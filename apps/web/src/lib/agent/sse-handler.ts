@@ -68,7 +68,7 @@ export class SSEHandler {
           const delay = Math.min(Math.pow(2, this.reconnectAttempts) * 1000, 30000);
           this.reconnectAttempts += 1;
 
-          console.log(
+          console.warn(
             `[SSEHandler] Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempts}/${this.options.maxReconnectAttempts})`
           );
 

@@ -42,6 +42,7 @@ export const UserRoleBadge = React.memo(function UserRoleBadge({
   className,
   ...props
 }: UserRoleBadgeProps) {
+  // eslint-disable-next-line security/detect-object-injection -- role is typed UserRole, roleIconMap has UserRole keys
   const Icon = roleIconMap[role];
 
   return (

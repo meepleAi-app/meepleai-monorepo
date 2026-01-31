@@ -35,6 +35,7 @@ import {
   type Typology,
 } from '@/lib/api/schemas/agent-typologies.schemas';
 
+import { PhaseModelConfiguration, type StrategyPhaseModels, type StrategyOptions } from './PhaseModelConfiguration';
 import { PromptPreview } from './PromptPreview';
 import { StrategySelector } from './StrategySelector';
 import { TypologyPromptEditor } from './TypologyPromptEditor';
@@ -68,6 +69,9 @@ export function TypologyForm({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [promptError, setPromptError] = useState<string | null>(null);
+  // Issue #3245: Phase-Model Configuration
+  const [phaseModels, setPhaseModels] = useState<StrategyPhaseModels>({});
+  const [strategyOptions, setStrategyOptions] = useState<StrategyOptions>({});
 
   const isEditMode = !!typology;
 
@@ -297,7 +301,32 @@ export function TypologyForm({
               />
             )}
           />
+        </CardContent>
+      </Card>
 
+      {/* Issue #3245: Phase-Model Configuration for RAG Strategies */}
+      {['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'].includes(watch('defaultStrategyName')) && (
+        <PhaseModelConfiguration
+          strategy={watch('defaultStrategyName')}
+          phaseModels={phaseModels}
+          strategyOptions={strategyOptions}
+          onChange={(newPhaseModels, newOptions) => {
+            setPhaseModels(newPhaseModels);
+            if (newOptions) setStrategyOptions(newOptions);
+          }}
+          disabled={isSubmitting || isLoading}
+        />
+      )}
+
+      {/* Advanced Parameters Card (for legacy strategies) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Parametri Avanzati</CardTitle>
+          <CardDescription>
+            Configurazione JSON per parametri specifici della strategia (opzionale)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <Separator />
 
           {/* Advanced Parameters Toggle */}

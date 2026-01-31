@@ -210,7 +210,7 @@ export const useSessionStore = create<SessionStore>()(
 
       // ========== Update Score (Optimistic UI) ==========
       updateScore: async (request: UpdateScoreRequest) => {
-        const { activeSession, scoreboard } = get();
+        const { activeSession, scoreboard: _scoreboard } = get();
         if (!activeSession) {
           throw new Error('No active session');
         }

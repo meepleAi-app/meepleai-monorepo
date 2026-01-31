@@ -83,10 +83,13 @@
 5. **Generation**: Template-specific (rule vs strategy)
 6. **Validation**: Self-critique + auto-escalation
 
-**Strategies**:
+**Strategies** (Issue #3245 - Extended):
 - **FAST** (60-70%): 2,060 tokens, $0.008, <200ms, 78-85%
 - **BALANCED** (25-30%): 2,820 tokens, $0.011, 1-2s, 85-92%
 - **PRECISE** (5-10%): 22,396 tokens, $0.095, 5-10s, 95-98%
+- **EXPERT**: ~15,000 tokens - Web search + multi-hop reasoning
+- **CONSENSUS**: ~18,000 tokens - Multi-LLM voting (3 voters + aggregator)
+- **CUSTOM**: Variable - Admin-defined phase combinations
 
 **Performance**:
 - Avg tokens: 1,310/query (-35% vs baseline)
@@ -149,6 +152,7 @@ START → README.md
 
 ### Implementation (10-)
 - [10-implementation-guide.md](10-implementation-guide.md)
+- [14-admin-phase-model-config.md](14-admin-phase-model-config.md) - Issue #3245: Admin API per configurazione modelli per fase
 
 ### Appendices
 - [appendix/A-research-sources.md](appendix/A-research-sources.md) - 53 sources

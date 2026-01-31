@@ -129,6 +129,7 @@ export default function GameToolkitLandingPage() {
    */
   const updateParticipant = (index: number, value: string) => {
     const updated = [...participants];
+    // eslint-disable-next-line security/detect-object-injection -- index is validated function parameter for array update
     updated[index] = value;
     setParticipants(updated);
   };

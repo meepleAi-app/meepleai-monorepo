@@ -5,8 +5,8 @@
  * Tests all filter states and interactions.
  */
 
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import type { GameStateType } from '@/lib/api/schemas/library.schemas';
 

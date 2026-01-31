@@ -217,7 +217,7 @@ function main() {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  console.log('🏗️  Generating mock PDF rulebooks...\n');
+  console.warn('🏗️  Generating mock PDF rulebooks...\n');
 
   let generatedCount = 0;
   let skippedCount = 0;
@@ -236,7 +236,7 @@ function main() {
 
     // Skip if file already exists
     if (fs.existsSync(outputPath)) {
-      console.log(`⏭️  ${filename} (already exists)`);
+      console.warn(`⏭️  ${filename} (already exists)`);
       skippedCount++;
       return;
     }
@@ -246,13 +246,13 @@ function main() {
     const stats = fs.statSync(outputPath);
     const sizeKB = (stats.size / 1024).toFixed(2);
 
-    console.log(`✅ ${filename} (${sizeKB} KB)`);
+    console.warn(`✅ ${filename} (${sizeKB} KB)`);
     generatedCount++;
   });
 
-  console.log(`\n📊 Summary: ${generatedCount} generated, ${skippedCount} skipped`);
-  console.log(`📂 Output: ${outputDir}`);
-  console.log('\n✅ Mock PDFs ready for E2E testing!\n');
+  console.warn(`\n📊 Summary: ${generatedCount} generated, ${skippedCount} skipped`);
+  console.warn(`📂 Output: ${outputDir}`);
+  console.warn('\n✅ Mock PDFs ready for E2E testing!\n');
 }
 
 // Run if called directly

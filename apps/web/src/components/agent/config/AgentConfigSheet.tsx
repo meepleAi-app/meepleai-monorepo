@@ -41,7 +41,7 @@ interface AgentConfigSheetProps {
 
 type ViewState = 'config' | 'template-info' | 'model-pricing';
 
-export function AgentConfigSheet({ isOpen, onClose, gameId, gameTitle }: AgentConfigSheetProps) {
+export function AgentConfigSheet({ isOpen, onClose, gameId: _gameId, gameTitle }: AgentConfigSheetProps) {
   const [view, setView] = useState<ViewState>('config');
 
   const handleBack = () => {
@@ -138,7 +138,7 @@ export function AgentConfigSheet({ isOpen, onClose, gameId, gameTitle }: AgentCo
           <div className="w-full">
             <ActionBar
               state="config"
-              onLaunch={() => console.log('Launch agent')}
+              onLaunch={() => {}}
               onCancel={onClose}
             />
           </div>

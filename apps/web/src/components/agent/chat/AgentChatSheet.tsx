@@ -153,8 +153,8 @@ export function AgentChatSheet({
         <div className="border-t border-slate-800 pt-3">
           <ActionBar
             state="chat"
-            onSettings={() => console.log('Settings')}
-            onExport={() => console.log('Export')}
+            onSettings={() => {}}
+            onExport={() => {}}
             onMinimize={closeChat}
           />
         </div>

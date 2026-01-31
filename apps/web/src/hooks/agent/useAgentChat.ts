@@ -64,7 +64,7 @@ export function useAgentChat(sessionId?: string, gameId?: string): UseAgentChatR
       // Could show state in UI (e.g., "Searching vector database...")
     }, []),
     onComplete: useCallback(
-      (answer: string, citations: Citation[], confidence: number | null) => {
+      (answer: string, citations: Citation[], _confidence: number | null) => {
         // Add final agent message
         const agentMessage: AgentMessage = {
           type: 'agent',
@@ -75,11 +75,6 @@ export function useAgentChat(sessionId?: string, gameId?: string): UseAgentChatR
 
         setMessages(prev => [...prev, agentMessage]);
         setCurrentChunk(''); // Clear chunk after completion
-
-        // Log confidence for debugging
-        if (confidence !== null) {
-          console.log('[useAgentChat] Answer confidence:', confidence);
-        }
       },
       []
     ),

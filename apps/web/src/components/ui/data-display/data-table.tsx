@@ -118,6 +118,7 @@ export function DataTable<TData, TValue>({
     // Select all rows in range
     const newSelection: RowSelectionState = { ...(rowSelection ?? internalRowSelection) };
     for (let i = start; i <= end; i++) {
+      // eslint-disable-next-line security/detect-object-injection -- i is loop index within validated range
       newSelection[rows[i].id] = true;
     }
 

@@ -5,9 +5,9 @@
  * Tests favorite/unfavorite states, hover, and loading.
  */
 
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import { FavoriteToggle } from './FavoriteToggle';
 

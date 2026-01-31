@@ -5,8 +5,8 @@
  * Tests file selection, validation, preview, and upload flow.
  */
 
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import { PdfUploadModal } from './PdfUploadModal';
 

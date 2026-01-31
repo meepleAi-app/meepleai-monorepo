@@ -105,6 +105,7 @@ export function ChatMessageList({
     (index: number): boolean => {
       if (index === 0) return false; // Never group first message
 
+      // eslint-disable-next-line security/detect-object-injection -- index is validated loop parameter from messages array
       const current = messages[index];
       const previous = messages[index - 1];
 

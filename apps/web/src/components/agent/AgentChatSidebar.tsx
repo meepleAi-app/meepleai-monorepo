@@ -43,6 +43,7 @@ export function AgentChatSidebar({
 
   // Zustand store
   const { messages, isMinimized, isStreaming, setMinimized } = useAgentChatStore(state => ({
+    // eslint-disable-next-line security/detect-object-injection -- sessionId is typed prop with ?? fallback
     messages: state.messagesBySession[sessionId] ?? [],
     isMinimized: state.isMinimized,
     isStreaming: state.isStreaming,

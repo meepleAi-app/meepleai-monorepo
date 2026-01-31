@@ -101,7 +101,7 @@ public class AgentSessionTests
         var newState = GameState.Create(
             currentTurn: 5,
             activePlayer: userId,
-            playerScores: new Dictionary<Guid, int> { { userId, 100 } },
+            playerScores: new Dictionary<Guid, decimal> { { userId, 100m } },
             gamePhase: "midgame",
             lastAction: "placed worker");
 

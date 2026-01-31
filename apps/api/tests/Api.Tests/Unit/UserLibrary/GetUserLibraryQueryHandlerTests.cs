@@ -50,30 +50,26 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gameId = Guid.NewGuid();
         var entryId = Guid.NewGuid();
 
-        var libraryEntry = Domain.Entities.UserLibraryEntry.Reconstitute(
-            id: entryId,
-            userId: userId,
-            gameId: gameId,
-            addedAt: DateTime.UtcNow,
-            notes: null,
-            isFavorite: false,
-            customAgentConfig: null,
-            customPdfMetadata: null,
-            currentStateValue: Domain.ValueObjects.GameStateValue.Nuovo,
-            currentStateChangedAt: null,
-            currentStateNotes: null,
-            stats: Domain.ValueObjects.GameStats.Empty(),
-            sessions: new List<Domain.ValueObjects.GameSession>(),
-            checklist: new List<Domain.ValueObjects.GameChecklist>());
-
-        var sharedGame = Api.BoundedContexts.SharedGameCatalog.Domain.Entities.SharedGame.Create(
-            id: gameId,
-            bggId: 12345,
+        var sharedGame = Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame.Create(
             title: "Test Game",
-            yearPublished: 2020);
+            yearPublished: 2020,
+            description: "Test Description",
+            minPlayers: 2,
+            maxPlayers: 4,
+            playingTimeMinutes: 60,
+            minAge: 10,
+            complexityRating: null,
+            averageRating: null,
+            imageUrl: "",
+            thumbnailUrl: "",
+            rules: null,
+            createdBy: userId,
+            bggId: 12345);
+
+        var gameId = sharedGame.Id;
+        var libraryEntry = new UserLibraryEntry(entryId, userId, gameId);
 
         // Add PDF document to DbContext
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
@@ -113,30 +109,26 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gameId = Guid.NewGuid();
         var entryId = Guid.NewGuid();
 
-        var libraryEntry = Domain.Entities.UserLibraryEntry.Reconstitute(
-            id: entryId,
-            userId: userId,
-            gameId: gameId,
-            addedAt: DateTime.UtcNow,
-            notes: null,
-            isFavorite: false,
-            customAgentConfig: null,
-            customPdfMetadata: null,
-            currentStateValue: Domain.ValueObjects.GameStateValue.Nuovo,
-            currentStateChangedAt: null,
-            currentStateNotes: null,
-            stats: Domain.ValueObjects.GameStats.Empty(),
-            sessions: new List<Domain.ValueObjects.GameSession>(),
-            checklist: new List<Domain.ValueObjects.GameChecklist>());
-
-        var sharedGame = Api.BoundedContexts.SharedGameCatalog.Domain.Entities.SharedGame.Create(
-            id: gameId,
-            bggId: 12345,
+        var sharedGame = Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame.Create(
             title: "Test Game",
-            yearPublished: 2020);
+            yearPublished: 2020,
+            description: "Test Description",
+            minPlayers: 2,
+            maxPlayers: 4,
+            playingTimeMinutes: 60,
+            minAge: 10,
+            complexityRating: null,
+            averageRating: null,
+            imageUrl: "",
+            thumbnailUrl: "",
+            rules: null,
+            createdBy: userId,
+            bggId: 12345);
+
+        var gameId = sharedGame.Id;
+        var libraryEntry = new UserLibraryEntry(entryId, userId, gameId);
 
         // No PDF documents added to DbContext
 

@@ -5,8 +5,9 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.Infrastructure;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
-using Api.Tests.Fixtures;
+using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -45,7 +46,9 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
             .UseNpgsql(connectionString)
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
         await _dbContext.Database.MigrateAsync();
 
         // Setup DI for handler
@@ -218,7 +221,7 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
         var state = initialState ?? GameState.Create(
             currentTurn: 1,
             activePlayer: Guid.NewGuid(),
-            playerScores: new Dictionary<Guid, int>(),
+            playerScores: new Dictionary<Guid, decimal>(),
             gamePhase: "setup",
             lastAction: "session started");
 

@@ -104,3 +104,28 @@ export type {
   RateLimitConfigListDto,
   RateLimitOverrideListDto,
 } from '@/lib/api/schemas/rate-limits.schemas';
+
+// Layout System Types (Issue #3286 - Phase 1)
+export type {
+  LayoutContext,
+  DeviceType,
+  ResponsiveState,
+  Action,
+  FABAction,
+  FABConfig,
+  ActionBarConfig,
+  MultiSelectState,
+  BreadcrumbItem,
+  LayoutState,
+  LayoutActions,
+  LayoutContextValue,
+  FABContextConfig,
+  Breakpoints,
+} from './layout';
+
+export {
+  BREAKPOINTS,
+  ACTION_BAR_SLOTS,
+  FAB_DIMENSIONS,
+  ANIMATION_TIMING,
+} from './layout';

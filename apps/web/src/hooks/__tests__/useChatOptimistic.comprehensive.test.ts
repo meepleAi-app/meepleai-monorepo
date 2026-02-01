@@ -88,10 +88,9 @@ describe('useChatOptimistic - Comprehensive (Issue #2309)', () => {
       const { result } = renderHook(() => useChatOptimistic());
 
       let optimisticStateDuringSend = false;
-      let sendPromise: Promise<void>;
 
       act(() => {
-        sendPromise = result.current.sendMessageOptimistic('Test');
+        result.current.sendMessageOptimistic('Test').then(() => {});
       });
 
       // Check immediately after call
@@ -103,11 +102,6 @@ describe('useChatOptimistic - Comprehensive (Issue #2309)', () => {
       );
 
       expect(optimisticStateDuringSend).toBe(true);
-
-      // Wait for the promise to complete to avoid state updates after unmount
-      await act(async () => {
-        await sendPromise;
-      });
     });
 
     it('should clear optimistic state after successful send', async () => {

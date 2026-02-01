@@ -9,7 +9,7 @@
  * @see apps/web/e2e/pages/helpers/AuthHelper.ts
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { AuthPage } from './pages/auth/AuthPage';
 import { AuthHelper } from './pages/helpers/AuthHelper';
 

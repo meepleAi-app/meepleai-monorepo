@@ -9,7 +9,7 @@
  * @see docs/08-user-flows/editor-role/03-content-management.md
  */
 
-import { test } from '../../fixtures/chromatic';
+import { test } from '../../fixtures';
 import { AuthHelper, USER_FIXTURES } from '../../pages';
 import {
   ScreenshotHelper,

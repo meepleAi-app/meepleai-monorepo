@@ -8,9 +8,13 @@
  * - Unlock after waiting period
  * - Admin unlock capability
  * - Progressive lockout escalation
+ *
+ * Refactored to use Page Object Model and fixtures
  */
 
-import { test, expect } from '../fixtures/chromatic';
+import { test, expect } from '../fixtures';
+import { LoginPage, AuthPage } from '../pages';
+import { RealBackendHelper } from '../pages/helpers/RealBackendHelper';
 
 import type { Page } from '@playwright/test';
 
@@ -21,11 +25,13 @@ interface LockoutState {
   failedAttempts: number;
   isLocked: boolean;
   lockedUntil: string | null;
-  lockoutDuration: number; // minutes
+  lockoutDuration: number;
 }
 
 /**
  * Setup mock routes for account lockout testing
+ * Note: These mocks are necessary to simulate specific lockout scenarios
+ * that would be difficult to reproduce with a real backend
  */
 async function setupAccountLockoutMocks(
   page: Page,
@@ -65,7 +71,7 @@ async function setupAccountLockoutMocks(
       if (now < lockoutEnd) {
         const minutesRemaining = Math.ceil((lockoutEnd.getTime() - now.getTime()) / 60000);
         await route.fulfill({
-          status: 423, // Locked
+          status: 423,
           contentType: 'application/json',
           body: JSON.stringify({
             error: 'Account locked',
@@ -76,7 +82,6 @@ async function setupAccountLockoutMocks(
         });
         return;
       } else {
-        // Lockout expired, reset state
         currentState.isLocked = false;
         currentState.lockedUntil = null;
         currentState.failedAttempts = 0;
@@ -85,7 +90,6 @@ async function setupAccountLockoutMocks(
 
     // Simulate login attempt
     if (body?.password === 'correct-password') {
-      // Successful login - reset attempts
       currentState.failedAttempts = 0;
       await route.fulfill({
         status: 200,
@@ -101,11 +105,9 @@ async function setupAccountLockoutMocks(
         }),
       });
     } else {
-      // Failed login - increment attempts
       currentState.failedAttempts++;
 
       if (currentState.failedAttempts >= 5) {
-        // Lock account
         currentState.isLocked = true;
         currentState.lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
@@ -177,17 +179,20 @@ async function setupAccountLockoutMocks(
 }
 
 test.describe('AUTH-10: Account Lockout', () => {
+  let loginPage: LoginPage;
+
+  test.beforeEach(async ({ page }) => {
+    loginPage = new LoginPage(page);
+  });
+
   test.describe('Failed Login Attempts', () => {
     test('should show warning after failed login attempt', async ({ page }) => {
       await setupAccountLockoutMocks(page, { failedAttempts: 0 });
 
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
-
-      // Attempt login with wrong password
-      await page.getByLabel(/email/i).fill('test@example.com');
-      await page.getByLabel(/password/i).fill('wrong-password');
-      await page.getByRole('button', { name: /login|sign.*in|entra/i }).click();
+      await loginPage.navigate();
+      await loginPage.fillEmail('test@example.com');
+      await loginPage.fillPassword('wrong-password');
+      await loginPage.submit();
 
       // Should show error with attempts remaining
       await expect(page.getByText(/invalid|incorrect|wrong/i)).toBeVisible();
@@ -196,13 +201,10 @@ test.describe('AUTH-10: Account Lockout', () => {
     test('should show remaining attempts count', async ({ page }) => {
       await setupAccountLockoutMocks(page, { failedAttempts: 3 });
 
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
-
-      // Attempt login with wrong password
-      await page.getByLabel(/email/i).fill('test@example.com');
-      await page.getByLabel(/password/i).fill('wrong-password');
-      await page.getByRole('button', { name: /login|sign.*in|entra/i }).click();
+      await loginPage.navigate();
+      await loginPage.fillEmail('test@example.com');
+      await loginPage.fillPassword('wrong-password');
+      await loginPage.submit();
 
       // Should show attempts remaining warning
       await expect(page.getByText(/attempt|remaining|left/i)).toBeVisible();
@@ -211,13 +213,10 @@ test.describe('AUTH-10: Account Lockout', () => {
     test('should lock account after 5 failed attempts', async ({ page }) => {
       await setupAccountLockoutMocks(page, { failedAttempts: 4 });
 
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
-
-      // 5th failed attempt - should trigger lockout
-      await page.getByLabel(/email/i).fill('test@example.com');
-      await page.getByLabel(/password/i).fill('wrong-password');
-      await page.getByRole('button', { name: /login|sign.*in|entra/i }).click();
+      await loginPage.navigate();
+      await loginPage.fillEmail('test@example.com');
+      await loginPage.fillPassword('wrong-password');
+      await loginPage.submit();
 
       // Should show lockout message
       await expect(page.getByText(/locked|too.*many.*attempts/i)).toBeVisible();
@@ -229,13 +228,10 @@ test.describe('AUTH-10: Account Lockout', () => {
     test('should prevent login when account is locked', async ({ page }) => {
       await setupAccountLockoutMocks(page, { isLocked: true, lockoutMinutesRemaining: 10 });
 
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
-
-      // Attempt login
-      await page.getByLabel(/email/i).fill('test@example.com');
-      await page.getByLabel(/password/i).fill('correct-password');
-      await page.getByRole('button', { name: /login|sign.*in|entra/i }).click();
+      await loginPage.navigate();
+      await loginPage.fillEmail('test@example.com');
+      await loginPage.fillPassword('correct-password');
+      await loginPage.submit();
 
       // Should show locked message
       await expect(page.getByText(/locked|temporarily/i)).toBeVisible();
@@ -244,13 +240,10 @@ test.describe('AUTH-10: Account Lockout', () => {
     test('should show countdown timer during lockout', async ({ page }) => {
       await setupAccountLockoutMocks(page, { isLocked: true, lockoutMinutesRemaining: 5 });
 
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
-
-      // Attempt login
-      await page.getByLabel(/email/i).fill('test@example.com');
-      await page.getByLabel(/password/i).fill('correct-password');
-      await page.getByRole('button', { name: /login|sign.*in|entra/i }).click();
+      await loginPage.navigate();
+      await loginPage.fillEmail('test@example.com');
+      await loginPage.fillPassword('correct-password');
+      await loginPage.submit();
 
       // Should show time remaining
       await expect(page.getByText(/\d+.*minute|wait|try.*again/i)).toBeVisible();
@@ -260,13 +253,10 @@ test.describe('AUTH-10: Account Lockout', () => {
       // Simulate expired lockout
       await setupAccountLockoutMocks(page, { isLocked: true, lockoutMinutesRemaining: 0 });
 
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
-
-      // Attempt login with correct password
-      await page.getByLabel(/email/i).fill('test@example.com');
-      await page.getByLabel(/password/i).fill('correct-password');
-      await page.getByRole('button', { name: /login|sign.*in|entra/i }).click();
+      await loginPage.navigate();
+      await loginPage.fillEmail('test@example.com');
+      await loginPage.fillPassword('correct-password');
+      await loginPage.submit();
 
       // Should succeed (redirect to dashboard or show success)
       await page.waitForURL(/dashboard|home/i, { timeout: 10000 }).catch(() => {
@@ -288,8 +278,7 @@ test.describe('AUTH-10: Account Lockout', () => {
         });
       });
 
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
+      await loginPage.navigate();
 
       // Click forgot password link
       const forgotPasswordLink = page.getByRole('link', { name: /forgot.*password|reset.*password/i });
@@ -309,16 +298,15 @@ test.describe('AUTH-10: Account Lockout', () => {
     test('should not reveal if email exists during lockout', async ({ page }) => {
       await setupAccountLockoutMocks(page, { isLocked: true });
 
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
-
-      // Attempt login with non-existent email
-      await page.getByLabel(/email/i).fill('nonexistent@example.com');
-      await page.getByLabel(/password/i).fill('any-password');
-      await page.getByRole('button', { name: /login|sign.*in|entra/i }).click();
+      await loginPage.navigate();
+      await loginPage.fillEmail('nonexistent@example.com');
+      await loginPage.fillPassword('any-password');
+      await loginPage.submit();
 
       // Error message should be generic (not revealing account existence)
-      const errorText = await page.locator('[role="alert"], .error, .text-red-500, .text-destructive').textContent();
+      const errorText = await page
+        .locator('[role="alert"], .error, .text-red-500, .text-destructive')
+        .textContent();
       expect(errorText?.toLowerCase()).not.toContain('does not exist');
       expect(errorText?.toLowerCase()).not.toContain('no account');
     });

@@ -24,7 +24,7 @@
  * @see Issue #2299 - E2E mock removal epic
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { LoginPage, AuthHelper } from './pages';
 
 test.describe('Authentication Validation Negative Scenarios - Issue #1494', () => {

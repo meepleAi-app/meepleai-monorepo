@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 
 const apiBase = 'http://localhost:8080';
 

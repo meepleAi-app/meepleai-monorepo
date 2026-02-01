@@ -7,9 +7,12 @@
  * - Resend verification email with rate limiting
  * - Expired verification token handling
  * - Access restrictions before verification
+ *
+ * Refactored to use Page Object Model and fixtures
  */
 
-import { test, expect } from '../fixtures/chromatic';
+import { test, expect } from '../fixtures';
+import { AuthPage, RegisterPage } from '../pages';
 
 import type { Page } from '@playwright/test';
 
@@ -36,12 +39,8 @@ async function setupEmailVerificationMocks(
     resendAllowed?: boolean;
   } = {}
 ) {
-  const {
-    emailVerified = false,
-    tokenValid = true,
-    tokenExpired = false,
-    resendAllowed = true,
-  } = options;
+  const { emailVerified = false, tokenValid = true, tokenExpired = false, resendAllowed = true } =
+    options;
 
   const user: MockUser = {
     id: 'test-user-id',
@@ -140,7 +139,9 @@ test.describe('AUTH-09: Email Verification', () => {
       await page.waitForLoadState('networkidle');
 
       // Verify pending message is displayed
-      await expect(page.getByRole('heading', { name: /verify.*email|email.*verification/i })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: /verify.*email|email.*verification/i })
+      ).toBeVisible();
       await expect(page.getByText(/test@example.com/i)).toBeVisible();
       await expect(page.getByText(/check.*email|verification.*sent/i)).toBeVisible();
     });
@@ -151,7 +152,9 @@ test.describe('AUTH-09: Email Verification', () => {
       await page.goto('/verification-pending?email=test@example.com');
       await page.waitForLoadState('networkidle');
 
-      const resendButton = page.getByRole('button', { name: /resend.*verification|send.*again/i });
+      const resendButton = page.getByRole('button', {
+        name: /resend.*verification|send.*again/i,
+      });
       await expect(resendButton).toBeVisible();
       await expect(resendButton).toBeEnabled();
     });
@@ -162,7 +165,9 @@ test.describe('AUTH-09: Email Verification', () => {
       await page.goto('/verification-pending?email=test@example.com');
       await page.waitForLoadState('networkidle');
 
-      const resendButton = page.getByRole('button', { name: /resend.*verification|send.*again/i });
+      const resendButton = page.getByRole('button', {
+        name: /resend.*verification|send.*again/i,
+      });
       await resendButton.click();
 
       // Wait for success message
@@ -175,7 +180,9 @@ test.describe('AUTH-09: Email Verification', () => {
       await page.goto('/verification-pending?email=test@example.com');
       await page.waitForLoadState('networkidle');
 
-      const resendButton = page.getByRole('button', { name: /resend.*verification|send.*again/i });
+      const resendButton = page.getByRole('button', {
+        name: /resend.*verification|send.*again/i,
+      });
       await resendButton.click();
 
       // Verify rate limit message is shown
@@ -188,13 +195,13 @@ test.describe('AUTH-09: Email Verification', () => {
       await page.goto('/verification-pending?email=test@example.com');
       await page.waitForLoadState('networkidle');
 
-      const resendButton = page.getByRole('button', { name: /resend.*verification|send.*again/i });
+      const resendButton = page.getByRole('button', {
+        name: /resend.*verification|send.*again/i,
+      });
       await resendButton.click();
 
       // Button should be disabled with countdown or show cooldown message
-      await expect(
-        resendButton.or(page.getByText(/\d+.*seconds|wait.*\d+/i))
-      ).toBeVisible();
+      await expect(resendButton.or(page.getByText(/\d+.*seconds|wait.*\d+/i))).toBeVisible();
     });
   });
 
@@ -252,7 +259,7 @@ test.describe('AUTH-09: Email Verification', () => {
       const verificationReminder = page.getByText(/verify.*email|email.*not.*verified/i);
       const verificationPage = page.url().includes('verification');
 
-      expect(verificationReminder.isVisible() || verificationPage).toBeTruthy();
+      expect((await verificationReminder.isVisible()) || verificationPage).toBeTruthy();
     });
 
     test('should allow full access after email verification', async ({ page }) => {

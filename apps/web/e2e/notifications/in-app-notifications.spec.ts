@@ -9,7 +9,7 @@
  * - Clear notifications
  */
 
-import { test, expect } from '../fixtures/chromatic';
+import { test, expect } from '../fixtures';
 
 import type { Page } from '@playwright/test';
 

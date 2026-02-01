@@ -9,7 +9,7 @@
  */
 
 import { setupMockAuth } from './fixtures/auth';
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 
 /**
  * Platform-specific modifier key

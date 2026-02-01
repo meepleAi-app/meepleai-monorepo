@@ -9,7 +9,8 @@
  * - Save custom templates
  */
 
-import { test, expect } from '../fixtures/chromatic';
+import { test, expect } from '../fixtures';
+import { GamePage } from '../pages';
 
 import type { Page } from '@playwright/test';
 

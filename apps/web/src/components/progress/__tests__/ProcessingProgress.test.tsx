@@ -8,6 +8,8 @@
  * - Cancel functionality
  * - Completion and error callbacks
  * - Network error handling
+ *
+ * Updated for Issue #3371: Schema alignment with backend ProcessingProgress model.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -36,6 +38,30 @@ vi.mock('../../loading', () => ({
   ),
 }));
 
+/**
+ * Helper to create mock API response matching backend ProcessingProgress model.
+ * Issue #3371: Schema alignment with backend.
+ */
+function createMockProgress(overrides: {
+  currentStep?: string;
+  percentComplete?: number;
+  errorMessage?: string | null;
+  pagesProcessed?: number;
+  totalPages?: number;
+} = {}) {
+  return {
+    currentStep: overrides.currentStep ?? 'Extracting',
+    percentComplete: overrides.percentComplete ?? 50,
+    elapsedTime: '00:01:23.0000000',
+    estimatedTimeRemaining: '00:02:00.0000000',
+    pagesProcessed: overrides.pagesProcessed ?? 5,
+    totalPages: overrides.totalPages ?? 10,
+    startedAt: '2026-02-01T10:30:00.000Z',
+    completedAt: null,
+    errorMessage: overrides.errorMessage ?? null,
+  };
+}
+
 describe('ProcessingProgress', () => {
   const mockOnComplete = vi.fn();
   const mockOnError = vi.fn();
@@ -62,11 +88,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('removes skeleton loader after data is fetched', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 50,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Extracting', percentComplete: 50 })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -78,11 +102,9 @@ describe('ProcessingProgress', () => {
 
   describe('Progress Display', () => {
     it('displays progress bar with correct percentage', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 75,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Chunking', percentComplete: 75 })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -93,11 +115,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('displays all step indicators', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 30,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Extracting', percentComplete: 30 })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -111,11 +131,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('shows processing status text', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 50,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Chunking', percentComplete: 50 })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -127,11 +145,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('displays correct progress percentage', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 42,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Embedding', percentComplete: 42 })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -144,9 +160,8 @@ describe('ProcessingProgress', () => {
   describe('Completion Callback', () => {
     it('calls onComplete when processing is completed', async () => {
       vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Completed',
-        percentComplete: 100,
-        error: null,
+        ...createMockProgress({ currentStep: 'Completed', percentComplete: 100 }),
+        completedAt: '2026-02-01T10:35:00.000Z',
       });
 
       render(
@@ -163,9 +178,8 @@ describe('ProcessingProgress', () => {
 
     it('only calls onComplete once on initial render', async () => {
       vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Completed',
-        percentComplete: 100,
-        error: null,
+        ...createMockProgress({ currentStep: 'Completed', percentComplete: 100 }),
+        completedAt: '2026-02-01T10:35:00.000Z',
       });
 
       render(
@@ -187,11 +201,9 @@ describe('ProcessingProgress', () => {
   describe('Error Callback', () => {
     it('calls onError when processing fails with error message', async () => {
       const errorMessage = 'PDF extraction failed';
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Failed',
-        percentComplete: 0,
-        error: errorMessage,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Failed', percentComplete: 0, errorMessage })
+      );
 
       render(
         <ProcessingProgress
@@ -206,11 +218,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('displays error message when processing fails', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Failed',
-        percentComplete: 0,
-        error: 'OCR failed for this document',
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Failed', percentComplete: 0, errorMessage: 'OCR failed for this document' })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -257,11 +267,9 @@ describe('ProcessingProgress', () => {
 
   describe('Cancel Functionality', () => {
     it('shows cancel button during processing', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 50,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Extracting', percentComplete: 50 })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -272,9 +280,8 @@ describe('ProcessingProgress', () => {
 
     it('hides cancel button when processing is complete', async () => {
       vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Completed',
-        percentComplete: 100,
-        error: null,
+        ...createMockProgress({ currentStep: 'Completed', percentComplete: 100 }),
+        completedAt: '2026-02-01T10:35:00.000Z',
       });
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
@@ -285,11 +292,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('opens cancel dialog when cancel button is clicked', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 50,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Chunking', percentComplete: 50 })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -304,11 +309,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('closes cancel dialog when "No, Continue" is clicked', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 50,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Embedding', percentComplete: 50 })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -323,11 +326,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('closes cancel dialog when overlay is clicked', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 50,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Indexing', percentComplete: 50 })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -345,11 +346,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('calls cancel API when "Yes, Cancel" is clicked', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 50,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Extracting', percentComplete: 50 })
+      );
       vi.mocked(api.pdf.cancelProcessing).mockResolvedValue(undefined);
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
@@ -367,11 +366,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('shows "Canceling..." while cancel is in progress', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 50,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Chunking', percentComplete: 50 })
+      );
       // Never resolve cancel API
       vi.mocked(api.pdf.cancelProcessing).mockImplementation(
         () => new Promise(() => {})
@@ -392,11 +389,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('displays error when cancel fails', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 50,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Embedding', percentComplete: 50 })
+      );
       vi.mocked(api.pdf.cancelProcessing).mockRejectedValue(
         new Error('Cancel request failed')
       );
@@ -418,11 +413,9 @@ describe('ProcessingProgress', () => {
 
   describe('Polling Behavior', () => {
     it('calls API on initial render', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 25,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Uploading', percentComplete: 25 })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -432,11 +425,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('resets state when pdfId changes', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 50,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Extracting', percentComplete: 50 })
+      );
 
       const { rerender } = render(<ProcessingProgress pdfId="pdf-1" />);
 
@@ -454,11 +445,9 @@ describe('ProcessingProgress', () => {
 
   describe('Component Header', () => {
     it('displays the component title', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 50,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Chunking', percentComplete: 50 })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -470,11 +459,9 @@ describe('ProcessingProgress', () => {
 
   describe('Accessibility', () => {
     it('has accessible progress bar', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 60,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Embedding', percentComplete: 60 })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -489,11 +476,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('error messages have role="alert"', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Failed',
-        percentComplete: 0,
-        error: 'Processing failed',
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Failed', percentComplete: 0, errorMessage: 'Processing failed' })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -504,11 +489,9 @@ describe('ProcessingProgress', () => {
     });
 
     it('cancel dialog is properly labeled', async () => {
-      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue({
-        status: 'Processing',
-        percentComplete: 50,
-        error: null,
-      });
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Indexing', percentComplete: 50 })
+      );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 

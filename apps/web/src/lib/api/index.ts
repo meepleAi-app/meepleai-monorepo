@@ -119,7 +119,8 @@ export {
 export { logger, logApiError } from './core/logger';
 
 // Re-export PDF-specific types
-export type { ProcessingProgress } from './schemas/pdf.schemas';
+export type { ProcessingProgress, ProcessingStepDto } from './schemas/pdf.schemas';
+export { ProcessingStepSchema, ProcessingProgressSchema } from './schemas/pdf.schemas';
 
 // Re-export all types and schemas
 export * from './schemas';

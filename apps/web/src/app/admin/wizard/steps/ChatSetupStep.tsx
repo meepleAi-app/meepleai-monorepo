@@ -47,18 +47,21 @@ export function ChatSetupStep({ gameId, gameName, pdfId, onComplete, onBack }: C
           return;
         }
 
-        switch (progress.status) {
-          case 'Pending':
+        // Map backend ProcessingStep to local ProcessingStatus
+        switch (progress.currentStep) {
+          case 'Uploading':
             setProcessingStatus('pending');
             setProcessingProgress(progress.percentComplete ?? 0);
-            setProcessingMessage(progress.message ?? 'In attesa...');
+            setProcessingMessage('Caricamento in corso...');
             break;
-          case 'Processing':
+          case 'Extracting':
+          case 'Chunking':
+          case 'Embedding':
+          case 'Indexing':
             setProcessingStatus('processing');
             setProcessingProgress(progress.percentComplete ?? 50);
             setProcessingMessage(
-              progress.message ??
-                `Elaborazione pagina ${progress.currentPage ?? '?'}/${progress.totalPages ?? '?'}`
+              `Elaborazione pagina ${progress.pagesProcessed ?? '?'}/${progress.totalPages ?? '?'}`
             );
             break;
           case 'Completed':
@@ -72,7 +75,7 @@ export function ChatSetupStep({ gameId, gameName, pdfId, onComplete, onBack }: C
             break;
           case 'Failed':
             setProcessingStatus('failed');
-            setProcessingMessage(progress.error ?? 'Elaborazione fallita');
+            setProcessingMessage(progress.errorMessage ?? 'Elaborazione fallita');
             if (pollingRef.current) {
               clearInterval(pollingRef.current);
               pollingRef.current = null;

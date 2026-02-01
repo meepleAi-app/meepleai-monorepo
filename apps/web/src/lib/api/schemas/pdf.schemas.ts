@@ -25,15 +25,52 @@ export const PdfDocumentDtoSchema = z.object({
 
 export type PdfDocumentDto = z.infer<typeof PdfDocumentDtoSchema>;
 
+// ========== Processing Step Enum ==========
+
+/**
+ * Processing pipeline steps matching backend ProcessingStep enum.
+ * @see apps/api/src/Api/Models/ProcessingProgress.cs
+ */
+export const ProcessingStepSchema = z.enum([
+  'Uploading',
+  'Extracting',
+  'Chunking',
+  'Embedding',
+  'Indexing',
+  'Completed',
+  'Failed',
+]);
+
+export type ProcessingStepDto = z.infer<typeof ProcessingStepSchema>;
+
 // ========== Processing Progress ==========
 
+/**
+ * Processing progress response matching backend ProcessingProgress model.
+ * @see apps/api/src/Api/Models/ProcessingProgress.cs
+ *
+ * TimeSpan fields (elapsedTime, estimatedTimeRemaining) are serialized as
+ * "HH:mm:ss.fffffff" strings by .NET System.Text.Json.
+ */
 export const ProcessingProgressSchema = z.object({
-  status: z.enum(['Pending', 'Processing', 'Completed', 'Failed']),
-  currentPage: z.number().int().nonnegative().optional(),
-  totalPages: z.number().int().positive().optional(),
-  percentComplete: z.number().min(0).max(100),
-  message: z.string().optional(),
-  error: z.string().nullable().optional(),
+  /** Current step in the processing pipeline */
+  currentStep: ProcessingStepSchema,
+  /** Overall completion percentage (0-100) */
+  percentComplete: z.number().int().min(0).max(100),
+  /** Time elapsed since processing started (TimeSpan as string "HH:mm:ss.fffffff") */
+  elapsedTime: z.string(),
+  /** Estimated time remaining, null if unable to estimate (TimeSpan as string) */
+  estimatedTimeRemaining: z.string().nullable(),
+  /** Number of pages processed so far */
+  pagesProcessed: z.number().int().nonnegative(),
+  /** Total number of pages in the PDF */
+  totalPages: z.number().int().nonnegative(),
+  /** When processing started (UTC ISO 8601) */
+  startedAt: z.string().datetime(),
+  /** When processing completed (UTC ISO 8601), null if still in progress */
+  completedAt: z.string().datetime().nullable(),
+  /** Error message if processing failed */
+  errorMessage: z.string().nullable().optional(),
 });
 
 export type ProcessingProgress = z.infer<typeof ProcessingProgressSchema>;

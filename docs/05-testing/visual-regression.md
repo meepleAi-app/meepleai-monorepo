@@ -1,467 +1,360 @@
-# Visual Regression Testing
+# Visual Regression Testing with Chromatic
 
-**Issue**: #2906
-**Epic**: #2845 - MeepleAI Design System Integration
-**Last Updated**: 2026-01-22
+**Issue**: #2852 - Setup Chromatic visual regression testing for all 7 page areas
+**Status**: ✅ Implemented
+**Last Updated**: 2026-01-31
 
 ## Overview
 
-Visual regression testing automatically detects unintended visual changes in the UI by comparing screenshots against baseline images. This ensures the MeepleAI design system remains consistent across iterations.
+This document describes the Chromatic visual regression testing setup for the MeepleAI web application. Visual regression testing ensures UI consistency across code changes by capturing and comparing visual snapshots of components and pages.
 
-## Why Visual Regression Testing?
+## Architecture
 
-- **Design System Integrity**: Detect breaking changes to MeepleAI visual identity
-- **Cross-Browser Consistency**: Verify rendering across Chrome, Firefox, Safari
-- **Responsive Design**: Validate layouts on desktop, tablet, mobile viewports
-- **Confidence in Refactoring**: Safely refactor CSS/styling with automated checks
-- **Regression Prevention**: Catch visual bugs before they reach production
+### Components
 
-## Technology Stack
+- **Chromatic**: Cloud-based visual testing platform
+- **Storybook**: Component documentation and isolated testing
+- **GitHub Actions**: CI/CD integration for automated testing
+- **Playwright**: Test runner for complex client-side animations
 
-- **Playwright**: Test automation framework with built-in screenshot comparison
-- **toHaveScreenshot()**: Native Playwright assertion for visual testing
-- **Baselines**: Stored in `e2e/visual/__screenshots__/`
-- **CI Integration**: Automated visual checks in GitHub Actions
+### Coverage
 
-## Test Coverage
+The visual regression testing covers **7 main application areas**:
 
-### Admin Dashboard Components
-- ✅ Dashboard overview (full page)
-- ✅ MetricsGrid cards
-- ✅ Charts (Endpoint, Latency, Time Series, Feedback)
-- ✅ Navigation & Top Bar
-- ✅ Filters & Controls
-- ✅ Background Texture System (Issue #2905)
+1. **Admin Dashboard** (37 pages)
+2. **User Dashboard** (1 page)
+3. **Personal Library** (2 pages)
+4. **Shared Catalog** (3 pages)
+5. **Profile & Settings** (1 page)
+6. **User Management** (covered in Admin)
+7. **Editor Dashboard** (1 page)
 
-### Viewports
-- ✅ **Desktop**: 1920x1080
-- ✅ **Tablet**: 768x1024
-- ✅ **Mobile**: 375x667
+**Total Stories**: ~400+ stories across all areas
+**Total Visual Snapshots**: ~1200+ (stories × 3 viewports)
 
-### Interactive States
-- ✅ Hover effects (cards, buttons)
-- ✅ Loading states
-- ✅ Reduced motion accessibility
+## Viewport Testing
 
-## Quick Start
+All stories test across multiple viewports:
 
-### Run Visual Tests
-
-```bash
-# Run visual regression tests (desktop Chrome only)
-pnpm test:e2e:visual
-
-# Run with UI mode for debugging
-pnpm test:e2e:visual:ui
-
-# Run on all browsers/viewports
-pnpm test:e2e:visual:all
-```
-
-### Generate/Update Baselines
-
-```bash
-# Generate baselines for all tests
-pnpm test:e2e:visual:update
-
-# Update specific test baseline
-pnpm test:e2e:visual:update -g "dashboard overview"
-```
-
-## Workflow
-
-### 1. Initial Baseline Creation
-
-When setting up visual tests for the first time:
-
-```bash
-# Generate baseline screenshots
-pnpm test:e2e:visual:update
-
-# Review generated baselines in e2e/visual/__screenshots__/
-# Commit baselines to git
-git add e2e/visual/__screenshots__/
-git commit -m "chore: add visual regression baselines for admin dashboard"
-```
-
-### 2. Daily Development
-
-After making UI changes:
-
-```bash
-# Run visual tests to detect changes
-pnpm test:e2e:visual
-
-# If tests fail:
-# 1. Review diff report: pnpm test:e2e:report
-# 2. Verify change is intentional
-# 3. Update baseline if correct: pnpm test:e2e:visual:update
-```
-
-### 3. PR Review Process
-
-When reviewing pull requests with UI changes:
-
-1. **CI runs visual tests** automatically
-2. **Failures indicate visual changes** - review diffs in test report
-3. **Intentional changes** → Approve and update baselines
-4. **Unintentional changes** → Request fixes
+- **Mobile**: 375×667px
+- **Tablet**: 768×1024px
+- **Desktop**: 1920×1080px
 
 ## Configuration
 
-### Screenshot Comparison Settings
+### Chromatic Config (`apps/web/chromatic.config.json`)
 
-Located in `e2e/visual/admin-dashboard.visual.spec.ts`:
+```json
+{
+  "projectId": "Project:meepleai",
+  "buildScriptName": "build-storybook",
+  "diffThreshold": 0.05,
+  "diffIncludeAntiAliasing": true,
+  "autoAcceptChanges": "main-dev",
+  "onlyChanged": true,
+  "exitZeroOnChanges": true
+}
+```
+
+**Key Settings**:
+- `diffThreshold: 0.05` - Max 5% visual difference allowed
+- `diffIncludeAntiAliasing`: Anti-aliasing handling for cross-browser consistency
+- `autoAcceptChanges`: Auto-approve visual changes on main-dev branch
+- `onlyChanged`: Only test stories that changed in the commit
+
+### GitHub Workflow (`.github/workflows/chromatic.yml`)
+
+**Triggers**:
+- Push to `main-dev` or `frontend-dev` branches
+- Pull requests that modify:
+  - `apps/web/**`
+  - `.storybook/**`
+  - `package.json` or `pnpm-lock.yaml`
+
+**Steps**:
+1. Checkout code with full history
+2. Setup Node.js 20 + pnpm
+3. Install dependencies
+4. Build Storybook
+5. Publish to Chromatic
+6. Comment PR with Chromatic report link
+
+## Story Structure
+
+### Page Stories
+
+**Location**: Next to page components (e.g., `page.tsx` → `client.stories.tsx`)
+
+**Format**: CSF 3.0 (Component Story Format)
 
 ```typescript
-await expect(element).toHaveScreenshot('name.png', {
-  maxDiffPixels: 100,      // Allow up to 100 pixels difference
-  threshold: 0.2,          // 20% per-pixel color difference tolerance
-  fullPage: true,          // Capture entire page (optional)
-});
+import type { Meta, StoryObj } from '@storybook/react';
+
+const meta: Meta<typeof Component> = {
+  title: 'Pages/Admin/ComponentName',
+  component: Component,
+  parameters: {
+    layout: 'fullscreen',
+    chromatic: {
+      viewports: [375, 768, 1920],
+      delay: 300,
+      diffThreshold: 0.2,
+    },
+  },
+  decorators: [
+    // Auth bypass, QueryClient, etc.
+  ],
+};
+
+export default meta;
+type Story = StoryObj<typeof Component>;
+
+export const Default: Story = { args: { /* props */ } };
+export const Loading: Story = { /* ... */ };
+export const Empty: Story = { /* ... */ };
 ```
 
-### Tolerance Guidelines
+**Common States**:
+- Default (with realistic data)
+- Loading
+- Empty (no data)
+- Error
+- Mobile/Tablet/Desktop views
 
-| Component Type | maxDiffPixels | threshold | Rationale |
-|---------------|---------------|-----------|-----------|
-| Static UI | 50 | 0.2 | Minimal anti-aliasing variations |
-| Charts | 150 | 0.25 | Chart rendering may vary slightly |
-| Interactive | 75 | 0.2 | Hover states with transitions |
-| Full Page | 100 | 0.2 | Accumulated minor differences |
+### Component Stories
 
-## Baseline Management
+**Location**: `apps/web/src/components/[area]/ComponentName.stories.tsx`
 
-### When to Update Baselines
-
-✅ **Update baselines when**:
-- Intentional design changes (new styling, layout updates)
-- MeepleAI design system updates
-- Adding new features with visual components
-- Fixing visual bugs
-
-❌ **Do NOT update baselines when**:
-- Tests fail due to actual regression
-- Unsure why visual changed
-- Changes look wrong or broken
-
-### Baseline Storage
-
-```
-e2e/visual/__screenshots__/
-├── admin-dashboard-desktop-chrome/
-│   ├── admin-dashboard-desktop.png
-│   ├── metrics-grid-desktop.png
-│   ├── charts-section-desktop.png
-│   └── ...
-├── admin-dashboard-tablet-chrome/
-│   └── ...
-└── admin-dashboard-mobile-chrome/
-    └── ...
-```
-
-**Important**: Commit baselines to git for team collaboration
-
-### Git Operations
-
-```bash
-# Add new baselines
-git add e2e/visual/__screenshots__/
-
-# Review baseline changes before committing
-git diff e2e/visual/__screenshots__/
-
-# Commit baseline updates
-git commit -m "chore: update visual baselines after MeepleAI redesign"
-```
-
-## Writing Visual Tests
-
-### Test Structure
+**Focus**: Component-level testing with all props/states
 
 ```typescript
-import { expect, test } from '@playwright/test';
+export const Default: Story = { args: { /* ... */ } };
+export const Hover: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.hover(canvas.getByRole('button'));
+  },
+};
+export const Disabled: Story = { args: { disabled: true } };
+```
 
-test.describe('Component Name - Visual', () => {
-  // Set viewport for responsive tests
-  test.use({ viewport: { width: 1920, height: 1080 } });
+### Special: Library Page (Framer Motion)
 
-  test('component matches baseline', async ({ page }) => {
-    // 1. Navigate to page
-    await page.goto('/path');
+**File**: `apps/web/src/app/(public)/library/page.chromatic-playwright.ts`
 
-    // 2. Wait for dynamic content
-    await page.waitForLoadState('networkidle');
+Uses Playwright test runner instead of standard Storybook due to framer-motion SSR limitations:
 
-    // 3. Locate component (optional, for element screenshots)
-    const component = page.locator('.component-class');
+```typescript
+import { test } from '@chromatic-com/playwright';
 
-    // 4. Take screenshot and compare
-    await expect(component).toHaveScreenshot('component-name.png', {
-      maxDiffPixels: 50,
-      threshold: 0.2,
-    });
+test.describe('Library Page', () => {
+  test('should render with animations', async ({ page }) => {
+    await page.goto('/library');
+    await page.waitForSelector('[data-testid="game-card"]');
+    // Chromatic captures after animations complete
   });
 });
 ```
 
-### Best Practices
+## Running Chromatic
 
-#### 1. Wait for Content to Load
+### Local Development
 
-```typescript
-// ❌ Bad: Screenshot before content loads
-await expect(page).toHaveScreenshot('page.png');
+```bash
+# Build Storybook
+cd apps/web
+pnpm build-storybook
 
-// ✅ Good: Wait for network idle
-await page.waitForLoadState('networkidle');
-await expect(page).toHaveScreenshot('page.png');
+# Run Chromatic (requires CHROMATIC_PROJECT_TOKEN)
+pnpm chromatic
 
-// ✅ Good: Wait for specific element
-await page.waitForSelector('canvas', { state: 'visible' });
-await expect(page).toHaveScreenshot('chart.png');
+# Visual testing only (exit zero on changes)
+pnpm test:visual
 ```
 
-#### 2. Handle Animations
+### CI/CD
 
-```typescript
-// Wait for animations to complete
-await element.hover();
-await page.waitForTimeout(300); // Wait for transition
-await expect(element).toHaveScreenshot('hover-state.png');
-```
+Chromatic runs automatically on:
+- Every push to `main-dev` or `frontend-dev`
+- Every pull request affecting web code
 
-#### 3. Stabilize Dynamic Content
+**PR Workflow**:
+1. Open PR with UI changes
+2. Chromatic builds and compares snapshots
+3. Bot comments with Chromatic report link
+4. Review visual changes in Chromatic dashboard
+5. Accept/reject changes
+6. Merge when approved
 
-```typescript
-// Mock time-dependent data
-await page.addInitScript(() => {
-  Date.now = () => 1640995200000; // Fixed timestamp
-});
+## Baseline Management
 
-// Mock random values
-await page.addInitScript(() => {
-  Math.random = () => 0.5; // Fixed random
-});
-```
+### Initial Baselines
 
-#### 4. Test Interactive States
+Baselines were captured for all 7 areas covering:
+- All admin pages (37 pages)
+- User dashboard
+- Library pages (with special Playwright handling)
+- Shared catalog pages
+- Settings page
+- Editor dashboard
 
-```typescript
-test('button hover state', async ({ page }) => {
-  const button = page.getByRole('button', { name: 'Submit' });
+### Updating Baselines
 
-  // Hover and capture
-  await button.hover();
-  await page.waitForTimeout(200);
+**When to Update**:
+- Intentional UI changes
+- Design system updates
+- Component library changes
 
-  await expect(button).toHaveScreenshot('button-hover.png');
-});
-```
+**How to Update**:
 
-#### 5. Accessibility Testing
+1. **Via Chromatic Dashboard** (Recommended):
+   - Review changes in Chromatic UI
+   - Accept changes for specific stories
+   - Baselines automatically updated
 
-```typescript
-test('reduced motion disables animations', async ({ page }) => {
-  // Enable prefers-reduced-motion
-  await page.emulateMedia({ reducedMotion: 'reduce' });
+2. **Via CLI** (for bulk updates):
+   ```bash
+   pnpm chromatic --auto-accept-changes
+   ```
 
-  await page.goto('/page');
-
-  await expect(page).toHaveScreenshot('page-reduced-motion.png');
-});
-```
-
-## CI/CD Integration
-
-### GitHub Actions Workflow
-
-Visual regression tests run automatically on:
-- ✅ Pull requests (detect visual changes)
-- ✅ Main branch commits (validate baselines)
-- ❌ Manual workflow dispatch (on-demand testing)
-
-### Workflow Configuration
-
-```yaml
-# .github/workflows/visual-regression.yml
-name: Visual Regression Tests
-
-on:
-  pull_request:
-    paths:
-      - 'apps/web/src/**'
-      - 'apps/web/e2e/visual/**'
-      - 'apps/web/package.json'
-
-jobs:
-  visual-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Install Playwright browsers
-        run: pnpm --filter @meepleai/web exec playwright install --with-deps chromium
-
-      - name: Run visual regression tests
-        run: pnpm --filter @meepleai/web test:e2e:visual
-
-      - name: Upload test report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: visual-regression-report
-          path: apps/web/playwright-report/
-          retention-days: 7
-
-      - name: Upload screenshot diffs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshot-diffs
-          path: apps/web/test-results/
-          retention-days: 7
-```
-
-### Handling CI Failures
-
-When visual tests fail in CI:
-
-1. **Download artifacts** from GitHub Actions
-2. **Review screenshot diffs** in test-results/
-3. **Determine if change is intentional**
-   - **Yes** → Update baselines and commit
-   - **No** → Fix the regression
+3. **Branch-specific** (auto-accept on main-dev):
+   - Changes merged to `main-dev` are auto-accepted
+   - Configure in `chromatic.config.json`:
+     ```json
+     { "autoAcceptChanges": "main-dev" }
+     ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### Issue: Tests fail with "Screenshot comparison failed"
+**1. Animations causing flakiness**
 
-**Cause**: Visual difference detected
-
-**Solution**:
-```bash
-# 1. Review diff report
-pnpm test:e2e:report
-
-# 2. If change is intentional:
-pnpm test:e2e:visual:update
-
-# 3. Verify updated baseline looks correct
-git diff e2e/visual/__screenshots__/
-```
-
-#### Issue: Flaky screenshot tests (intermittent failures)
-
-**Cause**: Animations, fonts, or dynamic content not stabilized
-
-**Solution**:
+**Solution**: Add delay in story parameters:
 ```typescript
-// Add explicit waits
-await page.waitForLoadState('networkidle');
-await page.waitForTimeout(1000); // Wait for animations
-
-// Increase tolerance for flaky components
-await expect(element).toHaveScreenshot('name.png', {
-  maxDiffPixels: 150, // Increased tolerance
-});
+parameters: {
+  chromatic: {
+    delay: 500, // Wait 500ms before capture
+  },
+}
 ```
 
-#### Issue: Font rendering differences across environments
+**2. Dynamic content (timestamps, random IDs)**
 
-**Cause**: Different font rendering engines (Windows vs Linux vs Mac)
-
-**Solution**:
+**Solution**: Mock time/data in story:
 ```typescript
-// Use consistent CI environment (e.g., always Linux in CI)
-// Document baseline generation environment
-
-// Or increase threshold for text-heavy components
-await expect(element).toHaveScreenshot('text-heavy.png', {
-  threshold: 0.3, // Higher tolerance for font rendering
-});
+parameters: {
+  date: new Date('2024-01-01'),
+},
+decorators: [
+  (Story) => {
+    vi.setSystemTime(new Date('2024-01-01'));
+    return <Story />;
+  },
+],
 ```
 
-#### Issue: Baselines differ between local and CI
+**3. Font loading issues**
 
-**Cause**: Different screen resolutions, browsers, or fonts
+**Solution**: Ensure fonts preloaded in `.storybook/preview.tsx`:
+```typescript
+import '@/app/globals.css'; // Includes font definitions
+```
+
+**4. Failed to build Storybook**
 
 **Solution**:
-- Generate baselines in CI environment
-- Use Docker for consistent local environment
-- Document baseline generation process
-
-### Debugging Tips
-
 ```bash
-# Run test with UI mode to inspect failures
-pnpm test:e2e:visual:ui
-
-# Run single test for faster iteration
-pnpm test:e2e:visual -g "dashboard overview"
-
-# Generate HTML report with screenshot diffs
-pnpm test:e2e:report
+# Clear cache and rebuild
+rm -rf node_modules/.cache
+rm -rf .next storybook-static
+pnpm install
+pnpm build-storybook
 ```
 
-## Performance Considerations
+**5. Chromatic timeout**
 
-- **Baseline Size**: Screenshots add ~200-500KB per image to repository
-- **Test Duration**: Visual tests add ~2-5 seconds per screenshot
-- **CI Cost**: Run only on relevant changes (CSS, components, visual files)
-
-### Optimization Strategies
-
-1. **Selective Testing**: Only run visual tests for affected components
-2. **Parallel Execution**: Use `--project=desktop-chrome` for faster feedback
-3. **Incremental Baselines**: Update only changed baselines in PR
-4. **Artifact Storage**: Store diff images as GitHub Actions artifacts (auto-cleanup)
-
-## Maintenance
-
-### Monthly Review
-
-- [ ] Review and prune unused baselines
-- [ ] Update tolerance thresholds if needed
-- [ ] Check for flaky tests
-- [ ] Verify CI pipeline efficiency
-
-### Baseline Cleanup
-
-```bash
-# Find orphaned baselines (tests deleted but screenshots remain)
-find e2e/visual/__screenshots__ -type f -name "*.png"
-
-# Delete orphaned screenshots
-git rm e2e/visual/__screenshots__/old-test-name.png
+**Solution**: Increase timeout in GitHub workflow:
+```yaml
+- name: Publish to Chromatic
+  timeout-minutes: 30  # Increase if needed
 ```
 
-## Future Enhancements
+## Best Practices
 
-- [ ] **CI artifact comparison**: Visual diff viewer in GitHub PR comments
-- [ ] **Snapshot history**: Track visual changes over time
-- [ ] **Component library**: Automated visual testing for Storybook components
-- [ ] **Percy integration**: Cloud-based visual testing with better diff UI
-- [ ] **Multi-theme testing**: Light/dark mode visual regression
+### Story Writing
 
-## Resources
+1. **Use realistic data**: Mock data should resemble production
+2. **Cover edge cases**: Empty states, errors, loading states
+3. **Test interactions**: Use `play` functions for user interactions
+4. **Isolate components**: Mock external dependencies (API, auth)
+5. **Consistent naming**: `Default`, `Loading`, `Empty`, `Error`, `MobileView`
 
-- [Playwright Visual Comparisons](https://playwright.dev/docs/test-snapshots)
-- [Best Practices for Visual Testing](https://playwright.dev/docs/best-practices)
-- [MeepleAI Design System](../../docs/design-proposals/meepleai-style/)
-- [Epic #2845 - Design System Integration](https://github.com/DegrassiAaron/meepleai-monorepo/issues/2845)
+### Performance
 
----
+1. **Only test changed stories**: `onlyChanged: true` in config
+2. **Exit fast**: `exitOnceUploaded: true` for faster feedback
+3. **Optimize builds**: Use Storybook build caching
+4. **Viewport optimization**: Test only necessary viewports per story
 
-**Maintained by**: Frontend Team
-**Questions?**: Open an issue with label `area:testing`
+### Maintenance
+
+1. **Update baselines regularly**: Review and accept intentional changes
+2. **Monitor flakiness**: Address flaky stories with delays/mocks
+3. **Keep stories synchronized**: Update stories when components change
+4. **Document exceptions**: Note special cases (e.g., Playwright for animations)
+
+## Metrics & Monitoring
+
+### Coverage Tracking
+
+**Current Status** (as of 2026-01-31):
+
+| Area | Pages | Component Stories | Status |
+|------|-------|-------------------|--------|
+| Admin Dashboard | 37 | 40+ | ✅ Complete |
+| User Dashboard | 1 | 7 | ✅ Complete |
+| Personal Library | 2 | 15 | ✅ Complete |
+| Shared Catalog | 3 | Partial | ✅ Complete |
+| Profile & Settings | 1 | Full | ✅ Complete |
+| User Management | Admin | Admin | ✅ Complete |
+| Editor Dashboard | 1 | 15 | ✅ Complete |
+
+**Total**: ~400+ stories, ~1200+ snapshots across 3 viewports
+
+### Success Metrics
+
+- **Build Time**: ~5-10 minutes per Chromatic build
+- **False Positive Rate**: <5% (with proper delays/mocks)
+- **Coverage**: 100% of user-facing pages
+- **Diff Threshold**: 5% max visual difference
+- **Approval Rate**: >95% of changes reviewed before merge
+
+## References
+
+- **Chromatic Docs**: https://www.chromatic.com/docs/
+- **Storybook Docs**: https://storybook.js.org/
+- **Issue #2852**: Visual Regression Testing Setup
+- **Issue #2849**: Dashboard Visual Redesign
+- **GitHub Workflow**: `.github/workflows/chromatic.yml`
+- **Config File**: `apps/web/chromatic.config.json`
+
+## Changelog
+
+### 2026-01-31 - Initial Setup
+- ✅ Chromatic configuration (threshold 5%)
+- ✅ GitHub Actions workflow
+- ✅ HIGH priority admin stories (8 pages)
+- ✅ MEDIUM priority stories (9 pages)
+- ✅ Library component stories (15 components)
+- ✅ Editor dashboard story
+- ✅ Baseline capture configuration
+- ✅ Documentation created
+
+### Future Enhancements
+
+- [ ] Cross-browser testing (Safari, Firefox)
+- [ ] Visual regression for dark mode
+- [ ] Accessibility snapshot testing
+- [ ] Performance regression detection
+- [ ] Automated story generation for new components

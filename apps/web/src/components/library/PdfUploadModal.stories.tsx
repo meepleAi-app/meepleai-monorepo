@@ -5,11 +5,12 @@
  * Tests file selection, validation, preview, and upload flow.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import { PdfUploadModal } from './PdfUploadModal';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof PdfUploadModal> = {
   title: 'Components/Library/PdfUploadModal',

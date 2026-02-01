@@ -5,14 +5,15 @@
  * Tests model selection, sliders, radio groups, and form states.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import { DEFAULT_AGENT_CONFIG } from '@/lib/api';
 
 import { AgentConfigModal } from './AgentConfigModal';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Create QueryClient with mock agent config
 const createMockQueryClient = (hasConfig = true) => {

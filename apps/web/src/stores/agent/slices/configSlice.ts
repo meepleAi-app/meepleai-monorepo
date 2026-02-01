@@ -14,6 +14,7 @@ import { StateCreator } from 'zustand';
 
 import { AgentConfig, AgentStoreError } from '../types';
 import { retryWithBackoff } from '../utils/retry';
+
 import type { AgentStore } from '../types/store.types';
 
 export interface ConfigSlice {
@@ -84,14 +85,15 @@ export const createConfigSlice: StateCreator<
           // return await response.json();
 
           // Mock implementation
-          return {
+          const config: AgentConfig = {
             gameId,
             mode: 'RulesClarifier',
             temperature: 0.7,
             maxTokens: 2000,
             useRAG: true,
             updatedAt: new Date(),
-          } as AgentConfig;
+          };
+          return config;
         },
         {
           maxAttempts: 3,
@@ -140,12 +142,13 @@ export const createConfigSlice: StateCreator<
       // Optimistic update
       set(state => {
         const existingConfig = state.gameConfigs[gameId];
-        state.gameConfigs[gameId] = {
+        const updatedConfig: AgentConfig = {
           ...existingConfig,
           ...partialConfig,
           gameId,
           updatedAt: new Date(),
-        } as AgentConfig;
+        };
+        state.gameConfigs[gameId] = updatedConfig;
       });
 
       await retryWithBackoff(
@@ -196,12 +199,13 @@ export const createConfigSlice: StateCreator<
   updateConfigLocal: (gameId, partialConfig) =>
     set(state => {
       const existingConfig = state.gameConfigs[gameId];
-      state.gameConfigs[gameId] = {
+      const updatedConfig: AgentConfig = {
         ...existingConfig,
         ...partialConfig,
         gameId,
         updatedAt: new Date(),
-      } as AgentConfig;
+      };
+      state.gameConfigs[gameId] = updatedConfig;
     }),
 
   /**

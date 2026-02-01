@@ -10,12 +10,13 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { api } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
 import { useSessionQuotaWithStatus } from '@/hooks/queries/useSessionQuota';
+import { useAuth } from '@/hooks/useAuth';
+import { api } from '@/lib/api';
 import type { Typology } from '@/lib/api/schemas';
 
 // ========== Model Configuration ==========
@@ -35,7 +36,7 @@ const MODEL_CONFIG: Record<UserTier, ModelConfig[]> = {
   ],
   Premium: [
     { name: 'Claude-3.5-Haiku', cost: 0.003 },
-    { name: 'GPT-4o', cost: 0.005 },
+    { name: 'GPT-4o', cost: 0.005, recommended: true },
   ],
 };
 
@@ -168,6 +169,7 @@ export function useAgentConfigModal({
 
   // ========== Models (tier-filtered) ==========
 
+  // eslint-disable-next-line security/detect-object-injection -- userTier is typed UserTier with valid MODEL_CONFIG keys
   const availableModels = useMemo(() => MODEL_CONFIG[userTier], [userTier]);
 
   // ========== Cost Estimation ==========
@@ -186,10 +188,11 @@ export function useAgentConfigModal({
       setSelectedTypologyId(cached.typologyId);
       setSelectedModelName(cached.modelName);
     } else {
-      // Pre-select recommended model if nothing cached
+      // Pre-select recommended model, or first available model if none recommended
       const recommended = availableModels.find((m) => m.recommended);
-      if (recommended) {
-        setSelectedModelName(recommended.name);
+      const defaultModel = recommended ?? availableModels[0];
+      if (defaultModel) {
+        setSelectedModelName(defaultModel.name);
       }
     }
   }, [gameId, availableModels]);

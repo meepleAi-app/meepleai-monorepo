@@ -5,8 +5,8 @@ import React from 'react';
 
 import { withThemeByClassName } from '@storybook/addon-themes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from 'next-themes';
 import { initialize, mswLoader } from 'msw-storybook-addon';
+import { ThemeProvider } from 'next-themes';
 
 import '../src/styles/globals.css'; // Import Tailwind CSS
 import { AuthContext } from '../src/components/auth/AuthProvider';

@@ -1,343 +1,542 @@
-# 🗺️ MeepleAI Roadmap
+# 🗺️ MeepleAI Roadmap - Optimized Sequence
 
-**Ultimo Aggiornamento**: 2026-01-31 01:50
-**Priorità Massima**: 🤖 AI Agent System - ✅ **MVP COMPLETATO!**
-**Status**: EPIC 0 ✅ | EPIC 1 ✅ | EPIC 2 ✅ | EPIC 3 ✅ (18/18 issues) 🚀
-
----
-
-## 📋 Indice
-
-1. [Overview & Status](#-overview--status)
-2. [🎯 Priorità Massima: AI Agent System](#-priorit%C3%A0-massima-sistema-ai-agent-5-settimane)
-3. [🎮 Priorità Alta: Game Session Toolkit](#-priorit%C3%A0-alta-game-session-toolkit)
-4. [📊 Testing & Quality](#-testing--quality-parallelo)
-5. [🎨 Design System](#-design-system--component-library)
-6. [📚 Personal Library](#-personal-library--user-features)
-7. [🏗️ Infrastructure](#%EF%B8%8F-infrastructure--devops)
-8. [🔧 Bug Fixes](#-bug-fixes--refactoring)
-9. [📅 Timeline & Milestone](#-timeline-ottimizzato-10-settimane)
-10. [🚨 Blockers](#-blockers--dipendenze)
+**Ultimo Aggiornamento**: 2026-01-31 16:30
+**Priorità Massima**: 🤖 Agent Page Complete MVP
+**Status**: Wave-Based Parallelization Strategy
 
 ---
 
-## 📊 Overview & Status
+## 📊 Executive Summary
 
-**Issue Totali**: 56 aperte (10 completate oggi)
-**Epic Attive**: 7
-**Milestone Target**: Agent Chat MVP (Week 5)
+**Issue Totali**: 44 aperte (51 originali - 7 completate/duplicate)
+**Waves Attive**: 4
+**Timeline**: 4-6 settimane (4 core + 2 infra opzionale)
 
-**Progress Epic**:
+**Progress Overview**:
+- ✅ EPIC #3174 EPIC 0-1: Backend + Frontend Typology (100%)
+- ✅ EPIC #3167 GST: Game Session Toolkit (100%)
+- 🟡 EPIC #3174 EPIC 2: Agent Session Backend (100%) + Frontend (50%)
+- 🔴 Agent Page Frontend: 0/18 (NEW PRIORITY)
 
-- ✅ Epic #3174 EPIC 0-1: Backend Completo (7/7 issues)
-- 🟡 Epic #3174 EPIC 2: Frontend 50% (2/4 issues)
-- ⏳ Epic #3174 EPIC 3: Testing Pending (0/3 issues)
-- 🟡 Epic #3167 GST: Backend 100%, Frontend Pending (3/7 done)
-
-**Next Critical Actions**:
-
-1. 🔴 AGT-013: Agent Chat Sidebar (SSE Streaming) ⭐⭐⭐
-2. 🟡 AGT-014: Agent State Management (Zustand)
-3. 🟡 GST-004/005: Toolkit Frontend Integration
+**Duplicati da Chiudere**: #2930, #2931, #2971
 
 ---
 
-## 🎯 Priorità Massima: Sistema AI Agent (5 settimane)
+## 🎯 WAVE 1: Agent Page MVP (Week 1-2) - 20 ISSUE
 
-### Epic #3174: AI Agent System - RAG Integration with Chat UI
+**Strategia**: Parallelizzazione massima Frontend (3 streams) + Backend + Testing
+**Valore**: Feature principale differenziante, massimo impatto utente
+**Efficienza**: 10 issue/week vs 1 issue/week sequenziale
 
-**Timeline**: Week 1-5 (Backend Week 1-3 ✅ | Frontend Week 3-4 🟡 | Testing Week 5 ⏳)
-**Progress**: 10/18 issues completate (56%)
+### Frontend Stream A - Foundation (8 issue sequenziali)
 
-#### ✅ EPIC 0-1: Foundation & Typology (Week 1-3) - COMPLETATO
+**Timeline**: Week 1.1-1.5 (giorni 1-3)
+**Dependencies**: Sequential routing → containers → components
 
-**EPIC 0 - RAG Validation** (2/2 ✅):
+1. **#3237** [FRONT-001] Agent Page Base Setup & Routing
+   - Route `/agent` con autenticazione
+   - Layout base con header + grid
+   - Mobile-responsive foundation
 
-- [x] #3172 RAG-001: PDF Processing E2E Validation
-- [x] #3173 RAG-002: Agent Endpoints Smoke Test
+2. **#3238** [FRONT-002] Agent Config Sheet Container
+   - Shadcn Sheet component
+   - Container logic per configurazione
+   - State management base
 
-**EPIC 1 Backend** (4/4 ✅):
+3. **#3239** [FRONT-003] Game/Template/Model Selectors
+   - Dropdown giochi da library
+   - Template selector (Rules, Strategy, Setup)
+   - AI model selector (GPT-4, Claude)
 
-- [x] #3175 AGT-001: AgentTypology Domain Model & Migration
-- [x] #3176 AGT-002: Typology CRUD Commands (Admin)
-- [x] #3177 AGT-003: Editor Proposal Commands
-- [x] #3178 AGT-004: Typology Query Handlers
+4. **#3240** [FRONT-004] Token Quota & Slot Cards Display
+   - Quota visualization (progress bars)
+   - Slot cards disponibili/occupati
+   - Real-time sync con backend
 
-**EPIC 1 Frontend** (4/4 ✅):
+5. **#3241** [FRONT-005] Contextual Action Bar
+   - Actions: Launch, Configure, Close session
+   - State-aware buttons (disabled quando appropriato)
+   - Keyboard shortcuts
 
-- [x] #3179 AGT-005: Admin Typologies List Page
-- [x] #3180 AGT-006: Create/Edit Typology Form
-- [x] #3181 AGT-007: Typology Approval Queue
-- [x] #3182 AGT-008: Editor Proposal Form & Test Sandbox
+6. **#3242** [FRONT-006] Chat Sheet Container
+   - Chat sidebar/sheet component
+   - SSE connection logic foundation
+   - Message list container
 
-#### 🟡 EPIC 2: Session-Based Agent & Chat UI (Week 3-4) - 50% Complete
+7. **#3254** [FRONT-016] Split View Layout (Desktop)
+   - Desktop: Chat + PDF side-by-side
+   - Mobile: Tabs/sheets switcher
+   - Responsive breakpoints
 
-**Backend** (3/3 ✅):
+8. **#3246** [FRONT-010] Slot Management Page
+   - `/agent/slots` route
+   - Active sessions list
+   - Slot release/transfer actions
 
-- [x] #3183 AGT-009: AgentSession Entity & Migration
-- [x] #3184 AGT-010: Session Commands (Launch, Chat, UpdateState)
-- [x] #3189 AGT-015: GST Integration - State Sync
+### Frontend Stream B - Chat Core (5 issue - START dopo #3242)
 
-**Frontend** (2/4 🟡):
+**Timeline**: Week 1.5-2 (giorni 4-7)
+**Dependencies**: Richiede #3242 (Chat container) completo
+**Critical Path**: SSE streaming integration ⭐
 
-- [x] #3185 AGT-011: Game Card 'Ask Agent' Button ⭐
-- [x] #3186 AGT-012: Agent Configuration Modal ⭐
-- [x] #3187 AGT-013: Agent Chat Sidebar (SSE Streaming) ⭐⭐⭐ **CRITICAL**
-- [x] #3188 AGT-014: Agent State Management (Zustand Store)
+1. **#3243** [FRONT-007] Message Components & SSE Streaming ⭐ CRITICAL
+   - Message bubble components (user, assistant, system)
+   - SSE EventSource integration
+   - Real-time message streaming
+   - Typing indicators
 
-**Blocker**: GST SSE (#3162) prerequisito per AGT-013
+2. **#3244** [FRONT-008] Citations & Confidence Display
+   - Citation badges con link PDF
+   - Confidence score visualization
+   - Source reference popup
 
-#### ⏳ EPIC 3: Testing & QA (Week 5) - Pending
+3. **#3245** [FRONT-009] Chat Input & SSE Integration ⭐ CRITICAL
+   - Input form con markdown support
+   - Send message → SSE connection
+   - Loading states, error handling
+   - Auto-scroll to latest message
 
-- [x] #3190 AGT-016: Frontend Components Tests
-- [x] #3191 AGT-017: E2E Test Flows (4 Scenarios)
-- [ ] #3192 AGT-018: RAG Quality Validation (20 Questions)
+4. **#3249** [FRONT-013] Agent Type Switcher & Dynamic Typology
+   - Runtime switch tra typologies
+   - Dynamic system prompt reload
+   - Session context preservation
 
-**Success Metrics**: >90% accuracy | <5s latency | <3% hallucination | >85% coverage
+5. **#3250** [FRONT-014] Agent Settings Drawer (Runtime Config)
+   - Temperature, max_tokens sliders
+   - Stream toggle (SSE on/off)
+   - Reset to defaults button
 
----
+### Frontend Stream C - Advanced Features (2 issue - PARALLELO con B)
 
-## 🎮 Priorità Alta: Game Session Toolkit
+**Timeline**: Week 1.5-2 (giorni 4-7)
+**Dependencies**: Indipendente da Stream B, può iniziare dopo Stream A
 
-### Epic #3167: Game Session Toolkit - Collaborative Scorekeeper
+1. **#3251** [FRONT-015] PDF Viewer Integration & Citation Links ⭐ CRITICAL
+   - react-pdf integration
+   - Citation click → scroll to PDF page
+   - Highlight referenced text
+   - Mobile-optimized viewer
 
-**Progress**: 3/7 issues (43% - Backend Complete ✅)
-**Dipendenze**: Bloccante per AGT-013/AGT-014 (Agent Chat UI)
+2. **#3247** [FRONT-011] Upgrade Flow & Premium CTA
+   - Quota reached modal
+   - Upgrade CTA design
+   - Tier comparison table
+   - Payment flow placeholder
 
-**Backend** (3/3 ✅):
+### Backend Stream (2 issue - PARALLELO da Day 1)
 
-- [x] #3160 GST-001: Bounded Context & Database Schema
-- [x] #3161 GST-002: CQRS Commands & Queries
-- [x] #3162 GST-003: Real-Time SSE Infrastructure
+**Timeline**: Week 1 (giorni 1-3)
+**Dependencies**: Nessuna, può iniziare immediatamente
+**Parallelizzabile**: Completo indipendente da frontend
 
-**Frontend** (0/4 ⏳):
+1. **#3252** [BACK-AGT-001] PATCH /api/v1/typologies/{id}
+   - Update typology command
+   - Validation + authorization
+   - Audit trail update
+   - Integration tests
 
-- [x] #3163 GST-004: Generic Toolkit Routes & Integration
-- [x] #3164 GST-005: Game-Specific Toolkit Integration
-- [x] #3165 GST-006: Session History & UserLibrary Integration
-- [x] #3166 GST-007: MVP Testing & Quality Assurance
+2. **#3253** [BACK-AGT-002] PATCH /api/v1/agent-sessions/{id}/config
+   - Update runtime config (temperature, max_tokens)
+   - Session state validation
+   - SSE broadcast config change
+   - Integration tests
 
----
+### Testing Stream (2 issue - PARALLELO durante sviluppo)
 
-## 📊 Testing & Quality (Parallelo)
+**Timeline**: Week 1-2 (continuo)
+**Dependencies**: #3248 dipende da frontend base (#3237-#3242)
 
-### Epic #3005: Test Coverage Improvement
+1. **#3258** [P1] Fix Remaining 11 Backend Test Failures (0.4%) ⭐ CRITICAL
+   - **START IMMEDIATELY** (blocca CI/CD)
+   - Fix test flakiness
+   - Testcontainers stability
+   - Coverage validation
 
-**Target**: Backend 85%→90% | Frontend 69%→85%
-
-- [x] #3025 Backend Coverage (+5% - edge cases, error handling)
-- [ ] #3026 Frontend Coverage (+16% - components, hooks, utilities)
-- [ ] #3082 E2E Test Flows (50 scenarios)
-- [ ] #2852 Visual Regression (Chromatic setup)
-
----
-
-## 🎨 Design System & Component Library
-
-### Epic #2965: Dual-Theme Design System (Glass Light + Dark)
-
-- [ ] #2924 Storybook Setup & Foundation
-- [ ] #2925 Extract Reusable Components
-- [ ] #2926 Design System Documentation
-
-**Duplicati da chiudere**: #2930, #2931
-
----
-
-## 📚 Personal Library & User Features
-
-- [ ] #2866 Library Page (Search & Filters)
-- [ ] #2867 Game Cards (Grid/List Views)
-- [ ] #3120 Private Games & Catalog Proposal System
-
----
-
-## 🏗️ Infrastructure & DevOps
-
-### Epic #2967: Zero-Cost CI/CD (Oracle Cloud)
-
-**Week 1-2 Setup**:
-
-- [ ] #2968 VM Provisioning
-- [ ] #2969 Runner Installation
-- [ ] #2970 Workflow Migration
-- [ ] #2972 Performance Monitoring
-- [ ] #2973 Cost Validation
-
-**Optional**: #2974 Prometheus/Grafana | #2975 Troubleshooting Docs | #2976 Maintenance Automation
-
-**Storage & Performance**:
-
-- [ ] #2703 S3-compatible object storage
-- [ ] #2927 Lighthouse CI
-- [ ] #2928 k6 Load Testing
-
-**Duplicato da chiudere**: #2971
-
----
-
-## 🔧 Bug Fixes & Refactoring
-
-- [ ] #3095 fix(dashboard): Incorrect /giochi route
-- [ ] #3096 refactor(tests): data-testid pattern (i18n)
-- [ ] #2929 Accessibility Audit (WCAG 2.1 AA)
-
----
-
-## 📋 Gap Analysis & CQRS
-
-### Epic #3066: CQRS Compliance
-
-- [ ] #3073 [P2] Feature Flags Backend
-- [ ] #3074 [P3] AI Token Usage Tracking
-- [ ] #3075 [P1] Session Quota UI
-- [ ] #3080 [P3] AI Usage Dashboard
+2. **#3248** [FRONT-012] E2E Tests & Responsive Validation
+   - Playwright E2E scenarios (dopo frontend base):
+     - Launch agent session
+     - Send message → receive response
+     - Citation click → PDF scroll
+     - Slot management flow
+   - Responsive testing (375px-1920px)
+   - Accessibility validation
 
 ---
 
-## 📅 Timeline Ottimizzato (10 settimane)
+## 🎯 WAVE 2: Foundation & Quality (Week 2-3) - 8 ISSUE
 
-### ✅ Week 1-3: Foundation (COMPLETATO)
+**Strategia**: CQRS compliance + Testing consolidation (parallelo)
+**Overlap**: Inizia durante Wave 1 finale (Week 2)
 
-**Achievement**: 10 issues done | EPIC 0-1 Backend ✅ | EPIC 1 Frontend ✅ | EPIC 2 Backend ✅
+### CQRS Gap Analysis Priority (2 issue - backend)
 
-### 🟡 Week 3-4: Core Agent Development (IN CORSO)
+**Timeline**: Week 2-3 (giorni 8-14)
 
-**Focus**: Chat UI + State Management
+1. **#3073** [P2] Feature Flags Backend - Tier-Based
+   - FeatureFlag entity + migration
+   - Tier-based activation logic
+   - Admin UI endpoints (CRUD)
+   - Integration tests
 
-- Week 3: Agent Typology Frontend ✅ + Agent Session Backend ✅
-- Week 4: **Chat Sidebar & Agent UI** (#3187-#3188) ⭐⭐⭐ **CRITICAL**
+2. **#3075** [P1] Session Quota UI - Frontend Implementation
+   - Dependencies: #3073 (Feature flags)
+   - Quota display component
+   - Real-time sync con backend
+   - Upgrade CTA integration
 
-### ⏳ Week 5: Testing & Quality
+### Testing & Coverage (3 issue - parallelo)
 
-**Focus**: E2E Tests + RAG Quality Validation (#3190-#3192)
+**Timeline**: Week 2-3 (giorni 8-14)
+**Parallelizzabile**: Indipendente da CQRS
 
-### ⏳ Week 6-8: Parallel Development
+1. **#3082** [P1] E2E Test Flows (50 scenarios)
+   - Authentication flows (5)
+   - Game catalog flows (10)
+   - Agent interaction flows (15)
+   - Library management flows (10)
+   - Admin workflows (10)
 
-**Focus**: Component Library + Infrastructure
+2. **#3025** [P2] Backend 90% Coverage Target
+   - Focus: Edge cases, error handling
+   - Integration tests for new endpoints
+   - Validation logic coverage
 
-- Week 6: Storybook (#2924) + Library Pages (#2866, #2867)
-- Week 7: Design System (#2925, #2926) + Oracle Cloud (#2968-#2970)
-- Week 8: Coverage Improvement (#3025, #3026) + CI/CD (#2972, #2973)
+3. **#3026** [P2] Frontend 85% Coverage Target
+   - Component unit tests
+   - Hook testing
+   - Store testing
+   - Utility functions coverage
 
-### ⏳ Week 9-10: Polish & Launch
+### Low Priority CQRS (2 issue - opzionale)
 
-**Focus**: Bug Fixes + Accessibility
+**Timeline**: Week 3+ (se tempo disponibile)
 
-- Week 9: E2E (#3082) + Bug Fixes (#3095, #3096)
-- Week 10: Accessibility (#2929) + Final QA
+1. **#3074** [P3] AI Token Usage Tracking - Backend
+   - TokenUsage aggregate
+   - Per-user/per-session tracking
+   - Analytics queries
+
+2. **#3080** [P3] AI Usage Dashboard - Frontend
+   - Dependencies: #3074
+   - Charts (token usage trends)
+   - Cost estimation
+   - Export to CSV
+
+---
+
+## 🎯 WAVE 3: User Library + Design System (Week 3-4) - 6 ISSUE
+
+**Strategia**: Library UX + Storybook foundation (parallelo)
+**Value**: Enhanced user experience + development velocity
+
+### User Library Enhancement (3 issue - frontend)
+
+**Timeline**: Week 3 (giorni 15-21)
+
+1. **#2866** [Personal Library] Library Page with Search and Filters
+   - `/library` route
+   - Search bar + filters (owned, wishlist, played)
+   - Pagination
+   - Sort options (name, date, plays)
+
+2. **#2867** [Personal Library] Game Cards (Grid + List Views)
+   - Grid view (responsive cards)
+   - List view (compact table)
+   - View toggle component
+   - Quick actions (play, wishlist, remove)
+
+3. **#3120** [UserLibrary] Private Games & Catalog Proposal System
+   - Private game creation
+   - Proposal workflow (submit → review → approve)
+   - Integration con shared catalog
+
+### Design System Foundation (3 issue - PARALLELO con Library)
+
+**Timeline**: Week 3-4 (giorni 15-24)
+
+1. **#2924** [Component Library] Storybook Setup and Foundation
+   - Storybook 7+ installation
+   - Component story templates
+   - Theme provider integration
+   - Accessibility addon
+
+2. **#2925** [Component Library] Extract Reusable Components
+   - **CHIUDI #2930 (duplicato)**
+   - Extract da admin dashboard:
+     - DataTable generic
+     - FormField wrappers
+     - Modal/Dialog patterns
+     - Button variants
+   - Document props + usage
+
+3. **#2926** [Component Library] Design System Documentation
+   - **CHIUDI #2931 (duplicato)**
+   - Typography scale docs
+   - Color palette (light + dark)
+   - Spacing system
+   - Component guidelines
+
+---
+
+## 🎯 WAVE 4: Infrastructure - BASSA PRIORITÀ (Week 5-6) - 10 ISSUE
+
+**Strategia**: Cost optimization + performance (opzionale)
+**Note**: Posticipabile, non bloccante per features
+
+### Oracle Cloud Zero-Cost CI/CD (6 issue - infra)
+
+**Timeline**: Week 5-6 (se richiesto)
+**Epic**: #2967
+
+1. **#2968** [Week 1.1] Oracle Cloud Setup & VM Provisioning
+   - Oracle Cloud account
+   - VM ARM64 provisioning
+   - Network configuration
+   - SSH access
+
+2. **#2969** [Week 1.2] GitHub Actions Runner Installation
+   - Runner installation script
+   - Auto-start configuration
+   - Security hardening
+
+3. **#2970** [Week 1.3] Workflow Migration to Self-Hosted
+   - **CHIUDI #2971 (duplicato)**
+   - Migrate backend-ci workflow
+   - Migrate frontend-ci workflow
+   - Migrate e2e-tests workflow
+
+4. **#2972** [Week 2.1] Performance Monitoring & Reliability
+   - Uptime monitoring
+   - Build time metrics
+   - Failure rate tracking
+
+5. **#2973** [Week 2.2] Cost Validation on GitHub Billing
+   - Verify $0 Actions cost
+   - Document savings ($120/mo → $0)
+
+6. **#2974-#2976** [Optional] Monitoring & Maintenance
+   - #2974: Prometheus + Grafana setup
+   - #2975: Troubleshooting docs
+   - #2976: Maintenance automation
+
+### Performance Testing Infrastructure (4 issue - opzionale)
+
+**Timeline**: Week 6+ (bassa priorità)
+
+1. **#2927** [Infrastructure] Lighthouse CI Performance Testing
+   - Lighthouse CI setup
+   - Performance budgets
+   - Automated reports
+   - PR integration
+
+2. **#2928** [Infrastructure] k6 Load Testing for APIs
+   - k6 installation
+   - Load test scenarios (auth, catalog, agent)
+   - Performance baselines
+   - Grafana dashboards
+
+3. **#2929** [Quality] Accessibility Audit (WCAG 2.1 AA)
+   - Automated scan (axe, pa11y)
+   - Manual audit per page
+   - Remediation tasks
+   - Compliance documentation
+
+4. **#2703** [Infra] S3-Compatible Object Storage
+   - MinIO/Supabase Storage integration
+   - PDF upload migration
+   - Backup strategy
+   - Cost analysis
+
+---
+
+## 📅 Timeline Consolidato
+
+### Week 1-2: WAVE 1 Agent Page (20 issue)
+
+**Parallelizzazione**:
+- Frontend Stream A (8) → giorni 1-3
+- Frontend Stream B (5) → giorni 4-7 (dopo A.#3242)
+- Frontend Stream C (2) → giorni 4-7 (parallelo B)
+- Backend Stream (2) → giorni 1-3 (parallelo A)
+- Testing Stream (2) → giorni 1-7 (continuo)
+
+**Efficienza**: 20 issue / 2 settimane = 10 issue/week
+
+### Week 2-3: WAVE 2 Foundation (8 issue - overlap con Wave 1)
+
+**Parallelizzazione**:
+- CQRS (2) + Testing (3) + Low Priority (2 opzionale)
+
+**Efficienza**: 8 issue / 1 settimana
+
+### Week 3-4: WAVE 3 Library + Design (6 issue)
+
+**Parallelizzazione**:
+- Library (3) + Design System (3)
+
+**Efficienza**: 6 issue / 1 settimana
+
+### Week 5-6: WAVE 4 Infrastructure (10 issue - OPZIONALE)
+
+**Parallelizzazione**:
+- Oracle Cloud (6) + Performance (4)
+
+**Efficienza**: 10 issue / 2 settimane (se richiesto)
 
 ---
 
 ## 🎯 Milestone Chiave
 
-### M1: Agent Chat MVP (Week 5) ⭐⭐⭐
+### M1: Agent Page MVP (Week 2) ⭐⭐⭐
 
-**Deliverable**: RAG pipeline ✅ | 2 typologies ✅ | Chat UI + SSE | Admin UI ✅ | >90% coverage
-**Valore**: Giocatori chattano con AI per regole, setup, strategie
+**Deliverable**:
+- 18 frontend components completati
+- 2 backend PATCH endpoints
+- E2E tests passanti
+- 11 backend test failures fixati
 
-### M2: Game Session Toolkit (Week 4)
+**Valore**: Feature principale differenziante completa
 
-**Deliverable**: Backend CQRS ✅ | SSE infra ✅ | Frontend toolkit | Session history
-**Valore**: Collaborative scorekeeper + agent state sync foundation
+### M2: Foundation Complete (Week 3)
 
-### M3: Design System (Week 8)
+**Deliverable**:
+- CQRS gap analysis P1 completo
+- 50 E2E test flows
+- Backend 90% + Frontend 85% coverage
 
-**Deliverable**: Storybook 20+ components | Glass Light+Dark themes | Design tokens docs
-**Valore**: UI development velocity + consistency
+**Valore**: Production-ready quality assurance
 
-### M4: Zero-Cost CI/CD (Week 8)
+### M3: UX Enhancement (Week 4)
 
-**Deliverable**: Oracle Cloud runner | Workflows migrati | $0 cost | Monitoring
-**Valore**: GitHub Actions costs eliminated, faster builds
+**Deliverable**:
+- User library completa
+- Storybook + design system foundation
+- Component library documentata
 
----
+**Valore**: Enhanced UX + development velocity
 
-## 📊 Metriche di Successo
+### M4: Infrastructure Optimization (Week 6 - OPZIONALE)
 
-**Agent System**: >90% accuracy | <5s latency | <3% hallucination | >90% BE + >85% FE coverage
+**Deliverable**:
+- Zero-cost CI/CD operativo
+- Performance testing infrastructure
+- Accessibility compliance
 
-**Testing**: Backend 85%→90% | Frontend 69%→85% | E2E 0→50 flows
-
-**Infrastructure**: CI/CD $120/mo→$0 | Build time -20% | Uptime >99.5%
+**Valore**: Cost optimization + quality gates
 
 ---
 
 ## 🚨 Blockers & Dipendenze
 
-### Critical Path (Agent System)
+### Critical Path (Agent Page)
 
 ```
-✅ EPIC 0-1 Backend (RAG + Typology) - DONE
+✅ EPIC 2 Backend (Session + GST) - DONE
   ↓
-✅ EPIC 1 Frontend (Typology UI) - DONE
+🔴 Stream A Frontend (Base UI) - #3237-#3242
   ↓
-✅ EPIC 2 Backend (Session + GST Sync) - DONE
+🔴 Stream B Frontend (Chat SSE) - #3243-#3245 ⭐ CRITICAL
   ↓
-🔴 EPIC 2 Frontend (Chat UI) - BLOCKED by GST SSE (#3162)
+🔴 Stream C Frontend (PDF + Polish) - #3251, #3247
   ↓
-⏳ EPIC 3 Testing (E2E + QA) - Week 5
+🔴 E2E Testing - #3248
+  ↓
+✅ Agent Page MVP Complete
 ```
 
-**Current Blocker**: GST SSE Infrastructure (#3162) prerequisito per AGT-013 Chat Sidebar
+**Current Blocker**: Nessuno - pronto per partenza Wave 1
 
-**Dipendenze**:
+**Dipendenze Interne**:
+- Stream B (#3243-#3245) → Richiede Stream A #3242 (Chat container)
+- #3248 (E2E tests) → Richiede Stream A base (#3237-#3242)
+- #3075 (Session Quota UI) → Richiede #3073 (Feature flags backend)
+- #3080 (AI Usage Dashboard) → Richiede #3074 (Token tracking)
 
-- GameCard (#2867) → AGT-011 ✅
-- game_sessions table (GST-001 #3160) → AGT-009 ✅
+**Azioni Immediate**:
+1. ✅ Start #3258 (Fix 11 test failures) - CRITICAL per CI/CD
+2. ✅ Start Backend Stream (#3252-#3253) - Indipendente
+3. ✅ Start Frontend Stream A (#3237-#3242) - Foundation
 
-**Duplicati da chiudere**: #2930, #2931, #2971
+**Duplicati da Chiudere**:
+1. #2930 → Duplicato di #2925 (Extract components)
+2. #2931 → Duplicato di #2926 (Design docs)
+3. #2971 → Duplicato di #2970 (Workflow migration)
+
+---
+
+## 📊 Metriche di Successo
+
+**Agent Page MVP**:
+- 18 frontend components ✅
+- 2 backend endpoints ✅
+- E2E tests 100% pass rate ✅
+- SSE streaming latency <1s ✅
+- Mobile responsive 375px-1920px ✅
+
+**Testing Quality**:
+- Backend: 85% → 90% coverage
+- Frontend: 69% → 85% coverage
+- E2E: 0 → 50 flows implemented
+- Test failures: 11 → 0
+
+**Infrastructure (opzionale)**:
+- CI/CD cost: $120/mo → $0
+- Build time: -20% improvement
+- Uptime: >99.5%
 
 ---
 
 ## 💡 Note Strategiche
 
-**Perché Agent System è Priorità #1?**
+**Perché Agent Page è Priorità #1?**
 
-1. High User Value: differenziatore competitivo
-2. 90% Infrastructure Ready: Qdrant, embedding, reranker operativi
-3. Clear Scope: 18 issues, 5 settimane
-4. Reusable Framework: base per Strategy Helper, Tournament Assistant
+1. **Valore Utente**: Feature principale differenziante vs competitori
+2. **Foundation Ready**: Backend 100% completo (EPIC 2), pronto per UI
+3. **Parallelizzazione**: 3 frontend streams + backend + testing = max efficienza
+4. **MVP Clear**: 18 issue ben definite, scope chiaro
 
-**Parallelizzazione**:
+**Perché Infrastructure è Bassa Priorità?**
 
-- Week 2-3: Agent Backend + GST Backend (paralleli)
-- Week 6-10: Component Library + Infrastructure + Testing (paralleli)
+1. **Non Bloccante**: Cost optimization, non feature-critical
+2. **Valore Differito**: ROI a lungo termine vs features immediate
+3. **Opzionale**: Sistema funziona con GitHub Actions standard
+4. **Posticipabile**: Può essere fatto in background dopo MVP
+
+**Parallelizzazione Strategy**:
+
+- **Week 1-2**: Frontend (3 streams) + Backend + Testing = 5 work streams paralleli
+- **Week 2-3**: CQRS + Coverage = 2 work streams paralleli
+- **Week 3-4**: Library + Design = 2 work streams paralleli
+- **Week 5-6**: Infra opzionale (se richiesto)
 
 **Risk Mitigation**:
 
-- RAG Validation First ✅
-- E2E Tests Early (parallel setup)
-- Incremental Delivery (typology → session → chat)
+- Fix #3258 test failures ASAP (blocca CI/CD)
+- E2E tests paralleli durante sviluppo (feedback rapido)
+- Backend endpoints prima di frontend (no blockers)
+- Incremental delivery (Stream A → B → C)
 
 ---
 
 ## 📖 Risorse & Documentazione
 
-**Agent System**: `docs/prd/ai-agent-system-mvp.md` | `ai-agent-epic-breakdown.md` | `ai-agent-summary.md` | `ai-agent-visual-roadmap.md`
-
-**Workflows**: Git Parallel Development `docs/workflows/git-parallel-development.md`
-
-**Project Docs**: Architecture `docs/01-architecture/` | Development `docs/02-development/` | Testing `docs/05-testing/`
+**PRD**: `docs/prd/agent-page-design-spec.md`
+**Architecture**: `docs/01-architecture/`
+**Development**: `docs/02-development/`
+**Testing**: `docs/05-testing/`
+**Workflows**: `docs/workflows/git-parallel-development.md`
 
 ---
 
 ## 🎯 Next Actions (Priority Order)
 
-1. **🔴 CRITICAL**: AGT-013 Agent Chat Sidebar (SSE Streaming) ⭐⭐⭐
-2. **🟡 HIGH**: AGT-014 Agent State Management (Zustand Store)
-3. **🟡 HIGH**: GST Frontend (#3163-#3164) - Toolkit UI Development
+1. **🔴 IMMEDIATE**: #3258 Fix 11 backend test failures ⭐ CRITICAL
+2. **🔴 HIGH**: Start Backend Stream (#3252-#3253) - Parallel da Day 1
+3. **🔴 HIGH**: Start Frontend Stream A (#3237-#3242) - Foundation
+4. **🟡 MEDIUM**: Chiudi duplicati (#2930, #2931, #2971)
+5. **🟡 MEDIUM**: Aggiorna project board con Wave structure
 
 ---
 
-## 🎉 Recent Progress (2026-01-30)
-
-**10 Issues Completate** 🚀:
-
-- EPIC 0: RAG Prerequisites 2/2 ✅
-- EPIC 1 Backend: Typology 4/4 ✅
-- EPIC 1 Frontend: Typology UI 4/4 ✅
-- EPIC 2 Backend: Session 3/3 ✅ (AGT-009, AGT-010, AGT-015)
-- EPIC 2 Frontend: 2/4 (AGT-011 Button, AGT-012 Modal)
-
-**Current Focus**: Chat Sidebar UI (blocked by GST SSE #3162)
+**Ultimo Aggiornamento**: 2026-01-31 16:30
+**Prossimo Review**: 2026-02-07 (fine Wave 1)

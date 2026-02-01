@@ -17,8 +17,9 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+
 import { WaitHelper } from '../helpers/WaitHelper';
-import { AuthHelper, USER_FIXTURES, E2E_CREDENTIALS } from '../pages/helpers/AuthHelper';
+import { AuthHelper, E2E_CREDENTIALS } from '../pages/helpers/AuthHelper';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 

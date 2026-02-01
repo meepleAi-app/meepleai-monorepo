@@ -11,7 +11,7 @@
  * - Error handling and recovery
  *
  * Backend endpoint (GST-003):
- * - GET /api/v1/sessions/{sessionId}/stream
+ * - GET /api/v1/game-sessions/{sessionId}/stream
  *
  * @example
  * ```typescript
@@ -164,7 +164,7 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
    */
   const connect = useCallback(() => {
     const baseUrl = apiBaseUrl || process.env.NEXT_PUBLIC_API_BASE || '';
-    const endpoint = `${baseUrl}/api/v1/sessions/${sessionId}/stream`;
+    const endpoint = `${baseUrl}/api/v1/game-sessions/${sessionId}/stream`;
 
     try {
       const eventSource = new EventSource(endpoint, {
@@ -175,7 +175,7 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
         setIsConnected(true);
         setError(null);
         reconnectAttemptsRef.current = 0;
-        console.log('[useSessionSync] Connected to SSE stream');
+        console.warn('[useSessionSync] Connected to SSE stream');
       };
 
       eventSource.onerror = err => {
@@ -191,7 +191,7 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
           const delay = Math.min(Math.pow(2, reconnectAttemptsRef.current) * 1000, 30000);
           reconnectAttemptsRef.current += 1;
 
-          console.log(
+          console.warn(
             `[useSessionSync] Reconnecting in ${delay / 1000}s (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
           );
 

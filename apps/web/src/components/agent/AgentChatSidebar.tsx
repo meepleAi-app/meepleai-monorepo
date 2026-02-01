@@ -15,14 +15,13 @@ import React, { useRef, useEffect, useState } from 'react';
 
 import { MessageSquare, Minimize2, Maximize2, X, Download, Copy } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { cn } from '@/lib/utils';
 import { useAgentChatStore } from '@/store/agent/store';
-import { AgentMessage, AgentMessageType } from '@/types/agent';
 
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/navigation/sheet';
-import { AgentTypingIndicator } from './AgentTypingIndicator';
 import { AgentMessage as AgentMessageComponent } from './AgentMessage';
+import { AgentTypingIndicator } from './AgentTypingIndicator';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/navigation/sheet';
 
 interface AgentChatSidebarProps {
   sessionId: string;
@@ -44,6 +43,7 @@ export function AgentChatSidebar({
 
   // Zustand store
   const { messages, isMinimized, isStreaming, setMinimized } = useAgentChatStore(state => ({
+    // eslint-disable-next-line security/detect-object-injection -- sessionId is typed prop with ?? fallback
     messages: state.messagesBySession[sessionId] ?? [],
     isMinimized: state.isMinimized,
     isStreaming: state.isStreaming,

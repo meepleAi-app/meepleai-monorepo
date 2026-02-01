@@ -18,6 +18,8 @@ internal static class AgentSessionEndpoints
         MapLaunchEndpoint(group);
         MapChatEndpoint(group);
         MapUpdateStateEndpoint(group);
+        MapUpdateTypologyEndpoint(group); // Issue #3252
+        MapUpdateConfigEndpoint(group); // Issue #3253
         MapEndSessionEndpoint(group);
 
         return group;
@@ -48,6 +50,24 @@ internal static class AgentSessionEndpoints
             .RequireSession()
             .WithTags("AgentSessions")
             .WithDescription("Update current game state for agent session");
+    }
+
+    private static void MapUpdateTypologyEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPatch("/game-sessions/{gameSessionId:guid}/agent/typology", HandleUpdateTypology)
+            .WithName("UpdateAgentSessionTypology")
+            .RequireSession()
+            .WithTags("AgentSessions")
+            .WithDescription("Update agent typology during active session");
+    }
+
+    private static void MapUpdateConfigEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPatch("/game-sessions/{gameSessionId:guid}/agent/config", HandleUpdateConfig)
+            .WithName("UpdateAgentSessionConfig")
+            .RequireSession()
+            .WithTags("AgentSessions")
+            .WithDescription("Update agent runtime configuration");
     }
 
     private static void MapEndSessionEndpoint(RouteGroupBuilder group)
@@ -125,6 +145,42 @@ internal static class AgentSessionEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> HandleUpdateTypology(
+        [FromRoute] Guid gameSessionId,
+        [FromBody] UpdateAgentSessionTypologyRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var command = new UpdateAgentSessionTypologyCommand(
+            AgentSessionId: request.AgentSessionId,
+            NewTypologyId: request.NewTypologyId
+        );
+
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleUpdateConfig(
+        [FromRoute] Guid gameSessionId,
+        [FromBody] UpdateAgentSessionConfigRequest request,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var command = new UpdateAgentSessionConfigCommand(
+            AgentSessionId: request.AgentSessionId,
+            ModelType: request.ModelType,
+            Temperature: request.Temperature,
+            MaxTokens: request.MaxTokens,
+            RagStrategy: request.RagStrategy,
+            RagParams: request.RagParams
+        );
+
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+
+        return Results.NoContent();
+    }
+
     private static async Task<IResult> HandleEndSession(
         [FromRoute] Guid gameSessionId,
         [FromBody] EndSessionAgentRequest request,
@@ -157,5 +213,17 @@ internal record ChatWithSessionAgentRequest(
 internal record UpdateAgentSessionStateRequest(
     Guid AgentSessionId,
     string GameStateJson);
+
+internal record UpdateAgentSessionTypologyRequest(
+    Guid AgentSessionId,
+    Guid NewTypologyId);
+
+internal record UpdateAgentSessionConfigRequest(
+    Guid AgentSessionId,
+    string ModelType,
+    double Temperature,
+    int MaxTokens,
+    string RagStrategy,
+    IDictionary<string, object> RagParams);
 
 internal record EndSessionAgentRequest(Guid AgentSessionId);

@@ -5,14 +5,15 @@
  * Tests selection states, dropdown menus, and responsive layouts.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
 import { BulkActionBar } from './BulkActionBar';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Create QueryClient for React Query
 const queryClient = new QueryClient({

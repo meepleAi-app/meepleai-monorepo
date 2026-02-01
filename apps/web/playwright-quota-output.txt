@@ -1,0 +1,23 @@
+­ƒöì Waiting for server to be healthy...
+Ô£ô Server health OK (uptime: undefineds)
+Ô£à Server is ready for testing
+­ƒôè Starting memory monitoring...
+[MemoryMonitor] Starting memory monitoring (interval: 10000ms)
+[MemoryMonitor] Heap: 42.75MB / 45.74MB (Samples: 5)
+
+­ƒôè Memory Usage Report:
+   Peak Heap Used: 44.85 MB
+   Avg Heap Used:  41.48 MB
+   Peak Heap Total: 60.74 MB
+   Samples: 5
+   Duration: 40.0s
+[MemoryMonitor] Cleaned up memory log file
+
+­ƒº╣ Global teardown complete
+
+=============================== Coverage summary ===============================
+Statements   : Unknown% ( 0/0 )
+Branches     : Unknown% ( 0/0 )
+Functions    : Unknown% ( 0/0 )
+Lines        : Unknown% ( 0/0 )
+================================================================================

@@ -121,7 +121,9 @@ export function getGameTemplateByName(gameName: string): GameTemplate | undefine
   const normalized = gameName.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
   // Direct match
+  // eslint-disable-next-line security/detect-object-injection -- normalized string from gameName, with validation
   if (GAME_TEMPLATES[normalized]) {
+    // eslint-disable-next-line security/detect-object-injection -- checked existence in if condition above
     return GAME_TEMPLATES[normalized];
   }
 

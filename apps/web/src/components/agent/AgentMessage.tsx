@@ -121,7 +121,6 @@ export const AgentMessage = React.memo(function AgentMessage({ message }: AgentM
                   title={citation.snippet ?? undefined}
                   onClick={() => {
                     // TODO: Future integration with PDF viewer
-                    console.log('Citation clicked:', citation);
                   }}
                 >
                   <span className="text-[#1a73e8]">

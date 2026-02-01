@@ -5,12 +5,13 @@
  * Covers: agent status, PDF status, actions, states
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import type { UserLibraryEntry } from '@/lib/api';
 
 import { UserGameCard } from './UserGameCard';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Create QueryClient for React Query
 const queryClient = new QueryClient({

@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+
 import { Loader2, Users, Play, TrendingUp } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
-import { Badge } from '@/components/ui/data-display/badge';
-import { useSessionStore } from '@/lib/stores/sessionStore';
 import { getGameTemplateByName, type GameTemplate } from '@/lib/config/game-templates';
+import { useSessionStore } from '@/lib/stores/sessionStore';
 
 interface GameDetails {
   id: string;
@@ -128,6 +129,7 @@ export default function GameToolkitLandingPage() {
    */
   const updateParticipant = (index: number, value: string) => {
     const updated = [...participants];
+    // eslint-disable-next-line security/detect-object-injection -- index is validated function parameter for array update
     updated[index] = value;
     setParticipants(updated);
   };

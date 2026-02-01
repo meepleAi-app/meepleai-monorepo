@@ -72,7 +72,7 @@ async function setupSessionTemplatesMocks(page: Page) {
   });
 
   // Mock templates endpoint
-  await page.route(`${API_BASE}/api/v1/sessions/templates**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/game-sessions/templates**`, async (route) => {
     const method = route.request().method();
 
     if (method === 'GET') {
@@ -113,7 +113,7 @@ async function setupSessionTemplatesMocks(page: Page) {
   });
 
   // Mock create session endpoint
-  await page.route(`${API_BASE}/api/v1/sessions`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/game-sessions`, async (route) => {
     const body = await route.request().postDataJSON();
 
     await route.fulfill({

@@ -5,12 +5,13 @@
  * Tests in/out of library states, loading, disabled, and quota limits.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import { AddToLibraryButton } from './AddToLibraryButton';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Create QueryClient with mock data
 const createMockQueryClient = (inLibrary = false, quotaReached = false) => {

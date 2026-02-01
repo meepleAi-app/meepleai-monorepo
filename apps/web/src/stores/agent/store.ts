@@ -20,6 +20,7 @@ import { immer } from 'zustand/middleware/immer';
 
 import { createConfigSlice } from './slices/configSlice';
 import { createConversationSlice } from './slices/conversationSlice';
+import { createPdfViewerSlice } from './slices/pdfViewerSlice';
 import { createSessionSlice } from './slices/sessionSlice';
 import { createUISlice } from './slices/uiSlice';
 
@@ -47,6 +48,7 @@ export const useAgentStore = create<AgentStore>()(
         ...createSessionSlice(set, get, store),
         ...createConversationSlice(set, get, store),
         ...createUISlice(set, get, store),
+        ...createPdfViewerSlice(set, get, store),
       })),
       {
         // Persistence configuration

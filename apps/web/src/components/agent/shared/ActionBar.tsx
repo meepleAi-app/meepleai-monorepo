@@ -1,12 +1,19 @@
 /**
  * Contextual Action Bar - State-aware action buttons
  * Issue #3241 (FRONT-005)
+ * Issue #3251 (FRONT-015) - Added PDF button for chat state
  */
 
 'use client';
 
-import { Settings, Download, Minimize2, BarChart } from 'lucide-react';
+import { Settings, Download, Minimize2, BarChart, FileText } from 'lucide-react';
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import { useAgentStore } from '@/stores/agentStore';
 
@@ -20,7 +27,10 @@ interface ActionBarProps {
   onExport?: () => void;
   onMinimize?: () => void;
   onViewUsage?: () => void;
+  onOpenPdf?: () => void;
   disabled?: boolean;
+  /** Whether PDF is available for this game */
+  hasPdf?: boolean;
 }
 
 export function ActionBar({
@@ -31,7 +41,9 @@ export function ActionBar({
   onExport,
   onMinimize,
   onViewUsage,
+  onOpenPdf,
   disabled = false,
+  hasPdf = false,
 }: ActionBarProps) {
   const { selectedGameId, selectedTypologyId, selectedModelId } = useAgentStore();
 
@@ -56,17 +68,56 @@ export function ActionBar({
 
   if (state === 'chat') {
     return (
-      <div className="flex gap-2 pb-safe">
-        <Button variant="ghost" size="icon" onClick={onSettings}>
-          <Settings className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={onExport}>
-          <Download className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={onMinimize} className="ml-auto">
-          <Minimize2 className="h-4 w-4" />
-        </Button>
-      </div>
+      <TooltipProvider>
+        <div className="flex gap-2 pb-safe">
+          {/* PDF Button - Issue #3251 */}
+          {hasPdf && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={onOpenPdf}>
+                  <FileText className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Apri Regolamento (P)</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={onSettings}>
+                <Settings className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Impostazioni</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={onExport}>
+                <Download className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Esporta Chat</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={onMinimize} className="ml-auto">
+                <Minimize2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Minimizza</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
     );
   }
 

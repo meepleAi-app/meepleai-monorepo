@@ -19,8 +19,8 @@
  */
 
 
-import { test as base, expect } from '../fixtures/chromatic';
-import { AdminHelper } from '../pages';
+import { test as base, expect } from '../fixtures';
+import { AdminHelper, AdminPage } from '../pages';
 
 import type { Page } from '@playwright/test';
 

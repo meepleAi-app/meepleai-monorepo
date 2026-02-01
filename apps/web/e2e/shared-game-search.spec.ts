@@ -15,7 +15,7 @@
  * - Verify catalog-first search behavior
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { AuthHelper, SharedGameCatalogPage, USER_FIXTURES } from './pages';
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';

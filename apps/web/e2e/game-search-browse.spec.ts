@@ -23,7 +23,7 @@
  * - Validate game card interactions and navigation
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { AuthHelper, USER_FIXTURES } from './pages';
 import { GamePage } from './pages/game/GamePage';
 

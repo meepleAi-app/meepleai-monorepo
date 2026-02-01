@@ -12,7 +12,7 @@
  * Epic: #2823
  */
 
-import { expect, test } from '../fixtures/chromatic';
+import { expect, test } from '../fixtures';
 import { WaitHelper } from '../helpers/WaitHelper';
 import { AuthHelper, USER_FIXTURES } from '../pages';
 

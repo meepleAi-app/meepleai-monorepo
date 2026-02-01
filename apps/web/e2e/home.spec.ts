@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/home/HomePage.ts
  */
 
-import { test } from './fixtures/chromatic';
+import { test } from './fixtures';
 import { HomePage } from './pages/home/HomePage';
 
 test.describe('Home Page', () => {

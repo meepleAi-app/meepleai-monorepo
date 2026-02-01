@@ -5,7 +5,7 @@
  */
 
 import { loginAsUser } from './fixtures/auth';
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import {
   setupTwoFactorMocks,
   mockTwoFactorStatus,

@@ -9,7 +9,7 @@
  * - Test alert functionality
  */
 
-import { test as base, expect } from './fixtures/chromatic';
+import { test as base, expect } from './fixtures';
 import { AdminHelper, AuthHelper } from './pages';
 
 import type { Page } from '@playwright/test';

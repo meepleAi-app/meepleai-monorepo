@@ -12,7 +12,7 @@
  * - Error and success states
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 
 test.use({
   viewport: { width: 1280, height: 900 },

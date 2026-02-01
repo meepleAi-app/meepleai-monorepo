@@ -50,7 +50,7 @@
 import path from 'path';
 
 import { authenticateViaAPI } from './fixtures/auth';
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import {
   uploadPdfAndWaitForProcessing,
   navigateToChatAndSelectGame,

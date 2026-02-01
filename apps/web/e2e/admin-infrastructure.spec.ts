@@ -18,7 +18,7 @@
  * - Issue #901: Grafana embed implementation
  */
 
-import { test as base, expect } from './fixtures/chromatic';
+import { test as base, expect } from './fixtures';
 import { WaitHelper } from './helpers/WaitHelper';
 import { AdminHelper } from './pages';
 

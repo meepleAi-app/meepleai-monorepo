@@ -167,5 +167,5 @@ export const test = base.extend<{
   },
 });
 
-// Re-export expect from base
-export { expect } from '@playwright/test';
+// Re-export expect and types from base
+export { expect, type Page, type APIRequestContext, type Route } from '@playwright/test';

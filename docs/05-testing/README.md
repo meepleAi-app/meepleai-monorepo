@@ -85,6 +85,7 @@ cd apps/web && pnpm test:e2e
 - [Backend Testing](../05-testing/backend/) - xUnit + Testcontainers
 - [Frontend Testing](../05-testing/frontend/) - Vitest patterns
 - [E2E Testing](../05-testing/e2e/) - Playwright guides
+- [Accessibility Guidelines](./accessibility-guidelines.md) - WCAG 2.1 AA compliance
 
 ---
 

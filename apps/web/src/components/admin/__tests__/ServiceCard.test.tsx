@@ -22,7 +22,7 @@ describe('ServiceCard', () => {
   it('renders status badge', () => {
     render(<ServiceCard serviceName="redis" status="Healthy" locale="it" />);
 
-    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Sano');
+    expect(screen.getByTestId('status-badge')).toHaveTextContent('Sano');
   });
 
   it('displays response time when provided', () => {
@@ -188,7 +188,7 @@ describe('ServiceCard', () => {
   it('renders loading skeleton when loading is true', () => {
     render(<ServiceCard serviceName="postgres" status="Healthy" loading locale="it" />);
 
-    expect(screen.getByTestId('service-card-loading')).toBeInTheDocument();
+    expect(screen.getByTestId('status-card-loading')).toBeInTheDocument();
   });
 
   it('does not render service name when loading', () => {
@@ -223,37 +223,37 @@ describe('ServiceCard', () => {
   it('displays Italian status for Healthy state', () => {
     render(<ServiceCard serviceName="postgres" status="Healthy" locale="it" />);
 
-    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Sano');
+    expect(screen.getByTestId('status-badge')).toHaveTextContent('Sano');
   });
 
   it('displays English status for Healthy state', () => {
     render(<ServiceCard serviceName="postgres" status="Healthy" locale="en" />);
 
-    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Healthy');
+    expect(screen.getByTestId('status-badge')).toHaveTextContent('Healthy');
   });
 
   it('displays Italian status for Degraded state', () => {
     render(<ServiceCard serviceName="redis" status="Degraded" locale="it" />);
 
-    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Degradato');
+    expect(screen.getByTestId('status-badge')).toHaveTextContent('Degradato');
   });
 
   it('displays English status for Degraded state', () => {
     render(<ServiceCard serviceName="redis" status="Degraded" locale="en" />);
 
-    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Degraded');
+    expect(screen.getByTestId('status-badge')).toHaveTextContent('Degraded');
   });
 
   it('displays Italian status for Unhealthy state', () => {
     render(<ServiceCard serviceName="qdrant" status="Unhealthy" locale="it" />);
 
-    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Non funzionante');
+    expect(screen.getByTestId('status-badge')).toHaveTextContent('Non funzionante');
   });
 
   it('displays English status for Unhealthy state', () => {
     render(<ServiceCard serviceName="qdrant" status="Unhealthy" locale="en" />);
 
-    expect(screen.getByTestId('service-status-badge')).toHaveTextContent('Unhealthy');
+    expect(screen.getByTestId('status-badge')).toHaveTextContent('Unhealthy');
   });
 
   it('formats English timestamp as "Now"', () => {
@@ -335,7 +335,7 @@ describe('ServiceCard', () => {
   it('has correct testid for identification', () => {
     render(<ServiceCard serviceName="postgres" status="Healthy" locale="it" />);
 
-    expect(screen.getByTestId('service-card-postgres')).toBeInTheDocument();
+    expect(screen.getByTestId('status-card-postgresql')).toBeInTheDocument();
   });
 
   // ==================== Accessibility ====================

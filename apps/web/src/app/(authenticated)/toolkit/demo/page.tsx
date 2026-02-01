@@ -97,21 +97,21 @@ export default function ToolkitDemoPage() {
 
   // Recalculate totals when scores change
   useEffect(() => {
-    const updatedParticipants = participants.map((p) => {
-      const totalScore = scores
-        .filter((s) => s.participantId === p.id)
-        .reduce((sum, s) => sum + s.scoreValue, 0);
-      return { ...p, totalScore };
+    setParticipants((prevParticipants) => {
+      const updatedParticipants = prevParticipants.map((p) => {
+        const totalScore = scores
+          .filter((s) => s.participantId === p.id)
+          .reduce((sum, s) => sum + s.scoreValue, 0);
+        return { ...p, totalScore };
+      });
+
+      // Update ranks
+      const sorted = [...updatedParticipants].sort((a, b) => b.totalScore - a.totalScore);
+      return updatedParticipants.map((p) => ({
+        ...p,
+        rank: sorted.findIndex((s) => s.id === p.id) + 1
+      }));
     });
-
-    // Update ranks
-    const sorted = [...updatedParticipants].sort((a, b) => b.totalScore - a.totalScore);
-    const withRanks = updatedParticipants.map((p) => ({
-      ...p,
-      rank: sorted.findIndex((s) => s.id === p.id) + 1
-    }));
-
-    setParticipants(withRanks);
   }, [scores]);
 
   const handleScoreSubmit = async (data: {

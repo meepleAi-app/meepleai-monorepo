@@ -8,3 +8,8 @@ export * from './confidence-badge';
 export * from './rating-stars';
 export * from './citation-link';
 export * from './collapsible';
+
+// Issue #2925: Component Library - Reusable components extracted from Admin Dashboard
+export * from './stat-card';
+export * from './status-card';
+export * from './activity-list';

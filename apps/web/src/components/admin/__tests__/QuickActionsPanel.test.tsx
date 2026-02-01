@@ -77,8 +77,8 @@ describe('QuickActionsPanel', () => {
     it('renders with default actions', () => {
       render(<QuickActionsPanel />);
 
-      expect(screen.getByTestId('quick-actions-title')).toBeInTheDocument();
-      expect(screen.getByTestId('quick-actions-grid')).toBeInTheDocument();
+      expect(screen.getByTestId('action-grid-title')).toBeInTheDocument();
+      expect(screen.getByTestId('action-grid')).toBeInTheDocument();
     });
 
     it('renders default title "Quick Actions"', () => {
@@ -96,7 +96,7 @@ describe('QuickActionsPanel', () => {
     it('renders loading state', () => {
       render(<QuickActionsPanel loading={true} />);
 
-      expect(screen.getByTestId('quick-actions-skeleton')).toBeInTheDocument();
+      expect(screen.getByTestId('action-grid-skeleton')).toBeInTheDocument();
     });
 
     it('renders custom actions', () => {

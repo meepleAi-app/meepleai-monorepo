@@ -6,7 +6,7 @@
  * @see apps/web/e2e/helpers/qa-test-utils.ts
  */
 
-import { test, expect, Page } from './fixtures/chromatic';
+import { test, expect, Page } from './fixtures';
 import { waitForAutoSelection } from './helpers/qa-test-utils';
 
 const apiBase = 'http://localhost:8080';

@@ -14,7 +14,7 @@
  * This file focuses on journey-specific page load budgets
  */
 
-import { expect, test } from '../fixtures/chromatic';
+import { expect, test } from '../fixtures';
 import { AuthHelper, USER_FIXTURES } from '../pages';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';

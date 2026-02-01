@@ -12,7 +12,7 @@
  * @see apps/web/e2e/page-objects/ - Page Object Model architecture
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { AuthHelper, AdminHelper } from './pages';
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';

@@ -9,7 +9,8 @@
  * - Upgrade prompts at quota limits
  */
 
-import { test, expect } from '../fixtures/chromatic';
+import { test, expect } from '../fixtures';
+import { GamePage, ProfilePage } from '../pages';
 
 import type { Page } from '@playwright/test';
 

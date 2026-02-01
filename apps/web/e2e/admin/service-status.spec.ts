@@ -17,7 +17,8 @@
  * - Uses real backend data (no mocks)
  */
 
-import { test as base, expect } from '../fixtures/chromatic';
+import { test as base, expect } from '../fixtures';
+import { AdminPage } from '../pages';
 import { WaitHelper } from '../helpers/WaitHelper';
 import { AdminHelper } from '../pages';
 

@@ -9,7 +9,8 @@
  * - "Similar to" filtering
  */
 
-import { test, expect } from '../fixtures/chromatic';
+import { test, expect } from '../fixtures';
+import { GamePage, SharedGameCatalogPage } from '../pages';
 
 import type { Page } from '@playwright/test';
 

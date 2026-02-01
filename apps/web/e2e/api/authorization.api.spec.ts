@@ -20,7 +20,7 @@
  */
 
 import { setupMockAuth } from '../fixtures/auth';
-import { test, expect } from '../fixtures/chromatic';
+import { test, expect } from '../fixtures';
 import { mockApiForbidden } from '../helpers/mocks';
 
 const API_BASE =

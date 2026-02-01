@@ -15,7 +15,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { playAudit } from 'playwright-lighthouse';
 
-import { test as base, expect, Page } from './fixtures/chromatic';
+import { test as base, expect, Page } from './fixtures';
 import { AdminHelper } from './pages';
 
 import type { Result } from 'axe-core';

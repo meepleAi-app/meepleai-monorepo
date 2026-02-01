@@ -4,7 +4,7 @@
  * Captures visual snapshots of chat components: input, messages, streaming states
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 
 test.use({
   viewport: { width: 1280, height: 900 },

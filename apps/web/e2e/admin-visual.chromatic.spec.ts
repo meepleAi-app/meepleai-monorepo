@@ -4,7 +4,7 @@
  * Captures visual snapshots of admin components: stats, charts, tables
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 
 test.use({
   viewport: { width: 1440, height: 1024 }, // Larger viewport for dashboard

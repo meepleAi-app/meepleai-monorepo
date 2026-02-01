@@ -40,7 +40,7 @@
  * @see Issue #2307 - Week 3 auth integration tests
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { LoginPage, AuthHelper, USER_FIXTURES } from './pages';
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';

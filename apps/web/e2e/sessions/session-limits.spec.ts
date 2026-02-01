@@ -9,7 +9,8 @@
  * - Proper error messages and upgrade prompts
  */
 
-import { test, expect } from '../fixtures/chromatic';
+import { test, expect } from '../fixtures';
+import { GamePage, ProfilePage } from '../pages';
 
 import type { Page } from '@playwright/test';
 

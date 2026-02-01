@@ -27,6 +27,9 @@ export { AdminHelper } from './helpers/AdminHelper';
 export { ChatHelper, type ChatMessage } from './helpers/ChatHelper';
 export { GamesHelper, type Game } from './helpers/GamesHelper';
 
+// Real Backend Helpers (Issue #3082 - Real backend integration)
+export { RealBackendHelper, createRealBackendHelper } from './helpers/RealBackendHelper';
+
 // Pages - Authentication
 export { AuthPage } from './auth/AuthPage'; // Existing complex auth page
 export { LoginPage } from './auth/LoginPage'; // NEW - Simple login interactions

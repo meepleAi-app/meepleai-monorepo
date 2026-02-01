@@ -87,4 +87,97 @@ describe('ParticipantCard', () => {
     render(<ParticipantCard participant={mockParticipant} />);
     expect(screen.getByText('A')).toBeInTheDocument();
   });
+
+  describe('Compact Variant', () => {
+    it('renders participant name in compact', () => {
+      render(<ParticipantCard participant={mockParticipant} variant="compact" />);
+      expect(screen.getByText('Alice')).toBeInTheDocument();
+    });
+
+    it('renders score with Score label in compact', () => {
+      render(<ParticipantCard participant={mockParticipant} variant="compact" />);
+      expect(screen.getByText(/Score: 87/)).toBeInTheDocument();
+    });
+
+    it('shows silver emoji for rank 2', () => {
+      const silverParticipant: Participant = { ...mockParticipant, rank: 2 };
+      render(<ParticipantCard participant={silverParticipant} variant="compact" />);
+      expect(screen.getByText('🥈')).toBeInTheDocument();
+    });
+
+    it('shows bronze emoji for rank 3', () => {
+      const bronzeParticipant: Participant = { ...mockParticipant, rank: 3 };
+      render(<ParticipantCard participant={bronzeParticipant} variant="compact" />);
+      expect(screen.getByText('🥉')).toBeInTheDocument();
+    });
+
+    it('shows rank number for rank > 3 in compact', () => {
+      const lowRankParticipant: Participant = { ...mockParticipant, rank: 5 };
+      render(<ParticipantCard participant={lowRankParticipant} variant="compact" />);
+      expect(screen.getByText('#5')).toBeInTheDocument();
+    });
+
+    it('shows typing spinner in compact variant', () => {
+      const typingParticipant: Participant = { ...mockParticipant, isTyping: true };
+      const { container } = render(
+        <ParticipantCard participant={typingParticipant} variant="compact" />
+      );
+      expect(container.querySelector('.animate-spin')).toBeInTheDocument();
+    });
+  });
+
+  describe('Full Variant', () => {
+    it('shows pts label in full variant', () => {
+      render(<ParticipantCard participant={mockParticipant} variant="full" />);
+      expect(screen.getByText('pts')).toBeInTheDocument();
+    });
+
+    it('shows rank text in full variant', () => {
+      render(<ParticipantCard participant={mockParticipant} variant="full" />);
+      expect(screen.getByText('rank')).toBeInTheDocument();
+    });
+
+    it('shows typing text in full variant', () => {
+      const typingParticipant: Participant = { ...mockParticipant, isTyping: true };
+      render(<ParticipantCard participant={typingParticipant} variant="full" />);
+      expect(screen.getByText('typing...')).toBeInTheDocument();
+    });
+  });
+
+  describe('Name Initials', () => {
+    it('handles multi-word names', () => {
+      const multiNameParticipant: Participant = {
+        ...mockParticipant,
+        displayName: 'John Paul',
+      };
+      render(<ParticipantCard participant={multiNameParticipant} variant="compact" />);
+      expect(screen.getByText('JP')).toBeInTheDocument();
+    });
+
+    it('removes (io) suffix from name', () => {
+      const ioParticipant: Participant = {
+        ...mockParticipant,
+        displayName: 'Bob (io)',
+      };
+      render(<ParticipantCard participant={ioParticipant} variant="compact" />);
+      expect(screen.getByText('B')).toBeInTheDocument();
+    });
+  });
+
+  describe('Owner Badge', () => {
+    it('shows crown icon when participant is owner', () => {
+      const { container } = render(
+        <ParticipantCard participant={mockParticipant} variant="compact" />
+      );
+      expect(container.querySelector('.lucide-crown')).toBeInTheDocument();
+    });
+
+    it('does not show crown when not owner', () => {
+      const nonOwner: Participant = { ...mockParticipant, isOwner: false };
+      const { container } = render(
+        <ParticipantCard participant={nonOwner} variant="compact" />
+      );
+      expect(container.querySelector('.lucide-crown')).not.toBeInTheDocument();
+    });
+  });
 });

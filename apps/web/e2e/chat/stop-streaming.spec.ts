@@ -9,7 +9,8 @@
  * - Allow follow-up questions after stopping
  */
 
-import { test, expect } from '../fixtures/chromatic';
+import { test, expect } from '../fixtures';
+import { ChatPage } from '../pages';
 
 import type { Page } from '@playwright/test';
 

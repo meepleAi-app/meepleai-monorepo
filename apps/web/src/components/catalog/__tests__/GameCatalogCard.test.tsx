@@ -333,9 +333,11 @@ describe('GameCatalogCard', () => {
     });
 
     it('shows loading text while adding', async () => {
-      mockMutateAsync.mockImplementation(
-        () => new Promise((resolve) => setTimeout(resolve, 100))
-      );
+      let resolvePromise: () => void;
+      const pendingPromise = new Promise<void>((resolve) => {
+        resolvePromise = resolve;
+      });
+      mockMutateAsync.mockImplementation(() => pendingPromise);
 
       renderWithQuery(<GameCatalogCard game={mockGame} />);
 
@@ -344,6 +346,12 @@ describe('GameCatalogCard', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Aggiunta in corso...')).toBeInTheDocument();
+      });
+
+      // Resolve the promise and wait for cleanup to complete
+      await act(async () => {
+        resolvePromise!();
+        await pendingPromise;
       });
     });
 

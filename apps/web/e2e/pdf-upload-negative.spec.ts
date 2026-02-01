@@ -15,7 +15,7 @@
  * - MIME type spoofing
  */
 
-import { test as base, expect, Page } from './fixtures/chromatic';
+import { test as base, expect, Page } from './fixtures';
 import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
 
 // Extend test with editor authentication (required for PDF upload)

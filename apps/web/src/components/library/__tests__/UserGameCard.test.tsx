@@ -1,5 +1,5 @@
 /**
- * UserGameCard Component Tests (Issue #2610)
+ * UserGameCard Component Tests (Issue #2610, #2867)
  *
  * Test Coverage:
  * - Rendering with complete/minimal data
@@ -10,6 +10,7 @@
  * - Favorite toggle integration
  * - Notes preview
  * - Date formatting
+ * - Game stats display (plays, win rate) - Issue #2867
  *
  * Target: ≥90% coverage
  */
@@ -369,6 +370,78 @@ describe('UserGameCard - Edge Cases', () => {
 
     const notesElement = screen.getByText(/A{10,}/);
     expect(notesElement).toHaveClass('line-clamp-2');
+  });
+});
+
+// ============================================================================
+// Game Stats Display Tests (Issue #2867)
+// ============================================================================
+
+describe('UserGameCard - Game Stats Display', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders play count placeholder in grid view', () => {
+    render(<UserGameCard game={mockGameComplete} viewMode="grid" {...mockCallbacks} />, { wrapper: createWrapper() });
+
+    const playCount = screen.getByTestId('play-count');
+    expect(playCount).toBeInTheDocument();
+    expect(playCount).toHaveTextContent('0 partite');
+  });
+
+  it('renders win rate placeholder in grid view', () => {
+    render(<UserGameCard game={mockGameComplete} viewMode="grid" {...mockCallbacks} />, { wrapper: createWrapper() });
+
+    const winRate = screen.getByTestId('win-rate');
+    expect(winRate).toBeInTheDocument();
+    expect(winRate).toHaveTextContent('0%');
+  });
+
+  it('renders play count placeholder in list view', () => {
+    render(<UserGameCard game={mockGameComplete} viewMode="list" {...mockCallbacks} />, { wrapper: createWrapper() });
+
+    const playCount = screen.getByTestId('play-count');
+    expect(playCount).toBeInTheDocument();
+    expect(playCount).toHaveTextContent('0 partite');
+  });
+
+  it('renders win rate placeholder in list view', () => {
+    render(<UserGameCard game={mockGameComplete} viewMode="list" {...mockCallbacks} />, { wrapper: createWrapper() });
+
+    const winRate = screen.getByTestId('win-rate');
+    expect(winRate).toBeInTheDocument();
+    expect(winRate).toHaveTextContent('0%');
+  });
+
+  it('displays Gamepad2 icon for play count', () => {
+    const { container } = render(<UserGameCard game={mockGameComplete} viewMode="grid" {...mockCallbacks} />, { wrapper: createWrapper() });
+
+    const gamepadIcon = container.querySelector('svg.lucide-gamepad-2');
+    expect(gamepadIcon).toBeInTheDocument();
+  });
+
+  it('displays Trophy icon for win rate', () => {
+    const { container } = render(<UserGameCard game={mockGameComplete} viewMode="grid" {...mockCallbacks} />, { wrapper: createWrapper() });
+
+    const trophyIcon = container.querySelector('svg.lucide-trophy');
+    expect(trophyIcon).toBeInTheDocument();
+  });
+
+  it('stats are visible in both grid and list views', () => {
+    // Grid view
+    const { rerender } = render(<UserGameCard game={mockGameComplete} viewMode="grid" {...mockCallbacks} />, { wrapper: createWrapper() });
+    expect(screen.getByTestId('play-count')).toBeInTheDocument();
+    expect(screen.getByTestId('win-rate')).toBeInTheDocument();
+
+    // List view
+    rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <UserGameCard game={mockGameComplete} viewMode="list" {...mockCallbacks} />
+      </QueryClientProvider>
+    );
+    expect(screen.getByTestId('play-count')).toBeInTheDocument();
+    expect(screen.getByTestId('win-rate')).toBeInTheDocument();
   });
 });
 

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeepleAI Layout Mock - Mobile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      /* MeepleAI Brand Colors */
+      --color-primary: 25 85% 45%;
+      --color-primary-foreground: 0 0% 100%;
+      --color-accent: 262 83% 62%;
+      --color-background: 30 25% 97%;
+      --color-foreground: 0 0% 18%;
+      --color-muted: 30 15% 92%;
+      --color-muted-foreground: 0 0% 45%;
+      --color-border: 30 12% 85%;
+      --color-card: 0 0% 100%;
+    }
+
+    * { font-family: 'Nunito', sans-serif; }
+    h1, h2, h3, h4, h5, h6, .font-heading { font-family: 'Quicksand', sans-serif; }
+    .bg-primary { background-color: hsl(var(--color-primary)); }
+    .text-primary { color: hsl(var(--color-primary)); }
+    .bg-accent { background-color: hsl(var(--color-accent)); }
+    .bg-background { background-color: hsl(var(--color-background)); }
+    .text-foreground { color: hsl(var(--color-foreground)); }
+    .bg-muted { background-color: hsl(var(--color-muted)); }
+    .text-muted { color: hsl(var(--color-muted-foreground)); }
+    .bg-card { background-color: hsl(var(--color-card)); }
+    .border-border { border-color: hsl(var(--color-border)); }
+
+    /* Animations */
+    @keyframes fab-morph {
+      0% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(0.9) rotate(45deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    .fab-hover:hover { animation: fab-morph 300ms ease-out; }
+
+    @keyframes quick-menu-in {
+      0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .quick-menu-visible { animation: quick-menu-in 150ms ease-out forwards; }
+
+    @keyframes action-slide {
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .action-item { animation: action-slide 200ms ease-out forwards; }
+    .action-item:nth-child(1) { animation-delay: 0ms; }
+    .action-item:nth-child(2) { animation-delay: 50ms; }
+    .action-item:nth-child(3) { animation-delay: 100ms; }
+    .action-item:nth-child(4) { animation-delay: 150ms; }
+
+    @keyframes breadcrumb-slide {
+      0% { opacity: 0; transform: translateX(-8px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+    .breadcrumb-anim { animation: breadcrumb-slide 150ms ease-out forwards; }
+
+    .ripple { position: relative; overflow: hidden; }
+    .ripple::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.3) 0%, transparent 70%);
+      opacity: 0;
+      transform: scale(0);
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    .ripple:active::after { opacity: 1; transform: scale(2); }
+
+    /* Context visibility */
+    .context-library .ctx-library,
+    .context-game .ctx-game,
+    .context-session .ctx-session { display: block !important; }
+    .context-library .ctx-game,
+    .context-library .ctx-session,
+    .context-game .ctx-library,
+    .context-game .ctx-session,
+    .context-session .ctx-library,
+    .context-session .ctx-game { display: none !important; }
+  </style>
+</head>
+<body class="bg-background text-foreground">
+
+  <div class="flex flex-col items-center gap-8 py-8 px-4">
+
+    <!-- ========== CONTEXT: LIBRARY ========== -->
+    <div>
+      <h2 class="font-heading font-bold text-center mb-4">Contesto: Library</h2>
+      <div class="mx-auto" style="width: 375px; height: 700px; position: relative; border: 8px solid #1a1a1a; border-radius: 40px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+
+        <!-- Navbar -->
+        <nav class="bg-card border-b border-border h-12 flex items-center justify-between px-4 shadow-sm">
+          <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted transition-colors ripple">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+          <div class="flex items-center gap-2">
+            <svg class="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C10.5 2 9.2 2.8 8.5 4H15.5C14.8 2.8 13.5 2 12 2ZM6 6C4.9 6 4 6.9 4 8V10C4 11.1 4.9 12 6 12H7V20C7 21.1 7.9 22 9 22H15C16.1 22 17 21.1 17 20V12H18C19.1 12 20 11.1 20 10V8C20 6.9 19.1 6 18 6H6Z"/>
+            </svg>
+            <span class="font-heading font-bold text-lg">MeepleAI</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted transition-colors ripple">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/>
+              </svg>
+            </button>
+            <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted transition-colors ripple">
+              <div class="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-sm font-semibold">M</div>
+            </button>
+          </div>
+        </nav>
+
+        <!-- Content -->
+        <main class="p-4 overflow-auto" style="height: calc(100% - 48px - 56px - 40px);">
+          <h1 class="font-heading font-bold text-xl mb-4">La mia libreria</h1>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+              <div class="aspect-square bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center"><span class="text-4xl">🏝️</span></div>
+              <div class="p-3"><h3 class="font-heading font-semibold text-sm">Catan</h3><span class="text-amber-500 text-xs">★ 4.2</span></div>
+            </div>
+            <div class="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+              <div class="aspect-square bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center"><span class="text-4xl">🚂</span></div>
+              <div class="p-3"><h3 class="font-heading font-semibold text-sm">Ticket to Ride</h3><span class="text-amber-500 text-xs">★ 4.3</span></div>
+            </div>
+          </div>
+        </main>
+
+        <!-- FAB -->
+        <button class="fab-hover absolute right-4 bg-primary text-white rounded-2xl shadow-lg flex items-center justify-center hover:shadow-xl transition-all" style="width: 56px; height: 56px; bottom: 104px;">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+          </svg>
+        </button>
+
+        <!-- Breadcrumb -->
+        <div class="breadcrumb-anim absolute left-4 right-20 bg-card/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-sm border border-border" style="bottom: 64px;">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">📚</span>
+            <span class="font-heading font-semibold text-sm">La mia libreria</span>
+          </div>
+        </div>
+
+        <!-- ActionBar -->
+        <div class="absolute bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg" style="height: 56px;">
+          <div class="flex items-center justify-around h-full px-2">
+            <button class="action-item flex flex-col items-center justify-center flex-1 h-full hover:bg-muted rounded-lg transition-colors ripple">
+              <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+              <span class="text-[10px] font-medium mt-0.5 text-primary">Aggiungi</span>
+            </button>
+            <button class="action-item flex flex-col items-center justify-center flex-1 h-full hover:bg-muted rounded-lg transition-colors ripple">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+              <span class="text-[10px] font-medium mt-0.5 text-muted">Filtra</span>
+            </button>
+            <button class="action-item flex flex-col items-center justify-center flex-1 h-full hover:bg-muted rounded-lg transition-colors ripple">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M6 12h12M9 17h6"/></svg>
+              <span class="text-[10px] font-medium mt-0.5 text-muted">Ordina</span>
+            </button>
+            <button class="action-item flex flex-col items-center justify-center flex-1 h-full hover:bg-muted rounded-lg transition-colors ripple">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+              <span class="text-[10px] font-medium mt-0.5 text-muted">Altro</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== CONTEXT: GAME DETAIL ========== -->
+    <div>
+      <h2 class="font-heading font-bold text-center mb-4">Contesto: Game Detail</h2>
+      <div class="mx-auto" style="width: 375px; height: 700px; position: relative; border: 8px solid #1a1a1a; border-radius: 40px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+
+        <!-- Navbar -->
+        <nav class="bg-card border-b border-border h-12 flex items-center justify-between px-4 shadow-sm">
+          <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted transition-colors ripple">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <span class="font-heading font-semibold">Dettaglio</span>
+          <div class="w-10"></div>
+        </nav>
+
+        <!-- Content -->
+        <main class="overflow-auto" style="height: calc(100% - 48px - 56px - 40px);">
+          <div class="aspect-video bg-gradient-to-br from-amber-200 to-orange-300 flex items-center justify-center">
+            <span class="text-6xl">🏝️</span>
+          </div>
+          <div class="p-4">
+            <h1 class="font-heading font-bold text-2xl">Settlers of Catan</h1>
+            <div class="flex items-center gap-2 mt-2 text-sm text-muted">
+              <span class="text-amber-500">★ 4.2</span>
+              <span>•</span>
+              <span>2-4 giocatori</span>
+              <span>•</span>
+              <span>60-90 min</span>
+            </div>
+            <p class="mt-4 text-sm leading-relaxed">Costruisci insediamenti, commercia risorse e diventa il dominatore dell'isola di Catan!</p>
+          </div>
+        </main>
+
+        <!-- FAB: Play -->
+        <button class="fab-hover absolute right-4 bg-primary text-white rounded-2xl shadow-lg flex items-center justify-center hover:shadow-xl transition-all" style="width: 56px; height: 56px; bottom: 104px;">
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        </button>
+
+        <!-- Breadcrumb -->
+        <div class="breadcrumb-anim absolute left-4 right-20 bg-card/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-sm border border-border" style="bottom: 64px;">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🎲</span>
+            <span class="font-heading font-semibold text-sm">Settlers of Catan</span>
+          </div>
+        </div>
+
+        <!-- ActionBar -->
+        <div class="absolute bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg" style="height: 56px;">
+          <div class="flex items-center justify-around h-full px-2">
+            <button class="action-item flex flex-col items-center justify-center flex-1 h-full hover:bg-muted rounded-lg transition-colors ripple">
+              <svg class="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              <span class="text-[10px] font-medium mt-0.5 text-primary">Gioca</span>
+            </button>
+            <button class="action-item flex flex-col items-center justify-center flex-1 h-full hover:bg-muted rounded-lg transition-colors ripple">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+              <span class="text-[10px] font-medium mt-0.5 text-muted">Aggiungi</span>
+            </button>
+            <button class="action-item flex flex-col items-center justify-center flex-1 h-full hover:bg-muted rounded-lg transition-colors ripple">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span class="text-[10px] font-medium mt-0.5 text-muted">Chiedi AI</span>
+            </button>
+            <button class="action-item flex flex-col items-center justify-center flex-1 h-full hover:bg-muted rounded-lg transition-colors ripple">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+              <span class="text-[10px] font-medium mt-0.5 text-muted">Altro</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== CONTEXT: SESSION ========== -->
+    <div>
+      <h2 class="font-heading font-bold text-center mb-4">Contesto: Session Active</h2>
+      <div class="mx-auto" style="width: 375px; height: 700px; position: relative; border: 8px solid #1a1a1a; border-radius: 40px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+
+        <!-- Navbar -->
+        <nav class="bg-card border-b border-border h-12 flex items-center justify-between px-4 shadow-sm">
+          <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted transition-colors ripple">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <span class="font-heading font-semibold">Sessione Catan</span>
+          <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted transition-colors ripple text-primary">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>
+            </svg>
+          </button>
+        </nav>
+
+        <!-- Content -->
+        <main class="p-4 overflow-auto" style="height: calc(100% - 48px - 56px - 40px);">
+          <!-- Timer -->
+          <div class="bg-card rounded-xl p-4 shadow-sm border border-border text-center mb-4">
+            <div class="font-heading font-bold text-3xl text-primary">01:23:45</div>
+            <div class="text-sm text-muted mt-1">Turno: Mario</div>
+          </div>
+          <!-- Scores -->
+          <div class="flex gap-2 mb-4">
+            <div class="flex-1 bg-card rounded-lg p-3 text-center border border-border">
+              <div class="font-semibold text-sm">Mario</div>
+              <div class="font-heading font-bold text-xl text-primary">12</div>
+            </div>
+            <div class="flex-1 bg-card rounded-lg p-3 text-center border border-border">
+              <div class="font-semibold text-sm">Luigi</div>
+              <div class="font-heading font-bold text-xl">10</div>
+            </div>
+            <div class="flex-1 bg-card rounded-lg p-3 text-center border border-border">
+              <div class="font-semibold text-sm">Peach</div>
+              <div class="font-heading font-bold text-xl">8</div>
+            </div>
+          </div>
+          <!-- Chat preview -->
+          <div class="bg-muted/50 rounded-xl p-4 border border-border">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-sm">🤖</div>
+              <div class="flex-1">
+                <div class="text-sm">Per costruire una strada devi pagare 1 legno e 1 argilla...</div>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <!-- FAB: AI -->
+        <button class="fab-hover absolute right-4 bg-accent text-white rounded-2xl shadow-lg flex items-center justify-center hover:shadow-xl transition-all" style="width: 56px; height: 56px; bottom: 104px;">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </button>
+
+        <!-- Breadcrumb -->
+        <div class="breadcrumb-anim absolute left-4 right-20 bg-card/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-sm border border-border" style="bottom: 64px;">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">▶️</span>
+            <span class="font-heading font-semibold text-sm">Sessione attiva</span>
+          </div>
+        </div>
+
+        <!-- ActionBar -->
+        <div class="absolute bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg" style="height: 56px;">
+          <div class="flex items-center justify-around h-full px-2">
+            <button class="action-item flex flex-col items-center justify-center flex-1 h-full hover:bg-muted rounded-lg transition-colors ripple">
+              <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span class="text-[10px] font-medium mt-0.5 text-accent">Chiedi AI</span>
+            </button>
+            <button class="action-item flex flex-col items-center justify-center flex-1 h-full hover:bg-muted rounded-lg transition-colors ripple">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span class="text-[10px] font-medium mt-0.5 text-muted">Timer</span>
+            </button>
+            <button class="action-item flex flex-col items-center justify-center flex-1 h-full hover:bg-muted rounded-lg transition-colors ripple">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span class="text-[10px] font-medium mt-0.5 text-muted">Punteggi</span>
+            </button>
+            <button class="action-item flex flex-col items-center justify-center flex-1 h-full hover:bg-muted rounded-lg transition-colors ripple">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+              <span class="text-[10px] font-medium mt-0.5 text-muted">Altro</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Legend -->
+  <div class="max-w-3xl mx-auto p-6 mt-8 mb-16">
+    <h2 class="font-heading font-bold text-xl mb-4">Legenda Layout</h2>
+    <div class="grid md:grid-cols-2 gap-4 text-sm">
+      <div class="bg-card rounded-lg p-4 border border-border">
+        <h3 class="font-heading font-semibold mb-2">Smart FAB</h3>
+        <ul class="space-y-1 text-muted">
+          <li>📚 Library: <span class="text-primary">➕ Aggiungi</span></li>
+          <li>🎲 Game Detail: <span class="text-primary">▶️ Gioca</span></li>
+          <li>▶️ Session: <span class="text-accent">🤖 Chiedi AI</span></li>
+        </ul>
+      </div>
+      <div class="bg-card rounded-lg p-4 border border-border">
+        <h3 class="font-heading font-semibold mb-2">ActionBar</h3>
+        <ul class="space-y-1 text-muted">
+          <li>Mobile: 3 azioni + overflow</li>
+          <li>Prima azione = primary color</li>
+          <li>Animazione staggered 50ms</li>
+        </ul>
+      </div>
+      <div class="bg-card rounded-lg p-4 border border-border">
+        <h3 class="font-heading font-semibold mb-2">Breadcrumb</h3>
+        <ul class="space-y-1 text-muted">
+          <li>Mostra contesto attuale</li>
+          <li>Icona + Label</li>
+          <li>Posizione: sopra ActionBar</li>
+        </ul>
+      </div>
+      <div class="bg-card rounded-lg p-4 border border-border">
+        <h3 class="font-heading font-semibold mb-2">Animazioni</h3>
+        <ul class="space-y-1 text-muted">
+          <li>FAB morph: 200ms ease-out</li>
+          <li>Quick menu: 150ms scale+fade</li>
+          <li>Breadcrumb: 150ms slide</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -267,6 +267,9 @@ export function LibraryFilters({
               <SelectItem value="title-asc">Titolo (A-Z)</SelectItem>
               <SelectItem value="title-desc">Titolo (Z-A)</SelectItem>
               <SelectItem value="favorite-desc">Preferiti prima</SelectItem>
+              {/* TODO: Add "Most Played" sort option when backend supports playCount sorting
+                  Requires: API schema update to include 'playCount' in sortBy options
+                  Refs: Issue #2866 acceptance criteria */}
             </SelectContent>
           </Select>
         </div>

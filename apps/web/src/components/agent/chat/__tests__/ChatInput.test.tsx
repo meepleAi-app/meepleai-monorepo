@@ -64,28 +64,28 @@ describe('ChatInput', () => {
       expect(screen.getByText('5/1000')).toBeInTheDocument();
     });
 
-    it('enforces 1000 character limit', async () => {
-      const user = userEvent.setup();
+    it('enforces 1000 character limit', () => {
       render(<ChatInput onSendMessage={mockOnSendMessage} />);
 
       const textarea = screen.getByRole('textbox', { name: /message input/i });
       const longText = 'a'.repeat(1100); // Exceeds limit
 
-      await user.type(textarea, longText);
+      // Use fireEvent.change for long strings (faster than user.type)
+      fireEvent.change(textarea, { target: { value: longText } });
 
       // Should stop at 1000 characters
       expect(textarea).toHaveValue('a'.repeat(1000));
       expect(screen.getByText('1000/1000')).toBeInTheDocument();
     });
 
-    it('shows warning color when near limit (>90%)', async () => {
-      const user = userEvent.setup();
+    it('shows warning color when near limit (>90%)', () => {
       render(<ChatInput onSendMessage={mockOnSendMessage} />);
 
       const textarea = screen.getByRole('textbox', { name: /message input/i });
       const nearLimitText = 'a'.repeat(950); // 95% of limit
 
-      await user.type(textarea, nearLimitText);
+      // Use fireEvent.change for long strings (faster than user.type)
+      fireEvent.change(textarea, { target: { value: nearLimitText } });
 
       const counter = screen.getByText('950/1000');
       expect(counter).toHaveClass('text-red-500');

@@ -133,7 +133,8 @@ internal static class SecretDefinitions
             "S3_ACCESS_KEY",
             "S3_SECRET_KEY",
             "S3_BUCKET_NAME",
-            "S3_REGION"
+            "S3_REGION",
+            "S3_ENDPOINT"  // Required for R2 and other S3-compatible providers
         ),
 
         ["monitoring"] = new(

@@ -1,13 +1,14 @@
 /**
  * Slot Cards - Visual agent slot management
  * Issue #3240 (FRONT-004)
+ * Issue #3247 (FRONT-011) - LockedSlotCard integration
  */
 
 'use client';
 
-import { Lock, CircleDot } from 'lucide-react';
+import { CircleDot } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
+import { LockedSlotCard } from '../slots/LockedSlotCard';
 
 interface Slot {
   id: string;
@@ -16,7 +17,14 @@ interface Slot {
   typologyName?: string;
 }
 
-export function SlotCards() {
+interface SlotCardsProps {
+  /** User's current tier */
+  currentTier?: string;
+  /** Callback when upgrade is clicked */
+  onUpgradeClick?: () => void;
+}
+
+export function SlotCards({ currentTier = 'free', onUpgradeClick }: SlotCardsProps) {
   // Mock data - replace with useSlotManagement hook
   const slots: Slot[] = [
     { id: '1', status: 'active', gameTitle: '7 Wonders', typologyName: 'Rules Helper' },
@@ -32,6 +40,7 @@ export function SlotCards() {
   const activeCount = slots.filter(s => s.status === 'active').length;
   const totalSlots = slots.filter(s => s.status !== 'locked').length;
   const lockedCount = slots.filter(s => s.status === 'locked').length;
+  const nonLockedSlots = slots.filter(s => s.status !== 'locked');
 
   return (
     <div className="space-y-4">
@@ -42,9 +51,9 @@ export function SlotCards() {
         </span>
       </div>
 
-      {/* Slot Grid */}
+      {/* Slot Grid - Active and Available only */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {slots.map(slot => (
+        {nonLockedSlots.map(slot => (
           <div
             key={slot.id}
             className={`
@@ -52,9 +61,7 @@ export function SlotCards() {
               ${
                 slot.status === 'active'
                   ? 'border-cyan-400 bg-cyan-500/10'
-                  : slot.status === 'locked'
-                    ? 'border-purple-500/30 bg-purple-500/5'
-                    : 'border-slate-700 bg-slate-900'
+                  : 'border-slate-700 bg-slate-900'
               }
             `}
           >
@@ -73,25 +80,17 @@ export function SlotCards() {
                 <CircleDot className="h-8 w-8 text-slate-600" />
               </div>
             )}
-
-            {slot.status === 'locked' && (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <Lock className="h-6 w-6 text-purple-400 mb-1" />
-                <span className="text-xs text-purple-300">Locked</span>
-              </div>
-            )}
           </div>
         ))}
       </div>
 
-      {/* Upgrade CTA */}
+      {/* Premium Upgrade Card - Issue #3247 */}
       {lockedCount > 0 && (
-        <Button
-          variant="outline"
-          className="w-full border-purple-500 text-purple-300 hover:bg-purple-500/10 agent-pulse-purple"
-        >
-          Upgrade for +{lockedCount} slots
-        </Button>
+        <LockedSlotCard
+          lockedCount={lockedCount}
+          currentTier={currentTier}
+          onUpgradeClick={onUpgradeClick}
+        />
       )}
     </div>
   );

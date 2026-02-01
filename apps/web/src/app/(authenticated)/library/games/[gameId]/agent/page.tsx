@@ -133,6 +133,7 @@ export default function AgentPage() {
       {/* Chat Sheet (Issue #3249: with dynamic typology switching) */}
       <AgentChatSheet
         gameTitle={game?.title || 'Game'}
+        gameId={gameId}
         currentTypology={currentTypology}
         modelName="GPT-4o-mini"
         tokensUsed={445}

@@ -2,6 +2,8 @@
  * Agent Chat Sheet - Bottom sheet chat container
  * Issue #3242 (FRONT-006)
  * Issue #3249: [FRONT-013] Agent Type Switcher & Dynamic Typology
+ * Issue #3250: [FRONT-014] Agent Settings Drawer integration
+ * Issue #3251: [FRONT-015] PDF Viewer integration
  *
  * Features:
  * - Bottom sheet with swipe gestures
@@ -10,9 +12,13 @@
  * - Message list placeholder
  * - Resize handle
  * - Dynamic typology switching (preserves chat history)
+ * - Settings drawer integration
+ * - PDF viewer integration
  */
 
 'use client';
+
+import { useState, useCallback } from 'react';
 
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,12 +30,16 @@ import type { Typology } from '@/lib/api/schemas/agent-typologies.schemas';
 import { useAgentStore } from '@/stores/agentStore';
 
 import { AgentTypeSwitcher } from './AgentTypeSwitcher';
+import { PdfViewerIntegration } from './PdfViewerIntegration';
+import { AgentSettingsDrawer, type AgentRuntimeConfig } from '../settings/AgentSettingsDrawer';
 import { ActionBar } from '../shared/ActionBar';
 
 
 interface AgentChatSheetProps {
   /** Game title to display in header */
   gameTitle: string;
+  /** Game ID for PDF viewer */
+  gameId: string;
   /** Current typology (full object for switcher) */
   currentTypology: Typology;
   /** Model name to display */
@@ -40,20 +50,69 @@ interface AgentChatSheetProps {
   tokensLimit: number;
   /** Session ID for typology switch API call */
   sessionId: string;
+  /** Whether game has PDF documents */
+  hasPdf?: boolean;
+  /** User tier for settings */
+  userTier?: 'free' | 'premium';
+  /** Current agent config */
+  currentConfig?: AgentRuntimeConfig;
   /** Callback when typology is switched successfully */
   onTypologySwitch?: (newTypology: Typology) => void;
+  /** Callback when config is updated */
+  onConfigUpdated?: (config: AgentRuntimeConfig) => void;
 }
+
+const DEFAULT_CONFIG: AgentRuntimeConfig = {
+  modelId: 'gpt-3.5-turbo',
+  temperature: 0.7,
+  ragStrategy: 'hybrid',
+  maxTokens: 2048,
+  topK: 5,
+  minScore: 0.7,
+};
 
 export function AgentChatSheet({
   gameTitle,
+  gameId,
   currentTypology,
   modelName,
   tokensUsed,
   tokensLimit,
   sessionId,
+  hasPdf = false,
+  userTier = 'free',
+  currentConfig = DEFAULT_CONFIG,
   onTypologySwitch,
+  onConfigUpdated,
 }: AgentChatSheetProps) {
-  const { isChatOpen, closeChat } = useAgentStore();
+  const { isChatOpen, closeChat, openPdfViewer } = useAgentStore();
+
+  // Settings drawer state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [agentConfig, setAgentConfig] = useState<AgentRuntimeConfig>(currentConfig);
+
+  // Settings handlers
+  const handleOpenSettings = useCallback(() => {
+    setIsSettingsOpen(true);
+  }, []);
+
+  const handleCloseSettings = useCallback(() => {
+    setIsSettingsOpen(false);
+  }, []);
+
+  const handleConfigUpdated = useCallback((config: AgentRuntimeConfig) => {
+    setAgentConfig(config);
+    onConfigUpdated?.(config);
+  }, [onConfigUpdated]);
+
+  // PDF handler
+  const handleOpenPdf = useCallback(() => {
+    // Open PDF at page 1 (or last viewed page from store)
+    openPdfViewer(gameId, 1);
+    toast.info(`📄 Apertura regolamento`, {
+      description: 'Premi P per aprire/chiudere',
+    });
+  }, [gameId, openPdfViewer]);
 
   // Fetch approved typologies for switcher dropdown
   const { data: availableTypologies = [], isLoading: isLoadingTypologies } = useApprovedTypologies(isChatOpen);
@@ -153,12 +212,27 @@ export function AgentChatSheet({
         <div className="border-t border-slate-800 pt-3">
           <ActionBar
             state="chat"
-            onSettings={() => {}}
+            onSettings={handleOpenSettings}
             onExport={() => {}}
             onMinimize={closeChat}
+            onOpenPdf={handleOpenPdf}
+            hasPdf={hasPdf}
           />
         </div>
       </SheetContent>
+
+      {/* Settings Drawer - Issue #3250 */}
+      <AgentSettingsDrawer
+        isOpen={isSettingsOpen}
+        onClose={handleCloseSettings}
+        sessionId={sessionId}
+        currentConfig={agentConfig}
+        userTier={userTier}
+        onConfigUpdated={handleConfigUpdated}
+      />
+
+      {/* PDF Viewer Integration - Issue #3251 */}
+      <PdfViewerIntegration gameId={gameId} />
     </Sheet>
   );
 }

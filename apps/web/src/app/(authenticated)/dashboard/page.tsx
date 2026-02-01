@@ -1,26 +1,38 @@
 /**
- * Dashboard Page (New Design) - Issue #3286
+ * Dashboard Page (Server Component) - Issue #3307
  *
- * New navigation hub design with:
- * - 6 reorderable sections
- * - Grid/List view toggle per section
- * - Global search with filters
- * - Warm Tabletop aesthetic
+ * Server-side entry point for the dashboard hub with:
+ * - SEO metadata configuration
+ * - Role-based access control (RequireRole)
+ * - Client component delegation
  *
  * @see docs/features/dashboard-requirements.md
  */
 
-'use client';
+import { RequireRole } from '@/components/auth/RequireRole';
+
+import { DashboardClient } from './dashboard-client';
+
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Dashboard | MeepleAI',
+  description:
+    'Your personal board game hub. View your library, track activity, manage wishlists, and get AI-powered game recommendations.',
+  openGraph: {
+    title: 'Dashboard | MeepleAI',
+    description:
+      'Your personal board game hub. View your library, track activity, manage wishlists, and get AI-powered game recommendations.',
+    type: 'website',
+  },
+};
 
 export const dynamic = 'force-dynamic';
 
-import { Dashboard } from '@/components/dashboard';
-import { Layout } from '@/components/layout';
-
 export default function DashboardPage() {
   return (
-    <Layout showActionBar>
-      <Dashboard />
-    </Layout>
+    <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
+      <DashboardClient />
+    </RequireRole>
   );
 }

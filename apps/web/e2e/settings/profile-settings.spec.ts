@@ -11,7 +11,7 @@
  * Note: Avatar upload is not implemented in current UI
  */
 
-import { test, expect } from '../fixtures/chromatic';
+import { test, expect } from '../fixtures';
 
 import type { Page } from '@playwright/test';
 

@@ -18,7 +18,7 @@
  * @see apps/web/e2e/pages/
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { AuthHelper, USER_FIXTURES } from './pages';
 
 test.describe('PDF Viewer Modal (BGAI-076)', () => {

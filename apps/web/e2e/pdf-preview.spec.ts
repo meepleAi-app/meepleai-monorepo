@@ -24,7 +24,7 @@
  * - Upload button is enabled after successful preview
  */
 
-import { test, expect, Page } from './fixtures/chromatic';
+import { test, expect, Page } from './fixtures';
 import { AuthHelper, USER_FIXTURES } from './pages';
 
 // Extend test with editor authentication

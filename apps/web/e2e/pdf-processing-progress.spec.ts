@@ -13,7 +13,7 @@
  * @see apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Handlers/
  */
 
-import { test as base, expect, type Page } from './fixtures/chromatic';
+import { test as base, expect, type Page } from './fixtures';
 import { AuthHelper, USER_FIXTURES } from './pages';
 
 // Extend test with editor authentication

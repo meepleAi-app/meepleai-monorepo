@@ -69,7 +69,7 @@ describe('useSessionSync', () => {
     );
 
     expect(global.EventSource).toHaveBeenCalledWith(
-      expect.stringContaining(`/api/v1/sessions/${mockSessionId}/stream`),
+      expect.stringContaining(`/api/v1/game-sessions/${mockSessionId}/stream`),
       expect.objectContaining({ withCredentials: true })
     );
   });

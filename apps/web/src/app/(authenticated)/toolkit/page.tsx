@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+
 import { Dice6, Users, CalendarDays } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { useSessionStore } from '@/lib/stores/sessionStore';
-import { toast } from 'sonner';
 
 /**
  * Toolkit Landing Page
@@ -112,6 +113,7 @@ export default function ToolkitLandingPage() {
    */
   const updateParticipant = (index: number, value: string) => {
     const updated = [...participantNames];
+    // eslint-disable-next-line security/detect-object-injection -- index is validated function parameter for array update
     updated[index] = value;
     setParticipantNames(updated);
   };

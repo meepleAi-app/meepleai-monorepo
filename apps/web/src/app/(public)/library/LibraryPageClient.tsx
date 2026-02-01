@@ -96,7 +96,7 @@ export default function LibraryPageClient() {
   });
 
   // Ask Agent modal state (Issue #3185)
-  const [askAgentModal, setAskAgentModal] = useState<{
+  const [_askAgentModal, _setAskAgentModal] = useState<{
     isOpen: boolean;
     gameId: string;
   }>({

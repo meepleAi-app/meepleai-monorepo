@@ -118,6 +118,7 @@ export function ScoreInput({
     }
   };
 
+  // eslint-disable-next-line security/detect-object-injection -- syncStatus is typed union of valid keys
   const currentSyncStatus = syncStatusConfig[syncStatus];
 
   return (

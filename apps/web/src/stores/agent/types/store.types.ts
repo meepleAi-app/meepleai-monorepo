@@ -5,12 +5,13 @@
  */
 
 import { ConfigSlice } from '../slices/configSlice';
-import { SessionSlice } from '../slices/sessionSlice';
 import { ConversationSlice } from '../slices/conversationSlice';
+import { SessionSlice } from '../slices/sessionSlice';
+import { UISlice } from '../slices/uiSlice';
 
 /**
  * Combined Agent Store Type
  *
  * Combines all slices into a single store interface
  */
-export type AgentStore = ConfigSlice & SessionSlice & ConversationSlice;
+export type AgentStore = ConfigSlice & SessionSlice & ConversationSlice & UISlice;

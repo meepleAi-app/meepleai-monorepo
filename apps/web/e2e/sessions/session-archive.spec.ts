@@ -32,7 +32,7 @@ async function setupSessionArchiveMocks(page: Page) {
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/sessions**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/game-sessions**`, async (route) => {
     const url = route.request().url();
     const includeArchived = url.includes('archived=true');
     const filteredSessions = includeArchived ? sessions : sessions.filter(s => !s.archived);
@@ -43,8 +43,8 @@ async function setupSessionArchiveMocks(page: Page) {
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/sessions/*/archive`, async (route) => {
-    const sessionId = route.request().url().match(/sessions\/([^/]+)\/archive/)?.[1];
+  await page.route(`${API_BASE}/api/v1/game-sessions/*/archive`, async (route) => {
+    const sessionId = route.request().url().match(/game-sessions\/([^/]+)\/archive/)?.[1];
     const idx = sessions.findIndex(s => s.id === sessionId);
     if (idx >= 0) sessions[idx].archived = true;
     await route.fulfill({
@@ -54,8 +54,8 @@ async function setupSessionArchiveMocks(page: Page) {
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/sessions/*/restore`, async (route) => {
-    const sessionId = route.request().url().match(/sessions\/([^/]+)\/restore/)?.[1];
+  await page.route(`${API_BASE}/api/v1/game-sessions/*/restore`, async (route) => {
+    const sessionId = route.request().url().match(/game-sessions\/([^/]+)\/restore/)?.[1];
     const idx = sessions.findIndex(s => s.id === sessionId);
     if (idx >= 0) sessions[idx].archived = false;
     await route.fulfill({

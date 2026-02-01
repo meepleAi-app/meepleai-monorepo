@@ -248,19 +248,19 @@ describe('AgentConfigModal', () => {
 
     await user.click(screen.getByText('Configura AI'));
 
-    // Wait for modal to load
+    // Wait for modal to load and recommended model to be auto-selected
+    // Premium users get GPT-4o as recommended model
     await waitFor(() => {
-      expect(screen.getByLabelText(/Modello AI/i)).toBeInTheDocument();
+      expect(screen.getByText('GPT-4o')).toBeInTheDocument();
     });
 
-    // Select model dropdown (this is simplified - actual interaction may vary)
-    const modelSelect = screen.getByLabelText(/Modello AI/i);
-    await user.click(modelSelect);
-
-    // Cost estimation should appear after selection
+    // Cost estimation should be visible once model is selected
     await waitFor(() => {
-      expect(screen.queryByText(/Costo stimato per query/i)).toBeInTheDocument();
+      expect(screen.getByText(/Costo stimato per query/i)).toBeInTheDocument();
     });
+
+    // Verify the cost badge displays the correct cost for GPT-4o
+    expect(screen.getByText(/\$0\.005/i)).toBeInTheDocument(); // GPT-4o cost (Premium tier)
   });
 
   it('should disable save button when form invalid', async () => {

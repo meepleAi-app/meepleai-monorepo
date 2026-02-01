@@ -5,12 +5,13 @@
  * Tests multiple game removal flow and loading states.
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
-import { within, userEvent } from '@storybook/test';
-import { fn } from '@storybook/test';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { within, userEvent } from 'storybook/test';
+import { fn } from 'storybook/test';
 
 import { BulkRemoveDialog } from './BulkRemoveDialog';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Create QueryClient for React Query
 const queryClient = new QueryClient({

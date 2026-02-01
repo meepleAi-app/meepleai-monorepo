@@ -69,7 +69,7 @@ async function setupMultiLanguageMocks(page: Page) {
   });
 
   // Mock session creation with language
-  await page.route(`${API_BASE}/api/v1/sessions`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/game-sessions`, async (route) => {
     const body = await route.request().postDataJSON();
     if (body?.language) {
       currentLanguage = body.language;

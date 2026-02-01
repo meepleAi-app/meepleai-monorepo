@@ -12,8 +12,10 @@
 
 import { StateCreator } from 'zustand';
 
-import { AgentSession, AgentStoreError } from '../types';
 import { AgentMode } from '@/components/agent';
+
+import { AgentSession, AgentStoreError } from '../types';
+
 import type { AgentStore } from '../types/store.types';
 
 export interface SessionSlice {

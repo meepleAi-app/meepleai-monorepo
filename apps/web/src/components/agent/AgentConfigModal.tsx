@@ -13,9 +13,13 @@
 'use client';
 
 import React from 'react';
+
 import { AlertCircle } from 'lucide-react';
 
-import { useAgentConfigModal } from '@/hooks/useAgentConfigModal';
+import { LoadingButton } from '@/components/loading/LoadingButton';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Progress } from '@/components/ui/feedback/progress';
 import {
   Dialog,
   DialogContent,
@@ -32,11 +36,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-import { Progress } from '@/components/ui/feedback/progress';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { LoadingButton } from '@/components/loading/LoadingButton';
-import { Badge } from '@/components/ui/data-display/badge';
 import { Label } from '@/components/ui/primitives/label';
+import { useAgentConfigModal } from '@/hooks/useAgentConfigModal';
 
 export interface AgentConfigModalProps {
   gameId: string;

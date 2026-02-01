@@ -617,7 +617,6 @@ export function UserGameCard({
         onShare={onShare ? () => onShare(game.gameId, game.gameTitle) : undefined}
         onManageSession={() => {
           // TODO: Implement session management
-          console.log('Manage session for', game.gameId);
         }}
       />
     </motion.div>

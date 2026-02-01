@@ -43,13 +43,13 @@ internal static class SessionTrackingEndpoints
 
     private static void MapCreateSessionEndpoint(RouteGroupBuilder group)
     {
-        group.MapPost("/sessions", async (
+        group.MapPost("/game-sessions", async (
             CreateSessionCommand command,
             IMediator mediator,
             CancellationToken ct) =>
         {
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
-            return Results.Created($"/api/v1/sessions/{result.SessionId}", result);
+            return Results.Created($"/api/v1/game-sessions/{result.SessionId}", result);
         })
         .RequireAuthenticatedUser()
         .WithName("CreateSession")
@@ -62,7 +62,7 @@ internal static class SessionTrackingEndpoints
 
     private static void MapUpdateScoreEndpoint(RouteGroupBuilder group)
     {
-        group.MapPut("/sessions/{sessionId:guid}/scores", async (
+        group.MapPut("/game-sessions/{sessionId:guid}/scores", async (
             Guid sessionId,
             UpdateScoreCommand command,
             IMediator mediator,
@@ -89,7 +89,7 @@ internal static class SessionTrackingEndpoints
 
     private static void MapAddParticipantEndpoint(RouteGroupBuilder group)
     {
-        group.MapPost("/sessions/{sessionId:guid}/participants", async (
+        group.MapPost("/game-sessions/{sessionId:guid}/participants", async (
             Guid sessionId,
             AddParticipantCommand command,
             IMediator mediator,
@@ -115,7 +115,7 @@ internal static class SessionTrackingEndpoints
 
     private static void MapAddNoteEndpoint(RouteGroupBuilder group)
     {
-        group.MapPost("/sessions/{sessionId:guid}/notes", async (
+        group.MapPost("/game-sessions/{sessionId:guid}/notes", async (
             Guid sessionId,
             AddNoteCommand command,
             IMediator mediator,
@@ -141,7 +141,7 @@ internal static class SessionTrackingEndpoints
 
     private static void MapFinalizeSessionEndpoint(RouteGroupBuilder group)
     {
-        group.MapPost("/sessions/{sessionId:guid}/finalize", async (
+        group.MapPost("/game-sessions/{sessionId:guid}/finalize", async (
             Guid sessionId,
             FinalizeSessionCommand command,
             IMediator mediator,
@@ -167,7 +167,7 @@ internal static class SessionTrackingEndpoints
 
     private static void MapGetActiveSessionEndpoint(RouteGroupBuilder group)
     {
-        group.MapGet("/sessions/active", async (
+        group.MapGet("/game-sessions/active", async (
             IMediator mediator,
             HttpContext context,
             CancellationToken ct) =>
@@ -200,7 +200,7 @@ internal static class SessionTrackingEndpoints
 
     private static void MapGetSessionByCodeEndpoint(RouteGroupBuilder group)
     {
-        group.MapGet("/sessions/code/{code}", async (
+        group.MapGet("/game-sessions/code/{code}", async (
             string code,
             IMediator mediator,
             CancellationToken ct) =>
@@ -226,7 +226,7 @@ internal static class SessionTrackingEndpoints
 
     private static void MapGetScoreboardEndpoint(RouteGroupBuilder group)
     {
-        group.MapGet("/sessions/{sessionId:guid}/scoreboard", async (
+        group.MapGet("/game-sessions/{sessionId:guid}/scoreboard", async (
             Guid sessionId,
             IMediator mediator,
             CancellationToken ct) =>
@@ -246,7 +246,7 @@ internal static class SessionTrackingEndpoints
 
     private static void MapGetSessionDetailsEndpoint(RouteGroupBuilder group)
     {
-        group.MapGet("/sessions/{sessionId:guid}", async (
+        group.MapGet("/game-sessions/{sessionId:guid}", async (
             Guid sessionId,
             IMediator mediator,
             CancellationToken ct) =>
@@ -272,7 +272,7 @@ internal static class SessionTrackingEndpoints
 
     private static void MapGetSessionHistoryEndpoint(RouteGroupBuilder group)
     {
-        group.MapGet("/sessions/history", async (
+        group.MapGet("/game-sessions/history", async (
             IMediator mediator,
             HttpContext context,
             Guid? gameId = null,
@@ -305,7 +305,7 @@ internal static class SessionTrackingEndpoints
     /// </summary>
     private static void MapSessionStreamEndpoint(RouteGroupBuilder group)
     {
-        group.MapGet("/sessions/{sessionId:guid}/stream", async (
+        group.MapGet("/game-sessions/{sessionId:guid}/stream", async (
             Guid sessionId,
             HttpContext context,
             IMediator mediator,

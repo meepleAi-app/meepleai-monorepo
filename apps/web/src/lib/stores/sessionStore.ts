@@ -96,7 +96,7 @@ export const useSessionStore = create<SessionStore>()(
 
         try {
           const baseUrl = process.env.NEXT_PUBLIC_API_BASE || '';
-          const response = await fetch(`${baseUrl}/api/v1/sessions`, {
+          const response = await fetch(`${baseUrl}/api/v1/game-sessions`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ export const useSessionStore = create<SessionStore>()(
 
         try {
           const baseUrl = process.env.NEXT_PUBLIC_API_BASE || '';
-          const response = await fetch(`${baseUrl}/api/v1/sessions/join/${code}`, {
+          const response = await fetch(`${baseUrl}/api/v1/game-sessions/join/${code}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -170,7 +170,7 @@ export const useSessionStore = create<SessionStore>()(
 
         try {
           const baseUrl = process.env.NEXT_PUBLIC_API_BASE || '';
-          const response = await fetch(`${baseUrl}/api/v1/sessions/${sessionId}/details`, {
+          const response = await fetch(`${baseUrl}/api/v1/game-sessions/${sessionId}/details`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -210,7 +210,7 @@ export const useSessionStore = create<SessionStore>()(
 
       // ========== Update Score (Optimistic UI) ==========
       updateScore: async (request: UpdateScoreRequest) => {
-        const { activeSession, scoreboard } = get();
+        const { activeSession, scoreboard: _scoreboard } = get();
         if (!activeSession) {
           throw new Error('No active session');
         }
@@ -242,7 +242,7 @@ export const useSessionStore = create<SessionStore>()(
 
         try {
           const baseUrl = process.env.NEXT_PUBLIC_API_BASE || '';
-          const response = await fetch(`${baseUrl}/api/v1/sessions/${activeSession.id}/scores`, {
+          const response = await fetch(`${baseUrl}/api/v1/game-sessions/${activeSession.id}/scores`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -304,7 +304,7 @@ export const useSessionStore = create<SessionStore>()(
 
         try {
           const baseUrl = process.env.NEXT_PUBLIC_API_BASE || '';
-          const response = await fetch(`${baseUrl}/api/v1/sessions/${activeSession.id}/pause`, {
+          const response = await fetch(`${baseUrl}/api/v1/game-sessions/${activeSession.id}/pause`, {
             method: 'PUT',
             credentials: 'include',
           });
@@ -341,7 +341,7 @@ export const useSessionStore = create<SessionStore>()(
 
         try {
           const baseUrl = process.env.NEXT_PUBLIC_API_BASE || '';
-          const response = await fetch(`${baseUrl}/api/v1/sessions/${activeSession.id}/resume`, {
+          const response = await fetch(`${baseUrl}/api/v1/game-sessions/${activeSession.id}/resume`, {
             method: 'PUT',
             credentials: 'include',
           });
@@ -379,7 +379,7 @@ export const useSessionStore = create<SessionStore>()(
         try {
           const baseUrl = process.env.NEXT_PUBLIC_API_BASE || '';
           const response = await fetch(
-            `${baseUrl}/api/v1/sessions/${activeSession.id}/finalize`,
+            `${baseUrl}/api/v1/game-sessions/${activeSession.id}/finalize`,
             {
               method: 'PUT',
               headers: {

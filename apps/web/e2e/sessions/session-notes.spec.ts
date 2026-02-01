@@ -31,7 +31,7 @@ async function setupSessionNotesMocks(page: Page) {
     });
   });
 
-  await page.route(`${API_BASE}/api/v1/sessions/*/notes**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/game-sessions/*/notes**`, async (route) => {
     const method = route.request().method();
     if (method === 'GET') {
       await route.fulfill({
@@ -65,7 +65,7 @@ async function setupSessionNotesMocks(page: Page) {
     }
   });
 
-  await page.route(`${API_BASE}/api/v1/sessions/*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/game-sessions/*`, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

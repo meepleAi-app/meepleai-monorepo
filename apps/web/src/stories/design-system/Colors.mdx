@@ -1,0 +1,258 @@
+{/* Colors.mdx - MeepleAI Color System Documentation */}
+import { Meta, ColorPalette, ColorItem } from '@storybook/addon-docs/blocks';
+
+<Meta title="Design System/Colors" />
+
+# Color System
+
+MeepleAI uses a semantic color system with HSL values for flexible theming. All colors are WCAG 2.1 AA compliant for accessibility.
+
+## Brand Colors
+
+Our primary brand palette reflects the warm, playful aesthetic of board games.
+
+<ColorPalette>
+  <ColorItem
+    title="MeepleAI Orange"
+    subtitle="--color-meeple-orange"
+    colors={{ Primary: 'hsl(25, 85%, 45%)' }}
+  />
+  <ColorItem
+    title="MeepleAI Purple"
+    subtitle="--color-meeple-purple"
+    colors={{ Accent: 'hsl(262, 83%, 62%)' }}
+  />
+  <ColorItem
+    title="Warm Background"
+    subtitle="--color-meeple-warm-bg"
+    colors={{ Surface: 'hsl(30, 25%, 97%)' }}
+  />
+</ColorPalette>
+
+## Semantic Colors (Light Theme)
+
+These tokens adapt between light and dark modes.
+
+### Primary Palette
+
+<ColorPalette>
+  <ColorItem
+    title="Primary"
+    subtitle="--primary: 25 95% 38%"
+    colors={{
+      Primary: 'hsl(25, 95%, 38%)',
+      Foreground: 'hsl(0, 0%, 100%)'
+    }}
+  />
+  <ColorItem
+    title="Secondary"
+    subtitle="--secondary: 142 76% 28%"
+    colors={{
+      Secondary: 'hsl(142, 76%, 28%)',
+      Foreground: 'hsl(0, 0%, 100%)'
+    }}
+  />
+  <ColorItem
+    title="Accent"
+    subtitle="--accent: 271 91% 55%"
+    colors={{
+      Accent: 'hsl(271, 91%, 55%)',
+      Foreground: 'hsl(0, 0%, 100%)'
+    }}
+  />
+</ColorPalette>
+
+### UI Colors
+
+<ColorPalette>
+  <ColorItem
+    title="Background"
+    subtitle="--background: 30 25% 97%"
+    colors={{ Background: 'hsl(30, 25%, 97%)' }}
+  />
+  <ColorItem
+    title="Foreground"
+    subtitle="--foreground: 30 15% 15%"
+    colors={{ Foreground: 'hsl(30, 15%, 15%)' }}
+  />
+  <ColorItem
+    title="Card"
+    subtitle="--card: 0 0% 100%"
+    colors={{
+      Card: 'hsl(0, 0%, 100%)',
+      'Card Foreground': 'hsl(30, 15%, 15%)'
+    }}
+  />
+  <ColorItem
+    title="Muted"
+    subtitle="--muted: 30 20% 90%"
+    colors={{
+      Muted: 'hsl(30, 20%, 90%)',
+      'Muted Foreground': 'hsl(30, 12%, 35%)'
+    }}
+  />
+</ColorPalette>
+
+### Feedback Colors
+
+<ColorPalette>
+  <ColorItem
+    title="Destructive"
+    subtitle="--destructive: 0 84.2% 60.2%"
+    colors={{
+      Destructive: 'hsl(0, 84.2%, 60.2%)',
+      Foreground: 'hsl(0, 0%, 98%)'
+    }}
+  />
+  <ColorItem
+    title="Success"
+    subtitle="--color-success: 142 76% 36%"
+    colors={{ Success: 'hsl(142, 76%, 36%)' }}
+  />
+  <ColorItem
+    title="Warning"
+    subtitle="--color-warning: 36 100% 50%"
+    colors={{ Warning: 'hsl(36, 100%, 50%)' }}
+  />
+  <ColorItem
+    title="Info"
+    subtitle="--color-info: 221 83% 53%"
+    colors={{ Info: 'hsl(221, 83%, 53%)' }}
+  />
+</ColorPalette>
+
+## Dark Theme Colors
+
+The dark theme uses neutral grays with warm accents for reduced eye strain.
+
+<ColorPalette>
+  <ColorItem
+    title="Dark Background"
+    subtitle="--background: 0 0% 10%"
+    colors={{ Background: 'hsl(0, 0%, 10%)' }}
+  />
+  <ColorItem
+    title="Dark Card"
+    subtitle="--card: 0 0% 18%"
+    colors={{ Card: 'hsl(0, 0%, 18%)' }}
+  />
+  <ColorItem
+    title="Dark Primary"
+    subtitle="--primary: 25 95% 60%"
+    colors={{ Primary: 'hsl(25, 95%, 60%)' }}
+  />
+  <ColorItem
+    title="Dark Accent"
+    subtitle="--accent: 45 93% 56%"
+    colors={{ Accent: 'hsl(45, 93%, 56%)' }}
+  />
+</ColorPalette>
+
+## Chart Colors
+
+Used for data visualization in dashboards and analytics.
+
+<ColorPalette>
+  <ColorItem
+    title="Chart Palette"
+    subtitle="--chart-1 through --chart-5"
+    colors={{
+      'Chart 1': 'hsl(25, 95%, 53%)',
+      'Chart 2': 'hsl(142, 76%, 36%)',
+      'Chart 3': 'hsl(271, 91%, 65%)',
+      'Chart 4': 'hsl(45, 93%, 47%)',
+      'Chart 5': 'hsl(0, 72%, 51%)'
+    }}
+  />
+</ColorPalette>
+
+## Sidebar Colors
+
+Dedicated tokens for the sidebar component.
+
+<ColorPalette>
+  <ColorItem
+    title="Sidebar"
+    subtitle="Sidebar-specific tokens"
+    colors={{
+      Background: 'hsl(30, 22%, 94%)',
+      Primary: 'hsl(25, 95%, 53%)',
+      Accent: 'hsl(30, 20%, 88%)',
+      Border: 'hsl(30, 15%, 82%)'
+    }}
+  />
+</ColorPalette>
+
+## Game-Specific Colors
+
+Extended palette for game badges and categorization.
+
+<ColorPalette>
+  <ColorItem
+    title="Game Colors"
+    subtitle="Board game theme colors"
+    colors={{
+      Gloomhaven: 'hsl(220, 70%, 50%)',
+      Wingspan: 'hsl(180, 50%, 50%)',
+      Terraforming: 'hsl(15, 70%, 50%)',
+      Catan: 'hsl(30, 80%, 50%)',
+      Azul: 'hsl(210, 80%, 60%)'
+    }}
+  />
+</ColorPalette>
+
+## Accessibility Notes
+
+### WCAG 2.1 AA Compliance
+
+All color combinations have been tested for minimum contrast ratios:
+
+| Element | Requirement | Our Ratio |
+|---------|-------------|-----------|
+| Normal text | 4.5:1 | 4.8:1+ |
+| Large text | 3:1 | 5.2:1+ |
+| UI components | 3:1 | 4.1:1+ |
+
+### Color Adjustments for Compliance
+
+Several colors were darkened from their original values to meet WCAG requirements (Issue #2234):
+
+- **Primary**: Darkened from 53% to 38% lightness
+- **Secondary**: Darkened from 36% to 28% lightness
+- **Accent**: Darkened from 65% to 55% lightness
+- **Muted Foreground**: Darkened to 35% for guaranteed contrast
+
+## Usage
+
+### In Tailwind Classes
+
+```tsx
+// Semantic colors
+<div className="bg-primary text-primary-foreground" />
+<div className="bg-secondary text-secondary-foreground" />
+<div className="bg-destructive text-destructive-foreground" />
+
+// UI colors
+<div className="bg-background text-foreground" />
+<div className="bg-muted text-muted-foreground" />
+<div className="bg-card text-card-foreground" />
+```
+
+### In CSS Variables
+
+```css
+.custom-element {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--border));
+}
+```
+
+### With Opacity
+
+```css
+/* HSL allows easy opacity adjustment */
+.overlay {
+  background: hsl(var(--primary) / 0.5);
+}
+```

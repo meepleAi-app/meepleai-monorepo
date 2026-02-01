@@ -1,0 +1,144 @@
+{/* Introduction.mdx - MeepleAI Design System Entry Point */}
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Design System/Introduction" />
+
+# MeepleAI Design System
+
+Welcome to the MeepleAI Design System documentation. This guide provides comprehensive documentation of our design tokens, components, and guidelines for building consistent, accessible user interfaces.
+
+## Overview
+
+MeepleAI uses a **token-based design system** built on Tailwind CSS 4 with CSS custom properties. Our design language reflects a "Playful Boardroom" aesthetic - professional yet approachable, with warm colors and rounded shapes that evoke the tactile feel of board games.
+
+### Design Principles
+
+- **Warm & Inviting**: Beige backgrounds, orange accents, and friendly typography
+- **Accessible First**: WCAG 2.1 AA compliant contrast ratios throughout
+- **Responsive**: Mobile-first design with optimized touch targets
+- **Consistent**: Systematic tokens for spacing, colors, and effects
+
+## Quick Links
+
+| Section | Description |
+|---------|-------------|
+| [Colors](/docs/design-system-colors--docs) | Color palette with semantic naming and theme tokens |
+| [Typography](/docs/design-system-typography--docs) | Font families, sizes, weights, and text styles |
+| [Spacing](/docs/design-system-spacing--docs) | 4px-based spacing scale with semantic names |
+| [Effects](/docs/design-system-effects--docs) | Shadows, border radius, transitions, and animations |
+| [Breakpoints](/docs/design-system-breakpoints--docs) | Responsive breakpoints and mobile tokens |
+| [Accessibility](/docs/design-system-accessibility--docs) | WCAG guidelines and a11y patterns |
+| [Composition](/docs/design-system-composition--docs) | Component patterns and usage examples |
+
+## Figma Design Files
+
+Our design system is sourced from Figma. Contact the design team for access to:
+
+- **MeepleAI Component Library** - UI component designs
+- **MeepleAI Design Tokens** - Color, typography, and spacing definitions
+- **MeepleAI Brand Guidelines** - Logo usage, voice & tone
+
+> For Figma access, contact the design team or check the internal documentation.
+
+## Tailwind Configuration
+
+Our Tailwind setup extends the default configuration with MeepleAI-specific tokens:
+
+### Font Families
+
+```js
+// tailwind.config.js
+fontFamily: {
+  quicksand: ['var(--font-quicksand)', 'sans-serif'], // Headings
+  nunito: ['var(--font-nunito)', 'sans-serif'],       // Body text
+  heading: ['var(--font-heading)', 'sans-serif'],
+  body: ['var(--font-body)', 'sans-serif'],
+}
+```
+
+### Animations
+
+```js
+// tailwind.config.js
+animation: {
+  'fade-in': 'fadeIn 0.5s ease-in',
+  'slide-up': 'slideUp 0.6s ease-out',
+  'scale-in': 'scaleIn 0.4s ease-out',
+  'pulse-meeple': 'pulseMeeple 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+}
+```
+
+### CSS Variable Integration
+
+Colors are managed via CSS variables in `globals.css` for dynamic theming:
+
+```css
+:root {
+  --primary: 25 95% 38%;      /* MeepleAI Orange */
+  --secondary: 142 76% 28%;   /* Accent Green */
+  --accent: 271 91% 55%;      /* Purple */
+  --background: 30 25% 97%;   /* Warm Beige */
+}
+```
+
+## Theme Support
+
+MeepleAI supports light and dark themes via the `dark` class on the `<html>` element:
+
+| Mode | Background | Text | Primary |
+|------|------------|------|---------|
+| Light | Warm beige (#f8f6f0) | Dark brown | Orange |
+| Dark | Neutral gray (#1a1a1a) | Warm beige | Orange (lighter) |
+
+## Getting Started
+
+### Using Design Tokens
+
+Import tokens via Tailwind utilities:
+
+```tsx
+// Using semantic colors
+<Button className="bg-primary text-primary-foreground">
+  Start Game
+</Button>
+
+// Using spacing tokens
+<Card className="p-6 space-y-4">
+  <CardContent />
+</Card>
+```
+
+### Using CSS Variables Directly
+
+For custom components:
+
+```css
+.custom-element {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+}
+```
+
+## File Structure
+
+```
+src/styles/
+├── globals.css          # Global styles and theme tokens
+└── design-tokens.css    # Complete token definitions
+
+.storybook/
+├── main.ts              # Storybook configuration
+└── preview.tsx          # Theme and provider setup
+```
+
+## Contributing
+
+When adding new components or modifying design tokens:
+
+1. **Update tokens** in `design-tokens.css` if adding new values
+2. **Document changes** in the relevant Storybook story
+3. **Test both themes** (light and dark mode)
+4. **Verify accessibility** using the a11y addon
+5. **Review with design team** before merging

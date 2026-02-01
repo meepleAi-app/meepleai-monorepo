@@ -4,7 +4,7 @@ import type { Preview } from '@storybook/react';
 import React from 'react';
 
 import { withThemeByClassName } from '@storybook/addon-themes';
-import { INITIAL_VIEWPORTS, MINIMAL_VIEWPORTS } from '@storybook/addon-viewport';
+import { INITIAL_VIEWPORTS, MINIMAL_VIEWPORTS } from 'storybook/viewport';
 
 import '../src/styles/globals.css'; // Import Tailwind CSS
 import { AuthContext } from '../src/components/auth/AuthProvider';

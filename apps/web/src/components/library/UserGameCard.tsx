@@ -30,6 +30,8 @@ import {
   Zap,
   Bot,
   Dice6,
+  Trophy,
+  Gamepad2,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -264,10 +266,19 @@ export function UserGameCard({
               {game.gamePublisher && (
                 <p className="text-sm text-muted-foreground truncate">{game.gamePublisher}</p>
               )}
-              {/* Date */}
-              <p className="text-xs text-muted-foreground mt-1">
-                Aggiunto il {new Date(game.addedAt).toLocaleDateString('it-IT')}
-              </p>
+              {/* Stats: Plays & Win Rate (Issue #2867) */}
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1" title="Partite giocate">
+                  <Gamepad2 className="h-3 w-3" />
+                  <span data-testid="play-count">0 partite</span>
+                </span>
+                <span className="flex items-center gap-1" title="Percentuale vittorie">
+                  <Trophy className="h-3 w-3" />
+                  <span data-testid="win-rate">0%</span>
+                </span>
+                <span>·</span>
+                <span>Aggiunto il {new Date(game.addedAt).toLocaleDateString('it-IT')}</span>
+              </div>
             </div>
 
             {/* Status Badges */}
@@ -533,6 +544,18 @@ export function UserGameCard({
             {/* TODO: Implement PDF status check when endpoint available */}
             Regolamento Standard
           </Badge>
+        </div>
+
+        {/* Game Stats: Plays & Win Rate (Issue #2867) */}
+        <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-1.5" title="Partite giocate">
+            <Gamepad2 className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground" data-testid="play-count">0 partite</span>
+          </div>
+          <div className="flex items-center gap-1.5" title="Percentuale vittorie">
+            <Trophy className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground" data-testid="win-rate">0%</span>
+          </div>
         </div>
 
         {/* Notes Preview */}

@@ -84,9 +84,12 @@ export function ChatInput({
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
 
-    // Enforce character limit
+    // Enforce character limit by truncating
     if (value.length <= MAX_CHARS) {
       setInput(value);
+    } else {
+      // Truncate to max characters (handles paste operations)
+      setInput(value.slice(0, MAX_CHARS));
     }
   };
 

@@ -64,7 +64,7 @@ describe('ServiceHealthMatrix', () => {
   it('renders default number of skeletons when loading', () => {
     render(<ServiceHealthMatrix loading locale="it" />);
 
-    const skeletons = screen.getAllByTestId('service-card-loading');
+    const skeletons = screen.getAllByTestId('status-card-loading');
     expect(skeletons).toHaveLength(6); // Default skeleton count
   });
 

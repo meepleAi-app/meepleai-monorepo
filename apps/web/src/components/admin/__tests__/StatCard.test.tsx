@@ -160,7 +160,7 @@ describe('StatCard', () => {
   describe('Loading state', () => {
     it('renders loading skeleton when loading is true', () => {
       render(<StatCard label="Test" value="100" loading />);
-      expect(screen.getByTestId('statcard-loading')).toBeInTheDocument();
+      expect(screen.getByTestId('stat-card-loading')).toBeInTheDocument();
     });
 
     it('does not render label or value when loading', () => {

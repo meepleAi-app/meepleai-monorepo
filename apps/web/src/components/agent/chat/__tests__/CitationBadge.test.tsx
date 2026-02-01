@@ -150,8 +150,8 @@ describe('CitationBadge', () => {
       const { container } = render(<CitationBadge citation={mockCitation} />);
 
       const button = container.querySelector('button');
-      expect(button).toHaveClass('hover:bg-gray-600');
-      expect(button).toHaveClass('transition-colors');
+      expect(button).toHaveClass('dark:hover:bg-gray-600');
+      expect(button).toHaveClass('transition-all');
     });
 
     it('has focus ring for accessibility', () => {
@@ -165,8 +165,9 @@ describe('CitationBadge', () => {
     it('uses correct color for source text', () => {
       const { container } = render(<CitationBadge citation={mockCitation} />);
 
-      const sourceSpan = screen.getByText('Chess Rulebook');
-      expect(sourceSpan).toHaveClass('text-cyan-400');
+      // The text color is on the button element, inherited by the source span
+      const button = container.querySelector('button');
+      expect(button).toHaveClass('dark:text-cyan-400');
     });
   });
 });

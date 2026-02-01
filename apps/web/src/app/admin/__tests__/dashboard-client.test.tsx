@@ -222,7 +222,8 @@ describe('DashboardClient', () => {
     renderWithQueryClient(<DashboardClient />, queryClient);
 
     await waitFor(() => {
-      expect(screen.getByTestId('activity-feed-title')).toBeInTheDocument();
+      // ActivityList component uses 'activity-list-title' data-testid
+      expect(screen.getByTestId('activity-list-title')).toBeInTheDocument();
       expect(screen.getByText(/New user registered/)).toBeInTheDocument();
     });
   });
@@ -355,7 +356,8 @@ describe('DashboardClient', () => {
     renderWithQueryClient(<DashboardClient />, queryClient);
 
     await waitFor(() => {
-      expect(screen.getByTestId('quick-actions-title')).toBeInTheDocument();
+      // ActionGrid component uses 'action-grid-title' data-testid
+      expect(screen.getByTestId('action-grid-title')).toBeInTheDocument();
     });
   });
 
@@ -375,7 +377,8 @@ describe('DashboardClient', () => {
     });
 
     // Activity feed should not be rendered when events are empty
-    expect(screen.queryByTestId('activity-feed')).not.toBeInTheDocument();
+    // Note: ActivityList component uses 'activity-list' data-testid
+    expect(screen.queryByTestId('activity-list')).not.toBeInTheDocument();
   });
 
   describe('Issue #889: Performance (<1s render)', () => {

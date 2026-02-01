@@ -7,9 +7,12 @@
  * - Device details display (browser, OS, location)
  * - Revoke specific device session
  * - Revoke all sessions except current
+ *
+ * Refactored to use Page Object Model and fixtures
  */
 
-import { test, expect } from '../fixtures/chromatic';
+import { test, expect } from '../fixtures';
+import { ProfilePage } from '../pages';
 
 import type { Page } from '@playwright/test';
 
@@ -136,7 +139,7 @@ async function setupDeviceManagementMocks(
     const sessionId = sessionIdMatch?.[1];
 
     if (sessionId) {
-      activeSessions = activeSessions.filter(s => s.id !== sessionId);
+      activeSessions = activeSessions.filter((s) => s.id !== sessionId);
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -153,8 +156,7 @@ async function setupDeviceManagementMocks(
 
   // Mock revoke all sessions endpoint
   await page.route(`${API_BASE}/api/v1/auth/sessions/revoke-all`, async (route) => {
-    // Keep only current session
-    activeSessions = activeSessions.filter(s => s.isCurrent);
+    activeSessions = activeSessions.filter((s) => s.isCurrent);
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -186,9 +188,9 @@ test.describe('AUTH-12: Device Management', () => {
       await page.waitForLoadState('networkidle');
 
       // Find and click security/devices section
-      const securityLink = page.getByRole('link', { name: /security|devices/i }).or(
-        page.getByText(/security|devices/i)
-      );
+      const securityLink = page
+        .getByRole('link', { name: /security|devices/i })
+        .or(page.getByText(/security|devices/i));
 
       if (await securityLink.isVisible()) {
         await securityLink.click();
@@ -207,7 +209,9 @@ test.describe('AUTH-12: Device Management', () => {
 
       // Should show multiple sessions
       const sessionCards = page.locator('[data-testid*="session"], .device-card, .session-item');
-      await expect(sessionCards.or(page.getByText(/chrome|safari|firefox/i).first())).toBeVisible();
+      await expect(
+        sessionCards.or(page.getByText(/chrome|safari|firefox/i).first())
+      ).toBeVisible();
     });
 
     test('should highlight current session', async ({ page }) => {
@@ -218,9 +222,9 @@ test.describe('AUTH-12: Device Management', () => {
 
       // Current session should be marked
       await expect(
-        page.getByText(/current|this.*device|active.*now/i).or(
-          page.locator('.current-session, [data-current="true"]')
-        )
+        page
+          .getByText(/current|this.*device|active.*now/i)
+          .or(page.locator('.current-session, [data-current="true"]'))
       ).toBeVisible();
     });
   });
@@ -263,9 +267,7 @@ test.describe('AUTH-12: Device Management', () => {
       await page.waitForLoadState('networkidle');
 
       // Should show last active time
-      await expect(
-        page.getByText(/last.*active|ago|just.*now|minute|hour/i)
-      ).toBeVisible();
+      await expect(page.getByText(/last.*active|ago|just.*now|minute|hour/i)).toBeVisible();
     });
 
     test('should show device type icons', async ({ page }) => {
@@ -276,9 +278,10 @@ test.describe('AUTH-12: Device Management', () => {
 
       // Should show device type indicators (desktop, mobile)
       await expect(
-        page.locator('[data-device-type], .device-icon, .device-type').first().or(
-          page.getByText(/desktop|mobile|tablet|iphone/i)
-        )
+        page
+          .locator('[data-device-type], .device-icon, .device-type')
+          .first()
+          .or(page.getByText(/desktop|mobile|tablet|iphone/i))
       ).toBeVisible();
     });
   });
@@ -303,7 +306,9 @@ test.describe('AUTH-12: Device Management', () => {
       await page.waitForLoadState('networkidle');
 
       // Current session should not have revoke button (or it's disabled)
-      const currentSessionRevoke = page.locator('[data-current="true"]').getByRole('button', { name: /revoke/i });
+      const currentSessionRevoke = page
+        .locator('[data-current="true"]')
+        .getByRole('button', { name: /revoke/i });
       const isVisible = await currentSessionRevoke.isVisible().catch(() => false);
 
       if (isVisible) {
@@ -318,16 +323,18 @@ test.describe('AUTH-12: Device Management', () => {
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
-      const revokeButton = page.getByRole('button', { name: /revoke|remove|terminate/i }).first();
+      const revokeButton = page
+        .getByRole('button', { name: /revoke|remove|terminate/i })
+        .first();
 
       if (await revokeButton.isVisible()) {
         await revokeButton.click();
 
         // Should show confirmation dialog
         await expect(
-          page.getByText(/confirm|are.*you.*sure|will.*be.*logged.*out/i).or(
-            page.getByRole('dialog')
-          )
+          page
+            .getByText(/confirm|are.*you.*sure|will.*be.*logged.*out/i)
+            .or(page.getByRole('dialog'))
         ).toBeVisible();
       }
     });
@@ -338,9 +345,9 @@ test.describe('AUTH-12: Device Management', () => {
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
-      const initialCount = mocks.getActiveSessions().length;
-
-      const revokeButton = page.getByRole('button', { name: /revoke|remove|terminate/i }).first();
+      const revokeButton = page
+        .getByRole('button', { name: /revoke|remove|terminate/i })
+        .first();
 
       if (await revokeButton.isVisible()) {
         await revokeButton.click();
@@ -375,7 +382,9 @@ test.describe('AUTH-12: Device Management', () => {
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
-      const revokeAllButton = page.getByRole('button', { name: /revoke.*all|sign.*out.*all/i });
+      const revokeAllButton = page.getByRole('button', {
+        name: /revoke.*all|sign.*out.*all/i,
+      });
 
       if (await revokeAllButton.isVisible()) {
         await revokeAllButton.click();
@@ -393,7 +402,9 @@ test.describe('AUTH-12: Device Management', () => {
       await page.goto('/settings/security');
       await page.waitForLoadState('networkidle');
 
-      const revokeAllButton = page.getByRole('button', { name: /revoke.*all|sign.*out.*all/i });
+      const revokeAllButton = page.getByRole('button', {
+        name: /revoke.*all|sign.*out.*all/i,
+      });
 
       if (await revokeAllButton.isVisible()) {
         await revokeAllButton.click();

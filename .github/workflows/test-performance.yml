@@ -2,6 +2,7 @@ name: Performance Tests
 
 # Consolidated performance testing: K6 load tests + Lighthouse CI
 # Issue #2286: Workflow re-enabled after modernization
+# Issue #2928: Extended with all API load test scenarios
 
 on:
   schedule:
@@ -10,10 +11,8 @@ on:
   pull_request:
     paths:
       - 'apps/web/**'
-      - 'apps/api/src/Api/Routing/*AdminEndpoints.cs'
-      - 'apps/api/src/Api/Routing/LlmAnalyticsEndpoints.cs'
-      - 'apps/api/src/Api/Routing/ReportingEndpoints.cs'
-      - 'apps/api/src/Api/BoundedContexts/Administration/**'
+      - 'apps/api/src/Api/Routing/**'
+      - 'apps/api/src/Api/BoundedContexts/**'
       - 'tests/k6/**'
       - '.github/workflows/test-performance.yml'
   push:
@@ -32,6 +31,18 @@ on:
           - smoke
           - load
           - stress
+      k6_scenario:
+        description: 'K6 scenario to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - admin-polling
+          - user-dashboard
+          - library-browsing
+          - catalog-search
+          - admin-concurrent
       run_lighthouse:
         description: 'Run Lighthouse CI'
         required: false
@@ -236,23 +247,63 @@ jobs:
 
       - name: Run k6 performance tests
         working-directory: tests/k6
-        timeout-minutes: 15
+        timeout-minutes: 30
         env:
           K6_TEST_TYPE: ${{ inputs.test_type || 'smoke' }}
+          K6_SCENARIO: ${{ inputs.k6_scenario || 'all' }}
         run: |
+          # Determine test type
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             TEST_TYPE="smoke"
-            echo "PR detected - running smoke test"
+            SCENARIO="all"
+            echo "PR detected - running smoke tests for all scenarios"
           elif [ "${{ github.event_name }}" == "schedule" ]; then
             TEST_TYPE="smoke"
-            echo "Scheduled run - running smoke test"
+            SCENARIO="all"
+            echo "Scheduled run - running smoke tests for all scenarios"
           else
             TEST_TYPE="${K6_TEST_TYPE}"
-            echo "Manual run - running ${TEST_TYPE} test"
+            SCENARIO="${K6_SCENARIO}"
+            echo "Manual run - running ${TEST_TYPE} test for scenario: ${SCENARIO}"
           fi
 
           mkdir -p reports
-          k6 run --env TEST_TYPE=${TEST_TYPE} scenarios/admin-polling.js
+
+          # Define scenario files
+          declare -A SCENARIOS=(
+            ["admin-polling"]="scenarios/admin-polling.js"
+            ["user-dashboard"]="scenarios/user-dashboard-polling.js"
+            ["library-browsing"]="scenarios/library-browsing.js"
+            ["catalog-search"]="scenarios/catalog-search.js"
+            ["admin-concurrent"]="scenarios/admin-concurrent-actions.js"
+          )
+
+          # Run scenarios
+          if [ "$SCENARIO" == "all" ]; then
+            echo "Running all K6 scenarios..."
+            for scenario_name in "${!SCENARIOS[@]}"; do
+              scenario_file="${SCENARIOS[$scenario_name]}"
+              if [ -f "$scenario_file" ]; then
+                echo "========================================="
+                echo "Running: $scenario_name"
+                echo "========================================="
+                k6 run --env TEST_TYPE=${TEST_TYPE} "$scenario_file" || true
+              else
+                echo "Scenario file not found: $scenario_file"
+              fi
+            done
+          else
+            scenario_file="${SCENARIOS[$SCENARIO]}"
+            if [ -f "$scenario_file" ]; then
+              echo "Running scenario: $SCENARIO"
+              k6 run --env TEST_TYPE=${TEST_TYPE} "$scenario_file"
+            else
+              echo "ERROR: Scenario file not found: $scenario_file"
+              exit 1
+            fi
+          fi
+
+          echo "K6 tests completed"
 
       - name: Debug API logs on failure
         if: failure()

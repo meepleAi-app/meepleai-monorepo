@@ -7,9 +7,12 @@
  * - Suspicious login alert (new location/country)
  * - Notification settings management
  * - Email notification delivery
+ *
+ * Refactored to use Page Object Model and fixtures
  */
 
-import { test, expect } from '../fixtures/chromatic';
+import { test, expect } from '../fixtures';
+import { ProfilePage } from '../pages';
 
 import type { Page } from '@playwright/test';
 
@@ -138,13 +141,13 @@ async function setupLoginNotificationsMocks(
         contentType: 'application/json',
         body: JSON.stringify({
           notifications: mockNotifications,
-          unreadCount: mockNotifications.filter(n => !n.acknowledged).length,
+          unreadCount: mockNotifications.filter((n) => !n.acknowledged).length,
         }),
       });
     } else if (method === 'POST') {
       // Acknowledge notification
       const body = await route.request().postDataJSON();
-      const notification = mockNotifications.find(n => n.id === body?.notificationId);
+      const notification = mockNotifications.find((n) => n.id === body?.notificationId);
       if (notification) {
         notification.acknowledged = true;
       }
@@ -206,9 +209,9 @@ test.describe('AUTH-11: Login Notifications', () => {
 
       // Should show new device notification
       await expect(
-        page.getByText(/new.*device|new.*login|unrecognized.*device/i).or(
-          page.locator('.notification-badge, .alert')
-        )
+        page
+          .getByText(/new.*device|new.*login|unrecognized.*device/i)
+          .or(page.locator('.notification-badge, .alert'))
       ).toBeVisible();
     });
 
@@ -229,7 +232,9 @@ test.describe('AUTH-11: Login Notifications', () => {
       await page.waitForLoadState('networkidle');
 
       // Find and click acknowledge button
-      const acknowledgeButton = page.getByRole('button', { name: /acknowledge|dismiss|this.*was.*me/i });
+      const acknowledgeButton = page.getByRole('button', {
+        name: /acknowledge|dismiss|this.*was.*me/i,
+      });
       if (await acknowledgeButton.isVisible()) {
         await acknowledgeButton.click();
         await expect(page.getByText(/acknowledged|dismissed/i)).toBeVisible();
@@ -246,9 +251,9 @@ test.describe('AUTH-11: Login Notifications', () => {
 
       // Should show suspicious activity warning
       await expect(
-        page.getByText(/suspicious|unusual|different.*location|new.*country/i).or(
-          page.locator('.warning, .alert-warning')
-        )
+        page
+          .getByText(/suspicious|unusual|different.*location|new.*country/i)
+          .or(page.locator('.warning, .alert-warning'))
       ).toBeVisible();
     });
 
@@ -270,9 +275,9 @@ test.describe('AUTH-11: Login Notifications', () => {
 
       // Should offer security options
       await expect(
-        page.getByRole('button', { name: /secure.*account|logout.*all|change.*password/i }).or(
-          page.getByText(/review.*security|take.*action/i)
-        )
+        page
+          .getByRole('button', { name: /secure.*account|logout.*all|change.*password/i })
+          .or(page.getByText(/review.*security|take.*action/i))
       ).toBeVisible();
     });
   });
@@ -295,9 +300,9 @@ test.describe('AUTH-11: Login Notifications', () => {
       await page.waitForLoadState('networkidle');
 
       // Find toggle for login notifications
-      const toggle = page.getByRole('switch', { name: /login.*notification/i }).or(
-        page.getByRole('checkbox', { name: /login.*notification/i })
-      );
+      const toggle = page
+        .getByRole('switch', { name: /login.*notification/i })
+        .or(page.getByRole('checkbox', { name: /login.*notification/i }));
 
       if (await toggle.isVisible()) {
         await toggle.click();
@@ -325,9 +330,9 @@ test.describe('AUTH-11: Login Notifications', () => {
 
       // Should show notification indicator (badge, bell icon, etc.)
       await expect(
-        page.locator('.notification-badge, [data-testid="notification-indicator"]').or(
-          page.getByRole('button', { name: /notification/i })
-        )
+        page
+          .locator('.notification-badge, [data-testid="notification-indicator"]')
+          .or(page.getByRole('button', { name: /notification/i }))
       ).toBeVisible();
     });
   });

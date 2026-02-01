@@ -7,9 +7,12 @@
  * - Session duration without remember me (24 hours)
  * - Remember me checkbox behavior
  * - Session persistence across browser restarts
+ *
+ * Refactored to use Page Object Model and fixtures
  */
 
-import { test, expect } from '../fixtures/chromatic';
+import { test, expect } from '../fixtures';
+import { LoginPage } from '../pages';
 
 import type { Page } from '@playwright/test';
 
@@ -28,7 +31,7 @@ async function setupRememberMeMocks(
   page: Page,
   options: {
     rememberMe?: boolean;
-    sessionAge?: number; // in milliseconds
+    sessionAge?: number;
   } = {}
 ) {
   const { rememberMe = false, sessionAge = 0 } = options;
@@ -134,30 +137,32 @@ async function setupRememberMeMocks(
 }
 
 test.describe('AUTH-13: Remember Me', () => {
+  let loginPage: LoginPage;
+
+  test.beforeEach(async ({ page }) => {
+    loginPage = new LoginPage(page);
+  });
+
   test.describe('Login Form', () => {
     test('should display remember me checkbox on login page', async ({ page }) => {
       await setupRememberMeMocks(page);
 
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
+      await loginPage.navigate();
 
       // Should show remember me checkbox
       await expect(
-        page.getByRole('checkbox', { name: /remember/i }).or(
-          page.getByLabel(/remember/i)
-        )
+        page.getByRole('checkbox', { name: /remember/i }).or(page.getByLabel(/remember/i))
       ).toBeVisible();
     });
 
     test('should have remember me unchecked by default', async ({ page }) => {
       await setupRememberMeMocks(page);
 
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
+      await loginPage.navigate();
 
-      const rememberMeCheckbox = page.getByRole('checkbox', { name: /remember/i }).or(
-        page.getByLabel(/remember/i)
-      );
+      const rememberMeCheckbox = page
+        .getByRole('checkbox', { name: /remember/i })
+        .or(page.getByLabel(/remember/i));
 
       if (await rememberMeCheckbox.isVisible()) {
         await expect(rememberMeCheckbox).not.toBeChecked();
@@ -167,12 +172,11 @@ test.describe('AUTH-13: Remember Me', () => {
     test('should be able to check remember me', async ({ page }) => {
       await setupRememberMeMocks(page);
 
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
+      await loginPage.navigate();
 
-      const rememberMeCheckbox = page.getByRole('checkbox', { name: /remember/i }).or(
-        page.getByLabel(/remember/i)
-      );
+      const rememberMeCheckbox = page
+        .getByRole('checkbox', { name: /remember/i })
+        .or(page.getByLabel(/remember/i));
 
       if (await rememberMeCheckbox.isVisible()) {
         await rememberMeCheckbox.check();
@@ -185,23 +189,20 @@ test.describe('AUTH-13: Remember Me', () => {
     test('should receive extended session when remember me is checked', async ({ page }) => {
       await setupRememberMeMocks(page, { rememberMe: true });
 
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
-
-      // Fill login form
-      await page.getByLabel(/email/i).fill('test@example.com');
-      await page.getByLabel(/password/i).fill('password123');
+      await loginPage.navigate();
+      await loginPage.fillEmail('test@example.com');
+      await loginPage.fillPassword('password123');
 
       // Check remember me
-      const rememberMeCheckbox = page.getByRole('checkbox', { name: /remember/i }).or(
-        page.getByLabel(/remember/i)
-      );
+      const rememberMeCheckbox = page
+        .getByRole('checkbox', { name: /remember/i })
+        .or(page.getByLabel(/remember/i));
       if (await rememberMeCheckbox.isVisible()) {
         await rememberMeCheckbox.check();
       }
 
       // Submit login
-      await page.getByRole('button', { name: /login|sign.*in|entra/i }).click();
+      await loginPage.submit();
 
       // Should be logged in (redirected or success message)
       await page.waitForURL(/dashboard|home/i, { timeout: 10000 }).catch(() => {
@@ -216,9 +217,7 @@ test.describe('AUTH-13: Remember Me', () => {
       await page.waitForLoadState('networkidle');
 
       // Should indicate extended session (30 days)
-      await expect(
-        page.getByText(/30.*day|extended|remember/i)
-      ).toBeVisible();
+      await expect(page.getByText(/30.*day|extended|remember/i)).toBeVisible();
     });
   });
 
@@ -226,23 +225,20 @@ test.describe('AUTH-13: Remember Me', () => {
     test('should receive standard session when remember me is not checked', async ({ page }) => {
       await setupRememberMeMocks(page, { rememberMe: false });
 
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
-
-      // Fill login form without checking remember me
-      await page.getByLabel(/email/i).fill('test@example.com');
-      await page.getByLabel(/password/i).fill('password123');
+      await loginPage.navigate();
+      await loginPage.fillEmail('test@example.com');
+      await loginPage.fillPassword('password123');
 
       // Ensure remember me is unchecked
-      const rememberMeCheckbox = page.getByRole('checkbox', { name: /remember/i }).or(
-        page.getByLabel(/remember/i)
-      );
-      if (await rememberMeCheckbox.isVisible() && await rememberMeCheckbox.isChecked()) {
+      const rememberMeCheckbox = page
+        .getByRole('checkbox', { name: /remember/i })
+        .or(page.getByLabel(/remember/i));
+      if (await rememberMeCheckbox.isVisible() && (await rememberMeCheckbox.isChecked())) {
         await rememberMeCheckbox.uncheck();
       }
 
       // Submit login
-      await page.getByRole('button', { name: /login|sign.*in|entra/i }).click();
+      await loginPage.submit();
 
       // Should be logged in
       await page.waitForURL(/dashboard|home/i, { timeout: 10000 }).catch(() => {
@@ -257,9 +253,7 @@ test.describe('AUTH-13: Remember Me', () => {
       await page.waitForLoadState('networkidle');
 
       // Should indicate standard session (24 hours)
-      await expect(
-        page.getByText(/24.*hour|standard|session/i)
-      ).toBeVisible();
+      await expect(page.getByText(/24.*hour|standard|session/i)).toBeVisible();
     });
   });
 
@@ -275,11 +269,7 @@ test.describe('AUTH-13: Remember Me', () => {
       await page.waitForLoadState('networkidle');
 
       // Should redirect to login or show session expired message
-      await expect(
-        page.getByText(/session.*expired|login.*again|sign.*in/i).or(
-          page
-        )
-      ).toBeVisible();
+      await expect(page.getByText(/session.*expired|login.*again|sign.*in/i).or(page)).toBeVisible();
     });
 
     test('should show session expiration warning', async ({ page }) => {
@@ -294,7 +284,10 @@ test.describe('AUTH-13: Remember Me', () => {
 
       // May show expiration warning
       // This depends on implementation - some apps show warning
-      const warningVisible = await page.getByText(/expir|session.*ending/i).isVisible().catch(() => false);
+      const _warningVisible = await page
+        .getByText(/expir|session.*ending/i)
+        .isVisible()
+        .catch(() => false);
       // Just ensure page loads
       await expect(page.locator('body')).toBeVisible();
     });
@@ -308,9 +301,7 @@ test.describe('AUTH-13: Remember Me', () => {
       await page.waitForLoadState('networkidle');
 
       // Should show some session information
-      await expect(
-        page.getByText(/session|device|logged.*in/i)
-      ).toBeVisible();
+      await expect(page.getByText(/session|device|logged.*in/i)).toBeVisible();
     });
   });
 });

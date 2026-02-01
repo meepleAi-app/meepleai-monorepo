@@ -10,7 +10,7 @@
  * @see docs/08-user-flows/user-role/03-library-management.md
  */
 
-import { test } from '../../fixtures/chromatic';
+import { test } from '../../fixtures';
 import { AuthHelper, USER_FIXTURES } from '../../pages';
 import {
   ScreenshotHelper,

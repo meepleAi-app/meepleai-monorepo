@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/
  */
 
-import { test, expect, Page } from './fixtures/chromatic';
+import { test, expect, Page } from './fixtures';
 import { WaitHelper } from './helpers/WaitHelper';
 
 const apiBase = 'http://localhost:8080';

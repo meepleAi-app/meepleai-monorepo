@@ -12,7 +12,7 @@
  * @see apps/api/src/Api/BoundedContexts/GameManagement
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { AuthHelper, USER_FIXTURES } from './pages';
 
 /**

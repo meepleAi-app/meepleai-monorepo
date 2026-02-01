@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/ - Page Object Model architecture
  */
 
-import { test as base, expect, Page } from './fixtures/chromatic';
+import { test as base, expect, Page } from './fixtures';
 import { AuthHelper, USER_FIXTURES } from './pages';
 
 const test = base.extend<{ userPage: Page }>({

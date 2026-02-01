@@ -14,7 +14,7 @@
 
 import { Buffer } from 'buffer';
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { AuthHelper, USER_FIXTURES } from './pages';
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';

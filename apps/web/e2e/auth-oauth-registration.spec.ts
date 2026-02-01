@@ -23,7 +23,7 @@
  * @see Issue #2299 - E2E mock consolidation
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { LoginPage } from './pages/auth/LoginPage';
 import { AuthHelper, UserFixture } from './pages/helpers/AuthHelper';
 

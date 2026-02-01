@@ -11,7 +11,7 @@
  * - Responsive (desktop + tablet)
  */
 
-import { test as base, expect, Page } from './fixtures/chromatic';
+import { test as base, expect, Page } from './fixtures';
 import { AdminHelper } from './pages';
 
 const test = base.extend<{ adminPage: Page }>({

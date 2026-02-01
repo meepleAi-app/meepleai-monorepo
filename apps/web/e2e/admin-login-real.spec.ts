@@ -20,7 +20,7 @@
  */
 
 import { authenticateViaAPI } from './fixtures/auth';
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 
 // Get admin credentials from environment or use defaults
 const ADMIN_EMAIL =

@@ -5,7 +5,7 @@
  * @see apps/web/e2e/pages/home/HomePage.ts
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { ChatPage } from './pages/chat/ChatPage';
 import { HomePage } from './pages/home/HomePage';
 

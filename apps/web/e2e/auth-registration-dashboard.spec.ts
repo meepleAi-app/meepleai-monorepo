@@ -22,7 +22,7 @@
  * @see Issue #2299 - E2E mock removal epic
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { AuthHelper } from './pages';
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';

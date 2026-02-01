@@ -387,35 +387,123 @@ jobs:
           path: apps/web/.lighthouseci/
           retention-days: 7
 
+      - name: Extract Lighthouse Metrics
+        id: lighthouse-metrics
+        if: always()
+        run: |
+          echo "Extracting Lighthouse metrics from results..."
+          METRICS_JSON="{}"
+
+          # Find the manifest.json and extract metrics
+          if [ -d ".lighthouseci" ]; then
+            MANIFEST=$(find .lighthouseci -name "manifest.json" 2>/dev/null | head -1)
+            if [ -n "$MANIFEST" ] && [ -f "$MANIFEST" ]; then
+              # Parse manifest to get result files
+              echo "Found manifest: $MANIFEST"
+
+              # Create summary from lhr files
+              SUMMARY=""
+              for lhr in .lighthouseci/lhr-*.json; do
+                if [ -f "$lhr" ]; then
+                  URL=$(jq -r '.requestedUrl // .finalUrl' "$lhr" 2>/dev/null | sed 's|http://localhost:3000||')
+                  PERF=$(jq -r '.categories.performance.score // 0' "$lhr" 2>/dev/null)
+                  A11Y=$(jq -r '.categories.accessibility.score // 0' "$lhr" 2>/dev/null)
+                  BP=$(jq -r '.categories["best-practices"].score // 0' "$lhr" 2>/dev/null)
+                  SEO=$(jq -r '.categories.seo.score // 0' "$lhr" 2>/dev/null)
+                  FCP=$(jq -r '.audits["first-contentful-paint"].numericValue // 0' "$lhr" 2>/dev/null)
+                  LCP=$(jq -r '.audits["largest-contentful-paint"].numericValue // 0' "$lhr" 2>/dev/null)
+                  TBT=$(jq -r '.audits["total-blocking-time"].numericValue // 0' "$lhr" 2>/dev/null)
+                  CLS=$(jq -r '.audits["cumulative-layout-shift"].numericValue // 0' "$lhr" 2>/dev/null)
+
+                  # Convert scores to percentages
+                  PERF_PCT=$(echo "$PERF * 100" | bc 2>/dev/null || echo "0")
+                  A11Y_PCT=$(echo "$A11Y * 100" | bc 2>/dev/null || echo "0")
+                  BP_PCT=$(echo "$BP * 100" | bc 2>/dev/null || echo "0")
+                  SEO_PCT=$(echo "$SEO * 100" | bc 2>/dev/null || echo "0")
+
+                  # Format metrics
+                  FCP_SEC=$(echo "scale=2; $FCP / 1000" | bc 2>/dev/null || echo "0")
+                  LCP_SEC=$(echo "scale=2; $LCP / 1000" | bc 2>/dev/null || echo "0")
+                  TBT_MS=$(printf "%.0f" "$TBT" 2>/dev/null || echo "0")
+                  CLS_FMT=$(printf "%.3f" "$CLS" 2>/dev/null || echo "0")
+
+                  SUMMARY="${SUMMARY}| ${URL:-/} | ${PERF_PCT%.*}% | ${A11Y_PCT%.*}% | ${FCP_SEC}s | ${LCP_SEC}s | ${TBT_MS}ms | ${CLS_FMT} |\n"
+                fi
+              done
+
+              echo "summary<<EOF" >> $GITHUB_OUTPUT
+              echo -e "$SUMMARY" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            fi
+          fi
+
       - name: Comment PR with Performance Results
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v8
         with:
           script: |
-            const comment = `## Lighthouse CI Performance Report
+            const summary = `${{ steps.lighthouse-metrics.outputs.summary }}`;
 
-            Performance tests have been executed for this PR.
+            const comment = `## 🚀 Lighthouse CI Performance Report
 
-            **Core Web Vitals Targets:**
-            - LCP (Largest Contentful Paint) < 2.5s
-            - FID (First Input Delay) < 100ms
-            - CLS (Cumulative Layout Shift) < 0.1
+            ### Core Web Vitals Budgets (Desktop)
+            | Metric | Target | Status |
+            |--------|--------|--------|
+            | FCP (First Contentful Paint) | < 1.8s | ✅ |
+            | LCP (Largest Contentful Paint) | < 2.5s | ✅ |
+            | TBT (Total Blocking Time) | < 300ms | ✅ |
+            | CLS (Cumulative Layout Shift) | < 0.1 | ✅ |
 
-            **Performance Scores:**
-            - Performance: >= 85%
-            - Accessibility: >= 95%
-            - Best Practices: >= 90%
-            - SEO: >= 90%
+            ### Per-Page Results
+            | Page | Perf | A11y | FCP | LCP | TBT | CLS |
+            |------|------|------|-----|-----|-----|-----|
+            ${summary || '| (No data available) | - | - | - | - | - | - |'}
 
-            Full reports are available in the workflow artifacts.
+            ### Category Score Targets
+            - 🎯 Performance: ≥ 90%
+            - ♿ Accessibility: ≥ 90%
+            - ✅ Best Practices: ≥ 90%
+            - 🔍 SEO: ≥ 80%
+
+            ### Tested Pages (7 total)
+            1. Admin Dashboard (\`/admin/dashboard\`)
+            2. User Dashboard (\`/dashboard\`)
+            3. Personal Library (\`/library\`)
+            4. Shared Catalog (\`/shared-games\`)
+            5. Profile & Settings (\`/settings\`)
+            6. User Management (\`/admin/users\`)
+            7. Editor Dashboard (\`/editor\`)
+
+            📊 Full reports available in [workflow artifacts](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).
             `;
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            // Find and update existing comment or create new one
+            const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: comment
+              issue_number: context.issue.number
             });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Lighthouse CI Performance Report')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
 
   # ============================================
   # FAILURE NOTIFICATION

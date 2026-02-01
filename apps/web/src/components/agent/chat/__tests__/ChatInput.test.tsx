@@ -11,8 +11,8 @@
  * - Accessibility (aria-labels, keyboard)
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ChatInput } from '../ChatInput';
@@ -23,6 +23,10 @@ describe('ChatInput', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   describe('Rendering', () => {
@@ -54,7 +58,7 @@ describe('ChatInput', () => {
 
   describe('Character Limit', () => {
     it('displays character counter', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null }); // Synchronous typing
       render(<ChatInput onSendMessage={mockOnSendMessage} />);
 
       const textarea = screen.getByRole('textbox', { name: /message input/i });
@@ -65,7 +69,7 @@ describe('ChatInput', () => {
     });
 
     it('enforces 1000 character limit', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null }); // Synchronous typing
       render(<ChatInput onSendMessage={mockOnSendMessage} />);
 
       const textarea = screen.getByRole('textbox', { name: /message input/i });
@@ -79,7 +83,7 @@ describe('ChatInput', () => {
     });
 
     it('shows warning color when near limit (>90%)', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null }); // Synchronous typing
       render(<ChatInput onSendMessage={mockOnSendMessage} />);
 
       const textarea = screen.getByRole('textbox', { name: /message input/i });
@@ -101,7 +105,7 @@ describe('ChatInput', () => {
     });
 
     it('is enabled when input has text', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<ChatInput onSendMessage={mockOnSendMessage} />);
 
       const textarea = screen.getByRole('textbox', { name: /message input/i });
@@ -126,7 +130,7 @@ describe('ChatInput', () => {
     });
 
     it('calls onSendMessage when clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<ChatInput onSendMessage={mockOnSendMessage} />);
 
       const textarea = screen.getByRole('textbox', { name: /message input/i });
@@ -140,7 +144,7 @@ describe('ChatInput', () => {
     });
 
     it('clears input after send', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<ChatInput onSendMessage={mockOnSendMessage} />);
 
       const textarea = screen.getByRole('textbox', { name: /message input/i });
@@ -155,7 +159,7 @@ describe('ChatInput', () => {
     });
 
     it('trims whitespace before sending', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<ChatInput onSendMessage={mockOnSendMessage} />);
 
       const textarea = screen.getByRole('textbox', { name: /message input/i });
@@ -170,7 +174,7 @@ describe('ChatInput', () => {
 
   describe('Keyboard Handling', () => {
     it('sends message on Enter key', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<ChatInput onSendMessage={mockOnSendMessage} />);
 
       const textarea = screen.getByRole('textbox', { name: /message input/i });
@@ -181,7 +185,7 @@ describe('ChatInput', () => {
     });
 
     it('adds newline on Shift+Enter', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<ChatInput onSendMessage={mockOnSendMessage} />);
 
       const textarea = screen.getByRole('textbox', { name: /message input/i });
@@ -192,7 +196,7 @@ describe('ChatInput', () => {
     });
 
     it('does not send empty message on Enter', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<ChatInput onSendMessage={mockOnSendMessage} />);
 
       const textarea = screen.getByRole('textbox', { name: /message input/i });
@@ -203,7 +207,7 @@ describe('ChatInput', () => {
     });
 
     it('does not send message on Enter during streaming', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(<ChatInput onSendMessage={mockOnSendMessage} isStreaming={true} />);
 
       const textarea = screen.getByRole('textbox', { name: /message input/i });
@@ -255,7 +259,7 @@ describe('ChatInput', () => {
     });
 
     it('calls onRetry when retry button is clicked', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       render(
         <ChatInput
           onSendMessage={mockOnSendMessage}

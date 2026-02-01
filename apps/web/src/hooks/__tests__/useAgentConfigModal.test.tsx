@@ -19,6 +19,8 @@ import { act } from '@testing-library/react';
 import { toast } from 'sonner';
 
 import { useAgentConfigModal, type UserTier } from '../useAgentConfigModal';
+import { api } from '@/lib/api';
+import { useSessionQuotaWithStatus } from '@/hooks/queries/useSessionQuota';
 
 // Mock dependencies
 vi.mock('sonner', () => ({
@@ -115,11 +117,9 @@ describe('useAgentConfigModal', () => {
     localStorageMock.clear();
 
     // Setup default mocks
-    const { api } = require('@/lib/api');
     vi.mocked(api.agents.getTypologies).mockResolvedValue(mockTypologies);
     vi.mocked(api.library.saveAgentConfig).mockResolvedValue({ configId: 'config-123' });
 
-    const { useSessionQuotaWithStatus } = require('@/hooks/queries/useSessionQuota');
     vi.mocked(useSessionQuotaWithStatus).mockReturnValue({
       data: mockQuota,
       isLoading: false,
@@ -306,7 +306,6 @@ describe('useAgentConfigModal', () => {
     });
 
     it('should show warning when quota ≥90%', async () => {
-      const { useSessionQuotaWithStatus } = require('@/hooks/queries/useSessionQuota');
       vi.mocked(useSessionQuotaWithStatus).mockReturnValue({
         data: { ...mockQuota, percentageUsed: 95, currentSessions: 95, maxSessions: 100 },
         isLoading: false,
@@ -322,7 +321,6 @@ describe('useAgentConfigModal', () => {
     });
 
     it('should not show warning for unlimited quota', async () => {
-      const { useSessionQuotaWithStatus } = require('@/hooks/queries/useSessionQuota');
       vi.mocked(useSessionQuotaWithStatus).mockReturnValue({
         data: { ...mockQuota, isUnlimited: true },
         isLoading: false,
@@ -436,7 +434,6 @@ describe('useAgentConfigModal', () => {
 
   describe('Save Config', () => {
     it('should call API with correct parameters', async () => {
-      const { api } = require('@/lib/api');
       const { result } = renderHook(() => useAgentConfigModal({ gameId: 'game-123' }), {
         wrapper: createWrapper(),
       });
@@ -490,11 +487,6 @@ describe('useAgentConfigModal', () => {
     });
 
     it('should show error toast on save failure', async () => {
-      const { api } = require('@/lib/api');
-      vi.mocked(api.library.saveAgentConfig).mockRejectedValueOnce(
-        new Error('Network error')
-      );
-
       const { result } = renderHook(() => useAgentConfigModal({ gameId: 'game-123' }), {
         wrapper: createWrapper(),
       });
@@ -507,8 +499,18 @@ describe('useAgentConfigModal', () => {
         result.current.setSelectedTypologyId('typo-1');
       });
 
+      // Set up rejection AFTER hook is rendered but BEFORE calling saveConfig
+      vi.mocked(api.library.saveAgentConfig).mockRejectedValueOnce(
+        new Error('Network error')
+      );
+
+      // saveConfig doesn't have try-catch, so we need to catch the error
       await act(async () => {
-        await result.current.saveConfig();
+        try {
+          await result.current.saveConfig();
+        } catch {
+          // Error is expected and handled by onError callback
+        }
       });
 
       await waitFor(() => {
@@ -540,10 +542,12 @@ describe('useAgentConfigModal', () => {
     });
 
     it('should invalidate related queries on success', async () => {
+      // Create wrapper first to get access to the queryClient instance
+      const wrapper = createWrapper();
       const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
       const { result } = renderHook(() => useAgentConfigModal({ gameId: 'game-123' }), {
-        wrapper: createWrapper(),
+        wrapper,
       });
 
       await waitFor(() => {
@@ -566,8 +570,6 @@ describe('useAgentConfigModal', () => {
     });
 
     it('should set saving state during save', async () => {
-      const { api } = require('@/lib/api');
-
       // Slow API response
       vi.mocked(api.library.saveAgentConfig).mockImplementationOnce(
         () =>
@@ -590,12 +592,22 @@ describe('useAgentConfigModal', () => {
 
       expect(result.current.saving).toBe(false);
 
+      let savePromise: Promise<void>;
       act(() => {
-        result.current.saveConfig();
+        savePromise = result.current.saveConfig();
       });
 
-      expect(result.current.saving).toBe(true);
+      // Wait for saving state to become true
+      await waitFor(() => {
+        expect(result.current.saving).toBe(true);
+      });
 
+      // Wait for save to complete
+      await act(async () => {
+        await savePromise;
+      });
+
+      // Wait for React Query to update isPending back to false
       await waitFor(() => {
         expect(result.current.saving).toBe(false);
       });

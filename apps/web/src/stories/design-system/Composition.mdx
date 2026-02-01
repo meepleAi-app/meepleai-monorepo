@@ -1,0 +1,414 @@
+{/* Composition.mdx - MeepleAI Component Composition Patterns */}
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Design System/Composition" />
+
+# Component Composition
+
+This guide demonstrates how to compose components using MeepleAI design tokens and patterns. These examples show common UI patterns built with our design system.
+
+## Card Patterns
+
+### Basic Card
+
+```tsx
+<div className="bg-card text-card-foreground border border-border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+  <h3 className="font-quicksand text-xl font-semibold mb-2">
+    Card Title
+  </h3>
+  <p className="text-muted-foreground">
+    Card description text goes here.
+  </p>
+</div>
+```
+
+### Game Card
+
+```tsx
+<div className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all hover:-translate-y-1">
+  {/* Image */}
+  <div className="aspect-video relative">
+    <img
+      src={game.imageUrl}
+      alt={game.name}
+      className="object-cover w-full h-full"
+    />
+    <div className="absolute top-2 right-2">
+      <span className="bg-primary text-primary-foreground px-2 py-1 rounded-full text-xs font-medium">
+        {game.playerCount} players
+      </span>
+    </div>
+  </div>
+
+  {/* Content */}
+  <div className="p-4 space-y-2">
+    <h3 className="font-quicksand font-semibold text-lg">
+      {game.name}
+    </h3>
+    <p className="text-muted-foreground text-sm line-clamp-2">
+      {game.description}
+    </p>
+
+    {/* Metadata */}
+    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+      <span className="flex items-center gap-1">
+        <ClockIcon className="size-4" />
+        {game.duration}
+      </span>
+      <span className="flex items-center gap-1">
+        <StarIcon className="size-4" />
+        {game.complexity}
+      </span>
+    </div>
+  </div>
+</div>
+```
+
+### Glass Card (Desktop)
+
+```tsx
+<div className="glass-card rounded-xl p-6">
+  <h3 className="font-quicksand font-semibold text-lg mb-2">
+    Frosted Glass Card
+  </h3>
+  <p className="text-muted-foreground">
+    This card uses backdrop blur for a glass effect on desktop.
+  </p>
+</div>
+```
+
+## Button Patterns
+
+### Primary Button
+
+```tsx
+<button className="bg-primary text-primary-foreground font-semibold py-3 px-6 rounded-lg transition-all duration-200 hover:opacity-90 hover:shadow-lg active:scale-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+  Start Game
+</button>
+```
+
+### Secondary Button
+
+```tsx
+<button className="bg-secondary text-secondary-foreground font-semibold py-3 px-6 rounded-lg transition-all duration-200 hover:opacity-90 active:scale-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+  Learn More
+</button>
+```
+
+### Outline Button
+
+```tsx
+<button className="border-2 border-primary text-primary font-semibold py-3 px-6 rounded-lg transition-all duration-200 hover:bg-primary hover:text-primary-foreground active:scale-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+  View Details
+</button>
+```
+
+### Icon Button
+
+```tsx
+<button
+  aria-label="Close"
+  className="p-2 rounded-lg hover:bg-muted transition-colors focus-visible:ring-2 focus-visible:ring-ring touch-target"
+>
+  <XIcon className="size-5" />
+</button>
+```
+
+### Button Group
+
+```tsx
+<div className="flex gap-3">
+  <button className="btn-primary">Primary</button>
+  <button className="btn-secondary">Secondary</button>
+  <button className="bg-muted text-muted-foreground py-3 px-6 rounded-lg hover:bg-muted/80">
+    Tertiary
+  </button>
+</div>
+```
+
+## Form Patterns
+
+### Text Input
+
+```tsx
+<div className="space-y-2">
+  <label htmlFor="game-name" className="text-sm font-medium">
+    Game Name
+  </label>
+  <input
+    id="game-name"
+    type="text"
+    placeholder="Enter game name"
+    className="w-full h-10 px-3 rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+  />
+</div>
+```
+
+### Input with Error
+
+```tsx
+<div className="space-y-2">
+  <label htmlFor="email" className="text-sm font-medium">
+    Email
+  </label>
+  <input
+    id="email"
+    type="email"
+    aria-invalid="true"
+    aria-describedby="email-error"
+    className="w-full h-10 px-3 rounded-md border border-destructive bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-destructive"
+  />
+  <p id="email-error" className="text-destructive text-sm">
+    Please enter a valid email address.
+  </p>
+</div>
+```
+
+### Select
+
+```tsx
+<div className="space-y-2">
+  <label htmlFor="complexity" className="text-sm font-medium">
+    Game Complexity
+  </label>
+  <select
+    id="complexity"
+    className="w-full h-10 px-3 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+  >
+    <option value="">Select complexity...</option>
+    <option value="light">Light</option>
+    <option value="medium">Medium</option>
+    <option value="heavy">Heavy</option>
+  </select>
+</div>
+```
+
+## Layout Patterns
+
+### Page Layout
+
+```tsx
+<div className="min-h-screen bg-background">
+  {/* Header */}
+  <header className="sticky top-0 z-sticky glass-nav">
+    <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <Logo />
+      <nav className="hidden md:flex gap-6">
+        <NavLinks />
+      </nav>
+      <MobileMenuButton className="md:hidden" />
+    </div>
+  </header>
+
+  {/* Main Content */}
+  <main className="container mx-auto px-4 py-8">
+    <div className="max-w-[var(--max-width-content)] mx-auto">
+      {children}
+    </div>
+  </main>
+
+  {/* Footer */}
+  <footer className="border-t border-border py-8">
+    <div className="container mx-auto px-4">
+      <FooterContent />
+    </div>
+  </footer>
+</div>
+```
+
+### Two-Column Layout
+
+```tsx
+<div className="flex flex-col lg:flex-row gap-8">
+  {/* Sidebar */}
+  <aside className="w-full lg:w-64 shrink-0">
+    <div className="sticky top-24 space-y-4">
+      <SidebarContent />
+    </div>
+  </aside>
+
+  {/* Main */}
+  <main className="flex-1 min-w-0">
+    <MainContent />
+  </main>
+</div>
+```
+
+### Grid Layout
+
+```tsx
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+  {games.map(game => (
+    <GameCard key={game.id} game={game} />
+  ))}
+</div>
+```
+
+## Navigation Patterns
+
+### Horizontal Nav
+
+```tsx
+<nav className="flex items-center gap-1">
+  {links.map(link => (
+    <a
+      key={link.href}
+      href={link.href}
+      className={cn(
+        "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+        isActive(link.href)
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+      )}
+    >
+      {link.label}
+    </a>
+  ))}
+</nav>
+```
+
+### Tab Navigation
+
+```tsx
+<div className="border-b border-border">
+  <nav className="flex gap-4" role="tablist">
+    {tabs.map(tab => (
+      <button
+        key={tab.id}
+        role="tab"
+        aria-selected={activeTab === tab.id}
+        className={cn(
+          "pb-3 text-sm font-medium transition-colors relative",
+          activeTab === tab.id
+            ? "text-primary"
+            : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        {tab.label}
+        {activeTab === tab.id && (
+          <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+        )}
+      </button>
+    ))}
+  </nav>
+</div>
+```
+
+### Breadcrumbs
+
+```tsx
+<nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm">
+  {breadcrumbs.map((crumb, index) => (
+    <React.Fragment key={crumb.href}>
+      {index > 0 && (
+        <ChevronRightIcon className="size-4 text-muted-foreground" />
+      )}
+      {index === breadcrumbs.length - 1 ? (
+        <span className="text-foreground font-medium">{crumb.label}</span>
+      ) : (
+        <a
+          href={crumb.href}
+          className="text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {crumb.label}
+        </a>
+      )}
+    </React.Fragment>
+  ))}
+</nav>
+```
+
+## Modal Pattern
+
+```tsx
+<div className="fixed inset-0 z-modal-backdrop bg-black/50" aria-hidden="true" />
+
+<dialog
+  className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-modal w-full max-w-md glass-modal rounded-2xl p-6 animate-scale-in"
+  aria-modal="true"
+  aria-labelledby="modal-title"
+>
+  <header className="flex items-center justify-between mb-4">
+    <h2 id="modal-title" className="font-quicksand text-xl font-semibold">
+      Modal Title
+    </h2>
+    <button
+      aria-label="Close"
+      className="p-2 rounded-lg hover:bg-muted transition-colors"
+    >
+      <XIcon className="size-5" />
+    </button>
+  </header>
+
+  <div className="space-y-4">
+    <p className="text-muted-foreground">
+      Modal content goes here.
+    </p>
+  </div>
+
+  <footer className="flex justify-end gap-3 mt-6">
+    <button className="bg-muted text-foreground px-4 py-2 rounded-lg">
+      Cancel
+    </button>
+    <button className="bg-primary text-primary-foreground px-4 py-2 rounded-lg">
+      Confirm
+    </button>
+  </footer>
+</dialog>
+```
+
+## Loading States
+
+### Skeleton Loader
+
+```tsx
+<div className="space-y-4">
+  <div className="skeleton h-8 w-3/4 rounded" />
+  <div className="skeleton h-4 w-full rounded" />
+  <div className="skeleton h-4 w-5/6 rounded" />
+</div>
+```
+
+### Spinner
+
+```tsx
+<div className="animate-spin rounded-full size-8 border-2 border-muted border-t-primary" />
+```
+
+### Loading Button
+
+```tsx
+<button disabled className="btn-primary opacity-60 cursor-not-allowed">
+  <span className="animate-spin size-4 border-2 border-white/30 border-t-white rounded-full mr-2" />
+  Loading...
+</button>
+```
+
+## Badge Pattern
+
+```tsx
+{/* Status Badge */}
+<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+  Active
+</span>
+
+{/* Destructive Badge */}
+<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-destructive/10 text-destructive">
+  Error
+</span>
+
+{/* Muted Badge */}
+<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+  Draft
+</span>
+```
+
+## Best Practices
+
+1. **Use semantic tokens** - Always prefer `bg-primary` over hardcoded colors
+2. **Compose with spacing tokens** - Use `gap-4`, `p-6`, `space-y-2`
+3. **Apply consistent radius** - Cards use `rounded-xl` or `rounded-2xl`
+4. **Include focus states** - Every interactive element needs `focus-visible:ring-2`
+5. **Support dark mode** - Use theme tokens that adapt automatically
+6. **Ensure touch targets** - Minimum 44x44px for mobile
+7. **Add transitions** - Use `transition-colors` or `transition-all` for smooth interactions

@@ -1,0 +1,341 @@
+{/* Effects.mdx - MeepleAI Effects System Documentation */}
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Design System/Effects" />
+
+# Effects
+
+MeepleAI's effect system includes shadows, border radius, transitions, and special effects like glass morphism. These tokens create visual depth and interactivity.
+
+## Shadows
+
+A comprehensive shadow scale from subtle to dramatic.
+
+<div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginBottom: '2rem' }}>
+  {[
+    { name: 'shadow-xs', value: '0 1px 2px 0 rgb(0 0 0 / 0.05)', desc: 'Subtle elevation' },
+    { name: 'shadow-sm', value: '0 1px 3px 0 rgb(0 0 0 / 0.1)', desc: 'Buttons, inputs' },
+    { name: 'shadow-md', value: '0 4px 6px -1px rgb(0 0 0 / 0.1)', desc: 'Cards, dropdowns' },
+    { name: 'shadow-lg', value: '0 10px 15px -3px rgb(0 0 0 / 0.1)', desc: 'Modals, overlays' },
+    { name: 'shadow-xl', value: '0 20px 25px -5px rgb(0 0 0 / 0.1)', desc: 'Floating panels' },
+    { name: 'shadow-2xl', value: '0 25px 50px -12px rgb(0 0 0 / 0.25)', desc: 'Hero elements' },
+  ].map(({ name, value, desc }) => (
+    <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+      <div
+        style={{
+          width: '6rem',
+          height: '3rem',
+          background: 'white',
+          boxShadow: value,
+          borderRadius: '0.5rem',
+        }}
+      />
+      <div>
+        <code>--{name}</code>
+        <p style={{ color: 'hsl(var(--muted-foreground))', margin: 0 }}>{desc}</p>
+      </div>
+    </div>
+  ))}
+</div>
+
+### Semantic Shadows
+
+| Token | Maps To | Use Case |
+|-------|---------|----------|
+| `--shadow-card` | shadow-sm | Card components |
+| `--shadow-card-hover` | shadow-md | Card hover state |
+| `--shadow-modal` | shadow-2xl | Modal dialogs |
+| `--shadow-dropdown` | shadow-lg | Dropdown menus |
+
+### CSS Tokens
+
+```css
+:root {
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+}
+```
+
+## Border Radius
+
+Rounded corners that match our friendly aesthetic.
+
+<div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2rem' }}>
+  {[
+    { name: 'radius-none', value: '0', preview: '0' },
+    { name: 'radius-sm', value: '0.375rem', preview: '6px' },
+    { name: 'radius-md', value: '0.5rem', preview: '8px' },
+    { name: 'radius-lg', value: '0.75rem', preview: '12px' },
+    { name: 'radius-xl', value: '1rem', preview: '16px' },
+    { name: 'radius-2xl', value: '1.5rem', preview: '24px' },
+    { name: 'radius-3xl', value: '2rem', preview: '32px' },
+    { name: 'radius-full', value: '9999px', preview: 'pill' },
+  ].map(({ name, value, preview }) => (
+    <div key={name} style={{ textAlign: 'center' }}>
+      <div
+        style={{
+          width: '4rem',
+          height: '4rem',
+          background: 'hsl(var(--primary))',
+          borderRadius: value,
+          marginBottom: '0.5rem',
+        }}
+      />
+      <code style={{ fontSize: '0.75rem' }}>--{name}</code>
+      <p style={{ color: 'hsl(var(--muted-foreground))', margin: 0, fontSize: '0.75rem' }}>{preview}</p>
+    </div>
+  ))}
+</div>
+
+### Semantic Radius
+
+| Token | Value | Use Case |
+|-------|-------|----------|
+| `--radius-button` | 8px | Buttons |
+| `--radius-card` | 16px | Cards |
+| `--radius-input` | 8px | Form inputs |
+| `--radius-modal` | 24px | Modal dialogs |
+
+### CSS Tokens
+
+```css
+:root {
+  --radius-none: 0;
+  --radius-sm: 0.375rem;   /* 6px */
+  --radius-md: 0.5rem;     /* 8px */
+  --radius-lg: 0.75rem;    /* 12px */
+  --radius-xl: 1rem;       /* 16px */
+  --radius-2xl: 1.5rem;    /* 24px */
+  --radius-3xl: 2rem;      /* 32px */
+  --radius-full: 9999px;   /* Pill/circle */
+}
+```
+
+## Transitions
+
+Smooth, consistent motion for interactive elements.
+
+### Duration Tokens
+
+| Token | Value | Use Case |
+|-------|-------|----------|
+| `--duration-instant` | 100ms | Immediate feedback |
+| `--duration-fast` | 200ms | Hover states |
+| `--duration-normal` | 300ms | Standard transitions |
+| `--duration-slow` | 500ms | Complex animations |
+| `--duration-slower` | 700ms | Page transitions |
+
+### Easing Functions
+
+| Token | Value | Character |
+|-------|-------|-----------|
+| `--ease-in` | cubic-bezier(0.4, 0, 1, 1) | Accelerating |
+| `--ease-out` | cubic-bezier(0, 0, 0.2, 1) | Decelerating |
+| `--ease-in-out` | cubic-bezier(0.4, 0, 0.2, 1) | Smooth |
+| `--ease-bounce` | cubic-bezier(0.68, -0.55, 0.265, 1.55) | Playful |
+
+### Preset Transitions
+
+```css
+:root {
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slower: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+```
+
+## Animations
+
+Pre-built animations for common patterns.
+
+### Available Animations
+
+| Animation | Duration | Use Case |
+|-----------|----------|----------|
+| `fadeIn` | 0.5s | Content reveal |
+| `slideUp` | 0.6s | Entry from bottom |
+| `slideDown` | 0.6s | Dropdown reveal |
+| `scaleIn` | 0.4s | Modal open |
+| `bounceSubtle` | 0.35s | Button press |
+| `pulseMeeple` | 2s infinite | Loading indicator |
+
+### Tailwind Classes
+
+```tsx
+<div className="animate-fade-in">Fade in</div>
+<div className="animate-slide-up">Slide up</div>
+<div className="animate-scale-in">Scale in</div>
+<div className="animate-pulse-meeple">Pulsing</div>
+```
+
+### CSS Keyframes
+
+```css
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+```
+
+## Opacity Scale
+
+Consistent transparency values.
+
+| Token | Value | Use Case |
+|-------|-------|----------|
+| `--opacity-disabled` | 0.5 | Disabled states |
+| `--opacity-hover` | 0.9 | Hover overlay |
+| `--opacity-loading` | 0.6 | Loading states |
+
+Full scale: 0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 100
+
+## Glass Morphism
+
+Frosted glass effects for modern UI (Issue #2965).
+
+### Glass Tokens
+
+```css
+:root {
+  /* Blur effects */
+  --glass-blur-sm: blur(4px);
+  --glass-blur-md: blur(8px);
+  --glass-blur-lg: blur(12px);
+  --glass-blur-xl: blur(16px);
+
+  /* Backgrounds */
+  --glass-bg-light: rgba(255, 255, 255, 0.7);
+  --glass-bg-light-strong: rgba(255, 255, 255, 0.85);
+  --glass-bg-dark: rgba(0, 0, 0, 0.5);
+  --glass-bg-dark-strong: rgba(0, 0, 0, 0.7);
+
+  /* Borders */
+  --glass-border-light: rgba(255, 255, 255, 0.2);
+  --glass-border-dark: rgba(255, 255, 255, 0.1);
+
+  /* Shadows */
+  --glass-shadow-light: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  --glass-shadow-dark: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+```
+
+### Usage Classes
+
+```tsx
+{/* Desktop glass card */}
+<div className="glass-card">Frosted card</div>
+
+{/* Glass navigation */}
+<nav className="glass-nav">Navigation</nav>
+
+{/* Glass modal */}
+<div className="glass-modal">Modal content</div>
+```
+
+> **Note**: Glass effects are disabled on mobile for performance. Mobile devices show solid backgrounds instead.
+
+## Dark Mode Glow Effects
+
+Enhanced effects for dark theme (Issue #2965).
+
+### Glow Tokens
+
+```css
+.dark {
+  --glow-primary: 0 0 20px hsl(var(--primary) / 0.3);
+  --glow-accent: 0 0 20px hsl(var(--accent) / 0.3);
+  --glow-focus: 0 0 0 3px hsl(var(--ring) / 0.5);
+}
+```
+
+### Text Shadows
+
+```css
+.dark {
+  --text-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.8);
+  --text-shadow-md: 0 2px 4px rgb(0 0 0 / 0.8);
+  --text-shadow-lg: 0 4px 8px rgb(0 0 0 / 0.9);
+}
+```
+
+### Usage
+
+```tsx
+{/* Dark mode glow button */}
+<button className="dark:glow-primary">Glowing button</button>
+
+{/* Text with shadow */}
+<h1 className="dark:text-shadow-md">Heading</h1>
+```
+
+## Hover Effects
+
+Pre-built hover patterns (Issue #2848).
+
+```css
+/* Card hover - lift and shadow */
+.hover-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Button hover - subtle lift */
+.hover-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* MeepleAI shadow - warm glow */
+.hover-shadow-meeple:hover {
+  box-shadow: 0 8px 20px rgba(139, 90, 60, 0.12);
+}
+```
+
+## Z-Index Layers
+
+Systematic z-index scale to prevent conflicts.
+
+| Token | Value | Layer |
+|-------|-------|-------|
+| `--z-base` | 0 | Content |
+| `--z-dropdown` | 1000 | Dropdowns |
+| `--z-sticky` | 1020 | Sticky elements |
+| `--z-fixed` | 1030 | Fixed elements |
+| `--z-modal-backdrop` | 1040 | Modal overlay |
+| `--z-modal` | 1050 | Modal dialog |
+| `--z-popover` | 1060 | Popovers |
+| `--z-tooltip` | 1070 | Tooltips |
+| `--z-notification` | 1080 | Notifications |
+| `--z-toast` | 1090 | Toast messages |
+| `--z-max` | 9999 | Maximum layer |
+
+## Reduced Motion
+
+All animations respect `prefers-reduced-motion`:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```

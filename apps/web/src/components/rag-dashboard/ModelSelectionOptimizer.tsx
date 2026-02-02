@@ -20,7 +20,6 @@ import {
   TrendingUp,
   Star,
   Info,
-  ArrowRight,
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';

@@ -5,8 +5,6 @@
  * Can be enabled via environment variable: E2E_USE_TESTCONTAINERS=true
  */
 
-import { getTestInfrastructure } from '../fixtures/testcontainers';
-
 async function setup(): Promise<void> {
   const useTestcontainers = process.env.E2E_USE_TESTCONTAINERS === 'true';
 
@@ -14,6 +12,8 @@ async function setup(): Promise<void> {
     console.log('\n🐳 Starting Testcontainers for admin-first-time-setup...\n');
 
     try {
+      // Dynamic import - testcontainers.ts uses @ts-nocheck for optional packages
+      const { getTestInfrastructure } = await import('../fixtures/testcontainers');
       const infrastructure = getTestInfrastructure();
       await infrastructure.start();
 

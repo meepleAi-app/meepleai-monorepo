@@ -12,7 +12,7 @@
  */
 
 import { useState, useMemo } from 'react';
-import type { RagStrategy } from './types';
+
 import {
   type ConfigurableValue,
   type RagConfigurationState,
@@ -25,6 +25,8 @@ import {
   formatLatency,
   calculateMonthlyCost,
 } from './types-configurable';
+
+import type { RagStrategy } from './types';
 
 // =============================================================================
 // Sub-Components
@@ -187,7 +189,7 @@ interface StrategyConfigPanelProps {
 }
 
 function StrategyConfigPanel({
-  strategy,
+  strategy: _strategy,
   config,
   onChange,
 }: StrategyConfigPanelProps) {
@@ -525,21 +527,21 @@ interface CostPreviewPanelProps {
   config: RagConfigurationState;
 }
 
+// Default strategy distribution (outside component to avoid recreating on every render)
+const DEFAULT_STRATEGY_DISTRIBUTION: Record<RagStrategy, number> = {
+  FAST: 0.6,
+  BALANCED: 0.25,
+  PRECISE: 0.1,
+  EXPERT: 0.03,
+  CONSENSUS: 0.02,
+  CUSTOM: 0,
+};
+
 function CostPreviewPanel({ config }: CostPreviewPanelProps) {
   const [queriesPerMonth, setQueriesPerMonth] = useState(100000);
 
-  // Default distribution based on usage percentages
-  const strategyDistribution: Record<RagStrategy, number> = {
-    FAST: 0.6,
-    BALANCED: 0.25,
-    PRECISE: 0.1,
-    EXPERT: 0.03,
-    CONSENSUS: 0.02,
-    CUSTOM: 0,
-  };
-
   const costProjection = useMemo(() => {
-    return calculateMonthlyCost(queriesPerMonth, strategyDistribution, config);
+    return calculateMonthlyCost(queriesPerMonth, DEFAULT_STRATEGY_DISTRIBUTION, config);
   }, [queriesPerMonth, config]);
 
   return (

@@ -171,10 +171,7 @@ pwsh -c "cd apps/api/src/Api; dotnet test /p:CollectCoverage=true"
 Target: ≥90% coverage
 
 **Frontend**:
-<<<<<<< HEAD
-=======
 
->>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 ```bash
 pwsh -c "cd apps/web; pnpm test; pnpm typecheck; pnpm lint"
 ```
@@ -212,10 +209,7 @@ Refs: #<N>"
 2. **Push**: `git push -u origin <branch>`
 
 3. **Create PR** (draft to PR target):
-<<<<<<< HEAD
-=======
 
->>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 ```bash
 # CRITICO: usa --base con PR target auto-detected o specificato
 current_branch=$(pwsh -c "git branch --show-current")
@@ -266,10 +260,7 @@ pwsh -c "cd apps/api/src/Api; dotnet build --no-restore; dotnet test --no-build"
 ```
 
 **Frontend**:
-<<<<<<< HEAD
-=======
 
->>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 ```bash
 pwsh -c "cd apps/web; pnpm build; pnpm test; pnpm typecheck"
 ```
@@ -304,15 +295,10 @@ pwsh -c "git remote prune origin"
 ## Progress Tracking Checkbox System
 
 **GitHub Issue Template Structure:**
-<<<<<<< HEAD
-```markdown
-## Progress
-=======
 
 ```markdown
 ## Progress
 
->>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 - [ ] Started
 - [ ] Analysis
 - [ ] Planning
@@ -326,33 +312,13 @@ pwsh -c "git remote prune origin"
 - [ ] Cleanup
 
 ## Definition of Done
-<<<<<<< HEAD
-=======
 
->>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 - [ ] DoD Item 1
 - [ ] DoD Item 2
 ```
 
 **Automatic Updates During Workflow:**
 
-<<<<<<< HEAD
-| Phase | Checkbox Updated | Command |
-|-------|-----------------|---------|
-| 0 | `[x] Started` | `gh api` update issue body |
-| 1 | `[x] Analysis` | `gh api` update issue body |
-| 2 | `[x] Planning` | `gh api` update issue body |
-| 3 | `[x] Branch Created` | `gh api` update issue body |
-| 4 | `[x] Implementation` | `gh api` update issue body |
-| 5 | `[x] Testing` | `gh api` update issue body |
-| 6 | `[x] PR Created` | `gh api` update issue body |
-| 6 | `[x] Code Review` | `gh api` update issue body |
-| 7 | `[x] DoD Verified` | `gh api` update issue body |
-| 8 | `[x] Merged` | `gh api` update issue body |
-| 8 | `[x] Cleanup` | `gh api` update issue body |
-
-**Update Helper Function:**
-=======
 | Phase | Checkbox Updated     | Command                    |
 | ----- | -------------------- | -------------------------- |
 | 0     | `[x] Started`        | `gh api` update issue body |
@@ -369,7 +335,6 @@ pwsh -c "git remote prune origin"
 
 **Update Helper Function:**
 
->>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 ```bash
 update_checkbox() {
   local issue_number=$1
@@ -392,19 +357,6 @@ update_checkbox 2373 "Implementation"
 
 ## MCP/Tool Matrix
 
-<<<<<<< HEAD
-| Phase | Tool/MCP |
-|-------|----------|
-| 0 | `/sc:load`, `git`, `gh api` (checkbox update) |
-| 1 | `mcp__MCP_DOCKER__issue_read`, `Agent Explore`, `write_memory`, `gh api` |
-| 2 | `sequential-thinking`, `AskUserQuestion`, `TodoWrite`, `write_memory`, `gh api` |
-| 3 | `git`, `write_memory`, `gh api` |
-| 4 | `serena__*`, `morphllm__edit_file`, `magic__*`, `TaskUpdate`, `gh api` |
-| 5 | `pwsh` (dotnet test, pnpm), `sequential-thinking`, `write_memory`, `gh api` |
-| 6 | `git`, `gh pr`, `/code-review:code-review`, `write_memory`, `gh api` |
-| 7 | `issue_write`, `AskUserQuestion`, `gh api` |
-| 8 | `pwsh` (dotnet, pnpm), `gh pr merge`, `issue_write`, `/sc:save`, `gh api` |
-=======
 | Phase | Tool/MCP                                                                        |
 | ----- | ------------------------------------------------------------------------------- |
 | 0     | `/sc:load`, `git`, `gh api` (checkbox update)                                   |
@@ -416,7 +368,6 @@ update_checkbox 2373 "Implementation"
 | 6     | `git`, `gh pr`, `/code-review:code-review`, `write_memory`, `gh api`            |
 | 7     | `issue_write`, `AskUserQuestion`, `gh api`                                      |
 | 8     | `pwsh` (dotnet, pnpm), `gh pr merge`, `issue_write`, `/sc:save`, `gh api`       |
->>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 
 ---
 
@@ -599,10 +550,7 @@ PHASE_8:
 **Changelog**:
 
 v2.3 (2026-02-02):
-<<<<<<< HEAD
-=======
 
->>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 - ✅ **PowerShell emphasis**: `pwsh -c` for all commands on Windows
 - ✅ **Smart branch detection**: PR always from current branch to auto-detected parent
 - ✅ **Progress tracking**: GitHub checkbox updates at every phase
@@ -610,10 +558,7 @@ v2.3 (2026-02-02):
 - ✅ **Branch flexibility**: Configurable --base-branch and --pr-target with smart defaults
 
 v2.2 (2026-01-29):
-<<<<<<< HEAD
-=======
 
->>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 - ✅ Reduced verbosity by 45%
 - ✅ PowerShell with pwsh -c for all pnpm commands
 - ✅ Configurable base branch (--base-branch, default: main-dev)

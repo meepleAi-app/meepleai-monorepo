@@ -414,8 +414,8 @@ Phase 3: Integration & Testing
 
 - ✅ Documentazione completata (rag-data.ts, rag-flow-current.md)
 - ✅ Database tables (#3438)
-- ✅ Backend services (#3436, #3437, #3435)
-- ⬜ Frontend UI (#3439, #3440)
+- ✅ Backend services (#3436, #3435) | ⬜ (#3437)
+- ✅ Frontend UI (#3439) | ⬜ (#3440)
 - ⬜ Testing & docs (#3441, #3442)
 - **Priority**: 🔴 CRITICAL (prerequisito per tutto)
 
@@ -582,7 +582,7 @@ graph TD
 #### Epic #3434 Completion
 
 6. ⬜ Complete #3435 + unit tests
-7. ⬜ Implement #3439 Strategy selector UI
+7. ✅ Implement #3439 Strategy selector UI (PR #3474)
 8. ⬜ Implement #3440 Admin config UI
 9. ⬜ Complete #3441 Testing
 10. ⬜ Finalize #3442 Documentation
@@ -621,14 +621,14 @@ Creare Epic "Dashboard & Admin Tools" per:
 ### Epic #3434: Tier-Strategy-Model Refactoring
 
 - [x] Documentation phase (rag-data.ts, rag-flow-current.md)
-- [ ] Database phase (#3438)
-- [ ] Backend services (#3436, #3437)
-- [ ] Routing refactor (#3435)
-- [ ] Frontend UI (#3439, #3440)
+- [x] Database phase (#3438)
+- [x] Backend services (#3436) | [ ] (#3437)
+- [x] Routing refactor (#3435)
+- [x] Frontend UI (#3439) | [ ] (#3440)
 - [ ] Testing (#3441)
 - [ ] Documentation finalization (#3442)
 
-**Progress**: 1/8 tasks (12.5%) | **Status**: 🔵 In Progress
+**Progress**: 5/8 tasks (62.5%) | **Status**: 🔵 In Progress
 
 ### Epic #3327: Security & Quota
 

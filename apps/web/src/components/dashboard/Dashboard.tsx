@@ -42,6 +42,7 @@ import { DashboardSection, type ViewMode } from './DashboardSection';
 import { DashboardHeader } from './DashboardHeader';
 import { HeroStats } from './HeroStats';
 import { ActiveSessionsWidget } from './ActiveSessionsWidget';
+import { LibrarySnapshot } from './LibrarySnapshot';
 import { GameCard, type GameData } from './GameCard';
 import { ActivityItem, type ActivityData } from './ActivityItem';
 import { WishlistCard, type WishlistItemData } from './WishlistCard';
@@ -623,9 +624,12 @@ export function Dashboard() {
         <HeroStats />
       </div>
 
-      {/* Active Sessions Widget - Issue #3309 */}
+      {/* Dashboard Widgets - Issue #3309, #3310 */}
       <div className="mx-auto max-w-7xl px-4 pb-6 sm:px-6 lg:px-8">
-        <ActiveSessionsWidget />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <ActiveSessionsWidget />
+          <LibrarySnapshot />
+        </div>
       </div>
 
       {/* Reorderable Sections */}

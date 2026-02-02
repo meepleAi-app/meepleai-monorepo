@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Strategy Flows - Visual Comparison</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+            background: #0a0e1a;
+            color: #e2e8f0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+            border-radius: 16px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 1rem;
+        }
+
+        .view-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .view-btn {
+            padding: 0.75rem 1.5rem;
+            background: rgba(51, 65, 85, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 8px;
+            color: #e2e8f0;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+            font-size: 0.875rem;
+        }
+
+        .view-btn:hover {
+            background: rgba(71, 85, 105, 0.8);
+            border-color: rgba(148, 163, 184, 0.5);
+        }
+
+        .view-btn.active {
+            background: rgba(59, 130, 246, 0.3);
+            border-color: #3b82f6;
+        }
+
+        .strategies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .strategy-flow {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .strategy-flow:hover {
+            border-color: rgba(148, 163, 184, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .strategy-flow.fast { border-top: 3px solid #10b981; }
+        .strategy-flow.balanced { border-top: 3px solid #3b82f6; }
+        .strategy-flow.precise { border-top: 3px solid #8b5cf6; }
+        .strategy-flow.expert { border-top: 3px solid #f59e0b; }
+        .strategy-flow.consensus { border-top: 3px solid #ef4444; }
+        .strategy-flow.custom { border-top: 3px solid #fbbf24; }
+
+        .flow-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+        }
+
+        .flow-icon {
+            font-size: 2rem;
+        }
+
+        .flow-title h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .flow-title p {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .svg-container {
+            margin: 1rem 0;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.15);
+        }
+
+        .metric-box {
+            padding: 0.75rem;
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .legend {
+            margin-top: 3rem;
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+        }
+
+        .legend h4 {
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: rgba(30, 41, 59, 0.4);
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        .legend-box {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .legend-box.input { background: #1e3a8a; color: #93c5fd; }
+        .legend-box.agent { background: #581c87; color: #c4b5fd; }
+        .legend-box.model { background: #831843; color: #f9a8d4; }
+        .legend-box.layer { background: #065f46; color: #6ee7b7; }
+        .legend-box.output { background: #78350f; color: #fcd34d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>RAG Strategy Flows</h1>
+            <p>Visual Comparison of 6 TOMAC-RAG Execution Strategies</p>
+        </div>
+
+        <div class="view-toggle">
+            <button class="view-btn active" onclick="showView('grid')">Side-by-Side</button>
+            <button class="view-btn" onclick="showView('individual')">Individual Flows</button>
+            <button class="view-btn" onclick="showView('matrix')">Matrix View</button>
+        </div>
+
+        <div class="strategies-grid" id="strategiesContainer"></div>
+
+        <div class="legend">
+            <h4>Block Types Legend</h4>
+            <div class="legend-grid">
+                <div class="legend-item">
+                    <div class="legend-box input">IN</div>
+                    <span>Input Query</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box agent">AG</div>
+                    <span>Agent Selection</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box model">M</div>
+                    <span>LLM Model</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box layer">L</div>
+                    <span>RAG Layer</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box output">OUT</div>
+                    <span>Final Output</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const strategies = {
+            FAST: {
+                id: 'fast',
+                name: 'FAST',
+                icon: '⚡',
+                description: 'FAQ semplici, risposte rapide',
+                color: '#10b981',
+                flow: [
+                    { type: 'input', label: 'Query Input', params: ['Type: Simple FAQ', 'User Tier: User+'] },
+                    { type: 'agent', label: 'GeneralAgent', params: ['Prompt: Concise', 'Default: FAST'] },
+                    { type: 'model', label: 'Llama 3.3 70B', params: ['Provider: OpenRouter', 'Cost: FREE'] },
+                    { type: 'layer', label: 'L1: Routing', params: ['Tokens: 280-360', 'Latency: 20-50ms'] },
+                    { type: 'layer', label: 'L2: Cache', params: ['Hit: 80%', 'Tokens: 50'] },
+                    { type: 'layer', label: 'L3: Retrieval', params: ['TopK: 3', 'Tokens: ~900'] },
+                    { type: 'layer', label: 'L5: Generation', params: ['Tokens: ~800', 'Latency: 100ms'] },
+                    { type: 'output', label: 'Response', params: ['Accuracy: 78-85%', 'Total: 2060tok'] }
+                ],
+                metrics: { tokens: '2060', cost: 'FREE', latency: '<200ms', accuracy: '78-85%' }
+            },
+            BALANCED: {
+                id: 'balanced',
+                name: 'BALANCED',
+                icon: '⚖️',
+                description: 'Query standard con validazione CRAG',
+                color: '#3b82f6',
+                flow: [
+                    { type: 'input', label: 'Query Input', params: ['Type: Standard', 'User Tier: User+'] },
+                    { type: 'agent', label: 'RulesInterpreter', params: ['Prompt: Authoritative', 'Default: BALANCED'] },
+                    { type: 'model', label: 'DeepSeek Chat', params: ['Provider: DeepSeek', 'Cost: $0.01'] },
+                    { type: 'layer', label: 'L1: Routing', params: ['Tokens: 280', 'Latency: 30ms'] },
+                    { type: 'layer', label: 'L2: Cache', params: ['Hit: 80%', 'Tokens: 50'] },
+                    { type: 'layer', label: 'L3: Retrieval', params: ['TopK: 5', 'Tokens: ~1200'] },
+                    { type: 'layer', label: 'L4: CRAG Eval', params: ['Model: T5-Large', 'Tokens: ~300'] },
+                    { type: 'layer', label: 'L5: Generation', params: ['Tokens: ~1000', 'Latency: 1-2s'] },
+                    { type: 'output', label: 'Response', params: ['Accuracy: 85-92%', 'Total: 2820tok'] }
+                ],
+                metrics: { tokens: '2820', cost: '$0.01', latency: '1-2s', accuracy: '85-92%' }
+            },
+            PRECISE: {
+                id: 'precise',
+                name: 'PRECISE',
+                icon: '🎯',
+                description: 'Query critiche, multi-agent pipeline',
+                color: '#8b5cf6',
+                flow: [
+                    { type: 'input', label: 'Query Input', params: ['Type: Critical', 'User Tier: Editor+'] },
+                    { type: 'agent', label: 'StrategyAgent', params: ['Prompt: Strategic', 'Default: PRECISE'] },
+                    { type: 'model', label: 'Claude Sonnet 4.5', params: ['Provider: Anthropic', 'Cost: $0.13'] },
+                    { type: 'layer', label: 'L1: Routing', params: ['Tokens: 360', 'Latency: 40ms'] },
+                    { type: 'layer', label: 'L3: Multi-Hop', params: ['Hops: 3', 'Tokens: ~5000'] },
+                    { type: 'layer', label: 'L4: LLM Grading', params: ['Model: Haiku', 'Tokens: ~2000'] },
+                    { type: 'layer', label: 'L5: Multi-Agent', params: ['Agents: 3', 'Tokens: ~12000'] },
+                    { type: 'layer', label: 'L6: Self-RAG', params: ['5-layer validation', 'Tokens: ~3000'] },
+                    { type: 'output', label: 'Response', params: ['Accuracy: 95-98%', 'Total: 22396tok'] }
+                ],
+                metrics: { tokens: '22396', cost: '$0.132', latency: '5-10s', accuracy: '95-98%' }
+            },
+            EXPERT: {
+                id: 'expert',
+                name: 'EXPERT',
+                icon: '🔍',
+                description: 'Web search + multi-hop reasoning',
+                color: '#f59e0b',
+                flow: [
+                    { type: 'input', label: 'Query Input', params: ['Type: External info', 'User Tier: Admin+'] },
+                    { type: 'agent', label: 'GeneralAgent', params: ['Prompt: Research', 'Default: EXPERT'] },
+                    { type: 'model', label: 'Claude Sonnet 4.5', params: ['Provider: Anthropic', 'Cost: $0.10'] },
+                    { type: 'layer', label: 'L1: Routing', params: ['Tokens: 280', 'Latency: 30ms'] },
+                    { type: 'layer', label: 'WebSearch', params: ['Queries: 3-5', 'Tokens: ~3000'] },
+                    { type: 'layer', label: 'Multi-Hop', params: ['Hops: 2-3', 'Tokens: ~8000'] },
+                    { type: 'layer', label: 'L5: Synthesis', params: ['Mode: Research', 'Tokens: ~3500'] },
+                    { type: 'output', label: 'Response', params: ['Accuracy: 92-96%', 'Total: 15000tok'] }
+                ],
+                metrics: { tokens: '15000', cost: '$0.099', latency: '8-15s', accuracy: '92-96%' }
+            },
+            CONSENSUS: {
+                id: 'consensus',
+                name: 'CONSENSUS',
+                icon: '🗳️',
+                description: 'Multi-LLM voting (3 voters + aggregator)',
+                color: '#ef4444',
+                flow: [
+                    { type: 'input', label: 'Query Input', params: ['Type: High-risk', 'User Tier: Admin+'] },
+                    { type: 'agent', label: 'CitationAgent', params: ['Prompt: Verification', 'Default: CONSENSUS'] },
+                    { type: 'model', label: 'Voter 1: Sonnet 4.5', params: ['Provider: Anthropic', 'Tokens: ~5000'] },
+                    { type: 'model', label: 'Voter 2: GPT-4o', params: ['Provider: OpenAI', 'Tokens: ~5000'] },
+                    { type: 'model', label: 'Voter 3: DeepSeek', params: ['Provider: DeepSeek', 'Tokens: ~5000'] },
+                    { type: 'layer', label: 'Aggregator', params: ['Model: Sonnet', 'Tokens: ~3000'] },
+                    { type: 'output', label: 'Response', params: ['Accuracy: 97-99%', 'Total: 18000tok'] }
+                ],
+                metrics: { tokens: '18000', cost: '$0.09', latency: '10-20s', accuracy: '97-99%' }
+            },
+            CUSTOM: {
+                id: 'custom',
+                name: 'CUSTOM',
+                icon: '⚙️',
+                description: 'Configurazione admin personalizzata',
+                color: '#fbbf24',
+                flow: [
+                    { type: 'input', label: 'Query Input', params: ['Type: Admin-defined', 'User Tier: Admin'] },
+                    { type: 'agent', label: 'Configurable Agent', params: ['Prompt: Custom', 'Strategy: CUSTOM'] },
+                    { type: 'model', label: 'Admin Choice', params: ['Provider: Variable', 'Cost: Variable'] },
+                    { type: 'layer', label: 'Custom Pipeline', params: ['Layers: Admin-defined', 'Tokens: Variable'] },
+                    { type: 'output', label: 'Response', params: ['Accuracy: Variable', 'Total: ~5000tok'] }
+                ],
+                metrics: { tokens: '~5000', cost: 'Variable', latency: 'Variable', accuracy: '80-95%' }
+            }
+        };
+
+        const blockColors = {
+            input: { bg: '#1e3a8a', text: '#93c5fd' },
+            agent: { bg: '#581c87', text: '#c4b5fd' },
+            model: { bg: '#831843', text: '#f9a8d4' },
+            layer: { bg: '#065f46', text: '#6ee7b7' },
+            output: { bg: '#78350f', text: '#fcd34d' }
+        };
+
+        function createSVGFlow(strategy, width = 280) {
+            const blockHeight = 70;
+            const blockSpacing = 20;
+            const arrowHeight = 30;
+            const totalBlocks = strategy.flow.length;
+            const height = (blockHeight * totalBlocks) + (arrowHeight * (totalBlocks - 1)) + 40;
+
+            let svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">`;
+
+            let y = 20;
+            strategy.flow.forEach((block, index) => {
+                const colors = blockColors[block.type];
+                const isLast = index === strategy.flow.length - 1;
+
+                svg += `
+                    <g class="flow-block" data-type="${block.type}">
+                        <rect x="20" y="${y}" width="${width - 40}" height="${blockHeight}"
+                              rx="8" fill="${colors.bg}" stroke="${colors.text}" stroke-width="1.5" opacity="0.9"/>
+
+                        <text x="30" y="${y + 22}" fill="${colors.text}" font-size="13" font-weight="700">
+                            ${block.label}
+                        </text>
+
+                        <text x="30" y="${y + 42}" fill="${colors.text}" font-size="10" opacity="0.8">
+                            ${block.params[0] || ''}
+                        </text>
+
+                        <text x="30" y="${y + 58}" fill="${colors.text}" font-size="10" opacity="0.8">
+                            ${block.params[1] || ''}
+                        </text>
+                    </g>
+                `;
+
+                if (!isLast) {
+                    const arrowY = y + blockHeight;
+                    const arrowCenterX = width / 2;
+                    svg += `
+                        <g class="arrow" opacity="0.6">
+                            <line x1="${arrowCenterX}" y1="${arrowY}"
+                                  x2="${arrowCenterX}" y2="${arrowY + arrowHeight}"
+                                  stroke="#64748b" stroke-width="2"/>
+                            <polygon points="${arrowCenterX},${arrowY + arrowHeight} ${arrowCenterX - 5},${arrowY + arrowHeight - 8} ${arrowCenterX + 5},${arrowY + arrowHeight - 8}"
+                                     fill="#64748b"/>
+                        </g>
+                    `;
+                }
+
+                y += blockHeight + arrowHeight;
+            });
+
+            svg += '</svg>';
+            return svg;
+        }
+
+        function renderStrategies() {
+            const container = document.getElementById('strategiesContainer');
+            container.textContent = '';
+
+            Object.values(strategies).forEach(strategy => {
+                const flowDiv = document.createElement('div');
+                flowDiv.className = `strategy-flow ${strategy.id}`;
+
+                const header = document.createElement('div');
+                header.className = 'flow-header';
+                header.innerHTML = `
+                    <span class="flow-icon">${strategy.icon}</span>
+                    <div class="flow-title">
+                        <h3>${strategy.name}</h3>
+                        <p>${strategy.description}</p>
+                    </div>
+                `;
+
+                const svgContainer = document.createElement('div');
+                svgContainer.className = 'svg-container';
+                svgContainer.innerHTML = createSVGFlow(strategy);
+
+                const metrics = document.createElement('div');
+                metrics.className = 'metrics-grid';
+                metrics.innerHTML = `
+                    <div class="metric-box">
+                        <div class="metric-label">Tokens</div>
+                        <div class="metric-value" style="color: ${strategy.color}">${strategy.metrics.tokens}</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Cost</div>
+                        <div class="metric-value" style="color: #10b981">${strategy.metrics.cost}</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Latency</div>
+                        <div class="metric-value" style="color: #f59e0b">${strategy.metrics.latency}</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Accuracy</div>
+                        <div class="metric-value" style="color: #3b82f6">${strategy.metrics.accuracy}</div>
+                    </div>
+                `;
+
+                flowDiv.appendChild(header);
+                flowDiv.appendChild(svgContainer);
+                flowDiv.appendChild(metrics);
+                container.appendChild(flowDiv);
+            });
+        }
+
+        function showView(view) {
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (view === 'grid') {
+                renderStrategies();
+            }
+        }
+
+        renderStrategies();
+    </script>
+</body>
+</html>

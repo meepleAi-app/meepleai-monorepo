@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAST Strategy Flow - Detailed Visualization</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background: radial-gradient(circle at top right, #064e3b 0%, #0a0e1a 50%, #000000 100%);
+            color: #e2e8f0;
+            padding: 3rem;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .flow-container {
+            max-width: 900px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #10b981;
+            border-radius: 16px;
+            padding: 3rem;
+            box-shadow: 0 0 60px rgba(16, 185, 129, 0.3);
+        }
+
+        .flow-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .strategy-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid #10b981;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #6ee7b7;
+            margin-bottom: 1rem;
+        }
+
+        .flow-header h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            color: #6ee7b7;
+            text-shadow: 0 0 30px rgba(110, 231, 183, 0.5);
+        }
+
+        .flow-header p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        .flow-block {
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(6, 78, 59, 0.2);
+            border-left: 4px solid #10b981;
+            border-radius: 8px;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .flow-block:hover {
+            background: rgba(6, 78, 59, 0.35);
+            transform: translateX(8px);
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.2);
+        }
+
+        .block-type {
+            position: absolute;
+            top: -12px;
+            right: 1rem;
+            padding: 0.25rem 0.75rem;
+            background: #0a0e1a;
+            border: 1px solid #10b981;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #6ee7b7;
+            text-transform: uppercase;
+        }
+
+        .block-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .block-icon {
+            font-size: 2rem;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(16, 185, 129, 0.15);
+            border-radius: 8px;
+        }
+
+        .block-title {
+            flex: 1;
+        }
+
+        .block-title h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+            color: #d1fae5;
+        }
+
+        .block-title small {
+            color: #6ee7b7;
+            font-size: 0.8rem;
+        }
+
+        .block-params {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .param-item {
+            padding: 0.5rem;
+            background: rgba(10, 14, 26, 0.6);
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .param-label {
+            color: #64748b;
+            margin-right: 0.5rem;
+        }
+
+        .param-value {
+            color: #a7f3d0;
+            font-weight: 600;
+        }
+
+        .flow-arrow {
+            text-align: center;
+            margin: 1rem 0;
+            font-size: 2rem;
+            color: #10b981;
+            opacity: 0.5;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; transform: translateY(0); }
+            50% { opacity: 0.7; transform: translateY(4px); }
+        }
+
+        .metrics-panel {
+            margin-top: 3rem;
+            padding: 2rem;
+            background: rgba(6, 78, 59, 0.15);
+            border: 2px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(10, 14, 26, 0.8);
+            border-radius: 8px;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #6ee7b7;
+        }
+
+        .metric-sublabel {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="flow-container">
+        <div class="flow-header">
+            <div class="strategy-badge">USER TIER REQUIRED: User or higher</div>
+            <h1>⚡ FAST</h1>
+            <p>FAQ semplici, risposte rapide</p>
+        </div>
+
+        <div class="flow-block">
+            <span class="block-type">INPUT</span>
+            <div class="block-header">
+                <div class="block-icon">📥</div>
+                <div class="block-title">
+                    <h3>Query Input</h3>
+                    <small>User question reception</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Type:</span>
+                    <span class="param-value">Simple FAQ</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Complexity:</span>
+                    <span class="param-value">Low</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Example:</span>
+                    <span class="param-value">"How many players?"</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">AGENT</span>
+            <div class="block-header">
+                <div class="block-icon">🤖</div>
+                <div class="block-title">
+                    <h3>GeneralAgent</h3>
+                    <small>Default agent for simple queries</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Base Prompt:</span>
+                    <span class="param-value">Concise helpful answers</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Default Strategy:</span>
+                    <span class="param-value">FAST</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">MODEL</span>
+            <div class="block-header">
+                <div class="block-icon">🧠</div>
+                <div class="block-title">
+                    <h3>Llama 3.3 70B</h3>
+                    <small>Free open-source model via OpenRouter</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Provider:</span>
+                    <span class="param-value">OpenRouter</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Cost:</span>
+                    <span class="param-value">FREE</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Context:</span>
+                    <span class="param-value">4K tokens</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Fallback:</span>
+                    <span class="param-value">Gemini 2.0 Flash</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">LAYER</span>
+            <div class="block-header">
+                <div class="block-icon">🧠</div>
+                <div class="block-title">
+                    <h3>L1: Routing</h3>
+                    <small>Query classification and strategy validation</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Tokens:</span>
+                    <span class="param-value">280-360</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Latency:</span>
+                    <span class="param-value">20-50ms</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Action:</span>
+                    <span class="param-value">Classify query type</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">LAYER</span>
+            <div class="block-header">
+                <div class="block-icon">💾</div>
+                <div class="block-title">
+                    <h3>L2: Semantic Cache</h3>
+                    <small>Check for similar cached responses</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Hit Rate:</span>
+                    <span class="param-value">80%</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Tokens (if hit):</span>
+                    <span class="param-value">~50</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Similarity:</span>
+                    <span class="param-value">Cosine > 0.95</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">TTL:</span>
+                    <span class="param-value">48 hours</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">LAYER</span>
+            <div class="block-header">
+                <div class="block-icon">📚</div>
+                <div class="block-title">
+                    <h3>L3: Retrieval (FAST mode)</h3>
+                    <small>Vector search for relevant context</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">TopK:</span>
+                    <span class="param-value">3 chunks</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Min Score:</span>
+                    <span class="param-value">0.55</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Tokens:</span>
+                    <span class="param-value">~900</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Search Type:</span>
+                    <span class="param-value">Vector only</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">LAYER</span>
+            <div class="block-header">
+                <div class="block-icon">✨</div>
+                <div class="block-title">
+                    <h3>L5: Generation</h3>
+                    <small>LLM response synthesis</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Tokens:</span>
+                    <span class="param-value">~800</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Latency:</span>
+                    <span class="param-value">~100ms</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Template:</span>
+                    <span class="param-value">FAQ-optimized</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Max Tokens:</span>
+                    <span class="param-value">500 output</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">OUTPUT</span>
+            <div class="block-header">
+                <div class="block-icon">📤</div>
+                <div class="block-title">
+                    <h3>Response Output</h3>
+                    <small>Final answer to user</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Accuracy:</span>
+                    <span class="param-value">78-85%</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Total Tokens:</span>
+                    <span class="param-value">2060</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Sources:</span>
+                    <span class="param-value">3 citations</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Confidence:</span>
+                    <span class="param-value">Medium-High</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics-panel">
+            <h2 style="color: #6ee7b7; margin-bottom: 1.5rem; text-align: center;">Strategy Metrics</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Tokens</div>
+                    <div class="metric-value">2060</div>
+                    <div class="metric-sublabel">Per query average</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Cost</div>
+                    <div class="metric-value">FREE</div>
+                    <div class="metric-sublabel">$0.0001 equivalent</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Latency</div>
+                    <div class="metric-value"><200ms</div>
+                    <div class="metric-sublabel">Sub-second response</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Accuracy</div>
+                    <div class="metric-value">78-85%</div>
+                    <div class="metric-sublabel">Good for simple FAQs</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Usage</div>
+                    <div class="metric-value">60-70%</div>
+                    <div class="metric-sublabel">Most common strategy</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Tiers</div>
+                    <div class="metric-value">User+</div>
+                    <div class="metric-sublabel">All authenticated</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .metrics-panel {
+            margin-top: 3rem;
+            padding: 2rem;
+            background: rgba(6, 78, 59, 0.15);
+            border: 2px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .metric-card {
+            padding: 1.25rem;
+            background: rgba(10, 14, 26, 0.8);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .metric-card:hover {
+            border-color: #10b981;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.2);
+        }
+
+        .metric-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #6ee7b7;
+        }
+
+        .metric-sublabel {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+    </style>
+</body>
+</html>

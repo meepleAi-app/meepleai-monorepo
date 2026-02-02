@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeepleAI RAG Flow - Current Implementation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px;
+            color: #e0e0e0;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed, #f97316);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 40px;
+            font-size: 0.9rem;
+        }
+
+        .diagram-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Flow Diagram */
+        .flow {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .layer {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .layer-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .layer-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .layer-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .layer-file {
+            font-size: 0.7rem;
+            color: #666;
+            font-family: 'Consolas', monospace;
+            margin-left: auto;
+        }
+
+        /* Layer Colors */
+        .layer-input { border-left: 4px solid #10b981; }
+        .layer-input .layer-badge { background: #10b981; color: #000; }
+
+        .layer-routing { border-left: 4px solid #f59e0b; }
+        .layer-routing .layer-badge { background: #f59e0b; color: #000; }
+
+        .layer-search { border-left: 4px solid #3b82f6; }
+        .layer-search .layer-badge { background: #3b82f6; color: #fff; }
+
+        .layer-generation { border-left: 4px solid #8b5cf6; }
+        .layer-generation .layer-badge { background: #8b5cf6; color: #fff; }
+
+        .layer-validation { border-left: 4px solid #ef4444; }
+        .layer-validation .layer-badge { background: #ef4444; color: #fff; }
+
+        .layer-output { border-left: 4px solid #10b981; }
+        .layer-output .layer-badge { background: #10b981; color: #000; }
+
+        /* Components inside layers */
+        .components {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .component {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 12px 16px;
+            min-width: 200px;
+            flex: 1;
+        }
+
+        .component-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .component-desc {
+            font-size: 0.75rem;
+            color: #888;
+            line-height: 1.4;
+        }
+
+        .component-code {
+            font-family: 'Consolas', monospace;
+            font-size: 0.65rem;
+            color: #666;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Arrows */
+        .arrow {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 30px;
+            color: #444;
+        }
+
+        .arrow svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Decision boxes */
+        .decision {
+            background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.05));
+            border: 1px dashed rgba(245,158,11,0.3);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.75rem;
+        }
+
+        .decision-title {
+            color: #f59e0b;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        /* Parallel indicator */
+        .parallel-group {
+            display: flex;
+            gap: 12px;
+            position: relative;
+        }
+
+        .parallel-group::before {
+            content: 'PARALLEL';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.6rem;
+            color: #7c3aed;
+            background: #1a1a2e;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid #7c3aed;
+        }
+
+        /* Metrics */
+        .metrics {
+            display: flex;
+            gap: 20px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .metric {
+            font-size: 0.7rem;
+        }
+
+        .metric-label {
+            color: #666;
+        }
+
+        .metric-value {
+            color: #00d4ff;
+            font-weight: 600;
+        }
+
+        /* Legend */
+        .legend {
+            margin-top: 40px;
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+        }
+
+        .legend-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #888;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        /* Code reference */
+        .code-ref {
+            display: inline-block;
+            font-family: 'Consolas', monospace;
+            font-size: 0.65rem;
+            color: #00d4ff;
+            background: rgba(0,212,255,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 4px;
+        }
+
+        /* Sub-layers */
+        .sub-layers {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .sub-layer {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .sub-layer-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #aaa;
+        }
+
+        .sub-layer-threshold {
+            font-size: 0.65rem;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .sub-layer-status {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.6rem;
+            font-weight: 600;
+        }
+
+        .status-pass { background: rgba(16,185,129,0.2); color: #10b981; }
+        .status-fail { background: rgba(239,68,68,0.2); color: #ef4444; }
+    </style>
+</head>
+<body>
+    <h1>MeepleAI TOMAC-RAG Flow</h1>
+    <p class="subtitle">Token-Optimized Modular Adaptive Corrective RAG - Current Implementation</p>
+
+    <div class="diagram-container">
+        <div class="flow">
+
+            <!-- INPUT -->
+            <div class="layer layer-input">
+                <div class="layer-header">
+                    <span class="layer-badge">INPUT</span>
+                    <span class="layer-title">User Query</span>
+                    <span class="layer-file">AskQuestionQuery.cs</span>
+                </div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-name">AskQuestionQuery</div>
+                        <div class="component-desc">
+                            GameId, Question, ThreadId?, SearchMode (vector/hybrid)
+                        </div>
+                        <div class="code-ref">KnowledgeBase/Application/Queries/AskQuestionQuery.cs:1-19</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">User Context</div>
+                        <div class="component-desc">
+                            UserTier (Anonymous/User/Editor/Admin), PreferredProvider?
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                </svg>
+            </div>
+
+            <!-- L0: ROUTING -->
+            <div class="layer layer-routing">
+                <div class="layer-header">
+                    <span class="layer-badge">L0</span>
+                    <span class="layer-title">Model Routing (BGAI-022)</span>
+                    <span class="layer-file">HybridAdaptiveRoutingStrategy.cs:82-120</span>
+                </div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-name">HybridAdaptiveRoutingStrategy</div>
+                        <div class="component-desc">
+                            Selects LLM provider based on user tier and traffic split
+                        </div>
+                        <div class="component-code">
+                            Anonymous → 20% OpenRouter, 80% Ollama<br>
+                            User → 20% OpenRouter<br>
+                            Editor → 50% OpenRouter<br>
+                            Admin → 80% OpenRouter
+                        </div>
+                    </div>
+                    <div class="decision">
+                        <div class="decision-title">Decision Logic</div>
+                        1. Check PreferredProvider override<br>
+                        2. Database-driven tier routing<br>
+                        3. Appsettings fallback<br>
+                        4. Apply traffic split %<br>
+                        5. Budget mode overrides
+                    </div>
+                </div>
+                <div class="metrics">
+                    <div class="metric">
+                        <span class="metric-label">Output: </span>
+                        <span class="metric-value">LlmRoutingDecision(Provider, Model, Reason)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                </svg>
+            </div>
+
+            <!-- L1: SEARCH & RETRIEVAL -->
+            <div class="layer layer-search">
+                <div class="layer-header">
+                    <span class="layer-badge">L1</span>
+                    <span class="layer-title">Search & Retrieval</span>
+                    <span class="layer-file">SearchQueryHandler.cs:41-97</span>
+                </div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-name">1. Embedding Generation</div>
+                        <div class="component-desc">
+                            IEmbeddingService.GenerateEmbeddingAsync()
+                        </div>
+                        <div class="code-ref">SearchQueryHandler.cs:53-58</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">2a. Vector Search</div>
+                        <div class="component-desc">
+                            Qdrant cosine similarity search
+                        </div>
+                        <div class="code-ref">VectorSearchDomainService.cs:20-65</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">2b. Keyword Search</div>
+                        <div class="component-desc">
+                            BM25/FTS (hybrid mode only)
+                        </div>
+                        <div class="code-ref">HybridSearchService.SearchAsync()</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">3. RRF Fusion</div>
+                        <div class="component-desc">
+                            Reciprocal Rank Fusion: score = 1/(rank+60)
+                        </div>
+                        <div class="code-ref">RrfFusionDomainService.FuseResults()</div>
+                    </div>
+                </div>
+                <div class="metrics">
+                    <div class="metric">
+                        <span class="metric-label">TopK: </span>
+                        <span class="metric-value">5 results</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">MinScore: </span>
+                        <span class="metric-value">0.55</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Output: </span>
+                        <span class="metric-value">SearchResultDto[] + Confidence</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                </svg>
+            </div>
+
+            <!-- L2: CONTEXT BUILDING -->
+            <div class="layer layer-search">
+                <div class="layer-header">
+                    <span class="layer-badge">L2</span>
+                    <span class="layer-title">Context Building</span>
+                    <span class="layer-file">AskQuestionQueryHandler.cs:71-92</span>
+                </div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-name">Chat History Loading</div>
+                        <div class="component-desc">
+                            Load from ChatThreadRepository if ThreadId provided
+                        </div>
+                        <div class="code-ref">AskQuestionQueryHandler.cs:71-78</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">Prompt Building</div>
+                        <div class="component-desc">
+                            System prompt (template) + User prompt (question + context)
+                        </div>
+                        <div class="code-ref">PromptTemplateService + ChatContextDomainService</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">Agent Context (optional)</div>
+                        <div class="component-desc">
+                            Game state: Turn, ActivePlayer, Scores, Phase
+                        </div>
+                        <div class="code-ref">AgentPromptBuilder.BuildSessionPrompt()</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                </svg>
+            </div>
+
+            <!-- L3: GENERATION -->
+            <div class="layer layer-generation">
+                <div class="layer-header">
+                    <span class="layer-badge">L3</span>
+                    <span class="layer-title">LLM Generation</span>
+                    <span class="layer-file">AskQuestionQueryHandler.cs:94-101</span>
+                </div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-name">ILlmService.GenerateCompletionAsync()</div>
+                        <div class="component-desc">
+                            Calls selected provider (OpenRouter/Ollama) with system + user prompts
+                        </div>
+                        <div class="code-ref">AskQuestionQueryHandler.cs:200-203</div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">Token Tracking</div>
+                        <div class="component-desc">
+                            OpenTelemetry metrics: input/output tokens, cost
+                        </div>
+                        <div class="code-ref">MeepleAiMetrics.RecordLlmTokenUsage():212-219</div>
+                    </div>
+                </div>
+                <div class="metrics">
+                    <div class="metric">
+                        <span class="metric-label">Output: </span>
+                        <span class="metric-value">LLM Response + TokenUsage</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                </svg>
+            </div>
+
+            <!-- L4: VALIDATION -->
+            <div class="layer layer-validation">
+                <div class="layer-header">
+                    <span class="layer-badge">L4</span>
+                    <span class="layer-title">RAG Validation Pipeline (5 Layers)</span>
+                    <span class="layer-file">RagValidationPipelineService.cs:55-259</span>
+                </div>
+
+                <div class="sub-layers">
+                    <div class="sub-layer">
+                        <div class="sub-layer-name">V1: Confidence</div>
+                        <div class="sub-layer-threshold">Threshold: ≥0.70</div>
+                        <div class="code-ref">ConfidenceValidationService.cs</div>
+                        <span class="sub-layer-status status-pass">SYNC - Early Exit</span>
+                    </div>
+                    <div class="sub-layer">
+                        <div class="sub-layer-name">V2: Multi-Model Consensus</div>
+                        <div class="sub-layer-threshold">GPT-4 + Claude ≥0.90 similarity</div>
+                        <div class="code-ref">MultiModelValidationService.cs</div>
+                        <span class="sub-layer-status status-pass">PARALLEL</span>
+                    </div>
+                    <div class="sub-layer">
+                        <div class="sub-layer-name">V3: Citation Verification</div>
+                        <div class="sub-layer-threshold">Source exists in PDF</div>
+                        <div class="code-ref">CitationValidationService.cs</div>
+                        <span class="sub-layer-status status-pass">PARALLEL</span>
+                    </div>
+                    <div class="sub-layer">
+                        <div class="sub-layer-name">V4: Hallucination Detection</div>
+                        <div class="sub-layer-threshold">No forbidden keywords</div>
+                        <div class="code-ref">HallucinationDetectionService.cs</div>
+                        <span class="sub-layer-status status-pass">CHAINS V2</span>
+                    </div>
+                    <div class="sub-layer">
+                        <div class="sub-layer-name">V5: Accuracy Tracking</div>
+                        <div class="sub-layer-threshold">Baseline ≥80%</div>
+                        <div class="code-ref">ValidationAccuracyTrackingService.cs</div>
+                        <span class="sub-layer-status status-pass">INFO ONLY</span>
+                    </div>
+                </div>
+
+                <div class="decision" style="margin-top: 16px;">
+                    <div class="decision-title">Validation Modes</div>
+                    <strong>Standard:</strong> V1 + V3 + V4 (3 layers)<br>
+                    <strong>MultiModel:</strong> V1 + V2 + V3 + V4 + V5 (5 layers, parallel V2-V4)
+                </div>
+
+                <div class="metrics">
+                    <div class="metric">
+                        <span class="metric-label">Performance: </span>
+                        <span class="metric-value">30-66% faster with parallel execution</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Final: </span>
+                        <span class="metric-value">IsValid = V1 && V2 && V3 && V4</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                </svg>
+            </div>
+
+            <!-- OUTPUT -->
+            <div class="layer layer-output">
+                <div class="layer-header">
+                    <span class="layer-badge">OUTPUT</span>
+                    <span class="layer-title">QaResponseDto</span>
+                    <span class="layer-file">AskQuestionQueryHandler.cs:103-111</span>
+                </div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-name">Response Content</div>
+                        <div class="component-desc">
+                            Answer, Sources[], Confidence, TokenUsage
+                        </div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">Validation Results</div>
+                        <div class="component-desc">
+                            IsValid, ValidationDetails, Warnings[]
+                        </div>
+                    </div>
+                    <div class="component">
+                        <div class="component-name">Metrics</div>
+                        <div class="component-desc">
+                            LatencyMs, SearchScore, GenerationModel
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Legend -->
+        <div class="legend">
+            <div class="legend-title">LEGEND</div>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #10b981;"></div>
+                    <span>Input/Output</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f59e0b;"></div>
+                    <span>Routing Layer</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3b82f6;"></div>
+                    <span>Search/Context Layer</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #8b5cf6;"></div>
+                    <span>Generation Layer</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>Validation Layer</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: transparent; border: 1px dashed #f59e0b;"></div>
+                    <span>Decision Logic</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- File References -->
+        <div class="legend" style="margin-top: 20px;">
+            <div class="legend-title">KEY FILES</div>
+            <div style="font-size: 0.75rem; color: #888; line-height: 1.8;">
+                <code style="color: #00d4ff;">AskQuestionQueryHandler.cs</code> - Main RAG orchestrator (5-step flow)<br>
+                <code style="color: #00d4ff;">SearchQueryHandler.cs</code> - Hybrid search execution (vector + keyword)<br>
+                <code style="color: #00d4ff;">HybridAdaptiveRoutingStrategy.cs</code> - Model selection & tier routing<br>
+                <code style="color: #00d4ff;">RagValidationPipelineService.cs</code> - 5-layer validation orchestrator<br>
+                <code style="color: #00d4ff;">AgentOrchestrationService.cs</code> - Agent selection by query type<br>
+                All files in: <code>apps/api/src/Api/BoundedContexts/KnowledgeBase/</code>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

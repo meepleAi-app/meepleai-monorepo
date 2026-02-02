@@ -50,6 +50,17 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     public CustomPdfMetadata? CustomPdfMetadata { get; private set; }
 
     /// <summary>
+    /// The ID of the associated private PDF document.
+    /// Null means no private PDF is associated (uses SharedGame's default or custom metadata).
+    /// </summary>
+    public Guid? PrivatePdfId { get; private set; }
+
+    /// <summary>
+    /// Returns whether this entry has an associated private PDF.
+    /// </summary>
+    public bool HasPrivatePdf => PrivatePdfId.HasValue;
+
+    /// <summary>
     /// Current state of the game in the library.
     /// </summary>
     public GameState CurrentState { get; private set; }
@@ -203,17 +214,32 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     public void ResetPdfToShared()
     {
         CustomPdfMetadata = null;
+        PrivatePdfId = null;
+    }
+
+    /// <summary>
+    /// Associates a private PDF document with this library entry.
+    /// Raises a PrivatePdfAssociatedEvent domain event.
+    /// </summary>
+    /// <param name="pdfDocumentId">The ID of the PDF document to associate</param>
+    public void AssociatePrivatePdf(Guid pdfDocumentId)
+    {
+        if (pdfDocumentId == Guid.Empty)
+            throw new ArgumentException("PDF document ID cannot be empty", nameof(pdfDocumentId));
+
+        PrivatePdfId = pdfDocumentId;
+
+        AddDomainEvent(new PrivatePdfAssociatedEvent(
+            libraryEntryId: Id,
+            userId: UserId,
+            gameId: GameId,
+            pdfDocumentId: pdfDocumentId));
     }
 
     /// <summary>
     /// Returns whether this entry uses a custom agent configuration.
     /// </summary>
     public bool HasCustomAgent() => CustomAgentConfig is not null;
-
-    /// <summary>
-    /// Returns whether this entry uses a custom PDF rulebook.
-    /// </summary>
-    public bool HasCustomPdf() => CustomPdfMetadata is not null;
 
     // ========== GAME STATE MANAGEMENT ==========
 

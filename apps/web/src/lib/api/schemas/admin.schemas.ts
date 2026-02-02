@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { ApiKeyDtoSchema } from './auth.schemas';
+
 // ========== Publication Workflow (Issue #3480 + #3481) ==========
 
 /**
@@ -36,8 +38,6 @@ export const PublishGameResponseSchema = z.object({
   publishedAt: z.string().datetime().nullable(),
 });
 export type PublishGameResponse = z.infer<typeof PublishGameResponseSchema>;
-
-import { ApiKeyDtoSchema } from './auth.schemas';
 
 // ========== User Management ==========
 

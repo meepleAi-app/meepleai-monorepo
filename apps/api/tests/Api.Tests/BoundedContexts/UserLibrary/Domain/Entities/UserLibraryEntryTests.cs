@@ -333,7 +333,7 @@ public sealed class UserLibraryEntryTests
             "https://storage.example.com/test.pdf", 1024, "test.pdf"));
 
         // Assert
-        entry.HasCustomPdf().Should().BeTrue();
+        entry.CustomPdfMetadata.Should().NotBeNull();
     }
 
     [Fact]
@@ -343,7 +343,7 @@ public sealed class UserLibraryEntryTests
         var entry = CreateEntry();
 
         // Assert
-        entry.HasCustomPdf().Should().BeFalse();
+        entry.CustomPdfMetadata.Should().BeNull();
     }
 
     #endregion

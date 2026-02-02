@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Configuration;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -53,58 +54,20 @@ public record StrategyModelMapping(
     IReadOnlyList<string> FallbackModels,
     bool IsCustomizable)
 {
-    // CA1861: Static readonly arrays for fallback models
-    private static readonly string[] s_balancedFallback = ["meta-llama/llama-3.3-70b-instruct:free"];
-    private static readonly string[] s_preciseFallback = ["openai/gpt-4o-mini"];
-    private static readonly string[] s_expertFallback = ["openai/gpt-4o"];
-    private static readonly string[] s_consensusFallback = ["openai/gpt-4o", "google/gemini-pro"];
-
     /// <summary>
     /// Creates a default mapping for a strategy when database has no entry.
+    /// Issue #3437: Delegates to DefaultStrategyModelMappings configuration.
     /// </summary>
-    public static StrategyModelMapping Default(RagStrategy strategy) => strategy switch
+    public static StrategyModelMapping Default(RagStrategy strategy)
     {
-        RagStrategy.Fast => new StrategyModelMapping(
+        // Use centralized configuration from Issue #3437
+        var config = DefaultStrategyModelMappings.GetMapping(strategy);
+
+        return new StrategyModelMapping(
             strategy,
-            "OpenRouter",
-            "meta-llama/llama-3.3-70b-instruct:free",
-            Array.Empty<string>(),
-            IsCustomizable: false),
-        RagStrategy.Balanced => new StrategyModelMapping(
-            strategy,
-            "OpenRouter",
-            "openai/gpt-4o-mini",
-            s_balancedFallback,
-            IsCustomizable: false),
-        RagStrategy.Precise => new StrategyModelMapping(
-            strategy,
-            "OpenRouter",
-            "anthropic/claude-sonnet-4",
-            s_preciseFallback,
-            IsCustomizable: false),
-        RagStrategy.Expert => new StrategyModelMapping(
-            strategy,
-            "OpenRouter",
-            "anthropic/claude-sonnet-4",
-            s_expertFallback,
-            IsCustomizable: false),
-        RagStrategy.Consensus => new StrategyModelMapping(
-            strategy,
-            "OpenRouter",
-            "anthropic/claude-sonnet-4",
-            s_consensusFallback,
-            IsCustomizable: false),
-        RagStrategy.Custom => new StrategyModelMapping(
-            strategy,
-            "OpenRouter",
-            "anthropic/claude-sonnet-4",
-            Array.Empty<string>(),
-            IsCustomizable: true),
-        _ => new StrategyModelMapping(
-            strategy,
-            "OpenRouter",
-            "meta-llama/llama-3.3-70b-instruct:free",
-            Array.Empty<string>(),
-            IsCustomizable: false)
-    };
+            config.Provider,
+            config.PrimaryModel,
+            config.FallbackModels,
+            config.IsCustomizable);
+    }
 }

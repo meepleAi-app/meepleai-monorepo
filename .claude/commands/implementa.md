@@ -13,27 +13,65 @@ End-to-end issue implementation with validation gates, code review, and automate
 - Auto-select optimal agents/MCP/skills
 - Pre-merge code review with auto-fix (confidence ≥70%)
 - Complete branch lifecycle
+- **Progress tracking** with checkbox updates
 
 ## Arguments
 
 - `<Issue N>` - GitHub issue number (e.g., `2372`, `#2372`)
-- `--base-branch <branch>` - Branch to create feature branch from (default: `main-dev`)
-- `--pr-target <branch>` - Target branch for PR merge (default: `main-dev`)
+- `--base-branch <branch>` - Branch to create feature branch from (default: current branch)
+- `--pr-target <branch>` - Target branch for PR merge (default: parent branch auto-detected)
+
+## Windows PowerShell Best Practices
+
+**CRITICO**: Usa sempre `pwsh -c "comando"` su Windows per evitare problemi di output vuoto.
+
+```bash
+# ✅ CORRETTO
+pwsh -c "git diff --name-only main-dev...HEAD"
+pwsh -c "docker logs meepleai-api --tail=50"
+pwsh -c "cd apps/web; pnpm test; pnpm typecheck"
+
+# ❌ EVITA (output vuoto su Windows)
+git diff --name-only main-dev...HEAD | grep pattern
+docker logs meepleai-api | findstr error
+cd apps/web && pnpm test && pnpm lint
+```
+
+**Regola**: Se un comando non produce output atteso, wrappa sempre in `pwsh -c`.
 
 ## Configuration
 
 ```bash
-# Default behavior
-/implementa 2373  # Creates branch from main-dev, PR targets main-dev
+# Default: usa branch corrente come base, PR verso parent auto-detected
+/implementa 2373
 
-# Custom base branch
+# Custom base branch (crea feature branch da questo)
 /implementa 2373 --base-branch feature/parent-epic
 
-# Custom PR target
+# Custom PR target (PR mergia qui)
 /implementa 2373 --pr-target staging
 
-# Both custom
+# Entrambi custom
 /implementa 2373 --base-branch develop --pr-target main
+```
+
+## Branch Detection Logic
+
+**Base Branch** (--base-branch o default):
+```bash
+# Se non specificato, usa branch corrente
+current_branch=$(pwsh -c "git branch --show-current")
+base_branch=${base_branch:-$current_branch}
+```
+
+**PR Target** (--pr-target o default):
+```bash
+# Se non specificato, auto-detect parent branch
+if [ -z "$pr_target" ]; then
+  pr_target=$(pwsh -c "git show-branch | grep '*' | grep -v \"$current_branch\" | head -1 | sed 's/.*\[\(.*\)\].*/\1/' | sed 's/\^.*//'")
+fi
+# Fallback: main-dev se non trovato
+pr_target=${pr_target:-main-dev}
 ```
 
 ## Workflow Phases
@@ -42,18 +80,27 @@ End-to-end issue implementation with validation gates, code review, and automate
 
 1. `/sc:load` - Load project context
 2. `git status && git branch` - Verify clean workspace
-3. Check on correct parent branch
+3. Detect base branch and PR target
+4. **Update GitHub Issue**: Mark checkbox `[ ] Started` → `[x] Started`
 
-**Gate**: ❌ Stop if dirty workspace or wrong branch
+```bash
+# Update issue checkbox on GitHub
+gh issue edit $issue_number --add-label "status:in-progress"
+gh api repos/{owner}/{repo}/issues/$issue_number \
+  --field body="$(gh issue view $issue_number --json body -q .body | sed 's/\[ \] Started/[x] Started/')"
+```
+
+**Gate**: ❌ Stop if dirty workspace
 
 ---
 
 ### Phase 1: Preparation 📋
 
-1. Fetch issue via `mcp__MCP_DOCKER__issue_read`
+1. Fetch issue: `mcp__MCP_DOCKER__issue_read`
 2. Parse: title, DoD, tasks, labels
-3. Explore codebase: `Agent Explore --quick` for patterns
+3. Explore codebase: `Agent Explore --quick`
 4. Checkpoint: `write_memory("issue_<N>_analysis")`
+5. **Update checkbox**: `[ ] Analysis` → `[x] Analysis`
 
 **Gate**: Understand requirements + find patterns
 
@@ -61,13 +108,14 @@ End-to-end issue implementation with validation gates, code review, and automate
 
 ### Phase 2: Planning 🧠
 
-1. **Complex issues**: Use `sequential-thinking` for analysis
+1. **Complex issues**: Use `sequential-thinking`
 2. Generate 2-3 options with confidence scores
 3. **Decision**:
    - confidence ≥90%: Auto-select
    - confidence <90%: `AskUserQuestion`
-4. `TodoWrite` with atomic tasks (min 3 for complex)
+4. `TodoWrite` with atomic tasks (min 3)
 5. Checkpoint: `write_memory("issue_<N>_plan")`
+6. **Update checkbox**: `[ ] Planning` → `[x] Planning`
 
 **Gate**: ❌ Stop if all options <70% confidence
 
@@ -75,14 +123,15 @@ End-to-end issue implementation with validation gates, code review, and automate
 
 ### Phase 3: Branch Setup 🌿
 
-**Base Branch**: `--base-branch` or default `main-dev`
+**Base Branch**: `--base-branch` or current branch
 
 1. Sync: `git checkout <base-branch> && git pull`
 2. Create: `git checkout -b <type>/issue-<id>-<desc>`
    - **Types**: feature|fix|docs|test|refactor|chore
 3. Checkpoint: `write_memory("issue_<N>_branch")`
+4. **Update checkbox**: `[ ] Branch Created` → `[x] Branch Created`
 
-**Gate**: ❌ Stop if branch exists or malformed name
+**Gate**: ❌ Stop if branch exists or malformed
 
 ---
 
@@ -98,9 +147,10 @@ End-to-end issue implementation with validation gates, code review, and automate
    - Frontend: React, Zustand, React Query
 3. **Update**:
    - `TaskUpdate`: pending → in_progress → completed
-   - `mcp__MCP_DOCKER__issue_write`: GitHub checkbox
-4. **Verify**: Compilation passes
+   - **GitHub checkbox**: Update per ogni task completato
+4. Verify: Compilation passes
 5. Checkpoint: `write_memory("issue_<N>_implementation")`
+6. **Update checkbox**: `[ ] Implementation` → `[x] Implementation`
 
 **Gate**: ❌ Stop on compilation errors
 
@@ -110,12 +160,12 @@ End-to-end issue implementation with validation gates, code review, and automate
 
 **Backend**:
 ```bash
-cd apps/api/src/Api && dotnet test
+pwsh -c "cd apps/api/src/Api; dotnet test /p:CollectCoverage=true"
 ```
 Target: ≥90% coverage
 
 **Frontend**:
-```powershell
+```bash
 pwsh -c "cd apps/web; pnpm test; pnpm typecheck; pnpm lint"
 ```
 Target: ≥85% coverage
@@ -128,6 +178,7 @@ Target: ≥85% coverage
 5. ❌ NEVER skip tests or disable validations
 
 Checkpoint: `write_memory("issue_<N>_tests")`
+**Update checkbox**: `[ ] Testing` → `[x] Testing`
 
 **Gate**: ❌ Stop if tests fail OR coverage <target OR new warnings
 
@@ -135,7 +186,7 @@ Checkpoint: `write_memory("issue_<N>_tests")`
 
 ### Phase 6: Code Review Pre-Merge 🔍
 
-**PR Target**: `--pr-target` or default `main-dev`
+**PR Target**: `--pr-target` or auto-detected parent branch
 
 1. **Commit**:
 ```bash
@@ -147,9 +198,12 @@ Refs: #<N>"
 
 2. **Push**: `git push -u origin <branch>`
 
-3. **Create PR** (draft to `--pr-target`):
+3. **Create PR** (draft to PR target):
 ```bash
-gh pr create --draft --base <pr-target> \
+# CRITICO: usa --base con PR target auto-detected o specificato
+current_branch=$(pwsh -c "git branch --show-current")
+
+gh pr create --draft --base "$pr_target" \
   --title "Issue #<N>: <title>" \
   --body "## Summary
 <desc>
@@ -166,6 +220,8 @@ Closes #<N>"
    - Fix + re-test + re-review
    - If >3 iterations: `AskUserQuestion`
 6. **Ready**: `gh pr ready`
+7. **Update checkbox**: `[ ] PR Created` → `[x] PR Created`
+8. **Update checkbox**: `[ ] Code Review` → `[x] Code Review`
 
 **Gate**: ❌ Stop if final score <80%
 
@@ -176,6 +232,7 @@ Closes #<N>"
 1. Check each DoD from issue
 2. Update: `mcp__MCP_DOCKER__issue_write` (DoD checkboxes)
 3. **If missing DoD**: `AskUserQuestion` (complete | update | sub-issue)
+4. **Update checkbox**: `[ ] DoD Verified` → `[x] DoD Verified`
 
 **Gate**: ❌ Stop if any DoD not ✅
 
@@ -187,11 +244,11 @@ Closes #<N>"
 
 **Backend**:
 ```bash
-cd apps/api/src/Api && dotnet build --no-restore && dotnet test --no-build
+pwsh -c "cd apps/api/src/Api; dotnet build --no-restore; dotnet test --no-build"
 ```
 
 **Frontend**:
-```powershell
+```bash
 pwsh -c "cd apps/web; pnpm build; pnpm test; pnpm typecheck"
 ```
 
@@ -200,19 +257,81 @@ pwsh -c "cd apps/web; pnpm build; pnpm test; pnpm typecheck"
 
 **Merge** (only after validation ✅):
 ```bash
-gh pr merge --squash --delete-branch --base <pr-target>
+# Merge verso PR target specificato o auto-detected
+gh pr merge --squash --delete-branch --base "$pr_target"
 ```
 
 **Cleanup**:
 ```bash
-git checkout <base-branch> && git pull
-git branch -D <branch>
-git remote prune origin
+git checkout "$base_branch" && git pull
+git branch -D "$feature_branch"
+pwsh -c "git remote prune origin"
 ```
 
 **Close issue**: `mcp__MCP_DOCKER__issue_write(state: closed)`
+**Update checkbox**: `[ ] Merged` → `[x] Merged`
+**Update checkbox**: `[ ] Cleanup` → `[x] Cleanup`
 **Save**: `/sc:save`
 **Checkpoint**: `write_memory("issue_<N>_completed")`
+
+---
+
+## Progress Tracking Checkbox System
+
+**GitHub Issue Template Structure:**
+```markdown
+## Progress
+- [ ] Started
+- [ ] Analysis
+- [ ] Planning
+- [ ] Branch Created
+- [ ] Implementation
+- [ ] Testing
+- [ ] PR Created
+- [ ] Code Review
+- [ ] DoD Verified
+- [ ] Merged
+- [ ] Cleanup
+
+## Definition of Done
+- [ ] DoD Item 1
+- [ ] DoD Item 2
+```
+
+**Automatic Updates During Workflow:**
+
+| Phase | Checkbox Updated | Command |
+|-------|-----------------|---------|
+| 0 | `[x] Started` | `gh api` update issue body |
+| 1 | `[x] Analysis` | `gh api` update issue body |
+| 2 | `[x] Planning` | `gh api` update issue body |
+| 3 | `[x] Branch Created` | `gh api` update issue body |
+| 4 | `[x] Implementation` | `gh api` update issue body |
+| 5 | `[x] Testing` | `gh api` update issue body |
+| 6 | `[x] PR Created` | `gh api` update issue body |
+| 6 | `[x] Code Review` | `gh api` update issue body |
+| 7 | `[x] DoD Verified` | `gh api` update issue body |
+| 8 | `[x] Merged` | `gh api` update issue body |
+| 8 | `[x] Cleanup` | `gh api` update issue body |
+
+**Update Helper Function:**
+```bash
+update_checkbox() {
+  local issue_number=$1
+  local checkbox_label=$2
+
+  current_body=$(gh issue view $issue_number --json body -q .body)
+  updated_body=$(echo "$current_body" | sed "s/\[ \] $checkbox_label/[x] $checkbox_label/")
+
+  gh api repos/{owner}/{repo}/issues/$issue_number \
+    --method PATCH \
+    --field body="$updated_body"
+}
+
+# Usage
+update_checkbox 2373 "Analysis"
+update_checkbox 2373 "Implementation"
+```
 
 ---
 
@@ -220,15 +339,15 @@ git remote prune origin
 
 | Phase | Tool/MCP |
 |-------|----------|
-| 0 | `/sc:load`, `git` |
-| 1 | `mcp__MCP_DOCKER__issue_read`, `Agent Explore`, `write_memory` |
-| 2 | `sequential-thinking`, `AskUserQuestion`, `TodoWrite`, `write_memory` |
-| 3 | `git`, `write_memory` |
-| 4 | `serena__*`, `morphllm__edit_file`, `magic__*`, `TaskUpdate`, `issue_write` |
-| 5 | `dotnet test`, `pwsh` (pnpm), `sequential-thinking`, `write_memory` |
-| 6 | `git`, `gh pr`, `/code-review:code-review`, `write_memory` |
-| 7 | `issue_write`, `AskUserQuestion` |
-| 8 | `dotnet`, `pwsh` (pnpm), `gh pr merge`, `issue_write`, `/sc:save` |
+| 0 | `/sc:load`, `git`, `gh api` (checkbox update) |
+| 1 | `mcp__MCP_DOCKER__issue_read`, `Agent Explore`, `write_memory`, `gh api` |
+| 2 | `sequential-thinking`, `AskUserQuestion`, `TodoWrite`, `write_memory`, `gh api` |
+| 3 | `git`, `write_memory`, `gh api` |
+| 4 | `serena__*`, `morphllm__edit_file`, `magic__*`, `TaskUpdate`, `gh api` |
+| 5 | `pwsh` (dotnet test, pnpm), `sequential-thinking`, `write_memory`, `gh api` |
+| 6 | `git`, `gh pr`, `/code-review:code-review`, `write_memory`, `gh api` |
+| 7 | `issue_write`, `AskUserQuestion`, `gh api` |
+| 8 | `pwsh` (dotnet, pnpm), `gh pr merge`, `issue_write`, `/sc:save`, `gh api` |
 
 ---
 
@@ -247,14 +366,16 @@ git remote prune origin
 **✅ ALWAYS**:
 - Session: `/sc:load` → `/sc:save`
 - Checkpoints: `write_memory()` after each phase
-- Tracking: `TodoWrite` + `TaskUpdate`
+- Tracking: `TodoWrite` + `TaskUpdate` + **GitHub checkbox updates**
 - Validation: Never bypass gates
 - Parallel: Use parallel tool calls (Read, Grep)
+- **PowerShell**: Use `pwsh -c` for all commands on Windows
 
 **❌ NEVER**:
 - Skip errors or disable tests
 - Merge without code review
 - Ignore DoD or allow new warnings
+- Use direct bash pipes on Windows (use `pwsh -c`)
 
 **🤝 ASK USER when**:
 - Confidence <90%
@@ -299,18 +420,19 @@ read_memory("issue_<N>_<phase>")  # Resume
 ## Output Template
 
 ```
-🔄 Phase 0: Session Init ✅
-📋 Phase 1: Preparation ✅ (patterns: FilterComponent)
-🧠 Phase 2: Planning ✅ (Option 1, confidence: 95%)
-🌿 Phase 3: Branch ✅ (feature/issue-<N>-<desc>)
-💻 Phase 4: Implementation ✅ (3/3 tasks)
-✅ Phase 5: Testing ✅ (92% backend, 87% frontend)
-🔍 Phase 6: Code Review ✅ (score: 85%)
-✔️ Phase 7: DoD ✅ (4/4)
-🎯 Phase 8: Merge ✅
+🔄 Phase 0: Session Init ✅ (Branch: main-dev → feature/issue-2373-auth, PR target: main-dev)
+📋 Phase 1: Preparation ✅ (patterns: FilterComponent) [✓ Checkbox updated]
+🧠 Phase 2: Planning ✅ (Option 1, confidence: 95%) [✓ Checkbox updated]
+🌿 Phase 3: Branch ✅ (feature/issue-2373-auth) [✓ Checkbox updated]
+💻 Phase 4: Implementation ✅ (3/3 tasks) [✓ Checkbox updated]
+✅ Phase 5: Testing ✅ (92% backend, 87% frontend) [✓ Checkbox updated]
+🔍 Phase 6: Code Review ✅ (score: 85%) [✓ Checkboxes updated]
+✔️ Phase 7: DoD ✅ (4/4) [✓ Checkbox updated]
+🎯 Phase 8: Merge → main-dev ✅ [✓ Checkboxes updated]
 
-✅ SUCCESS: Issue #<N> completed
-📊 Stats: X files, Y tests, Z% coverage, W% review score
+✅ SUCCESS: Issue #2373 completed
+📊 Stats: 15 files, 42 tests, 91% coverage, 85% review score
+🌿 Branch: feature/issue-2373-auth → main-dev (merged & deleted)
 ```
 
 ---
@@ -321,13 +443,15 @@ read_memory("issue_<N>_<phase>")  # Resume
 PHASE_0:
   - /sc:load
   - git status (GATE: fail if dirty)
-  - git branch (GATE: fail if not on base-branch)
+  - Detect: base_branch (current), pr_target (parent or main-dev)
+  - gh api: update checkbox "Started"
 
 PHASE_1:
   - mcp__MCP_DOCKER__issue_read($N)
-  - Parse: {title, DoD[], tasks[]}
+  - Parse: {title, DoD[], tasks[], checkboxes[]}
   - Agent Explore --quick
   - write_memory("issue_$N_analysis")
+  - gh api: update checkbox "Analysis"
 
 PHASE_2:
   - IF complex: sequential-thinking
@@ -336,64 +460,79 @@ PHASE_2:
     ELSE: AskUserQuestion
   - TodoWrite (min 3 tasks)
   - write_memory("issue_$N_plan")
+  - gh api: update checkbox "Planning"
   - GATE: STOP if all <70%
 
 PHASE_3:
-  - git checkout <base-branch> && git pull
+  - git checkout $base_branch && git pull
   - git checkout -b <type>/issue-$N-<desc>
   - write_memory("issue_$N_branch")
+  - gh api: update checkbox "Branch Created"
   - GATE: STOP if exists or malformed
 
 PHASE_4:
-  - FOR task: select tool → implement → TaskUpdate → issue_write
+  - FOR task: select tool → implement → TaskUpdate
+  - gh api: update checkbox per task
   - write_memory("issue_$N_implementation")
+  - gh api: update checkbox "Implementation"
   - GATE: STOP on compilation error
 
 PHASE_5:
-  - dotnet test (≥90%)
-  - pwsh -c "pnpm test && typecheck && lint" (≥85%)
+  - pwsh -c "cd apps/api/src/Api; dotnet test" (≥90%)
+  - pwsh -c "cd apps/web; pnpm test && typecheck && lint" (≥85%)
   - IF fail: isolate → root cause → guards → re-test
   - write_memory("issue_$N_tests")
+  - gh api: update checkbox "Testing"
   - GATE: STOP if fail OR low coverage
 
 PHASE_6:
   - git commit + push
-  - gh pr create --draft --base <pr-target>
+  - gh pr create --draft --base $pr_target
+  - gh api: update checkbox "PR Created"
   - /code-review:code-review
   - Fix loop (max 3, confidence ≥70)
   - gh pr ready
+  - gh api: update checkbox "Code Review"
   - GATE: STOP if score <80%
 
 PHASE_7:
   - Check DoD[]
   - issue_write (DoD checkboxes)
+  - gh api: update checkbox "DoD Verified"
   - IF missing: AskUserQuestion
   - GATE: STOP if any not ✅
 
 PHASE_8:
-  - dotnet build && test
-  - pwsh -c "pnpm build && test && typecheck"
+  - pwsh -c "cd apps/api/src/Api; dotnet build && test"
+  - pwsh -c "cd apps/web; pnpm build && test && typecheck"
   - GATE: STOP if fail → AskUserQuestion
-  - gh pr merge --squash --base <pr-target>
+  - gh pr merge --squash --base $pr_target
+  - gh api: update checkbox "Merged"
   - issue_write(closed)
   - Cleanup: checkout → pull → branch -D → prune
+  - gh api: update checkbox "Cleanup"
   - /sc:save
   - write_memory("issue_$N_completed")
 ```
 
 ---
 
-**Version**: 2.2 (2026-01-29)
+**Version**: 2.3 (2026-02-02)
 
 **Changelog**:
 
+v2.3 (2026-02-02):
+- ✅ **PowerShell emphasis**: `pwsh -c` for all commands on Windows
+- ✅ **Smart branch detection**: PR always from current branch to auto-detected parent
+- ✅ **Progress tracking**: GitHub checkbox updates at every phase
+- ✅ **Optimized structure**: Reduced verbosity, clearer flow
+- ✅ **Branch flexibility**: Configurable --base-branch and --pr-target with smart defaults
+
 v2.2 (2026-01-29):
-- ✅ Reduced verbosity by 45% (condensed phase descriptions)
+- ✅ Reduced verbosity by 45%
 - ✅ PowerShell with pwsh -c for all pnpm commands
 - ✅ Configurable base branch (--base-branch, default: main-dev)
 - ✅ Explicit PR target branch (--pr-target, default: main-dev)
-- ✅ Removed redundant explanations and duplicate content
-- ✅ Streamlined MCP/Tool matrix and execution flow
 
 v2.1 (2026-01-28):
 - ✅ Pre-merge build+test validation in Phase 8

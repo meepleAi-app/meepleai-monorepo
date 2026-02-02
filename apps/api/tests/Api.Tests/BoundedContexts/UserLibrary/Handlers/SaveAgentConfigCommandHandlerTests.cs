@@ -8,6 +8,7 @@ using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Handlers;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -118,13 +119,13 @@ public sealed class SaveAgentConfigCommandHandlerTests
             .ReturnsAsync((AgentTypology?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<DomainException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _handler.Handle(command, TestContext.Current.CancellationToken)
         );
     }
 
     [Fact]
-    public async Task Handle_TypologyNotApproved_ThrowsDomainException()
+    public async Task Handle_TypologyNotApproved_ThrowsConflictException()
     {
         // Arrange
         var typologyId = Guid.NewGuid();
@@ -151,7 +152,7 @@ public sealed class SaveAgentConfigCommandHandlerTests
         );
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DomainException>(() =>
+        var exception = await Assert.ThrowsAsync<ConflictException>(() =>
             _handler.Handle(command, TestContext.Current.CancellationToken)
         );
 

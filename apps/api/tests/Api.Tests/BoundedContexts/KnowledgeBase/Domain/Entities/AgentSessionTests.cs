@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Xunit;
@@ -135,7 +136,7 @@ public class AgentSessionTests
         var act = () => session.UpdateGameState(newState);
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<ConflictException>()
             .WithMessage("*inactive*");
     }
 
@@ -179,7 +180,7 @@ public class AgentSessionTests
         var act = () => session.End();
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<ConflictException>()
             .WithMessage("*already ended*");
     }
 

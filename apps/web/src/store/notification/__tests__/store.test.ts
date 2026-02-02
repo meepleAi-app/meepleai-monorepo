@@ -303,4 +303,223 @@ describe('useNotificationStore', () => {
       expect(result.current.error).toBeNull();
     });
   });
+
+  describe('markAsRead edge cases', () => {
+    it('should handle API rejection with error message', async () => {
+      vi.mocked(api.notifications.markNotificationRead).mockRejectedValue(
+        new Error('Server unavailable')
+      );
+
+      const { result } = renderHook(() => useNotificationStore());
+
+      await act(async () => {
+        await result.current.markAsRead('notif-1');
+      });
+
+      expect(result.current.error).toBe('Server unavailable');
+      expect(result.current.isMarkingRead).toBe(false);
+    });
+
+    it('should handle non-Error rejection', async () => {
+      vi.mocked(api.notifications.markNotificationRead).mockRejectedValue('API Failure');
+
+      const { result } = renderHook(() => useNotificationStore());
+
+      await act(async () => {
+        await result.current.markAsRead('notif-1');
+      });
+
+      expect(result.current.error).toBe('Failed to mark notification as read');
+    });
+  });
+
+  describe('markAllAsRead error handling', () => {
+    it('should handle API rejection with error message', async () => {
+      vi.mocked(api.notifications.markAllNotificationsRead).mockRejectedValue(
+        new Error('Bulk operation failed')
+      );
+
+      const { result } = renderHook(() => useNotificationStore());
+
+      await act(async () => {
+        await result.current.markAllAsRead();
+      });
+
+      expect(result.current.error).toBe('Bulk operation failed');
+      expect(result.current.isMarkingRead).toBe(false);
+    });
+
+    it('should handle non-Error rejection', async () => {
+      vi.mocked(api.notifications.markAllNotificationsRead).mockRejectedValue({ status: 500 });
+
+      const { result } = renderHook(() => useNotificationStore());
+
+      await act(async () => {
+        await result.current.markAllAsRead();
+      });
+
+      expect(result.current.error).toBe('Failed to mark all notifications as read');
+    });
+  });
+
+  describe('fetchNotifications error handling', () => {
+    it('should handle non-Error rejection', async () => {
+      vi.mocked(api.notifications.getNotifications).mockRejectedValue('String error');
+
+      const { result } = renderHook(() => useNotificationStore());
+
+      await act(async () => {
+        await result.current.fetchNotifications();
+      });
+
+      expect(result.current.error).toBe('Failed to fetch notifications');
+    });
+  });
+
+  describe('addNotification with read status', () => {
+    it('should not increment unread count for already-read notification', () => {
+      const { result } = renderHook(() => useNotificationStore());
+      const readNotification = createMockNotification({
+        id: 'notif-read',
+        isRead: true,
+        readAt: new Date().toISOString()
+      });
+
+      act(() => {
+        result.current.addNotification(readNotification);
+      });
+
+      expect(result.current.notifications).toHaveLength(1);
+      expect(result.current.unreadCount).toBe(0);
+    });
+  });
+});
+
+// Import selectors for testing
+import {
+  selectNotifications,
+  selectUnreadCount,
+  selectUnreadNotifications,
+  selectIsLoading,
+  selectError,
+} from '../store';
+
+describe('Notification Store Selectors', () => {
+  beforeEach(() => {
+    const { result } = renderHook(() => useNotificationStore());
+    act(() => {
+      result.current.reset();
+    });
+    vi.clearAllMocks();
+  });
+
+  describe('selectNotifications', () => {
+    it('should return notifications array', async () => {
+      const mockNotifications = [
+        createMockNotification({ id: 'notif-1' }),
+        createMockNotification({ id: 'notif-2' }),
+      ];
+      vi.mocked(api.notifications.getNotifications).mockResolvedValue(mockNotifications);
+
+      const { result } = renderHook(() => useNotificationStore());
+
+      await act(async () => {
+        await result.current.fetchNotifications();
+      });
+
+      const state = useNotificationStore.getState();
+      expect(selectNotifications(state)).toEqual(mockNotifications);
+    });
+
+    it('should return empty array initially', () => {
+      const state = useNotificationStore.getState();
+      expect(selectNotifications(state)).toEqual([]);
+    });
+  });
+
+  describe('selectUnreadCount', () => {
+    it('should return unread count', async () => {
+      const mockNotifications = [
+        createMockNotification({ id: 'notif-1', isRead: false }),
+        createMockNotification({ id: 'notif-2', isRead: false }),
+        createMockNotification({ id: 'notif-3', isRead: true }),
+      ];
+      vi.mocked(api.notifications.getNotifications).mockResolvedValue(mockNotifications);
+
+      const { result } = renderHook(() => useNotificationStore());
+
+      await act(async () => {
+        await result.current.fetchNotifications();
+      });
+
+      const state = useNotificationStore.getState();
+      expect(selectUnreadCount(state)).toBe(2);
+    });
+  });
+
+  describe('selectUnreadNotifications', () => {
+    it('should return only unread notifications', async () => {
+      const mockNotifications = [
+        createMockNotification({ id: 'notif-1', isRead: false }),
+        createMockNotification({ id: 'notif-2', isRead: true }),
+        createMockNotification({ id: 'notif-3', isRead: false }),
+      ];
+      vi.mocked(api.notifications.getNotifications).mockResolvedValue(mockNotifications);
+
+      const { result } = renderHook(() => useNotificationStore());
+
+      await act(async () => {
+        await result.current.fetchNotifications();
+      });
+
+      const state = useNotificationStore.getState();
+      const unread = selectUnreadNotifications(state);
+      expect(unread).toHaveLength(2);
+      expect(unread.every(n => !n.isRead)).toBe(true);
+    });
+  });
+
+  describe('selectIsLoading', () => {
+    it('should return true when isFetching is true', async () => {
+      vi.mocked(api.notifications.getNotifications).mockImplementation(
+        () => new Promise(() => {}) // Never resolves
+      );
+
+      const { result } = renderHook(() => useNotificationStore());
+
+      act(() => {
+        result.current.fetchNotifications();
+      });
+
+      const state = useNotificationStore.getState();
+      expect(selectIsLoading(state)).toBe(true);
+    });
+
+    it('should return false when not loading', () => {
+      const state = useNotificationStore.getState();
+      expect(selectIsLoading(state)).toBe(false);
+    });
+  });
+
+  describe('selectError', () => {
+    it('should return error string when error exists', async () => {
+      vi.mocked(api.notifications.getNotifications).mockRejectedValue(
+        new Error('Test error')
+      );
+
+      const { result } = renderHook(() => useNotificationStore());
+
+      await act(async () => {
+        await result.current.fetchNotifications();
+      });
+
+      const state = useNotificationStore.getState();
+      expect(selectError(state)).toBe('Test error');
+    });
+
+    it('should return null when no error', () => {
+      const state = useNotificationStore.getState();
+      expect(selectError(state)).toBeNull();
+    });
+  });
 });

@@ -132,10 +132,13 @@ export const createConfigSlice: StateCreator<
       state.configError = null;
     });
 
-    // Store original config for rollback
+    // Store original config for rollback (must copy to avoid immer proxy issues)
     let originalConfig: AgentConfig | undefined;
     set(state => {
-      originalConfig = state.gameConfigs[gameId];
+      const existing = state.gameConfigs[gameId];
+      if (existing) {
+        originalConfig = { ...existing };
+      }
     });
 
     try {

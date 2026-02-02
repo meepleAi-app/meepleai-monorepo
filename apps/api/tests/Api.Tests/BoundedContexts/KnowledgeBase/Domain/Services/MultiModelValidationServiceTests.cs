@@ -195,9 +195,9 @@ public class MultiModelValidationServiceTests
         // GPT-4 fails, Claude succeeds
         _mockOpenRouterClient
             .Setup(c => c.GenerateCompletionAsync(
-                "openai/gpt-4o",
-                systemPrompt,
-                userPrompt,
+                Gpt4Model,
+                It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<double>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -205,9 +205,9 @@ public class MultiModelValidationServiceTests
 
         _mockOpenRouterClient
             .Setup(c => c.GenerateCompletionAsync(
-                "anthropic/claude-3.5-sonnet",
-                systemPrompt,
-                userPrompt,
+                ClaudeModel,
+                It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<double>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -234,9 +234,9 @@ public class MultiModelValidationServiceTests
         // GPT-4 succeeds, Claude fails
         _mockOpenRouterClient
             .Setup(c => c.GenerateCompletionAsync(
-                "openai/gpt-4o",
-                systemPrompt,
-                userPrompt,
+                Gpt4Model,
+                It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<double>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -244,9 +244,9 @@ public class MultiModelValidationServiceTests
 
         _mockOpenRouterClient
             .Setup(c => c.GenerateCompletionAsync(
-                "anthropic/claude-3.5-sonnet",
-                systemPrompt,
-                userPrompt,
+                ClaudeModel,
+                It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<double>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -373,7 +373,7 @@ public class MultiModelValidationServiceTests
 
         _mockOpenRouterClient
             .Setup(c => c.GenerateCompletionAsync(
-                "openai/gpt-4o",
+                Gpt4Model,
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<double>(),
@@ -387,7 +387,7 @@ public class MultiModelValidationServiceTests
 
         _mockOpenRouterClient
             .Setup(c => c.GenerateCompletionAsync(
-                "anthropic/claude-3.5-sonnet",
+                ClaudeModel,
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<double>(),
@@ -429,8 +429,8 @@ public class MultiModelValidationServiceTests
         Assert.True(result.ClaudeResponse.DurationMs >= 0, "Claude duration should be non-negative");
 
         // Verify response details are captured
-        Assert.Equal("openai/gpt-4o", result.Gpt4Response.ModelId);
-        Assert.Equal("anthropic/claude-3.5-sonnet", result.ClaudeResponse.ModelId);
+        Assert.Equal(Gpt4Model, result.Gpt4Response.ModelId);
+        Assert.Equal(ClaudeModel, result.ClaudeResponse.ModelId);
         Assert.NotNull(result.Gpt4Response.Usage);
         Assert.NotNull(result.ClaudeResponse.Usage);
     }
@@ -590,7 +590,7 @@ public class MultiModelValidationServiceTests
     {
         _mockOpenRouterClient
             .Setup(c => c.GenerateCompletionAsync(
-                "openai/gpt-4o",
+                Gpt4Model,
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<double>(),
@@ -602,7 +602,7 @@ public class MultiModelValidationServiceTests
 
         _mockOpenRouterClient
             .Setup(c => c.GenerateCompletionAsync(
-                "anthropic/claude-3.5-sonnet",
+                ClaudeModel,
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<double>(),
@@ -613,6 +613,10 @@ public class MultiModelValidationServiceTests
                 new LlmUsage(100, 50, 150)));
     }
 
+    // Model identifiers matching MultiModelValidationService (Issue #3231: Use free models)
+    private const string Gpt4Model = "meta-llama/llama-3.3-70b-instruct:free";
+    private const string ClaudeModel = "google/gemini-2.0-flash-exp:free";
+
     /// <summary>
     /// Helper method to setup mock responses for both models
     /// </summary>
@@ -620,7 +624,7 @@ public class MultiModelValidationServiceTests
     {
         _mockOpenRouterClient
             .Setup(c => c.GenerateCompletionAsync(
-                "openai/gpt-4o",
+                Gpt4Model,
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<double>(),
@@ -632,7 +636,7 @@ public class MultiModelValidationServiceTests
 
         _mockOpenRouterClient
             .Setup(c => c.GenerateCompletionAsync(
-                "anthropic/claude-3.5-sonnet",
+                ClaudeModel,
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<double>(),

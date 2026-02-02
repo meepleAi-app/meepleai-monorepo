@@ -2,6 +2,21 @@
 
 Comprehensive documentation for 15 RAG variants implemented or planned for MeepleAI's TOMAC-RAG architecture.
 
+## 6 Routing Strategies
+
+TOMAC-RAG routes queries to one of 6 strategies, each combining multiple variants:
+
+| Strategy | Tokens | Cost | Latency | Accuracy | Phases |
+|----------|--------|------|---------|----------|--------|
+| 🚀 **FAST** | 2,060 | $0.0001 | <200ms | 78-85% | Synthesis |
+| ⚖️ **BALANCED** | 2,820 | $0.01 | 1-2s | 85-92% | Synthesis + CRAG |
+| 🎯 **PRECISE** | 22,396 | $0.132 | 5-10s | 95-98% | Retrieval + Analysis + Synthesis + Validation |
+| 🔬 **EXPERT** | 15,000 | $0.099 | 8-15s | 92-96% | Web Search + Multi-Hop + Synthesis |
+| 🗳️ **CONSENSUS** | 18,000 | $0.09 | 10-20s | 97-99% | 3 Voters + Aggregator |
+| ⚙️ **CUSTOM** | Variable | Variable | Variable | Variable | Admin configured |
+
+> **Note**: Anonymous users cannot access the RAG system. Authentication is required.
+
 ## Priority P0 (Implemented/High Priority)
 
 1. **[Semantic Cache](01-semantic-cache.md)** - 986 tokens | $0.004 | +0% accuracy | 50% token reduction

@@ -13,12 +13,24 @@
 
 Access control based on user role:
 
-| User Tier | Max Tokens/Query | Allowed Strategies | Model Access |
-|-----------|------------------|-------------------|--------------|
-| Anonymous | 1,500 | FAST only | Free models (Llama 3.3) |
-| User | 3,000 | FAST, BALANCED | Free + GPT-4o-mini |
-| Editor | 5,000 | FAST, BALANCED, PRECISE | GPT-4o-mini, Haiku, Sonnet |
-| Admin | 15,000 | All (incl. Multi-Agent) | Full access (Opus) |
+> **Note**: Anonymous users cannot access the RAG system. Authentication is required.
+
+> **IMPORTANT: User Tier vs Cost**
+>
+> User tier affects **ACCESS CONTROL ONLY**, not cost calculations:
+> - ✅ **Tier affects**: Which strategies are allowed, Cache TTL, Max tokens/query, Model access level
+> - ❌ **Tier does NOT affect**: Cost per query, Token consumption, Model pricing
+>
+> **Cost is determined by STRATEGY + MODEL selection**, not by user tier.
+> See [Appendix E - Model Pricing](appendix/E-model-pricing-2026.md) for cost details.
+
+| User Tier | Max Tokens/Query | Allowed Strategies | Model Access | Cache TTL |
+|-----------|------------------|-------------------|--------------|-----------|
+| ~~Anonymous~~ | ❌ | **NO ACCESS** | Authentication required | - |
+| User | 3,000 | FAST, BALANCED | Free + GPT-4o-mini | 48h |
+| Editor | 5,000 | FAST, BALANCED, PRECISE | GPT-4o-mini, Haiku, Sonnet | 72h |
+| Admin | 15,000 | All (FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, CUSTOM) | Full access (Opus) | 168h |
+| Premium | 20,000+ | All | Priority access | 336h |
 
 ---
 
@@ -98,7 +110,28 @@ def calc_complexity(query: str, template: str) -> int:
 
 **Strategy Selection**:
 ```python
-def select_strategy(complexity: int, template: str) -> str:
+def select_strategy(complexity: int, template: str, user_tier: str,
+                    requires_web: bool = False, requires_consensus: bool = False) -> str:
+    """
+    Select strategy based on query characteristics and user tier.
+
+    Strategies:
+    - FAST: Simple FAQ, quick responses (complexity ≤1)
+    - BALANCED: Standard queries with CRAG validation (complexity 2-3)
+    - PRECISE: Critical decisions, multi-agent pipeline (complexity ≥4)
+    - EXPERT: Web search + multi-hop reasoning (requires external info)
+    - CONSENSUS: Multi-LLM voting (high-stakes arbitration)
+    - CUSTOM: Admin-configured (explicit selection only)
+    """
+    # CONSENSUS: High-stakes decisions requiring multi-LLM agreement
+    if requires_consensus and user_tier in ["Admin", "Premium"]:
+        return "CONSENSUS"
+
+    # EXPERT: When external information is needed
+    if requires_web and user_tier in ["Admin", "Premium"]:
+        return "EXPERT"
+
+    # Standard routing based on complexity
     if complexity <= 1 and template == "rule_lookup":
         return "FAST"
     elif complexity <= 3:
@@ -117,24 +150,19 @@ Based on User Tier + Strategy:
 def select_model(user_role: str, strategy: str) -> tuple[str, str]:
     """Returns (provider, model_name)"""
 
+    # Anonymous users cannot access the system
     if user_role == "Anonymous":
+        raise AuthenticationRequiredException("Authentication required to use RAG system")
+
+    if user_role == "User":
         if strategy == "FAST":
             return random_split(0.8, ("OpenRouter", "llama-3.3-70b:free"),
                                      ("OpenRouter", "gpt-4o-mini"))
         elif strategy == "BALANCED":
-            return random_split(0.2, ("OpenRouter", "gpt-4o-mini"),
-                                     ("OpenRouter", "llama-3.3-70b:free"))
-        else:  # PRECISE denied
-            raise UpgradeRequiredException("PRECISE requires User tier or higher")
-
-    elif user_role == "User":
-        # Similar to Anonymous but with PRECISE quota
-        if strategy == "PRECISE":
-            if await check_quota(user_id, "precise", limit=5, period="day"):
-                return ("OpenRouter", "claude-3.5-haiku")
-            else:
-                raise QuotaExceededException("PRECISE: 5/day limit reached")
-        # ... (similar to Anonymous for FAST/BALANCED)
+            return random_split(0.5, ("OpenRouter", "gpt-4o-mini"),
+                                     ("OpenRouter", "claude-3.5-haiku"))
+        else:  # PRECISE, EXPERT, CONSENSUS, CUSTOM denied
+            raise UpgradeRequiredException(f"{strategy} requires Editor tier or higher")
 
     elif user_role == "Editor":
         if strategy == "FAST":
@@ -143,18 +171,27 @@ def select_model(user_role: str, strategy: str) -> tuple[str, str]:
         elif strategy == "BALANCED":
             return random_split(0.5, ("OpenRouter", "gpt-4o-mini"),
                                      ("OpenRouter", "claude-3.5-haiku"))
-        else:  # PRECISE
+        elif strategy == "PRECISE":
             return ("OpenRouter", "claude-3.5-sonnet")
+        else:  # EXPERT, CONSENSUS, CUSTOM denied
+            raise UpgradeRequiredException(f"{strategy} requires Admin tier")
 
-    elif user_role == "Admin":
+    elif user_role in ["Admin", "Premium"]:
         if strategy == "FAST":
             return random_split(0.8, ("Ollama", "llama3:8b"),
                                      ("OpenRouter", "claude-3.5-haiku"))
         elif strategy == "BALANCED":
             return random_split(0.5, ("OpenRouter", "claude-3.5-haiku"),
                                      ("OpenRouter", "claude-3.5-sonnet"))
-        else:  # PRECISE
+        elif strategy == "PRECISE":
             return ("OpenRouter", "claude-opus-4")  # Full premium access
+        elif strategy == "EXPERT":
+            return ("OpenRouter", "claude-3.5-sonnet")  # Web search + multi-hop
+        elif strategy == "CONSENSUS":
+            # Multi-LLM voting uses multiple providers
+            return ("Multi", "consensus-voting")  # Special handling
+        elif strategy == "CUSTOM":
+            return ("Configured", "admin-custom")  # Uses phase-configured models
 
 def random_split(prob: float, option_a: tuple, option_b: tuple) -> tuple:
     """A/B split based on probability"""
@@ -169,15 +206,21 @@ def random_split(prob: float, option_a: tuple, option_b: tuple) -> tuple:
 ```python
 @dataclass
 class RoutingDecision:
-    strategy: str  # "FAST" | "BALANCED" | "PRECISE"
-    template: str  # "rule_lookup" | "resource_planning"
+    strategy: str  # "FAST" | "BALANCED" | "PRECISE" | "EXPERT" | "CONSENSUS" | "CUSTOM"
+    template: str  # "rule_lookup" | "resource_planning" | "setup_guide" | "strategy_advice" | "educational"
     complexity: int  # 0-5
-    provider: str  # "Ollama" | "OpenRouter"
+    provider: str  # "Ollama" | "OpenRouter" | "Multi" | "Configured"
     model: str  # Model identifier
     user_tier: str
     tokens_budget: int
 
 async def route_query(query: str, user: User) -> RoutingDecision:
+    # Authentication check - Anonymous users cannot access the system
+    if user is None or user.role == "Anonymous":
+        raise AuthenticationRequiredException("Authentication required to use RAG system")
+
+    role = user.role
+
     # Check user override flags
     if "--fast" in query:
         strategy = "FAST"
@@ -188,14 +231,24 @@ async def route_query(query: str, user: User) -> RoutingDecision:
     elif "--precise" in query:
         template = await classify_template(query.replace("--precise", ""))
         strategy = "PRECISE"
+    elif "--expert" in query:
+        template = await classify_template(query.replace("--expert", ""))
+        strategy = "EXPERT"
+    elif "--consensus" in query:
+        template = await classify_template(query.replace("--consensus", ""))
+        strategy = "CONSENSUS"
+    elif "--custom" in query:
+        template = await classify_template(query.replace("--custom", ""))
+        strategy = "CUSTOM"
     else:
         # Standard routing
         template = await classify_template(query)
         complexity = calc_complexity(query, template)
-        strategy = select_strategy(complexity, template)
+        requires_web = detect_web_search_need(query)
+        requires_consensus = detect_consensus_need(query)
+        strategy = select_strategy(complexity, template, role, requires_web, requires_consensus)
 
     # Access control check
-    role = user.role if user else "Anonymous"
     if not can_access(role, strategy):
         raise AccessDeniedException(f"{strategy} requires {required_tier(strategy)}")
 

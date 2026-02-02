@@ -49,6 +49,24 @@ public class GameEntity
     public Guid? SharedGameId { get; set; }
     public SharedGameEntity? SharedGame { get; set; }
 
+    // Issue #3481: Publication workflow
+    /// <summary>
+    /// Indicates if game is published to SharedGameCatalog.
+    /// </summary>
+    public bool IsPublished { get; set; }
+
+    /// <summary>
+    /// Approval status for SharedGameCatalog publication.
+    /// Values: 0=Draft, 1=PendingReview, 2=Approved, 3=Rejected
+    /// </summary>
+    public int ApprovalStatus { get; set; }
+
+    /// <summary>
+    /// Timestamp when game was approved and published.
+    /// Null if not approved.
+    /// </summary>
+    public DateTime? PublishedAt { get; set; }
+
     public ICollection<RuleSpecEntity> RuleSpecs { get; set; } = new List<RuleSpecEntity>();
     public ICollection<AgentEntity> Agents { get; set; } = new List<AgentEntity>();
     public ICollection<ChatEntity> Chats { get; set; } = new List<ChatEntity>();

@@ -156,6 +156,7 @@ export function useRagStrategy(): UseRagStrategyReturn {
    */
   const getStrategyData = useCallback(
     (strategy: RagStrategy) => {
+      // eslint-disable-next-line security/detect-object-injection -- Type-safe: strategy is RagStrategy enum
       return STRATEGIES[strategy];
     },
     []

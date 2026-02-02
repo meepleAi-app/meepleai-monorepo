@@ -4,8 +4,6 @@
  * Cleans up Testcontainers if they were used
  */
 
-import { getTestInfrastructure, resetTestInfrastructure } from '../fixtures/testcontainers';
-
 async function teardown(): Promise<void> {
   const useTestcontainers = process.env.E2E_USE_TESTCONTAINERS === 'true';
 
@@ -13,6 +11,8 @@ async function teardown(): Promise<void> {
     console.log('\n🧹 Stopping Testcontainers for admin-first-time-setup...\n');
 
     try {
+      // Dynamic import - testcontainers.ts uses @ts-nocheck for optional packages
+      const { getTestInfrastructure, resetTestInfrastructure } = await import('../fixtures/testcontainers');
       const infrastructure = getTestInfrastructure();
       await infrastructure.stop();
       resetTestInfrastructure();

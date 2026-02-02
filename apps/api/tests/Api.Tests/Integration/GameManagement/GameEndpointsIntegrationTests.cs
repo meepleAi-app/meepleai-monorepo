@@ -708,4 +708,39 @@ public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
             response.StatusCode == HttpStatusCode.Unauthorized,
             $"Expected NotFound or Unauthorized, got {response.StatusCode}");
     }
+
+    // ========================================
+    // PUBLISH GAME TESTS (Issue #3481)
+    // ========================================
+
+    [Fact]
+    public async Task PublishGame_WithoutAuth_ReturnsUnauthorized()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var publishRequest = new { Status = 2 }; // Approved = 2
+
+        // Act
+        var response = await _client.PutAsJsonAsync($"/api/v1/games/{gameId}/publish", publishRequest);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PublishGame_NonExistentGame_ReturnsNotFoundOrUnauthorized()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var publishRequest = new { Status = 2 }; // Approved = 2
+
+        // Act
+        var response = await _client.PutAsJsonAsync($"/api/v1/games/{gameId}/publish", publishRequest);
+
+        // Assert - Non-existent game with no auth
+        Assert.True(
+            response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.Unauthorized,
+            $"Expected NotFound or Unauthorized, got {response.StatusCode}");
+    }
 }

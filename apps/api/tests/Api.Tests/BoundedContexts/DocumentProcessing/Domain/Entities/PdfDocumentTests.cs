@@ -139,6 +139,70 @@ public class PdfDocumentTests
         Assert.Equal("completed", document.ProcessingStatus);
     }
 
+    // ===== LinkToGame Tests (Issue #3372) =====
+
+    [Fact]
+    public void LinkToGame_WithValidGameId_UpdatesGameId()
+    {
+        // Arrange
+        var originalGameId = Guid.NewGuid();
+        var newGameId = Guid.NewGuid();
+        var document = CreateTestDocumentWithGameId(originalGameId);
+
+        // Act
+        document.LinkToGame(newGameId);
+
+        // Assert
+        Assert.Equal(newGameId, document.GameId);
+    }
+
+    [Fact]
+    public void LinkToGame_WithEmptyGuid_ThrowsArgumentException()
+    {
+        // Arrange
+        var document = CreateTestDocument(LanguageCode.English);
+
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(
+            () => document.LinkToGame(Guid.Empty));
+
+        Assert.Contains("Game ID cannot be empty", exception.Message);
+        Assert.Equal("gameId", exception.ParamName);
+    }
+
+    [Fact]
+    public void LinkToGame_OverwritesExistingGameId()
+    {
+        // Arrange
+        var firstGameId = Guid.NewGuid();
+        var secondGameId = Guid.NewGuid();
+        var document = CreateTestDocumentWithGameId(firstGameId);
+
+        // Verify initial state
+        Assert.Equal(firstGameId, document.GameId);
+
+        // Act - Link to second game
+        document.LinkToGame(secondGameId);
+
+        // Assert - GameId should be overwritten
+        Assert.Equal(secondGameId, document.GameId);
+        Assert.NotEqual(firstGameId, document.GameId);
+    }
+
+    [Fact]
+    public void LinkToGame_WithSameGameId_DoesNotThrow()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var document = CreateTestDocumentWithGameId(gameId);
+
+        // Act - Link to same game (idempotent operation)
+        document.LinkToGame(gameId);
+
+        // Assert
+        Assert.Equal(gameId, document.GameId);
+    }
+
     private static PdfDocument CreateTestDocument(LanguageCode language)
     {
         return new PdfDocument(
@@ -149,6 +213,19 @@ public class PdfDocumentTests
             new FileSize(1024),
             Guid.NewGuid(),
             language
+        );
+    }
+
+    private static PdfDocument CreateTestDocumentWithGameId(Guid gameId)
+    {
+        return new PdfDocument(
+            Guid.NewGuid(),
+            gameId,
+            new FileName("test.pdf"),
+            "/path/to/test.pdf",
+            new FileSize(1024),
+            Guid.NewGuid(),
+            LanguageCode.English
         );
     }
 }

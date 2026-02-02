@@ -6,6 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 /// <summary>
 /// Command to create a new game in the catalog.
 /// Issue #2373: Added SharedGameId for catalog integration.
+/// Issue #3372: Added PdfId for linking PDF during game creation.
 /// </summary>
 internal record CreateGameCommand(
     string Title,
@@ -18,5 +19,6 @@ internal record CreateGameCommand(
     string? IconUrl = null,
     string? ImageUrl = null,
     int? BggId = null,
-    Guid? SharedGameId = null
+    Guid? SharedGameId = null,
+    Guid? PdfId = null
 ) : ICommand<GameDto>;

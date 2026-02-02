@@ -71,6 +71,7 @@ export interface GameSortOptions {
 /**
  * Admin Wizard: Create game request with optional image URLs
  * Issue #2373: Added sharedGameId for catalog integration
+ * Issue #3372: Added pdfId for linking PDF during game creation
  */
 export interface CreateGameRequest {
   title: string;
@@ -85,6 +86,8 @@ export interface CreateGameRequest {
   bggId?: number | null;
   /** Issue #2373: Link to SharedGameCatalog entry for enriched data */
   sharedGameId?: string | null;
+  /** Issue #3372: Link PDF to game during creation */
+  pdfId?: string | null;
 }
 
 /**

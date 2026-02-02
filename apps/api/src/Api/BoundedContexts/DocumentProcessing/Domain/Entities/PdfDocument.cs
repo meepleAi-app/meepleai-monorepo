@@ -194,6 +194,19 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     public void MakePrivate() => IsPublic = false;
 
     /// <summary>
+    /// Links this PDF to a game.
+    /// Issue #3372: Support linking PDF during game creation.
+    /// </summary>
+    /// <param name="gameId">The game ID to link to</param>
+    public void LinkToGame(Guid gameId)
+    {
+        if (gameId == Guid.Empty)
+            throw new ArgumentException("Game ID cannot be empty", nameof(gameId));
+
+        GameId = gameId;
+    }
+
+    /// <summary>
     /// Creates a copy of this document for a shared game.
     /// Issue #2732: Document copying on share request approval
     /// </summary>

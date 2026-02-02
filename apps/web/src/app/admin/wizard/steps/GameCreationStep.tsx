@@ -29,7 +29,7 @@ interface GameCreationStepProps {
 type ImageInputMode = 'url' | 'upload';
 
 export function GameCreationStep({
-  pdfId: _pdfId,
+  pdfId,
   pdfFileName,
   onComplete,
   onBack,
@@ -110,12 +110,14 @@ export function GameCreationStep({
 
     try {
       // Step 1: Create game first (without images) to get gameId
+      // Issue #3372: Pass pdfId to link PDF during game creation
       const result = await api.games.create({
         title: gameName.trim(),
         publisher: publisher.trim() || null,
         yearPublished: yearPublished ?? null,
         iconUrl: null,
         imageUrl: null,
+        pdfId: pdfId,
       });
 
       // Step 2: Upload files if provided and link to game (Issue #2255)
@@ -179,6 +181,7 @@ export function GameCreationStep({
     imageMode,
     imageUrl,
     imageFile,
+    pdfId,
     onComplete,
   ]);
 

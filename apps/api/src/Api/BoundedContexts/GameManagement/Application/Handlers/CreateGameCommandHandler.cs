@@ -1,8 +1,10 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -10,17 +12,21 @@ namespace Api.BoundedContexts.GameManagement.Application.Handlers;
 
 /// <summary>
 /// Handles game creation command.
+/// Issue #3372: Added PDF linking support during game creation.
 /// </summary>
 internal class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, GameDto>
 {
     private readonly IGameRepository _gameRepository;
+    private readonly IPdfDocumentRepository _pdfDocumentRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public CreateGameCommandHandler(
         IGameRepository gameRepository,
+        IPdfDocumentRepository pdfDocumentRepository,
         IUnitOfWork unitOfWork)
     {
         _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _pdfDocumentRepository = pdfDocumentRepository ?? throw new ArgumentNullException(nameof(pdfDocumentRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
@@ -72,9 +78,19 @@ internal class CreateGameCommandHandler : ICommandHandler<CreateGameCommand, Gam
             game.LinkToSharedGame(command.SharedGameId.Value);
         }
 
-        // Persist
+        // Persist game first
         await _gameRepository.AddAsync(game, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Link PDF to game if PdfId provided (Issue #3372)
+        if (command.PdfId.HasValue)
+        {
+            var pdfDocument = await _pdfDocumentRepository.GetByIdAsync(command.PdfId.Value, cancellationToken).ConfigureAwait(false)
+                ?? throw new NotFoundException("PdfDocument", command.PdfId.Value.ToString());
+
+            pdfDocument.LinkToGame(game.Id);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         // Map to DTO
         return MapToDto(game);

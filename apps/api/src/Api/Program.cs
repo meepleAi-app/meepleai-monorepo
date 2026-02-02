@@ -500,6 +500,9 @@ v1Api.MapLedgerModeEndpoints();     // Issue #2405: Ledger Mode endpoints
 // Issue #866: Agent management endpoints
 v1Api.MapAgentEndpoints();
 
+// Issue #3377: AI model configuration endpoints
+v1Api.MapModelEndpoints();
+
 // Issue #3177, #3178: Agent typology endpoints (AGT-003, AGT-004)
 v1Api.MapGroup("/agent-typologies").MapAgentTypologyEndpoints();
 

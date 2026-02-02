@@ -101,6 +101,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<UserBadgeEntity> UserBadges => Set<UserBadgeEntity>(); // ISSUE-2731: User badge awards
     public DbSet<ShareRequestLimitConfigEntity> ShareRequestLimitConfigs => Set<ShareRequestLimitConfigEntity>(); // ISSUE-2730: Rate limit config
     public DbSet<UserRateLimitOverrideEntity> UserRateLimitOverrides => Set<UserRateLimitOverrideEntity>(); // ISSUE-2730: User overrides
+    public DbSet<TierStrategyAccessEntity> TierStrategyAccess => Set<TierStrategyAccessEntity>(); // ISSUE-3438: Tier-strategy access control
+    public DbSet<StrategyModelMappingEntity> StrategyModelMappings => Set<StrategyModelMappingEntity>(); // ISSUE-3438: Strategy-model mapping
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();

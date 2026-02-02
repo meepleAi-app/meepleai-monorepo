@@ -55,6 +55,10 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<IModelConfigurationService, ModelConfigurationService>(); // Issue #3377: Models tier endpoint
         services.AddSingleton<ITierStrategyAccessService, TierStrategyAccessService>(); // Issue #3436: Tier-strategy access control
 
+        // Issue #3436: Tier-Strategy Access Validation Service
+        // Scoped - uses ITierStrategyAccessRepository which depends on DbContext
+        services.AddScoped<ITierStrategyAccessService, TierStrategyAccessService>();
+
         // Issue #2404: Agent Mode Handlers (Scoped - use repositories and LLM services)
         services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.PlayerModeHandler>();
         services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.ChatModeHandler>();
@@ -146,6 +150,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IAgentRepository, AgentRepository>(); // Issue #866: Agent management
         services.AddScoped<IAgentTypologyRepository, AgentTypologyRepository>(); // Issue #3175, #3177: AgentTypology CRUD
         services.AddScoped<IAgentSessionRepository, AgentSessionRepository>(); // Issue #3184 (AGT-010): Agent session lifecycle
+        services.AddScoped<ITierStrategyAccessRepository, TierStrategyAccessRepository>(); // Issue #3436: Tier-Strategy access
 
         // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
         services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();

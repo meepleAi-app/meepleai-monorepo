@@ -288,6 +288,208 @@ export const USER_TIERS: UserTierData[] = [
 ];
 
 // =============================================================================
+// TIER → STRATEGY ACCESS - Architecture Principle
+// =============================================================================
+
+/**
+ * CRITICAL ARCHITECTURE PRINCIPLE:
+ *
+ * User Tier → Available Strategies → Model Selection
+ *
+ * Flow:
+ * 1. User tier determines which strategies are ENABLED for selection
+ * 2. User selects a strategy (FAST, BALANCED, PRECISE, etc.)
+ * 3. Strategy determines which LLM model to use (NOT the user tier!)
+ * 4. Admin can enable/disable strategies and configure custom flows
+ *
+ * Example:
+ * - User (tier) → can select: FAST or BALANCED
+ * - User chooses → BALANCED
+ * - System uses → DeepSeek Chat (from BALANCED strategy config)
+ *
+ * The tier does NOT influence model routing directly!
+ */
+export interface TierStrategyAccess {
+  tier: string;
+  hasRagAccess: boolean;
+  availableStrategies: RagStrategy[];
+  maxComplexity: string;
+  description: string;
+}
+
+export const TIER_STRATEGY_ACCESS: TierStrategyAccess[] = [
+  {
+    tier: 'Anonymous',
+    hasRagAccess: false,
+    availableStrategies: [],
+    maxComplexity: 'NONE',
+    description: '❌ NO ACCESS - Authentication required',
+  },
+  {
+    tier: 'User',
+    hasRagAccess: true,
+    availableStrategies: ['FAST', 'BALANCED'],
+    maxComplexity: 'BALANCED',
+    description: 'Simple → Standard: FAQ and validated queries',
+  },
+  {
+    tier: 'Editor',
+    hasRagAccess: true,
+    availableStrategies: ['FAST', 'BALANCED', 'PRECISE'],
+    maxComplexity: 'PRECISE',
+    description: 'Simple → Advanced: Multi-agent critical decisions',
+  },
+  {
+    tier: 'Admin',
+    hasRagAccess: true,
+    availableStrategies: ['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'],
+    maxComplexity: 'CONSENSUS',
+    description: 'Full access: All strategies + custom configurations',
+  },
+  {
+    tier: 'Premium',
+    hasRagAccess: true,
+    availableStrategies: ['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS'],
+    maxComplexity: 'CONSENSUS',
+    description: 'Premium: All production strategies with priority',
+  },
+];
+
+/**
+ * Strategy → Model Mapping (Admin Configurable)
+ *
+ * Each strategy has predefined models, but Admin can customize.
+ * The strategy (NOT the user tier) determines which model to use.
+ */
+export interface StrategyModelMapping {
+  strategy: RagStrategy;
+  primaryModel: string;
+  fallbackModels: string[];
+  provider: 'Anthropic' | 'OpenAI' | 'DeepSeek' | 'OpenRouter';
+  isCustomizable: boolean;
+  adminOnly: boolean;
+}
+
+export const STRATEGY_MODEL_MAPPING: StrategyModelMapping[] = [
+  {
+    strategy: 'FAST',
+    primaryModel: 'llama-3.3-70b',
+    fallbackModels: ['gemini-2.0-flash-exp'],
+    provider: 'OpenRouter',
+    isCustomizable: false,
+    adminOnly: false,
+  },
+  {
+    strategy: 'BALANCED',
+    primaryModel: 'deepseek-chat',
+    fallbackModels: ['claude-haiku-4.5'],
+    provider: 'DeepSeek',
+    isCustomizable: true,
+    adminOnly: false,
+  },
+  {
+    strategy: 'PRECISE',
+    primaryModel: 'claude-sonnet-4.5',
+    fallbackModels: ['claude-haiku-4.5', 'gpt-4o-mini'],
+    provider: 'Anthropic',
+    isCustomizable: true,
+    adminOnly: false,
+  },
+  {
+    strategy: 'EXPERT',
+    primaryModel: 'claude-sonnet-4.5',
+    fallbackModels: ['gpt-4o'],
+    provider: 'Anthropic',
+    isCustomizable: true,
+    adminOnly: false,
+  },
+  {
+    strategy: 'CONSENSUS',
+    primaryModel: 'claude-sonnet-4.5',
+    fallbackModels: ['gpt-4o', 'deepseek-chat'], // Multi-model voting
+    provider: 'Anthropic',
+    isCustomizable: true,
+    adminOnly: false,
+  },
+  {
+    strategy: 'CUSTOM',
+    primaryModel: 'claude-haiku-4.5',
+    fallbackModels: ['claude-sonnet-4.5'],
+    provider: 'Anthropic',
+    isCustomizable: true,
+    adminOnly: true,
+  },
+];
+
+// =============================================================================
+// AGENT CLASSIFICATION - Query Type Detection
+// =============================================================================
+
+/**
+ * Agent selection based on query classification.
+ * Based on AgentOrchestrationService.cs:23-168
+ *
+ * Classification Logic:
+ * - Keyword pattern matching on lowercase query
+ * - First match wins (order matters)
+ * - Default: GeneralQuestion if no patterns match
+ *
+ * @see apps/api/src/Api/BoundedContexts/KnowledgeBase/Domain/Services/AgentOrchestration/AgentOrchestrationService.cs
+ */
+export interface AgentClassificationData {
+  queryType: string;
+  agentType: string;
+  keywords: string[];
+  example: string;
+  description: string;
+}
+
+export const AGENT_CLASSIFICATION: AgentClassificationData[] = [
+  {
+    queryType: 'CitationVerification',
+    agentType: 'CitationAgent',
+    keywords: ['source', 'citation', 'reference', 'page', 'where does it say'],
+    example: 'Where in the rules does it say that?',
+    description: 'Verifies sources and validates citations from PDF documents',
+  },
+  {
+    queryType: 'ConfidenceAssessment',
+    agentType: 'ConfidenceAgent',
+    keywords: ['confidence', 'sure', 'certain', 'accuracy', 'how confident'],
+    example: 'How confident are you about this answer?',
+    description: 'Evaluates answer reliability and confidence scores',
+  },
+  {
+    queryType: 'ConversationContinuation',
+    agentType: 'ConversationAgent',
+    keywords: ['continue', 'more', 'elaborate', 'explain further', 'tell me more'],
+    example: 'Can you elaborate on that?',
+    description: 'Continues multi-turn conversations with context awareness',
+  },
+  {
+    queryType: 'RulesInterpretation',
+    agentType: 'RulesInterpreter',
+    keywords: ['rule', 'can i', 'is it legal', 'allowed', 'permitted', 'may i'],
+    example: 'Can I move my piece diagonally?',
+    description: 'Interprets game rules and provides authoritative rulings',
+  },
+  {
+    queryType: 'StrategyAdvice',
+    agentType: 'StrategyAgent',
+    keywords: ['strategy', 'tactic', 'best move', 'should i', 'recommend', 'advice'],
+    example: "What's the best strategy for early game?",
+    description: 'Provides strategic guidance and tactical recommendations',
+  },
+  {
+    queryType: 'GeneralQuestion',
+    agentType: 'GeneralAgent',
+    keywords: [],
+    example: 'How do I set up the game?',
+    description: 'Default agent for general questions and setup instructions',
+  },
+];
+
+// =============================================================================
 // GLOBAL METRICS - Key Performance Indicators
 // =============================================================================
 

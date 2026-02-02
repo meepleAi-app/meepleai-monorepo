@@ -63,6 +63,10 @@ internal static class AdministrationServiceExtensions
         // ISSUE-2512: Auto-configuration service for first run setup
         services.AddScoped<IAutoConfigurationService, AutoConfigurationService>();
 
+        // Issue #3324: SSE real-time dashboard streaming service
+        // Singleton because it holds Channel-based subscriber state across requests
+        services.AddSingleton<IDashboardStreamService, DashboardStreamService>();
+
         // Issue #2139: HttpClient for Prometheus queries
         services.AddHttpClient<PrometheusClientService>()
             .AddPolicyHandler(GetRetryPolicy())

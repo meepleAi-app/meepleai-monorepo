@@ -413,8 +413,8 @@ Phase 3: Integration & Testing
 **Week 1-2: Epic #3434 - Tier-Strategy-Model Refactor** 🔴 ACTIVE
 
 - ✅ Documentazione completata (rag-data.ts, rag-flow-current.md)
-- ⬜ Database tables (#3438)
-- ⬜ Backend services (#3436, #3437, #3435)
+- ✅ Database tables (#3438)
+- ✅ Backend services (#3436, #3437, #3435)
 - ⬜ Frontend UI (#3439, #3440)
 - ⬜ Testing & docs (#3441, #3442)
 - **Priority**: 🔴 CRITICAL (prerequisito per tutto)

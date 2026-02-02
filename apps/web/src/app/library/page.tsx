@@ -1,10 +1,11 @@
 /**
  * User Library Page (Issue #2464, #2613, #2618)
  * Updated: Issue #3104 - Navigation handled by layout
+ * Updated: Protected route - requires authentication
  *
  * Enhanced user library management with search, filtering, and actions.
  *
- * Route: /library
+ * Route: /library (authenticated users only)
  * Features:
  * - Search by game title
  * - Filter by favorites
@@ -25,6 +26,7 @@
 
 import dynamic from 'next/dynamic';
 
+import { RequireRole } from '@/components/auth/RequireRole';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 
 // Dynamically import the client component with SSR disabled
@@ -50,5 +52,9 @@ const LibraryPageClient = dynamic(() => import('./LibraryPageClient'), {
 });
 
 export default function LibraryPage() {
-  return <LibraryPageClient />;
+  return (
+    <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
+      <LibraryPageClient />
+    </RequireRole>
+  );
 }

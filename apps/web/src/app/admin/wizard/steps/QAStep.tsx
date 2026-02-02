@@ -22,6 +22,7 @@ interface QAStepProps {
   gameName: string;
   chatThreadId: string;
   onReset: () => void;
+  onNext?: () => void; // Optional: Navigate to next step (Issue #3480)
 }
 
 interface Message {
@@ -40,7 +41,7 @@ interface Citation {
   text: string;
 }
 
-export function QAStep({ gameId, gameName, chatThreadId, onReset }: QAStepProps) {
+export function QAStep({ gameId, gameName, chatThreadId, onReset, onNext }: QAStepProps) {
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -290,9 +291,15 @@ export function QAStep({ gameId, gameName, chatThreadId, onReset }: QAStepProps)
           <Button variant="outline" asChild>
             <Link href={`/chat?gameId=${gameId}`}>Apri Chat Completa</Link>
           </Button>
-          <Button asChild>
-            <Link href="/admin">Torna ad Admin</Link>
-          </Button>
+          {onNext ? (
+            <Button onClick={onNext} className="bg-green-600 hover:bg-green-700">
+              Avanti: Pubblica →
+            </Button>
+          ) : (
+            <Button asChild>
+              <Link href="/admin">Torna ad Admin</Link>
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -10,6 +10,8 @@
  * @see docs/03-api/rag/appendix/F-calculation-formulas.md
  */
 
+import type { RagStrategy } from './types';
+
 // =============================================================================
 // STRATEGY DATA - 6 Official Strategies
 // =============================================================================

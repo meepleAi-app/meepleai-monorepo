@@ -14,8 +14,11 @@
  */
 
 import React, { useState } from 'react';
+
 import { X, Code2, BookOpen, Beaker, GraduationCap, ExternalLink, FileCode } from 'lucide-react';
 
+import { Badge } from '@/components/ui/data-display/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Dialog,
   DialogContent,
@@ -23,8 +26,6 @@ import {
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
-import { Badge } from '@/components/ui/data-display/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 
 // =============================================================================
 // Types

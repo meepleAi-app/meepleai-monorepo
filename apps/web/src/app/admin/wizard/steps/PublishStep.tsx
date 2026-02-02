@@ -14,8 +14,6 @@ import { useRouter } from 'next/navigation';
 import { toast } from '@/components/layout';
 import { Spinner } from '@/components/loading';
 import { Card } from '@/components/ui/data-display/card';
-import { Button } from '@/components/ui/primitives/button';
-import { Label } from '@/components/ui/primitives/label';
 import {
   Select,
   SelectContent,
@@ -23,6 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Label } from '@/components/ui/primitives/label';
 import { api } from '@/lib/api';
 import type { ApprovalStatus } from '@/lib/api/schemas/admin.schemas';
 

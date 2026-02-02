@@ -19,9 +19,10 @@ export { ActivityItem, type ActivityData, type ActivityType, type ActivityItemPr
 export { WishlistCard, type WishlistItemData, type WishlistPriority, type WishlistVisibility, type WishlistCardProps } from './WishlistCard';
 export { NotificationItem, type NotificationData, type NotificationType, type NotificationStatus, type NotificationAction, type NotificationActionType, type NotificationItemProps } from './NotificationItem';
 
-// Widgets (Issue #3309, #3310)
+// Widgets (Issue #3309, #3310, #3312)
 export { ActiveSessionsWidget, type ActiveSession, type ActiveSessionsWidgetProps } from './ActiveSessionsWidget';
 export { LibrarySnapshot, type TopGame, type LibraryQuota, type LibrarySnapshotProps } from './LibrarySnapshot';
+export { ChatHistorySection, type ChatThread, type ChatHistorySectionProps } from './ChatHistorySection';
 
 // Legacy components (Issue #1834: UI-007)
 export { QuickActions, type QuickActionsProps, type QuickAction } from './QuickActions';

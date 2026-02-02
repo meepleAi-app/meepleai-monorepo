@@ -7,7 +7,6 @@
  * Issue #3480: Admin wizard publish confirmation
  */
 
-import { Button } from '@/components/ui/primitives/button';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
+import { Button } from '@/components/ui/primitives/button';
 import type { ApprovalStatus } from '@/lib/api/schemas/admin.schemas';
 
 interface PublishConfirmModalProps {
@@ -42,6 +42,7 @@ export function PublishConfirmModal({
   pdfFileName,
   approvalStatus,
 }: PublishConfirmModalProps) {
+  // eslint-disable-next-line security/detect-object-injection -- approvalStatus is type-safe ApprovalStatus enum
   const statusInfo = STATUS_LABELS[approvalStatus];
 
   return (

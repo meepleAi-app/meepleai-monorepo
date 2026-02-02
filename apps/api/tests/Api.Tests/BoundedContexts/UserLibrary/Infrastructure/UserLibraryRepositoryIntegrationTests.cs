@@ -278,6 +278,156 @@ public sealed class UserLibraryRepositoryIntegrationTests : IAsyncLifetime
         result.Should().BeInDescendingOrder(e => e.AddedAt);
     }
 
+    [Fact]
+    public async Task AddAsync_WithPrivatePdfId_PersistsAssociation()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+
+        // Seed user
+        var userEntity = new UserEntity
+        {
+            Id = userId,
+            Email = $"test_{Guid.NewGuid()}@example.com",
+            DisplayName = "Test User",
+            PasswordHash = "hashedpassword123",
+            Role = "User",
+            Tier = "Free",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Users.Add(userEntity);
+
+        // Seed game
+        var gameEntity = new SharedGameEntity
+        {
+            Id = gameId,
+            Title = "Test Game",
+            YearPublished = 2024,
+            Description = "Test Description",
+            MinPlayers = 1,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            MinAge = 10,
+            CreatedBy = userId,
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.SharedGames.Add(gameEntity);
+
+        // Seed PDF document
+        var pdfEntity = new PdfDocumentEntity
+        {
+            Id = pdfId,
+            UploadedByUserId = userId,
+            GameId = gameId,
+            UploadedAt = DateTime.UtcNow,
+            FilePath = "/test/path.pdf",
+            FileName = "test.pdf",
+            FileSizeBytes = 1024,
+            PageCount = 10,
+            ProcessingStatus = "Completed"
+        };
+        _dbContext.PdfDocuments.Add(pdfEntity);
+
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        // Create library entry with private PDF
+        var entry = new UserLibraryEntry(Guid.NewGuid(), userId, gameId);
+        entry.AssociatePrivatePdf(pdfId);
+
+        // Act
+        await _repository.AddAsync(entry);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        // Assert - verify persisted correctly
+        var retrieved = await _repository.GetUserGameWithStatsAsync(userId, gameId);
+        retrieved.Should().NotBeNull();
+        retrieved!.PrivatePdfId.Should().Be(pdfId);
+        retrieved.HasPrivatePdf.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetUserGameWithStatsAsync_WithPrivatePdf_LoadsNavigationProperty()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+
+        // Seed user
+        var userEntity = new UserEntity
+        {
+            Id = userId,
+            Email = $"test_{Guid.NewGuid()}@example.com",
+            DisplayName = "Test User",
+            PasswordHash = "hashedpassword123",
+            Role = "User",
+            Tier = "Free",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Users.Add(userEntity);
+
+        // Seed game
+        var gameEntity = new SharedGameEntity
+        {
+            Id = gameId,
+            Title = "Test Game",
+            YearPublished = 2024,
+            Description = "Test Description",
+            MinPlayers = 1,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            MinAge = 10,
+            CreatedBy = userId,
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.SharedGames.Add(gameEntity);
+
+        // Seed PDF document
+        var pdfEntity = new PdfDocumentEntity
+        {
+            Id = pdfId,
+            UploadedByUserId = userId,
+            GameId = gameId,
+            UploadedAt = DateTime.UtcNow,
+            FilePath = "/test/path.pdf",
+            FileName = "test.pdf",
+            FileSizeBytes = 1024,
+            PageCount = 10,
+            ProcessingStatus = "Completed"
+        };
+        _dbContext.PdfDocuments.Add(pdfEntity);
+
+        // Create library entry entity with private PDF
+        var entryEntity = new UserLibraryEntryEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            GameId = gameId,
+            AddedAt = DateTime.UtcNow,
+            IsFavorite = false,
+            CurrentState = 0,
+            TimesPlayed = 0,
+            CompetitiveSessions = 0,
+            PrivatePdfId = pdfId
+        };
+        _dbContext.UserLibraryEntries.Add(entryEntity);
+
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        // Act
+        var retrieved = await _repository.GetUserGameWithStatsAsync(userId, gameId);
+
+        // Assert
+        retrieved.Should().NotBeNull();
+        retrieved!.PrivatePdfId.Should().Be(pdfId);
+        retrieved.HasPrivatePdf.Should().BeTrue();
+    }
+
     #endregion
 
     #region GetUserGameWithStatsAsync Tests

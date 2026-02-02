@@ -41,16 +41,16 @@ Completare i due flussi end-to-end più critici per user e admin:
 
 #### Stream A - Admin Flow (Epic #3306 estesa)
 
-**Frontend Track**:
+**Frontend Track**:222222222222
 | Issue | Titolo | Area | SP | Status |
 |:-----:|--------|------|:--:|:------:|
-| #3480 | Admin Wizard - Publish to Shared Library | Frontend | 3 | ⬜ Open |
+| #3480 | Admin Wizard - Publish to Shared Library | Frontend | 3 | x⬜ Open |
 | #3482 | Game Approval Status UI | Frontend | 2 | ⬜ Open |
 
 **Backend Track**:
 | Issue | Titolo | Area | SP | Status |
 |:-----:|--------|------|:--:|:------:|
-| #3481 | SharedGameCatalog Publication Workflow | Backend | 5 | ⬜ Open |
+| #3481 | SharedGameCatalog Publication Workflow | Backend | 5 | x⬜ Open |
 
 **Totale Stream A**: 10 SP → ~5 giorni (parallelo)
 
@@ -65,7 +65,7 @@ Completare i due flussi end-to-end più critici per user e admin:
 **Backend Track**:
 | Issue | Titolo | Area | SP | Status |
 |:-----:|--------|------|:--:|:------:|
-| #3478 | UserLibraryEntry PDF Association | Backend | 3 | ⬜ Open |
+| #3478 | UserLibraryEntry PDF Association | Backend | 3 | x⬜ Open |
 | #3479 | Private PDF Upload Endpoint | Backend | 3 | ⬜ Open |
 
 **Totale Stream B**: 16 SP → ~8 giorni (parallelo)

@@ -224,8 +224,8 @@ export function BlockExplanationModal({ block, isOpen, onClose }: BlockExplanati
                     size="sm"
                     className="ml-auto"
                     onClick={() => {
-                      // Open in VS Code (future enhancement)
-                      console.log('Open:', block.codeReference);
+                      // TODO: Open in VS Code (future enhancement)
+                      // Currently no-op until file integration is implemented
                     }}
                   >
                     <ExternalLink className="h-3 w-3" />

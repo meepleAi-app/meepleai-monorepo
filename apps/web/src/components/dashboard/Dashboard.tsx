@@ -40,6 +40,7 @@ import { useLayout } from '@/components/layout/LayoutProvider';
 import { Button } from '@/components/ui/primitives/button';
 import { DashboardSection, type ViewMode } from './DashboardSection';
 import { DashboardHeader } from './DashboardHeader';
+import { HeroStats } from './HeroStats';
 import { GameCard, type GameData } from './GameCard';
 import { ActivityItem, type ActivityData } from './ActivityItem';
 import { WishlistCard, type WishlistItemData } from './WishlistCard';
@@ -615,6 +616,11 @@ export function Dashboard() {
     <div className="min-h-screen pb-24">
       {/* Dashboard Header with Global Search */}
       <DashboardHeader />
+
+      {/* Hero Stats Section - Issue #3308 */}
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <HeroStats />
+      </div>
 
       {/* Reorderable Sections */}
       <Reorder.Group

@@ -10,6 +10,8 @@ export { Dashboard, type SectionConfig } from './Dashboard';
 // Sections and Layout
 export { DashboardSection, type ViewMode, type DashboardSectionProps } from './DashboardSection';
 export { DashboardHeader } from './DashboardHeader';
+export { HeroStats, type DashboardStats, type HeroStatsProps } from './HeroStats';
+export { KpiCard, KpiCardSkeleton, type KpiCardProps, type KpiColorVariant, type KpiTrend, type KpiStreak } from './KpiCard';
 
 // Cards and Items
 export { GameCard, type GameData, type GameCardProps } from './GameCard';

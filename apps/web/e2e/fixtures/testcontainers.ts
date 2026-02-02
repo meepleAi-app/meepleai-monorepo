@@ -1,7 +1,10 @@
+// @ts-nocheck - Optional testcontainers feature, packages not installed by default
 /**
  * Testcontainers Fixture - Infrastructure Setup
  *
  * Provides isolated PostgreSQL, Redis, and Qdrant containers for E2E tests
+ * NOTE: Requires manual installation: pnpm add -D @testcontainers/postgresql testcontainers
+ * Only used when E2E_USE_TESTCONTAINERS=true environment variable is set
  */
 
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';

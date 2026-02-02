@@ -19,18 +19,18 @@ import { Button } from '@/components/ui/primitives/button';
 import { AgentRagIntegration } from './AgentRagIntegration';
 import { AgentRoleConfigurator } from './AgentRoleConfigurator';
 import { ArchitectureExplorer } from './ArchitectureExplorer';
-import { LayerDeepDocs } from './LayerDeepDocs';
-import { PromptTemplateBuilder } from './PromptTemplateBuilder';
-import { VariantComparisonTool } from './VariantComparisonTool';
 import { CostCalculator } from './CostCalculator';
 import { DecisionWalkthrough } from './DecisionWalkthrough';
+import { LayerDeepDocs } from './LayerDeepDocs';
 import { ModelSelectionOptimizer } from './ModelSelectionOptimizer';
 import { PerformanceMetricsTable } from './PerformanceMetricsTable';
+import { PromptTemplateBuilder } from './PromptTemplateBuilder';
 import { QuerySimulator } from './QuerySimulator';
+import { METRICS } from './rag-data';
 import { StatsGrid } from './StatsGrid';
 import { TokenFlowVisualizer } from './TokenFlowVisualizer';
 import { DEFAULT_STATS } from './types';
-import { METRICS } from './rag-data';
+import { VariantComparisonTool } from './VariantComparisonTool';
 
 import type { ViewMode } from './types';
 

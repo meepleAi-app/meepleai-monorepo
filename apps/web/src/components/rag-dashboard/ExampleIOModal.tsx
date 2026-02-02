@@ -13,8 +13,11 @@
  */
 
 import React, { useState } from 'react';
-import { X, Play, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
+import { X, Play, Loader2, AlertCircle } from 'lucide-react';
+
+import { Badge } from '@/components/ui/data-display/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Dialog,
   DialogContent,
@@ -22,12 +25,11 @@ import {
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
-import { Badge } from '@/components/ui/data-display/badge';
 import { Input } from '@/components/ui/primitives/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
+
+import { STRATEGIES } from './rag-data';
 
 import type { RagStrategy, UserTier } from './types';
-import { STRATEGIES } from './rag-data';
 
 // =============================================================================
 // Types

@@ -222,7 +222,7 @@
                         <p><strong>Purpose</strong>: Decide the optimal path for each query</p>
                         <pre>def route_query(query: str, user: User) -> RoutingDecision:
     # Dimension 1: What does the user have access to?
-    max_budget = get_token_budget(user.role)  # Anonymous: 1.5K, Admin: 15K
+    max_budget = get_token_budget(user.role)  # User: 3K, Editor: 5K, Admin: 15K
 
     # Dimension 2: What kind of question is this?
     template = classify_template(query)
@@ -861,17 +861,17 @@ class AgentPromptBuilder:
                 <!-- Example 1: Simple Query -->
                 <div class="expandable">
                     <div class="expandable-header" onclick="toggleExpandable(this.parentElement)">
-                        <h4>📗 Example 1: Anonymous User, Simple FAQ (FAST + Cache)</h4>
+                        <h4>📗 Example 1: User Tier, Simple FAQ (FAST + Cache)</h4>
                         <span class="expandable-icon">▼</span>
                     </div>
                     <div class="expandable-content">
                         <pre style="font-size: 0.75rem; line-height: 1.5;">
-User: Anonymous (free tier)
+User: User (basic tier)
 Query: "How many players in Wingspan?"
 
 ┌─────────────────────────────────────────────────────────────────┐
 │ L1: ROUTING                                                      │
-│   • User tier: Anonymous → budget: 1,500 tokens max             │
+│   • User tier: User → budget: 3,000 tokens max                  │
 │   • Template classification: "rule_lookup" (wants rule text)    │
 │   • Complexity scoring:                                         │
 │     - Length: 5 words (no penalty)                              │
@@ -1195,14 +1195,14 @@ Decision: PRECISE Multi-Agent justified for:
                         </tr>
                     </thead>
                     <tbody>
-                        <tr style="background: rgba(100, 116, 139, 0.1);">
-                            <td><strong>Anonymous</strong></td>
-                            <td>1,500</td>
-                            <td>FAST only</td>
-                            <td>Llama 3.3 Free</td>
-                            <td>Simple FAQ, setup questions</td>
+                        <tr style="background: rgba(239, 68, 68, 0.1);">
+                            <td><strong><s>Anonymous</s></strong></td>
+                            <td>❌</td>
+                            <td>NO ACCESS</td>
+                            <td>-</td>
+                            <td>Authentication required</td>
                         </tr>
-                        <tr>
+                        <tr style="background: rgba(100, 116, 139, 0.1);">
                             <td><strong>User</strong></td>
                             <td>3,000</td>
                             <td>FAST, BALANCED</td>

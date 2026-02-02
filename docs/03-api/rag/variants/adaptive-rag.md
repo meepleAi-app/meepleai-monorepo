@@ -4,7 +4,7 @@
 
 | Metric | Value |
 |--------|-------|
-| **Tokens/Query** | Variable (2,000–15,000) |
+| **Tokens/Query** | Variable (2,000–22,000) |
 | **Cost/Query** | $-$$$ (depends on complexity) |
 | **Accuracy** | +10-20% above naive |
 | **Latency** | Variable (100ms–10s) |
@@ -17,25 +17,31 @@
 ```
 Query Input
     ↓
-[Router] Complexity Scoring
+[Auth Check] → Anonymous? → ❌ REJECT (authentication required)
+    ↓
+[Router] Complexity Scoring + User Tier
     ├─ Simple → FAST path
     ├─ Medium → BALANCED path
-    └─ Complex → PRECISE path
+    ├─ Complex → PRECISE path
+    ├─ External info needed → EXPERT path (Admin/Premium only)
+    ├─ High-stakes decision → CONSENSUS path (Admin/Premium only)
+    └─ Admin override → CUSTOM path
     ↓
-Strategy-Specific Retriever
-    ├─ FAST: MiniLM, top-3
-    ├─ BALANCED: E5-Base, top-10
-    └─ PRECISE: Multi-hop, top-20
-    ↓
-Strategy-Specific Grader
-    ├─ FAST: None (skip)
-    ├─ BALANCED: Cross-encoder
-    └─ PRECISE: LLM-based
+Strategy-Specific Pipeline
+    ├─ FAST: [Synthesis only]
+    ├─ BALANCED: [Synthesis + CRAG Evaluation]
+    ├─ PRECISE: [Retrieval + Analysis + Synthesis + Validation]
+    ├─ EXPERT: [Web Search + Multi-Hop + Synthesis]
+    ├─ CONSENSUS: [Voter1 + Voter2 + Voter3 + Aggregator]
+    └─ CUSTOM: [Admin-configured phases]
     ↓
 Strategy-Specific Generator
-    ├─ FAST: Claude Haiku
-    ├─ BALANCED: Claude Sonnet
-    └─ PRECISE: Multi-agent
+    ├─ FAST: Llama 3.3 Free / Haiku
+    ├─ BALANCED: GPT-4o-mini / Sonnet
+    ├─ PRECISE: Claude Opus / Multi-agent
+    ├─ EXPERT: Sonnet + Web augmentation
+    ├─ CONSENSUS: Multi-LLM voting (Sonnet + GPT-4o + DeepSeek)
+    └─ CUSTOM: Phase-configured models
     ↓
 Answer Output
 ```
@@ -61,27 +67,47 @@ Answer Output
 
 ## Token Breakdown
 
-**FAST Path** (60-70% of queries):
+**FAST Path** (~55% of queries for User tier):
 - Router: 300 tokens (classification)
 - Retriever: 1,500 tokens (3 chunks)
-- Generator: 400 tokens (Haiku output)
-- Total: ~2,200 tokens
+- Generator: 400 tokens (Haiku/Llama output)
+- Total: **~2,060 tokens** | Cost: $0.0001 (free models)
 
-**BALANCED Path** (25-30% of queries):
+**BALANCED Path** (~35% of queries):
 - Router: 300 tokens
-- Retriever: 5,000 tokens (10 chunks)
-- Grader: 200 tokens (reranking)
-- Generator: 1,200 tokens (Sonnet output)
-- Total: ~6,700 tokens
+- Retriever: 3,500 tokens (10 chunks, filtered)
+- CRAG Evaluation: 200 tokens
+- Generator: 800 tokens (Sonnet output)
+- Total: **~2,820 tokens** | Cost: $0.01 (DeepSeek/Sonnet)
 
-**PRECISE Path** (5-10% of queries):
+**PRECISE Path** (~8% of queries, Editor+):
 - Router: 300 tokens
-- Retriever: 8,000 tokens (20 chunks, multi-hop)
-- Grader: 2,000 tokens (LLM evaluation)
-- Generator: 3,500 tokens (multi-agent)
-- Total: ~13,800 tokens
+- Retrieval: 2,500 tokens (multi-phase)
+- Analysis: 3,000 tokens
+- Synthesis: 8,000 tokens (multi-agent)
+- Validation: 4,000 tokens
+- Total: **~22,396 tokens** | Cost: $0.132 (Haiku + Sonnet + Opus)
 
-**Weighted Average**: 0.65×2,200 + 0.27×6,700 + 0.08×13,800 = **~4,500 tokens/query**
+**EXPERT Path** (~2% of queries, Admin/Premium only):
+- Router: 300 tokens
+- Web Search: 3,000 tokens (external sources)
+- Multi-Hop: 6,000 tokens (entity expansion, max 3 hops)
+- Synthesis: 5,000 tokens
+- Total: **~15,000 tokens** | Cost: $0.099 (Claude Sonnet 4.5)
+
+**CONSENSUS Path** (~1% of queries, Admin/Premium only):
+- Router: 300 tokens
+- Voter 1 (Sonnet): 4,500 tokens
+- Voter 2 (GPT-4o): 4,500 tokens
+- Voter 3 (DeepSeek): 4,500 tokens
+- Aggregator: 3,500 tokens
+- Total: **~18,000 tokens** | Cost: $0.09 (Multi-LLM)
+
+**CUSTOM Path** (<1% of queries, Admin only):
+- Variable based on phase configuration
+- Total: **Variable** | Cost: Variable
+
+**Weighted Average** (typical distribution): **~4,200 tokens/query**
 
 ---
 
@@ -115,8 +141,12 @@ class AdaptiveRagRouter:
         strategy = self._select_strategy(complexity)
 
         # Step 4: Check user access
-        if strategy == "PRECISE" and user_tier == "anonymous":
-            return "BALANCED"  # Downgrade
+        # Anonymous users cannot access the system - authentication required
+        if user_tier == "anonymous":
+            raise AuthenticationRequiredException("Authentication required")
+
+        if strategy == "PRECISE" and user_tier == "user":
+            return "BALANCED"  # Downgrade for User tier
 
         return strategy
 
@@ -171,10 +201,13 @@ class AdaptiveRagRouter:
 - PRECISE → Agentic with multi-agent
 
 **User-Tier Matrix**:
-- Anonymous: FAST (80%) → BALANCED (20%)
-- User: FAST (60%) → BALANCED (35%) → PRECISE (5%, limited)
+> **Note**: Anonymous users cannot access the RAG system. Authentication is required.
+
+- ~~Anonymous~~: ❌ NO ACCESS (authentication required)
+- User: FAST (60%) → BALANCED (40%)
 - Editor: FAST (45%) → BALANCED (40%) → PRECISE (15%)
-- Admin: FAST (25%) → BALANCED (50%) → PRECISE (25%)
+- Admin: FAST (25%) → BALANCED (40%) → PRECISE (20%) → EXPERT/CONSENSUS (15%)
+- Premium: FAST (20%) → BALANCED (35%) → PRECISE (25%) → EXPERT/CONSENSUS (20%)
 
 ---
 

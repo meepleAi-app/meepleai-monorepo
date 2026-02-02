@@ -36,7 +36,7 @@ This wastes tokens on simple questions and underperforms on complex ones.
 ```python
 def route_query(query: str, user: User) -> RoutingDecision:
     # Dimension 1: What does the user have access to?
-    max_budget = get_token_budget(user.role)  # Anonymous: 1.5K, Admin: 15K tokens
+    max_budget = get_token_budget(user.role)  # User: 3K, Editor: 5K, Admin: 15K tokens
 
     # Dimension 2: What kind of question is this?
     template = classify_template(query)
@@ -66,11 +66,13 @@ Query: "How many food tokens in Wingspan?"
 → Template: rule_lookup (wants rule text)
 → Complexity: 1 (simple, clear terminology)
 → Strategy: FAST (simple lookup)
-→ Model: Llama 3.3 Free (Anonymous user)
+→ Model: Llama 3.3 Free (User tier)
 → Expected: 50 tokens (cache hit) or 2,060 tokens (cache miss)
 ```
 
-**Why This Matters**: Anonymous users asking FAQ get instant, free responses. Complex strategic queries from Admins get premium multi-agent analysis. Everyone gets optimal service for their needs.
+**Why This Matters**: User tier asking FAQ get instant, low-cost responses. Complex strategic queries from Admins get premium multi-agent analysis. Everyone gets optimal service for their needs.
+
+> **Note**: Anonymous users cannot access the RAG system. Authentication is required.
 
 ---
 
@@ -814,14 +816,14 @@ Total: $241/month (12x cheaper!)
 
 ## 🔀 Real-World Decision Making Examples
 
-### Example 1: Anonymous User, Simple Question
+### Example 1: User Tier, Simple Question
 
 ```
-User: Anonymous (free tier)
+User: User (basic tier)
 Query: "How many players in Wingspan?"
 
 Layer 1 (Routing):
-  → User tier: Anonymous (budget: 1,500 tokens max)
+  → User tier: User (budget: 3,000 tokens max)
   → Template: rule_lookup (wants rule text)
   → Complexity: 1 (simple, clear)
   → Strategy: FAST
@@ -1049,8 +1051,8 @@ def answer_query(query, user):
         docs = multi_hop_retrieve(query, max_hops=3)  # Deep for complex
 
     # Right-size model
-    if user.tier == "Anonymous":
-        model = "llama-3.3-free"
+    if user.tier == "User":
+        model = "llama-3.3-free"  # or gpt-4o-mini
     elif complexity <= 3:
         model = "gpt-4o-mini"
     else:
@@ -1272,7 +1274,7 @@ Result:
 
 6. **Multi-Agent for Multi-Dimensional**: Complex strategic queries benefit from specialized perspectives (Analyzer extracts facts, Strategist reasons, Validator verifies).
 
-7. **User Tiers Align with Value**: Anonymous users get fast FAQ answers (low cost). Admins get premium strategic analysis (high value justifies high cost).
+7. **User Tiers Align with Value**: User tier gets fast FAQ answers (low cost). Admins get premium strategic analysis (high value justifies high cost). Anonymous users must authenticate to access the system.
 
 ---
 

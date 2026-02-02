@@ -82,28 +82,29 @@ export const AgentMessage = React.memo(function AgentMessage({ message }: AgentM
         {/* Content */}
         <div className="text-sm">
           {isAgent ? (
-            <ReactMarkdown
-              className="prose prose-sm max-w-none"
-              components={{
-                p: ({ children }: { children?: React.ReactNode }) => <p className="mb-2 last:mb-0">{children}</p>,
-                ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
-                ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
-                code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
-                  const isInline = !className;
-                  return isInline ? (
-                    <code className="bg-[#e5e7eb] px-1 py-0.5 rounded text-xs font-mono">
-                      {children}
-                    </code>
-                  ) : (
-                    <code className="block bg-[#1e293b] text-[#e2e8f0] p-2 rounded text-xs font-mono overflow-x-auto">
-                      {children}
-                    </code>
-                  );
-                },
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
+            <div className="prose prose-sm max-w-none">
+              <ReactMarkdown
+                components={{
+                  p: ({ children }: { children?: React.ReactNode }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                  ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
+                  code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
+                    const isInline = !className;
+                    return isInline ? (
+                      <code className="bg-[#e5e7eb] px-1 py-0.5 rounded text-xs font-mono">
+                        {children}
+                      </code>
+                    ) : (
+                      <code className="block bg-[#1e293b] text-[#e2e8f0] p-2 rounded text-xs font-mono overflow-x-auto">
+                        {children}
+                      </code>
+                    );
+                  },
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
           ) : (
             <p className="whitespace-pre-wrap">{message.content}</p>
           )}

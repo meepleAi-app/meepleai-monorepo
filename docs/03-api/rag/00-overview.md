@@ -6,7 +6,7 @@
 
 ## 🎯 Executive Summary
 
-TOMAC-RAG combines best practices from 36 analyzed RAG variants into a unified 6-layer architecture optimized for board game Rules Agent.
+TOMAC-RAG combines best practices from 36 analyzed RAG variants into a unified 6-layer architecture with **6 routing strategies** optimized for board game Rules Agent.
 
 ### Key Results
 
@@ -29,6 +29,44 @@ TOMAC-RAG combines best practices from 36 analyzed RAG variants into a unified 6
 
 ---
 
+## 🎯 6 Routing Strategies
+
+| Strategy | Tokens | Cost | Latency | Accuracy | Use Case |
+|----------|--------|------|---------|----------|----------|
+| 🚀 **FAST** | 2,060 | $0.008 | <200ms | 78-85% | FAQ semplici, risposte rapide |
+| ⚖️ **BALANCED** | 2,820 | $0.011 | 1-2s | 85-92% | Query standard + CRAG validation |
+| 🎯 **PRECISE** | 22,396 | $0.095 | 5-10s | 95-98% | Multi-agent pipeline, decisioni critiche |
+| 🔬 **EXPERT** | 15,000 | $0.065 | 8-15s | 92-96% | Web search + multi-hop reasoning |
+| 🗳️ **CONSENSUS** | 18,000 | $0.078 | 10-20s | 97-99% | Multi-LLM voting (3 voters + aggregator) |
+| ⚙️ **CUSTOM** | Variable | Variable | Variable | Variable | Configurazione admin personalizzata |
+
+### Strategy Phases
+
+```
+FAST        → [Synthesis]
+BALANCED    → [Synthesis] + [CRAG Evaluation]
+PRECISE     → [Retrieval] + [Analysis] + [Synthesis] + [Validation]
+EXPERT      → [Web Search] + [Multi-Hop] + [Synthesis]
+CONSENSUS   → [Voter1] + [Voter2] + [Voter3] + [Aggregator]
+CUSTOM      → [Synthesis] + any combination (Admin configured)
+```
+
+---
+
+## 👥 User Tier Access
+
+> **Note**: Anonymous users cannot access the RAG system. Authentication is required.
+
+| Tier | Strategies Available | Token Budget | Models |
+|------|---------------------|--------------|--------|
+| ~~Anonymous~~ | ❌ **NO ACCESS** | - | - |
+| **User** | FAST, BALANCED | 3,000 | Free + GPT-4o-mini |
+| **Editor** | FAST, BALANCED, PRECISE | 5,000 | + Haiku, Sonnet |
+| **Admin** | ALL (incl. EXPERT, CONSENSUS, CUSTOM) | 15,000 | Full access (Opus) |
+| **Premium** | ALL | 20,000+ | Priority access |
+
+---
+
 ## 🎓 How TOMAC-RAG Works
 
 **New to the system?** Start here: **[How It Works - Complete Explanation](HOW-IT-WORKS.md)**
@@ -44,7 +82,7 @@ TOMAC-RAG intelligently routes queries through 6 layers:
 5. **Generation**: Template-specific (Direct → Structured → Multi-agent)
 6. **Validation**: Self-checking (Citation → Alignment → Reflection)
 
-**Result**: Right strategy for each query type. Simple questions stay simple (50-2,060t), complex strategic queries get premium analysis (12,900t).
+**Result**: Right strategy for each query type. Simple questions stay simple (50-2,060t), complex strategic queries get premium analysis (22,396t).
 
 **Key Insight**: Adding quality features (CRAG, Self-RAG) **reduces** total cost through aggressive optimization (cache 80%, contextual embeddings -30%, CRAG filtering -40-70%).
 
@@ -85,7 +123,7 @@ L6: VALIDATION → Citation/Alignment/Reflection
 2. Approve TOMAC-RAG design
 3. Implement Phase 1 (cache + FAST, 4 weeks)
 4. Measure baseline metrics
-5. Gradual rollout (Admin → Editor → User → Anonymous)
+5. Gradual rollout (Admin → Editor → User → Premium)
 
 ---
 

@@ -20,10 +20,11 @@
 ### Token Budget Compliance
 ```python
 @pytest.mark.parametrize("user_tier,max_tokens", [
-    ("Anonymous", 1500),
+    # Anonymous users cannot access the system - authentication required
     ("User", 3000),
     ("Editor", 5000),
-    ("Admin", 15000)
+    ("Admin", 15000),
+    ("Premium", 20000)
 ])
 async def test_token_budget(user_tier, max_tokens):
     response = await rag.ask(query="Complex strategic query", user_role=user_tier)

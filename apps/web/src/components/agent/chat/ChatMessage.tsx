@@ -108,40 +108,41 @@ export const ChatMessage = React.memo(function ChatMessage({
         {/* Content */}
         <div className="text-sm">
           {isAgent ? (
-            <ReactMarkdown
-              className={cn('prose prose-sm max-w-none', 'prose-invert')}
-              components={{
-                p: ({ children }: { children?: React.ReactNode }) => (
-                  <p className="mb-2 last:mb-0 text-gray-100">{children}</p>
-                ),
-                ul: ({ children }: { children?: React.ReactNode }) => (
-                  <ul className="list-disc pl-4 mb-2 text-gray-100">{children}</ul>
-                ),
-                ol: ({ children }: { children?: React.ReactNode }) => (
-                  <ol className="list-decimal pl-4 mb-2 text-gray-100">{children}</ol>
-                ),
-                code: ({
-                  children,
-                  className,
-                }: {
-                  children?: React.ReactNode;
-                  className?: string;
-                }) => {
-                  const isInline = !className;
-                  return isInline ? (
-                    <code className="bg-gray-700 text-cyan-300 px-1 py-0.5 rounded text-xs font-mono">
-                      {children}
-                    </code>
-                  ) : (
-                    <code className="block bg-slate-900 text-gray-100 p-2 rounded text-xs font-mono overflow-x-auto">
-                      {children}
-                    </code>
-                  );
-                },
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
+            <div className={cn('prose prose-sm max-w-none', 'prose-invert')}>
+              <ReactMarkdown
+                components={{
+                  p: ({ children }: { children?: React.ReactNode }) => (
+                    <p className="mb-2 last:mb-0 text-gray-100">{children}</p>
+                  ),
+                  ul: ({ children }: { children?: React.ReactNode }) => (
+                    <ul className="list-disc pl-4 mb-2 text-gray-100">{children}</ul>
+                  ),
+                  ol: ({ children }: { children?: React.ReactNode }) => (
+                    <ol className="list-decimal pl-4 mb-2 text-gray-100">{children}</ol>
+                  ),
+                  code: ({
+                    children,
+                    className,
+                  }: {
+                    children?: React.ReactNode;
+                    className?: string;
+                  }) => {
+                    const isInline = !className;
+                    return isInline ? (
+                      <code className="bg-gray-700 text-cyan-300 px-1 py-0.5 rounded text-xs font-mono">
+                        {children}
+                      </code>
+                    ) : (
+                      <code className="block bg-slate-900 text-gray-100 p-2 rounded text-xs font-mono overflow-x-auto">
+                        {children}
+                      </code>
+                    );
+                  },
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
           ) : (
             <p className="whitespace-pre-wrap">{message.content}</p>
           )}

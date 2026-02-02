@@ -146,11 +146,12 @@ class SemanticCache:
 def get_cache_ttl(user_role: str, query_frequency: str) -> int:
     """Return TTL in hours based on user tier and query popularity"""
 
+    # Note: Anonymous users cannot access the system - authentication required
     base_ttl = {
-        "Anonymous": 24,   # 1 day
         "User": 48,        # 2 days
         "Editor": 72,      # 3 days
-        "Admin": 168       # 1 week
+        "Admin": 168,      # 1 week
+        "Premium": 336     # 2 weeks
     }
 
     # Extend TTL for popular queries

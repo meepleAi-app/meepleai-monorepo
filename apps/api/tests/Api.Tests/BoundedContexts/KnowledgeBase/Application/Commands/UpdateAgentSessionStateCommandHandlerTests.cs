@@ -118,7 +118,7 @@ public class UpdateAgentSessionStateCommandHandlerTests
         var command = new UpdateAgentSessionStateCommand(sessionId, newGameStateJson);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<ConflictException>(() =>
             _handler.Handle(command, TestContext.Current.CancellationToken));
     }
 }

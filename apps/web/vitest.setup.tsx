@@ -65,6 +65,9 @@ vi.mock('prismjs', () => ({
 // Mock prismjs/components/prism-json
 vi.mock('prismjs/components/prism-json', () => ({}));
 
+// Mock react-image-crop CSS (Issue #3xxx: CSS import not resolvable in Vitest jsdom)
+vi.mock('react-image-crop/dist/ReactCrop.css', () => ({}));
+
 // Mock react-pdf to avoid DOMMatrix errors in jsdom (Issue #3031)
 // react-pdf uses pdfjs-dist which requires browser-only APIs
 vi.mock('react-pdf', () => {

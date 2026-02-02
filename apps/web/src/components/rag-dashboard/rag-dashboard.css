@@ -1,0 +1,619 @@
+/**
+ * RAG Dashboard - Neural Gaming Interface Styles
+ *
+ * Custom CSS for the TOMAC-RAG visualization dashboard.
+ * Aesthetic: Sci-fi strategy game command center meets data visualization.
+ *
+ * Key visual elements:
+ * - Hexagonal motifs (board game tiles + neural network nodes)
+ * - Data streams (flowing particles for token flow)
+ * - Glowing edges (neon accents on cards)
+ * - Atmospheric depth (grain, gradient meshes, ambient glow)
+ */
+
+/* =============================================================================
+   CSS Custom Properties - RAG Dashboard Theme
+   ============================================================================= */
+
+.rag-dashboard {
+  /* Neural interface colors */
+  --rag-neon-blue: hsl(221 83% 53%);
+  --rag-neon-purple: hsl(262 83% 62%);
+  --rag-neon-green: hsl(142 76% 36%);
+  --rag-neon-orange: hsl(25 95% 53%);
+  --rag-neon-gold: hsl(45 93% 47%);
+  --rag-neon-red: hsl(0 72% 51%);
+
+  /* Glow effects */
+  --rag-glow-blue: 0 0 20px hsla(221, 83%, 53%, 0.4), 0 0 40px hsla(221, 83%, 53%, 0.2);
+  --rag-glow-purple: 0 0 20px hsla(262, 83%, 62%, 0.4), 0 0 40px hsla(262, 83%, 62%, 0.2);
+  --rag-glow-green: 0 0 20px hsla(142, 76%, 36%, 0.4), 0 0 40px hsla(142, 76%, 36%, 0.2);
+  --rag-glow-orange: 0 0 20px hsla(25, 95%, 53%, 0.4), 0 0 40px hsla(25, 95%, 53%, 0.2);
+
+  /* Grid pattern */
+  --rag-grid-color: hsla(221, 83%, 53%, 0.05);
+  --rag-grid-size: 40px;
+
+  /* Animation timing */
+  --rag-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --rag-transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --rag-transition-bounce: 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* =============================================================================
+   Background Effects
+   ============================================================================= */
+
+.rag-dashboard {
+  position: relative;
+  min-height: 100vh;
+  background: hsl(var(--background));
+}
+
+/* Hexagonal grid overlay */
+.rag-dashboard::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(30deg, var(--rag-grid-color) 12%, transparent 12.5%, transparent 87%, var(--rag-grid-color) 87.5%, var(--rag-grid-color)),
+    linear-gradient(150deg, var(--rag-grid-color) 12%, transparent 12.5%, transparent 87%, var(--rag-grid-color) 87.5%, var(--rag-grid-color)),
+    linear-gradient(30deg, var(--rag-grid-color) 12%, transparent 12.5%, transparent 87%, var(--rag-grid-color) 87.5%, var(--rag-grid-color)),
+    linear-gradient(150deg, var(--rag-grid-color) 12%, transparent 12.5%, transparent 87%, var(--rag-grid-color) 87.5%, var(--rag-grid-color)),
+    linear-gradient(60deg, hsla(221, 83%, 53%, 0.03) 25%, transparent 25.5%, transparent 75%, hsla(221, 83%, 53%, 0.03) 75%, hsla(221, 83%, 53%, 0.03)),
+    linear-gradient(60deg, hsla(221, 83%, 53%, 0.03) 25%, transparent 25.5%, transparent 75%, hsla(221, 83%, 53%, 0.03) 75%, hsla(221, 83%, 53%, 0.03));
+  background-size: var(--rag-grid-size) calc(var(--rag-grid-size) * 1.732);
+  background-position: 0 0, 0 0, calc(var(--rag-grid-size) / 2) calc(var(--rag-grid-size) * 0.866), calc(var(--rag-grid-size) / 2) calc(var(--rag-grid-size) * 0.866), 0 0, calc(var(--rag-grid-size) / 2) calc(var(--rag-grid-size) * 0.866);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+
+/* Ambient gradient overlay */
+.rag-dashboard::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, hsla(221, 83%, 53%, 0.08), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, hsla(262, 83%, 62%, 0.05), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 0% 100%, hsla(25, 95%, 53%, 0.05), transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dark .rag-dashboard::before {
+  opacity: 0.4;
+}
+
+.dark .rag-dashboard::after {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, hsla(221, 83%, 53%, 0.15), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, hsla(262, 83%, 62%, 0.1), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 0% 100%, hsla(25, 95%, 53%, 0.08), transparent 50%);
+}
+
+/* =============================================================================
+   Card Enhancements - Glowing Edges
+   ============================================================================= */
+
+.rag-card {
+  position: relative;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all var(--rag-transition-smooth);
+}
+
+.rag-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    hsla(221, 83%, 53%, 0.3),
+    hsla(262, 83%, 62%, 0.2),
+    hsla(25, 95%, 53%, 0.3)
+  );
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--rag-transition-smooth);
+}
+
+.rag-card:hover::before {
+  opacity: 1;
+}
+
+.dark .rag-card {
+  background: hsla(0, 0%, 10%, 0.8);
+  border-color: hsla(0, 0%, 25%, 0.5);
+}
+
+.dark .rag-card:hover {
+  box-shadow: var(--rag-glow-blue);
+}
+
+/* =============================================================================
+   Stats Cards - Animated Number Display
+   ============================================================================= */
+
+.rag-stat-card {
+  position: relative;
+  padding: 1.5rem;
+  text-align: center;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--card)),
+    hsla(var(--muted), 0.5)
+  );
+  border-radius: 12px;
+  border: 1px solid hsl(var(--border));
+  transition: all var(--rag-transition-smooth);
+}
+
+.rag-stat-card:hover {
+  transform: translateY(-4px);
+}
+
+.rag-stat-value {
+  font-family: var(--font-quicksand);
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--rag-neon-blue), var(--rag-neon-purple));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.rag-stat-card[data-variant="success"] .rag-stat-value {
+  background: linear-gradient(135deg, var(--rag-neon-green), hsl(142 76% 50%));
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.rag-stat-card[data-variant="warning"] .rag-stat-value {
+  background: linear-gradient(135deg, var(--rag-neon-orange), var(--rag-neon-gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.rag-stat-label {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+}
+
+/* =============================================================================
+   Token Flow Visualization
+   ============================================================================= */
+
+.rag-flow-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rag-flow-layer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all var(--rag-transition-smooth);
+}
+
+.rag-flow-layer:hover {
+  transform: translateX(4px);
+  border-color: var(--layer-color, hsl(var(--primary)));
+}
+
+.rag-flow-layer::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--layer-color, hsl(var(--primary)));
+  border-radius: 4px 0 0 4px;
+  opacity: 0.5;
+  transition: opacity var(--rag-transition-fast);
+}
+
+.rag-flow-layer:hover::before {
+  opacity: 1;
+}
+
+.rag-flow-layer[data-active="true"] {
+  background: hsla(var(--primary), 0.05);
+  border-color: var(--layer-color, hsl(var(--primary)));
+}
+
+.rag-flow-layer[data-active="true"]::before {
+  opacity: 1;
+  box-shadow: 0 0 10px var(--layer-color, hsl(var(--primary)));
+}
+
+/* Layer icon badge */
+.rag-layer-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  font-size: 1.5rem;
+  background: hsla(var(--muted), 0.5);
+  border-radius: 12px;
+  transition: all var(--rag-transition-smooth);
+}
+
+.rag-flow-layer:hover .rag-layer-icon {
+  transform: scale(1.1);
+  background: var(--layer-color, hsl(var(--primary)));
+}
+
+/* Token bar */
+.rag-token-bar {
+  position: relative;
+  height: 8px;
+  flex: 1;
+  background: hsl(var(--muted));
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.rag-token-bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, var(--layer-color, hsl(var(--primary))), hsla(var(--layer-color-hsl, 221 83% 53%), 0.6));
+  border-radius: 4px;
+  transition: width 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Connection lines */
+.rag-flow-connector {
+  position: absolute;
+  left: 24px;
+  width: 2px;
+  height: 16px;
+  background: linear-gradient(
+    to bottom,
+    var(--layer-color, hsl(var(--primary))),
+    transparent
+  );
+}
+
+/* =============================================================================
+   Query Simulator Input
+   ============================================================================= */
+
+.rag-query-input {
+  position: relative;
+}
+
+.rag-query-input input {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  padding-left: 3rem;
+  font-size: 1rem;
+  background: hsl(var(--card));
+  border: 2px solid hsl(var(--border));
+  border-radius: 12px;
+  color: hsl(var(--foreground));
+  transition: all var(--rag-transition-smooth);
+}
+
+.rag-query-input input:focus {
+  outline: none;
+  border-color: var(--rag-neon-blue);
+  box-shadow: var(--rag-glow-blue);
+}
+
+.rag-query-input input::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+.rag-query-input .search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: hsl(var(--muted-foreground));
+  transition: color var(--rag-transition-fast);
+}
+
+.rag-query-input:focus-within .search-icon {
+  color: var(--rag-neon-blue);
+}
+
+/* =============================================================================
+   Strategy Selector Buttons
+   ============================================================================= */
+
+.rag-strategy-btn {
+  position: relative;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  background: hsl(var(--card));
+  border: 2px solid hsl(var(--border));
+  border-radius: 8px;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  transition: all var(--rag-transition-smooth);
+  overflow: hidden;
+}
+
+.rag-strategy-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--strategy-color, hsl(var(--primary)));
+  opacity: 0;
+  transition: opacity var(--rag-transition-fast);
+}
+
+.rag-strategy-btn:hover {
+  border-color: var(--strategy-color, hsl(var(--primary)));
+  transform: translateY(-2px);
+}
+
+.rag-strategy-btn:hover::before {
+  opacity: 0.1;
+}
+
+.rag-strategy-btn[data-active="true"] {
+  background: var(--strategy-color, hsl(var(--primary)));
+  border-color: var(--strategy-color, hsl(var(--primary)));
+  color: white;
+}
+
+.rag-strategy-btn[data-active="true"]::before {
+  opacity: 0;
+}
+
+.rag-strategy-btn[data-strategy="FAST"] {
+  --strategy-color: var(--rag-neon-green);
+}
+
+.rag-strategy-btn[data-strategy="BALANCED"] {
+  --strategy-color: var(--rag-neon-blue);
+}
+
+.rag-strategy-btn[data-strategy="PRECISE"] {
+  --strategy-color: var(--rag-neon-purple);
+}
+
+/* =============================================================================
+   View Mode Toggle
+   ============================================================================= */
+
+.rag-view-toggle {
+  display: inline-flex;
+  padding: 4px;
+  background: hsl(var(--muted));
+  border-radius: 10px;
+  gap: 4px;
+}
+
+.rag-view-toggle-btn {
+  padding: 0.5rem 1.25rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: all var(--rag-transition-fast);
+}
+
+.rag-view-toggle-btn:hover {
+  color: hsl(var(--foreground));
+}
+
+.rag-view-toggle-btn[data-active="true"] {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  box-shadow: 0 2px 8px hsla(0, 0%, 0%, 0.1);
+}
+
+/* =============================================================================
+   Cost Calculator Sliders
+   ============================================================================= */
+
+.rag-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rag-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rag-slider-label {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+}
+
+.rag-slider-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--rag-neon-blue);
+}
+
+.rag-slider {
+  width: 100%;
+  height: 8px;
+  background: hsl(var(--muted));
+  border-radius: 4px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.rag-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--rag-neon-blue);
+  border-radius: 50%;
+  cursor: grab;
+  transition: transform var(--rag-transition-fast);
+  box-shadow: 0 2px 8px hsla(221, 83%, 53%, 0.4);
+}
+
+.rag-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.rag-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.1);
+}
+
+/* =============================================================================
+   Architecture Diagram Nodes
+   ============================================================================= */
+
+.rag-node {
+  position: relative;
+  padding: 1rem;
+  background: hsl(var(--card));
+  border: 2px solid hsl(var(--border));
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all var(--rag-transition-smooth);
+}
+
+.rag-node:hover {
+  transform: scale(1.02);
+  border-color: var(--node-color, hsl(var(--primary)));
+  box-shadow: 0 0 20px hsla(var(--node-color-hsl, 221 83% 53%), 0.2);
+}
+
+.rag-node[data-selected="true"] {
+  border-color: var(--node-color, hsl(var(--primary)));
+  background: hsla(var(--node-color-hsl, 221 83% 53%), 0.05);
+}
+
+/* =============================================================================
+   Pulse Animation for Active Elements
+   ============================================================================= */
+
+@keyframes rag-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.02);
+  }
+}
+
+.rag-pulse {
+  animation: rag-pulse 2s ease-in-out infinite;
+}
+
+/* =============================================================================
+   Data Stream Animation
+   ============================================================================= */
+
+@keyframes rag-data-stream {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.rag-data-stream {
+  position: absolute;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--rag-neon-blue), transparent);
+  animation: rag-data-stream 2s ease-in-out infinite;
+}
+
+/* =============================================================================
+   Responsive Adjustments
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .rag-stat-value {
+    font-size: 2rem;
+  }
+
+  .rag-flow-layer {
+    padding: 0.75rem;
+  }
+
+  .rag-layer-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+
+  /* Disable background effects on mobile for performance */
+  .rag-dashboard::before,
+  .rag-dashboard::after {
+    display: none;
+  }
+}
+
+/* =============================================================================
+   Reduced Motion Support
+   ============================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .rag-card,
+  .rag-stat-card,
+  .rag-flow-layer,
+  .rag-strategy-btn,
+  .rag-node {
+    transition: none;
+  }
+
+  .rag-pulse,
+  .rag-data-stream {
+    animation: none;
+  }
+
+  .rag-flow-layer:hover,
+  .rag-stat-card:hover,
+  .rag-strategy-btn:hover,
+  .rag-node:hover {
+    transform: none;
+  }
+}

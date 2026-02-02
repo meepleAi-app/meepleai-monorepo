@@ -182,7 +182,7 @@ START → README.md
 2. **Approve**: Product/Engineering approve TOMAC-RAG design
 3. **Implement**: Start Phase 1 (semantic cache + FAST strategy)
 4. **Measure**: Establish baseline metrics before rollout
-5. **Deploy**: Gradual rollout (Admin → Editor → User → Anonymous)
+5. **Deploy**: Gradual rollout (Admin → Editor → User → Premium)
 
 ---
 

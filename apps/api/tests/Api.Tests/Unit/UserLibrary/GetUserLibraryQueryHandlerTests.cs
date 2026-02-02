@@ -7,7 +7,10 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
@@ -37,7 +40,12 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
             .UseInMemoryDatabase($"test_db_{Guid.NewGuid()}")
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options, null!, null!);
+        // Create mocks for DbContext dependencies
+        var mockMediator = new Mock<IMediator>();
+        var mockEventCollector = new Mock<IDomainEventCollector>();
+        mockEventCollector.Setup(e => e.GetAndClearEvents()).Returns(new List<IDomainEvent>());
+
+        _dbContext = new MeepleAiDbContext(options, mockMediator.Object, mockEventCollector.Object);
 
         _handler = new GetUserLibraryQueryHandler(
             _mockLibraryRepo.Object,
@@ -62,8 +70,8 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
             minAge: 10,
             complexityRating: null,
             averageRating: null,
-            imageUrl: "",
-            thumbnailUrl: "",
+            imageUrl: "https://example.com/game.jpg",
+            thumbnailUrl: "https://example.com/game-thumb.jpg",
             rules: null,
             createdBy: userId,
             bggId: 12345);
@@ -86,7 +94,15 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
 
         _mockLibraryRepo
             .Setup(r => r.GetUserLibraryPaginatedAsync(
-                userId, null, false, null, null, false, 1, 20, It.IsAny<CancellationToken>()))
+                It.IsAny<Guid>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool?>(),
+                It.IsAny<string[]?>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((new[] { libraryEntry }, 1));
 
         _mockSharedGameRepo
@@ -121,8 +137,8 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
             minAge: 10,
             complexityRating: null,
             averageRating: null,
-            imageUrl: "",
-            thumbnailUrl: "",
+            imageUrl: "https://example.com/game.jpg",
+            thumbnailUrl: "https://example.com/game-thumb.jpg",
             rules: null,
             createdBy: userId,
             bggId: 12345);
@@ -134,7 +150,15 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
 
         _mockLibraryRepo
             .Setup(r => r.GetUserLibraryPaginatedAsync(
-                userId, null, false, null, null, false, 1, 20, It.IsAny<CancellationToken>()))
+                It.IsAny<Guid>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool?>(),
+                It.IsAny<string[]?>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((new[] { libraryEntry }, 1));
 
         _mockSharedGameRepo

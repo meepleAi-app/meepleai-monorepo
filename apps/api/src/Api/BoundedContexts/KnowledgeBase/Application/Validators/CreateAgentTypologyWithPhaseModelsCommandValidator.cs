@@ -106,60 +106,65 @@ internal sealed class CreateAgentTypologyWithPhaseModelsCommandValidator
         {
             // Standard phases
             When(x => x.Retrieval != null, () =>
-                RuleFor(x => x.Retrieval!).SetValidator(new PhaseModelConfigValidator("Retrieval")));
+                RuleFor(x => x.Retrieval!).SetValidator(CreatePhaseModelConfigValidator("Retrieval")));
 
             When(x => x.Analysis != null, () =>
-                RuleFor(x => x.Analysis!).SetValidator(new PhaseModelConfigValidator("Analysis")));
+                RuleFor(x => x.Analysis!).SetValidator(CreatePhaseModelConfigValidator("Analysis")));
 
             When(x => x.Synthesis != null, () =>
-                RuleFor(x => x.Synthesis!).SetValidator(new PhaseModelConfigValidator("Synthesis")));
+                RuleFor(x => x.Synthesis!).SetValidator(CreatePhaseModelConfigValidator("Synthesis")));
 
             When(x => x.Validation != null, () =>
-                RuleFor(x => x.Validation!).SetValidator(new PhaseModelConfigValidator("Validation")));
+                RuleFor(x => x.Validation!).SetValidator(CreatePhaseModelConfigValidator("Validation")));
 
             When(x => x.CragEvaluation != null, () =>
-                RuleFor(x => x.CragEvaluation!).SetValidator(new PhaseModelConfigValidator("CragEvaluation")));
+                RuleFor(x => x.CragEvaluation!).SetValidator(CreatePhaseModelConfigValidator("CragEvaluation")));
 
             When(x => x.SelfReflection != null, () =>
-                RuleFor(x => x.SelfReflection!).SetValidator(new PhaseModelConfigValidator("SelfReflection")));
+                RuleFor(x => x.SelfReflection!).SetValidator(CreatePhaseModelConfigValidator("SelfReflection")));
 
             // EXPERT phases
             When(x => x.WebSearch != null, () =>
-                RuleFor(x => x.WebSearch!).SetValidator(new PhaseModelConfigValidator("WebSearch")));
+                RuleFor(x => x.WebSearch!).SetValidator(CreatePhaseModelConfigValidator("WebSearch")));
 
             When(x => x.MultiHop != null, () =>
-                RuleFor(x => x.MultiHop!).SetValidator(new PhaseModelConfigValidator("MultiHop")));
+                RuleFor(x => x.MultiHop!).SetValidator(CreatePhaseModelConfigValidator("MultiHop")));
 
             // CONSENSUS phases
             When(x => x.ConsensusVoter1 != null, () =>
-                RuleFor(x => x.ConsensusVoter1!).SetValidator(new PhaseModelConfigValidator("ConsensusVoter1")));
+                RuleFor(x => x.ConsensusVoter1!).SetValidator(CreatePhaseModelConfigValidator("ConsensusVoter1")));
 
             When(x => x.ConsensusVoter2 != null, () =>
-                RuleFor(x => x.ConsensusVoter2!).SetValidator(new PhaseModelConfigValidator("ConsensusVoter2")));
+                RuleFor(x => x.ConsensusVoter2!).SetValidator(CreatePhaseModelConfigValidator("ConsensusVoter2")));
 
             When(x => x.ConsensusVoter3 != null, () =>
-                RuleFor(x => x.ConsensusVoter3!).SetValidator(new PhaseModelConfigValidator("ConsensusVoter3")));
+                RuleFor(x => x.ConsensusVoter3!).SetValidator(CreatePhaseModelConfigValidator("ConsensusVoter3")));
 
             When(x => x.ConsensusAggregator != null, () =>
-                RuleFor(x => x.ConsensusAggregator!).SetValidator(new PhaseModelConfigValidator("ConsensusAggregator")));
+                RuleFor(x => x.ConsensusAggregator!).SetValidator(CreatePhaseModelConfigValidator("ConsensusAggregator")));
         }
-    }
 
-    private sealed class PhaseModelConfigValidator : AbstractValidator<PhaseModelConfigurationDto>
-    {
-        public PhaseModelConfigValidator(string phaseName)
+        /// <summary>
+        /// Creates an inline validator for PhaseModelConfigurationDto.
+        /// Uses InlineValidator pattern to avoid DI registration issues with constructor parameters.
+        /// </summary>
+        private static InlineValidator<PhaseModelConfigurationDto> CreatePhaseModelConfigValidator(string phaseName)
         {
-            RuleFor(x => x.Model)
+            var validator = new InlineValidator<PhaseModelConfigurationDto>();
+
+            validator.RuleFor(x => x.Model)
                 .NotEmpty().WithMessage($"{phaseName}.Model is required")
                 .MaximumLength(200).WithMessage($"{phaseName}.Model cannot exceed 200 characters");
 
-            RuleFor(x => x.MaxTokens)
+            validator.RuleFor(x => x.MaxTokens)
                 .InclusiveBetween(50, 32000)
                 .WithMessage($"{phaseName}.MaxTokens must be between 50 and 32000");
 
-            RuleFor(x => x.Temperature)
+            validator.RuleFor(x => x.Temperature)
                 .InclusiveBetween(0.0m, 2.0m)
                 .WithMessage($"{phaseName}.Temperature must be between 0.0 and 2.0");
+
+            return validator;
         }
     }
 

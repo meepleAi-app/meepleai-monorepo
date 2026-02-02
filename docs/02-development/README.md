@@ -480,10 +480,20 @@ pnpm update <package-name>
 - [Operational Guide](operational-guide.md)
 - [Documentation Tools](documentation-tools-guide.md)
 
+### Docker Documentation ⭐ NEW
+Complete Docker Compose guides for local development:
+- **[Quick Start (5 min)](docker/quick-start.md)** - Get running fast
+- **[Service Endpoints](docker/service-endpoints.md)** - All URLs and test commands
+- **[Clean Builds](docker/clean-builds.md)** - Medium & full reset strategies
+- **[Common Commands](docker/common-commands.md)** - Daily command cheatsheet
+- **[Troubleshooting](docker/troubleshooting.md)** - Port conflicts, memory/CPU issues
+- **[Docker Profiles](docker/docker-profiles.md)** - Minimal, dev, AI, observability, full
+- **[Advanced Features](docker/advanced-features.md)** - Overrides, optimization, IDE integration
+
 ### Configuration
 - [Local Secrets Setup](local-secrets-setup.md)
 - [Configuration Values Guide](configuration-values-guide.md)
-- [Docker Services Test URLs](docker-services-test-urls.md)
+- [Local Environment Startup](local-environment-startup-guide.md)
 
 ### Architecture
 - [Architecture Overview](../01-architecture/overview/system-architecture.md)

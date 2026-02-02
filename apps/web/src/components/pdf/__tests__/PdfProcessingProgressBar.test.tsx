@@ -497,7 +497,7 @@ describe('PdfProcessingProgressBar', () => {
 
       await user.click(screen.getByTestId('cancel-button'));
 
-      expect(screen.getByText("Annullare l'elaborazione?")).toBeInTheDocument();
+      expect(screen.getByText("Vuoi cancellare l'elaborazione?")).toBeInTheDocument();
     });
 
     it('should call api.pdf.cancelProcessing when confirmed', async () => {
@@ -517,7 +517,7 @@ describe('PdfProcessingProgressBar', () => {
       await user.click(screen.getByTestId('cancel-button'));
 
       // Confirm cancel
-      await user.click(screen.getByRole('button', { name: /sì, annulla/i }));
+      await user.click(screen.getByRole('button', { name: /sì, cancella/i }));
 
       await waitFor(() => {
         expect(mockCancelProcessing).toHaveBeenCalledWith(defaultProps.pdfId);
@@ -542,7 +542,7 @@ describe('PdfProcessingProgressBar', () => {
       await user.click(screen.getByTestId('cancel-button'));
 
       // Confirm cancel
-      await user.click(screen.getByRole('button', { name: /sì, annulla/i }));
+      await user.click(screen.getByRole('button', { name: /sì, cancella/i }));
 
       await waitFor(() => {
         expect(onCancel).toHaveBeenCalled();
@@ -568,7 +568,7 @@ describe('PdfProcessingProgressBar', () => {
 
       // Dialog should close
       await waitFor(() => {
-        expect(screen.queryByText("Annullare l'elaborazione?")).not.toBeInTheDocument();
+        expect(screen.queryByText("Vuoi cancellare l'elaborazione?")).not.toBeInTheDocument();
       });
     });
 

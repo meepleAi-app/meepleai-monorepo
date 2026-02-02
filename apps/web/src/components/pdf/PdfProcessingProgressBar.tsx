@@ -456,10 +456,10 @@ export function PdfProcessingProgressBar({
       <ConfirmDialog
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
-        title="Annullare l'elaborazione?"
-        message="Sei sicuro di voler annullare l'elaborazione del PDF? Questa azione non può essere annullata e dovrai ricaricare il file."
+        title="Vuoi cancellare l'elaborazione?"
+        message="Sei sicuro di voler cancellare l'elaborazione del PDF? Questa azione non può essere annullata e dovrai ricaricare il file."
         variant="destructive"
-        confirmText="Sì, annulla"
+        confirmText="Sì, cancella"
         cancelText="No, continua"
         onConfirm={handleConfirmCancel}
         onCancel={() => setShowCancelDialog(false)}

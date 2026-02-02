@@ -6,8 +6,8 @@
 
 import path from 'path';
 
-import { authenticateViaAPI } from './fixtures/auth';
 import { test, expect } from './fixtures';
+import { authenticateViaAPI } from './fixtures/auth';
 import { WaitHelper } from './helpers/WaitHelper';
 
 /**

@@ -15,14 +15,14 @@
  *   await testData.cleanup(); // Removes all created test data
  */
 
+import { ApiClient } from './api-client';
+
 import type {
   User,
   UserRole,
   Game,
   ChatMessage,
-  PromptTemplate,
 } from '../types/pom-interfaces';
-import { ApiClient } from './api-client';
 
 // Test data prefix for easy identification and cleanup
 const TEST_PREFIX = 'e2e_test_';

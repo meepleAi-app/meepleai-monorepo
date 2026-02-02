@@ -11,17 +11,17 @@
 
 'use client';
 
+import { useTransition } from 'react';
+
 import {
   Settings,
   Shield,
   LogOut,
   User as UserIcon,
   LogIn,
-  UserPlus,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTransition } from 'react';
 
 import { logoutAction } from '@/actions/auth';
 import {

@@ -25,6 +25,7 @@
 'use client';
 
 import { memo } from 'react';
+
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -155,6 +156,7 @@ export const ActivityItem = memo(function ActivityItem({
   className,
 }: ActivityItemProps) {
   const { type, title, timestamp, details, game, user } = data;
+  // eslint-disable-next-line security/detect-object-injection -- type is from typed ActivityType union
   const config = ACTIVITY_CONFIG[type];
   const Icon = config.icon;
 
@@ -204,6 +206,7 @@ export const ActivityItem = memo(function ActivityItem({
           {user && (
             <span className="flex items-center gap-1">
               {user.avatarUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element -- External avatar URL */
                 <img
                   src={user.avatarUrl}
                   alt=""

@@ -8,6 +8,7 @@
 'use client';
 
 import { forwardRef, type ComponentPropsWithoutRef } from 'react';
+
 import {
   Plus,
   Filter,
@@ -35,13 +36,13 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 import type { Action } from '@/types/layout';
 

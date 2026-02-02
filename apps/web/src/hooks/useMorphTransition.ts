@@ -9,8 +9,8 @@
 
 import { useMemo } from 'react';
 
-import { ANIMATION_TIMING } from '@/types/layout';
 import { usePrefersReducedMotion } from '@/hooks/useResponsive';
+import { ANIMATION_TIMING } from '@/types/layout';
 
 /**
  * Morph transition configuration
@@ -102,6 +102,7 @@ export function useMorphTransition(
 
   const morphStyle = useMemo(() => {
     // Get configuration
+    // eslint-disable-next-line security/detect-object-injection -- type is from typed MorphType union
     const config = typeof type === 'string' ? MORPH_CONFIGS[type] : type;
     const {
       duration = ANIMATION_TIMING.base,
@@ -138,6 +139,7 @@ export function useMorphTransition(
  * @returns Tailwind class string
  */
 export function getMorphClass(type: MorphType = 'default'): string {
+  // eslint-disable-next-line security/detect-object-injection -- type is from typed MorphType union
   const config = MORPH_CONFIGS[type];
   const duration = Math.round(config.duration);
 

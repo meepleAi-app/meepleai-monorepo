@@ -27,11 +27,12 @@
 'use client';
 
 import { useRef, useEffect, useState, type ReactNode } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, GripVertical, Grid3X3, List, type LucideIcon } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types

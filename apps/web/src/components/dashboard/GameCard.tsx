@@ -25,11 +25,13 @@
 'use client';
 
 import { memo } from 'react';
+
 import { motion } from 'framer-motion';
 import { Heart, Bot, MapPin, Calendar, Gamepad2, Share2 } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
+
 import type { ViewMode } from './DashboardSection';
 
 // ============================================================================
@@ -113,6 +115,7 @@ export const GameCard = memo(function GameCard({
         {/* Image Container */}
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           {imageUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element -- External game image URL */
             <img
               src={imageUrl}
               alt=""
@@ -213,6 +216,7 @@ export const GameCard = memo(function GameCard({
       {/* Thumbnail */}
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-muted">
         {imageUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element -- External game image URL */
           <img src={imageUrl} alt="" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">

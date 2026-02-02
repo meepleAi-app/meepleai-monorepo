@@ -10,7 +10,6 @@
  */
 
 import { test, expect } from '../fixtures';
-import { GamePage, SharedGameCatalogPage } from '../pages';
 
 import type { Page } from '@playwright/test';
 

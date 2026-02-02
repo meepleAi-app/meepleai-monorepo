@@ -7,8 +7,8 @@
  * Issue #3286 - Admin Dashboard Redesign
  */
 
-import { RequireRole } from '@/components/auth/RequireRole';
 import { CommandCenterDashboard } from '@/components/admin/command-center';
+import { RequireRole } from '@/components/auth/RequireRole';
 
 export const metadata = {
   title: 'Command Center | MeepleAI Admin',

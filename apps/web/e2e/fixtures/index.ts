@@ -76,7 +76,7 @@ export * from './robust-selectors';
 // Combined Real Backend Test Fixture
 // ============================================================================
 
-import { test as base, Page } from '@playwright/test';
+import { test as base } from '@playwright/test';
 
 import { ApiClient } from './api-client';
 import { TestDataManager } from './test-data';

@@ -22,6 +22,7 @@
 'use client';
 
 import { memo, useState } from 'react';
+
 import { motion, PanInfo, useMotionValue, useTransform } from 'framer-motion';
 import {
   Share2,
@@ -40,8 +41,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types
@@ -165,6 +166,7 @@ export const NotificationItem = memo(function NotificationItem({
   className,
 }: NotificationItemProps) {
   const { type, title, body, status, isActionable, actions, createdAt, deepLink } = data;
+  // eslint-disable-next-line security/detect-object-injection -- type is from typed NotificationType union
   const config = NOTIFICATION_CONFIG[type];
   const Icon = config.icon;
 

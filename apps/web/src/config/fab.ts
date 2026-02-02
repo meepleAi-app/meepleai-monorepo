@@ -5,7 +5,7 @@
  * Defines context-specific FAB actions and quick menu items.
  */
 
-import type { LayoutContext, FABAction } from '@/types/layout';
+import type { LayoutContext } from '@/types/layout';
 
 /**
  * Quick menu item configuration
@@ -81,6 +81,7 @@ export const FAB_CONFIG: Record<LayoutContext, FABActionConfig | null> = {
  * Get FAB configuration for a specific context.
  */
 export function getFABConfig(context: LayoutContext): FABActionConfig | null {
+  // eslint-disable-next-line security/detect-object-injection -- context is from typed LayoutContext union
   return FAB_CONFIG[context] ?? null;
 }
 

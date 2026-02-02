@@ -8,6 +8,7 @@
 'use client';
 
 import { forwardRef, useEffect, useRef, type ComponentPropsWithoutRef } from 'react';
+
 import {
   Plus,
   Search,
@@ -23,8 +24,8 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
-import { cn } from '@/lib/utils';
 import type { QuickMenuItem } from '@/config/fab';
+import { cn } from '@/lib/utils';
 
 /**
  * Icon mapping for quick menu icons

@@ -12,10 +12,11 @@
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
+
 import { useQuery } from '@tanstack/react-query';
 
-import { useDebounce } from '@/hooks/useDebounce';
 import type { SearchResult, SearchResultType } from '@/components/layout/GlobalSearch/SearchResults';
+import { useDebounce } from '@/hooks/useDebounce';
 
 /**
  * Local storage key for recent searches
@@ -225,6 +226,7 @@ export function useGlobalSearch(): UseGlobalSearchReturn {
     if (highlightedIndex < 0 || highlightedIndex >= results.length) {
       return null;
     }
+    // eslint-disable-next-line security/detect-object-injection -- highlightedIndex is validated numeric index
     return results[highlightedIndex];
   }, [highlightedIndex, results]);
 

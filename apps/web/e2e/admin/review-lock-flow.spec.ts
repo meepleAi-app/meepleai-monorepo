@@ -20,7 +20,7 @@
 
 
 import { test as base, expect } from '../fixtures';
-import { AdminHelper, AdminPage } from '../pages';
+import { AdminHelper } from '../pages';
 
 import type { Page } from '@playwright/test';
 

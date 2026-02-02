@@ -18,13 +18,14 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Bell, Filter, X, Command, Loader2 } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import { useLayout } from '@/components/layout/LayoutProvider';
 import { Button } from '@/components/ui/primitives/button';
 import { useGlobalSearch } from '@/hooks/useGlobalSearch';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // DashboardHeader Component
@@ -262,6 +263,7 @@ export function DashboardHeader() {
                           className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted"
                         >
                           {result.imageUrl ? (
+                            /* eslint-disable-next-line @next/next/no-img-element -- External search result URL */
                             <img
                               src={result.imageUrl}
                               alt=""

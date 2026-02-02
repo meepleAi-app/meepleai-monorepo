@@ -23,6 +23,7 @@
 'use client';
 
 import { memo } from 'react';
+
 import { motion } from 'framer-motion';
 import {
   Heart,
@@ -36,8 +37,9 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
+
 import type { ViewMode } from './DashboardSection';
 
 // ============================================================================
@@ -116,7 +118,9 @@ export const WishlistCard = memo(function WishlistCard({
   className,
 }: WishlistCardProps) {
   const { game, priority, targetPrice, notes, visibility, addedAt, isGifted } = data;
+  // eslint-disable-next-line security/detect-object-injection -- priority is from typed WishlistPriority union
   const priorityConfig = PRIORITY_CONFIG[priority];
+  // eslint-disable-next-line security/detect-object-injection -- visibility is from typed WishlistVisibility union
   const visibilityConfig = VISIBILITY_CONFIG[visibility];
   const VisibilityIcon = visibilityConfig.icon;
 
@@ -139,6 +143,7 @@ export const WishlistCard = memo(function WishlistCard({
         {/* Image Container */}
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           {game.imageUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element -- External game image URL */
             <img
               src={game.imageUrl}
               alt=""
@@ -242,6 +247,7 @@ export const WishlistCard = memo(function WishlistCard({
       {/* Thumbnail */}
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-muted">
         {game.imageUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element -- External game image URL */
           <img src={game.imageUrl} alt="" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">

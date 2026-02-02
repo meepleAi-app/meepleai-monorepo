@@ -16,6 +16,7 @@
 'use client';
 
 import { forwardRef, type ComponentPropsWithoutRef } from 'react';
+
 import {
   Plus,
   Play,
@@ -25,10 +26,10 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
-import { cn } from '@/lib/utils';
+import { FAB_POSITION } from '@/config/fab';
 import { useFAB } from '@/hooks/useFAB';
 import { useLongPress } from '@/hooks/useLongPress';
-import { FAB_POSITION } from '@/config/fab';
+import { cn } from '@/lib/utils';
 
 import { QuickMenu } from './QuickMenu';
 

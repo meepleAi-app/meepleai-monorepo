@@ -36,7 +36,6 @@ import {
 import { useResponsive } from '@/hooks/useResponsive';
 import type {
   LayoutState,
-  LayoutActions,
   LayoutContextValue,
   LayoutContext,
   FABConfig,
@@ -234,9 +233,9 @@ type LayoutContextValueWithDispatch = LayoutContextValue & {
 };
 
 /**
- * Layout context
+ * Layout React context (note: LayoutContext type is imported from @/types/layout)
  */
-const LayoutContext = createContext<LayoutContextValueWithDispatch | null>(null);
+const LayoutReactContext = createContext<LayoutContextValueWithDispatch | null>(null);
 
 /**
  * Provider props
@@ -372,9 +371,9 @@ export function LayoutProvider({
   );
 
   return (
-    <LayoutContext.Provider value={contextValue}>
+    <LayoutReactContext.Provider value={contextValue}>
       {children}
-    </LayoutContext.Provider>
+    </LayoutReactContext.Provider>
   );
 }
 
@@ -390,7 +389,7 @@ export function LayoutProvider({
  * ```
  */
 export function useLayout(): LayoutContextValueWithDispatch {
-  const context = useContext(LayoutContext);
+  const context = useContext(LayoutReactContext);
 
   if (!context) {
     throw new Error('useLayout must be used within a LayoutProvider');

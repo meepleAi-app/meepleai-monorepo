@@ -6,10 +6,11 @@
  * @module components/ui/data-display/meeple-card.stories
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { Users, Clock, Calendar, MapPin, Trophy, Gamepad2, BookOpen, Star } from 'lucide-react';
 
 import { MeepleCard } from './meeple-card';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof MeepleCard> = {
   title: 'UI/Data Display/MeepleCard',

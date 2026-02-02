@@ -13,8 +13,7 @@
  */
 
 import { test, expect } from '../fixtures';
-import { LoginPage, AuthPage } from '../pages';
-import { RealBackendHelper } from '../pages/helpers/RealBackendHelper';
+import { LoginPage } from '../pages';
 
 import type { Page } from '@playwright/test';
 

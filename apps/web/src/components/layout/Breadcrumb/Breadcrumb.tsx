@@ -9,6 +9,7 @@
 'use client';
 
 import { forwardRef, type ComponentPropsWithoutRef } from 'react';
+
 import {
   Library,
   Gamepad2,
@@ -96,6 +97,7 @@ export const Breadcrumb = forwardRef<HTMLElement, BreadcrumbProps>(
     const { context, responsive } = useLayout();
     const { isMobile } = responsive;
 
+    // eslint-disable-next-line security/detect-object-injection -- context is from typed LayoutContext union
     const config = CONTEXT_CONFIG[context];
     const IconComponent = config.icon;
     const displayLabel = customLabel ?? config.label;
@@ -168,5 +170,6 @@ Breadcrumb.displayName = 'Breadcrumb';
  * Get context configuration for external use
  */
 export function getContextConfig(context: LayoutContext): ContextConfig {
+  // eslint-disable-next-line security/detect-object-injection -- context is from typed LayoutContext union
   return CONTEXT_CONFIG[context];
 }

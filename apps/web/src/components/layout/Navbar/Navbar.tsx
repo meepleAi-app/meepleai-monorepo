@@ -14,8 +14,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
 import {
-  Home,
   Gamepad2,
   BookOpen,
   LayoutDashboard,

@@ -20,6 +20,7 @@
 'use client';
 
 import { useMemo } from 'react';
+
 import { motion } from 'framer-motion';
 import {
   Library,
@@ -32,11 +33,13 @@ import {
   Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
-import type { LucideIcon } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
+
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
+
+import type { LucideIcon } from 'lucide-react';
 
 // ============================================================================
 // Types
@@ -250,7 +253,7 @@ function formatRelativeTime(isoDate: string): string {
   });
 }
 
-function getDateGroup(isoDate: string): string {
+function _getDateGroup(isoDate: string): string {
   const date = new Date(isoDate);
   const now = new Date();
 

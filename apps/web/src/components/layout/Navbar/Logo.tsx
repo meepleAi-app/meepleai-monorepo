@@ -13,8 +13,8 @@
 
 import Link from 'next/link';
 
-import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
 import { useLayout } from '@/components/layout/LayoutProvider';
+import { MeepleLogo } from '@/components/ui/meeple/meeple-logo';
 import { cn } from '@/lib/utils';
 
 export interface LogoProps {

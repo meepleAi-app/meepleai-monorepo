@@ -12,7 +12,6 @@
  */
 
 import { test, expect } from '../fixtures';
-import { ProfilePage } from '../pages';
 
 import type { Page } from '@playwright/test';
 

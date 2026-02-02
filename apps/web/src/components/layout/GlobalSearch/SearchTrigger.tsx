@@ -12,6 +12,7 @@
 'use client';
 
 import { forwardRef } from 'react';
+
 import { Search } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';

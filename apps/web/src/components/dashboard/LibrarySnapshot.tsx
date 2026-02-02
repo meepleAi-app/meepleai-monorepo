@@ -19,6 +19,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+
 import { motion } from 'framer-motion';
 import {
   Library,
@@ -27,13 +28,13 @@ import {
   Plus,
   Gamepad2,
 } from 'lucide-react';
-import Link from 'next/link';
 import Image from 'next/image';
+import Link from 'next/link';
 
-import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Progress } from '@/components/ui/feedback/progress';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types

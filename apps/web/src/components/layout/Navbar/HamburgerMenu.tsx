@@ -12,6 +12,8 @@
 
 'use client';
 
+import { useTransition } from 'react';
+
 import {
   Home,
   Gamepad2,
@@ -28,10 +30,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTransition } from 'react';
 
 import { logoutAction } from '@/actions/auth';
 import { useLayout } from '@/components/layout/LayoutProvider';
+import { Separator } from '@/components/ui/navigation/separator';
 import {
   Sheet,
   SheetContent,
@@ -40,7 +42,6 @@ import {
 } from '@/components/ui/navigation/sheet';
 import { ThemeToggle } from '@/components/ui/navigation/ThemeToggle';
 import { Button } from '@/components/ui/primitives/button';
-import { Separator } from '@/components/ui/navigation/separator';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { cn } from '@/lib/utils';
 

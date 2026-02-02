@@ -24,6 +24,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+
 import { useMediaQuery } from 'usehooks-ts';
 
 import type { ResponsiveState, DeviceType } from '@/types/layout';
@@ -92,7 +93,7 @@ export function useResponsive(): ResponsiveState {
     if (isLargeScreen) return 'desktop';
     if (isMediumScreen) return 'tablet';
     return 'mobile';
-  }, [isHydrated, isSmallScreen, isMediumScreen, isLargeScreen]);
+  }, [isHydrated, isMediumScreen, isLargeScreen]);
 
   // Return SSR-safe initial state during hydration
   if (!isHydrated) {
@@ -121,6 +122,7 @@ export function useResponsive(): ResponsiveState {
  * ```
  */
 export function useBreakpoint(breakpoint: keyof typeof BREAKPOINTS): boolean {
+  // eslint-disable-next-line security/detect-object-injection -- breakpoint is from typed BREAKPOINTS key union
   const query = `(min-width: ${BREAKPOINTS[breakpoint]}px)`;
   return useMediaQuery(query);
 }

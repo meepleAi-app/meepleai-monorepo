@@ -10,7 +10,6 @@
  */
 
 import { test, expect } from '../fixtures';
-import { AdminPage } from '../pages';
 
 import type { Page } from '@playwright/test';
 

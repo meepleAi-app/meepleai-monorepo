@@ -225,6 +225,7 @@ export const CONTEXT_ACTIONS: Record<LayoutContext, Action[]> = {
  * Returns actions sorted by priority (ascending).
  */
 export function getActionsForContext(context: LayoutContext): Action[] {
+  // eslint-disable-next-line security/detect-object-injection -- context is from typed LayoutContext union
   const actions = CONTEXT_ACTIONS[context] ?? CONTEXT_ACTIONS.default;
   return [...actions].sort((a, b) => a.priority - b.priority);
 }
@@ -244,5 +245,6 @@ export const MAX_VISIBLE_ACTIONS = {
 export function getMaxVisibleActions(
   deviceType: 'mobile' | 'tablet' | 'desktop'
 ): number {
+  // eslint-disable-next-line security/detect-object-injection -- deviceType is from typed literal union
   return MAX_VISIBLE_ACTIONS[deviceType];
 }

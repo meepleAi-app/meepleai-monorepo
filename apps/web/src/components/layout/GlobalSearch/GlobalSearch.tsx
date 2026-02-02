@@ -14,16 +14,17 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
+
 import { useRouter } from 'next/navigation';
 
 import { useLayout } from '@/components/layout/LayoutProvider';
 import { useGlobalSearch } from '@/hooks/useGlobalSearch';
 import { cn } from '@/lib/utils';
 
-import { SearchTrigger } from './SearchTrigger';
+import { RecentSearches } from './RecentSearches';
 import { SearchInput } from './SearchInput';
 import { SearchResults, type SearchResult } from './SearchResults';
-import { RecentSearches } from './RecentSearches';
+import { SearchTrigger } from './SearchTrigger';
 
 export interface GlobalSearchProps {
   /** Additional className */

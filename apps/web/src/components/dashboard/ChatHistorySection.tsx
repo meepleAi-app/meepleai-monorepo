@@ -20,6 +20,7 @@
 'use client';
 
 import { useMemo } from 'react';
+
 import { motion } from 'framer-motion';
 import {
   MessageSquare,
@@ -29,9 +30,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types
@@ -93,10 +94,6 @@ const MOCK_THREADS: ChatThread[] = [
 function formatRelativeTime(isoDate: string): string {
   const date = new Date(isoDate);
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   // Check if same day
   const isToday =

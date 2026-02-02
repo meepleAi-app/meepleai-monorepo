@@ -249,7 +249,9 @@ function EntityIndicator({
   customColor?: string;
   className?: string;
 }) {
+  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const color = customColor || entityColors[entity].hsl;
+  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const name = entityColors[entity].name;
 
   // Hero/featured uses ribbon, others use left border
@@ -320,6 +322,7 @@ function CoverImage({
   entity: MeepleEntityType;
   customColor?: string;
 }) {
+  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const color = customColor || entityColors[entity].hsl;
   const placeholder =
     'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"%3E%3Crect width="400" height="300" fill="%23334155"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="64" fill="%239CA3AF"%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E';
@@ -415,6 +418,7 @@ function ActionButtons({
   customColor?: string;
   className?: string;
 }) {
+  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
   const color = customColor || entityColors[entity].hsl;
 
   return (
@@ -562,6 +566,7 @@ export const MeepleCard = React.memo(function MeepleCard({
             }
           : undefined
       }
+      // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
       aria-label={`${entityColors[entity].name}: ${title}`}
       data-testid={testId || 'meeple-card'}
       data-entity={entity}

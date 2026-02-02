@@ -21,8 +21,6 @@ import type {
   User,
   UserRole,
   Game,
-  ChatMessage,
-  PromptTemplate,
   ConfigurationItem,
 } from '../types/pom-interfaces';
 

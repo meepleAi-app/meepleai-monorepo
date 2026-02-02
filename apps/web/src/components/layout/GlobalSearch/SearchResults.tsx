@@ -12,6 +12,7 @@
 'use client';
 
 import { forwardRef, useCallback, useEffect, useRef } from 'react';
+
 import { Gamepad2, FileText, MessageSquare, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
@@ -107,6 +108,7 @@ export const SearchResults = forwardRef<HTMLDivElement, SearchResultsProps>(
     useEffect(() => {
       if (highlightedIndex >= 0 && listRef.current) {
         const items = listRef.current.querySelectorAll('[data-result-item]');
+        // eslint-disable-next-line security/detect-object-injection -- highlightedIndex is validated numeric index
         const highlightedItem = items[highlightedIndex] as HTMLElement;
         if (highlightedItem) {
           highlightedItem.scrollIntoView({ block: 'nearest' });
@@ -124,7 +126,7 @@ export const SearchResults = forwardRef<HTMLDivElement, SearchResultsProps>(
 
     // Handle keyboard events (passed from parent)
     const handleResultKeyDown = useCallback(
-      (e: React.KeyboardEvent, result: SearchResult, index: number) => {
+      (e: React.KeyboardEvent, result: SearchResult, _index: number) => {
         if (e.key === 'Enter') {
           e.preventDefault();
           onSelect?.(result);

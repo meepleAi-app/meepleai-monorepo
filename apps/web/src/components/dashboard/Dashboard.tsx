@@ -18,6 +18,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
   Zap,
@@ -35,22 +36,23 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import { useLayout } from '@/components/layout/LayoutProvider';
 import { Button } from '@/components/ui/primitives/button';
-import { DashboardSection, type ViewMode } from './DashboardSection';
-import { DashboardHeader } from './DashboardHeader';
-import { HeroStats } from './HeroStats';
+import { cn } from '@/lib/utils';
+
 import { ActiveSessionsWidget } from './ActiveSessionsWidget';
-import { LibrarySnapshot } from './LibrarySnapshot';
-import { ChatHistorySection } from './ChatHistorySection';
-import { QuickActionsGrid } from './QuickActionsGrid';
 import { ActivityFeed } from './ActivityFeed';
-import { GameCard, type GameData } from './GameCard';
 import { ActivityItem, type ActivityData } from './ActivityItem';
-import { WishlistCard, type WishlistItemData } from './WishlistCard';
+import { ChatHistorySection } from './ChatHistorySection';
+import { DashboardHeader } from './DashboardHeader';
+import { DashboardSection, type ViewMode } from './DashboardSection';
+import { GameCard, type GameData } from './GameCard';
+import { HeroStats } from './HeroStats';
+import { LibrarySnapshot } from './LibrarySnapshot';
 import { NotificationItem, type NotificationData } from './NotificationItem';
 import { QuickActionCard } from './QuickActionCard';
+import { QuickActionsGrid } from './QuickActionsGrid';
+import { WishlistCard, type WishlistItemData } from './WishlistCard';
 
 // ============================================================================
 // Types
@@ -83,25 +85,33 @@ const MOCK_QUICK_ACTIONS: QuickActionData[] = [
     icon: Plus,
     title: 'Aggiungi Gioco',
     description: 'Cerca o crea un nuovo gioco',
-    onClick: () => console.log('Add game'),
+    onClick: () => {
+      /* TODO: Navigate to add game */
+    },
   },
   {
     icon: FileText,
     title: 'Carica Regolamento',
     description: 'Upload PDF o documento',
-    onClick: () => console.log('Upload rules'),
+    onClick: () => {
+      /* TODO: Open upload rules dialog */
+    },
   },
   {
     icon: Bot,
     title: "Chiedi all'AI",
     description: 'Assistente regole e strategie',
-    onClick: () => console.log('Ask AI'),
+    onClick: () => {
+      /* TODO: Open AI assistant */
+    },
   },
   {
     icon: Dices,
     title: 'Nuova Partita',
     description: 'Registra una sessione di gioco',
-    onClick: () => console.log('New session'),
+    onClick: () => {
+      /* TODO: Start new session */
+    },
   },
 ];
 
@@ -484,8 +494,8 @@ export function Dashboard() {
                       <GameCard
                         data={game}
                         viewMode={section.viewMode}
-                        onAskAI={() => console.log('Ask AI about', game.name)}
-                        onClick={() => console.log('View game', game.id)}
+                        onAskAI={() => void game.name /* TODO: Ask AI */}
+                        onClick={() => void game.id /* TODO: View game */}
                       />
                     </motion.div>
                   ))}
@@ -546,8 +556,8 @@ export function Dashboard() {
                       <GameCard
                         data={game}
                         viewMode={section.viewMode}
-                        onAskAI={() => console.log('Ask AI about', game.name)}
-                        onClick={() => console.log('View game', game.id)}
+                        onAskAI={() => void game.name /* TODO: Ask AI */}
+                        onClick={() => void game.id /* TODO: View game */}
                       />
                     </motion.div>
                   ))}
@@ -578,8 +588,8 @@ export function Dashboard() {
                     <WishlistCard
                       data={item}
                       viewMode={section.viewMode}
-                      onAcquire={() => console.log('Acquire', item.game.name)}
-                      onClick={() => console.log('View wishlist item', item.id)}
+                      onAcquire={() => void item.game.name /* TODO: Acquire */}
+                      onClick={() => void item.id /* TODO: View wishlist item */}
                     />
                   </motion.div>
                 ))}
@@ -601,8 +611,8 @@ export function Dashboard() {
                   >
                     <NotificationItem
                       data={notification}
-                      onAction={(actionId) => console.log('Notification action', notification.id, actionId)}
-                      onDismiss={() => console.log('Dismiss notification', notification.id)}
+                      onAction={(actionId) => void [notification.id, actionId] /* TODO: Handle action */}
+                      onDismiss={() => void notification.id /* TODO: Dismiss */}
                     />
                   </motion.div>
                 ))}
@@ -698,24 +708,24 @@ export function Dashboard() {
  */
 function getSectionActions(sectionId: string) {
   const baseActions = [
-    { id: 'search', label: 'Cerca', icon: Search, priority: 1, onClick: () => console.log('Search') },
-    { id: 'filter', label: 'Filtra', icon: Filter, priority: 2, onClick: () => console.log('Filter') },
+    { id: 'search', label: 'Cerca', icon: Search, priority: 1, onClick: () => void 0 /* TODO: Search */ },
+    { id: 'filter', label: 'Filtra', icon: Filter, priority: 2, onClick: () => void 0 /* TODO: Filter */ },
   ];
 
   switch (sectionId) {
     case 'collection':
       return [
-        { id: 'add', label: 'Aggiungi', icon: Plus, priority: 0, variant: 'primary' as const, onClick: () => console.log('Add game') },
+        { id: 'add', label: 'Aggiungi', icon: Plus, priority: 0, variant: 'primary' as const, onClick: () => void 0 /* TODO: Add game */ },
         ...baseActions,
       ];
     case 'shared-games':
       return [
-        { id: 'share', label: 'Condividi', icon: Users, priority: 0, variant: 'primary' as const, onClick: () => console.log('Share') },
+        { id: 'share', label: 'Condividi', icon: Users, priority: 0, variant: 'primary' as const, onClick: () => void 0 /* TODO: Share */ },
         ...baseActions,
       ];
     case 'wishlist':
       return [
-        { id: 'add', label: 'Aggiungi', icon: Plus, priority: 0, variant: 'primary' as const, onClick: () => console.log('Add to wishlist') },
+        { id: 'add', label: 'Aggiungi', icon: Plus, priority: 0, variant: 'primary' as const, onClick: () => void 0 /* TODO: Add to wishlist */ },
         ...baseActions,
       ];
     default:

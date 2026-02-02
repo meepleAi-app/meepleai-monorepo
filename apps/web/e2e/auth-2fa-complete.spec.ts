@@ -4,8 +4,8 @@
  * @see apps/web/e2e/pages/helpers/AuthHelper.ts
  */
 
-import { loginAsUser } from './fixtures/auth';
 import { test, expect } from './fixtures';
+import { loginAsUser } from './fixtures/auth';
 import {
   setupTwoFactorMocks,
   mockTwoFactorStatus,

@@ -53,12 +53,12 @@ export function Layout({
   children,
   className,
   showActionBar = true,
-  showFAB = true,
+  showFAB: _showFAB = true,
   withPadding = true,
   fullBleed = false,
 }: LayoutProps) {
   const { responsive, isMenuOpen, multiSelect } = useLayout();
-  const { isMobile, isDesktop } = responsive;
+  const { isMobile, isDesktop: _isDesktop } = responsive;
 
   // Calculate bottom padding based on visible elements
   // ActionBar: 56px + safe-area, BottomNav: 72px
@@ -180,6 +180,7 @@ export function PageContent({
     <div
       className={cn(
         'w-full',
+        // eslint-disable-next-line security/detect-object-injection -- maxWidth is from typed PageMaxWidth union
         maxWidthClasses[maxWidth],
         maxWidth !== 'full' && 'mx-auto',
         className

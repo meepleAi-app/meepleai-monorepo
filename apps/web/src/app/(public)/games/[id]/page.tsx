@@ -34,6 +34,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
+import { PdfProcessingProgressBar } from '@/components/pdf/PdfProcessingProgressBar';
 import { PdfUploadForm } from '@/components/pdf/PdfUploadForm';
 import { PdfViewerModal } from '@/components/pdf/PdfViewerModal';
 import { Badge } from '@/components/ui/data-display/badge';
@@ -81,6 +82,7 @@ export default function GameDetailPage() {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState<{ url: string; name: string } | null>(null);
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [processingPdfId, setProcessingPdfId] = useState<string | null>(null);
 
   // Load game data
   useEffect(() => {
@@ -265,22 +267,42 @@ export default function GameDetailPage() {
     }
   };
 
-  // Handle PDF upload success
-  const handleUploadSuccess = async (documentId: string) => {
+  // Handle PDF upload success - start showing processing progress
+  const handleUploadSuccess = (documentId: string) => {
     setShowUploadForm(false);
-    // Reload PDFs to show the newly uploaded one
+    setProcessingPdfId(documentId);
+  };
+
+  // Handle PDF processing completion
+  const handleProcessingComplete = async () => {
+    setProcessingPdfId(null);
+    // Reload PDFs to show the newly processed one
     if (gameId) {
       try {
         const pdfsData = await api.games.getDocuments(gameId);
         setPdfs(pdfsData);
       } catch (err) {
         logger.error(
-          'Failed to reload PDFs after upload',
+          'Failed to reload PDFs after processing',
           err instanceof Error ? err : new Error(String(err)),
-          createErrorContext('GameDetailPage', 'handleUploadSuccess', { gameId, documentId })
+          createErrorContext('GameDetailPage', 'handleProcessingComplete', { gameId })
         );
       }
     }
+  };
+
+  // Handle PDF processing error
+  const handleProcessingError = (error: string) => {
+    logger.error(
+      'PDF processing failed',
+      new Error(error),
+      createErrorContext('GameDetailPage', 'handleProcessingError', { gameId, processingPdfId, error })
+    );
+  };
+
+  // Handle PDF processing cancel
+  const handleProcessingCancel = () => {
+    setProcessingPdfId(null);
   };
 
   // Handle PDF upload error
@@ -598,6 +620,17 @@ export default function GameDetailPage() {
                     gameName={game.title}
                     onUploadSuccess={handleUploadSuccess}
                     onUploadError={handleUploadError}
+                  />
+                </div>
+              )}
+
+              {processingPdfId && (
+                <div className="mb-4">
+                  <PdfProcessingProgressBar
+                    pdfId={processingPdfId}
+                    onComplete={handleProcessingComplete}
+                    onError={handleProcessingError}
+                    onCancel={handleProcessingCancel}
                   />
                 </div>
               )}

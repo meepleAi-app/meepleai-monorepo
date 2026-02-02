@@ -13,7 +13,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
-using Api.BoundedContexts.KnowledgeBase.Domain.Services.TierAccess;
+// Note: ITierStrategyAccessService is in Api.BoundedContexts.KnowledgeBase.Domain.Services namespace
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
@@ -53,8 +53,6 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
         services.AddSingleton<IAgentPromptBuilder, AgentPromptBuilder>(); // Issue #3184 (AGT-010): Session agent prompt building
         services.AddSingleton<IModelConfigurationService, ModelConfigurationService>(); // Issue #3377: Models tier endpoint
-        services.AddSingleton<ITierStrategyAccessService, TierStrategyAccessService>(); // Issue #3436: Tier-strategy access control
-
         // Issue #3436: Tier-Strategy Access Validation Service
         // Scoped - uses ITierStrategyAccessRepository which depends on DbContext
         services.AddScoped<ITierStrategyAccessService, TierStrategyAccessService>();
@@ -98,6 +96,9 @@ internal static class KnowledgeBaseServiceExtensions
         // ISSUE-958: LLM Hybrid Architecture
         // Domain Services - Routing Strategy
         services.AddSingleton<ILlmRoutingStrategy, HybridAdaptiveRoutingStrategy>();
+
+        // Issue #3435: Strategy-Model mapping service (Singleton - uses IServiceScopeFactory for DB access)
+        services.AddSingleton<IStrategyModelMappingService, StrategyModelMappingService>();
 
         // ISSUE-1725: Model override service for budget-aware downgrading
         services.AddSingleton<ILlmModelOverrideService, LlmModelOverrideService>();
@@ -151,6 +152,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IAgentTypologyRepository, AgentTypologyRepository>(); // Issue #3175, #3177: AgentTypology CRUD
         services.AddScoped<IAgentSessionRepository, AgentSessionRepository>(); // Issue #3184 (AGT-010): Agent session lifecycle
         services.AddScoped<ITierStrategyAccessRepository, TierStrategyAccessRepository>(); // Issue #3436: Tier-Strategy access
+        services.AddScoped<IStrategyModelMappingRepository, StrategyModelMappingRepository>(); // Issue #3435: Strategy-Model mapping
 
         // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
         services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();

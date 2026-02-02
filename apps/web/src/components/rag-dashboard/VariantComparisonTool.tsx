@@ -5,6 +5,17 @@
  *
  * Interactive comparison matrix for RAG variants.
  * Shows strategy × template combinations with model options.
+ *
+ * ⚠️ ARCHITECTURE WARNING (Epic #3434):
+ * This component uses OLD ARCHITECTURE where Tier influences variants.
+ * NEW ARCHITECTURE: Tier → Available Strategies only (NOT variants)
+ * Variants should be: Strategy × Template (30 total, tier removed)
+ *
+ * TODO: Refactor to remove tier from variant formula
+ * - Current: 31 variants (Strategy × Template × Tier)
+ * - Target: 30 variants (Strategy × Template only)
+ * - Tier only determines which strategies user can ACCESS
+ *
  * NOTE: Anonymous users have NO ACCESS (31 variants, was 36).
  */
 

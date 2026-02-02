@@ -81,13 +81,15 @@ const STRATEGY_TOKENS: Record<RagStrategy, Record<string, { input: number; outpu
     generation: { input: 10000, output: 1200 },
     validation: { input: 1500, output: 300 },
   },
+  // CUSTOM removed: Token flow depends on Admin-defined pipeline configuration
+  // Will be calculated dynamically from strategy definition in future (Epic #3413)
   CUSTOM: {
-    routing: { input: 350, output: 50 },
-    cache: { input: 200, output: 0 },
-    retrieval: { input: 3000, output: 0 },
-    crag: { input: 300, output: 0 },
-    generation: { input: 4000, output: 400 },
-    validation: { input: 500, output: 100 },
+    routing: { input: 0, output: 0 },
+    cache: { input: 0, output: 0 },
+    retrieval: { input: 0, output: 0 },
+    crag: { input: 0, output: 0 },
+    generation: { input: 0, output: 0 },
+    validation: { input: 0, output: 0 },
   },
 };
 

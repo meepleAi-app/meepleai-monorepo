@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -10,12 +11,14 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 internal interface ILlmRoutingStrategy
 {
     /// <summary>
-    /// Select the appropriate LLM provider and model based on routing logic
+    /// Select the appropriate LLM provider and model based on routing logic.
+    /// Issue #3435: Strategy-based routing (strategy determines model, tier validates access).
     /// </summary>
     /// <param name="user">User making the request (null for anonymous)</param>
+    /// <param name="strategy">RAG strategy that determines model selection</param>
     /// <param name="context">Additional context for routing decision</param>
     /// <returns>Routing decision with provider name and model ID</returns>
-    LlmRoutingDecision SelectProvider(User? user, string? context = null);
+    LlmRoutingDecision SelectProvider(User? user, RagStrategy strategy, string? context = null);
 }
 
 /// <summary>

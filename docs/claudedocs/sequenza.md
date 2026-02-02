@@ -567,12 +567,12 @@ graph TD
 #### Day 3-4: Epic #3434 Backend Services
 
 3. ✅ Implement #3436 TierStrategyAccess validation
-4. ⬜ Implement #3437 StrategyModelMapping configuration
+4. ✅ Implement #3437 StrategyModelMapping configuration
    - **Dipende da**: #3438 completato
 
 #### Day 5: Epic #3434 Routing Refactor
 
-5. ⬜ Start #3435 HybridAdaptiveRoutingStrategy refactor
+5. ✅ Start #3435 HybridAdaptiveRoutingStrategy refactor
    - Remove tier-based routing
    - Implement strategy-based routing
    - **Dipende da**: #3436, #3437 completati

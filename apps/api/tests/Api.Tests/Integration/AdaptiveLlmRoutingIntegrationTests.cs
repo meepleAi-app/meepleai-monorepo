@@ -2,10 +2,12 @@ using System.Diagnostics;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
+using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.Configuration;
 using Api.Services;
@@ -123,7 +125,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             "You are a helpful assistant.",
             "Say hello",
             user,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success, $"Expected success but got failure: {result.ErrorMessage}");
@@ -176,7 +178,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 "You are a helpful assistant.",
                 "Say hello",
                 user,
-                TestContext.Current.CancellationToken);
+                cancellationToken: TestContext.Current.CancellationToken);
         }
 
         // Now Ollama circuit should be open, verify fallback to OpenRouter
@@ -184,7 +186,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             "You are a helpful assistant.",
             "Say hello after fallback",
             user,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success, $"Expected success but got failure: {result.ErrorMessage}");
@@ -223,7 +225,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 "You are a helpful assistant.",
                 $"Attempt {i}",
                 user,
-                TestContext.Current.CancellationToken);
+                cancellationToken: TestContext.Current.CancellationToken);
         }
 
         // Now both circuits should be open
@@ -231,7 +233,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             "You are a helpful assistant.",
             "Final attempt",
             user,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Success, "Expected failure when all providers are down");
@@ -258,7 +260,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             "You are a helpful assistant.",
             "Say hello",
             user,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success, $"Expected success but got failure: {result.ErrorMessage}");
@@ -307,7 +309,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             "You are a helpful assistant.",
             "Say hello",
             user,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success, $"Expected success but got failure: {result.ErrorMessage}");
@@ -344,7 +346,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             "You are a helpful assistant.",
             "Say hello",
             user,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -389,7 +391,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             "You are a helpful assistant.",
             "Say hello",
             user,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Success);
@@ -432,7 +434,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             "You are a helpful assistant.",
             "Say hello",
             user,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
         stopwatch.Stop();
 
         // Assert
@@ -481,7 +483,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 "You are a helpful assistant.",
                 $"Request {i}",
                 user,
-                TestContext.Current.CancellationToken);
+                cancellationToken: TestContext.Current.CancellationToken);
 
             if (result.Success && result.Metadata.ContainsKey("latency_ms"))
             {
@@ -504,7 +506,8 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         }
     }
     /// <summary>
-    /// Creates a configured HybridLlmService instance for testing
+    /// Creates a configured HybridLlmService instance for testing.
+    /// Issue #3435: Updated to use strategy-based routing.
     /// </summary>
     private HybridLlmService CreateHybridLlmService(
         IOptions<AiProviderSettings> aiSettings,
@@ -517,8 +520,34 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             mockOpenRouterClient.Object
         };
 
+        // Issue #3435: Create mocks for strategy-based routing dependencies
+        var mockStrategyMappingService = new Mock<IStrategyModelMappingService>();
+        mockStrategyMappingService
+            .Setup(s => s.GetModelForStrategyAsync(It.IsAny<RagStrategy>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((RagStrategy strategy, CancellationToken _) =>
+            {
+                var mapping = StrategyModelMapping.Default(strategy);
+                return (mapping.Provider, mapping.PrimaryModel);
+            });
+        mockStrategyMappingService
+            .Setup(s => s.GetFallbackModelsAsync(It.IsAny<RagStrategy>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((RagStrategy strategy, CancellationToken _) =>
+            {
+                var mapping = StrategyModelMapping.Default(strategy);
+                return mapping.FallbackModels;
+            });
+
+        var mockTierAccessService = new Mock<ITierStrategyAccessService>();
+        mockTierAccessService
+            .Setup(s => s.HasAccessToStrategyAsync(It.IsAny<LlmUserTier>(), It.IsAny<RagStrategy>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        mockTierAccessService
+            .Setup(s => s.GetAvailableStrategiesAsync(It.IsAny<LlmUserTier>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Enum.GetValues<RagStrategy>().ToList());
+
         var routingStrategy = new HybridAdaptiveRoutingStrategy(
-            _configuration,
+            mockStrategyMappingService.Object,
+            mockTierAccessService.Object,
             aiSettings,
             _strategyLogger);
 

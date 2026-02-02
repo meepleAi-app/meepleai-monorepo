@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-d
 import { cn } from '@/lib/utils';
 
 import { RAG_LAYERS, MODELS } from './types';
+import { TIER_STRATEGY_ACCESS } from './rag-data';
 
 import type { RagStrategy, UserTier, QueryTemplate, QueryAnalysis } from './types';
 
@@ -65,23 +66,34 @@ function calculateComplexity(query: string, template: QueryTemplate): number {
 
 /**
  * Select strategy based on tier and complexity.
- * NOTE: Anonymous users have NO ACCESS - throws error.
+ * Uses TIER_STRATEGY_ACCESS (new architecture: Tier → Available Strategies).
+ *
+ * Architecture: Tier determines WHICH strategies are available.
+ * Complexity determines WHICH of the available strategies to recommend.
+ *
+ * @see rag-data.ts TIER_STRATEGY_ACCESS
  */
-function selectStrategy(tier: UserTier, complexity: number): RagStrategy {
+function selectStrategy(tier: UserTier, complexity: number, availableStrategies: RagStrategy[]): RagStrategy {
   // Anonymous users cannot access the RAG system
-  if (tier === 'Anonymous') {
+  if (tier === 'Anonymous' || availableStrategies.length === 0) {
     throw new Error('AuthenticationRequired: Anonymous users cannot access RAG system');
   }
 
-  // User tier limited to FAST and BALANCED
-  if (tier === 'User') {
-    return complexity <= 2 ? 'FAST' : 'BALANCED';
-  }
+  // Select from AVAILABLE strategies only (tier-based access control)
+  // Complexity determines recommendation within allowed strategies
 
-  // Editor and above have full access
-  if (complexity <= 1) return 'FAST';
-  if (complexity <= 3) return 'BALANCED';
-  return 'PRECISE';
+  if (complexity <= 1 && availableStrategies.includes('FAST')) return 'FAST';
+  if (complexity <= 3 && availableStrategies.includes('BALANCED')) return 'BALANCED';
+  if (complexity <= 4 && availableStrategies.includes('PRECISE')) return 'PRECISE';
+  if (complexity === 5 && availableStrategies.includes('EXPERT')) return 'EXPERT';
+
+  // Fallback: highest complexity available strategy
+  if (availableStrategies.includes('CONSENSUS')) return 'CONSENSUS';
+  if (availableStrategies.includes('EXPERT')) return 'EXPERT';
+  if (availableStrategies.includes('PRECISE')) return 'PRECISE';
+  if (availableStrategies.includes('BALANCED')) return 'BALANCED';
+
+  return availableStrategies[0]; // Fallback to first available
 }
 
 /**
@@ -107,7 +119,18 @@ function estimateTokens(strategy: RagStrategy, cacheHit: boolean): number {
 function analyzeQuery(query: string, tier: UserTier): QueryAnalysis {
   const template = classifyTemplate(query);
   const complexity = calculateComplexity(query, template);
-  const strategy = selectStrategy(tier, complexity);
+
+  // NEW ARCHITECTURE: Tier → Available Strategies (access control only)
+  const tierAccess = TIER_STRATEGY_ACCESS.find(t => t.tier === tier);
+
+  if (!tierAccess || !tierAccess.hasRagAccess) {
+    throw new Error('AuthenticationRequired: This tier has no access to RAG system');
+  }
+
+  const availableStrategies = tierAccess.availableStrategies;
+  const strategy = selectStrategy(tier, complexity, availableStrategies);
+
+  // Strategy determines model (NOT tier!)
   const cacheHit = Math.random() < 0.8; // 80% cache hit simulation
   const estimatedTokens = estimateTokens(strategy, cacheHit);
   const model = MODELS[strategy][0];

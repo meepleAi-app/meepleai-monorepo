@@ -7,6 +7,36 @@
 
 import { z } from 'zod';
 
+// ========== Publication Workflow (Issue #3480 + #3481) ==========
+
+/**
+ * Approval status for game publication workflow (matches C# ApprovalStatus enum)
+ * Issue #3481: Backend publication workflow
+ */
+export const ApprovalStatusSchema = z.enum(['Draft', 'PendingReview', 'Approved', 'Rejected']);
+export type ApprovalStatus = z.infer<typeof ApprovalStatusSchema>;
+
+/**
+ * Request to publish game to SharedGameCatalog
+ * Issue #3480: Frontend wizard integration
+ */
+export const PublishGameRequestSchema = z.object({
+  status: ApprovalStatusSchema,
+});
+export type PublishGameRequest = z.infer<typeof PublishGameRequestSchema>;
+
+/**
+ * Response from publish game endpoint
+ */
+export const PublishGameResponseSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  isPublished: z.boolean(),
+  approvalStatus: ApprovalStatusSchema,
+  publishedAt: z.string().datetime().nullable(),
+});
+export type PublishGameResponse = z.infer<typeof PublishGameResponseSchema>;
+
 import { ApiKeyDtoSchema } from './auth.schemas';
 
 // ========== User Management ==========

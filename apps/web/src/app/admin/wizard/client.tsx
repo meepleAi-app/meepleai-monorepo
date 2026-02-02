@@ -3,11 +3,12 @@
 /**
  * Admin Game Setup Wizard - Client Component
  *
- * 4-step wizard for admin game setup:
+ * 5-step wizard for admin game setup (Issue #3480):
  * 1. Upload PDF → Public library (visible only to registered users)
  * 2. Create game → With name, icon, image (URL or file upload)
  * 3. Chat setup → Wait for processing, create chat thread
  * 4. Q&A → Ask a question about the game rules
+ * 5. Publish → Publish game to SharedGameCatalog with approval status
  */
 
 import { useState, useCallback } from 'react';
@@ -24,9 +25,10 @@ import { api } from '@/lib/api';
 import { ChatSetupStep } from './steps/ChatSetupStep';
 import { GameCreationStep } from './steps/GameCreationStep';
 import { PdfUploadStep } from './steps/PdfUploadStep';
+import { PublishStep } from './steps/PublishStep';
 import { QAStep } from './steps/QAStep';
 
-type WizardStep = 'upload' | 'game' | 'chat' | 'qa';
+type WizardStep = 'upload' | 'game' | 'chat' | 'qa' | 'publish';
 
 interface WizardState {
   currentStep: WizardStep;
@@ -44,6 +46,7 @@ const STEPS: { id: WizardStep; label: string; description: string; icon: string 
   { id: 'game', label: '2. Crea Gioco', description: 'Nome e immagini', icon: '🎮' },
   { id: 'chat', label: '3. Setup Chat', description: 'Prepara agente RAG', icon: '💬' },
   { id: 'qa', label: '4. Q&A', description: 'Testa le regole', icon: '❓' },
+  { id: 'publish', label: '5. Pubblica', description: 'Libreria condivisa', icon: '📚' },
 ];
 
 export function AdminWizardClient() {
@@ -131,6 +134,17 @@ export function AdminWizardClient() {
     },
     [goToNextStep]
   );
+
+  // Step 4: Q&A complete → Go to publish
+  const handleQAComplete = useCallback(() => {
+    goToNextStep();
+  }, [goToNextStep]);
+
+  // Step 5: Publish complete
+  const handlePublishComplete = useCallback(() => {
+    toast.success('Setup completato! Gioco pubblicato con successo.');
+    // Wizard flow complete - user will be redirected by PublishStep
+  }, []);
 
   // Reset wizard
   const resetWizard = useCallback(() => {
@@ -269,6 +283,18 @@ export function AdminWizardClient() {
                 gameName={state.gameName ?? 'Gioco'}
                 chatThreadId={state.chatThreadId}
                 onReset={resetWizard}
+                onNext={handleQAComplete}
+              />
+            )}
+
+            {state.currentStep === 'publish' && state.gameId && state.pdfId && (
+              <PublishStep
+                gameId={state.gameId}
+                gameName={state.gameName ?? 'Gioco'}
+                pdfId={state.pdfId}
+                pdfFileName={state.pdfFileName ?? 'PDF'}
+                onBack={goToPrevStep}
+                onComplete={handlePublishComplete}
               />
             )}
           </Card>

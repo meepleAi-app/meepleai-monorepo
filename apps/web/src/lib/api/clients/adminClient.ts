@@ -9,6 +9,12 @@ import { z } from 'zod';
 
 import { getApiBase } from '../core/httpClient';
 import {
+  ApprovalStatusSchema,
+  PublishGameRequestSchema,
+  PublishGameResponseSchema,
+  type ApprovalStatus,
+  type PublishGameRequest,
+  type PublishGameResponse,
   AdminUserSchema,
   AdminUserResponseSchema,
   PromptTemplateSchema,
@@ -1174,6 +1180,23 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       return httpClient.post<AgentTypology>(`/admin/agent-typologies/${id}/reject`, {
         reason,
       });
+    },
+
+    // ========== Game Publication (Issue #3480 + #3481) ==========
+
+    /**
+     * Publish game to SharedGameCatalog with approval status
+     * PUT /api/v1/games/{id}/publish
+     *
+     * Issue #3480: Admin wizard publish step
+     * Issue #3481: Backend publication workflow
+     */
+    async publishGameToSharedLibrary(gameId: string, status: ApprovalStatus) {
+      return httpClient.put<PublishGameResponse>(
+        `/api/v1/games/${gameId}/publish`,
+        { status },
+        PublishGameResponseSchema
+      );
     },
   };
 }

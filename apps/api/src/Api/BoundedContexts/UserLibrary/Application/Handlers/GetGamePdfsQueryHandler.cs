@@ -46,7 +46,7 @@ internal class GetGamePdfsQueryHandler : IRequestHandler<GetGamePdfsQuery, List<
         }
 
         // Add custom user-uploaded PDF if exists
-        if (libraryEntry.HasCustomPdf() && libraryEntry.CustomPdfMetadata != null)
+        if (libraryEntry.CustomPdfMetadata != null)
         {
             var customPdf = new GamePdfDto(
                 Id: libraryEntry.CustomPdfMetadata.Url,

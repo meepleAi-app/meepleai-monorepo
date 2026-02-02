@@ -63,6 +63,17 @@ public class UserLibraryEntryEntity
     public string? CustomPdfOriginalFileName { get; set; }
 
     /// <summary>
+    /// The ID of the associated private PDF document.
+    /// Null means no private PDF is associated.
+    /// </summary>
+    public Guid? PrivatePdfId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the associated private PDF document.
+    /// </summary>
+    public PdfDocumentEntity? PdfDocument { get; set; }
+
+    /// <summary>
     /// Current state of the game (stored as integer enum).
     /// </summary>
     public int CurrentState { get; set; }

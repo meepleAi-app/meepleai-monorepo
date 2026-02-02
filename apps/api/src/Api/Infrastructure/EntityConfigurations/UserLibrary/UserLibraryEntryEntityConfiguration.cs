@@ -28,6 +28,10 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
         builder.HasIndex(e => e.AddedAt)
             .HasDatabaseName("IX_UserLibraryEntries_AddedAt");
 
+        // Index for private PDF association
+        builder.HasIndex(e => e.PrivatePdfId)
+            .HasDatabaseName("IX_UserLibraryEntries_PrivatePdfId");
+
         // Properties
         builder.Property(e => e.AddedAt)
             .IsRequired();
@@ -110,6 +114,12 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
             .WithMany()
             .HasForeignKey(e => e.GameId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Relationship to PdfDocument (private PDF association)
+        builder.HasOne(e => e.PdfDocument)
+            .WithMany()
+            .HasForeignKey(e => e.PrivatePdfId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         // Child entity collections
         builder.HasMany(e => e.Sessions)

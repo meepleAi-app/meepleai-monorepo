@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { AlertCircle, ChevronDown, Info, ShieldAlert } from 'lucide-react';
 
@@ -110,6 +110,7 @@ export function StrategySelector({
   description = 'Choose a RAG strategy based on your query complexity',
 }: StrategySelectorProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const { getAllStrategiesWithAccess, hasRagAccess, getStrategyData } = useRagStrategy();
 
   const strategiesWithAccess = useMemo(
@@ -123,6 +124,41 @@ export function StrategySelector({
   );
 
   const hasAccess = hasRagAccess(userTier);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropdownOpen]);
+
+  // Close dropdown on Escape key
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => document.removeEventListener('keydown', handleEscapeKey);
+  }, [isDropdownOpen]);
+
+  // Close dropdown when disabled
+  useEffect(() => {
+    if (disabled && isDropdownOpen) {
+      setIsDropdownOpen(false);
+    }
+  }, [disabled, isDropdownOpen]);
 
   const handleStrategySelect = useCallback(
     (strategy: RagStrategy) => {
@@ -173,7 +209,7 @@ export function StrategySelector({
   if (variant === 'dropdown') {
     return (
       <TooltipProvider>
-        <div className={cn('relative', className)}>
+        <div ref={dropdownRef} className={cn('relative', className)}>
           <Button
             variant="outline"
             role="combobox"

@@ -11,7 +11,7 @@
  * @see docs/03-api/rag/appendix/F-calculation-formulas.md
  */
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import type { RagStrategy } from './types';
 import {
   type ConfigurableValue,
@@ -52,7 +52,7 @@ function ConfigurableInput<T extends number | string>({
   min,
   max,
   step,
-}: ConfigurableInputProps<T>): React.ReactElement {
+}: ConfigurableInputProps<T>) {
   const hasMeasured = hasMeasuredData(value);
   const effectiveValue = getEffectiveValue(value);
 
@@ -190,7 +190,7 @@ function StrategyConfigPanel({
   strategy,
   config,
   onChange,
-}: StrategyConfigPanelProps): React.ReactElement {
+}: StrategyConfigPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -393,7 +393,7 @@ interface ModelPricingPanelProps {
   onChange: (pricing: ModelPricing[]) => void;
 }
 
-function ModelPricingPanel({ pricing, onChange }: ModelPricingPanelProps): React.ReactElement {
+function ModelPricingPanel({ pricing, onChange }: ModelPricingPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const updateModel = (index: number, updated: ModelPricing) => {
@@ -525,7 +525,7 @@ interface CostPreviewPanelProps {
   config: RagConfigurationState;
 }
 
-function CostPreviewPanel({ config }: CostPreviewPanelProps): React.ReactElement {
+function CostPreviewPanel({ config }: CostPreviewPanelProps) {
   const [queriesPerMonth, setQueriesPerMonth] = useState(100000);
 
   // Default distribution based on usage percentages
@@ -619,7 +619,7 @@ export function RagConfigurationForm({
   initialConfig = DEFAULT_CONFIGURATION,
   onSave,
   onExport,
-}: RagConfigurationFormProps): React.ReactElement {
+}: RagConfigurationFormProps) {
   const [config, setConfig] = useState<RagConfigurationState>(initialConfig);
   const [isDirty, setIsDirty] = useState(false);
 

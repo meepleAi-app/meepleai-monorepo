@@ -14,8 +14,11 @@
  */
 
 import React, { useState } from 'react';
+
 import { X, Code2, BookOpen, Beaker, GraduationCap, ExternalLink, FileCode } from 'lucide-react';
 
+import { Badge } from '@/components/ui/data-display/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Dialog,
   DialogContent,
@@ -23,8 +26,6 @@ import {
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
-import { Badge } from '@/components/ui/data-display/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 
 // =============================================================================
 // Types
@@ -223,8 +224,8 @@ export function BlockExplanationModal({ block, isOpen, onClose }: BlockExplanati
                     size="sm"
                     className="ml-auto"
                     onClick={() => {
-                      // Open in VS Code (future enhancement)
-                      console.log('Open:', block.codeReference);
+                      // TODO: Open in VS Code (future enhancement)
+                      // Currently no-op until file integration is implemented
                     }}
                   >
                     <ExternalLink className="h-3 w-3" />

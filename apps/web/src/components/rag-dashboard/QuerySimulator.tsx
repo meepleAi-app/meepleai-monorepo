@@ -16,8 +16,8 @@ import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { cn } from '@/lib/utils';
 
-import { RAG_LAYERS, MODELS } from './types';
 import { TIER_STRATEGY_ACCESS } from './rag-data';
+import { RAG_LAYERS, MODELS } from './types';
 
 import type { RagStrategy, UserTier, QueryTemplate, QueryAnalysis } from './types';
 

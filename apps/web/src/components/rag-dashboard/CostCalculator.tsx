@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-d
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
-import type { CostProjection, RagStrategy, UserTier } from './types';
+import type { CostProjection, RagStrategy } from './types';
 
 // =============================================================================
 // Cost Constants - Synced with rag-data.ts (Single Source of Truth)

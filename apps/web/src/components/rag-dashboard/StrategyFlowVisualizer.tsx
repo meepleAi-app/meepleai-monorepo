@@ -14,18 +14,19 @@
  */
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
+import { motion } from 'framer-motion';
 import { Info, Play, ChevronRight } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
-import { Card } from '@/components/ui/data-display/card';
 import { Badge } from '@/components/ui/data-display/badge';
+import { Card } from '@/components/ui/data-display/card';
+import { Button } from '@/components/ui/primitives/button';
 
 import { BlockExplanationModal } from './BlockExplanationModal';
 import { ExampleIOModal } from './ExampleIOModal';
+import { STRATEGIES } from './rag-data';
 
 import type { RagStrategy } from './types';
-import { STRATEGIES } from './rag-data';
 
 // =============================================================================
 // Types
@@ -42,10 +43,11 @@ interface FlowBlock {
   codeReference?: string;
 }
 
-interface StrategyFlow {
-  strategyId: RagStrategy;
-  blocks: FlowBlock[];
-}
+// Unused interface - keeping for potential future use
+// interface StrategyFlow {
+//   strategyId: RagStrategy;
+//   blocks: FlowBlock[];
+// }
 
 // =============================================================================
 // Block Data (from research)
@@ -405,7 +407,7 @@ interface FlowBlockProps {
   onClick: () => void;
 }
 
-function FlowBlockComponent({ block, strategyColor, onClick }: FlowBlockProps) {
+function FlowBlockComponent({ block, strategyColor: _strategyColor, onClick }: FlowBlockProps) {
   const blockColorMap = {
     input: 'hsl(221, 83%, 53%)',
     agent: 'hsl(262, 83%, 62%)',
@@ -461,7 +463,7 @@ interface StrategyFlowVisualizerProps {
   onViewExamples?: () => void;
 }
 
-export function StrategyFlowVisualizer({ strategy, onViewExamples }: StrategyFlowVisualizerProps) {
+export function StrategyFlowVisualizer({ strategy, onViewExamples: _onViewExamples }: StrategyFlowVisualizerProps) {
   const [selectedBlock, setSelectedBlock] = useState<FlowBlock | null>(null);
   const [showExamples, setShowExamples] = useState(false);
 

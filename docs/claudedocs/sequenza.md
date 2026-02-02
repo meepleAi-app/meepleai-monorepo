@@ -15,6 +15,7 @@
 **Efficiency**: 65% time saving (~4 weeks saved)
 
 ### Obiettivo
+
 Completare i due flussi end-to-end più critici per user e admin:
 
 1. **FLUSSO ADMIN**: Dashboard → Wizard → Upload PDF → Publish to Shared Library
@@ -26,10 +27,10 @@ Completare i due flussi end-to-end più critici per user e admin:
 
 **Prerequisiti per entrambi i flussi**:
 
-| Issue | Titolo | Area | SP | Status | Branch |
-|:-----:|--------|------|:--:|:------:|:------:|
-| #3324 | SSE Infrastructure | Backend | 5 | ⬜ Open | - |
-| #3370 | usePdfProcessingProgress hook | Frontend | 2 | ⬜ Open | - |
+| Issue | Titolo                        | Area     | SP  | Status  | Branch |
+| :---: | ----------------------------- | -------- | :-: | :-----: | :----: |
+| #3324 | SSE Infrastructure            | Backend  |  5  | ✅ Open |   -    |
+| #3370 | usePdfProcessingProgress hook | Frontend |  2  | ✅ Open |   -    |
 
 **Totale**: 7 SP, 5-7 giorni
 **Critical Path**: SSE blocca progress real-time per PDF e chat
@@ -105,39 +106,42 @@ Completare i due flussi end-to-end più critici per user e admin:
 ### 🎯 Epic Summary - Flussi Critici
 
 #### Epic #3475 (NUOVA): User Private Library & Collections Management
+
 **Link**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/3475
 **Obiettivo**: User gestisce collezioni personali con PDF privati
 
-| Issue | Titolo | SP | Week |
-|:-----:|--------|:--:|:----:|
-| [#3476](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3476) | User Collection Dashboard | 5 | Week 2 |
-| [#3477](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3477) | Add Game to Collection Wizard | 5 | Week 2 |
-| [#3478](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3478) | UserLibraryEntry PDF Association | 3 | Week 2 |
-| [#3479](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3479) | Private PDF Upload Endpoint | 3 | Week 2 |
+|                                  Issue                                  | Titolo                           | SP  |  Week  |
+| :---------------------------------------------------------------------: | -------------------------------- | :-: | :----: |
+| [#3476](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3476) | User Collection Dashboard        |  5  | Week 2 |
+| [#3477](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3477) | Add Game to Collection Wizard    |  5  | Week 2 |
+| [#3478](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3478) | UserLibraryEntry PDF Association |  3  | Week 2 |
+| [#3479](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3479) | Private PDF Upload Endpoint      |  3  | Week 2 |
 
 **Totale**: 4 issues, 16 SP
 **Spec**: `docs/claudedocs/epic-user-private-library-spec.md`
 
 #### Epic #3306 (ESTESA): Dashboard Hub & Game Management
+
 **Link**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/3306
 **Nuove Issue per Admin Flow**:
 
-| Issue | Titolo | SP | Week |
-|:-----:|--------|:--:|:----:|
-| [#3480](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3480) | Admin Wizard - Publish to Shared Library | 3 | Week 2 |
-| [#3481](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3481) | SharedGameCatalog Publication Workflow | 5 | Week 2 |
-| [#3482](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3482) | Game Approval Status UI | 2 | Week 2 |
+|                                  Issue                                  | Titolo                                   | SP  |  Week  |
+| :---------------------------------------------------------------------: | ---------------------------------------- | :-: | :----: |
+| [#3480](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3480) | Admin Wizard - Publish to Shared Library |  3  | Week 2 |
+| [#3481](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3481) | SharedGameCatalog Publication Workflow   |  5  | Week 2 |
+| [#3482](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3482) | Game Approval Status UI                  |  2  | Week 2 |
 
 **Totale estensione**: 3 issues, 10 SP
 
 #### Epic #3386 (ESTESA): Agent Creation & Testing Flow
+
 **Link**: https://github.com/DegrassiAaron/meepleai-monorepo/issues/3386
 **Nuove Issue per Chat History**:
 
-| Issue | Titolo | SP | Week |
-|:-----:|--------|:--:|:----:|
-| [#3483](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3483) | Chat Session Persistence Service | 5 | Week 3 |
-| [#3484](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3484) | Chat History Integration | 3 | Week 3 |
+|                                  Issue                                  | Titolo                           | SP  |  Week  |
+| :---------------------------------------------------------------------: | -------------------------------- | :-: | :----: |
+| [#3483](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3483) | Chat Session Persistence Service |  5  | Week 3 |
+| [#3484](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3484) | Chat History Integration         |  3  | Week 3 |
 
 **Totale estensione**: 2 issues, 8 SP
 
@@ -146,22 +150,27 @@ Completare i due flussi end-to-end più critici per user e admin:
 ### 🏗️ Architecture Highlights
 
 #### Private vs Shared PDF Strategy
+
 ```
 Shared PDF:  collection = "shared_{gameId}"
 Private PDF: collection = "private_{userId}_{gameId}"
 ```
+
 **Rationale**: Data isolation + code reuse (same processing pipeline)
 
 #### UserLibraryEntry Extension
+
 ```csharp
 public class UserLibraryEntry {
     public Guid? PrivatePdfId { get; private set; } // NEW
     public bool HasPrivatePdf => PrivatePdfId.HasValue; // NEW
 }
 ```
+
 **Rationale**: Backward compatible, maintains existing relationships
 
 #### Wizard Pattern Reuse
+
 - **Source**: Agent Creation Wizard (#3376)
 - **Pattern**: Multi-step + Zustand state + validation
 - **Benefits**: Proven pattern, consistent UX, faster development
@@ -171,6 +180,7 @@ public class UserLibraryEntry {
 ### ✅ Definition of Done - Flussi Critici
 
 #### FLUSSO 1 - Admin
+
 - [ ] Admin può creare gioco da dashboard personale
 - [ ] Wizard permette upload PDF principale
 - [ ] Gioco pubblicato in SharedGameCatalog con approval status
@@ -178,6 +188,7 @@ public class UserLibraryEntry {
 - [ ] Test E2E: wizard completo → gioco in catalog
 
 #### FLUSSO 2 - User
+
 - [ ] User può visualizzare collezione personale con stats
 - [ ] Wizard permette aggiunta gioco con PDF privato
 - [ ] PDF associato correttamente a UserLibraryEntry
@@ -186,6 +197,7 @@ public class UserLibraryEntry {
 - [ ] Test E2E: add game → upload PDF → chat → history
 
 #### Cross-Cutting
+
 - [ ] SSE infrastructure funzionante (#3324)
 - [ ] Progress PDF real-time visualizzato (#3370)
 - [ ] Parallelizzazione backend/frontend verificata
@@ -197,23 +209,25 @@ public class UserLibraryEntry {
 ### 📊 Success Metrics
 
 **Coverage**:
+
 - FLUSSO 1 (Admin): 75% → 100% (+25%)
 - FLUSSO 2 (User): 40% → 100% (+60%)
 
 **Efficiency**:
+
 - Parallelization: 3 concurrent streams Week 2
 - Time-to-completion: ~21 giorni vs 49 giorni sequential
 - **Time Saved**: ~28 giorni (~4 weeks, ~65% faster)
 
 **Epic Health**:
+
 - Epic nuova (#3475): 4 issues, 16 SP (focused, manageable)
 - Epic estese: +10 SP (#3306), +8 SP (#3386)
 - No epic > 60 SP (mantiene dimensioni gestibili)
 
 ---
 
-**NOTE**: Questa sezione va inserita PRIMA della sezione "🎯 PRIORITÀ CORRENTE - Issue Critiche" in `sequenza.md`
----
+## **NOTE**: Questa sezione va inserita PRIMA della sezione "🎯 PRIORITÀ CORRENTE - Issue Critiche" in `sequenza.md`
 
 ## 🎯 PRIORITÀ CORRENTE - Issue Critiche
 

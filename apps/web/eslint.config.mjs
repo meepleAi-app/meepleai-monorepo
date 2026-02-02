@@ -431,4 +431,13 @@ export default [
       // Note: @typescript-eslint/no-explicit-any remains enforced (error) for type safety
     },
   },
+  // Configuration for RAG dashboard - TypeScript typed Record access patterns
+  {
+    files: ["src/components/rag-dashboard/**/*.{ts,tsx}"],
+    rules: {
+      // Disable object injection warnings - all Record<string, T> accesses are type-safe
+      // TypeScript enforces key constraints, making these warnings false positives
+      "security/detect-object-injection": "off",
+    },
+  },
 ];

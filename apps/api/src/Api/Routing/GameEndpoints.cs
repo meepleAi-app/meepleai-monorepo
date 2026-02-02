@@ -130,6 +130,17 @@ internal static class GameEndpoints
         .WithTags("Games", "Admin", "Upload")
         .WithSummary("Upload game image")
         .WithDescription("Uploads game icon or cover image. Admin or Editor role required. Accepts multipart/form-data with file, gameId, and imageType fields.");
+
+        // Publish game to SharedGameCatalog - Issue #3481
+        group.MapPut("/games/{id}/publish", HandlePublishGame)
+        .Produces<GameDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .WithTags("Games", "Admin", "SharedGameCatalog")
+        .WithSummary("Publish game to SharedGameCatalog")
+        .WithDescription("Updates game publication status and publishes to SharedGameCatalog. Admin role required.");
     }
 
     private static void MapSessionLifecycleEndpoints(RouteGroupBuilder group)
@@ -400,6 +411,26 @@ internal static class GameEndpoints
             MaxPlayers: request.MaxPlayers,
             MinPlayTimeMinutes: request.MinPlayTimeMinutes,
             MaxPlayTimeMinutes: request.MaxPlayTimeMinutes
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandlePublishGame(
+        Guid id,
+        PublishGameRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Auth check - Admin only
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new PublishGameCommand(
+            GameId: id,
+            Status: request.Status
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);

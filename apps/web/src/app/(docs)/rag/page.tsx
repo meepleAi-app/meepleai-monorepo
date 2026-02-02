@@ -11,9 +11,10 @@
  * @see docs/03-api/rag/ for detailed documentation
  */
 
+import { RagDashboard } from '@/components/rag-dashboard/RagDashboard';
+
 import type { Metadata } from 'next';
 
-import { RagDashboard } from '@/components/rag-dashboard/RagDashboard';
 
 export const metadata: Metadata = {
   title: 'RAG Strategy Dashboard | MeepleAI',

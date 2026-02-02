@@ -8,6 +8,7 @@
 End-to-end issue implementation with validation gates, code review, and automated cleanup.
 
 **Features**:
+
 - Session management (Serena) with checkpoints
 - Validation gates (build, test, DoD, code review)
 - Auto-select optimal agents/MCP/skills
@@ -58,6 +59,7 @@ cd apps/web && pnpm test && pnpm lint
 ## Branch Detection Logic
 
 **Base Branch** (--base-branch o default):
+
 ```bash
 # Se non specificato, usa branch corrente
 current_branch=$(pwsh -c "git branch --show-current")
@@ -65,6 +67,7 @@ base_branch=${base_branch:-$current_branch}
 ```
 
 **PR Target** (--pr-target o default):
+
 ```bash
 # Se non specificato, auto-detect parent branch
 if [ -z "$pr_target" ]; then
@@ -138,6 +141,7 @@ gh api repos/{owner}/{repo}/issues/$issue_number \
 ### Phase 4: Implementation 💻
 
 **Per task**:
+
 1. **Tool selection**:
    - Symbol ops → `mcp__serena__*`
    - Bulk edits → `mcp__morphllm-fast-apply__edit_file`
@@ -159,18 +163,26 @@ gh api repos/{owner}/{repo}/issues/$issue_number \
 ### Phase 5: Testing ✅
 
 **Backend**:
+
 ```bash
 pwsh -c "cd apps/api/src/Api; dotnet test /p:CollectCoverage=true"
 ```
+
 Target: ≥90% coverage
 
 **Frontend**:
+<<<<<<< HEAD
+=======
+
+>>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 ```bash
 pwsh -c "cd apps/web; pnpm test; pnpm typecheck; pnpm lint"
 ```
+
 Target: ≥85% coverage
 
 **Error handling**:
+
 1. Isolate error in test case
 2. Root cause: `sequential-thinking`
 3. Create guards/validations
@@ -189,6 +201,7 @@ Checkpoint: `write_memory("issue_<N>_tests")`
 **PR Target**: `--pr-target` or auto-detected parent branch
 
 1. **Commit**:
+
 ```bash
 git add .
 git commit -m "<type>(<scope>): <desc>
@@ -199,6 +212,10 @@ Refs: #<N>"
 2. **Push**: `git push -u origin <branch>`
 
 3. **Create PR** (draft to PR target):
+<<<<<<< HEAD
+=======
+
+>>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 ```bash
 # CRITICO: usa --base con PR target auto-detected o specificato
 current_branch=$(pwsh -c "git branch --show-current")
@@ -243,25 +260,33 @@ Closes #<N>"
 **MANDATORY Pre-Merge Validation**:
 
 **Backend**:
+
 ```bash
 pwsh -c "cd apps/api/src/Api; dotnet build --no-restore; dotnet test --no-build"
 ```
 
 **Frontend**:
+<<<<<<< HEAD
+=======
+
+>>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 ```bash
 pwsh -c "cd apps/web; pnpm build; pnpm test; pnpm typecheck"
 ```
 
 **Gate**: ❌ STOP if build/test/typecheck fails
+
 - If fails: `AskUserQuestion` (fix | abort | force)
 
 **Merge** (only after validation ✅):
+
 ```bash
 # Merge verso PR target specificato o auto-detected
 gh pr merge --squash --delete-branch --base "$pr_target"
 ```
 
 **Cleanup**:
+
 ```bash
 git checkout "$base_branch" && git pull
 git branch -D "$feature_branch"
@@ -279,8 +304,15 @@ pwsh -c "git remote prune origin"
 ## Progress Tracking Checkbox System
 
 **GitHub Issue Template Structure:**
+<<<<<<< HEAD
 ```markdown
 ## Progress
+=======
+
+```markdown
+## Progress
+
+>>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 - [ ] Started
 - [ ] Analysis
 - [ ] Planning
@@ -294,12 +326,17 @@ pwsh -c "git remote prune origin"
 - [ ] Cleanup
 
 ## Definition of Done
+<<<<<<< HEAD
+=======
+
+>>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 - [ ] DoD Item 1
 - [ ] DoD Item 2
 ```
 
 **Automatic Updates During Workflow:**
 
+<<<<<<< HEAD
 | Phase | Checkbox Updated | Command |
 |-------|-----------------|---------|
 | 0 | `[x] Started` | `gh api` update issue body |
@@ -315,6 +352,24 @@ pwsh -c "git remote prune origin"
 | 8 | `[x] Cleanup` | `gh api` update issue body |
 
 **Update Helper Function:**
+=======
+| Phase | Checkbox Updated     | Command                    |
+| ----- | -------------------- | -------------------------- |
+| 0     | `[x] Started`        | `gh api` update issue body |
+| 1     | `[x] Analysis`       | `gh api` update issue body |
+| 2     | `[x] Planning`       | `gh api` update issue body |
+| 3     | `[x] Branch Created` | `gh api` update issue body |
+| 4     | `[x] Implementation` | `gh api` update issue body |
+| 5     | `[x] Testing`        | `gh api` update issue body |
+| 6     | `[x] PR Created`     | `gh api` update issue body |
+| 6     | `[x] Code Review`    | `gh api` update issue body |
+| 7     | `[x] DoD Verified`   | `gh api` update issue body |
+| 8     | `[x] Merged`         | `gh api` update issue body |
+| 8     | `[x] Cleanup`        | `gh api` update issue body |
+
+**Update Helper Function:**
+
+>>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 ```bash
 update_checkbox() {
   local issue_number=$1
@@ -337,6 +392,7 @@ update_checkbox 2373 "Implementation"
 
 ## MCP/Tool Matrix
 
+<<<<<<< HEAD
 | Phase | Tool/MCP |
 |-------|----------|
 | 0 | `/sc:load`, `git`, `gh api` (checkbox update) |
@@ -348,12 +404,26 @@ update_checkbox 2373 "Implementation"
 | 6 | `git`, `gh pr`, `/code-review:code-review`, `write_memory`, `gh api` |
 | 7 | `issue_write`, `AskUserQuestion`, `gh api` |
 | 8 | `pwsh` (dotnet, pnpm), `gh pr merge`, `issue_write`, `/sc:save`, `gh api` |
+=======
+| Phase | Tool/MCP                                                                        |
+| ----- | ------------------------------------------------------------------------------- |
+| 0     | `/sc:load`, `git`, `gh api` (checkbox update)                                   |
+| 1     | `mcp__MCP_DOCKER__issue_read`, `Agent Explore`, `write_memory`, `gh api`        |
+| 2     | `sequential-thinking`, `AskUserQuestion`, `TodoWrite`, `write_memory`, `gh api` |
+| 3     | `git`, `write_memory`, `gh api`                                                 |
+| 4     | `serena__*`, `morphllm__edit_file`, `magic__*`, `TaskUpdate`, `gh api`          |
+| 5     | `pwsh` (dotnet test, pnpm), `sequential-thinking`, `write_memory`, `gh api`     |
+| 6     | `git`, `gh pr`, `/code-review:code-review`, `write_memory`, `gh api`            |
+| 7     | `issue_write`, `AskUserQuestion`, `gh api`                                      |
+| 8     | `pwsh` (dotnet, pnpm), `gh pr merge`, `issue_write`, `/sc:save`, `gh api`       |
+>>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 
 ---
 
 ## Critical Rules
 
 **🔴 STOP if**:
+
 - Phase 0: Dirty workspace or wrong branch
 - Phase 2: All options <70% confidence
 - Phase 3: Branch exists or malformed
@@ -364,6 +434,7 @@ update_checkbox 2373 "Implementation"
 - Phase 8: Pre-merge validation fails
 
 **✅ ALWAYS**:
+
 - Session: `/sc:load` → `/sc:save`
 - Checkpoints: `write_memory()` after each phase
 - Tracking: `TodoWrite` + `TaskUpdate` + **GitHub checkbox updates**
@@ -372,12 +443,14 @@ update_checkbox 2373 "Implementation"
 - **PowerShell**: Use `pwsh -c` for all commands on Windows
 
 **❌ NEVER**:
+
 - Skip errors or disable tests
 - Merge without code review
 - Ignore DoD or allow new warnings
 - Use direct bash pipes on Windows (use `pwsh -c`)
 
 **🤝 ASK USER when**:
+
 - Confidence <90%
 - Code review loop >3
 - DoD incomplete
@@ -388,6 +461,7 @@ update_checkbox 2373 "Implementation"
 ## Error Recovery
 
 **Compilation Fail**:
+
 ```
 ❌ STOP → Show errors → AskUserQuestion:
 a) Fix auto (if clear)
@@ -396,11 +470,13 @@ c) Abort + checkpoint
 ```
 
 **Test Fail**:
+
 ```
 ❌ STOP → Isolate → Root cause (sequential-thinking) → Guards → Re-test
 ```
 
 **Code Review Loop >3**:
+
 ```
 ⚠️ PAUSE → Show issues → AskUserQuestion:
 a) Ignore score <70
@@ -409,6 +485,7 @@ c) Request human review
 ```
 
 **From Checkpoint**:
+
 ```bash
 /sc:load
 list_memories()  # Show checkpoints
@@ -522,6 +599,10 @@ PHASE_8:
 **Changelog**:
 
 v2.3 (2026-02-02):
+<<<<<<< HEAD
+=======
+
+>>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 - ✅ **PowerShell emphasis**: `pwsh -c` for all commands on Windows
 - ✅ **Smart branch detection**: PR always from current branch to auto-detected parent
 - ✅ **Progress tracking**: GitHub checkbox updates at every phase
@@ -529,16 +610,22 @@ v2.3 (2026-02-02):
 - ✅ **Branch flexibility**: Configurable --base-branch and --pr-target with smart defaults
 
 v2.2 (2026-01-29):
+<<<<<<< HEAD
+=======
+
+>>>>>>> a317f4777 (docs(claude): update implementa command documentation)
 - ✅ Reduced verbosity by 45%
 - ✅ PowerShell with pwsh -c for all pnpm commands
 - ✅ Configurable base branch (--base-branch, default: main-dev)
 - ✅ Explicit PR target branch (--pr-target, default: main-dev)
 
 v2.1 (2026-01-28):
+
 - ✅ Pre-merge build+test validation in Phase 8
 - ✅ Mandatory validation gates
 
 v2.0 (2026-01-24):
+
 - ✅ Session management + checkpoints
 - ✅ Validation gates per phase
 - ✅ Pre-merge code review

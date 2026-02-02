@@ -339,6 +339,13 @@ docker compose logs -f api
 docker compose down -v  # Reset (data loss!)
 ```
 
+**Docker Quick Reference**: See [docs/02-development/docker/](./docs/02-development/docker/)
+- **Quick Start** (5min): [quick-start.md](./docs/02-development/docker/quick-start.md)
+- **All Endpoints**: [service-endpoints.md](./docs/02-development/docker/service-endpoints.md)
+- **Clean Builds**: [clean-builds.md](./docs/02-development/docker/clean-builds.md)
+- **Commands**: [common-commands.md](./docs/02-development/docker/common-commands.md)
+- **Troubleshooting**: [troubleshooting.md](./docs/02-development/docker/troubleshooting.md)
+
 ## Project Structure
 
 ```
@@ -357,9 +364,10 @@ tests/Api.Tests/          # Backend test suite
 
 ## Docs Reference
 
-- API: http://localhost:8080/scalar/v1
-- Guides: `docs/02-development/`, `docs/03-api/`, `docs/05-testing/`
-- ADRs: `docs/01-architecture/adr/`
+- **API**: http://localhost:8080/scalar/v1
+- **Docker Guides**: `docs/02-development/docker/` (Quick start, endpoints, troubleshooting)
+- **Dev Guides**: `docs/02-development/`, `docs/03-api/`, `docs/05-testing/`
+- **ADRs**: `docs/01-architecture/adr/`
 
 ## Troubleshooting
 

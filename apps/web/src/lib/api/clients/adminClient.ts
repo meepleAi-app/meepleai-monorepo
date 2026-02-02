@@ -9,11 +9,8 @@ import { z } from 'zod';
 
 import { getApiBase } from '../core/httpClient';
 import {
-  ApprovalStatusSchema,
-  PublishGameRequestSchema,
   PublishGameResponseSchema,
   type ApprovalStatus,
-  type PublishGameRequest,
   type PublishGameResponse,
   AdminUserSchema,
   AdminUserResponseSchema,

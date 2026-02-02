@@ -22,5 +22,31 @@ export { PerformanceMetricsTable } from './PerformanceMetricsTable';
 
 export * from './types';
 export * from './types-configurable';
-export * from './rag-data';
+// Explicit rag-data exports to avoid conflicts with types-configurable
+export {
+  STRATEGIES,
+  LAYERS,
+  MODEL_PRICING,
+  USER_TIERS,
+  TIER_STRATEGY_ACCESS,
+  STRATEGY_MODEL_MAPPING,
+  AGENT_CLASSIFICATION,
+  METRICS,
+  DOC_STRUCTURE,
+  getStrategy,
+  getLayer,
+  // Note: calculateQueryCost, calculateMonthlyCost, formatLatency conflict with types-configurable
+  // Use rag-data versions with explicit import if needed
+} from './rag-data';
+export type {
+  StrategyData,
+  LayerData,
+  ModelPricingData,
+  UserTierData,
+  TierStrategyAccess,
+  StrategyModelMapping,
+  AgentClassificationData,
+} from './rag-data';
 export { RagConfigurationForm } from './RagConfigurationForm';
+export { StrategyCard } from './StrategyCard';
+export { StrategySelector } from './StrategySelector';

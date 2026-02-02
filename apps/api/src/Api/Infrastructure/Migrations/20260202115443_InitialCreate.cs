@@ -4,7 +4,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Api.Migrations
+namespace Api.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -53,6 +53,27 @@ namespace Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_agent_feedback", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "agent_typologies",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    base_prompt = table.Column<string>(type: "character varying(5000)", maxLength: 5000, nullable: false),
+                    default_strategy_json = table.Column<string>(type: "jsonb", nullable: false),
+                    status = table.Column<int>(type: "integer", nullable: false),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: false),
+                    approved_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    approved_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_agent_typologies", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -393,6 +414,41 @@ namespace Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "strategy_model_mapping",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Strategy = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    PrimaryModel = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    FallbackModels = table.Column<string[]>(type: "text[]", nullable: false),
+                    Provider = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    IsCustomizable = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    AdminOnly = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_strategy_model_mapping", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "tier_strategy_access",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Tier = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Strategy = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    IsEnabled = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_tier_strategy_access", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "users",
                 columns: table => new
                 {
@@ -410,7 +466,14 @@ namespace Api.Migrations
                     DataRetentionDays = table.Column<int>(type: "integer", nullable: false, defaultValue: 90),
                     TotpSecretEncrypted = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     IsTwoFactorEnabled = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    TwoFactorEnabledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    TwoFactorEnabledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    EmailVerified = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    EmailVerifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsSuspended = table.Column<bool>(type: "boolean", nullable: false),
+                    SuspendedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    SuspendReason = table.Column<string>(type: "text", nullable: true),
+                    Level = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
+                    ExperiencePoints = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
                 },
                 constraints: table =>
                 {
@@ -489,6 +552,30 @@ namespace Api.Migrations
                         name: "FK_admin_report_executions_admin_reports_report_id",
                         column: x => x.report_id,
                         principalTable: "admin_reports",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "typology_prompt_templates",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    typology_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    content = table.Column<string>(type: "character varying(10000)", maxLength: 10000, nullable: false),
+                    version = table.Column<int>(type: "integer", nullable: false),
+                    is_current = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_typology_prompt_templates", x => x.id);
+                    table.CheckConstraint("ck_typology_prompt_templates_version", "version >= 1");
+                    table.ForeignKey(
+                        name: "FK_typology_prompt_templates_agent_typologies_typology_id",
+                        column: x => x.typology_id,
+                        principalTable: "agent_typologies",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -899,6 +986,29 @@ namespace Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "email_verifications",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: false),
+                    TokenHash = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    VerifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    InvalidatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_email_verifications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_email_verifications_users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "library_share_links",
                 columns: table => new
                 {
@@ -1066,7 +1176,7 @@ namespace Api.Migrations
                     ValueType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     Category = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     RequiresRestart = table.Column<bool>(type: "boolean", nullable: false),
                     Environment = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Version = table.Column<int>(type: "integer", nullable: false),
@@ -1413,6 +1523,7 @@ namespace Api.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     GameId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: true),
                     Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
                     StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -1429,6 +1540,12 @@ namespace Api.Migrations
                         principalTable: "games",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_GameSessions_users_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1517,6 +1634,44 @@ namespace Api.Migrations
                     table.ForeignKey(
                         name: "FK_rulespec_comments_users_UserId",
                         column: x => x.UserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "session_tracking_sessions",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    game_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    session_code = table.Column<string>(type: "character varying(6)", maxLength: 6, nullable: false),
+                    session_type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    session_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    location = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    finalized_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    deleted_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: false),
+                    updated_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    row_version = table.Column<byte[]>(type: "bytea", rowVersion: true, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_session_tracking_sessions", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_sessions_games_game_id",
+                        column: x => x.game_id,
+                        principalTable: "games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_sessions_users_user_id",
+                        column: x => x.user_id,
                         principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -1636,7 +1791,7 @@ namespace Api.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserLibraryEntryId = table.Column<Guid>(type: "uuid", nullable: false),
                     PlayedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    DurationMinutes = table.Column<int>(type: "integer", nullable: false),
+                    duration_minutes = table.Column<int>(type: "integer", nullable: false),
                     DidWin = table.Column<bool>(type: "boolean", nullable: true),
                     Players = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     Notes = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
@@ -1646,7 +1801,7 @@ namespace Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_game_sessions", x => x.Id);
-                    table.CheckConstraint("chk_game_sessions_duration", "\"DurationMinutes\" > 0");
+                    table.CheckConstraint("chk_game_sessions_duration", "duration_minutes > 0");
                     table.ForeignKey(
                         name: "FK_game_sessions_user_library_entries_UserLibraryEntryId",
                         column: x => x.UserLibraryEntryId,
@@ -1836,6 +1991,56 @@ namespace Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "agent_sessions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    AgentId = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameSessionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
+                    TypologyId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CurrentGameStateJson = table.Column<string>(type: "jsonb", nullable: false, defaultValue: "{}"),
+                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    EndedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_agent_sessions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_agent_sessions_GameSessions_GameSessionId",
+                        column: x => x.GameSessionId,
+                        principalTable: "GameSessions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_agent_sessions_agent_typologies_TypologyId",
+                        column: x => x.TypologyId,
+                        principalTable: "agent_typologies",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_agent_sessions_agents_AgentId",
+                        column: x => x.AgentId,
+                        principalTable: "agents",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_agent_sessions_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_agent_sessions_users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "game_session_states",
                 columns: table => new
                 {
@@ -1881,6 +2086,36 @@ namespace Api.Migrations
                         principalTable: "rule_specs",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "session_tracking_participants",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    session_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    display_name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    is_owner = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    join_order = table.Column<int>(type: "integer", nullable: false),
+                    final_rank = table.Column<int>(type: "integer", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_session_tracking_participants", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_participants_session_tracking_sessions_ses~",
+                        column: x => x.session_id,
+                        principalTable: "session_tracking_sessions",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_participants_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -2076,6 +2311,125 @@ namespace Api.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "session_tracking_card_draws",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    session_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    participant_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    deck_type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    deck_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    card_value = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_session_tracking_card_draws", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_card_draws_session_tracking_participants_p~",
+                        column: x => x.participant_id,
+                        principalTable: "session_tracking_participants",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_card_draws_session_tracking_sessions_sessi~",
+                        column: x => x.session_id,
+                        principalTable: "session_tracking_sessions",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "session_tracking_dice_rolls",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    session_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    participant_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    dice_type = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                    roll_count = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
+                    results = table.Column<string>(type: "jsonb", nullable: false),
+                    timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_session_tracking_dice_rolls", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_dice_rolls_session_tracking_participants_p~",
+                        column: x => x.participant_id,
+                        principalTable: "session_tracking_participants",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_dice_rolls_session_tracking_sessions_sessi~",
+                        column: x => x.session_id,
+                        principalTable: "session_tracking_sessions",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "session_tracking_notes",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    session_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    participant_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    note_type = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    template_key = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    content = table.Column<string>(type: "text", nullable: false),
+                    is_hidden = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_session_tracking_notes", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_notes_session_tracking_participants_partic~",
+                        column: x => x.participant_id,
+                        principalTable: "session_tracking_participants",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_notes_session_tracking_sessions_session_id",
+                        column: x => x.session_id,
+                        principalTable: "session_tracking_sessions",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "session_tracking_score_entries",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    session_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    participant_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    round_number = table.Column<int>(type: "integer", nullable: true),
+                    category = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    score_value = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
+                    timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_session_tracking_score_entries", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_score_entries_session_tracking_participant~",
+                        column: x => x.participant_id,
+                        principalTable: "session_tracking_participants",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_session_tracking_score_entries_session_tracking_sessions_se~",
+                        column: x => x.session_id,
+                        principalTable: "session_tracking_sessions",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_admin_report_executions_report_id",
                 table: "admin_report_executions",
@@ -2113,6 +2467,64 @@ namespace Api.Migrations
                 name: "IX_agent_feedback_UserId",
                 table: "agent_feedback",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_agent_sessions_AgentId",
+                table: "agent_sessions",
+                column: "AgentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_agent_sessions_GameId",
+                table: "agent_sessions",
+                column: "GameId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_agent_sessions_TypologyId",
+                table: "agent_sessions",
+                column: "TypologyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AgentSessions_GameSessionId",
+                table: "agent_sessions",
+                column: "GameSessionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AgentSessions_GameSessionId_UserId_Unique",
+                table: "agent_sessions",
+                columns: new[] { "GameSessionId", "UserId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AgentSessions_IsActive",
+                table: "agent_sessions",
+                column: "IsActive");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AgentSessions_UserId",
+                table: "agent_sessions",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AgentSessions_UserId_IsActive",
+                table: "agent_sessions",
+                columns: new[] { "UserId", "IsActive" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_agent_typologies_created_by",
+                table: "agent_typologies",
+                column: "created_by");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_agent_typologies_name",
+                table: "agent_typologies",
+                column: "name",
+                unique: true,
+                filter: "is_deleted = false");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_agent_typologies_status",
+                table: "agent_typologies",
+                column: "status");
 
             migrationBuilder.CreateIndex(
                 name: "IX_agents_GameEntityId",
@@ -2452,6 +2864,22 @@ namespace Api.Migrations
                 column: "GameId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_email_verifications_ExpiresAt",
+                table: "email_verifications",
+                column: "ExpiresAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_email_verifications_TokenHash",
+                table: "email_verifications",
+                column: "TokenHash",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_email_verifications_UserId",
+                table: "email_verifications",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_game_categories_name",
                 table: "game_categories",
                 column: "name",
@@ -2483,7 +2911,7 @@ namespace Api.Migrations
                 name: "ix_game_errata_published_date",
                 table: "game_errata",
                 column: "published_date",
-                descending: Array.Empty<bool>());
+                descending: new bool[0]);
 
             migrationBuilder.CreateIndex(
                 name: "ix_game_errata_shared_game_id",
@@ -2591,6 +3019,11 @@ namespace Api.Migrations
                 name: "IX_Games_SharedGameId",
                 table: "games",
                 column: "SharedGameId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameSessions_CreatedByUserId_Status",
+                table: "GameSessions",
+                columns: new[] { "CreatedByUserId", "Status" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_GameSessions_GameId",
@@ -2923,6 +3356,83 @@ namespace Api.Migrations
                 column: "ResolvedByUserId");
 
             migrationBuilder.CreateIndex(
+                name: "idx_cards_session",
+                table: "session_tracking_card_draws",
+                columns: new[] { "session_id", "timestamp" },
+                descending: new[] { false, true });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_session_tracking_card_draws_participant_id",
+                table: "session_tracking_card_draws",
+                column: "participant_id");
+
+            migrationBuilder.CreateIndex(
+                name: "idx_dice_session",
+                table: "session_tracking_dice_rolls",
+                columns: new[] { "session_id", "timestamp" },
+                descending: new[] { false, true });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_session_tracking_dice_rolls_participant_id",
+                table: "session_tracking_dice_rolls",
+                column: "participant_id");
+
+            migrationBuilder.CreateIndex(
+                name: "idx_notes_session_participant",
+                table: "session_tracking_notes",
+                columns: new[] { "session_id", "participant_id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_session_tracking_notes_participant_id",
+                table: "session_tracking_notes",
+                column: "participant_id");
+
+            migrationBuilder.CreateIndex(
+                name: "idx_participants_session",
+                table: "session_tracking_participants",
+                column: "session_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_session_tracking_participants_user_id",
+                table: "session_tracking_participants",
+                column: "user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "idx_scores_round",
+                table: "session_tracking_score_entries",
+                columns: new[] { "session_id", "round_number" });
+
+            migrationBuilder.CreateIndex(
+                name: "idx_scores_session_participant",
+                table: "session_tracking_score_entries",
+                columns: new[] { "session_id", "participant_id" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_session_tracking_score_entries_participant_id",
+                table: "session_tracking_score_entries",
+                column: "participant_id");
+
+            migrationBuilder.CreateIndex(
+                name: "idx_sessions_code",
+                table: "session_tracking_sessions",
+                column: "session_code",
+                unique: true,
+                filter: "is_deleted = false");
+
+            migrationBuilder.CreateIndex(
+                name: "idx_sessions_game_date",
+                table: "session_tracking_sessions",
+                columns: new[] { "game_id", "session_date" },
+                descending: new[] { false, true },
+                filter: "is_deleted = false");
+
+            migrationBuilder.CreateIndex(
+                name: "idx_sessions_user_status",
+                table: "session_tracking_sessions",
+                columns: new[] { "user_id", "status" },
+                filter: "is_deleted = false");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_share_links_creator_id",
                 table: "share_links",
                 column: "creator_id");
@@ -3083,6 +3593,22 @@ namespace Api.Migrations
                 filter: "is_deleted = false");
 
             migrationBuilder.CreateIndex(
+                name: "IX_strategy_model_mapping_AdminOnly",
+                table: "strategy_model_mapping",
+                column: "AdminOnly");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_strategy_model_mapping_Provider",
+                table: "strategy_model_mapping",
+                column: "Provider");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_strategy_model_mapping_Strategy",
+                table: "strategy_model_mapping",
+                column: "Strategy",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_system_configurations_Category",
                 table: "system_configurations",
                 column: "Category");
@@ -3153,6 +3679,45 @@ namespace Api.Migrations
                 name: "IX_text_chunks_PdfDocumentId",
                 table: "text_chunks",
                 column: "PdfDocumentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_tier_strategy_access_IsEnabled",
+                table: "tier_strategy_access",
+                column: "IsEnabled");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_tier_strategy_access_Strategy",
+                table: "tier_strategy_access",
+                column: "Strategy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_tier_strategy_access_Tier",
+                table: "tier_strategy_access",
+                column: "Tier");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_tier_strategy_access_Tier_Strategy",
+                table: "tier_strategy_access",
+                columns: new[] { "Tier", "Strategy" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_typology_prompt_templates_current",
+                table: "typology_prompt_templates",
+                columns: new[] { "typology_id", "is_current" },
+                unique: true,
+                filter: "is_current = true");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_typology_prompt_templates_typology_id",
+                table: "typology_prompt_templates",
+                column: "typology_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_typology_prompt_templates_typology_version",
+                table: "typology_prompt_templates",
+                columns: new[] { "typology_id", "version" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_used_totp_codes_expiry",
@@ -3342,6 +3907,58 @@ namespace Api.Migrations
                 name: "IX_workflow_error_logs_workflow_id",
                 table: "workflow_error_logs",
                 column: "workflow_id");
+
+            // Issue #3438: Seed TierStrategyAccess data
+            var now = DateTime.UtcNow;
+
+            // User tier: FAST, BALANCED enabled
+            migrationBuilder.InsertData(
+                table: "tier_strategy_access",
+                columns: new[] { "Id", "Tier", "Strategy", "IsEnabled", "CreatedAt", "UpdatedAt" },
+                values: new object[] { Guid.NewGuid(), "User", "FAST", true, now, now });
+
+            migrationBuilder.InsertData(
+                table: "tier_strategy_access",
+                columns: new[] { "Id", "Tier", "Strategy", "IsEnabled", "CreatedAt", "UpdatedAt" },
+                values: new object[] { Guid.NewGuid(), "User", "BALANCED", true, now, now });
+
+            // Editor tier: FAST, BALANCED, PRECISE enabled
+            migrationBuilder.InsertData(
+                table: "tier_strategy_access",
+                columns: new[] { "Id", "Tier", "Strategy", "IsEnabled", "CreatedAt", "UpdatedAt" },
+                values: new object[] { Guid.NewGuid(), "Editor", "FAST", true, now, now });
+
+            migrationBuilder.InsertData(
+                table: "tier_strategy_access",
+                columns: new[] { "Id", "Tier", "Strategy", "IsEnabled", "CreatedAt", "UpdatedAt" },
+                values: new object[] { Guid.NewGuid(), "Editor", "BALANCED", true, now, now });
+
+            migrationBuilder.InsertData(
+                table: "tier_strategy_access",
+                columns: new[] { "Id", "Tier", "Strategy", "IsEnabled", "CreatedAt", "UpdatedAt" },
+                values: new object[] { Guid.NewGuid(), "Editor", "PRECISE", true, now, now });
+
+            // Admin tier: wildcard (*) for all strategies
+            migrationBuilder.InsertData(
+                table: "tier_strategy_access",
+                columns: new[] { "Id", "Tier", "Strategy", "IsEnabled", "CreatedAt", "UpdatedAt" },
+                values: new object[] { Guid.NewGuid(), "Admin", "*", true, now, now });
+
+            // Issue #3438: Seed StrategyModelMapping data
+            migrationBuilder.InsertData(
+                table: "strategy_model_mapping",
+                columns: new[] { "Id", "Strategy", "PrimaryModel", "FallbackModels", "Provider", "IsCustomizable", "AdminOnly", "CreatedAt", "UpdatedAt" },
+                values: new object[] { Guid.NewGuid(), "FAST", "google/gemini-flash-1.5", new[] { "openai/gpt-4o-mini" }, "openrouter", true, false, now, now });
+
+            migrationBuilder.InsertData(
+                table: "strategy_model_mapping",
+                columns: new[] { "Id", "Strategy", "PrimaryModel", "FallbackModels", "Provider", "IsCustomizable", "AdminOnly", "CreatedAt", "UpdatedAt" },
+                values: new object[] { Guid.NewGuid(), "BALANCED", "openai/gpt-4o-mini", new[] { "anthropic/claude-3-haiku" }, "openrouter", true, false, now, now });
+
+            migrationBuilder.InsertData(
+                table: "strategy_model_mapping",
+                columns: new[] { "Id", "Strategy", "PrimaryModel", "FallbackModels", "Provider", "IsCustomizable", "AdminOnly", "CreatedAt", "UpdatedAt" },
+                values: new object[] { Guid.NewGuid(), "PRECISE", "anthropic/claude-3.5-sonnet", new[] { "openai/gpt-4o" }, "openrouter", true, false, now, now });
         }
 
         /// <inheritdoc />
@@ -3355,6 +3972,9 @@ namespace Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "agent_feedback");
+
+            migrationBuilder.DropTable(
+                name: "agent_sessions");
 
             migrationBuilder.DropTable(
                 name: "ai_request_logs");
@@ -3392,6 +4012,9 @@ namespace Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "contribution_records");
+
+            migrationBuilder.DropTable(
+                name: "email_verifications");
 
             migrationBuilder.DropTable(
                 name: "game_checklists");
@@ -3448,6 +4071,18 @@ namespace Api.Migrations
                 name: "rulespec_comments");
 
             migrationBuilder.DropTable(
+                name: "session_tracking_card_draws");
+
+            migrationBuilder.DropTable(
+                name: "session_tracking_dice_rolls");
+
+            migrationBuilder.DropTable(
+                name: "session_tracking_notes");
+
+            migrationBuilder.DropTable(
+                name: "session_tracking_score_entries");
+
+            migrationBuilder.DropTable(
                 name: "share_links");
 
             migrationBuilder.DropTable(
@@ -3475,6 +4110,9 @@ namespace Api.Migrations
                 name: "shared_game_publishers");
 
             migrationBuilder.DropTable(
+                name: "strategy_model_mapping");
+
+            migrationBuilder.DropTable(
                 name: "system_configurations");
 
             migrationBuilder.DropTable(
@@ -3482,6 +4120,12 @@ namespace Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "text_chunks");
+
+            migrationBuilder.DropTable(
+                name: "tier_strategy_access");
+
+            migrationBuilder.DropTable(
+                name: "typology_prompt_templates");
 
             migrationBuilder.DropTable(
                 name: "used_totp_codes");
@@ -3532,6 +4176,9 @@ namespace Api.Migrations
                 name: "rule_specs");
 
             migrationBuilder.DropTable(
+                name: "session_tracking_participants");
+
+            migrationBuilder.DropTable(
                 name: "ChatThreads");
 
             migrationBuilder.DropTable(
@@ -3550,6 +4197,9 @@ namespace Api.Migrations
                 name: "game_publishers");
 
             migrationBuilder.DropTable(
+                name: "agent_typologies");
+
+            migrationBuilder.DropTable(
                 name: "badges");
 
             migrationBuilder.DropTable(
@@ -3563,6 +4213,9 @@ namespace Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "prompt_templates");
+
+            migrationBuilder.DropTable(
+                name: "session_tracking_sessions");
 
             migrationBuilder.DropTable(
                 name: "document_collections");

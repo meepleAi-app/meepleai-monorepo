@@ -559,14 +559,14 @@ graph TD
 #### Day 1-2: Epic #3434 Foundation
 
 1. ✅ Commit documentazione (rag-data.ts, rag-flow-current.md)
-2. ⬜ Start #3438 Database tables
+2. ✅ Start #3438 Database tables
    - Create migration for TierStrategyAccess & StrategyModelMapping
    - Seed default tier-strategy mappings
    - **Blocca**: Tutti gli altri task di #3434
 
 #### Day 3-4: Epic #3434 Backend Services
 
-3. ⬜ Implement #3436 TierStrategyAccess validation
+3. ✅ Implement #3436 TierStrategyAccess validation
 4. ⬜ Implement #3437 StrategyModelMapping configuration
    - **Dipende da**: #3438 completato
 

@@ -44,6 +44,7 @@ import { HeroStats } from './HeroStats';
 import { ActiveSessionsWidget } from './ActiveSessionsWidget';
 import { LibrarySnapshot } from './LibrarySnapshot';
 import { ChatHistorySection } from './ChatHistorySection';
+import { QuickActionsGrid } from './QuickActionsGrid';
 import { GameCard, type GameData } from './GameCard';
 import { ActivityItem, type ActivityData } from './ActivityItem';
 import { WishlistCard, type WishlistItemData } from './WishlistCard';
@@ -625,13 +626,14 @@ export function Dashboard() {
         <HeroStats />
       </div>
 
-      {/* Dashboard Widgets - Issue #3309, #3310, #3312 */}
+      {/* Dashboard Widgets - Issue #3309, #3310, #3312, #3313 */}
       <div className="mx-auto max-w-7xl px-4 pb-6 sm:px-6 lg:px-8 space-y-4">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <ActiveSessionsWidget />
           <LibrarySnapshot />
         </div>
         <ChatHistorySection />
+        <QuickActionsGrid />
       </div>
 
       {/* Reorderable Sections */}

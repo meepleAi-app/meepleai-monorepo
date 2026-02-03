@@ -5,7 +5,7 @@
  * This component is deprecated and will be removed in a future release.
  * For authenticated pages, use AuthenticatedLayout which includes UnifiedActionBar.
  *
- * Primary mobile navigation with 5 main app sections.
+ * Primary mobile navigation with role-based visibility.
  * Fixed bottom sticky nav, hidden on desktop (≥768px).
  *
  * Design: Playful Boardroom - wireframes-playful-boardroom.md
@@ -13,8 +13,12 @@
  * Issue: #3104 - Updated to 4 items (Settings moved to top bar)
  * Issue: #2860 - Updated to 5 items (Home, Library, Catalog, Chat, Profile)
  *
+ * Visibility rules:
+ * - Anonymous users: Home, Catalogo
+ * - Authenticated users: Home, Library, Catalogo, Chat, Profilo
+ *
  * Features:
- * - 5 nav items: Home, Library, Catalog, Chat, Profile
+ * - Role-based nav items visibility
  * - Active state detection (path matching)
  * - Touch-friendly targets (44x44px minimum - WCAG 2.1 AA)
  * - Lucide icons with labels
@@ -29,6 +33,7 @@ import { Home, Gamepad2, MessageSquare, BookOpen, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -37,12 +42,19 @@ interface NavItem {
   label: string;
   ariaLabel: string;
   testId: string;
+  /** Only show for authenticated users */
+  authOnly?: boolean;
 }
 
 /**
  * Navigation items for mobile bottom nav
- * Order: Home, Library, Catalog, Chat, Profile (Issue #2860)
- * 5 items for mobile-first responsive navigation
+ *
+ * Visibility rules:
+ * - authOnly: only visible when logged in
+ * - no flag: visible to everyone
+ *
+ * Anonymous users see: Home, Catalogo
+ * Authenticated users see: Home, Libreria, Catalogo, Chat, Profilo
  */
 const navItems: NavItem[] = [
   {
@@ -58,6 +70,7 @@ const navItems: NavItem[] = [
     label: 'Libreria',
     ariaLabel: 'Navigate to your game library',
     testId: 'bottomnav-library',
+    authOnly: true,
   },
   {
     href: '/games',
@@ -72,6 +85,7 @@ const navItems: NavItem[] = [
     label: 'Chat',
     ariaLabel: 'Navigate to chat interface',
     testId: 'bottomnav-chat',
+    authOnly: true,
   },
   {
     href: '/profile',
@@ -79,11 +93,21 @@ const navItems: NavItem[] = [
     label: 'Profilo',
     ariaLabel: 'Navigate to your profile',
     testId: 'bottomnav-profile',
+    authOnly: true,
   },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { data: user } = useCurrentUser();
+
+  const isAuthenticated = !!user;
+
+  // Filter nav items based on authentication status
+  const visibleNavItems = navItems.filter(item => {
+    if (item.authOnly && !isAuthenticated) return false;
+    return true;
+  });
 
   const isActive = (href: string) => {
     // Exact match for home and profile, starts-with for other routes
@@ -110,7 +134,7 @@ export function BottomNav() {
       aria-label="Primary mobile navigation"
     >
       <div className="flex justify-around items-center h-full px-4">
-        {navItems.map(({ href, icon: Icon, label, ariaLabel, testId }) => {
+        {visibleNavItems.map(({ href, icon: Icon, label, ariaLabel, testId }) => {
           const active = isActive(href);
           return (
             <Link

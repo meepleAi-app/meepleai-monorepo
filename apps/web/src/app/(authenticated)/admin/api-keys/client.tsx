@@ -70,8 +70,6 @@ type StatsModalState = {
 export function ApiKeysPageClient() {
   const { user, loading: authLoading } = useAuthUser();
 
-  if (!user) return null;
-
   // State
   const [apiKeys, setApiKeys] = useState<ApiKeyWithStatsDto[]>([]);
   const [filteredKeys, setFilteredKeys] = useState<ApiKeyWithStatsDto[]>([]);
@@ -320,6 +318,9 @@ export function ApiKeysPageClient() {
   const showStats = (apiKey: ApiKeyWithStatsDto) => {
     setStatsModal({ isOpen: true, apiKey });
   };
+
+  // Early return after all hooks
+  if (!user) return null;
 
   if (dataLoading) {
     return (

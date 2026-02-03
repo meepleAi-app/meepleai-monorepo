@@ -59,7 +59,6 @@ type ToastMessage = {
 export function AdminPageClient() {
   const { user, loading: authLoading } = useAuthUser();
 
-  if (!user) return null;
   // State
   const [stats, setStats] = useState<DashboardStatsDto | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
@@ -129,6 +128,9 @@ export function AdminPageClient() {
 
     return () => clearInterval(interval);
   }, [autoRefresh, fetchStats]);
+
+  // Early return after all hooks
+  if (!user) return null;
 
   // Export data
   const handleExport = async (format: 'csv' | 'json') => {

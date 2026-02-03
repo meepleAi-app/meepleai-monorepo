@@ -28,14 +28,14 @@ import {
 
 import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
 import { AdminLayout } from '@/components/admin/AdminLayout';
+import { AlertsBanner } from '@/components/admin/AlertsBanner';
+import { ChartsSection } from '@/components/admin/charts/ChartsSection';
 import { DashboardHeader } from '@/components/admin/DashboardHeader';
 import { KPICardsGrid, buildKPICards } from '@/components/admin/KPICardsGrid';
-import { AlertsBanner } from '@/components/admin/AlertsBanner';
 import { MetricsGrid } from '@/components/admin/MetricsGrid';
 import { QuickActions, type QuickAction } from '@/components/admin/QuickActions';
 import type { StatCardProps } from '@/components/admin/StatCard';
 import { SystemStatus, type ServiceStatus } from '@/components/admin/SystemStatus';
-import { ChartsSection } from '@/components/admin/charts/ChartsSection';
 import { useDashboardData } from '@/hooks/queries/useDashboardData';
 import type { DashboardMetrics } from '@/lib/api';
 

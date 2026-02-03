@@ -34,7 +34,6 @@ type ConfirmationDialog = {
 export function AdminPageClient() {
   const { user, loading: authLoading } = useAuthUser();
 
-  if (!user) return null;
   const [stats, setStats] = useState<CacheStats | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string>('all');
@@ -190,6 +189,9 @@ export function AdminPageClient() {
     if (hitRate >= 0.4) return '#f9ab00'; // Yellow
     return '#d93025'; // Red
   };
+
+  // Early return after all hooks
+  if (!user) return null;
 
   if (dataLoading) {
     return (

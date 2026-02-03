@@ -123,9 +123,6 @@ export function ImportClient() {
   const { user, loading: authLoading } = useAuthUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Early return if no user
-  if (!user) return null;
-
   // Import mode
   const [mode, setMode] = useState<ImportMode>('csv');
 
@@ -844,6 +841,9 @@ export function ImportClient() {
 
   const jsonValidCount = jsonItems.filter(i => i.status === 'valid').length;
   const jsonInvalidCount = jsonItems.filter(i => i.status === 'invalid').length;
+
+  // Early return after all hooks
+  if (!user) return null;
 
   return (
     <AdminAuthGuard loading={authLoading} user={user}>

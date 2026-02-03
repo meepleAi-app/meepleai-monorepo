@@ -28,13 +28,6 @@ export function AdminPageClient() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [statusMessage, setStatusMessage] = useState<string>('');
 
-  if (!user) return null;
-
-  // Check if user is Editor or Admin
-  if (user.role !== 'Editor' && user.role !== 'Admin') {
-    setErrorMessage('Access denied. Editor or Admin role required.');
-  }
-
   useEffect(() => {
     void loadGames();
   }, []);
@@ -92,7 +85,10 @@ export function AdminPageClient() {
     }
   };
 
-  if (user && user.role !== 'Editor' && user.role !== 'Admin') {
+  // Early return after all hooks
+  if (!user) return null;
+
+  if (user.role !== 'Editor' && user.role !== 'Admin') {
     return (
       <AdminAuthGuard loading={authLoading} user={user}>
         <div className="min-h-dvh bg-slate-950 text-white flex items-center justify-center">

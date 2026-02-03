@@ -36,28 +36,6 @@ export function AdminPageClient({ user: _user }: AdminPageClientProps) {
   const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'success' });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Handle missing ID
-  if (!id) {
-    return (
-      <div
-        className="min-h-screen"
-        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
-      >
-        <div className="max-w-[1400px] mx-auto p-8">
-          <div className="bg-white rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden p-8">
-            <h1 className="text-2xl font-bold mb-4">Invalid Template ID</h1>
-            <p className="text-gray-600 mb-4">No template ID provided.</p>
-            <Link href="/admin/prompts">
-              <button className="px-6 py-2 bg-indigo-500 text-white border-none rounded-lg cursor-pointer hover:bg-indigo-600">
-                Back to Templates
-              </button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 5000);
@@ -132,6 +110,28 @@ export function AdminPageClient({ user: _user }: AdminPageClientProps) {
       setLoading(false);
     }
   };
+
+  // Early return after all hooks
+  if (!id) {
+    return (
+      <div
+        className="min-h-screen"
+        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+      >
+        <div className="max-w-[1400px] mx-auto p-8">
+          <div className="bg-white rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] overflow-hidden p-8">
+            <h1 className="text-2xl font-bold mb-4">Invalid Template ID</h1>
+            <p className="text-gray-600 mb-4">No template ID provided.</p>
+            <Link href="/admin/prompts">
+              <button className="px-6 py-2 bg-indigo-500 text-white border-none rounded-lg cursor-pointer hover:bg-indigo-600">
+                Back to Templates
+              </button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

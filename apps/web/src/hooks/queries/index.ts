@@ -153,6 +153,18 @@ export {
   sessionQuotaKeys,
 } from './useSessionQuota';
 
+// Chat Sessions queries and mutations (Issue #3484)
+export {
+  useRecentChatSessions,
+  useGameChatSessions,
+  useInfiniteGameChatSessions,
+  useChatSession,
+  useCreateChatSession,
+  useAddChatSessionMessage,
+  useDeleteChatSession,
+  chatSessionKeys,
+} from './useChatSessions';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

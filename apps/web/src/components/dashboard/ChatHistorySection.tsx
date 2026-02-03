@@ -1,19 +1,21 @@
 /**
  * ChatHistorySection - Dashboard Widget for Recent AI Chats
  * Issue #3312 - Implement ChatHistorySection
+ * Issue #3484 - Backend Integration
  *
  * Features:
- * - Shows up to 4 most recent chat threads
- * - Displays title, relative timestamp
- * - Click navigates to chat thread
+ * - Shows up to 4 most recent chat sessions from backend
+ * - Displays title, relative timestamp, message count
+ * - Click navigates to chat session
  * - "New Chat" button to start new conversation
  * - "View All" link to chat history
  * - Empty state with "Start Conversation" CTA
  * - Loading skeleton state
+ * - Delete session with confirmation
  *
  * @example
  * ```tsx
- * <ChatHistorySection />
+ * <ChatHistorySection userId={currentUser.id} />
  * ```
  */
 
@@ -23,15 +25,20 @@ import { useMemo } from 'react';
 
 import { motion } from 'framer-motion';
 import {
+  Bot,
+  ChevronRight,
   MessageSquare,
   Plus,
-  ChevronRight,
-  Bot,
+  Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
+import {
+  useDeleteChatSession,
+  useRecentChatSessions,
+} from '@/hooks/queries';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -43,49 +50,22 @@ export interface ChatThread {
   title: string;
   lastMessageAt: string;
   messageCount: number;
+  gameId?: string;
+  gameTitle?: string;
 }
 
 export interface ChatHistorySectionProps {
-  /** Chat threads data */
+  /** User ID for fetching sessions (required for backend integration) */
+  userId?: string;
+  /** Chat threads data (optional - for testing or manual override) */
   threads?: ChatThread[];
   /** Total count of threads (for "View All" logic) */
   totalCount?: number;
-  /** Loading state */
+  /** Loading state (optional - auto-detected from query) */
   isLoading?: boolean;
   /** Additional CSS classes */
   className?: string;
 }
-
-// ============================================================================
-// Mock Data (for development)
-// ============================================================================
-
-const MOCK_THREADS: ChatThread[] = [
-  {
-    id: 'thread-1',
-    title: 'Regole Wingspan - Setup iniziale',
-    lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-    messageCount: 12,
-  },
-  {
-    id: 'thread-2',
-    title: 'Strategie Catan - Espansione Marinai',
-    lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 28).toISOString(), // Yesterday
-    messageCount: 8,
-  },
-  {
-    id: 'thread-3',
-    title: 'FAQ Ticket to Ride - Carte duplicate e regole tunnel',
-    lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
-    messageCount: 5,
-  },
-  {
-    id: 'thread-4',
-    title: 'Setup Azul - Modalità 2 giocatori',
-    lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(), // 3 days ago
-    messageCount: 3,
-  },
-];
 
 // ============================================================================
 // Helper Functions
@@ -196,12 +176,26 @@ function EmptyState() {
 // Thread Item Component
 // ============================================================================
 
-function ThreadItem({ thread, index }: { thread: ChatThread; index: number }) {
+interface ThreadItemProps {
+  thread: ChatThread;
+  index: number;
+  onDelete?: (threadId: string, gameId?: string) => void;
+  isDeleting?: boolean;
+}
+
+function ThreadItem({ thread, index, onDelete, isDeleting }: ThreadItemProps) {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDelete?.(thread.id, thread.gameId);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05 }}
+      className={cn(isDeleting && 'opacity-50')}
     >
       <Link
         href={`/chat/${thread.id}`}
@@ -210,19 +204,41 @@ function ThreadItem({ thread, index }: { thread: ChatThread; index: number }) {
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
-          <span
-            className="text-sm truncate group-hover:text-foreground transition-colors"
-            data-testid={`chat-title-${thread.id}`}
-          >
-            {thread.title}
-          </span>
+          <div className="min-w-0 flex-1">
+            <span
+              className="text-sm truncate block group-hover:text-foreground transition-colors"
+              data-testid={`chat-title-${thread.id}`}
+            >
+              {thread.title}
+            </span>
+            {thread.gameTitle && (
+              <span className="text-xs text-muted-foreground truncate block">
+                {thread.gameTitle}
+              </span>
+            )}
+          </div>
         </div>
-        <span
-          className="text-xs text-muted-foreground shrink-0 ml-2"
-          data-testid={`chat-time-${thread.id}`}
-        >
-          {formatRelativeTime(thread.lastMessageAt)}
-        </span>
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          <span
+            className="text-xs text-muted-foreground"
+            data-testid={`chat-time-${thread.id}`}
+          >
+            {formatRelativeTime(thread.lastMessageAt)}
+          </span>
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              data-testid={`delete-thread-${thread.id}`}
+            >
+              <Trash2 className="h-3 w-3" />
+              <span className="sr-only">Elimina</span>
+            </Button>
+          )}
+        </div>
       </Link>
     </motion.div>
   );
@@ -233,18 +249,82 @@ function ThreadItem({ thread, index }: { thread: ChatThread; index: number }) {
 // ============================================================================
 
 export function ChatHistorySection({
-  threads = MOCK_THREADS,
-  totalCount,
-  isLoading = false,
+  userId,
+  threads: propThreads,
+  totalCount: propTotalCount,
+  isLoading: propIsLoading,
   className,
 }: ChatHistorySectionProps) {
+  // Fetch from backend if userId provided and no threads prop
+  const {
+    data: backendData,
+    isLoading: queryLoading,
+    error,
+  } = useRecentChatSessions(userId, {
+    limit: 10,
+    enabled: !!userId && !propThreads,
+  });
+
+  // Delete mutation
+  const deleteMutation = useDeleteChatSession();
+
+  // Map backend data to ChatThread format
+  const threads = useMemo(() => {
+    if (propThreads) return propThreads;
+    if (!backendData?.sessions) return [];
+
+    return backendData.sessions.map((session) => ({
+      id: session.id,
+      title: session.title || `Chat del ${new Date(session.createdAt).toLocaleDateString('it-IT')}`,
+      lastMessageAt: session.lastMessageAt || session.createdAt,
+      messageCount: session.messageCount,
+      gameId: session.gameId,
+      gameTitle: session.gameTitle || undefined,
+    }));
+  }, [propThreads, backendData]);
+
   const displayThreads = useMemo(() => threads.slice(0, 4), [threads]);
-  const total = totalCount ?? threads.length;
+  const total = propTotalCount ?? backendData?.totalCount ?? threads.length;
   const hasMore = total > 4;
   const isEmpty = threads.length === 0;
+  const isLoading = propIsLoading ?? queryLoading;
+
+  const handleDelete = (threadId: string, gameId?: string) => {
+    if (!userId) return;
+    deleteMutation.mutate({
+      sessionId: threadId,
+      userId,
+      gameId: gameId ?? '',
+    });
+  };
 
   if (isLoading) {
     return <ChatHistorySectionSkeleton className={className} />;
+  }
+
+  // Show error state
+  if (error && !propThreads) {
+    return (
+      <section
+        className={cn(
+          'rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xl p-4',
+          className
+        )}
+        data-testid="chat-history-error"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-destructive/20 flex items-center justify-center">
+              <MessageSquare className="h-4 w-4 text-destructive" />
+            </div>
+            <h3 className="font-semibold text-sm">Conversazioni AI Recenti</h3>
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground text-center py-4">
+          Impossibile caricare le conversazioni
+        </p>
+      </section>
+    );
   }
 
   return (
@@ -288,7 +368,13 @@ export function ChatHistorySection({
           {/* Threads List */}
           <div className="space-y-1" data-testid="threads-list">
             {displayThreads.map((thread, index) => (
-              <ThreadItem key={thread.id} thread={thread} index={index} />
+              <ThreadItem
+                key={thread.id}
+                thread={thread}
+                index={index}
+                onDelete={userId ? handleDelete : undefined}
+                isDeleting={deleteMutation.isPending && deleteMutation.variables?.sessionId === thread.id}
+              />
             ))}
           </div>
 

@@ -1,32 +1,33 @@
 /**
  * Authenticated Route Group Layout
- * Issue #3479 - Navbar consistency across authenticated pages
+ * Issue #3479 - Layout System v2: Unified Layout
  *
- * Applies PublicLayout to all pages in (authenticated) group:
+ * Applies AuthenticatedLayout to all pages in (authenticated) group:
  * - /dashboard
  * - /library
  * - /toolkit
  * - /agent
+ * - /admin (all admin routes)
  *
  * Features:
- * - UnifiedHeader with user context (internally managed)
- * - BottomNav for mobile
- * - Responsive container
+ * - UnifiedHeader with desktop nav + mobile top bar
+ * - UnifiedActionBar combining bottom nav + context actions
+ * - SmartFAB with context-aware actions
+ * - Breadcrumb navigation (desktop)
  * - Dark mode support
- * - Consistent navigation with public pages
+ * - Mobile-first responsive design
  */
 
 'use client';
 
 import { ReactNode } from 'react';
 
-import { PublicLayout } from '@/components/layouts/PublicLayout';
+import { AuthenticatedLayout } from '@/components/layouts/AuthenticatedLayout';
 
-export default function AuthenticatedLayout({ children }: { children: ReactNode }) {
-  console.log('[AuthenticatedLayout] Rendering with PublicLayout');
+export default function AuthenticatedRouteLayout({ children }: { children: ReactNode }) {
   return (
-    <PublicLayout showNewsletter={false}>
+    <AuthenticatedLayout>
       {children}
-    </PublicLayout>
+    </AuthenticatedLayout>
   );
 }

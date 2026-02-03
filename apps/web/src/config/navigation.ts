@@ -6,8 +6,6 @@
  * These items are always visible in the ActionBar alongside context actions.
  */
 
-import type { LucideIcon } from 'lucide-react';
-
 /**
  * Navigation item configuration for unified bottom navigation.
  */

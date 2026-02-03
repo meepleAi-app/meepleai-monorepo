@@ -49,8 +49,8 @@
 
 import path from 'path';
 
+import { test, expect } from './fixtures';
 import { authenticateViaAPI } from './fixtures/auth';
-import { test, expect } from './fixtures/chromatic';
 import {
   uploadPdfAndWaitForProcessing,
   navigateToChatAndSelectGame,

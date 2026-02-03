@@ -78,6 +78,7 @@ export default function BlogPage() {
                 className="bg-card opacity-60 hover:opacity-100 transition-opacity cursor-not-allowed"
               >
                 <CardHeader className="pb-2 text-center">
+                  {/* eslint-disable-next-line security/detect-object-injection */}
                   <span className="text-3xl">{CATEGORY_ICONS[key]}</span>
                   <CardTitle className="text-sm mt-2">{t(`pages.blog.categories.${key}`)}</CardTitle>
                 </CardHeader>

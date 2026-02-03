@@ -4,7 +4,7 @@
  * @see apps/web/e2e/helpers/qa-test-utils.ts
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { setupQATestEnvironment, waitForAutoSelection, QASnippet } from './helpers/qa-test-utils';
 import { WaitHelper } from './helpers/WaitHelper';
 

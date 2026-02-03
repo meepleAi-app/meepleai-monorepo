@@ -12,7 +12,7 @@
  * - admin-dashboard-polling.spec.ts (Journey 6: Real-time updates)
  */
 
-import { test as base, expect, Page } from './fixtures/chromatic';
+import { test as base, expect, Page } from './fixtures';
 import { AdminHelper } from './pages';
 
 const test = base.extend<{ adminPage: Page }>({

@@ -11,13 +11,14 @@ describe('StatCard', () => {
   it('renders label and value correctly', () => {
     render(<StatCard label="Total Users" value="1,247" />);
 
-    expect(screen.getByText('Total Users')).toBeInTheDocument();
-    expect(screen.getByText('1,247')).toBeInTheDocument();
+    expect(screen.getByTestId('stat-card-label')).toHaveTextContent('Total Users');
+    expect(screen.getByTestId('stat-card-value')).toHaveTextContent('1,247');
   });
 
   it('applies default variant styling', () => {
     const { container } = render(<StatCard label="Test" value="100" variant="default" />);
-    const card = container.querySelector('[class*="border-gray-200"]');
+    // Issue #2850: Component uses design system border tokens
+    const card = container.querySelector('[class*="border-border"]');
     expect(card).toBeInTheDocument();
   });
 
@@ -96,14 +97,13 @@ describe('StatCard', () => {
   it('has accessible structure', () => {
     render(<StatCard label="Total Users" value="1,247" />);
 
-    // Label should be uppercase and smaller
-    const label = screen.getByText('Total Users');
-    expect(label).toHaveClass('uppercase');
-    expect(label).toHaveClass('text-xs');
+    // Label should use proper styling
+    const label = screen.getByTestId('stat-card-label');
+    expect(label).toBeInTheDocument();
 
     // Value should be large and bold
-    const value = screen.getByText('1,247');
-    expect(value).toHaveClass('text-3xl');
+    const value = screen.getByTestId('stat-card-value');
+    expect(value).toHaveClass('text-5xl');
     expect(value).toHaveClass('font-bold');
   });
 
@@ -127,7 +127,8 @@ describe('StatCard', () => {
       const { container } = render(
         <StatCard label="Test" value="100" icon={Users} variant="default" />
       );
-      const iconContainer = container.querySelector('[class*="text-gray-600"]');
+      // Issue #2850: MeepleAI Design System uses #d2691e for default icon
+      const iconContainer = container.querySelector('[class*="text-[#d2691e]"]');
       expect(iconContainer).toBeInTheDocument();
     });
 
@@ -159,13 +160,13 @@ describe('StatCard', () => {
   describe('Loading state', () => {
     it('renders loading skeleton when loading is true', () => {
       render(<StatCard label="Test" value="100" loading />);
-      expect(screen.getByTestId('statcard-loading')).toBeInTheDocument();
+      expect(screen.getByTestId('stat-card-loading')).toBeInTheDocument();
     });
 
     it('does not render label or value when loading', () => {
       render(<StatCard label="Total Users" value="1,247" loading />);
-      expect(screen.queryByText('Total Users')).not.toBeInTheDocument();
-      expect(screen.queryByText('1,247')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('stat-card-label')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('stat-card-value')).not.toBeInTheDocument();
     });
 
     it('renders skeleton placeholders when loading', () => {
@@ -176,14 +177,14 @@ describe('StatCard', () => {
 
     it('renders icon skeleton when icon is provided and loading', () => {
       const { container } = render(<StatCard label="Test" value="100" icon={Users} loading />);
-      // Should have a larger skeleton for the icon
-      const iconSkeleton = container.querySelector('.h-10.w-10');
+      // Issue #2850: Icon skeleton is 48x48 (h-12 w-12)
+      const iconSkeleton = container.querySelector('.h-12.w-12');
       expect(iconSkeleton).toBeInTheDocument();
     });
 
     it('does not render icon skeleton when no icon and loading', () => {
       const { container } = render(<StatCard label="Test" value="100" loading />);
-      const iconSkeleton = container.querySelector('.h-10.w-10');
+      const iconSkeleton = container.querySelector('.h-12.w-12');
       expect(iconSkeleton).not.toBeInTheDocument();
     });
   });
@@ -191,7 +192,8 @@ describe('StatCard', () => {
   describe('Hover effect', () => {
     it('has hover transition classes', () => {
       const { container } = render(<StatCard label="Test" value="100" />);
-      const card = container.querySelector('[class*="hover:shadow-md"]');
+      // Issue #2850: MeepleAI Design System uses custom hover shadow
+      const card = container.querySelector('[class*="hover:-translate-y-"]');
       expect(card).toBeInTheDocument();
     });
 

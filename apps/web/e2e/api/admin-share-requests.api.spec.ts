@@ -11,7 +11,7 @@
  * @see apps/api/src/Api/Routing/SharedGameCatalogEndpoints.cs
  */
 
-import { test, expect, APIRequestContext } from '../fixtures/chromatic';
+import { test, expect, APIRequestContext } from '../fixtures';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 

@@ -243,10 +243,12 @@ describe('BulkRemoveDialog - Loading State', () => {
   beforeEach(resetMocks);
 
   it('disables buttons during removal', async () => {
-    // Make mutation take time
-    mockMutateAsync.mockImplementation(
-      () => new Promise(resolve => setTimeout(resolve, 100))
-    );
+    // Use a deferred promise that we can resolve manually
+    let resolveMutation: () => void;
+    const mutationPromise = new Promise<void>(resolve => {
+      resolveMutation = resolve;
+    });
+    mockMutateAsync.mockImplementation(() => mutationPromise);
 
     const user = userEvent.setup();
 
@@ -263,5 +265,14 @@ describe('BulkRemoveDialog - Loading State', () => {
     // Cancel button should be disabled
     const cancelButton = screen.getByRole('button', { name: /Annulla/i });
     expect(cancelButton).toBeDisabled();
+
+    // Resolve the mutation to allow cleanup to complete
+    resolveMutation!();
+
+    // Wait for the component to finish all async operations
+    await waitFor(() => {
+      // The dialog should close after successful removal
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
   });
 });

@@ -74,7 +74,8 @@ export const drawerVariants = (side: 'left' | 'right' | 'top' | 'bottom' = 'righ
   const direction = side === 'left' || side === 'top' ? -1 : 1;
   const distance = side === 'left' || side === 'right' ? 320 : 400;
 
-  return {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- Dynamic computed property [axis] requires type assertion
+  const variants: Variants = {
     hidden: {
       [axis]: direction * distance,
       opacity: 0.8,
@@ -97,6 +98,8 @@ export const drawerVariants = (side: 'left' | 'right' | 'top' | 'bottom' = 'righ
       },
     },
   } as Variants;
+
+  return variants;
 };
 
 /**

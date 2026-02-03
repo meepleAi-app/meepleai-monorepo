@@ -5,7 +5,9 @@ using Moq;
 using Xunit;
 using Api.Tests.Constants;
 
+#pragma warning disable S3261 // Empty namespace - tests disabled in Issue #2577, kept for future re-enablement
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
+#pragma warning restore S3261
 
 /// <summary>
 /// Unit tests for GoldenDatasetLoader - DISABLED

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Application;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
@@ -129,6 +130,17 @@ internal static class GameEndpoints
         .WithTags("Games", "Admin", "Upload")
         .WithSummary("Upload game image")
         .WithDescription("Uploads game icon or cover image. Admin or Editor role required. Accepts multipart/form-data with file, gameId, and imageType fields.");
+
+        // Publish game to SharedGameCatalog - Issue #3481
+        group.MapPut("/games/{id}/publish", HandlePublishGame)
+        .Produces<GameDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .WithTags("Games", "Admin", "SharedGameCatalog")
+        .WithSummary("Publish game to SharedGameCatalog")
+        .WithDescription("Updates game publication status and publishes to SharedGameCatalog. Admin role required.");
     }
 
     private static void MapSessionLifecycleEndpoints(RouteGroupBuilder group)
@@ -405,19 +417,51 @@ internal static class GameEndpoints
         return Results.Ok(result);
     }
 
-    private static async Task<IResult> HandleStartSession(
-        StartGameSessionRequest request,
+    private static async Task<IResult> HandlePublishGame(
+        Guid id,
+        PublishGameRequest request,
         IMediator mediator,
-                ILogger<Program> logger,
+        HttpContext context,
         CancellationToken ct)
     {
-        var command = new StartGameSessionCommand(
-            GameId: request.GameId,
-            Players: request.Players
+        // Auth check - Admin only
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new PublishGameCommand(
+            GameId: id,
+            Status: request.Status
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        logger.LogInformation("Started game session {SessionId} for game {GameId}", result.Id, result.GameId);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleStartSession(
+        StartGameSessionRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        // Issue #3070: Get user info for session quota enforcement
+        var (authenticated, session, error) = context.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        var userId = session!.User!.Id;
+        var userTier = UserTier.Parse(session.User!.Tier);
+        var userRole = Role.Parse(session.User!.Role);
+
+        var command = new StartGameSessionCommand(
+            GameId: request.GameId,
+            Players: request.Players,
+            UserId: userId,
+            UserTier: userTier,
+            UserRole: userRole
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        logger.LogInformation("Started game session {SessionId} for game {GameId} by user {UserId}", result.Id, result.GameId, userId);
         return Results.Created($"/api/v1/sessions/{result.Id}", result);
     }
 

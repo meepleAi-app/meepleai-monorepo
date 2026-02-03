@@ -8,8 +8,8 @@
  * @see apps/web/src/hooks/useKeyboardShortcuts.ts
  */
 
+import { test, expect } from './fixtures';
 import { setupMockAuth } from './fixtures/auth';
-import { test, expect } from './fixtures/chromatic';
 
 /**
  * Platform-specific modifier key

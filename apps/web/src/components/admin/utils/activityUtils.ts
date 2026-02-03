@@ -7,6 +7,19 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { enUS, it } from 'date-fns/locale';
+import {
+  UserPlusIcon,
+  FileUpIcon,
+  AlertTriangleIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ActivityIcon,
+  UserIcon,
+  GamepadIcon,
+  SettingsIcon,
+  SparklesIcon,
+  type LucideIcon,
+} from 'lucide-react';
 
 /**
  * Activity event data structure shared across all activity components.
@@ -23,19 +36,6 @@ export interface ActivityEvent {
   timestamp: string;
   severity?: 'Info' | 'Warning' | 'Error' | 'Critical';
 }
-import {
-  UserPlusIcon,
-  FileUpIcon,
-  AlertTriangleIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ActivityIcon,
-  UserIcon,
-  GamepadIcon,
-  SettingsIcon,
-  SparklesIcon,
-  type LucideIcon,
-} from 'lucide-react';
 
 /**
  * Severity level styling mapping for activity events.
@@ -99,6 +99,7 @@ export function getActivityType(eventType: string): ActivityType {
     AlertResolved: 'system',
   };
 
+  // eslint-disable-next-line security/detect-object-injection -- Safe: accessing known mapping with string key, fallback provided
   return eventToType[eventType] ?? 'system';
 }
 

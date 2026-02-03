@@ -18,6 +18,7 @@ import { ReactNode, useCallback, useEffect, useState } from 'react';
 
 import { MenuIcon } from 'lucide-react';
 
+import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
 import {
   Sheet,
   SheetContent,
@@ -27,7 +28,6 @@ import {
 } from '@/components/ui/navigation/sheet';
 import { TooltipProvider } from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
-import { BackgroundTexture } from '@/components/ui/BackgroundTexture';
 import { cn } from '@/lib/utils';
 
 import { AdminBreadcrumbs, type BreadcrumbItem } from './AdminBreadcrumbs';

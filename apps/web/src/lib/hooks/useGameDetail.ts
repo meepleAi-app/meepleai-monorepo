@@ -6,7 +6,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { api } from '@/lib/api';
 import { useGameDetailStore } from '@/lib/stores/useGameDetailStore';
 
 export const GAME_DETAIL_QUERY_KEY = (gameId: string) => ['game-detail', gameId] as const;
@@ -80,7 +79,6 @@ export interface UpdateStatePayload {
 export function useGameDetail(gameId: string) {
   const setGameId = useGameDetailStore((s) => s.setGameId);
   const setCurrentState = useGameDetailStore((s) => s.setCurrentState);
-  const setError = useGameDetailStore((s) => s.setError);
 
   return useQuery<GameDetail, Error>({
     queryKey: GAME_DETAIL_QUERY_KEY(gameId),

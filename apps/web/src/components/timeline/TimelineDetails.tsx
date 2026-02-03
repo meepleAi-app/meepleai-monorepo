@@ -43,7 +43,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
     <div className="w-[360px] bg-gray-50 border-l border-gray-300 flex flex-col overflow-y-auto">
       {/* Header */}
       <div className="p-4 border-b border-gray-300 flex justify-between items-center">
-        <h3 className="m-0 text-base font-semibold">Dettagli Evento</h3>
+        <h3 className="m-0 text-base font-semibold" data-testid="event-details-title">Dettagli Evento</h3>
         <button
           onClick={onToggleCollapse}
           className="px-2.5 py-1.5 bg-gray-100 border-none rounded cursor-pointer text-base"

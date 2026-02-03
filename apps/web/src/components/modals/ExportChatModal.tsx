@@ -117,6 +117,7 @@ export function ExportChatModal({ isOpen, onClose, chatId, gameName }: ExportCha
       isOpen={isOpen}
       onClose={handleCancel}
       title="Esporta Chat"
+      data-testid="export-modal"
       description={`Esporta la conversazione per ${gameName}`}
       size="md"
       closeOnBackdropClick={!isSubmitting}
@@ -131,7 +132,7 @@ export function ExportChatModal({ isOpen, onClose, chatId, gameName }: ExportCha
           name="format"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Formato di esportazione</FormLabel>
+              <FormLabel data-testid="export-format-label">Formato di esportazione</FormLabel>
               <FormControl>
                 <div className="space-y-2" role="group" aria-label="Export format selection">
                   {/* PDF Option */}

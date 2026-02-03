@@ -93,6 +93,7 @@ export function ThreadListItem({ thread, isActive, onSelect, onDelete }: ThreadL
               className="text-[10px] px-1.5 py-0.5 bg-[#dadce0] text-[#5f6368] rounded-sm uppercase font-semibold pointer-events-none"
               title="Archived thread"
               aria-label="Archived"
+              data-testid="archived-badge"
             >
               Archived
             </span>

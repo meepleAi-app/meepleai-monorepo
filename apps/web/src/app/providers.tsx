@@ -11,15 +11,14 @@
 
 import { useState, useEffect, ReactNode } from 'react';
 
-import { ThemeProvider } from '@/components/providers/ThemeProvider';
-
 import { QueryProvider } from '@/app/QueryProvider';
 import { AccessibleSkipLink } from '@/components/accessible';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { ErrorBoundary, RouteErrorBoundary } from '@/components/errors';
-import { KeyboardShortcutsHelp } from '@/components/layout';
+import { KeyboardShortcutsHelp, LayoutProvider } from '@/components/layout';
 import { SessionWarningModal } from '@/components/modals';
 import { IntlProvider } from '@/components/providers/IntlProvider';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { Toaster } from '@/components/ui/feedback/sonner';
 import { useGlobalKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
@@ -131,6 +130,7 @@ function AppContent({ children }: { children: ReactNode }) {
  * - ThemeProvider (dark/light mode)
  * - QueryProvider (TanStack Query data layer - Issue #1079)
  * - AuthProvider (authentication state)
+ * - LayoutProvider (layout state management - Issue #3287)
  * - ErrorBoundary (error handling)
  * - Session management
  * - Keyboard shortcuts
@@ -142,11 +142,13 @@ export function AppProviders({ children }: AppProvidersProps) {
       <ThemeProvider>
         <QueryProvider>
           <AuthProvider>
-            <ErrorBoundary componentName="App" showDetails={process.env.NODE_ENV === 'development'}>
-              <RouteErrorBoundary routeName="AppContent">
-                <AppContent>{children}</AppContent>
-              </RouteErrorBoundary>
-            </ErrorBoundary>
+            <LayoutProvider>
+              <ErrorBoundary componentName="App" showDetails={process.env.NODE_ENV === 'development'}>
+                <RouteErrorBoundary routeName="AppContent">
+                  <AppContent>{children}</AppContent>
+                </RouteErrorBoundary>
+              </ErrorBoundary>
+            </LayoutProvider>
           </AuthProvider>
         </QueryProvider>
       </ThemeProvider>

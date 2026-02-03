@@ -162,7 +162,7 @@ export function ChatContent() {
           <div className="flex-1 min-w-0">
             {/* Thread Title (Issue #858) */}
             <div className="flex items-center gap-2">
-              <h1 className="m-0 text-xl truncate">
+              <h1 className="m-0 text-xl truncate" data-testid="chat-title">
                 {activeChatId
                   ? (activeThread?.title ?? 'Chat Thread')
                   : 'Seleziona o crea un thread'}
@@ -180,7 +180,7 @@ export function ChatContent() {
             </div>
             {/* Thread Metadata (Issue #858) */}
             <div className="mt-1 mb-0 text-[#64748b] text-[13px] flex items-center gap-2">
-              <span>
+              <span data-testid="chat-game-name">
                 {selectedGameId ? (selectedGame?.title ?? '') : 'Nessun gioco selezionato'}
               </span>
               {activeThread && (

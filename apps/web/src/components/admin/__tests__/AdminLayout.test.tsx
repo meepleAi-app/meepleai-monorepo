@@ -251,7 +251,8 @@ describe('AdminLayout', () => {
     it('applies dark mode background', () => {
       const { container } = render(<AdminLayout {...defaultProps} />);
 
-      expect(container.querySelector('.dark\\:bg-gray-950')).toBeInTheDocument();
+      // Component uses design system bg-background token
+      expect(container.querySelector('.bg-background')).toBeInTheDocument();
     });
 
     it('applies transition classes for sidebar width change', () => {

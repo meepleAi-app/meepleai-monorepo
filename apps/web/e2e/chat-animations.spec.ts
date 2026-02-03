@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { WaitHelper } from './helpers/WaitHelper';
 
 import type { Page } from '@playwright/test';

@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
 import { api } from '@/lib/api';
 import type {
   ShareRequestDetailsDto,
@@ -9,7 +11,6 @@ import type {
   RequestChangesData,
   ActiveReviewDto,
 } from '@/lib/api/schemas/admin-share-requests.schemas';
-import { toast } from 'sonner';
 
 /**
  * Admin Share Requests Query Hooks
@@ -188,7 +189,7 @@ export function useStartReview() {
 
       toast.success('Review started. You have 30 minutes to complete the review.');
     },
-    onError: (error: any) => {
+    onError: (error: Error & { status?: number; data?: unknown }) => {
       if (error.status === 409) {
         toast.error('This request is already being reviewed by another admin.');
       } else if (error.status === 403) {
@@ -288,7 +289,7 @@ export function useApproveRequest() {
 
       toast.success('Share request approved! Contributor will be notified.');
     },
-    onError: (error: any) => {
+    onError: (error: Error & { status?: number; data?: unknown }) => {
       if (error.status === 409) {
         toast.error('Cannot approve: request is locked by another admin or status changed.');
       } else if (error.status === 403) {
@@ -339,7 +340,7 @@ export function useRejectRequest() {
 
       toast.success('Share request rejected. Contributor will be notified.');
     },
-    onError: (error: any) => {
+    onError: (error: Error & { status?: number; data?: unknown }) => {
       if (error.status === 409) {
         toast.error('Cannot reject: request is locked by another admin or status changed.');
       } else if (error.status === 403) {
@@ -394,7 +395,7 @@ export function useRequestChanges() {
 
       toast.success('Changes requested. Contributor will be notified.');
     },
-    onError: (error: any) => {
+    onError: (error: Error & { status?: number; data?: unknown }) => {
       if (error.status === 409) {
         toast.error(
           'Cannot request changes: request is locked by another admin or status changed.'

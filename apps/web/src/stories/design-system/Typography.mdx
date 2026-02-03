@@ -1,0 +1,199 @@
+{/* Typography.mdx - MeepleAI Typography System Documentation */}
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Design System/Typography" />
+
+# Typography
+
+MeepleAI uses a carefully curated typography system with two primary font families: **Quicksand** for headings and **Nunito** for body text. Both are friendly, rounded sans-serifs that reflect our playful aesthetic.
+
+## Font Families
+
+### Quicksand (Headings)
+
+<div style={{ fontFamily: 'var(--font-quicksand, system-ui)', marginBottom: '2rem' }}>
+  <p style={{ fontSize: '2.25rem', fontWeight: 700 }}>The Quick Brown Fox Jumps Over The Lazy Dog</p>
+  <p style={{ fontSize: '1rem', color: 'hsl(var(--muted-foreground))' }}>ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789</p>
+</div>
+
+- **Usage**: Headings, titles, display text
+- **Weights**: Medium (500), Semibold (600), Bold (700)
+- **CSS Variable**: `var(--font-quicksand)` or `var(--font-heading)`
+
+### Nunito (Body)
+
+<div style={{ fontFamily: 'var(--font-nunito, system-ui)', marginBottom: '2rem' }}>
+  <p style={{ fontSize: '1.125rem' }}>The Quick Brown Fox Jumps Over The Lazy Dog</p>
+  <p style={{ fontSize: '1rem', color: 'hsl(var(--muted-foreground))' }}>ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789</p>
+</div>
+
+- **Usage**: Body text, paragraphs, UI labels
+- **Weights**: Regular (400), Medium (500), Semibold (600)
+- **CSS Variable**: `var(--font-nunito)` or `var(--font-body)`
+
+### System Fallbacks
+
+```css
+--font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+             Roboto, 'Helvetica Neue', Arial, sans-serif;
+--font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Monaco,
+             Consolas, 'Liberation Mono', 'Courier New', monospace;
+```
+
+## Font Size Scale
+
+Our type scale uses rem units based on a 16px root.
+
+<div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+  <div style={{ fontSize: '4.5rem', fontFamily: 'var(--font-quicksand, system-ui)', fontWeight: 700 }}>Text 7xl <span style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))' }}>72px / 4.5rem</span></div>
+  <div style={{ fontSize: '3.75rem', fontFamily: 'var(--font-quicksand, system-ui)', fontWeight: 700 }}>Text 6xl <span style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))' }}>60px / 3.75rem</span></div>
+  <div style={{ fontSize: '3rem', fontFamily: 'var(--font-quicksand, system-ui)', fontWeight: 700 }}>Text 5xl <span style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))' }}>48px / 3rem</span></div>
+  <div style={{ fontSize: '2.25rem', fontFamily: 'var(--font-quicksand, system-ui)', fontWeight: 700 }}>Text 4xl <span style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))' }}>36px / 2.25rem</span></div>
+  <div style={{ fontSize: '1.875rem', fontFamily: 'var(--font-quicksand, system-ui)', fontWeight: 600 }}>Text 3xl <span style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))' }}>30px / 1.875rem</span></div>
+  <div style={{ fontSize: '1.5rem', fontFamily: 'var(--font-quicksand, system-ui)', fontWeight: 600 }}>Text 2xl <span style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))' }}>24px / 1.5rem</span></div>
+  <div style={{ fontSize: '1.25rem' }}>Text xl <span style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))' }}>20px / 1.25rem</span></div>
+  <div style={{ fontSize: '1.125rem' }}>Text lg <span style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))' }}>18px / 1.125rem</span></div>
+  <div style={{ fontSize: '1rem' }}>Text base <span style={{ fontSize: '0.875rem', color: 'hsl(var(--muted-foreground))' }}>16px / 1rem</span></div>
+  <div style={{ fontSize: '0.875rem' }}>Text sm <span style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' }}>14px / 0.875rem</span></div>
+  <div style={{ fontSize: '0.75rem' }}>Text xs <span style={{ fontSize: '0.625rem', color: 'hsl(var(--muted-foreground))' }}>12px / 0.75rem</span></div>
+</div>
+
+## CSS Tokens
+
+```css
+:root {
+  --text-xs: 0.75rem;      /* 12px */
+  --text-sm: 0.875rem;     /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg: 1.125rem;     /* 18px */
+  --text-xl: 1.25rem;      /* 20px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 1.875rem;    /* 30px */
+  --text-4xl: 2.25rem;     /* 36px */
+  --text-5xl: 3rem;        /* 48px */
+  --text-6xl: 3.75rem;     /* 60px */
+  --text-7xl: 4.5rem;      /* 72px */
+}
+```
+
+## Line Heights
+
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+  <div>
+    <p style={{ lineHeight: 1, background: 'hsl(var(--muted))', padding: '1rem' }}>None (1.0)<br/>Tight for headings</p>
+    <code>--leading-none: 1</code>
+  </div>
+  <div>
+    <p style={{ lineHeight: 1.25, background: 'hsl(var(--muted))', padding: '1rem' }}>Tight (1.25)<br/>Compact UI text</p>
+    <code>--leading-tight: 1.25</code>
+  </div>
+  <div>
+    <p style={{ lineHeight: 1.5, background: 'hsl(var(--muted))', padding: '1rem' }}>Normal (1.5)<br/>Default body text</p>
+    <code>--leading-normal: 1.5</code>
+  </div>
+</div>
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--leading-none` | 1 | Headings, single-line |
+| `--leading-tight` | 1.25 | Compact UI, buttons |
+| `--leading-snug` | 1.375 | Subheadings |
+| `--leading-normal` | 1.5 | Body text (default) |
+| `--leading-relaxed` | 1.625 | Long-form reading |
+| `--leading-loose` | 2 | Spaced lists |
+
+## Font Weights
+
+<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>
+  <span style={{ fontWeight: 400 }}>Regular (400) - Body text, paragraphs</span>
+  <span style={{ fontWeight: 500 }}>Medium (500) - Emphasis, labels</span>
+  <span style={{ fontWeight: 600 }}>Semibold (600) - Subheadings, buttons</span>
+  <span style={{ fontWeight: 700 }}>Bold (700) - Headings, titles</span>
+  <span style={{ fontWeight: 800 }}>Extrabold (800) - Hero text, impact</span>
+</div>
+
+```css
+:root {
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-extrabold: 800;
+}
+```
+
+## Letter Spacing
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--tracking-tighter` | -0.05em | Large display headings |
+| `--tracking-tight` | -0.025em | Headings |
+| `--tracking-normal` | 0 | Body text (default) |
+| `--tracking-wide` | 0.025em | Uppercase labels |
+| `--tracking-wider` | 0.05em | Small caps |
+| `--tracking-widest` | 0.1em | Buttons, navigation |
+
+## Heading Styles
+
+### Recommended Usage
+
+| Level | Size | Weight | Use Case |
+|-------|------|--------|----------|
+| H1 | 4xl-5xl | Bold | Page titles |
+| H2 | 2xl-3xl | Semibold | Section headers |
+| H3 | xl-2xl | Semibold | Subsections |
+| H4 | lg | Semibold | Card titles |
+| H5 | base | Semibold | Labels |
+| H6 | sm | Medium | Meta text |
+
+### Example
+
+```tsx
+<h1 className="font-quicksand text-4xl font-bold tracking-tight">
+  Page Title
+</h1>
+<h2 className="font-quicksand text-2xl font-semibold">
+  Section Header
+</h2>
+<p className="font-nunito text-base leading-relaxed">
+  Body text with comfortable reading line height.
+</p>
+```
+
+## Tailwind Usage
+
+### Font Family
+
+```tsx
+<h1 className="font-quicksand">Heading with Quicksand</h1>
+<h1 className="font-heading">Heading (alias)</h1>
+<p className="font-nunito">Body text with Nunito</p>
+<p className="font-body">Body text (alias)</p>
+```
+
+### Font Size
+
+```tsx
+<span className="text-xs">Extra Small</span>
+<span className="text-sm">Small</span>
+<span className="text-base">Base</span>
+<span className="text-lg">Large</span>
+<span className="text-xl">Extra Large</span>
+<span className="text-2xl">2XL</span>
+```
+
+### Responsive Typography
+
+```tsx
+<h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl">
+  Responsive Heading
+</h1>
+```
+
+## Best Practices
+
+1. **Use Quicksand for headings only** - It's optimized for display sizes
+2. **Nunito for body text** - Better readability at smaller sizes
+3. **Maintain hierarchy** - Clear distinction between heading levels
+4. **Line length** - Aim for 65-75 characters for body text (`max-w-prose`)
+5. **Contrast** - Ensure text meets WCAG AA contrast requirements

@@ -63,6 +63,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         Guid userId,
         string? search,
         bool? favoritesOnly,
+        string[]? stateFilter,
         string? sortBy,
         bool descending,
         int page,
@@ -89,6 +90,21 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         if (favoritesOnly == true)
         {
             query = query.Where(e => e.IsFavorite);
+        }
+
+        // Apply state filter (Issue #2866)
+        if (stateFilter is { Length: > 0 })
+        {
+            var stateValues = stateFilter
+                .Select(s => Enum.TryParse<GameStateType>(s, true, out var state) ? (int?)state : null)
+                .Where(s => s.HasValue)
+                .Select(s => s!.Value)
+                .ToArray();
+
+            if (stateValues.Length > 0)
+            {
+                query = query.Where(e => stateValues.Contains(e.CurrentState));
+            }
         }
 
         // Get total count before pagination
@@ -158,6 +174,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             .AsNoTracking()
             .Include(e => e.Sessions.OrderByDescending(s => s.PlayedAt))
             .Include(e => e.Checklist.OrderBy(c => c.DisplayOrder))
+            .Include(e => e.PdfDocument)
             .FirstOrDefaultAsync(e => e.UserId == userId && e.GameId == gameId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -335,6 +352,13 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         var addedAtProp = typeof(UserLibraryEntry).GetProperty("AddedAt");
         addedAtProp?.SetValue(entry, entity.AddedAt);
 
+        // Set PrivatePdfId from DB using reflection (avoid raising domain event for existing data)
+        if (entity.PrivatePdfId.HasValue)
+        {
+            var privatePdfIdProp = typeof(UserLibraryEntry).GetProperty("PrivatePdfId");
+            privatePdfIdProp?.SetValue(entry, entity.PrivatePdfId.Value);
+        }
+
         // Clear domain events that were raised during construction
         // (we don't want to re-raise events for existing entities)
         entry.ClearDomainEvents();
@@ -465,7 +489,8 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             CustomPdfUploadedAt = domainEntity.CustomPdfMetadata?.UploadedAt,
             CustomPdfFileSizeBytes = domainEntity.CustomPdfMetadata?.FileSizeBytes,
             CustomPdfOriginalFileName = domainEntity.CustomPdfMetadata?.OriginalFileName,
-            
+            PrivatePdfId = domainEntity.PrivatePdfId,
+
             // Game state
             CurrentState = (int)domainEntity.CurrentState.Value,
             StateChangedAt = domainEntity.CurrentState.ChangedAt,

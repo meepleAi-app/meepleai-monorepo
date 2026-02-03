@@ -1,0 +1,184 @@
+{
+  "metadata": {
+    "description": "Gold standard expectations for PDF extraction validation tests",
+    "purpose": "Validate real backend processing accuracy against known baselines",
+    "updated": "2026-01-29"
+  },
+  "simple": {
+    "carcassonne_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/carcassone_rulebook.pdf",
+      "fileSize": 224256,
+      "expectedPages": 8,
+      "expectedWordCount": 2500,
+      "language": "en",
+      "keyPhrases": ["tile", "meeple", "follower", "city", "road"],
+      "minAccuracyScore": 0.95,
+      "extractionTimeP95Ms": 3000,
+      "complexity": "simple",
+      "notes": "Clean layout, single-column text, minimal tables"
+    },
+    "scacchi-fide_2017_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/scacchi-fide_2017_rulebook.pdf",
+      "fileSize": 616448,
+      "expectedPages": 15,
+      "expectedWordCount": 5000,
+      "language": "it",
+      "keyPhrases": ["scacco", "re", "regina", "torre", "pedone"],
+      "minAccuracyScore": 0.93,
+      "extractionTimeP95Ms": 4000,
+      "complexity": "simple",
+      "notes": "Italian language, standard chess rulebook format"
+    },
+    "splendor_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/splendor_rulebook.pdf",
+      "fileSize": 597504,
+      "expectedPages": 4,
+      "expectedWordCount": 1800,
+      "language": "en",
+      "keyPhrases": ["gem", "card", "noble", "prestige"],
+      "minAccuracyScore": 0.94,
+      "extractionTimeP95Ms": 2500,
+      "complexity": "simple",
+      "notes": "Very clean layout, high-quality text"
+    },
+    "ticket-to-ride_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/ticket-to-ride_rulebook.pdf",
+      "fileSize": 1887436,
+      "expectedPages": 8,
+      "expectedWordCount": 3200,
+      "language": "en",
+      "keyPhrases": ["train", "route", "destination", "ticket"],
+      "minAccuracyScore": 0.92,
+      "extractionTimeP95Ms": 3500,
+      "complexity": "simple",
+      "notes": "Some colored backgrounds, mostly clear text"
+    },
+    "azul_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/azul_rulebook.pdf",
+      "fileSize": 2202624,
+      "expectedPages": 4,
+      "expectedWordCount": 1500,
+      "language": "en",
+      "keyPhrases": ["tile", "pattern", "floor", "wall"],
+      "minAccuracyScore": 0.93,
+      "extractionTimeP95Ms": 3000,
+      "complexity": "simple",
+      "notes": "Visual heavy but clear text sections"
+    }
+  },
+  "moderate": {
+    "wingspan_en_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/wingspan_en_rulebook.pdf",
+      "fileSize": 5033984,
+      "expectedPages": 16,
+      "expectedWordCount": 7000,
+      "language": "en",
+      "keyPhrases": ["bird", "habitat", "food", "egg", "wingspan"],
+      "minAccuracyScore": 0.88,
+      "extractionTimeP95Ms": 6000,
+      "complexity": "moderate",
+      "notes": "Multi-column layout, bird card tables"
+    },
+    "7-wonders_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/7-wonders_rulebook.pdf",
+      "fileSize": 9338880,
+      "expectedPages": 12,
+      "expectedWordCount": 5500,
+      "language": "en",
+      "keyPhrases": ["wonder", "age", "science", "military", "guild"],
+      "minAccuracyScore": 0.87,
+      "extractionTimeP95Ms": 7000,
+      "complexity": "moderate",
+      "notes": "Complex card layouts, multiple tables"
+    },
+    "agricola_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/agricola_rulebook.pdf",
+      "fileSize": 9223168,
+      "expectedPages": 20,
+      "expectedWordCount": 9000,
+      "language": "en",
+      "keyPhrases": ["farm", "harvest", "wood", "clay", "occupation"],
+      "minAccuracyScore": 0.86,
+      "extractionTimeP95Ms": 8000,
+      "complexity": "moderate",
+      "notes": "Dense text, action tables, card lists"
+    },
+    "pandemic_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/pandemic_rulebook.pdf",
+      "fileSize": 9338880,
+      "expectedPages": 16,
+      "expectedWordCount": 6500,
+      "language": "en",
+      "keyPhrases": ["outbreak", "infection", "disease", "cure", "epidemic"],
+      "minAccuracyScore": 0.89,
+      "extractionTimeP95Ms": 7500,
+      "complexity": "moderate",
+      "notes": "Good layout, some complex card grids"
+    }
+  },
+  "complex": {
+    "cantan_en_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/cantan_en_rulebook.pdf",
+      "fileSize": 12582912,
+      "expectedPages": 16,
+      "expectedWordCount": 7500,
+      "language": "en",
+      "keyPhrases": ["settlement", "road", "resource", "development"],
+      "minAccuracyScore": 0.84,
+      "extractionTimeP95Ms": 9000,
+      "complexity": "complex",
+      "notes": "Heavy visual elements, setup diagrams"
+    },
+    "root_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/root_rulebook.pdf",
+      "fileSize": 18874368,
+      "expectedPages": 24,
+      "expectedWordCount": 12000,
+      "language": "en",
+      "keyPhrases": ["faction", "woodland", "clearing", "rule", "dominance"],
+      "minAccuracyScore": 0.82,
+      "extractionTimeP95Ms": 12000,
+      "complexity": "complex",
+      "notes": "Asymmetric game, faction-specific rules, complex tables"
+    },
+    "barrage_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/barrage_rulebook.pdf",
+      "fileSize": 22020096,
+      "expectedPages": 28,
+      "expectedWordCount": 14000,
+      "language": "en",
+      "keyPhrases": ["dam", "conduit", "powerhouse", "water", "energy"],
+      "minAccuracyScore": 0.81,
+      "extractionTimeP95Ms": 15000,
+      "complexity": "complex",
+      "notes": "Heavy rules, iconography, complex board diagrams"
+    }
+  },
+  "edge-cases": {
+    "terraforming-mars_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/terraforming-mars_rulebook.pdf",
+      "fileSize": 39845888,
+      "expectedPages": 32,
+      "expectedWordCount": 18000,
+      "language": "en",
+      "keyPhrases": ["terraform", "corporation", "project", "ocean", "temperature"],
+      "minAccuracyScore": 0.78,
+      "extractionTimeP95Ms": 25000,
+      "complexity": "edge-case",
+      "notes": "Large file, 200+ card reference, complex corporate abilities, stress test"
+    }
+  },
+  "validation_rules": {
+    "accuracy_calculation": "Compare extracted text against manual gold standard using Levenshtein distance ratio",
+    "performance_measurement": "P95 latency measured across 5 runs on CPU-only containers",
+    "quality_thresholds": {
+      "simple": 0.92,
+      "moderate": 0.85,
+      "complex": 0.80,
+      "edge-cases": 0.75
+    },
+    "required_phrase_detection": "All keyPhrases must appear in extracted text (case-insensitive)",
+    "page_count_tolerance": "±1 page acceptable (OCR may merge/split pages)",
+    "word_count_tolerance": "±15% acceptable (extraction may include/exclude decorative text)"
+  }
+}

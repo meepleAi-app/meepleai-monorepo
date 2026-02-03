@@ -9,15 +9,15 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-// TODO(#2759): Re-enable confetti after fixing pnpm-lock.yaml
-// import Confetti from 'react-confetti';
+import { useEffect, useState } from 'react';
 
-import { BadgeTier, getCelebratoryTitle, getTierIcon, type BadgeNotificationData } from '@/types/badges';
-import { cn } from '@/lib/utils';
+import { AnimatePresence, motion } from 'framer-motion';
+import Confetti from 'react-confetti';
+
 import { Dialog, DialogContent } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
+import { BadgeTier, getCelebratoryTitle, getTierIcon, type BadgeNotificationData } from '@/types/badges';
 
 export interface BadgeEarnedModalProps {
   /** Badge that was earned (null to hide modal) */
@@ -28,20 +28,6 @@ export interface BadgeEarnedModalProps {
 
   /** Optional share handler */
   onShare?: (badge: BadgeNotificationData) => void;
-}
-
-/**
- * Helper: Get tier glow color
- */
-function getTierGlow(tier: string): string {
-  const glows: Record<string, string> = {
-    Diamond: 'rgba(6, 182, 212, 0.8)',
-    Platinum: 'rgba(203, 213, 225, 0.6)',
-    Gold: 'rgba(250, 204, 21, 0.7)',
-    Silver: 'rgba(209, 213, 219, 0.5)',
-    Bronze: 'rgba(217, 119, 6, 0.6)',
-  };
-  return glows[tier] || 'rgba(0, 0, 0, 0.3)';
 }
 
 /**
@@ -61,39 +47,36 @@ export function BadgeEarnedModal({
   onClose,
   onShare,
 }: BadgeEarnedModalProps){
-  // TODO(#2759): Re-enable confetti state after fixing react-confetti in pnpm-lock.yaml
-  // const [showConfetti, setShowConfetti] = useState(false);
-  // const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
-  // TODO(#2759): Re-enable confetti size tracking
-  // useEffect(() => {
-  //   const updateSize = () => {
-  //     setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-  //   };
-  //   updateSize();
-  //   window.addEventListener('resize', updateSize);
-  //   return () => window.removeEventListener('resize', updateSize);
-  // }, []);
+  // Track window size for confetti
+  useEffect(() => {
+    const updateSize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
 
-  // TODO(#2759): Re-enable confetti trigger
-  // useEffect(() => {
-  //   if (badge) {
-  //     setShowConfetti(true);
-  //     const timer = setTimeout(() => setShowConfetti(false), 5000);
-  //     return () => clearTimeout(timer);
-  //   }
-  // }, [badge]);
+  // Trigger confetti on badge earn
+  useEffect(() => {
+    if (badge) {
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [badge]);
 
   if (!badge) return <></>;
 
-  // TODO(#2759): Re-enable confetti config
-  // const confettiConfig = getConfettiConfig(badge.tier);
+  const confettiConfig = getConfettiConfig(badge.tier);
 
   return (
     <>
       {/* Confetti Effect */}
-      {/* TODO(#2759): Re-enable confetti after fixing pnpm-lock.yaml */}
-      {/* {showConfetti && (
+      {showConfetti && (
         <Confetti
           width={windowSize.width}
           height={windowSize.height}
@@ -102,7 +85,7 @@ export function BadgeEarnedModal({
           gravity={0.3}
           colors={confettiConfig.colors}
         />
-      )} */}
+      )}
 
       {/* Modal */}
       <Dialog open={!!badge} onOpenChange={(open) => !open && onClose()}>
@@ -157,6 +140,7 @@ export function BadgeEarnedModal({
                 >
                   <div className="flex h-full w-full items-center justify-center rounded-full bg-background">
                     {badge.iconUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element -- External user-provided URL, Next.js Image optimization not applicable */
                       <img
                         src={badge.iconUrl}
                         alt={badge.name}
@@ -218,9 +202,8 @@ export function BadgeEarnedModal({
 
 /**
  * Helper: Get confetti configuration based on tier
- * TODO(#2759): Re-enable after fixing react-confetti in pnpm-lock.yaml
  */
-/* function getConfettiConfig(tier: BadgeTier) {
+function getConfettiConfig(tier: BadgeTier) {
   const configs = {
     [BadgeTier.Diamond]: {
       elementCount: 200,
@@ -243,8 +226,9 @@ export function BadgeEarnedModal({
       colors: ['#d97706', '#f59e0b', '#b45309'],
     },
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return configs[tier];
-} */
+}
 
 /**
  * Helper: Get tier gradient (reused from BadgeGrid)
@@ -257,14 +241,14 @@ function getTierGradient(tier: BadgeTier): string {
     [BadgeTier.Silver]: 'bg-gradient-to-br from-gray-300 to-gray-400',
     [BadgeTier.Bronze]: 'bg-gradient-to-br from-amber-600 to-amber-800',
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return gradients[tier];
 }
 
 /**
  * Helper: Get tier glow color
- * TODO(#2759): Re-enable after fixing react-confetti in pnpm-lock.yaml
  */
-/* function getTierGlow(tier: BadgeTier): string {
+function getTierGlow(tier: BadgeTier): string {
   const glows: Record<BadgeTier, string> = {
     [BadgeTier.Diamond]: 'rgba(6, 182, 212, 0.6)',
     [BadgeTier.Platinum]: 'rgba(203, 213, 225, 0.6)',
@@ -272,7 +256,8 @@ function getTierGradient(tier: BadgeTier): string {
     [BadgeTier.Silver]: 'rgba(209, 213, 219, 0.5)',
     [BadgeTier.Bronze]: 'rgba(217, 119, 6, 0.5)',
   };
+  // eslint-disable-next-line security/detect-object-injection -- Safe: tier is a BadgeTier enum value
   return glows[tier];
-} */
+}
 
 BadgeEarnedModal.displayName = 'BadgeEarnedModal';

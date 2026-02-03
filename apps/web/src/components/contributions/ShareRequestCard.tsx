@@ -17,7 +17,6 @@ import { FileText, Eye, Edit, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { ContributionStatusBadge } from './ContributionStatusBadge';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import {
@@ -30,6 +29,8 @@ import {
 } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import type { UserShareRequestDto } from '@/lib/api/schemas/share-requests.schemas';
+
+import { ContributionStatusBadge } from './ContributionStatusBadge';
 
 interface ShareRequestCardProps {
   request: UserShareRequestDto;

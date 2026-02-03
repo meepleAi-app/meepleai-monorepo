@@ -2,8 +2,10 @@ using Api.BoundedContexts.Authentication.Application.Commands;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Services;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
@@ -20,6 +22,8 @@ public class RegisterCommandHandlerTests
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<ISessionRepository> _sessionRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IEmailVerificationService> _emailVerificationServiceMock;
+    private readonly Mock<ILogger<RegisterCommandHandler>> _loggerMock;
     private readonly RegisterCommandHandler _handler;
 
     public RegisterCommandHandlerTests()
@@ -27,11 +31,24 @@ public class RegisterCommandHandlerTests
         _userRepositoryMock = new Mock<IUserRepository>();
         _sessionRepositoryMock = new Mock<ISessionRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _emailVerificationServiceMock = new Mock<IEmailVerificationService>();
+        _loggerMock = new Mock<ILogger<RegisterCommandHandler>>();
+
+        // Setup email verification to succeed by default
+        _emailVerificationServiceMock
+            .Setup(x => x.SendVerificationEmailAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         _handler = new RegisterCommandHandler(
             _userRepositoryMock.Object,
             _sessionRepositoryMock.Object,
-            _unitOfWorkMock.Object
+            _unitOfWorkMock.Object,
+            _emailVerificationServiceMock.Object,
+            _loggerMock.Object
         );
     }
     [Fact]

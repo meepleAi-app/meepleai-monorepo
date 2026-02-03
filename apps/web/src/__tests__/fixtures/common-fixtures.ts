@@ -16,6 +16,11 @@ import type { NextRouter } from 'next/router';
 import { render, type RenderOptions } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 
+import { allTestMessages, msg, settingsPatterns } from './i18n-test-messages';
+
+// Re-export helpers for type-safe i18n/label assertions in tests
+export { msg, settingsPatterns } from './i18n-test-messages';
+
 // =============================================================================
 // AUTH FIXTURES
 // =============================================================================
@@ -402,6 +407,284 @@ export const createMockChat = (overrides?: Partial<MockChat>): MockChat => ({
 });
 
 // =============================================================================
+// SESSION PARTICIPANT FIXTURES
+// =============================================================================
+
+/**
+ * Participant type for game sessions (ScoreInput, session components)
+ */
+export type MockParticipant = {
+  id: string;
+  displayName: string;
+  isCurrentUser: boolean;
+};
+
+/**
+ * Creates a mock session participant
+ *
+ * @example
+ * const player = createMockParticipant({ displayName: 'Alice', isCurrentUser: true });
+ */
+export const createMockParticipant = (overrides?: Partial<MockParticipant>): MockParticipant => ({
+  id: overrides?.id || `participant-${Date.now()}`,
+  displayName: overrides?.displayName || 'Test Player',
+  isCurrentUser: overrides?.isCurrentUser ?? false,
+});
+
+/**
+ * Creates a list of mock participants for game sessions
+ */
+export const createMockParticipantList = (count: number = 3): MockParticipant[] => {
+  const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
+  return Array.from({ length: count }, (_, i) =>
+    createMockParticipant({
+      id: `p${i + 1}`,
+      displayName: names[i] || `Player ${i + 1}`,
+      isCurrentUser: i === 0,
+    })
+  );
+};
+
+// =============================================================================
+// SHARE LINK FIXTURES
+// =============================================================================
+
+/**
+ * Share link type for library sharing (ShareLibraryModal)
+ */
+export type MockShareLink = {
+  shareToken: string;
+  shareUrl: string;
+  privacyLevel: 'unlisted' | 'public';
+  includeNotes: boolean;
+  expiresAt: string | null;
+  isActive: boolean;
+  viewCount: number;
+  lastAccessedAt: string | null;
+};
+
+/**
+ * Creates a mock share link
+ *
+ * @example
+ * const link = createMockShareLink({ privacyLevel: 'public', viewCount: 100 });
+ */
+export const createMockShareLink = (overrides?: Partial<MockShareLink>): MockShareLink => ({
+  shareToken: overrides?.shareToken || `token-${Date.now()}`,
+  shareUrl: overrides?.shareUrl || `https://meepleai.dev/share/${overrides?.shareToken || 'abc123'}`,
+  privacyLevel: overrides?.privacyLevel || 'unlisted',
+  includeNotes: overrides?.includeNotes ?? false,
+  expiresAt: overrides?.expiresAt !== undefined ? overrides.expiresAt : null,
+  isActive: overrides?.isActive ?? true,
+  viewCount: overrides?.viewCount ?? 0,
+  lastAccessedAt: overrides?.lastAccessedAt !== undefined ? overrides.lastAccessedAt : null,
+});
+
+// =============================================================================
+// AGENT MESSAGE FIXTURES
+// =============================================================================
+
+/**
+ * Agent message type for chat sidebar
+ */
+export type MockAgentMessage = {
+  id: string;
+  type: 'user' | 'agent';
+  content: string;
+  timestamp?: string;
+};
+
+/**
+ * Creates a mock agent message
+ *
+ * @example
+ * const userMsg = createMockAgentMessage({ type: 'user', content: 'Hello' });
+ * const agentMsg = createMockAgentMessage({ type: 'agent', content: 'Hi there!' });
+ */
+export const createMockAgentMessage = (overrides?: Partial<MockAgentMessage>): MockAgentMessage => ({
+  id: overrides?.id || `msg-${Date.now()}`,
+  type: overrides?.type || 'user',
+  content: overrides?.content || 'Test message',
+  timestamp: overrides?.timestamp || new Date().toISOString(),
+});
+
+/**
+ * Creates a conversation with alternating user/agent messages
+ */
+export const createMockConversation = (messageCount: number = 4): MockAgentMessage[] => {
+  return Array.from({ length: messageCount }, (_, i) =>
+    createMockAgentMessage({
+      id: `${i + 1}`,
+      type: i % 2 === 0 ? 'user' : 'agent',
+      content: i % 2 === 0 ? `User message ${Math.floor(i / 2) + 1}` : `Agent response ${Math.floor(i / 2) + 1}`,
+    })
+  );
+};
+
+// =============================================================================
+// CITATION FIXTURES
+// =============================================================================
+
+/**
+ * Citation type for agent messages
+ */
+export type MockCitation = {
+  documentId?: string | null;
+  source: string;
+  page?: number | null;
+  pageNumber?: number | null;
+  line?: number | null;
+  text?: string | null;
+  snippet?: string | null;
+  score?: number | null;
+  relevanceScore?: number | null;
+};
+
+/**
+ * Creates a mock citation for agent messages
+ *
+ * @example
+ * const citation = createMockCitation({ source: 'rules.pdf', pageNumber: 5 });
+ */
+export const createMockCitation = (overrides?: Partial<MockCitation>): MockCitation => ({
+  documentId: overrides?.documentId !== undefined ? overrides.documentId : null,
+  source: overrides?.source || 'document.pdf',
+  page: overrides?.page !== undefined ? overrides.page : null,
+  pageNumber: overrides?.pageNumber !== undefined ? overrides.pageNumber : null,
+  line: overrides?.line !== undefined ? overrides.line : null,
+  text: overrides?.text !== undefined ? overrides.text : null,
+  snippet: overrides?.snippet !== undefined ? overrides.snippet : null,
+  score: overrides?.score !== undefined ? overrides.score : null,
+  relevanceScore: overrides?.relevanceScore !== undefined ? overrides.relevanceScore : null,
+});
+
+// =============================================================================
+// SHARED LIBRARY GAME FIXTURES
+// =============================================================================
+
+/**
+ * SharedLibraryGame type for public shared library view
+ */
+export type MockSharedLibraryGame = {
+  gameId: string;
+  title: string;
+  publisher: string | null;
+  yearPublished: number | null;
+  iconUrl: string | null;
+  imageUrl: string | null;
+  isFavorite: boolean;
+  notes: string | null;
+  addedAt: string;
+};
+
+/**
+ * Creates a mock shared library game
+ *
+ * @example
+ * const game = createMockSharedLibraryGame({ title: 'Chess', isFavorite: true });
+ */
+export const createMockSharedLibraryGame = (
+  overrides?: Partial<MockSharedLibraryGame>
+): MockSharedLibraryGame => ({
+  gameId: overrides?.gameId || `game-${Date.now()}`,
+  title: overrides?.title || 'Test Game',
+  publisher: overrides?.publisher !== undefined ? overrides.publisher : 'Test Publisher',
+  yearPublished: overrides?.yearPublished !== undefined ? overrides.yearPublished : 2024,
+  iconUrl: overrides?.iconUrl !== undefined ? overrides.iconUrl : null,
+  imageUrl: overrides?.imageUrl !== undefined ? overrides.imageUrl : null,
+  isFavorite: overrides?.isFavorite ?? false,
+  notes: overrides?.notes !== undefined ? overrides.notes : null,
+  addedAt: overrides?.addedAt || new Date().toISOString(),
+});
+
+// =============================================================================
+// SESSION FIXTURES
+// =============================================================================
+
+/**
+ * Session type for game sessions
+ */
+export type MockSession = {
+  id: string;
+  sessionCode: string;
+  sessionType: 'Generic' | 'GameSpecific';
+  gameName?: string;
+  gameIcon?: string;
+  sessionDate: Date;
+  status: 'Active' | 'Paused' | 'Finalized';
+  participantCount: number;
+};
+
+/**
+ * Creates a mock session
+ *
+ * @example
+ * const session = createMockSession({ gameName: 'Chess', status: 'Finalized' });
+ */
+export const createMockSession = (overrides?: Partial<MockSession>): MockSession => ({
+  id: overrides?.id || `session-${Date.now()}`,
+  sessionCode: overrides?.sessionCode || 'ABC123',
+  sessionType: overrides?.sessionType || 'GameSpecific',
+  gameName: overrides?.gameName,
+  gameIcon: overrides?.gameIcon,
+  sessionDate: overrides?.sessionDate || new Date('2024-01-15T10:00:00Z'),
+  status: overrides?.status || 'Active',
+  participantCount: overrides?.participantCount ?? 4,
+});
+
+/**
+ * Full participant type for session details (with score info)
+ */
+export type MockSessionParticipant = {
+  id: string;
+  displayName: string;
+  isOwner: boolean;
+  isCurrentUser: boolean;
+  avatarColor: string;
+  totalScore: number;
+  rank?: number;
+  isTyping?: boolean;
+};
+
+/**
+ * Creates a mock session participant with full details
+ *
+ * @example
+ * const player = createMockSessionParticipant({ displayName: 'Alice', rank: 1, totalScore: 150 });
+ */
+export const createMockSessionParticipant = (
+  overrides?: Partial<MockSessionParticipant>
+): MockSessionParticipant => ({
+  id: overrides?.id || `participant-${Date.now()}`,
+  displayName: overrides?.displayName || 'Test Player',
+  isOwner: overrides?.isOwner ?? false,
+  isCurrentUser: overrides?.isCurrentUser ?? false,
+  avatarColor: overrides?.avatarColor || '#3b82f6',
+  totalScore: overrides?.totalScore ?? 0,
+  rank: overrides?.rank,
+  isTyping: overrides?.isTyping,
+});
+
+/**
+ * Creates a list of session participants with rankings
+ */
+export const createMockSessionParticipantList = (count: number = 4): MockSessionParticipant[] => {
+  const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
+  const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6'];
+  return Array.from({ length: count }, (_, i) =>
+    createMockSessionParticipant({
+      id: `p${i + 1}`,
+      displayName: names[i] || `Player ${i + 1}`,
+      avatarColor: colors[i] || '#6b7280',
+      isCurrentUser: i === 0,
+      isOwner: i === 0,
+      totalScore: 150 - i * 30,
+      rank: i + 1,
+    })
+  );
+};
+
+// =============================================================================
 // FETCH RESPONSE FIXTURES
 // =============================================================================
 
@@ -708,13 +991,12 @@ export const validateMockData = <T>(
 /**
  * English messages for IntlProvider in tests
  * Issue #1951: Minimal message set to support OAuthButtons and other i18n components
+ * Issue #3077: Added 2FA messages for TwoFactorDisable/TwoFactorRecoveryCodes tests
+ *
+ * Messages are centralized in i18n-test-messages.ts to avoid magic strings.
+ * Import `msg()` helper in tests for type-safe message assertions.
  */
-const testMessages = {
-  'auth.oauth.separator': 'Or continue with',
-  'auth.oauth.google': 'Continue with Google',
-  'auth.oauth.discord': 'Continue with Discord',
-  'auth.oauth.github': 'Continue with GitHub',
-};
+const testMessages = allTestMessages;
 
 /**
  * Renders a component wrapped with IntlProvider for testing i18n components

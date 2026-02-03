@@ -1,0 +1,233 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created": "2026-01-30",
+    "issue": "#3192",
+    "description": "20 sample validation questions for RAG quality testing",
+    "total_questions": 20,
+    "target_accuracy": 0.9,
+    "target_confidence": 0.7
+  },
+  "questions": [
+    {
+      "id": "Q001",
+      "difficulty": "easy",
+      "category": "basic_movement",
+      "question": "How do pawns move in chess?",
+      "expectedKeywords": ["forward", "one square", "capture", "diagonally"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["backward", "sideways"],
+      "minConfidence": 0.8,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q002",
+      "difficulty": "easy",
+      "category": "basic_movement",
+      "question": "How many squares can a knight move?",
+      "expectedKeywords": ["L-shape", "two squares", "one square"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": [],
+      "minConfidence": 0.85,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q003",
+      "difficulty": "easy",
+      "category": "basic_rules",
+      "question": "What is check in chess?",
+      "expectedKeywords": ["king", "attack", "threatened", "must move"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["checkmate", "game over"],
+      "minConfidence": 0.8,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q004",
+      "difficulty": "easy",
+      "category": "basic_rules",
+      "question": "What is checkmate?",
+      "expectedKeywords": ["king", "attack", "no escape", "game ends"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["stalemate"],
+      "minConfidence": 0.85,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q005",
+      "difficulty": "easy",
+      "category": "basic_movement",
+      "question": "Can the queen move diagonally?",
+      "expectedKeywords": ["yes", "diagonal", "any distance", "straight"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["no", "cannot"],
+      "minConfidence": 0.9,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q006",
+      "difficulty": "easy",
+      "category": "setup",
+      "question": "How many pieces does each player start with?",
+      "expectedKeywords": ["16", "sixteen", "eight pawns", "two rooks"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": [],
+      "minConfidence": 0.85,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q007",
+      "difficulty": "easy",
+      "category": "basic_movement",
+      "question": "Can bishops move horizontally?",
+      "expectedKeywords": ["no", "only diagonal", "cannot"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["yes", "horizontal"],
+      "minConfidence": 0.85,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q008",
+      "difficulty": "easy",
+      "category": "basic_movement",
+      "question": "How does the rook move?",
+      "expectedKeywords": ["straight", "horizontal", "vertical", "any distance"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["diagonal"],
+      "minConfidence": 0.8,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q009",
+      "difficulty": "easy",
+      "category": "basic_rules",
+      "question": "What is stalemate?",
+      "expectedKeywords": ["no legal moves", "not in check", "draw"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["checkmate", "win", "lose"],
+      "minConfidence": 0.75,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q010",
+      "difficulty": "easy",
+      "category": "basic_movement",
+      "question": "How many squares can the king move?",
+      "expectedKeywords": ["one", "any direction"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["two", "multiple"],
+      "minConfidence": 0.85,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q011",
+      "difficulty": "medium",
+      "category": "special_moves",
+      "question": "Can I castle if my king is in check?",
+      "expectedKeywords": ["no", "cannot", "not in check", "requirement"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["yes", "allowed"],
+      "minConfidence": 0.8,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q012",
+      "difficulty": "medium",
+      "category": "special_moves",
+      "question": "Can I castle if my king has moved earlier in the game?",
+      "expectedKeywords": ["no", "cannot", "king must not have moved", "neither piece"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["yes", "allowed"],
+      "minConfidence": 0.85,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q013",
+      "difficulty": "medium",
+      "category": "special_moves",
+      "question": "What is en passant?",
+      "expectedKeywords": ["pawn", "capture", "passed", "fifth rank"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": [],
+      "minConfidence": 0.7,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q014",
+      "difficulty": "medium",
+      "category": "pawn_promotion",
+      "question": "What happens when a pawn reaches the opposite end?",
+      "expectedKeywords": ["promotion", "queen", "rook", "bishop", "knight"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["king", "stays pawn"],
+      "minConfidence": 0.8,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q015",
+      "difficulty": "medium",
+      "category": "edge_cases",
+      "question": "Can a pawn capture on its first move?",
+      "expectedKeywords": ["yes", "diagonally", "if enemy piece"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["no", "cannot capture"],
+      "minConfidence": 0.75,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q016",
+      "difficulty": "hard",
+      "category": "complex_scenarios",
+      "question": "If I'm in check, can I castle to escape?",
+      "expectedKeywords": ["no", "cannot", "must move king", "not allowed"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["yes", "allowed"],
+      "minConfidence": 0.7,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q017",
+      "difficulty": "hard",
+      "category": "complex_scenarios",
+      "question": "Can I castle if a square the king passes through is attacked?",
+      "expectedKeywords": ["no", "cannot", "king cannot pass", "attacked square"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["yes", "allowed"],
+      "minConfidence": 0.75,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q018",
+      "difficulty": "hard",
+      "category": "special_moves",
+      "question": "Can I perform en passant if I wait a turn after the opponent's pawn moves?",
+      "expectedKeywords": ["no", "immediately", "next move", "must capture"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["yes", "any time"],
+      "minConfidence": 0.7,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q019",
+      "difficulty": "hard",
+      "category": "draw_conditions",
+      "question": "What is the fifty-move rule?",
+      "expectedKeywords": ["fifty", "no pawn move", "no capture", "draw"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["hundred", "automatic win"],
+      "minConfidence": 0.65,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    },
+    {
+      "id": "Q020",
+      "difficulty": "hard",
+      "category": "draw_conditions",
+      "question": "What happens if the same position occurs three times?",
+      "expectedKeywords": ["threefold repetition", "draw", "claim"],
+      "expectedCitations": ["rulebook"],
+      "forbiddenKeywords": ["automatic", "win", "lose"],
+      "minConfidence": 0.65,
+      "gameId": "30706e12-4c77-4a52-9118-8d48c94f6d9c"
+    }
+  ]
+}

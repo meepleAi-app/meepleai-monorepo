@@ -31,10 +31,12 @@ internal static class UserLibraryEndpoints
         MapGetGameAgentConfigEndpoint(group);
         MapConfigureGameAgentEndpoint(group);
         MapResetGameAgentEndpoint(group);
+        MapSaveAgentConfigEndpoint(group); // Issue #3212
 
         // Custom PDF endpoints
         MapUploadCustomGamePdfEndpoint(group);
         MapResetGamePdfEndpoint(group);
+        MapGetGamePdfsEndpoint(group); // Issue #3152
 
         // Library sharing endpoints
         MapCreateLibraryShareLinkEndpoint(group);
@@ -59,6 +61,7 @@ internal static class UserLibraryEndpoints
             [FromQuery] int? page,
             [FromQuery] int? pageSize,
             [FromQuery] bool? favoritesOnly,
+            [FromQuery] string[]? stateFilter,
             [FromQuery] string? sortBy,
             [FromQuery] bool? sortDescending,
             IMediator mediator,
@@ -78,6 +81,7 @@ internal static class UserLibraryEndpoints
                 Page: page ?? 1,
                 PageSize: pageSize ?? 20,
                 FavoritesOnly: favoritesOnly,
+                StateFilter: stateFilter,
                 SortBy: sortBy ?? "addedAt",
                 Descending: sortDescending ?? true
             );
@@ -89,7 +93,7 @@ internal static class UserLibraryEndpoints
         .Produces<PaginatedLibraryResponseDto>(200)
         .WithTags("Library")
         .WithSummary("Get user's game library")
-        .WithDescription("Returns paginated list of games in user's library. Supports filtering by favorites and sorting by addedAt, title, or favorite status.")
+        .WithDescription("Returns paginated list of games in user's library. Supports filtering by favorites, state (Nuovo/InPrestito/Wishlist/Owned), and sorting by addedAt, title, or favorite status.")
         .WithOpenApi();
     }
 
@@ -495,6 +499,37 @@ internal static class UserLibraryEndpoints
         .WithOpenApi();
     }
 
+    private static void MapGetGamePdfsEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #3152: Get all PDFs for a game (custom + catalog)
+        group.MapGet("/library/games/{gameId:guid}/pdfs", async (
+            Guid gameId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetGamePdfsQuery(gameId, userId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<List<GamePdfDto>>(200)
+        .Produces(401)
+        .WithTags("Library", "PDF")
+        .WithSummary("Get game PDFs")
+        .WithDescription("Returns all PDFs associated with a game in user's library (custom uploads + shared catalog). Issue #3152.")
+        .WithOpenApi();
+    }
+
     private static void MapCreateLibraryShareLinkEndpoint(RouteGroupBuilder group)
     {
         group.MapPost("/library/share", async (
@@ -897,6 +932,59 @@ internal static class UserLibraryEndpoints
 
         return false;
     }
+
+    /// <summary>
+    /// Maps POST endpoint for saving simplified agent configuration (Issue #3212).
+    /// </summary>
+    private static void MapSaveAgentConfigEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/library/games/{gameId:guid}/agent-config", async (
+            Guid gameId,
+            [FromBody] SaveAgentConfigRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new SaveAgentConfigCommand(
+                userId,
+                gameId,
+                request.TypologyId,
+                request.ModelName,
+                request.CostEstimate
+            );
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (ConflictException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<SaveAgentConfigResponse>(200)
+        .Produces<ProblemDetails>(400)
+        .Produces<ProblemDetails>(401)
+        .Produces<ProblemDetails>(404)
+        .Produces<ProblemDetails>(409)
+        .WithName("SaveAgentConfig")
+        .WithDescription("Save simplified agent configuration for a game (Issue #3212)")
+        .WithOpenApi();
+    }
 }
 
 /// <summary>
@@ -966,4 +1054,14 @@ public record RecordGameSessionRequest(
 /// </summary>
 public record SendLoanReminderRequest(
     string? CustomMessage = null
+);
+
+/// <summary>
+/// Request body for saving agent configuration (Issue #3212).
+/// Simplified version of AgentConfigDto for frontend modal.
+/// </summary>
+public record SaveAgentConfigRequest(
+    Guid TypologyId,
+    string ModelName,
+    double CostEstimate
 );

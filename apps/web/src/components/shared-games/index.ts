@@ -18,3 +18,9 @@ export {
 export { SharedGameDetailModal, type SharedGameDetailModalProps } from './SharedGameDetailModal';
 export { ContributorsSection } from './ContributorsSection';
 export { ContributorCard } from './ContributorCard';
+export {
+  CatalogGameCard,
+  CatalogGameCardSkeleton,
+  type CatalogGameCardProps,
+  type CommunityStats,
+} from './CatalogGameCard';

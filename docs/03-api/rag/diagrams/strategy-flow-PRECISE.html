@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRECISE Strategy Flow - Multi-Agent Pipeline</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Operator Mono', 'Dank Mono', monospace;
+            background: radial-gradient(circle at bottom left, #581c87 0%, #0a0e1a 50%, #000000 100%);
+            color: #e2e8f0;
+            padding: 3rem 2rem;
+            min-height: 100vh;
+        }
+
+        .flow-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(15, 23, 42, 0.95);
+            border: 3px solid #8b5cf6;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 0 80px rgba(139, 92, 246, 0.4);
+        }
+
+        .flow-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 3px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .strategy-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.5rem;
+            background: rgba(139, 92, 246, 0.2);
+            border: 2px solid #8b5cf6;
+            border-radius: 24px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #c4b5fd;
+            margin-bottom: 1rem;
+        }
+
+        .complexity-badge {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            color: #fca5a5;
+        }
+
+        .flow-header h1 {
+            font-size: 3.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #a78bfa, #c4b5fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 40px rgba(167, 139, 250, 0.5);
+        }
+
+        .flow-header p {
+            color: #a78bfa;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .flow-block {
+            margin-bottom: 2rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(88, 28, 135, 0.15), rgba(88, 28, 135, 0.05));
+            border-left: 5px solid #8b5cf6;
+            border-radius: 12px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .flow-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #8b5cf6, transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .flow-block:hover::before {
+            opacity: 1;
+        }
+
+        .flow-block:hover {
+            background: linear-gradient(135deg, rgba(88, 28, 135, 0.25), rgba(88, 28, 135, 0.15));
+            transform: translateX(10px);
+            box-shadow: -5px 5px 30px rgba(139, 92, 246, 0.3);
+        }
+
+        .block-type {
+            position: absolute;
+            top: -14px;
+            right: 1.5rem;
+            padding: 0.35rem 1rem;
+            background: #0a0e1a;
+            border: 2px solid #8b5cf6;
+            border-radius: 16px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #c4b5fd;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .block-header {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .block-icon {
+            font-size: 2.5rem;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(139, 92, 246, 0.2);
+            border: 2px solid #8b5cf6;
+            border-radius: 12px;
+            flex-shrink: 0;
+        }
+
+        .block-title h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.35rem;
+            color: #ddd6fe;
+        }
+
+        .block-title small {
+            color: #a78bfa;
+            font-size: 0.875rem;
+        }
+
+        .block-params {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-top: 1.25rem;
+        }
+
+        .param-item {
+            padding: 0.75rem;
+            background: rgba(10, 14, 26, 0.7);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .param-label {
+            display: block;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .param-value {
+            color: #c4b5fd;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .flow-arrow {
+            text-align: center;
+            margin: 1.5rem 0;
+            font-size: 2.5rem;
+            color: #8b5cf6;
+            opacity: 0.6;
+            animation: pulse 2.5s infinite;
+            position: relative;
+        }
+
+        .flow-arrow::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent, #8b5cf6, transparent);
+            opacity: 0.3;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; transform: translateY(0) scale(1); }
+            50% { opacity: 0.8; transform: translateY(6px) scale(1.1); }
+        }
+
+        .metrics-panel {
+            margin-top: 3rem;
+            padding: 2.5rem;
+            background: linear-gradient(135deg, rgba(88, 28, 135, 0.2), rgba(88, 28, 135, 0.1));
+            border: 3px solid rgba(139, 92, 246, 0.4);
+            border-radius: 16px;
+        }
+
+        .metrics-panel h2 {
+            text-align: center;
+            color: #c4b5fd;
+            margin-bottom: 2rem;
+            font-size: 1.75rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        .metric-card {
+            padding: 1.75rem;
+            background: rgba(10, 14, 26, 0.9);
+            border: 2px solid rgba(139, 92, 246, 0.3);
+            border-radius: 12px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .metric-card:hover {
+            border-color: #8b5cf6;
+            box-shadow: 0 8px 30px rgba(139, 92, 246, 0.3);
+            transform: translateY(-4px);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+        }
+
+        .metric-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #c4b5fd;
+            line-height: 1;
+        }
+
+        .metric-sublabel {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+
+        .multi-agent-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid #8b5cf6;
+            border-radius: 20px;
+            margin-top: 1rem;
+        }
+
+        .agent-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #8b5cf6;
+            animation: blink 1.5s infinite;
+        }
+
+        .agent-dot:nth-child(2) { animation-delay: 0.3s; }
+        .agent-dot:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="flow-container">
+        <div class="flow-header">
+            <div class="strategy-badge">
+                TIER REQUIRED: Editor or higher
+                <span class="complexity-badge">HIGH COMPLEXITY</span>
+            </div>
+            <h1>🎯 PRECISE</h1>
+            <p>Multi-Agent Pipeline for Critical Decisions</p>
+        </div>
+
+        <div class="flow-block">
+            <span class="block-type">INPUT</span>
+            <div class="block-header">
+                <div class="block-icon">📥</div>
+                <div class="block-title">
+                    <h3>Critical Query Input</h3>
+                    <small>High-stakes decision requiring validation</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Type</span>
+                    <span class="param-value">Critical / Strategic</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Complexity</span>
+                    <span class="param-value">High (4-5/5)</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Example</span>
+                    <span class="param-value">"Tournament rule edge case"</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">AGENT</span>
+            <div class="block-header">
+                <div class="block-icon">🤖</div>
+                <div class="block-title">
+                    <h3>StrategyAgent</h3>
+                    <small>Strategic reasoning with expert analysis</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Base Prompt</span>
+                    <span class="param-value">Strategic reasoning + alternatives</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Default Strategy</span>
+                    <span class="param-value">PRECISE (this)</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Validation Level</span>
+                    <span class="param-value">Maximum (5-layer)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">MODEL</span>
+            <div class="block-header">
+                <div class="block-icon">🧠</div>
+                <div class="block-title">
+                    <h3>Claude Sonnet 4.5</h3>
+                    <small>Premium reasoning model from Anthropic</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Provider</span>
+                    <span class="param-value">Anthropic</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Cost per Query</span>
+                    <span class="param-value">$0.132</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Context Window</span>
+                    <span class="param-value">200K tokens</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Fallback Models</span>
+                    <span class="param-value">Haiku 4.5, GPT-4o-mini</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">LAYER</span>
+            <div class="block-header">
+                <div class="block-icon">🧠</div>
+                <div class="block-title">
+                    <h3>L1: Routing & Validation</h3>
+                    <small>Verify tier access and classify query</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Tokens</span>
+                    <span class="param-value">360</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Latency</span>
+                    <span class="param-value">40ms</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Validation</span>
+                    <span class="param-value">Tier ≥ Editor</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">LAYER</span>
+            <div class="block-header">
+                <div class="block-icon">🔄</div>
+                <div class="block-title">
+                    <h3>L3: Multi-Hop Retrieval</h3>
+                    <small>Deep context gathering with 3 hops</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Hops</span>
+                    <span class="param-value">3 iterations</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">TopK per hop</span>
+                    <span class="param-value">5-7 chunks</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Tokens</span>
+                    <span class="param-value">~5000</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Strategy</span>
+                    <span class="param-value">Iterative refinement</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">LAYER</span>
+            <div class="block-header">
+                <div class="block-icon">⚖️</div>
+                <div class="block-title">
+                    <h3>L4: LLM Grading</h3>
+                    <small>Context relevance evaluation</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Model</span>
+                    <span class="param-value">Claude Haiku 4.5</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Tokens</span>
+                    <span class="param-value">~2000</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Purpose</span>
+                    <span class="param-value">Filter irrelevant chunks</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Threshold</span>
+                    <span class="param-value">Relevance > 0.7</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">LAYER - MULTI-AGENT</span>
+            <div class="block-header">
+                <div class="block-icon">🤖</div>
+                <div class="block-title">
+                    <h3>L5: Multi-Agent Generation</h3>
+                    <small>3 specialized agents with consensus</small>
+                    <div class="multi-agent-indicator">
+                        <span class="agent-dot"></span>
+                        <span class="agent-dot"></span>
+                        <span class="agent-dot"></span>
+                        <span style="font-size: 0.75rem; color: #94a3b8;">3 Agents Active</span>
+                    </div>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item" style="border-left: 3px solid #3b82f6;">
+                    <span class="param-label">Agent 1: Analyzer</span>
+                    <span class="param-value">Rules interpretation</span>
+                </div>
+                <div class="param-item" style="border-left: 3px solid #8b5cf6;">
+                    <span class="param-label">Agent 2: Validator</span>
+                    <span class="param-value">Source verification</span>
+                </div>
+                <div class="param-item" style="border-left: 3px solid #ec4899;">
+                    <span class="param-label">Agent 3: Synthesizer</span>
+                    <span class="param-value">Final answer composition</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Total Tokens</span>
+                    <span class="param-value">~12000 (4K each)</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Coordination</span>
+                    <span class="param-value">Sequential with feedback</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Models</span>
+                    <span class="param-value">Haiku + Sonnet + Opus</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">LAYER - VALIDATION</span>
+            <div class="block-header">
+                <div class="block-icon">🔍</div>
+                <div class="block-title">
+                    <h3>L6: Self-RAG Validation</h3>
+                    <small>5-layer quality assurance pipeline</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item" style="background: rgba(59, 130, 246, 0.1);">
+                    <span class="param-label">V1: Confidence</span>
+                    <span class="param-value">Threshold ≥ 0.70</span>
+                </div>
+                <div class="param-item" style="background: rgba(139, 92, 246, 0.1);">
+                    <span class="param-label">V2: Multi-Model</span>
+                    <span class="param-value">Similarity ≥ 0.90</span>
+                </div>
+                <div class="param-item" style="background: rgba(16, 185, 129, 0.1);">
+                    <span class="param-label">V3: Citation</span>
+                    <span class="param-value">Source in PDF</span>
+                </div>
+                <div class="param-item" style="background: rgba(245, 158, 11, 0.1);">
+                    <span class="param-label">V4: Hallucination</span>
+                    <span class="param-value">No forbidden words</span>
+                </div>
+                <div class="param-item" style="background: rgba(239, 68, 68, 0.1);">
+                    <span class="param-label">V5: Accuracy</span>
+                    <span class="param-value">Baseline ≥ 80%</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Total Tokens</span>
+                    <span class="param-value">~3000</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">OUTPUT</span>
+            <div class="block-header">
+                <div class="block-icon">📤</div>
+                <div class="block-title">
+                    <h3>Validated Response</h3>
+                    <small>High-confidence answer with full citations</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Accuracy</span>
+                    <span class="param-value">95-98%</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Total Tokens</span>
+                    <span class="param-value">22,396</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Citations</span>
+                    <span class="param-value">5-7 verified sources</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Confidence</span>
+                    <span class="param-value">Very High (≥95%)</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Validation</span>
+                    <span class="param-value">5/5 layers passed</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics-panel">
+            <h2>Performance & Quality Metrics</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Tokens</div>
+                    <div class="metric-value">22,396</div>
+                    <div class="metric-sublabel">10.8× more than FAST</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Cost</div>
+                    <div class="metric-value">$0.132</div>
+                    <div class="metric-sublabel">1320× more than FAST</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Latency</div>
+                    <div class="metric-value">5-10s</div>
+                    <div class="metric-sublabel">25-50× slower than FAST</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Accuracy</div>
+                    <div class="metric-value">95-98%</div>
+                    <div class="metric-sublabel">+13% vs FAST</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Usage</div>
+                    <div class="metric-value">5-10%</div>
+                    <div class="metric-sublabel">High-value queries only</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Validation</div>
+                    <div class="metric-value">5 Layers</div>
+                    <div class="metric-sublabel">Maximum quality assurance</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Agents Used</div>
+                    <div class="metric-value">3×</div>
+                    <div class="metric-sublabel">Analyzer + Validator + Synthesizer</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">ROI</div>
+                    <div class="metric-value">High</div>
+                    <div class="metric-sublabel">For critical decisions</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Models Mix</div>
+                    <div class="metric-value">Haiku + Sonnet + Opus</div>
+                    <div class="metric-sublabel">Progressive complexity</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

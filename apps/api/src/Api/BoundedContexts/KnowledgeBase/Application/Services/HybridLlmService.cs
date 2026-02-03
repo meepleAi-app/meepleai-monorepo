@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -118,16 +119,19 @@ internal class HybridLlmService : ILlmService
             systemPrompt,
             userPrompt,
             user: null, // No user context (anonymous)
+            strategy: RagStrategy.Balanced, // Default to balanced for interface calls
             ct).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Generate completion with user context for adaptive routing
+    /// Generate completion with user context for adaptive routing.
+    /// Issue #3435: Strategy-based routing (strategy determines model, tier validates access).
     /// </summary>
     public async Task<LlmCompletionResult> GenerateCompletionAsync(
         string systemPrompt,
         string userPrompt,
         User? user,
+        RagStrategy strategy = RagStrategy.Balanced,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(systemPrompt);
@@ -138,7 +142,8 @@ internal class HybridLlmService : ILlmService
         }
 
         // ISSUE-962: Route with circuit breaker awareness and support fallback retries
-        var decision = _routingStrategy.SelectProvider(user);
+        // Issue #3435: Strategy-based routing (strategy determines model, tier validates access)
+        var decision = _routingStrategy.SelectProvider(user, strategy);
         var client = GetClientWithCircuitBreaker(decision.ProviderName);
 
         if (client == null)
@@ -245,12 +250,14 @@ internal class HybridLlmService : ILlmService
             systemPrompt,
             userPrompt,
             user: null, // No user context (anonymous)
+            strategy: RagStrategy.Balanced, // Default to balanced for interface calls
             ct);
     }
 
     /// <summary>
-    /// Generate streaming completion with user context for adaptive routing
-    /// ISSUE-1725: Enhanced to return StreamChunk with usage metadata
+    /// Generate streaming completion with user context for adaptive routing.
+    /// ISSUE-1725: Enhanced to return StreamChunk with usage metadata.
+    /// Issue #3435: Strategy-based routing (strategy determines model, tier validates access).
     /// </summary>
 #pragma warning disable S3400 // Methods should not return constants - async iterator pattern requires this signature
 #pragma warning disable S4456 // Parameter validation on async iterator - validated before yield
@@ -258,6 +265,7 @@ internal class HybridLlmService : ILlmService
         string systemPrompt,
         string userPrompt,
         User? user,
+        RagStrategy strategy = RagStrategy.Balanced,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
 #pragma warning restore S4456
 #pragma warning restore S3400
@@ -271,7 +279,8 @@ internal class HybridLlmService : ILlmService
         }
 
         // Route to appropriate provider
-        var decision = _routingStrategy.SelectProvider(user);
+        // Issue #3435: Strategy-based routing (strategy determines model, tier validates access)
+        var decision = _routingStrategy.SelectProvider(user, strategy);
         var client = GetClient(decision.ProviderName);
 
         if (client == null)
@@ -308,16 +317,19 @@ internal class HybridLlmService : ILlmService
             systemPrompt,
             userPrompt,
             user: null, // No user context (anonymous)
+            strategy: RagStrategy.Balanced, // Default to balanced for interface calls
             ct).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Generate JSON response with user context for adaptive routing
+    /// Generate JSON response with user context for adaptive routing.
+    /// Issue #3435: Strategy-based routing (strategy determines model, tier validates access).
     /// </summary>
     public async Task<T?> GenerateJsonAsync<T>(
         string systemPrompt,
         string userPrompt,
         User? user,
+        RagStrategy strategy = RagStrategy.Balanced,
         CancellationToken cancellationToken = default) where T : class
     {
         ArgumentNullException.ThrowIfNull(systemPrompt);
@@ -330,7 +342,7 @@ internal class HybridLlmService : ILlmService
             Just the raw JSON object that matches the required structure.
             """;
 
-        var result = await GenerateCompletionAsync(enhancedSystemPrompt, userPrompt, user, cancellationToken).ConfigureAwait(false);
+        var result = await GenerateCompletionAsync(enhancedSystemPrompt, userPrompt, user, strategy, cancellationToken).ConfigureAwait(false);
 
         if (!result.Success || string.IsNullOrWhiteSpace(result.Response))
         {

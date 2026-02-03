@@ -7,6 +7,11 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs;
 /// Data transfer object for game information.
 /// Issue #2373: Added SharedGameId for catalog integration.
 /// </summary>
+/// <summary>
+/// Data transfer object for game information.
+/// Issue #2373: Added SharedGameId for catalog integration.
+/// Issue #3481: Added publication workflow fields.
+/// </summary>
 internal record GameDto(
     Guid Id,
     string Title,
@@ -20,7 +25,10 @@ internal record GameDto(
     DateTime CreatedAt,
     string? IconUrl = null,
     string? ImageUrl = null,
-    Guid? SharedGameId = null
+    Guid? SharedGameId = null,
+    bool IsPublished = false,
+    string? ApprovalStatus = null,
+    DateTime? PublishedAt = null
 );
 
 /// <summary>

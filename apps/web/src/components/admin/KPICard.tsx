@@ -132,7 +132,7 @@ export function KPICard({
         </div>
 
         {/* Title */}
-        <p className="text-sm font-medium text-stone-500 dark:text-stone-400">
+        <p className="text-sm font-medium text-stone-500 dark:text-stone-400" data-testid={testId ? `${testId}-title` : undefined}>
           {title}
         </p>
 

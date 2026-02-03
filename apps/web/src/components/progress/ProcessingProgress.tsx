@@ -28,21 +28,35 @@ const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_DURATION_MS = 600000; // 10 minutes max
 
 /**
- * Transform API ProcessingProgress to component ProcessingProgress
+ * Parse .NET TimeSpan string format "HH:mm:ss.fffffff" to seconds.
+ * Returns undefined for null/empty values.
+ */
+function parseTimeSpanToSeconds(timeSpan: string | null | undefined): number | undefined {
+  if (!timeSpan) return undefined;
+
+  // Format: "HH:mm:ss.fffffff" or "HH:mm:ss"
+  // eslint-disable-next-line security/detect-unsafe-regex -- Safe: bounded quantifiers, no nested repetition
+  const match = timeSpan.match(/^(\d+):(\d+):(\d+)(?:\.(\d+))?$/);
+  if (!match) return undefined;
+
+  const hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const seconds = parseInt(match[3], 10);
+
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+/**
+ * Transform API ProcessingProgress to component ProcessingProgress.
+ * Now that the API schema matches the backend, we can directly use currentStep.
+ * Issue #3371: Schema alignment with backend ProcessingProgress model.
  */
 function transformApiProgress(apiProgress: ApiProcessingProgress): ProcessingProgressType {
-  const stepMap: Record<string, ProcessingStep> = {
-    Pending: ProcessingStep.Uploading, // Map Pending to Uploading step
-    Processing: ProcessingStep.Extracting, // Map Processing to Extracting step
-    Completed: ProcessingStep.Completed,
-    Failed: ProcessingStep.Failed,
-  };
-
   return {
-    currentStep: stepMap[apiProgress.status] || ProcessingStep.Uploading,
+    currentStep: apiProgress.currentStep as ProcessingStep,
     percentComplete: apiProgress.percentComplete,
-    estimatedTimeRemaining: undefined,
-    errorMessage: apiProgress.error || undefined,
+    estimatedTimeRemaining: parseTimeSpanToSeconds(apiProgress.estimatedTimeRemaining),
+    errorMessage: apiProgress.errorMessage || undefined,
     updatedAt: new Date().toISOString(),
   };
 }

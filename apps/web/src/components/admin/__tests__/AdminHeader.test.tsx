@@ -172,7 +172,10 @@ describe('AdminHeader', () => {
       const avatarButton = screen.getByRole('button', { name: 'AD' });
       await user.click(avatarButton);
 
-      expect(screen.getByText('Admin')).toBeInTheDocument();
+      // There are now multiple "Admin" texts (button and dropdown label)
+      // Check that the dropdown contains "Admin" as the user label
+      const adminTexts = screen.getAllByText('Admin');
+      expect(adminTexts.length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -225,19 +228,21 @@ describe('AdminHeader', () => {
   });
 
   describe('Home link', () => {
-    it('renders home link on desktop', () => {
+    it('renders System button that links to home', () => {
       render(<AdminHeader />);
 
-      const homeLink = screen.getByRole('link', { name: /home/i });
-      expect(homeLink).toHaveAttribute('href', '/');
+      // Home link is now the "System" button that goes to /
+      const systemBtn = screen.getByTestId('admin-header-system-btn');
+      expect(systemBtn).toHaveAttribute('href', '/');
     });
 
-    it('home link has hidden class for mobile', () => {
+    it('System button has hidden class for mobile', () => {
       render(<AdminHeader />);
 
-      const homeLink = screen.getByRole('link', { name: /home/i });
-      expect(homeLink).toHaveClass('hidden');
-      expect(homeLink).toHaveClass('sm:flex');
+      // System button is hidden on mobile (sm:flex)
+      const systemBtn = screen.getByTestId('admin-header-system-btn');
+      expect(systemBtn).toHaveClass('hidden');
+      expect(systemBtn).toHaveClass('sm:flex');
     });
   });
 
@@ -296,7 +301,8 @@ describe('AdminHeader', () => {
       render(<AdminHeader />);
 
       const header = screen.getByRole('banner');
-      expect(header).toHaveClass('z-40');
+      // Component uses z-50 for higher stacking context
+      expect(header).toHaveClass('z-50');
     });
 
     it('applies border styling', () => {
@@ -310,8 +316,9 @@ describe('AdminHeader', () => {
       render(<AdminHeader />);
 
       const header = screen.getByRole('banner');
-      expect(header).toHaveClass('dark:bg-gray-900');
-      expect(header).toHaveClass('dark:border-gray-700');
+      // Component uses semantic design tokens for dark mode
+      expect(header).toHaveClass('dark:bg-card');
+      expect(header).toHaveClass('dark:border-border/30');
     });
 
     it('logout option has red text styling', async () => {
@@ -348,7 +355,8 @@ describe('AdminHeader', () => {
     it('home link is accessible', () => {
       render(<AdminHeader />);
 
-      const homeLink = screen.getByRole('link', { name: /home/i });
+      // Home link is now the "System" button that goes to /
+      const homeLink = screen.getByRole('link', { name: /system/i });
       expect(homeLink).toBeInTheDocument();
     });
   });

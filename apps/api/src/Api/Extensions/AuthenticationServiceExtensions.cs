@@ -92,6 +92,9 @@ internal static class AuthenticationServiceExtensions
         services.AddScoped<IPasswordResetService, PasswordResetService>();
         services.AddScoped<IEmailService, EmailService>();
 
+        // ISSUE-3071: Email verification service
+        services.AddScoped<IEmailVerificationService, EmailVerificationService>();
+
         return services;
     }
 

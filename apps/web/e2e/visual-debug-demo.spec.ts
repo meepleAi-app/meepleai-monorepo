@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 
 /**
  * Visual Debug Demo - Investigate Portal Issue Interactively

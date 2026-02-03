@@ -16,7 +16,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from '../fixtures';
 
 const execAsync = promisify(exec);
 

@@ -44,7 +44,8 @@ describe('ChatClient - Threads & Messages', () => {
           { id: 'thread-2', title: 'Thread 2', gameId: 'game-1', status: 'closed' },
         ];
 
-        mockHttpClient.get.mockResolvedValueOnce(mockThreads);
+        // API returns { threads: [...], count: n }, client extracts threads array
+        mockHttpClient.get.mockResolvedValueOnce({ threads: mockThreads, count: 2 });
 
         const result = await chatClient.getThreadsByGame('game-1');
 

@@ -37,7 +37,7 @@
  * - chat-citations.spec.ts: Citation display tests
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import {
   verifyCitationDisplay,
   verifyNoCitations,

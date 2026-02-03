@@ -40,7 +40,7 @@ internal sealed class Confidence : ValueObject
         yield return Value;
     }
 
-    public override string ToString() => $"{Value:P0}"; // Format as percentage
+    public override string ToString() => $"{Value * 100:0}%"; // Format as percentage without space (culture-invariant)
 
     public static implicit operator double(Confidence confidence) => confidence.Value;
     public static Confidence Parse(double value) => new(value);

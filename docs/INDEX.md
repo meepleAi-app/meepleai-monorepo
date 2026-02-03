@@ -10,7 +10,6 @@
 |----------|-----|
 | **API Docs (Scalar UI)** | http://localhost:8080/scalar/v1 |
 | **OpenAPI Spec** | http://localhost:8080/openapi/v1.json |
-| **Living Docs Guide** | [living-documentation.md](living-documentation.md) |
 | **README** | [../README.md](../README.md) |
 | **CLAUDE.md** | [../CLAUDE.md](../CLAUDE.md) |
 
@@ -20,7 +19,7 @@
 
 ### 01. Architecture (Manual)
 
-**ADR - Architecture Decision Records** (`01-architecture/adr/` - 22 files)
+**ADR - Architecture Decision Records** (`01-architecture/adr/`)
 - [ADR-001](01-architecture/adr/adr-001-hybrid-rag.md): Hybrid RAG (Vector + Keyword)
 - [ADR-003b](01-architecture/adr/adr-003b-unstructured-pdf.md): PDF Processing Pipeline
 - [ADR-004b](01-architecture/adr/adr-004b-hybrid-llm.md): Hybrid LLM Strategy
@@ -36,7 +35,7 @@
 **Domain-Driven Design** (`01-architecture/ddd/`)
 - Domain patterns and bounded context definitions
 
-### 02. Development Guide ⭐ NEW
+### 02. Development Guide
 
 **[Development Guide](02-development/README.md)** - Complete developer documentation
 
@@ -50,12 +49,12 @@
 - Common Tasks & Troubleshooting
 
 **Essential Guides**:
-- **[Visual Studio Code Setup](02-development/guida-visualcode.md)** ⭐ Task automation, Docker workflow, troubleshooting
+- **[Visual Studio Code Setup](02-development/guida-visualcode.md)** - Task automation, Docker workflow, troubleshooting
 - [Git Workflow](02-development/git-workflow.md)
 - [Local Secrets Setup](02-development/local-secrets-setup.md)
 - [Operational Guide](02-development/operational-guide.md)
 
-### 03. API Documentation ⭐ NEW
+### 03. API Documentation
 
 **[API Reference](03-api/README.md)** - Complete REST API documentation
 
@@ -68,7 +67,7 @@
 - Webhooks & Data Models
 - Client Libraries & Examples
 
-### 04. Deployment Guide ⭐ NEW
+### 04. Deployment Guide
 
 **[Deployment Guide](04-deployment/README.md)** - Production deployment documentation
 
@@ -84,13 +83,13 @@
 - Disaster Recovery
 
 **Cost Optimization**:
-- **[GitHub Alternatives & Cost Optimization](04-deployment/github-alternatives-cost-optimization.md)** ⭐ NEW
+- **[GitHub Alternatives & Cost Optimization](04-deployment/github-alternatives-cost-optimization.md)**
   - GitHub Free tier limits analysis (2026 pricing)
   - Zero-cost alternatives: self-hosted runners, GitLab, Forgejo
   - Oracle Always Free setup guide
   - Decision matrix and implementation roadmap
 
-### 05. Testing Documentation ⭐ NEW
+### 05. Testing Documentation
 
 **[Testing Guide](05-testing/README.md)** - Comprehensive testing strategy
 
@@ -104,9 +103,55 @@
 - Performance Testing (k6)
 - Accessibility Testing
 
-### 08. User Flows ⭐ NEW
+### 06. Security Documentation
 
-**[User Flows Documentation](08-user-flows/README.md)** - Complete user flow documentation by role
+**[Security Guide](06-security/README.md)** - Security practices and guidelines
+
+### 07. Frontend Documentation
+
+**[Frontend Guide](07-frontend/README.md)** - Frontend architecture and guides
+
+**Topics Covered**:
+- Next.js App Router patterns
+- React component architecture
+- State management (Zustand, React Query)
+- Tailwind + shadcn/ui design system
+- Performance optimization
+
+### 08. Infrastructure Documentation
+
+**[Infrastructure Guide](08-infrastructure/README.md)** - Infrastructure configuration
+
+**Topics Covered**:
+- Docker Compose setup
+- Traefik reverse proxy
+- Database configuration (PostgreSQL, Redis, Qdrant)
+- Service orchestration
+
+### 09. Bounded Contexts
+
+**[Bounded Contexts Guide](09-bounded-contexts/README.md)** - DDD Bounded Contexts documentation
+
+**Available Contexts**:
+- [KnowledgeBase](09-bounded-contexts/knowledge-base.md): RAG pipeline, hybrid search, chat
+- [Authentication](09-bounded-contexts/authentication.md): OAuth, 2FA, API keys
+- [DocumentProcessing](09-bounded-contexts/document-processing.md): PDF extraction
+- [GameManagement](09-bounded-contexts/game-management.md): Games catalog
+- [SystemConfiguration](09-bounded-contexts/system-configuration.md): Dynamic config
+- [Administration](09-bounded-contexts/administration.md): Users, alerts, audit
+
+### 10. User Guides
+
+**[User Guides](10-user-guides/README.md)** - Admin and user documentation
+
+**Topics Covered**:
+- Administrator guides
+- End-user documentation
+- Feature walkthroughs
+
+### 11. User Flows
+
+**[User Flows Documentation](11-user-flows/README.md)** - Complete user flow documentation by role
 
 **Topics Covered**:
 - User Stories (Gherkin format)
@@ -116,28 +161,28 @@
 - Implementation Status
 - Gap Analysis
 
-**User Role** (`08-user-flows/user-role/`):
-- [Authentication](08-user-flows/user-role/01-authentication.md): Registration, Login, OAuth, 2FA, API Keys
-- [Game Discovery](08-user-flows/user-role/02-game-discovery.md): Browse, Search, Filter, Game Details
-- [Library Management](08-user-flows/user-role/03-library-management.md): Tier-based quotas (A games, B/C PDFs, D sessions)
-- [AI Chat](08-user-flows/user-role/04-ai-chat.md): RAG questions, Threads, History, Export
-- [Game Sessions](08-user-flows/user-role/05-game-sessions.md): Create, Players, State Tracking, Player Mode
+**User Role** (`11-user-flows/user-role/`):
+- [Authentication](11-user-flows/user-role/01-authentication.md): Registration, Login, OAuth, 2FA, API Keys
+- [Game Discovery](11-user-flows/user-role/02-game-discovery.md): Browse, Search, Filter, Game Details
+- [Library Management](11-user-flows/user-role/03-library-management.md): Tier-based quotas (A games, B/C PDFs, D sessions)
+- [AI Chat](11-user-flows/user-role/04-ai-chat.md): RAG questions, Threads, History, Export
+- [Game Sessions](11-user-flows/user-role/05-game-sessions.md): Create, Players, State Tracking, Player Mode
 
-**Editor Role** (`08-user-flows/editor-role/`):
-- [Game Management](08-user-flows/editor-role/01-game-management.md): Create, Edit, BGG Import, Archive
-- [Document Management](08-user-flows/editor-role/02-document-management.md): PDF Upload, Versions, Processing
-- [Content Management](08-user-flows/editor-role/03-content-management.md): Quick Questions, FAQ, Errata
-- [Publication Workflow](08-user-flows/editor-role/04-publication-workflow.md): Submit, Track, Handle Rejection
+**Editor Role** (`11-user-flows/editor-role/`):
+- [Game Management](11-user-flows/editor-role/01-game-management.md): Create, Edit, BGG Import, Archive
+- [Document Management](11-user-flows/editor-role/02-document-management.md): PDF Upload, Versions, Processing
+- [Content Management](11-user-flows/editor-role/03-content-management.md): Quick Questions, FAQ, Errata
+- [Publication Workflow](11-user-flows/editor-role/04-publication-workflow.md): Submit, Track, Handle Rejection
 
-**Admin Role** (`08-user-flows/admin-role/`):
-- [Approval Workflow](08-user-flows/admin-role/01-approval-workflow.md): Queue, Approve/Reject, Delete
-- [User Management](08-user-flows/admin-role/02-user-management.md): CRUD, Roles, Tiers, Bulk Ops
-- [System Configuration](08-user-flows/admin-role/03-system-configuration.md): Quotas, Feature Flags, AI Models
-- [Monitoring](08-user-flows/admin-role/04-monitoring.md): Health, Services, Alerts, Analytics
+**Admin Role** (`11-user-flows/admin-role/`):
+- [Approval Workflow](11-user-flows/admin-role/01-approval-workflow.md): Queue, Approve/Reject, Delete
+- [User Management](11-user-flows/admin-role/02-user-management.md): CRUD, Roles, Tiers, Bulk Ops
+- [System Configuration](11-user-flows/admin-role/03-system-configuration.md): Quotas, Feature Flags, AI Models
+- [Monitoring](11-user-flows/admin-role/04-monitoring.md): Health, Services, Alerts, Analytics
 
 **Supporting Documents**:
-- [Core Flow Diagrams](08-user-flows/diagrams/core-flows.md): Mermaid sequence diagrams
-- [Gap Analysis](08-user-flows/gap-analysis.md): Implementation status & proposed features
+- [Core Flow Diagrams](11-user-flows/diagrams/core-flows.md): Mermaid sequence diagrams
+- [Gap Analysis](11-user-flows/gap-analysis.md): Implementation status & proposed features
 
 ---
 
@@ -249,52 +294,6 @@ export async function askQuestion(
 
 ---
 
-## Migration History
-
-### v1.2 (2026-01-15) - Documentation Consolidation
-
-**Removed** (81% reduction: 79 → 1 claudedocs files):
-- ❌ `/claudedocs/` (root) → Entire directory removed
-- ❌ Issue completion reports (29 files)
-- ❌ Week implementation summaries (14 files)
-- ❌ Cleanup & migration reports (9 files)
-- ❌ Research & planning docs (4 files)
-- ❌ Test reports & error analysis (6 files)
-- ❌ Miscellaneous completions (2 files)
-
-**Reorganized** (16 files moved to standard structure):
-- ✅ Security audits → `docs/06-security/`
-- ✅ Configuration guides → `docs/04-deployment/secrets/`
-- ✅ Monitoring reports → `docs/04-deployment/monitoring/`
-- ✅ Development guides → `docs/01-architecture/ddd/`, `docs/02-development/troubleshooting/`
-- ✅ Testing & validation → `docs/05-testing/`, `docs/03-api/`, `docs/04-deployment/validation/`
-- ✅ Architecture specs → `docs/01-architecture/components/`
-
-**Backup**: `docs-backup-consolidation-2026-01-15/`
-
-**Purpose**: Remove historical implementation reports, focus on operational documentation
-
-### v1.1 (2026-01-01)
-
-**Added**:
-- ✅ `docs/02-development/`: Development guide (new)
-- ✅ `docs/03-api/`: API documentation (new)
-- ✅ `docs/04-deployment/`: Deployment guide (new)
-- ✅ `docs/05-testing/`: Testing documentation (new)
-
-**Purpose**: Restore practical documentation that complements living docs for onboarding and operations
-
-### v1.0 (2024-12-31)
-
-**Removed** (84% reduction: 301 → 47 files):
-- ❌ Previous `docs/02-development/` → Replaced by living docs
-- ❌ Previous `docs/03-api/` → Replaced by OpenAPI
-- ❌ `docs/04-*`, `docs/05-*`, `docs/06-*`, `docs/07-*`, `docs/08-*`, `docs/10-*`
-
-**Backup**: `docs-backup-20241231/`
-
----
-
 ## Quick Navigation
 
 ### For Developers
@@ -305,17 +304,20 @@ export async function askQuestion(
 
 ### For DevOps
 1. **Deployment**: [Deployment Guide](04-deployment/README.md)
-2. **Monitoring**: [Deployment Guide - Monitoring](04-deployment/README.md#monitoring--observability)
-3. **Backups**: [Deployment Guide - Database](04-deployment/README.md#database-management)
+2. **Infrastructure**: [Infrastructure Guide](08-infrastructure/README.md)
+3. **Monitoring**: [Deployment Guide - Monitoring](04-deployment/README.md#monitoring--observability)
+4. **Backups**: [Deployment Guide - Database](04-deployment/README.md#database-management)
 
 ### For Product/QA
-1. **User Flows**: [User Flows Documentation](08-user-flows/README.md)
-2. **API Testing**: [API Documentation](03-api/README.md)
-3. **E2E Testing**: [Testing Guide - E2E](05-testing/README.md#e2e-testing-playwright)
-4. **System Overview**: [Architecture](01-architecture/overview/system-architecture.md)
+1. **User Flows**: [User Flows Documentation](11-user-flows/README.md)
+2. **Quality Validation**: [Quality Documentation](quality/README.md)
+3. **API Testing**: [API Documentation](03-api/README.md)
+4. **E2E Testing**: [Testing Guide - E2E](05-testing/README.md#e2e-testing-playwright)
+5. **Project Roadmap**: [Roadmap & Epics](roadmap/)
+6. **System Overview**: [Architecture](01-architecture/overview/system-architecture.md)
 
 ---
 
-**Version**: 1.3
-**Last Updated**: 2026-01-19
+**Version**: 1.4
+**Last Updated**: 2026-01-26
 **Maintainers**: Engineering Team

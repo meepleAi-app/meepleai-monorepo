@@ -19,11 +19,11 @@
 
 import { useMemo } from 'react';
 
-import type { DashboardMetrics } from '@/lib/api';
 import { useDashboardData } from '@/hooks/queries/useDashboardData';
+import type { DashboardMetrics } from '@/lib/api';
 
-import { APIRequestsChart, ApiRequestByDay } from './APIRequestsChart';
 import { AIUsageDonut, AiUsageStats } from './AIUsageDonut';
+import { APIRequestsChart, ApiRequestByDay } from './APIRequestsChart';
 
 /**
  * Calculate AI usage breakdown from metrics

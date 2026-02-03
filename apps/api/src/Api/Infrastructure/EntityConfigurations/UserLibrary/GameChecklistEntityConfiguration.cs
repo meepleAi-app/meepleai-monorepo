@@ -58,7 +58,7 @@ internal class GameChecklistEntityConfiguration : IEntityTypeConfiguration<UserG
         builder.ToTable(t =>
         {
             t.HasCheckConstraint("chk_game_checklists_display_order",
-                "\"display_order\" >= 0");
+                "\"DisplayOrder\" >= 0");
         });
     }
 }

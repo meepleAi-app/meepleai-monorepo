@@ -266,7 +266,9 @@ if ($copied -gt 0) {
     Write-Host "  OPTIONAL (Advanced features):" -ForegroundColor Gray
     Write-Host "     - email.secret         -> SMTP credentials (or use MailPit)" -ForegroundColor White
     Write-Host "     - oauth.secret         -> Google/GitHub/Discord OAuth" -ForegroundColor White
-    Write-Host "     - storage.secret       -> S3 credentials" -ForegroundColor White
+    Write-Host "     - storage.secret       -> S3/R2 credentials (Cloudflare R2 recommended)" -ForegroundColor White
+    Write-Host "                               Setup guide: docs/04-deployment/r2-storage-configuration-guide.md" -ForegroundColor DarkGray
+    Write-Host "                               Get R2 token: https://dash.cloudflare.com/?to=/:account/r2/api-tokens" -ForegroundColor DarkGray
     Write-Host ""
 
     Write-Host "[TIP] Quick edit: notepad <filename>.secret" -ForegroundColor Cyan

@@ -49,12 +49,16 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
     public DbSet<AgentConfigurationEntity> AgentConfigurations => Set<AgentConfigurationEntity>(); // ISSUE-2391 Sprint 2
+    public DbSet<AgentTypologyEntity> AgentTypologies => Set<AgentTypologyEntity>(); // ISSUE-3175: Agent typology domain model
+    public DbSet<TypologyPromptTemplateEntity> TypologyPromptTemplates => Set<TypologyPromptTemplateEntity>(); // ISSUE-3175: Typology prompt templates
+    public DbSet<AgentSessionEntity> AgentSessions => Set<AgentSessionEntity>(); // ISSUE-3183: Agent session state persistence
     public DbSet<N8NConfigEntity> N8NConfigs => Set<N8NConfigEntity>();
     public DbSet<RuleSpecCommentEntity> RuleSpecComments => Set<RuleSpecCommentEntity>();
     public DbSet<PromptTemplateEntity> PromptTemplates => Set<PromptTemplateEntity>();
     public DbSet<PromptVersionEntity> PromptVersions => Set<PromptVersionEntity>();
     public DbSet<PromptAuditLogEntity> PromptAuditLogs => Set<PromptAuditLogEntity>();
     public DbSet<PasswordResetTokenEntity> PasswordResetTokens => Set<PasswordResetTokenEntity>();
+    public DbSet<EmailVerificationEntity> EmailVerifications => Set<EmailVerificationEntity>(); // ISSUE-3071: Email verification
     public DbSet<CacheStatEntity> CacheStats => Set<CacheStatEntity>();
     public DbSet<SystemConfigurationEntity> SystemConfigurations => Set<SystemConfigurationEntity>();
     public DbSet<WorkflowErrorLogEntity> WorkflowErrorLogs => Set<WorkflowErrorLogEntity>(); // N8N-05
@@ -97,6 +101,16 @@ public class MeepleAiDbContext : DbContext
     public DbSet<UserBadgeEntity> UserBadges => Set<UserBadgeEntity>(); // ISSUE-2731: User badge awards
     public DbSet<ShareRequestLimitConfigEntity> ShareRequestLimitConfigs => Set<ShareRequestLimitConfigEntity>(); // ISSUE-2730: Rate limit config
     public DbSet<UserRateLimitOverrideEntity> UserRateLimitOverrides => Set<UserRateLimitOverrideEntity>(); // ISSUE-2730: User overrides
+    public DbSet<TierStrategyAccessEntity> TierStrategyAccess => Set<TierStrategyAccessEntity>(); // ISSUE-3438: Tier-strategy access control
+    public DbSet<StrategyModelMappingEntity> StrategyModelMappings => Set<StrategyModelMappingEntity>(); // ISSUE-3438: Strategy-model mapping
+
+    // GST-001: SessionTracking bounded context (persistence entities)
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.ParticipantEntity> SessionTrackingParticipants => Set<Api.Infrastructure.Entities.SessionTracking.ParticipantEntity>();
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.ScoreEntryEntity> SessionTrackingScoreEntries => Set<Api.Infrastructure.Entities.SessionTracking.ScoreEntryEntity>();
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.PlayerNoteEntity> SessionTrackingPlayerNotes => Set<Api.Infrastructure.Entities.SessionTracking.PlayerNoteEntity>();
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.DiceRollEntity> SessionTrackingDiceRolls => Set<Api.Infrastructure.Entities.SessionTracking.DiceRollEntity>();
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.CardDrawEntity> SessionTrackingCardDraws => Set<Api.Infrastructure.Entities.SessionTracking.CardDrawEntity>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -146,6 +160,17 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.SystemConfiguration.Domain.Entities.UserRateLimitOverride>(); // ISSUE-2730
         modelBuilder.Ignore<BoundedContexts.UserLibrary.Domain.Entities.UserLibraryEntry>(); // User Library feature
         modelBuilder.Ignore<BoundedContexts.SharedGameCatalog.Domain.Entities.RulebookAnalysis>(); // ISSUE-2402
+        modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.AgentTypology>(); // ISSUE-3175
+        modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.TypologyPromptTemplate>(); // ISSUE-3175
+        modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.AgentSession>(); // ISSUE-3183
+
+        // GST-001: SessionTracking domain entities
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.Session>(); // ISSUE-3160
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.Participant>(); // ISSUE-3160
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.ScoreEntry>(); // ISSUE-3160
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.PlayerNote>(); // ISSUE-3160
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.DiceRoll>(); // ISSUE-3160
+        modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.CardDraw>(); // ISSUE-3160
     }
 
     /// <summary>

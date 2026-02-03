@@ -2,7 +2,9 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Handlers;
 
@@ -14,13 +16,16 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
 {
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
+    private readonly MeepleAiDbContext _dbContext;
 
     public GetUserLibraryQueryHandler(
         IUserLibraryRepository libraryRepository,
-        ISharedGameRepository sharedGameRepository)
+        ISharedGameRepository sharedGameRepository,
+        MeepleAiDbContext dbContext)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
     }
 
     public async Task<PaginatedLibraryResponseDto> Handle(GetUserLibraryQuery query, CancellationToken cancellationToken)
@@ -31,12 +36,23 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
             query.UserId,
             query.Search,
             query.FavoritesOnly,
+            query.StateFilter,
             query.SortBy,
             query.Descending,
             query.Page,
             query.PageSize,
             cancellationToken
         ).ConfigureAwait(false);
+
+        // Batch load: Get all GameIds that have PDF documents (single query)
+        var gameIds = entries.Select(e => e.GameId).ToList();
+        var gameIdsWithPdfs = await _dbContext.PdfDocuments
+            .Where(p => gameIds.Contains(p.GameId))
+            .Select(p => p.GameId)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var pdfGameSet = gameIdsWithPdfs.ToHashSet();
 
         // Get shared game details for each entry
         var entryDtos = new List<UserLibraryEntryDto>();
@@ -56,7 +72,11 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     GameImageUrl: sharedGame.ImageUrl,
                     AddedAt: entry.AddedAt,
                     Notes: entry.Notes?.Value,
-                    IsFavorite: entry.IsFavorite
+                    IsFavorite: entry.IsFavorite,
+                    CurrentState: entry.CurrentState.Value.ToString(),
+                    StateChangedAt: entry.CurrentState.ChangedAt,
+                    StateNotes: entry.CurrentState.StateNotes,
+                    HasPdfDocuments: pdfGameSet.Contains(entry.GameId)
                 ));
             }
         }

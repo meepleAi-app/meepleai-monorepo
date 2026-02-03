@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
@@ -15,7 +16,7 @@ internal static class SharedGameSeeder
 {
     private static readonly Dictionary<string, GameSeedData> GameMappings = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["7-wonders_rulebook.pdf"] = new("7 Wonders", 13, "en"),
+        ["7-wonders_rulebook.pdf"] = new("7 Wonders", 68448, "en"), // Fixed: BGG #13 is CATAN, #68448 is 7 Wonders
         ["agricola_rulebook.pdf"] = new("Agricola", 31260, "en"),
         ["azul_rulebook.pdf"] = new("Azul", 230802, "en"),
         ["carcassone_rulebook.pdf"] = new("Carcassonne", 822, "en"),
@@ -113,7 +114,7 @@ internal static class SharedGameSeeder
             AverageRating = bgg.AverageRating.HasValue ? (decimal)bgg.AverageRating.Value : null,
             ImageUrl = bgg.ImageUrl ?? $"{PlaceholderImageBase}/400x300?text=No+Image",
             ThumbnailUrl = bgg.ThumbnailUrl ?? $"{PlaceholderImageBase}/150x150?text=No+Image",
-            Status = 1, // Published
+            Status = (int)GameStatus.Published,
             RulesLanguage = rulesLanguage,
             CreatedBy = systemUserId,
             CreatedAt = DateTime.UtcNow,
@@ -144,7 +145,7 @@ internal static class SharedGameSeeder
             AverageRating = null,
             ImageUrl = $"{PlaceholderImageBase}/400x300?text=" + Uri.EscapeDataString(data.Name),
             ThumbnailUrl = $"{PlaceholderImageBase}/150x150?text=" + Uri.EscapeDataString(data.Name),
-            Status = 1,
+            Status = (int)GameStatus.Published,
             RulesLanguage = data.Language,
             CreatedBy = systemUserId,
             CreatedAt = DateTime.UtcNow,

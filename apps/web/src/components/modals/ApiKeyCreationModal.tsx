@@ -309,7 +309,7 @@ export function ApiKeyCreationModal({
                     {copied ? (
                       <>
                         <Check className="h-4 w-4 mr-1" />
-                        Copied
+                        <span data-testid="copied-text">Copied</span>
                       </>
                     ) : (
                       <>
@@ -339,7 +339,7 @@ export function ApiKeyCreationModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]" aria-describedby="api-key-form-description">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2" data-testid="api-key-modal-title">
             <Key className="h-5 w-5" />
             Create New API Key
           </DialogTitle>

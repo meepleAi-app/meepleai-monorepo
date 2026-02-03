@@ -1,0 +1,237 @@
+{/* Spacing.mdx - MeepleAI Spacing System Documentation */}
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Design System/Spacing" />
+
+# Spacing System
+
+MeepleAI uses a **4px base unit** spacing system for consistent, harmonious layouts. All spacing values are multiples of 4px (0.25rem), creating visual rhythm throughout the interface.
+
+## Base Scale
+
+The spacing scale follows a predictable progression based on the 4px unit.
+
+<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>
+  {[
+    { name: 'space-0', value: '0', px: '0px' },
+    { name: 'space-1', value: '0.25rem', px: '4px' },
+    { name: 'space-2', value: '0.5rem', px: '8px' },
+    { name: 'space-3', value: '0.75rem', px: '12px' },
+    { name: 'space-4', value: '1rem', px: '16px' },
+    { name: 'space-5', value: '1.25rem', px: '20px' },
+    { name: 'space-6', value: '1.5rem', px: '24px' },
+    { name: 'space-8', value: '2rem', px: '32px' },
+    { name: 'space-10', value: '2.5rem', px: '40px' },
+    { name: 'space-12', value: '3rem', px: '48px' },
+    { name: 'space-16', value: '4rem', px: '64px' },
+    { name: 'space-20', value: '5rem', px: '80px' },
+    { name: 'space-24', value: '6rem', px: '96px' },
+    { name: 'space-32', value: '8rem', px: '128px' },
+  ].map(({ name, value, px }) => (
+    <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div
+        style={{
+          width: value,
+          height: '1.5rem',
+          background: 'hsl(var(--primary))',
+          borderRadius: '0.25rem',
+          minWidth: '4px'
+        }}
+      />
+      <code style={{ minWidth: '120px' }}>--{name}</code>
+      <span style={{ color: 'hsl(var(--muted-foreground))' }}>{value} ({px})</span>
+    </div>
+  ))}
+</div>
+
+## CSS Tokens
+
+```css
+:root {
+  --space-0: 0;
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+  --space-24: 6rem;     /* 96px */
+  --space-32: 8rem;     /* 128px */
+}
+```
+
+## Semantic Spacing
+
+For easier usage, we provide semantic aliases that map to common use cases.
+
+| Token | Maps To | Pixels | Use Case |
+|-------|---------|--------|----------|
+| `--space-xs` | space-2 | 8px | Tight gaps, icon spacing |
+| `--space-sm` | space-3 | 12px | Small gaps, inline elements |
+| `--space-md` | space-4 | 16px | Default spacing, buttons |
+| `--space-lg` | space-6 | 24px | Section spacing, cards |
+| `--space-xl` | space-8 | 32px | Large gaps, section breaks |
+| `--space-2xl` | space-12 | 48px | Major sections |
+| `--space-3xl` | space-16 | 64px | Page-level spacing |
+
+## Component Sizing
+
+Fixed sizes for common UI elements.
+
+### Container Widths
+
+| Token | Value | Use Case |
+|-------|-------|----------|
+| `--size-sidebar` | 20rem (320px) | Sidebar panel |
+| `--size-modal-sm` | 28rem (448px) | Small dialogs |
+| `--size-modal-md` | 36rem (576px) | Standard modals |
+| `--size-modal-lg` | 48rem (768px) | Large modals |
+| `--size-modal-xl` | 64rem (1024px) | Full-width modals |
+| `--size-content-max` | 56rem (896px) | Content width |
+| `--size-container-max` | 80rem (1280px) | Container width |
+
+### Touch Targets
+
+| Token | Value | Purpose |
+|-------|-------|---------|
+| `--size-touch-min` | 2.75rem (44px) | WCAG minimum touch target |
+| `--size-icon-sm` | 1rem (16px) | Small icons |
+| `--size-icon-md` | 1.25rem (20px) | Default icons |
+| `--size-icon-lg` | 1.5rem (24px) | Large icons |
+| `--size-icon-xl` | 2rem (32px) | Extra large icons |
+
+## Mobile Spacing
+
+Adjusted spacing for mobile viewports (Issue #1092).
+
+| Token | Value | Use Case |
+|-------|-------|----------|
+| `--size-mobile-nav-height` | 4.5rem (72px) | Bottom navigation |
+| `--size-mobile-sheet-width` | 20rem (320px) | Mobile drawer |
+| `--size-mobile-header-height` | 3.5rem (56px) | Mobile header |
+| `--space-mobile-xs` | 8px | Tight mobile gaps |
+| `--space-mobile-sm` | 12px | Small mobile gaps |
+| `--space-mobile-md` | 16px | Default mobile |
+| `--space-mobile-lg` | 24px | Large mobile gaps |
+
+## Layout Constraints
+
+### Maximum Widths
+
+```css
+:root {
+  --max-width-prose: 65ch;                   /* Optimal reading width */
+  --max-width-form: 32rem;                   /* 512px - forms */
+  --max-width-content: var(--size-content-max);
+  --max-width-container: var(--size-container-max);
+}
+```
+
+### Aspect Ratios
+
+| Token | Value | Use Case |
+|-------|-------|----------|
+| `--aspect-square` | 1 / 1 | Avatar, thumbnail |
+| `--aspect-video` | 16 / 9 | Video embeds |
+| `--aspect-ultrawide` | 21 / 9 | Hero banners |
+| `--aspect-portrait` | 3 / 4 | Card images |
+
+## Usage in Components
+
+### Card Padding
+
+```css
+:root {
+  --card-padding-sm: var(--space-4);   /* 16px */
+  --card-padding-md: var(--space-6);   /* 24px */
+  --card-padding-lg: var(--space-8);   /* 32px */
+}
+```
+
+### Button Padding
+
+```css
+:root {
+  --button-padding-x-sm: var(--space-3);   /* 12px */
+  --button-padding-y-sm: var(--space-2);   /* 8px */
+  --button-padding-x-md: var(--space-4);   /* 16px */
+  --button-padding-y-md: var(--space-3);   /* 12px */
+  --button-padding-x-lg: var(--space-6);   /* 24px */
+  --button-padding-y-lg: var(--space-4);   /* 16px */
+}
+```
+
+### Input Heights
+
+```css
+:root {
+  --input-height-sm: 2.25rem;   /* 36px */
+  --input-height-md: 2.5rem;    /* 40px */
+  --input-height-lg: 3rem;      /* 48px */
+}
+```
+
+## Tailwind Usage
+
+### Padding & Margin
+
+```tsx
+// Using Tailwind's spacing scale (matches our tokens)
+<div className="p-4">16px padding</div>
+<div className="p-6">24px padding</div>
+<div className="m-8">32px margin</div>
+
+// Directional
+<div className="px-4 py-2">Horizontal/vertical</div>
+<div className="pt-6 pb-4">Top/bottom</div>
+```
+
+### Gap (Flexbox/Grid)
+
+```tsx
+<div className="flex gap-4">16px gap</div>
+<div className="grid gap-6">24px gap</div>
+<div className="space-y-4">16px vertical stack</div>
+```
+
+### Responsive Spacing
+
+```tsx
+<div className="p-4 md:p-6 lg:p-8">
+  Responsive padding: 16px -> 24px -> 32px
+</div>
+```
+
+## Utility Classes
+
+Pre-defined spacing patterns for common layouts.
+
+```css
+/* Page-level spacing */
+.space-page {
+  padding: var(--space-6);   /* 24px */
+}
+
+/* Section spacing */
+.space-section {
+  padding: var(--space-8) var(--space-6);   /* 32px 24px */
+}
+
+/* Card spacing */
+.space-card {
+  padding: var(--card-padding-md);   /* 24px */
+}
+```
+
+## Best Practices
+
+1. **Use the scale** - Don't use arbitrary values like 7px or 13px
+2. **Be consistent** - Same elements should have same spacing
+3. **Increase with size** - Larger containers need more internal spacing
+4. **Consider touch** - Mobile touch targets must be at least 44px
+5. **Vertical rhythm** - Use consistent vertical spacing for readability

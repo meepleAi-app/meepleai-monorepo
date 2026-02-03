@@ -21,7 +21,9 @@ namespace Api.Tests.BoundedContexts.Authentication.Security;
 [Trait("BoundedContext", "Authentication")]
 [Trait("Issue", "2645")]
 [Trait("OWASP", "A07-Authentication")]
+#pragma warning disable S3881 // Simplified dispose pattern sufficient for test class
 public class ConcurrentSessionSecurityTests : IDisposable
+#pragma warning restore S3881
 {
     private readonly Api.Infrastructure.MeepleAiDbContext _dbContext;
     private readonly ISessionRepository _sessionRepository;

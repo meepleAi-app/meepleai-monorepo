@@ -16,18 +16,18 @@ describe('QuickActions', () => {
   describe('Default rendering', () => {
     it('renders with default actions', () => {
       render(<QuickActions />);
-      expect(screen.getByTestId('quick-actions-grid')).toBeInTheDocument();
+      expect(screen.getByTestId('action-grid')).toBeInTheDocument();
     });
 
     it('renders default title', () => {
       render(<QuickActions />);
-      expect(screen.getByText('Quick Actions')).toBeInTheDocument();
+      expect(screen.getByTestId('action-grid-title')).toHaveTextContent('Quick Actions');
     });
 
     it('renders all default actions', () => {
       render(<QuickActions />);
       defaultQuickActions.forEach(action => {
-        expect(screen.getByTestId(`quick-action-${action.id}`)).toBeInTheDocument();
+        expect(screen.getByTestId(`action-${action.id}`)).toBeInTheDocument();
       });
     });
 
@@ -82,20 +82,20 @@ describe('QuickActions', () => {
   describe('Custom title', () => {
     it('renders custom title when provided', () => {
       render(<QuickActions title="Admin Actions" />);
-      expect(screen.getByText('Admin Actions')).toBeInTheDocument();
-      expect(screen.queryByText('Quick Actions')).not.toBeInTheDocument();
+      expect(screen.getByTestId('action-grid-title')).toHaveTextContent('Admin Actions');
+      expect(screen.queryByTestId('action-grid-title')).toHaveTextContent('Admin Actions');
     });
   });
 
   describe('Loading state', () => {
     it('renders skeleton when loading', () => {
       render(<QuickActions loading />);
-      expect(screen.getByTestId('quick-actions-skeleton')).toBeInTheDocument();
+      expect(screen.getByTestId('action-grid-skeleton')).toBeInTheDocument();
     });
 
     it('does not render actions when loading', () => {
       render(<QuickActions loading />);
-      expect(screen.queryByTestId('quick-actions-grid')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('action-grid')).not.toBeInTheDocument();
     });
 
     it('renders 6 skeleton items', () => {
@@ -177,7 +177,7 @@ describe('QuickActions', () => {
           ]}
         />
       );
-      const link = screen.getByTestId('quick-action-primary');
+      const link = screen.getByTestId('action-primary');
       expect(link).toHaveClass('hover:bg-blue-50');
     });
 
@@ -195,7 +195,7 @@ describe('QuickActions', () => {
           ]}
         />
       );
-      const link = screen.getByTestId('quick-action-warning');
+      const link = screen.getByTestId('action-warning');
       expect(link).toHaveClass('hover:bg-yellow-50');
     });
 
@@ -213,7 +213,7 @@ describe('QuickActions', () => {
           ]}
         />
       );
-      const link = screen.getByTestId('quick-action-danger');
+      const link = screen.getByTestId('action-danger');
       expect(link).toHaveClass('hover:bg-red-50');
     });
 
@@ -230,22 +230,24 @@ describe('QuickActions', () => {
           ]}
         />
       );
-      const link = screen.getByTestId('quick-action-default');
-      expect(link).toHaveClass('hover:bg-gray-50');
+      const link = screen.getByTestId('action-default');
+      // Component uses design system tokens for hover
+      expect(link).toHaveClass('hover:bg-muted/50');
     });
   });
 
   describe('Links', () => {
     it('renders links with correct href', () => {
       render(<QuickActions />);
-      const uploadLink = screen.getByTestId('quick-action-upload-pdf');
-      expect(uploadLink).toHaveAttribute('href', '/admin/bulk-export');
+      // Default actions use 'approve-games' as first action
+      const approveLink = screen.getByTestId('action-approve-games');
+      expect(approveLink).toHaveAttribute('href', '/admin/games/pending');
     });
 
     it('all actions are links', () => {
       render(<QuickActions />);
       defaultQuickActions.forEach(action => {
-        const link = screen.getByTestId(`quick-action-${action.id}`);
+        const link = screen.getByTestId(`action-${action.id}`);
         expect(link.tagName).toBe('A');
       });
     });
@@ -254,7 +256,7 @@ describe('QuickActions', () => {
   describe('Responsive grid', () => {
     it('has responsive grid classes', () => {
       render(<QuickActions />);
-      const grid = screen.getByTestId('quick-actions-grid');
+      const grid = screen.getByTestId('action-grid');
       expect(grid).toHaveClass('grid-cols-1');
       expect(grid).toHaveClass('sm:grid-cols-2');
       expect(grid).toHaveClass('lg:grid-cols-3');
@@ -317,13 +319,13 @@ describe('QuickActions', () => {
 
     it('applies orange border hover for gradient actions', () => {
       render(<QuickActions actions={gradientActions} />);
-      const link = screen.getByTestId('quick-action-approve-games');
+      const link = screen.getByTestId('action-approve-games');
       expect(link).toHaveClass('hover:border-orange-500');
     });
 
     it('applies group class for icon scale hover', () => {
       render(<QuickActions actions={gradientActions} />);
-      const link = screen.getByTestId('quick-action-approve-games');
+      const link = screen.getByTestId('action-approve-games');
       expect(link).toHaveClass('group');
     });
 

@@ -66,6 +66,7 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
           aria-label="Close RAG Timeline"
           variant="ghost"
           className="flex items-center gap-2"
+          data-testid="close-timeline-button"
         >
           <span>Chiudi Timeline</span>
           <span aria-hidden="true" className="text-base">

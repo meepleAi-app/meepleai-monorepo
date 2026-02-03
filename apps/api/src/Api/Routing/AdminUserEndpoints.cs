@@ -2,8 +2,11 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserBadges;
 using Api.Extensions;
 using Api.Infrastructure.Security;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
@@ -26,10 +29,21 @@ internal static class AdminUserEndpoints
         MapUserCrudEndpoints(group);
         // ADMIN-TIER-01: Update user subscription tier
         MapUserTierEndpoints(group);
+        // ISSUE-3141: Set user level endpoint
+        MapUserLevelEndpoints(group);
         // BULK OPERATIONS - Issue #905
         MapBulkUserEndpoints(group);
         // Get user activity timeline (ADMIN-USER-ACTIVITY-01 - Issue #911)
         MapUserActivityEndpoints(group);
+        // Get user library stats (Issue #3139)
+        MapUserLibraryStatsEndpoints(group);
+        // Get user badges (Issue #3140)
+        MapUserBadgesEndpoints(group);
+        // Get user detail (Issue #2890)
+        MapUserDetailEndpoint(group);
+        MapUserRoleHistoryEndpoint(group);
+        MapUserQuickActionsEndpoints(group);
+        MapUserImpersonateEndpoint(group);
 
         return group;
     }
@@ -122,6 +136,26 @@ internal static class AdminUserEndpoints
         .WithDescription("Returns CSV with format: email,displayName,role,createdAt")
         .Produces<string>(StatusCodes.Status200OK, "text/csv")
         .Produces(StatusCodes.Status401Unauthorized);
+
+        // Suspend/Unsuspend endpoints - Issue #2886
+        group.MapPost("/admin/users/{id}/suspend", HandleSuspendUser)
+        .WithName("SuspendUser")
+        .WithTags("Admin")
+        .WithSummary("Suspend a user account")
+        .WithDescription("Suspended users cannot login until unsuspended.")
+        .Produces<Api.Models.UserDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status404NotFound);
+
+        group.MapPost("/admin/users/{id}/unsuspend", HandleUnsuspendUser)
+        .WithName("UnsuspendUser")
+        .WithTags("Admin")
+        .WithSummary("Unsuspend (reactivate) a user account")
+        .Produces<Api.Models.UserDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status404NotFound);
     }
 
     private static void MapUserActivityEndpoints(RouteGroupBuilder group)
@@ -175,6 +209,7 @@ internal static class AdminUserEndpoints
         CancellationToken ct,
         string? search = null,
         string? role = null,
+        string? status = null,
         string? sortBy = null,
         string? sortOrder = "desc",
         int page = 1,
@@ -183,7 +218,7 @@ internal static class AdminUserEndpoints
         var (authorized, _, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var query = new GetAllUsersQuery(search, role, sortBy, sortOrder, page, limit);
+        var query = new GetAllUsersQuery(search, role, status, sortBy, sortOrder, page, limit);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Json(result);
     }
@@ -312,7 +347,7 @@ internal static class AdminUserEndpoints
         var command = new BulkPasswordResetCommand(
             request.UserIds,
             request.NewPassword,
-            Guid.Parse(session.User!.Id.ToString())
+            session.User!.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -335,7 +370,7 @@ internal static class AdminUserEndpoints
         var command = new BulkRoleChangeCommand(
             request.UserIds,
             request.NewRole,
-            Guid.Parse(session.User!.Id.ToString())
+            session.User!.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -360,7 +395,7 @@ internal static class AdminUserEndpoints
 
         var command = new BulkImportUsersCommand(
             csvContent,
-            Guid.Parse(session.User!.Id.ToString())
+            session.User!.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -385,6 +420,65 @@ internal static class AdminUserEndpoints
         var csv = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Content(csv, "text/csv", System.Text.Encoding.UTF8);
+    }
+
+    private static async Task<IResult> HandleSuspendUser(
+        string id,
+        SuspendUserRequest? request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} suspending user {UserId}", session!.User!.Id, id);
+
+        // Issue #2886: Get admin ID for audit logging (session.User.Id is already Guid)
+        var requesterId = session.User.Id;
+
+        try
+        {
+            var command = new SuspendUserCommand(id, requesterId, request?.Reason);
+            var user = await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("User {UserId} suspended successfully by admin {AdminId}", id, requesterId);
+            return Results.Ok(user);
+        }
+        catch (DomainException ex)
+        {
+            logger.LogWarning(ex, "Domain error suspending user {UserId}", id);
+            return Results.BadRequest(new { error = "domain_error", message = ex.Message });
+        }
+    }
+
+    private static async Task<IResult> HandleUnsuspendUser(
+        string id,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} unsuspending user {UserId}", session!.User!.Id, id);
+
+        // Issue #2886: Get admin ID for audit logging (session.User.Id is already Guid)
+        var requesterId = session.User.Id;
+
+        try
+        {
+            var command = new UnsuspendUserCommand(id, requesterId);
+            var user = await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("User {UserId} unsuspended successfully by admin {AdminId}", id, requesterId);
+            return Results.Ok(user);
+        }
+        catch (DomainException ex)
+        {
+            logger.LogWarning(ex, "Domain error unsuspending user {UserId}", id);
+            return Results.BadRequest(new { error = "domain_error", message = ex.Message });
+        }
     }
 
     private static async Task<IResult> HandleGetUserActivity(
@@ -418,12 +512,459 @@ internal static class AdminUserEndpoints
 
         return Results.Json(result);
     }
+
+    private static void MapUserLibraryStatsEndpoints(RouteGroupBuilder group)
+    {
+        // Get user library statistics (admin only) - Issue #3139
+        group.MapGet("/admin/users/{userId:guid}/library/stats", HandleGetUserLibraryStats)
+            .RequireAdminSession()
+            .WithName("GetUserLibraryStats")
+            .WithTags("Admin", "UserLibrary")
+            .WithDescription("Retrieve library statistics for a specific user (admin only)")
+            .Produces<AdminUserLibraryStatsDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> HandleGetUserLibraryStats(
+        Guid userId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} retrieving library stats for user {UserId}", session!.User!.Id, userId);
+
+        var query = new GetUserLibraryStatsQuery(userId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        if (result is null)
+        {
+            logger.LogInformation("User {UserId} has no library entries", userId);
+            return Results.NotFound(new { error = "User has no library entries or user does not exist" });
+        }
+
+        logger.LogInformation("Admin {AdminId} retrieved library stats for user {UserId}: {TotalGames} games, {SessionsPlayed} sessions",
+            session.User.Id, userId, result.TotalGames, result.SessionsPlayed);
+
+        return Results.Ok(result);
+    }
+
+    private static void MapUserLevelEndpoints(RouteGroupBuilder group)
+    {
+        // Set user level (admin only) - Issue #3141
+        group.MapPatch("/admin/users/{userId:guid}/level", HandleSetUserLevel)
+            .WithName("SetUserLevel")
+            .WithTags("Admin", "Users")
+            .WithDescription("Set user level (admin only)")
+            .Produces<Api.BoundedContexts.Authentication.Application.DTOs.UserDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> HandleSetUserLevel(
+        Guid userId,
+        SetUserLevelRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} setting level for user {UserId} to {Level}",
+            session!.User!.Id, userId, request.Level);
+
+        var command = new SetUserLevelCommand(userId, request.Level);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation("User {UserId} level set to {Level} by admin {AdminId}",
+            userId, request.Level, session.User.Id);
+
+        return Results.Ok(result);
+    }
+
+    private static void MapUserBadgesEndpoints(RouteGroupBuilder group)
+    {
+        // Get user badges (admin only) - Issue #3140
+        group.MapGet("/admin/users/{userId:guid}/badges", HandleGetUserBadges)
+            .RequireAdminSession()
+            .WithName("GetUserBadgesAdmin")
+            .WithTags("Admin", "Badges")
+            .WithSummary("Get all user badges (admin only)")
+            .WithDescription(@"Retrieve all badges earned by a specific user, including both visible and hidden badges.
+
+**Authorization**: Admin session required (403 for non-admins)
+
+**Behavior**:
+- Returns all badges for the user (visible + hidden)
+- Excludes revoked badges
+- Returns empty array `[]` if user has no badges
+- Returns empty array `[]` if user does not exist (no 404)
+
+**Ordering**: Badges ordered by DisplayOrder, then EarnedAt descending
+
+**Example Response**:
+```json
+[
+  {
+    ""id"": ""badge-guid-1"",
+    ""code"": ""FIRST_GAME"",
+    ""name"": ""First Game"",
+    ""description"": ""Added first game to library"",
+    ""iconUrl"": ""/badges/first-game.png"",
+    ""tier"": ""Bronze"",
+    ""earnedAt"": ""2026-01-15T10:30:00Z"",
+    ""isDisplayed"": true
+  },
+  {
+    ""id"": ""badge-guid-2"",
+    ""code"": ""SECRET_BADGE"",
+    ""name"": ""Secret Achievement"",
+    ""description"": ""Hidden badge description"",
+    ""iconUrl"": ""/badges/secret.png"",
+    ""tier"": ""Gold"",
+    ""earnedAt"": ""2026-01-20T14:00:00Z"",
+    ""isDisplayed"": false
+  }
+]
+```
+
+**Issue**: #3140 - Admin endpoint to view user badges")
+            .Produces<List<UserBadgeDto>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> HandleGetUserBadges(
+        Guid userId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} retrieving badges for user {UserId}", session!.User!.Id, userId);
+
+        // Reuse existing GetUserBadgesQuery with IncludeHidden: true
+        var query = new GetUserBadgesQuery(userId, IncludeHidden: true);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        logger.LogInformation("Admin {AdminId} retrieved {Count} badges for user {UserId}",
+            session.User.Id, result.Count, userId);
+
+        return Results.Ok(result);
+    }
+
+    private static void MapUserDetailEndpoint(RouteGroupBuilder group)
+    {
+        // Get complete user details (admin only) - Issue #2890
+        group.MapGet("/admin/users/{userId:guid}", HandleGetUserDetail)
+            .RequireAdminSession()
+            .WithName("GetUserDetail")
+            .WithTags("Admin", "Users")
+            .WithSummary("Get complete user details (admin only)")
+            .WithDescription(@"Retrieve complete user information for admin User Detail page.
+
+**Authorization**: Admin session required
+
+**Response**: Complete user details including:
+- Basic info: Id, Email, DisplayName, Role, Tier
+- Gamification: Level, ExperiencePoints
+- Status: EmailVerified, IsSuspended, IsTwoFactorEnabled
+- Timestamps: CreatedAt, EmailVerifiedAt, SuspendedAt, TwoFactorEnabledAt
+
+**Issue**: #2890 - User Detail Modal/Page")
+            .Produces<Api.BoundedContexts.Authentication.Application.DTOs.UserDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> HandleGetUserDetail(
+        Guid userId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} retrieving details for user {UserId}",
+            session!.User!.Id, userId);
+
+        var query = new Api.BoundedContexts.Authentication.Application.Queries.GetUserByIdQuery(userId);
+        var user = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        if (user is null)
+        {
+            logger.LogWarning("User {UserId} not found", userId);
+            return Results.NotFound(new { error = "User not found" });
+        }
+
+        logger.LogInformation("Admin {AdminId} retrieved details for user {UserId}",
+            session.User.Id, userId);
+
+        return Results.Ok(user);
+    }
+
+    private static void MapUserRoleHistoryEndpoint(RouteGroupBuilder group)
+    {
+        // Get user role change history (admin only) - Issue #2890
+        group.MapGet("/admin/users/{userId:guid}/role-history", HandleGetUserRoleHistory)
+            .RequireAdminSession()
+            .WithName("GetUserRoleHistory")
+            .WithTags("Admin", "Users")
+            .WithSummary("Get user role change history (admin only)")
+            .WithDescription(@"Retrieve chronological history of role changes for a user.
+
+**Authorization**: Admin session required
+
+**Response**: List of role changes with:
+- Timestamp
+- Old role → New role
+- Changed by (admin user)
+- IP address
+
+**Issue**: #2890 - User Detail Modal/Page")
+            .Produces<List<RoleChangeHistoryDto>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> HandleGetUserRoleHistory(
+        Guid userId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} retrieving role history for user {UserId}",
+            session!.User!.Id, userId);
+
+        var query = new GetUserRoleHistoryQuery(userId);
+        var history = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        logger.LogInformation("Admin {AdminId} retrieved {Count} role changes for user {UserId}",
+            session.User.Id, history.Count, userId);
+
+        return Results.Ok(history);
+    }
+
+    private static void MapUserQuickActionsEndpoints(RouteGroupBuilder group)
+    {
+        // Reset user password (admin only) - Issue #2890
+        group.MapPost("/admin/users/{userId:guid}/reset-password", HandleResetUserPassword)
+            .RequireAdminSession()
+            .WithName("ResetUserPassword")
+            .WithTags("Admin", "Users")
+            .WithSummary("Reset user password (admin only)")
+            .WithDescription(@"Admin quick action to reset user password.
+
+**Authorization**: Admin session required
+
+**Request**: NewPassword (must meet security requirements)
+
+**Behavior**:
+- Resets user password
+- Logs action in audit trail
+
+**Issue**: #2890 - User Detail Modal/Page")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Send email to user (admin only) - Issue #2890
+        group.MapPost("/admin/users/{userId:guid}/send-email", HandleSendUserEmail)
+            .RequireAdminSession()
+            .WithName("SendUserEmail")
+            .WithTags("Admin", "Users")
+            .WithSummary("Send email to user (admin only)")
+            .WithDescription(@"Admin quick action to send custom email to user.
+
+**Authorization**: Admin session required
+
+**Request**: Subject, Body
+
+**Behavior**:
+- Sends email to user's registered email address
+- Logs action in audit trail
+
+**Note**: Email service integration pending - currently logs only
+
+**Issue**: #2890 - User Detail Modal/Page")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
+    }
+
+    private static async Task<IResult> HandleResetUserPassword(
+        Guid userId,
+        ResetUserPasswordRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} resetting password for user {UserId}",
+            session!.User!.Id, userId);
+
+        try
+        {
+            var command = new ResetUserPasswordCommand(userId.ToString(), request.NewPassword);
+            await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation("Password reset successful for user {UserId} by admin {AdminId}",
+                userId, session.User.Id);
+
+            return Results.Ok(new { message = "Password reset successful" });
+        }
+        catch (NotFoundException ex)
+        {
+            logger.LogWarning(ex, "User {UserId} not found for password reset", userId);
+            return Results.NotFound(new { error = "User not found" });
+        }
+        catch (DomainException ex)
+        {
+            logger.LogWarning(ex, "Domain error resetting password for user {UserId}", userId);
+            return Results.BadRequest(new { error = "domain_error", message = ex.Message });
+        }
+    }
+
+    private static async Task<IResult> HandleSendUserEmail(
+        Guid userId,
+        SendUserEmailRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation("Admin {AdminId} sending email to user {UserId}",
+            session!.User!.Id, userId);
+
+        try
+        {
+            var command = new SendUserEmailCommand(
+                userId,
+                request.Subject,
+                request.Body,
+                session.User.Id);
+
+            await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation("Email sent to user {UserId} by admin {AdminId}",
+                userId, session.User.Id);
+
+            return Results.Ok(new { message = "Email sent successfully" });
+        }
+        catch (NotFoundException ex)
+        {
+            logger.LogWarning(ex, "User {UserId} not found for email sending", userId);
+            return Results.NotFound(new { error = "User not found" });
+        }
+        catch (DomainException ex)
+        {
+            logger.LogWarning(ex, "Domain error sending email to user {UserId}", userId);
+            return Results.BadRequest(new { error = "domain_error", message = ex.Message });
+        }
+    }
+
+    private static void MapUserImpersonateEndpoint(RouteGroupBuilder group)
+    {
+        // Impersonate user (admin only) - Issue #2890
+        group.MapPost("/admin/users/{userId:guid}/impersonate", HandleImpersonateUser)
+            .RequireAdminSession()
+            .WithName("ImpersonateUser")
+            .WithTags("Admin", "Users", "Debug")
+            .WithSummary("Impersonate user for debugging (admin only)")
+            .WithDescription(@"Create session as another user for debugging purposes.
+
+**Authorization**: Admin session required
+
+**Security**:
+- ⚠️ HIGH RISK: Creates full user session
+- Logs impersonation in audit trail
+- Session marked as impersonated
+- Limited duration (24 hours)
+
+**Behavior**:
+- Creates new session for target user
+- Returns session token
+- Original admin session remains active
+- Audit log records both admin and impersonated user
+
+**Use Case**: Debug user-specific issues, test permissions
+
+**Issue**: #2890 - User Detail Modal/Page")
+            .Produces<ImpersonateUserResponseDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
+    }
+
+    private static async Task<IResult> HandleImpersonateUser(
+        Guid userId,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogWarning("⚠️ Admin {AdminId} attempting to impersonate user {UserId}",
+            session!.User!.Id, userId);
+
+        try
+        {
+            var command = new ImpersonateUserCommand(
+                userId,
+                session.User.Id);
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogWarning("⚠️ Impersonation successful: Admin {AdminId} → User {UserId}",
+                session.User.Id, userId);
+
+            return Results.Ok(result);
+        }
+        catch (NotFoundException ex)
+        {
+            logger.LogWarning(ex, "User {UserId} not found for impersonation", userId);
+            return Results.NotFound(new { error = "User not found" });
+        }
+        catch (DomainException ex)
+        {
+            logger.LogWarning(ex, "Domain error impersonating user {UserId}", userId);
+            return Results.BadRequest(new { error = "domain_error", message = ex.Message });
+        }
+    }
 }
 
 /// <summary>
 /// Request payload for updating user tier.
 /// </summary>
 internal record UpdateUserTierRequest(string Tier);
+
+/// <summary>
+/// Request payload for setting user level.
+/// </summary>
+internal record SetUserLevelRequest(int Level);
 
 /// <summary>
 /// Request payload for bulk password reset.
@@ -434,3 +975,18 @@ internal record BulkPasswordResetRequest(IReadOnlyList<Guid> UserIds, string New
 /// Request payload for bulk role change.
 /// </summary>
 internal record BulkRoleChangeRequest(IReadOnlyList<Guid> UserIds, string NewRole);
+
+/// <summary>
+/// Request payload for suspending a user account.
+/// </summary>
+internal record SuspendUserRequest(string? Reason);
+
+/// <summary>
+/// Request payload for resetting user password (Issue #2890).
+/// </summary>
+internal record ResetUserPasswordRequest(string NewPassword);
+
+/// <summary>
+/// Request payload for sending email to user (Issue #2890).
+/// </summary>
+internal record SendUserEmailRequest(string Subject, string Body);

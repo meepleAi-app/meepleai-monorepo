@@ -48,11 +48,65 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
         return entity is null ? null : MapToDomain(entity);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, ShareRequest>> GetByIdsForUpdateAsync(
+        IEnumerable<Guid> ids,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
+        var idList = ids.ToList();
+        if (idList.Count == 0)
+        {
+            return new Dictionary<Guid, ShareRequest>();
+        }
+
+        // Batch query with tracking enabled for updates
+        var entities = await _context.Set<ShareRequestEntity>()
+            .Include(e => e.AttachedDocuments)
+            .Where(e => idList.Contains(e.Id))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // Map to dictionary for O(1) lookup by ID
+        return entities.ToDictionary(
+            e => e.Id,
+            e => MapToDomain(e));
+    }
+
     public void Update(ShareRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var entity = MapToEntity(request);
-        _context.Set<ShareRequestEntity>().Update(entity);
+
+        // Find the tracked entity (loaded by GetByIdForUpdateAsync)
+        var trackedEntity = _context.Set<ShareRequestEntity>()
+            .Local
+            .FirstOrDefault(e => e.Id == request.Id);
+
+        if (trackedEntity != null)
+        {
+            // Update the tracked entity's properties directly
+            trackedEntity.UserId = request.UserId;
+            trackedEntity.SourceGameId = request.SourceGameId;
+            trackedEntity.TargetSharedGameId = request.TargetSharedGameId;
+            trackedEntity.Status = (int)request.Status;
+            trackedEntity.StatusBeforeReview = request.StatusBeforeReview.HasValue ? (int)request.StatusBeforeReview.Value : null;
+            trackedEntity.ContributionType = (int)request.ContributionType;
+            trackedEntity.UserNotes = request.UserNotes;
+            trackedEntity.AdminFeedback = request.AdminFeedback;
+            trackedEntity.ReviewingAdminId = request.ReviewingAdminId;
+            trackedEntity.ReviewStartedAt = request.ReviewStartedAt;
+            trackedEntity.ReviewLockExpiresAt = request.ReviewLockExpiresAt;
+            trackedEntity.ResolvedAt = request.ResolvedAt;
+            trackedEntity.ModifiedAt = request.ModifiedAt;
+            trackedEntity.ModifiedBy = request.ModifiedBy;
+            // RowVersion is managed by EF Core concurrency token
+        }
+        else
+        {
+            // No tracked entity found - attach a new one
+            var entity = MapToEntity(request);
+            _context.Set<ShareRequestEntity>().Update(entity);
+        }
     }
 
     public async Task<bool> HasPendingRequestAsync(

@@ -12,13 +12,13 @@
 
 import { Share2 } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
 import { useRateLimitStatus } from '@/hooks/queries/useShareRequests';
 
 export interface ShareButtonProps {

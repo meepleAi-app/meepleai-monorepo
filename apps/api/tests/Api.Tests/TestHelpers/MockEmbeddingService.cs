@@ -71,7 +71,7 @@ internal class MockEmbeddingService : IEmbeddingService
     private float[] GenerateDeterministicEmbedding(string text)
     {
         // Use text hash for deterministic values
-        var hash = text.GetHashCode();
+        var hash = StringComparer.Ordinal.GetHashCode(text);
 #pragma warning disable CA5394 // Random is acceptable in test mocks for deterministic output
         var random = new Random(hash);
 

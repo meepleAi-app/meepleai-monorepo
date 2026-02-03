@@ -42,7 +42,11 @@ internal class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, UserDto
             DisplayName: user.DisplayName ?? string.Empty,
             Role: user.Role,
             CreatedAt: user.CreatedAt,
-            LastSeenAt: lastSeenAt
+            LastSeenAt: lastSeenAt,
+            IsSuspended: user.IsSuspended,
+            SuspendReason: user.SuspendReason,
+            Level: user.Level,
+            ExperiencePoints: user.ExperiencePoints
         );
     }
 }

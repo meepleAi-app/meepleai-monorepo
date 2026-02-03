@@ -270,10 +270,13 @@ public class ShareRequestStateMachineTests
         request.ExtendReviewLock(adminId, additionalMinutes: 30);
 
         // Assert
+        // ExtendReviewLock adds additional minutes to the EXISTING expiration time
+        // Original: ~10 min from now, After: ~10 + 30 = ~40 min from now
+        request.ReviewLockExpiresAt.Should().NotBeNull();
         request.ReviewLockExpiresAt.Should().BeCloseTo(
-            DateTime.UtcNow.AddMinutes(30),
+            originalExpiration!.Value.AddMinutes(30),
             TimeSpan.FromSeconds(5));
-        request.ReviewLockExpiresAt.Should().BeAfter(originalExpiration!.Value);
+        request.ReviewLockExpiresAt.Should().BeAfter(originalExpiration.Value);
     }
 
     [Fact]
@@ -339,7 +342,9 @@ public class ShareRequestStateMachineTests
         var evt = request.DomainEvents.OfType<ShareRequestLockExtendedEvent>().Single();
         evt.ShareRequestId.Should().Be(request.Id);
         evt.AdminId.Should().Be(adminId);
-        evt.NewExpirationTime.Should().BeCloseTo(DateTime.UtcNow.AddMinutes(45), TimeSpan.FromSeconds(5));
+        // ExtendReviewLock adds 45 minutes to existing lock (which was 30 min from StartReview)
+        // So total is 30 + 45 = 75 minutes from when StartReview was called
+        evt.NewExpirationTime.Should().BeCloseTo(DateTime.UtcNow.AddMinutes(30 + 45), TimeSpan.FromSeconds(5));
     }
 
     #endregion

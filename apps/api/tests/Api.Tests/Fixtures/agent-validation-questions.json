@@ -1,0 +1,322 @@
+[
+  {
+    "id": "Q001",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "How do I set up the game for the first time?",
+    "expectedKeywords": ["setup", "place", "board", "components"],
+    "expectedCitations": [
+      {
+        "pageNumber": 2,
+        "snippet": "setup"
+      }
+    ],
+    "forbiddenKeywords": ["invented", "fake", "imaginary"],
+    "difficulty": "easy",
+    "category": "setup",
+    "targetConfidence": 0.85
+  },
+  {
+    "id": "Q002",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "What is the objective of the game?",
+    "expectedKeywords": ["win", "objective", "goal", "victory"],
+    "expectedCitations": [
+      {
+        "pageNumber": 1,
+        "snippet": "objective"
+      }
+    ],
+    "forbiddenKeywords": ["made up", "fictional", "not real"],
+    "difficulty": "easy",
+    "category": "gameplay",
+    "targetConfidence": 0.90
+  },
+  {
+    "id": "Q003",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "How many players can play this game?",
+    "expectedKeywords": ["players", "2", "3", "4", "number"],
+    "expectedCitations": [
+      {
+        "pageNumber": 1,
+        "snippet": "players"
+      }
+    ],
+    "forbiddenKeywords": ["unlimited", "infinite", "thousands"],
+    "difficulty": "easy",
+    "category": "setup",
+    "targetConfidence": 0.95
+  },
+  {
+    "id": "Q004",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "What happens on a player's turn?",
+    "expectedKeywords": ["turn", "action", "move", "phase"],
+    "expectedCitations": [
+      {
+        "pageNumber": 3,
+        "snippet": "turn"
+      }
+    ],
+    "forbiddenKeywords": ["skip", "nothing", "undefined"],
+    "difficulty": "easy",
+    "category": "gameplay",
+    "targetConfidence": 0.85
+  },
+  {
+    "id": "Q005",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "How do you score points in the game?",
+    "expectedKeywords": ["score", "points", "earn", "gain"],
+    "expectedCitations": [
+      {
+        "pageNumber": 4,
+        "snippet": "scoring"
+      }
+    ],
+    "forbiddenKeywords": ["random", "luck", "guessing"],
+    "difficulty": "easy",
+    "category": "gameplay",
+    "targetConfidence": 0.80
+  },
+  {
+    "id": "Q006",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "Can I trade resources with other players?",
+    "expectedKeywords": ["trade", "resources", "exchange", "players"],
+    "expectedCitations": [
+      {
+        "pageNumber": 5,
+        "snippet": "trading"
+      }
+    ],
+    "forbiddenKeywords": ["never", "prohibited", "impossible"],
+    "difficulty": "easy",
+    "category": "gameplay",
+    "targetConfidence": 0.85
+  },
+  {
+    "id": "Q007",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "What are the different types of cards in the game?",
+    "expectedKeywords": ["cards", "types", "categories", "different"],
+    "expectedCitations": [
+      {
+        "pageNumber": 2,
+        "snippet": "card types"
+      }
+    ],
+    "forbiddenKeywords": ["unlimited", "infinite", "countless"],
+    "difficulty": "easy",
+    "category": "gameplay",
+    "targetConfidence": 0.85
+  },
+  {
+    "id": "Q008",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "How long does a typical game last?",
+    "expectedKeywords": ["duration", "time", "minutes", "hours"],
+    "expectedCitations": [
+      {
+        "pageNumber": 1,
+        "snippet": "game duration"
+      }
+    ],
+    "forbiddenKeywords": ["forever", "infinite", "endless"],
+    "difficulty": "easy",
+    "category": "setup",
+    "targetConfidence": 0.80
+  },
+  {
+    "id": "Q009",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "What is the first player marker used for?",
+    "expectedKeywords": ["first player", "marker", "token", "turn order"],
+    "expectedCitations": [
+      {
+        "pageNumber": 2,
+        "snippet": "first player"
+      }
+    ],
+    "forbiddenKeywords": ["nothing", "decoration", "useless"],
+    "difficulty": "easy",
+    "category": "gameplay",
+    "targetConfidence": 0.85
+  },
+  {
+    "id": "Q010",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "Can I play an action card on another player's turn?",
+    "expectedKeywords": ["action", "card", "turn", "opponent"],
+    "expectedCitations": [
+      {
+        "pageNumber": 6,
+        "snippet": "action cards"
+      }
+    ],
+    "forbiddenKeywords": ["always", "never specific", "undefined"],
+    "difficulty": "easy",
+    "category": "gameplay",
+    "targetConfidence": 0.80
+  },
+  {
+    "id": "Q011",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "What happens if I run out of resources during my turn?",
+    "expectedKeywords": ["resources", "run out", "shortage", "cannot"],
+    "expectedCitations": [
+      {
+        "pageNumber": 7,
+        "snippet": "resource management"
+      }
+    ],
+    "forbiddenKeywords": ["nothing happens", "ignore", "doesn't matter"],
+    "difficulty": "medium",
+    "category": "edge_cases",
+    "targetConfidence": 0.75
+  },
+  {
+    "id": "Q012",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "Can I perform the same action multiple times in one turn?",
+    "expectedKeywords": ["action", "multiple", "times", "same"],
+    "expectedCitations": [
+      {
+        "pageNumber": 3,
+        "snippet": "actions"
+      }
+    ],
+    "forbiddenKeywords": ["unlimited", "infinite", "as many as you want"],
+    "difficulty": "medium",
+    "category": "gameplay",
+    "targetConfidence": 0.75
+  },
+  {
+    "id": "Q013",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "What is the tiebreaker if two players have the same score?",
+    "expectedKeywords": ["tiebreaker", "same score", "tied", "equal"],
+    "expectedCitations": [
+      {
+        "pageNumber": 8,
+        "snippet": "tiebreaker"
+      }
+    ],
+    "forbiddenKeywords": ["random", "coin flip", "not specified"],
+    "difficulty": "medium",
+    "category": "edge_cases",
+    "targetConfidence": 0.75
+  },
+  {
+    "id": "Q014",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "How do special abilities interact with standard rules?",
+    "expectedKeywords": ["special abilities", "override", "standard", "exception"],
+    "expectedCitations": [
+      {
+        "pageNumber": 9,
+        "snippet": "special abilities"
+      }
+    ],
+    "forbiddenKeywords": ["ignore rules", "do whatever", "no restrictions"],
+    "difficulty": "medium",
+    "category": "gameplay",
+    "targetConfidence": 0.70
+  },
+  {
+    "id": "Q015",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "Can I combine two action cards to create a more powerful effect?",
+    "expectedKeywords": ["combine", "action cards", "together", "effect"],
+    "expectedCitations": [
+      {
+        "pageNumber": 6,
+        "snippet": "card combinations"
+      }
+    ],
+    "forbiddenKeywords": ["always yes", "never specified", "anything goes"],
+    "difficulty": "medium",
+    "category": "gameplay",
+    "targetConfidence": 0.75
+  },
+  {
+    "id": "Q016",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "In a 6-player variant, how does turn order change compared to the standard 4-player game?",
+    "expectedKeywords": ["6-player", "variant", "turn order", "different"],
+    "expectedCitations": [
+      {
+        "pageNumber": 10,
+        "snippet": "variants"
+      }
+    ],
+    "forbiddenKeywords": ["no difference", "same as normal", "not supported"],
+    "difficulty": "hard",
+    "category": "edge_cases",
+    "targetConfidence": 0.70
+  },
+  {
+    "id": "Q017",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "What is the optimal strategy for the first three turns to maximize early game advantage?",
+    "expectedKeywords": ["strategy", "first turns", "early game", "advantage"],
+    "expectedCitations": [
+      {
+        "pageNumber": 11,
+        "snippet": "strategy tips"
+      }
+    ],
+    "forbiddenKeywords": ["there isn't one", "random", "luck only"],
+    "difficulty": "hard",
+    "category": "gameplay",
+    "targetConfidence": 0.70
+  },
+  {
+    "id": "Q018",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "How do tournament rules differ from casual play, especially regarding timing and disputes?",
+    "expectedKeywords": ["tournament", "rules", "timing", "disputes"],
+    "expectedCitations": [
+      {
+        "pageNumber": 12,
+        "snippet": "tournament rules"
+      }
+    ],
+    "forbiddenKeywords": ["no difference", "same rules", "not mentioned"],
+    "difficulty": "hard",
+    "category": "edge_cases",
+    "targetConfidence": 0.70
+  },
+  {
+    "id": "Q019",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "If a player is eliminated mid-game, how are their resources and territory handled?",
+    "expectedKeywords": ["eliminated", "resources", "territory", "handled"],
+    "expectedCitations": [
+      {
+        "pageNumber": 8,
+        "snippet": "player elimination"
+      }
+    ],
+    "forbiddenKeywords": ["disappear", "ignored", "not covered"],
+    "difficulty": "hard",
+    "category": "edge_cases",
+    "targetConfidence": 0.70
+  },
+  {
+    "id": "Q020",
+    "gameId": "00000000-0000-0000-0000-000000000001",
+    "question": "Can you clarify the interaction between the 'Steal Resource' card and the 'Protected Resources' rule when both are in play simultaneously?",
+    "expectedKeywords": ["Steal Resource", "Protected Resources", "interaction", "simultaneously"],
+    "expectedCitations": [
+      {
+        "pageNumber": 7,
+        "snippet": "card interactions"
+      }
+    ],
+    "forbiddenKeywords": ["undefined", "not covered", "up to players"],
+    "difficulty": "hard",
+    "category": "edge_cases",
+    "targetConfidence": 0.70
+  }
+]

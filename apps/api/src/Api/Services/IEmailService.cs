@@ -5,6 +5,9 @@ internal interface IEmailService
     Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetToken, CancellationToken ct = default);
     Task SendTwoFactorDisabledEmailAsync(string toEmail, string toName, bool wasAdminOverride, CancellationToken ct = default);
 
+    // ISSUE-3071: Email verification
+    Task SendVerificationEmailAsync(string toEmail, string toName, string verificationToken, CancellationToken ct = default);
+
     // ISSUE-918: Email delivery integration for reports
     Task SendReportEmailAsync(
         IReadOnlyList<string> recipients,
@@ -97,5 +100,17 @@ internal interface IEmailService
         int remainingMonthly,
         int remainingPending,
         string libraryUrl,
+        CancellationToken ct = default);
+
+    // ISSUE-2886: User suspension emails
+    Task SendAccountSuspendedEmailAsync(
+        string toEmail,
+        string userName,
+        string? reason,
+        CancellationToken ct = default);
+
+    Task SendAccountReactivatedEmailAsync(
+        string toEmail,
+        string userName,
         CancellationToken ct = default);
 }

@@ -13,6 +13,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+
 import { authenticateViaAPI } from './fixtures/auth';
 
 /**

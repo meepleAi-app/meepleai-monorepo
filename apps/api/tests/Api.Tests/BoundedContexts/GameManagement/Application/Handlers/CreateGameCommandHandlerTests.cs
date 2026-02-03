@@ -1,7 +1,9 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Handlers;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
 using Xunit;
@@ -12,20 +14,24 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 /// <summary>
 /// Comprehensive tests for CreateGameCommandHandler.
 /// Tests game creation with value object validation and DTO mapping.
+/// Issue #3372: Added IPdfDocumentRepository mock for PDF linking support.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class CreateGameCommandHandlerTests
 {
     private readonly Mock<IGameRepository> _gameRepositoryMock;
+    private readonly Mock<IPdfDocumentRepository> _pdfDocumentRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly CreateGameCommandHandler _handler;
 
     public CreateGameCommandHandlerTests()
     {
         _gameRepositoryMock = new Mock<IGameRepository>();
+        _pdfDocumentRepositoryMock = new Mock<IPdfDocumentRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _handler = new CreateGameCommandHandler(
             _gameRepositoryMock.Object,
+            _pdfDocumentRepositoryMock.Object,
             _unitOfWorkMock.Object);
     }
     [Fact]
@@ -481,6 +487,111 @@ public class CreateGameCommandHandlerTests
 
         Assert.NotNull(capturedGame);
         Assert.Equal(169786, capturedGame.BggId);
+    }
+
+    // ===== PDF LINKING TESTS (Issue #3372) =====
+
+    [Fact]
+    public async Task Handle_WithPdfId_FetchesPdfAndSavesTwice()
+    {
+        // Arrange
+        var pdfId = Guid.NewGuid();
+        var command = new CreateGameCommand(
+            Title: "Settlers of Catan",
+            PdfId: pdfId);
+
+        // Create a real PdfDocument using Reconstitute (since class is sealed)
+        var pdfDocument = Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument.Reconstitute(
+            id: pdfId,
+            gameId: Guid.Empty, // Initially not linked
+            fileName: new Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects.FileName("rules.pdf"),
+            filePath: "/storage/rules.pdf",
+            fileSize: new Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects.FileSize(1024),
+            uploadedByUserId: Guid.NewGuid(),
+            uploadedAt: DateTime.UtcNow,
+            processingStatus: "completed",
+            processedAt: DateTime.UtcNow,
+            pageCount: 10,
+            processingError: null,
+            language: Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects.LanguageCode.English);
+
+        _pdfDocumentRepositoryMock
+            .Setup(r => r.GetByIdAsync(pdfId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pdfDocument);
+
+        Game? capturedGame = null;
+        _gameRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<Game>(), It.IsAny<CancellationToken>()))
+            .Callback<Game, CancellationToken>((g, _) => capturedGame = g)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(capturedGame);
+
+        // Verify PDF was fetched
+        _pdfDocumentRepositoryMock.Verify(
+            r => r.GetByIdAsync(pdfId, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Verify SaveChanges was called twice (once for game, once for PDF link)
+        _unitOfWorkMock.Verify(
+            u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+
+        // Verify PDF GameId was updated
+        Assert.Equal(capturedGame.Id, pdfDocument.GameId);
+    }
+
+    [Fact]
+    public async Task Handle_WithNonExistentPdfId_ThrowsNotFoundException()
+    {
+        // Arrange
+        var pdfId = Guid.NewGuid();
+        var command = new CreateGameCommand(
+            Title: "Terra Mystica",
+            PdfId: pdfId);
+
+        // PDF not found - returns null
+        _pdfDocumentRepositoryMock
+            .Setup(r => r.GetByIdAsync(pdfId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken));
+
+        // Verify exception contains correct info
+        Assert.Equal("PdfDocument", exception.ResourceType);
+        Assert.Equal(pdfId.ToString(), exception.ResourceId);
+
+        // Verify PDF was searched
+        _pdfDocumentRepositoryMock.Verify(
+            r => r.GetByIdAsync(pdfId, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Note: Game was created and saved before PDF check, so 1 SaveChanges call
+        _unitOfWorkMock.Verify(
+            u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithoutPdfId_DoesNotQueryPdfRepository()
+    {
+        // Arrange
+        var command = new CreateGameCommand(Title: "Dominion");
+
+        // Act
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert - PDF repository should not be queried
+        _pdfDocumentRepositoryMock.Verify(
+            r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }
 

@@ -8,8 +8,10 @@
 import {
   GameSessionDtoSchema,
   PaginatedSessionsResponseSchema,
+  SessionQuotaResponseSchema,
   type GameSessionDto,
   type PaginatedSessionsResponse,
+  type SessionQuotaResponse,
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -258,6 +260,42 @@ export function createSessionsClient({ httpClient }: CreateSessionsClientParams)
       return httpClient.post(
         `/api/v1/sessions/${encodeURIComponent(sessionId)}/state/restore/${encodeURIComponent(snapshotId)}`
       );
+    },
+
+    // ========== Session Quota (Issue #3075) ==========
+
+    /**
+     * Get current user's session quota
+     * GET /api/v1/users/{userId}/session-quota
+     *
+     * Returns session quota information including:
+     * - Current active sessions count
+     * - Maximum allowed sessions for user's tier
+     * - Remaining slots available
+     * - Whether user can create new sessions
+     *
+     * @param userId User ID (GUID format)
+     * @returns Session quota information
+     */
+    async getQuota(userId: string): Promise<SessionQuotaResponse> {
+      const response = await httpClient.get(
+        `/api/v1/users/${encodeURIComponent(userId)}/session-quota`,
+        SessionQuotaResponseSchema
+      );
+
+      if (!response) {
+        // Return default response for unauthenticated/error cases
+        return {
+          currentSessions: 0,
+          maxSessions: 1,
+          remainingSlots: 1,
+          canCreateNew: true,
+          isUnlimited: false,
+          userTier: 'free',
+        };
+      }
+
+      return response;
     },
   };
 }

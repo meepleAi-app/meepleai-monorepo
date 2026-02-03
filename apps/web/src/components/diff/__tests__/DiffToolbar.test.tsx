@@ -5,6 +5,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DiffToolbar } from '../DiffToolbar';
 import type { DiffStatistics as DiffStats } from '@/lib/diffProcessor';
 

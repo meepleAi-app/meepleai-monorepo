@@ -7,7 +7,7 @@
  * ✅ STATUS: COMPLETE - Enhanced with negative scenarios
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { AuthHelper, GamesHelper, USER_FIXTURES } from './pages';
 
 test.describe('Error Handling E2E Tests - Issue #1494', () => {

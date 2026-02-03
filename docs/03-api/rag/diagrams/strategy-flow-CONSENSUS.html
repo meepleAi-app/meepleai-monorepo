@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONSENSUS Strategy Flow - Multi-LLM Voting System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'IBM Plex Mono', 'Source Code Pro', monospace;
+            background: radial-gradient(circle at top center, #7f1d1d 0%, #0a0e1a 40%, #000000 100%);
+            color: #e2e8f0;
+            padding: 3rem 2rem;
+            min-height: 100vh;
+        }
+
+        .flow-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: rgba(15, 23, 42, 0.97);
+            border: 3px solid #ef4444;
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: 0 0 100px rgba(239, 68, 68, 0.4), inset 0 0 60px rgba(127, 29, 29, 0.1);
+        }
+
+        .flow-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 3px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .strategy-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1.75rem;
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid #ef4444;
+            border-radius: 28px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #fca5a5;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
+        }
+
+        .complexity-badge {
+            background: #7f1d1d;
+            border: 1px solid #ef4444;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            color: #fecaca;
+            animation: glow 2s infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.8); }
+        }
+
+        .flow-header h1 {
+            font-size: 4rem;
+            margin-bottom: 0.75rem;
+            background: linear-gradient(135deg, #fca5a5, #ef4444, #dc2626);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 60px rgba(239, 68, 68, 0.6);
+            font-weight: 900;
+        }
+
+        .flow-header p {
+            color: #fca5a5;
+            font-size: 1.3rem;
+            font-weight: 500;
+        }
+
+        .flow-block {
+            margin-bottom: 2rem;
+            padding: 2.5rem;
+            background: linear-gradient(135deg, rgba(127, 29, 29, 0.2), rgba(127, 29, 29, 0.05));
+            border: 2px solid rgba(239, 68, 68, 0.3);
+            border-radius: 16px;
+            transition: all 0.4s;
+            position: relative;
+        }
+
+        .flow-block::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 14px;
+            padding: 2px;
+            background: linear-gradient(135deg, #ef4444, transparent);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .flow-block:hover::before {
+            opacity: 1;
+        }
+
+        .flow-block:hover {
+            background: linear-gradient(135deg, rgba(127, 29, 29, 0.35), rgba(127, 29, 29, 0.15));
+            transform: translateX(12px);
+            box-shadow: -8px 8px 40px rgba(239, 68, 68, 0.3);
+        }
+
+        .block-type {
+            position: absolute;
+            top: -16px;
+            right: 2rem;
+            padding: 0.4rem 1.25rem;
+            background: #0a0e1a;
+            border: 2px solid #ef4444;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #fca5a5;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+        }
+
+        .block-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .block-icon {
+            font-size: 3rem;
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid #ef4444;
+            border-radius: 14px;
+            flex-shrink: 0;
+        }
+
+        .block-title h3 {
+            font-size: 1.75rem;
+            margin-bottom: 0.4rem;
+            color: #fecaca;
+        }
+
+        .block-title small {
+            color: #fca5a5;
+            font-size: 0.95rem;
+        }
+
+        .voter-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(10, 14, 26, 0.6);
+            border-radius: 12px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .voter-card {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05));
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .voter-card:nth-child(2) {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05));
+            border-color: #8b5cf6;
+        }
+
+        .voter-card:nth-child(3) {
+            background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(236, 72, 153, 0.05));
+            border-color: #ec4899;
+        }
+
+        .voter-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(59, 130, 246, 0.3);
+        }
+
+        .voter-number {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .voter-model {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .voter-provider {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .voter-tokens {
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+        }
+
+        .block-params {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .param-item {
+            padding: 1rem;
+            background: rgba(10, 14, 26, 0.8);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .param-label {
+            display: block;
+            color: #64748b;
+            margin-bottom: 0.35rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .param-value {
+            color: #fca5a5;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .flow-arrow {
+            text-align: center;
+            margin: 2rem 0;
+            font-size: 3rem;
+            color: #ef4444;
+            opacity: 0.6;
+            animation: pulse 2.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; transform: translateY(0); }
+            50% { opacity: 0.9; transform: translateY(8px); }
+        }
+
+        .metrics-panel {
+            margin-top: 3rem;
+            padding: 3rem;
+            background: linear-gradient(135deg, rgba(127, 29, 29, 0.25), rgba(127, 29, 29, 0.1));
+            border: 3px solid rgba(239, 68, 68, 0.4);
+            border-radius: 20px;
+        }
+
+        .metrics-panel h2 {
+            text-align: center;
+            color: #fca5a5;
+            margin-bottom: 2.5rem;
+            font-size: 2rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+
+        .metric-card {
+            padding: 2rem 1.5rem;
+            background: rgba(10, 14, 26, 0.9);
+            border: 2px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .metric-card:hover {
+            border-color: #ef4444;
+            box-shadow: 0 8px 30px rgba(239, 68, 68, 0.4);
+            transform: translateY(-6px);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 0.75rem;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fca5a5;
+            line-height: 1;
+        }
+
+        .metric-sublabel {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 0.6rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="flow-container">
+        <div class="flow-header">
+            <div class="strategy-badge">
+                TIER REQUIRED: Admin or Premium
+                <span class="complexity-badge">HIGHEST COMPLEXITY</span>
+            </div>
+            <h1>🗳️ CONSENSUS</h1>
+            <p>Multi-LLM Voting for Critical Decisions</p>
+        </div>
+
+        <div class="flow-block">
+            <span class="block-type">INPUT</span>
+            <div class="block-header">
+                <div class="block-icon">📥</div>
+                <div class="block-title">
+                    <h3>High-Risk Query Input</h3>
+                    <small>Critical decision requiring maximum confidence</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Type</span>
+                    <span class="param-value">High-stakes / Controversial</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Complexity</span>
+                    <span class="param-value">Critical (5/5)</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Example</span>
+                    <span class="param-value">"Rule arbitration dispute"</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">AGENT</span>
+            <div class="block-header">
+                <div class="block-icon">🔍</div>
+                <div class="block-title">
+                    <h3>CitationAgent</h3>
+                    <small>Source verification specialist</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Base Prompt</span>
+                    <span class="param-value">Verify all sources with page refs</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Default Strategy</span>
+                    <span class="param-value">CONSENSUS (this)</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Citation Mode</span>
+                    <span class="param-value">Mandatory with page numbers</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">LAYER</span>
+            <div class="block-header">
+                <div class="block-icon">🧠</div>
+                <div class="block-title">
+                    <h3>L1: Routing</h3>
+                    <small>Initialize multi-model voting system</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Tokens</span>
+                    <span class="param-value">280</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Action</span>
+                    <span class="param-value">Activate 3 voters</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Validation</span>
+                    <span class="param-value">Tier ≥ Admin</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">MULTI-MODEL VOTING</span>
+            <div class="block-header">
+                <div class="block-icon">🗳️</div>
+                <div class="block-title">
+                    <h3>Parallel Voting System</h3>
+                    <small>3 independent LLMs answer simultaneously</small>
+                </div>
+            </div>
+
+            <div class="voter-grid">
+                <div class="voter-card">
+                    <div class="voter-number">Voter 1</div>
+                    <div class="voter-model" style="color: #93c5fd;">Claude Sonnet 4.5</div>
+                    <div class="voter-provider">Anthropic</div>
+                    <div class="voter-tokens">~5000 tokens</div>
+                </div>
+                <div class="voter-card">
+                    <div class="voter-number">Voter 2</div>
+                    <div class="voter-model" style="color: #c4b5fd;">GPT-4o</div>
+                    <div class="voter-provider">OpenAI</div>
+                    <div class="voter-tokens">~5000 tokens</div>
+                </div>
+                <div class="voter-card">
+                    <div class="voter-number">Voter 3</div>
+                    <div class="voter-model" style="color: #f9a8d4;">DeepSeek Chat</div>
+                    <div class="voter-provider">DeepSeek</div>
+                    <div class="voter-tokens">~5000 tokens</div>
+                </div>
+            </div>
+
+            <div class="block-params" style="margin-top: 1.5rem;">
+                <div class="param-item">
+                    <span class="param-label">Execution Mode</span>
+                    <span class="param-value">Parallel (3 simultaneous calls)</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Total Tokens</span>
+                    <span class="param-value">~15000 (5K × 3)</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Diversity</span>
+                    <span class="param-value">3 different providers</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Independence</span>
+                    <span class="param-value">No cross-contamination</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">LAYER - AGGREGATION</span>
+            <div class="block-header">
+                <div class="block-icon">⚖️</div>
+                <div class="block-title">
+                    <h3>Vote Aggregation (Sonnet 4.5)</h3>
+                    <small>Intelligent consensus from 3 responses</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Aggregator Model</span>
+                    <span class="param-value">Claude Sonnet 4.5</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Strategy</span>
+                    <span class="param-value">Weighted majority voting</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Tokens</span>
+                    <span class="param-value">~3000</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Conflict Resolution</span>
+                    <span class="param-value">Source-backed consensus</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Quality Check</span>
+                    <span class="param-value">Citation verification</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Output</span>
+                    <span class="param-value">Single validated answer</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-arrow">↓</div>
+
+        <div class="flow-block">
+            <span class="block-type">OUTPUT</span>
+            <div class="block-header">
+                <div class="block-icon">✅</div>
+                <div class="block-title">
+                    <h3>Consensus Response</h3>
+                    <small>Multi-model validated answer with maximum confidence</small>
+                </div>
+            </div>
+            <div class="block-params">
+                <div class="param-item">
+                    <span class="param-label">Accuracy</span>
+                    <span class="param-value">97-99%</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Total Tokens</span>
+                    <span class="param-value">18,000</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Agreement Level</span>
+                    <span class="param-value">≥2/3 voters</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Citations</span>
+                    <span class="param-value">Multi-source verified</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Confidence</span>
+                    <span class="param-value">Maximum (99%+)</span>
+                </div>
+                <div class="param-item">
+                    <span class="param-label">Dissenting Views</span>
+                    <span class="param-value">Documented if present</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics-panel">
+            <h2>Strategy Performance Metrics</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Tokens</div>
+                    <div class="metric-value">18,000</div>
+                    <div class="metric-sublabel">8.7× more than FAST</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Cost</div>
+                    <div class="metric-value">$0.09</div>
+                    <div class="metric-sublabel">900× more than FAST</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Latency</div>
+                    <div class="metric-value">10-20s</div>
+                    <div class="metric-sublabel">50-100× slower than FAST</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Accuracy</div>
+                    <div class="metric-value">97-99%</div>
+                    <div class="metric-sublabel">+14% vs FAST</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Usage</div>
+                    <div class="metric-value">1-3%</div>
+                    <div class="metric-sublabel">Only critical decisions</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Models Used</div>
+                    <div class="metric-value">4×</div>
+                    <div class="metric-sublabel">3 voters + 1 aggregator</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Providers</div>
+                    <div class="metric-value">3×</div>
+                    <div class="metric-sublabel">Anthropic + OpenAI + DeepSeek</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Confidence</div>
+                    <div class="metric-value">99%+</div>
+                    <div class="metric-sublabel">Multi-model agreement</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(127, 29, 29, 0.15); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); text-align: center;">
+            <h4 style="color: #fca5a5; margin-bottom: 0.75rem; font-size: 1.1rem;">💡 When to Use CONSENSUS</h4>
+            <p style="color: #cbd5e1; line-height: 1.6; font-size: 0.9rem;">
+                Tournament rule disputes • Controversial interpretations • High-stakes decisions •
+                Legal/official rulings • Multi-perspective validation • When accuracy > cost
+            </p>
+        </div>
+    </div>
+</body>
+</html>

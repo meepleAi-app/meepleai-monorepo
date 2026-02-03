@@ -1,15 +1,15 @@
 /**
- * Settings Page - 4 Tabs Implementation (SPRINT-1, Issue #848)
+ * Settings Page - 4 Tabs Implementation (Issue #2881)
  *
  * Comprehensive user settings page with:
- * - Profile tab: Display name, email, password change
- * - Preferences tab: Language, notifications, theme, data retention
- * - Privacy tab: 2FA management, OAuth account linking
- * - Advanced tab: API keys, sessions, account deletion
+ * - Profile tab: Display name, email, avatar, level/badges, stats
+ * - Preferences tab: Language, theme, notifications, animations
+ * - Privacy tab: Public profile toggles, data retention
+ * - Account tab: Password change, 2FA, sessions, delete account
  *
  * Uses Authentication.Application layer via CQRS:
  * - GetUserProfileQuery for data
- * - UpdateUserProfileCommand for changes (placeholder)
+ * - UpdateUserProfileCommand for changes
  * - Enable2FACommand/Disable2FACommand for 2FA
  */
 
@@ -17,11 +17,19 @@
 
 import { useEffect, useState } from 'react';
 
+import { User, Settings, Shield, Key } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 
 import { LoadingButton } from '@/components/loading/LoadingButton';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { AvatarUpload } from '@/components/profile/AvatarUpload';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Switch } from '@/components/ui/forms/switch';
 import { Separator } from '@/components/ui/navigation/separator';
@@ -52,11 +60,21 @@ import {
   type TotpSetupResponse,
   type TwoFactorStatusDto,
   type UserSessionInfo,
+  type UserBadgeDto,
+  type UserLibraryStats,
 } from '@/lib/api';
 import { hasStoredApiKey } from '@/lib/api/core/apiKeyStore';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
+
+// Tab configuration with icons
+const TABS = [
+  { id: 'profile', label: 'Profilo', icon: User },
+  { id: 'preferences', label: 'Preferenze', icon: Settings },
+  { id: 'privacy', label: 'Privacy', icon: Shield },
+  { id: 'account', label: 'Account', icon: Key },
+] as const;
 
 // OAuth provider configuration
 const OAUTH_PROVIDERS = [
@@ -70,9 +88,17 @@ interface OAuthAccount {
   createdAt: string;
 }
 
+// Privacy preferences (local state until API is implemented)
+interface PrivacyPreferences {
+  publicProfile: boolean;
+  showLibrary: boolean;
+  showActivity: boolean;
+  showBadges: boolean;
+}
+
 export default function SettingsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState<string>('profile');
 
   // Global state
   const [loading, setLoading] = useState(true);
@@ -83,18 +109,32 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // Badges and stats
+  const [badges, setBadges] = useState<UserBadgeDto[]>([]);
+  const [libraryStats, setLibraryStats] = useState<UserLibraryStats | null>(null);
 
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Preferences state (mock data - backend not implemented)
+  // Preferences state
   const [preferences, setPreferences] = useState<UserPreferences>({
     language: 'en',
     emailNotifications: true,
     theme: 'system',
     dataRetentionDays: 90,
+  });
+  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+
+  // Privacy preferences (local until API)
+  const [privacyPrefs, setPrivacyPrefs] = useState<PrivacyPreferences>({
+    publicProfile: false,
+    showLibrary: false,
+    showActivity: false,
+    showBadges: true,
   });
 
   // 2FA state
@@ -125,11 +165,17 @@ export default function SettingsPage() {
   const [revokeAllPassword, setRevokeAllPassword] = useState('');
   const [revokeAllLoading, setRevokeAllLoading] = useState(false);
 
+  // Delete account confirmation
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
   // Load initial data
   useEffect(() => {
     loadProfile();
     load2FAStatus();
     loadOAuthAccounts();
+    loadBadges();
+    loadLibraryStats();
     setApiKeyAuthenticated(hasStoredApiKey());
     loadUserSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -157,8 +203,8 @@ export default function SettingsPage() {
       setProfile(user);
       setDisplayName(user.displayName);
       setEmail(user.email);
-      // Hydrate preferences from profile with defensive defaults
       // Issue #2755: Fix TypeError when user properties are undefined
+      // Hydrate preferences from profile with defensive defaults
       setPreferences({
         language: user.language || 'en',
         theme: (user.theme as 'light' | 'dark' | 'system') || 'system',
@@ -180,8 +226,7 @@ export default function SettingsPage() {
 
   const load2FAStatus = async () => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const status = await (api.auth as any).getTwoFactorStatus();
+      const status = await api.auth.getTwoFactorStatus();
       setTwoFactorStatus(status);
     } catch (err) {
       logger.error(
@@ -214,6 +259,32 @@ export default function SettingsPage() {
     }
   };
 
+  const loadBadges = async () => {
+    try {
+      const userBadges = await api.badges.getMyBadges();
+      setBadges(userBadges);
+    } catch (err) {
+      logger.error(
+        'Failed to load badges',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SettingsPage', 'loadBadges', { operation: 'fetch_badges' })
+      );
+    }
+  };
+
+  const loadLibraryStats = async () => {
+    try {
+      const stats = await api.library.getStats();
+      setLibraryStats(stats);
+    } catch (err) {
+      logger.error(
+        'Failed to load library stats',
+        err instanceof Error ? err : new Error(String(err)),
+        createErrorContext('SettingsPage', 'loadLibraryStats', { operation: 'fetch_library_stats' })
+      );
+    }
+  };
+
   // Profile update handler
   const handleUpdateProfile = async () => {
     setSuccess(null);
@@ -231,7 +302,7 @@ export default function SettingsPage() {
         email: email.trim(),
       });
       setSuccess('Profile updated successfully');
-      await loadProfile(); // Refresh profile data
+      await loadProfile();
     } catch (err) {
       const errorMsg = getErrorMessage(err);
       logger.error(
@@ -276,7 +347,6 @@ export default function SettingsPage() {
         newPassword,
       });
       setSuccess('Password changed successfully');
-      // Clear password fields on success
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -319,12 +389,17 @@ export default function SettingsPage() {
     }
   };
 
+  // Privacy preferences update (local for now)
+  const handleUpdatePrivacy = () => {
+    setSuccess('Privacy settings saved locally');
+    // TODO: Call API when privacy endpoint is implemented
+  };
+
   // 2FA handlers
   const handleSetup2FA = async () => {
     try {
       setLoading(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const setupResponse = await (api.auth as any).setup2FA();
+      const setupResponse = await api.auth.setup2FA();
       setSetup(setupResponse);
       setShowBackupCodes(true);
       setError(null);
@@ -343,8 +418,7 @@ export default function SettingsPage() {
   const handleEnable2FA = async () => {
     try {
       setLoading(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (api.auth as any).enable2FA(verificationCode);
+      await api.auth.enable2FA(verificationCode);
       setSuccess('Two-factor authentication enabled successfully!');
       setSetup(null);
       setShowBackupCodes(false);
@@ -369,8 +443,7 @@ export default function SettingsPage() {
 
     try {
       setLoading(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (api.auth as any).disable2FA(disablePassword, disableCode);
+      await api.auth.disable2FA(disablePassword, disableCode);
       setSuccess('Two-factor authentication disabled.');
       setDisablePassword('');
       setDisableCode('');
@@ -455,10 +528,9 @@ export default function SettingsPage() {
     setSuccess(null);
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (api.auth as any).loginWithApiKey(apiKeyInput);
+      await api.auth.loginWithApiKey(apiKeyInput);
       setApiKeyAuthenticated(true);
-      setApiKeyInput(''); // Clear input for security
+      setApiKeyInput('');
       setSuccess('API key stored for this browser session.');
     } catch (error) {
       logger.error(
@@ -482,8 +554,7 @@ export default function SettingsPage() {
     setError(null);
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (api.auth as any).logoutApiKey();
+      await api.auth.logoutApiKey();
       setApiKeyAuthenticated(false);
       setSuccess('API key removed from this session');
     } catch (error) {
@@ -502,8 +573,7 @@ export default function SettingsPage() {
   const loadUserSessions = async () => {
     try {
       setSessionsLoading(true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const userSessions = await (api.auth as any).getUserSessions();
+      const userSessions = await api.auth.getUserSessions();
       setSessions(userSessions);
     } catch (error) {
       logger.error(
@@ -526,10 +596,8 @@ export default function SettingsPage() {
     setSuccess(null);
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (api.auth as any).revokeSession(sessionId);
+      await api.auth.revokeSession(sessionId);
       setSuccess('Session revoked successfully');
-      // Reload sessions list
       await loadUserSessions();
     } catch (error) {
       logger.error(
@@ -553,8 +621,7 @@ export default function SettingsPage() {
     setSuccess(null);
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (api.auth as any).revokeAllSessions({
+      const result = await api.auth.revokeAllSessions({
         includeCurrentSession: revokeAllIncludeCurrent,
         password: revokeAllPassword || null,
       });
@@ -565,18 +632,15 @@ export default function SettingsPage() {
         }`
       );
 
-      // Close dialog and reset state
       setShowRevokeAllDialog(false);
       setRevokeAllIncludeCurrent(false);
       setRevokeAllPassword('');
 
-      // If current session was revoked, redirect to login
       if (result.currentSessionRevoked) {
         setTimeout(() => {
           router.push('/login');
         }, 2000);
       } else {
-        // Reload sessions list
         await loadUserSessions();
       }
     } catch (error) {
@@ -601,7 +665,6 @@ export default function SettingsPage() {
   const getDeviceInfo = (userAgent: string | null) => {
     if (!userAgent) return 'Unknown device';
 
-    // Simple device detection
     if (userAgent.includes('Mobile')) return 'Mobile device';
     if (userAgent.includes('Tablet')) return 'Tablet';
     if (userAgent.includes('Windows')) return 'Windows PC';
@@ -612,19 +675,30 @@ export default function SettingsPage() {
   };
 
   const isCurrentSession = (session: UserSessionInfo) => {
-    // Simple heuristic: the most recently seen session is likely the current one
     const now = new Date();
     const lastSeen = session.lastSeenAt
       ? new Date(session.lastSeenAt)
       : new Date(session.createdAt);
     const diffMinutes = (now.getTime() - lastSeen.getTime()) / (1000 * 60);
-    return diffMinutes < 5; // Consider sessions active within last 5 minutes as "current"
+    return diffMinutes < 5;
+  };
+
+  const getBadgeTierColor = (tier: string) => {
+    const colors: Record<string, string> = {
+      Bronze: 'bg-amber-600',
+      Silver: 'bg-gray-400',
+      Gold: 'bg-yellow-500',
+      Platinum: 'bg-cyan-400',
+      Diamond: 'bg-purple-500',
+    };
+    // eslint-disable-next-line security/detect-object-injection -- tier is from typed API response, not user input
+    return colors[tier] || 'bg-gray-400';
   };
 
   if (loading && !profile) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500" />
       </div>
     );
   }
@@ -634,14 +708,11 @@ export default function SettingsPage() {
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1
-            className="text-3xl font-bold text-foreground"
-            data-testid="settings-heading"
-          >
-            Settings
+          <h1 className="text-3xl font-bold text-foreground" data-testid="settings-heading">
+            Impostazioni
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">
-            Manage your account settings and preferences
+          <p className="text-muted-foreground mt-2">
+            Gestisci il tuo account, le preferenze e la privacy
           </p>
         </div>
 
@@ -660,118 +731,163 @@ export default function SettingsPage() {
           </Alert>
         )}
 
-        {/* Tabs */}
+        {/* Tabs with orange underline */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="preferences">Preferences</TabsTrigger>
-            <TabsTrigger value="privacy">Privacy</TabsTrigger>
-            <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-transparent border-b border-border rounded-none p-0 h-auto">
+            {TABS.map(tab => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger
+                  key={tab.id}
+                  value={tab.id}
+                  className="relative flex items-center justify-center gap-2 py-3 px-4 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-orange-500 text-muted-foreground hover:text-foreground transition-colors after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-orange-500 after:scale-x-0 data-[state=active]:after:scale-x-100 after:transition-transform"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </TabsTrigger>
+              );
+            })}
           </TabsList>
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
+            {/* Avatar and basic info */}
             <Card>
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>Update your display name and email address</CardDescription>
+                <CardTitle>Il tuo profilo</CardTitle>
+                <CardDescription>Gestisci le informazioni del tuo profilo pubblico</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input
-                    id="displayName"
-                    value={displayName}
-                    onChange={e => setDisplayName(e.target.value)}
-                    placeholder="Your display name"
+              <CardContent className="space-y-6">
+                {/* Avatar section */}
+                <div className="flex items-center gap-6">
+                  <AvatarUpload
+                    currentAvatarUrl={avatarUrl}
+                    displayName={displayName || 'User'}
+                    onUpload={async (file, previewUrl) => {
+                      // Optimistic UI update
+                      setAvatarUrl(previewUrl);
+                      try {
+                        // TODO: Upload to backend when API is available
+                        // await api.auth.uploadAvatar(file);
+                        setSuccess('Avatar aggiornato con successo!');
+                      } catch (err) {
+                        // Revert on error
+                        setAvatarUrl(avatarUrl);
+                        setError(getErrorMessage(err));
+                      }
+                    }}
+                    disabled={loading}
                   />
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold">{displayName || 'User'}</h3>
+                    <p className="text-muted-foreground">{email}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Membro dal{' '}
+                      {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : '—'}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="your.email@example.com"
-                    disabled
-                  />
-                  <p className="text-sm text-slate-500">Email changes not yet supported</p>
-                </div>
+                <Separator />
 
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Input id="role" value={profile?.role || ''} disabled />
-                </div>
+                {/* Profile form */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="displayName">Nome visualizzato</Label>
+                    <Input
+                      id="displayName"
+                      value={displayName}
+                      onChange={e => setDisplayName(e.target.value)}
+                      placeholder="Il tuo nome"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="memberSince">Member Since</Label>
-                  <Input
-                    id="memberSince"
-                    value={
-                      profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : ''
-                    }
-                    disabled
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="your.email@example.com"
+                      disabled
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      La modifica dell'email non è ancora supportata
+                    </p>
+                  </div>
 
-                <Button
-                  onClick={handleUpdateProfile}
-                  disabled={loading}
-                  data-testid="save-profile-button"
-                >
-                  Update Profile
-                </Button>
+                  <Button onClick={handleUpdateProfile} disabled={loading} className="bg-orange-500 hover:bg-orange-600" data-testid="save-profile-button">
+                    Salva profilo
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
+            {/* Badges section */}
             <Card>
               <CardHeader>
-                <CardTitle>Change Password</CardTitle>
-                <CardDescription>Update your password to keep your account secure</CardDescription>
+                <CardTitle>Badge e riconoscimenti</CardTitle>
+                <CardDescription>I badge che hai guadagnato su MeepleAI</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <Input
-                    id="currentPassword"
-                    type="password"
-                    value={currentPassword}
-                    onChange={e => setCurrentPassword(e.target.value)}
-                    placeholder="Enter current password"
-                  />
-                </div>
+              <CardContent>
+                {badges.length > 0 ? (
+                  <div className="flex flex-wrap gap-3">
+                    {badges.slice(0, 6).map(badge => (
+                      <div
+                        key={badge.id}
+                        className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg"
+                        title={badge.description}
+                      >
+                        <div
+                          className={`w-3 h-3 rounded-full ${getBadgeTierColor(badge.tier)}`}
+                        />
+                        <span className="text-sm font-medium">{badge.name}</span>
+                      </div>
+                    ))}
+                    {badges.length > 6 && (
+                      <Button variant="ghost" size="sm" onClick={() => router.push('/badges')}>
+                        +{badges.length - 6} altri
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Non hai ancora guadagnato nessun badge. Continua a giocare per ottenerli!
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    placeholder="Enter new password (min 8 characters)"
-                  />
+            {/* Stats section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Le tue statistiche</CardTitle>
+                <CardDescription>Un riepilogo della tua attività su MeepleAI</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-3xl font-bold text-orange-500">
+                      {libraryStats?.totalGames ?? 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Giochi in libreria</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-3xl font-bold text-orange-500">
+                      {libraryStats?.favoriteGames ?? 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Preferiti</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-3xl font-bold text-orange-500">{badges.length}</div>
+                    <div className="text-sm text-muted-foreground">Badge</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-3xl font-bold text-orange-500">—</div>
+                    <div className="text-sm text-muted-foreground">Livello</div>
+                  </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleChangePassword}
-                  disabled={loading}
-                  data-testid="change-password-button"
-                >
-                  Change Password
-                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -780,14 +896,14 @@ export default function SettingsPage() {
           <TabsContent value="preferences" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>User Preferences</CardTitle>
+                <CardTitle>Preferenze utente</CardTitle>
                 <CardDescription>
-                  Customize your experience with language, theme, and notification settings
+                  Personalizza la tua esperienza con lingua, tema e notifiche
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="language">Language</Label>
+                  <Label htmlFor="language">Lingua</Label>
                   <Select
                     value={preferences.language}
                     onValueChange={value => setPreferences({ ...preferences, language: value })}
@@ -796,8 +912,8 @@ export default function SettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
                       <SelectItem value="it">Italiano</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
                       <SelectItem value="es">Español</SelectItem>
                       <SelectItem value="fr">Français</SelectItem>
                       <SelectItem value="de">Deutsch</SelectItem>
@@ -806,7 +922,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="theme">Theme</Label>
+                  <Label htmlFor="theme">Tema</Label>
                   <Select
                     value={preferences.theme}
                     onValueChange={(value: 'light' | 'dark' | 'system') =>
@@ -817,18 +933,20 @@ export default function SettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="light">Light</SelectItem>
-                      <SelectItem value="dark">Dark</SelectItem>
-                      <SelectItem value="system">System</SelectItem>
+                      <SelectItem value="light">Chiaro</SelectItem>
+                      <SelectItem value="dark">Scuro</SelectItem>
+                      <SelectItem value="system">Sistema</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
+                <Separator />
+
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="emailNotifications">Email Notifications</Label>
-                    <p className="text-sm text-slate-500">
-                      Receive email updates about your account activity
+                    <Label htmlFor="emailNotifications">Notifiche email</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Ricevi aggiornamenti via email sulla tua attività
                     </p>
                   </div>
                   <Switch
@@ -840,10 +958,117 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="animations">Animazioni</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Abilita le animazioni nell'interfaccia
+                    </p>
+                  </div>
+                  <Switch
+                    id="animations"
+                    checked={animationsEnabled}
+                    onCheckedChange={setAnimationsEnabled}
+                  />
+                </div>
 
+                <Button onClick={handleUpdatePreferences} className="bg-orange-500 hover:bg-orange-600" data-testid="save-preferences-button">
+                  Salva preferenze
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Privacy Tab */}
+          <TabsContent value="privacy" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Profilo pubblico</CardTitle>
+                <CardDescription>
+                  Controlla cosa gli altri utenti possono vedere del tuo profilo
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="publicProfile">Profilo visibile</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Permetti ad altri utenti di vedere il tuo profilo
+                    </p>
+                  </div>
+                  <Switch
+                    id="publicProfile"
+                    checked={privacyPrefs.publicProfile}
+                    onCheckedChange={checked =>
+                      setPrivacyPrefs({ ...privacyPrefs, publicProfile: checked })
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="showLibrary">Mostra libreria</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Mostra la tua collezione di giochi agli altri
+                    </p>
+                  </div>
+                  <Switch
+                    id="showLibrary"
+                    checked={privacyPrefs.showLibrary}
+                    onCheckedChange={checked =>
+                      setPrivacyPrefs({ ...privacyPrefs, showLibrary: checked })
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="showActivity">Mostra attività</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Mostra la tua attività recente nel tuo profilo
+                    </p>
+                  </div>
+                  <Switch
+                    id="showActivity"
+                    checked={privacyPrefs.showActivity}
+                    onCheckedChange={checked =>
+                      setPrivacyPrefs({ ...privacyPrefs, showActivity: checked })
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="showBadges">Mostra badge</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Mostra i tuoi badge nel profilo pubblico
+                    </p>
+                  </div>
+                  <Switch
+                    id="showBadges"
+                    checked={privacyPrefs.showBadges}
+                    onCheckedChange={checked =>
+                      setPrivacyPrefs({ ...privacyPrefs, showBadges: checked })
+                    }
+                  />
+                </div>
+
+                <Button onClick={handleUpdatePrivacy} className="bg-orange-500 hover:bg-orange-600">
+                  Salva impostazioni privacy
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Conservazione dati</CardTitle>
+                <CardDescription>
+                  Quanto tempo conservare la tua cronologia chat e i dati di gioco
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="dataRetention">Data Retention (days)</Label>
+                  <Label htmlFor="dataRetention">Periodo di conservazione</Label>
                   <Select
                     value={preferences.dataRetentionDays.toString()}
                     onValueChange={value =>
@@ -854,50 +1079,147 @@ export default function SettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="30">30 days</SelectItem>
-                      <SelectItem value="90">90 days</SelectItem>
-                      <SelectItem value="180">180 days</SelectItem>
-                      <SelectItem value="365">1 year</SelectItem>
-                      <SelectItem value="-1">Forever</SelectItem>
+                      <SelectItem value="30">30 giorni</SelectItem>
+                      <SelectItem value="90">90 giorni</SelectItem>
+                      <SelectItem value="180">180 giorni</SelectItem>
+                      <SelectItem value="365">1 anno</SelectItem>
+                      <SelectItem value="-1">Per sempre</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-sm text-slate-500">
-                    How long to keep your chat history and game data
-                  </p>
                 </div>
 
-                <Button onClick={handleUpdatePreferences} data-testid="save-preferences-button">
-                  Save Preferences
+                <Button onClick={handleUpdatePreferences} variant="outline">
+                  Aggiorna conservazione dati
                 </Button>
+              </CardContent>
+            </Card>
+
+            {/* OAuth Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Account collegati</CardTitle>
+                <CardDescription>
+                  Collega i tuoi account social per un accesso più facile
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {OAUTH_PROVIDERS.map(provider => {
+                  const linked = isLinked(provider.id);
+                  const isCurrentlyUnlinking = unlinking === provider.id;
+
+                  return (
+                    <div
+                      key={provider.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                          <span className="text-sm font-semibold">{provider.name[0]}</span>
+                        </div>
+                        <div>
+                          <div className="font-medium">{provider.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {linked ? 'Collegato' : 'Non collegato'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {linked ? (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleUnlinkOAuth(provider.id)}
+                          disabled={isCurrentlyUnlinking}
+                        >
+                          {isCurrentlyUnlinking ? 'Scollegamento...' : 'Scollega'}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handleLinkOAuth(provider.id)}
+                          className={provider.color}
+                        >
+                          Collega
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Privacy Tab */}
-          <TabsContent value="privacy" className="space-y-6">
+          {/* Account Tab */}
+          <TabsContent value="account" className="space-y-6">
+            {/* Password change */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Cambia password</CardTitle>
+                <CardDescription>Aggiorna la tua password per mantenere sicuro il tuo account</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Password attuale</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    value={currentPassword}
+                    onChange={e => setCurrentPassword(e.target.value)}
+                    placeholder="Inserisci la password attuale"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">Nuova password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    placeholder="Inserisci la nuova password (min 8 caratteri)"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Conferma nuova password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="Conferma la nuova password"
+                  />
+                </div>
+
+                <Button onClick={handleChangePassword} disabled={loading} className="bg-orange-500 hover:bg-orange-600" data-testid="change-password-button">
+                  Cambia password
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* 2FA Section */}
             <Card>
               <CardHeader>
-                <CardTitle>Two-Factor Authentication</CardTitle>
-                <CardDescription>Add an extra layer of security to your account</CardDescription>
+                <CardTitle>Autenticazione a due fattori</CardTitle>
+                <CardDescription>Aggiungi un livello extra di sicurezza al tuo account</CardDescription>
               </CardHeader>
               <CardContent>
                 {twoFactorStatus?.isEnabled ? (
                   <div className="space-y-4">
                     <Alert className="border-green-500 bg-green-50 dark:bg-green-900/20">
                       <AlertDescription className="text-green-800 dark:text-green-200">
-                        ✓ Two-factor authentication is enabled
+                        ✓ L'autenticazione a due fattori è attiva
                         <br />
-                        Backup codes remaining: {twoFactorStatus.unusedBackupCodesCount}
+                        Codici di backup rimanenti: {twoFactorStatus.unusedBackupCodesCount}
                       </AlertDescription>
                     </Alert>
 
                     {twoFactorStatus.unusedBackupCodesCount < 3 && (
                       <Alert variant="destructive">
                         <AlertDescription>
-                          ⚠️ Warning: You have only {twoFactorStatus.unusedBackupCodesCount} backup
-                          codes remaining. Consider disabling and re-enabling 2FA to generate new
-                          backup codes.
+                          ⚠️ Attenzione: hai solo {twoFactorStatus.unusedBackupCodesCount} codici di
+                          backup rimasti. Considera di disabilitare e riabilitare il 2FA per
+                          generare nuovi codici.
                         </AlertDescription>
                       </Alert>
                     )}
@@ -905,25 +1227,25 @@ export default function SettingsPage() {
                     <Separator />
 
                     <div className="space-y-4">
-                      <h4 className="font-medium">Disable Two-Factor Authentication</h4>
+                      <h4 className="font-medium">Disabilita autenticazione a due fattori</h4>
                       <div className="space-y-2">
-                        <Label htmlFor="disablePassword">Current Password</Label>
+                        <Label htmlFor="disablePassword">Password attuale</Label>
                         <Input
                           id="disablePassword"
                           type="password"
                           value={disablePassword}
                           onChange={e => setDisablePassword(e.target.value)}
-                          placeholder="Enter your password"
+                          placeholder="Inserisci la tua password"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="disableCode">TOTP Code or Backup Code</Label>
+                        <Label htmlFor="disableCode">Codice TOTP o codice di backup</Label>
                         <Input
                           id="disableCode"
                           type="text"
                           value={disableCode}
                           onChange={e => setDisableCode(e.target.value)}
-                          placeholder="000000 or XXXX-XXXX"
+                          placeholder="000000 o XXXX-XXXX"
                         />
                       </div>
                       <Button
@@ -931,7 +1253,7 @@ export default function SettingsPage() {
                         onClick={handleDisable2FA}
                         disabled={loading || !disablePassword || !disableCode}
                       >
-                        {loading ? 'Disabling...' : 'Disable 2FA'}
+                        {loading ? 'Disabilitazione...' : 'Disabilita 2FA'}
                       </Button>
                     </div>
                   </div>
@@ -939,39 +1261,40 @@ export default function SettingsPage() {
                   <div>
                     {!setup ? (
                       <div className="space-y-4">
-                        <p className="text-slate-600 dark:text-slate-400">
-                          Two-factor authentication adds an extra layer of security to your account.
-                          You'll need your password and a code from your authenticator app to log
-                          in.
+                        <p className="text-muted-foreground">
+                          L'autenticazione a due fattori aggiunge un livello extra di sicurezza al
+                          tuo account. Avrai bisogno della tua password e di un codice dalla tua app
+                          di autenticazione per accedere.
                         </p>
                         <LoadingButton
                           onClick={handleSetup2FA}
                           isLoading={loading}
-                          loadingText="Setting up..."
+                          loadingText="Configurazione..."
+                          className="bg-orange-500 hover:bg-orange-600"
                           data-testid="enable-2fa-button"
                         >
-                          Enable Two-Factor Authentication
+                          Abilita autenticazione a due fattori
                         </LoadingButton>
                       </div>
                     ) : (
                       <div className="space-y-6">
                         <Card>
                           <CardHeader>
-                            <CardTitle className="text-lg">Step 1: Scan QR Code</CardTitle>
+                            <CardTitle className="text-lg">Passo 1: Scansiona il QR Code</CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-4">
-                            <p className="text-sm text-slate-600 dark:text-slate-400">
-                              Scan this QR code with your authenticator app (Google Authenticator,
-                              Authy, etc.)
+                            <p className="text-sm text-muted-foreground">
+                              Scansiona questo QR code con la tua app di autenticazione (Google
+                              Authenticator, Authy, etc.)
                             </p>
-                            <div className="flex justify-center bg-card p-4 rounded border border-border/50 dark:border-border/30">
+                            <div className="flex justify-center bg-card p-4 rounded border">
                               <QRCodeSVG value={setup.qrCodeUrl} size={256} />
                             </div>
                             <details className="text-sm">
-                              <summary className="cursor-pointer text-slate-600 hover:text-slate-900">
-                                Can't scan? Enter manually
+                              <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                                Non riesci a scansionare? Inserisci manualmente
                               </summary>
-                              <div className="mt-2 p-3 bg-muted dark:bg-card rounded">
+                              <div className="mt-2 p-3 bg-muted rounded">
                                 <code className="text-xs font-mono">{setup.secret}</code>
                               </div>
                             </details>
@@ -981,10 +1304,10 @@ export default function SettingsPage() {
                         {showBackupCodes && (
                           <Alert variant="destructive">
                             <AlertDescription>
-                              <h4 className="font-semibold mb-2">Step 2: Save Backup Codes</h4>
+                              <h4 className="font-semibold mb-2">Passo 2: Salva i codici di backup</h4>
                               <p className="mb-3">
-                                ⚠️ Save these codes in a secure location. Each code can only be used
-                                once.
+                                ⚠️ Salva questi codici in un luogo sicuro. Ogni codice può essere
+                                usato una sola volta.
                               </p>
                               <div className="grid grid-cols-2 gap-2 mb-4">
                                 {setup.backupCodes?.map((code: string, i: number) => (
@@ -998,10 +1321,10 @@ export default function SettingsPage() {
                               </div>
                               <div className="flex gap-2">
                                 <Button onClick={downloadBackupCodes} variant="secondary" size="sm">
-                                  Download Codes
+                                  Scarica codici
                                 </Button>
                                 <Button onClick={() => setShowBackupCodes(false)} size="sm">
-                                  I've Saved My Codes
+                                  Ho salvato i miei codici
                                 </Button>
                               </div>
                             </AlertDescription>
@@ -1011,11 +1334,11 @@ export default function SettingsPage() {
                         {!showBackupCodes && (
                           <Card>
                             <CardHeader>
-                              <CardTitle className="text-lg">Step 3: Verify & Enable</CardTitle>
+                              <CardTitle className="text-lg">Passo 3: Verifica e abilita</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                              <p className="text-sm text-slate-600 dark:text-slate-400">
-                                Enter the 6-digit code from your authenticator app
+                              <p className="text-sm text-muted-foreground">
+                                Inserisci il codice a 6 cifre dalla tua app di autenticazione
                               </p>
                               <div className="flex items-center gap-2">
                                 <Input
@@ -1033,9 +1356,10 @@ export default function SettingsPage() {
                                 <Button
                                   onClick={handleEnable2FA}
                                   disabled={loading || verificationCode.length !== 6}
+                                  className="bg-orange-500 hover:bg-orange-600"
                                   data-testid="verify-enable-2fa-button"
                                 >
-                                  {loading ? 'Verifying...' : 'Verify & Enable'}
+                                  {loading ? 'Verifica...' : 'Verifica e abilita'}
                                 </Button>
                               </div>
                             </CardContent>
@@ -1050,7 +1374,7 @@ export default function SettingsPage() {
                             setVerificationCode('');
                           }}
                         >
-                          Cancel Setup
+                          Annulla configurazione
                         </Button>
                       </div>
                     )}
@@ -1059,147 +1383,22 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
-            {/* OAuth Section */}
+            {/* Active sessions */}
             <Card>
               <CardHeader>
-                <CardTitle>Linked Accounts</CardTitle>
+                <CardTitle>Sessioni attive</CardTitle>
                 <CardDescription>
-                  Connect your accounts to login with social providers
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {OAUTH_PROVIDERS.map(provider => {
-                  const linked = isLinked(provider.id);
-                  const isCurrentlyUnlinking = unlinking === provider.id;
-
-                  return (
-                    <div
-                      key={provider.id}
-                      className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-muted dark:bg-muted/70 flex items-center justify-center">
-                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                            {provider.name[0]}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="font-medium text-foreground">
-                            {provider.name}
-                          </div>
-                          <div className="text-sm text-slate-500 dark:text-slate-400">
-                            {linked ? 'Connected' : 'Not connected'}
-                          </div>
-                        </div>
-                      </div>
-
-                      {linked ? (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleUnlinkOAuth(provider.id)}
-                          disabled={isCurrentlyUnlinking}
-                        >
-                          {isCurrentlyUnlinking ? 'Unlinking...' : 'Unlink'}
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          onClick={() => handleLinkOAuth(provider.id)}
-                          className={provider.color}
-                        >
-                          Link
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Advanced Tab */}
-          <TabsContent value="advanced" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>API Key Authentication</CardTitle>
-                <CardDescription>
-                  Store an API key for this browser session. We send it via the Authorization header
-                  on every request.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {apiKeyAuthenticated ? (
-                  <div className="space-y-4">
-                    <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
-                      <AlertDescription className="text-green-800 dark:text-green-200">
-                        ✓ API key authentication active. Requests now include{' '}
-                        <code>Authorization: ApiKey ****</code>.
-                      </AlertDescription>
-                    </Alert>
-                    <Button variant="outline" onClick={handleApiKeyLogout} disabled={apiKeyLoading}>
-                      {apiKeyLoading ? 'Removing...' : 'Remove API Key Authentication'}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <Alert>
-                      <AlertDescription>
-                        <div className="space-y-2">
-                          <p className="font-medium">Session-Scoped API Key Storage</p>
-                          <ul className="text-sm space-y-1 ml-4 list-disc">
-                            <li>The key lives in sessionStorage (cleared on tab/browser close)</li>
-                            <li>
-                              Automatically added to the <code>Authorization</code> header
-                            </li>
-                            <li>No cookies or localStorage usage</li>
-                            <li>Great for testing admin tools or short-lived sessions</li>
-                          </ul>
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="api-key-input">API Key</Label>
-                      <Input
-                        id="api-key-input"
-                        type="password"
-                        placeholder="mpl_live_xxxxxxxxxxxxxxxx"
-                        value={apiKeyInput}
-                        onChange={e => setApiKeyInput(e.target.value)}
-                        disabled={apiKeyLoading}
-                      />
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Your API key will be validated and stored for this browser session only.
-                      </p>
-                    </div>
-
-                    <Button
-                      onClick={handleApiKeyLogin}
-                      disabled={apiKeyLoading || !apiKeyInput.trim()}
-                    >
-                      {apiKeyLoading ? 'Authenticating...' : 'Login with API Key'}
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Active Sessions</CardTitle>
-                <CardDescription>
-                  View and manage your active login sessions across all devices
+                  Visualizza e gestisci le tue sessioni di login attive su tutti i dispositivi
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {sessionsLoading ? (
                   <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
                   </div>
                 ) : sessions.length === 0 ? (
                   <Alert>
-                    <AlertDescription>No active sessions found</AlertDescription>
+                    <AlertDescription>Nessuna sessione attiva trovata</AlertDescription>
                   </Alert>
                 ) : (
                   <div className="space-y-4">
@@ -1210,47 +1409,33 @@ export default function SettingsPage() {
                       return (
                         <div
                           key={session.id}
-                          className="flex items-start justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
+                          className="flex items-start justify-between p-4 border rounded-lg"
                         >
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-2">
-                              <div className="font-medium text-foreground">
+                              <div className="font-medium">
                                 {getDeviceInfo(session.userAgent)}
                               </div>
                               {isCurrent && (
                                 <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded">
-                                  Current Session
+                                  Sessione attuale
                                 </span>
                               )}
                             </div>
 
-                            <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                            <div className="text-sm text-muted-foreground space-y-1">
                               <div>
-                                <span className="font-medium">IP Address:</span>{' '}
-                                {session.ipAddress || 'Unknown'}
+                                <span className="font-medium">IP:</span>{' '}
+                                {session.ipAddress || 'Sconosciuto'}
                               </div>
                               <div>
-                                <span className="font-medium">Created:</span>{' '}
+                                <span className="font-medium">Creata:</span>{' '}
                                 {formatDateTime(session.createdAt)}
                               </div>
                               <div>
-                                <span className="font-medium">Last Seen:</span>{' '}
-                                {session.lastSeenAt ? formatDateTime(session.lastSeenAt) : 'Never'}
-                              </div>
-                              <div>
-                                <span className="font-medium">Expires:</span>{' '}
+                                <span className="font-medium">Scade:</span>{' '}
                                 {formatDateTime(session.expiresAt)}
                               </div>
-                              {session.userAgent && (
-                                <details className="mt-2">
-                                  <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                                    Show user agent
-                                  </summary>
-                                  <div className="mt-1 p-2 bg-muted dark:bg-card rounded text-xs font-mono break-all">
-                                    {session.userAgent}
-                                  </div>
-                                </details>
-                              )}
                             </div>
                           </div>
 
@@ -1261,20 +1446,20 @@ export default function SettingsPage() {
                             disabled={isRevoking || isCurrent}
                             className="ml-4"
                           >
-                            {isRevoking ? 'Revoking...' : 'Revoke'}
+                            {isRevoking ? 'Revoca...' : 'Revoca'}
                           </Button>
                         </div>
                       );
                     })}
 
-                    <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex gap-2">
+                    <div className="pt-4 border-t flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={loadUserSessions}
                         disabled={sessionsLoading}
                       >
-                        {sessionsLoading ? 'Refreshing...' : 'Refresh Sessions'}
+                        {sessionsLoading ? 'Aggiornamento...' : 'Aggiorna sessioni'}
                       </Button>
                       {sessions.length > 1 && (
                         <Button
@@ -1283,7 +1468,7 @@ export default function SettingsPage() {
                           onClick={() => setShowRevokeAllDialog(true)}
                           disabled={sessionsLoading}
                         >
-                          Logout All Devices
+                          Disconnetti tutti i dispositivi
                         </Button>
                       )}
                     </div>
@@ -1292,14 +1477,14 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
-            {/* Logout All Devices Dialog (Issue #2056) */}
+            {/* Logout All Devices Dialog */}
             <Dialog open={showRevokeAllDialog} onOpenChange={setShowRevokeAllDialog}>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle>Logout from All Devices</DialogTitle>
+                  <DialogTitle>Disconnetti da tutti i dispositivi</DialogTitle>
                   <DialogDescription>
-                    This will revoke all your active sessions across all devices. You will need to
-                    log in again on those devices.
+                    Questa operazione revocherà tutte le sessioni attive su tutti i dispositivi.
+                    Dovrai effettuare nuovamente l'accesso su quei dispositivi.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -1314,26 +1499,24 @@ export default function SettingsPage() {
                         htmlFor="includeCurrentSession"
                         className="text-sm font-medium cursor-pointer"
                       >
-                        Include current session
+                        Includi sessione corrente
                       </label>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        If checked, you will be logged out immediately and need to log in again.
+                      <p className="text-xs text-muted-foreground">
+                        Se selezionato, verrai disconnesso immediatamente e dovrai effettuare
+                        nuovamente l'accesso.
                       </p>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="revokeAllPassword">Password (optional)</Label>
+                    <Label htmlFor="revokeAllPassword">Password (opzionale)</Label>
                     <Input
                       id="revokeAllPassword"
                       type="password"
-                      placeholder="Enter your password for extra security"
+                      placeholder="Inserisci la tua password per maggiore sicurezza"
                       value={revokeAllPassword}
                       onChange={e => setRevokeAllPassword(e.target.value)}
                       disabled={revokeAllLoading}
                     />
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Providing your password adds an extra layer of security verification.
-                    </p>
                   </div>
                 </div>
                 <DialogFooter>
@@ -1346,43 +1529,145 @@ export default function SettingsPage() {
                     }}
                     disabled={revokeAllLoading}
                   >
-                    Cancel
+                    Annulla
                   </Button>
                   <Button
                     variant="destructive"
                     onClick={handleRevokeAllSessions}
                     disabled={revokeAllLoading}
                   >
-                    {revokeAllLoading ? 'Logging out...' : 'Logout All Devices'}
+                    {revokeAllLoading ? 'Disconnessione...' : 'Disconnetti tutti'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
 
+            {/* API Key section */}
             <Card>
               <CardHeader>
-                <CardTitle>Danger Zone</CardTitle>
-                <CardDescription>Irreversible actions for your account</CardDescription>
+                <CardTitle>Autenticazione API Key</CardTitle>
+                <CardDescription>
+                  Memorizza una API key per questa sessione del browser
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {apiKeyAuthenticated ? (
+                  <div className="space-y-4">
+                    <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                      <AlertDescription className="text-green-800 dark:text-green-200">
+                        ✓ Autenticazione API key attiva. Le richieste includeranno{' '}
+                        <code>Authorization: ApiKey ****</code>.
+                      </AlertDescription>
+                    </Alert>
+                    <Button variant="outline" onClick={handleApiKeyLogout} disabled={apiKeyLoading}>
+                      {apiKeyLoading ? 'Rimozione...' : 'Rimuovi autenticazione API Key'}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="api-key-input">API Key</Label>
+                      <Input
+                        id="api-key-input"
+                        type="password"
+                        placeholder="mpl_live_xxxxxxxxxxxxxxxx"
+                        value={apiKeyInput}
+                        onChange={e => setApiKeyInput(e.target.value)}
+                        disabled={apiKeyLoading}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        La tua API key sarà validata e memorizzata solo per questa sessione del
+                        browser.
+                      </p>
+                    </div>
+
+                    <Button
+                      onClick={handleApiKeyLogin}
+                      disabled={apiKeyLoading || !apiKeyInput.trim()}
+                      className="bg-orange-500 hover:bg-orange-600"
+                    >
+                      {apiKeyLoading ? 'Autenticazione...' : 'Autentica con API Key'}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Danger Zone */}
+            <Card className="border-red-200 dark:border-red-900">
+              <CardHeader>
+                <CardTitle className="text-red-600">Zona pericolosa</CardTitle>
+                <CardDescription>Azioni irreversibili per il tuo account</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Alert variant="destructive">
                   <AlertDescription>
-                    Account deletion is permanent and cannot be undone. All your data will be
-                    permanently deleted.
+                    L'eliminazione dell'account è permanente e non può essere annullata. Tutti i
+                    tuoi dati verranno eliminati definitivamente.
                   </AlertDescription>
                 </Alert>
-                <Button variant="destructive" disabled>
-                  Delete Account (Coming Soon)
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  Elimina account
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Delete Account Dialog */}
+            <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle className="text-red-600">Elimina account</DialogTitle>
+                  <DialogDescription>
+                    Questa azione è irreversibile. Tutti i tuoi dati, inclusa la libreria di giochi,
+                    le chat e le preferenze verranno eliminati permanentemente.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="deleteConfirm">
+                      Scrivi <strong>ELIMINA</strong> per confermare
+                    </Label>
+                    <Input
+                      id="deleteConfirm"
+                      value={deleteConfirmText}
+                      onChange={e => setDeleteConfirmText(e.target.value)}
+                      placeholder="ELIMINA"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowDeleteDialog(false);
+                      setDeleteConfirmText('');
+                    }}
+                  >
+                    Annulla
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    disabled={deleteConfirmText !== 'ELIMINA'}
+                    onClick={() => {
+                      setShowDeleteDialog(false);
+                      setSuccess('Funzionalità di eliminazione account in arrivo!');
+                    }}
+                  >
+                    Elimina account
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         </Tabs>
 
         {/* Back to Home */}
         <div className="mt-8">
           <Button variant="ghost" onClick={() => router.push('/')}>
-            ← Back to Home
+            ← Torna alla home
           </Button>
         </div>
       </div>

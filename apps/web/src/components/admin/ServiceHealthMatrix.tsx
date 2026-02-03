@@ -40,26 +40,6 @@ const layoutClasses = {
   'grid-4': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
 };
 
-/**
- * Parse TimeSpan string from backend (e.g., "00:00:00.0150000") to milliseconds
- */
-function parseTimeSpanToMs(timeSpan: string): number {
-  try {
-    const parts = timeSpan.split(':');
-    if (parts.length !== 3) return 0;
-
-    const hours = parseInt(parts[0], 10);
-    const minutes = parseInt(parts[1], 10);
-    const secondsParts = parts[2].split('.');
-    const seconds = parseInt(secondsParts[0], 10);
-    const fractionalSeconds = secondsParts[1] ? parseFloat(`0.${secondsParts[1]}`) : 0;
-
-    return (hours * 3600 + minutes * 60 + seconds) * 1000 + fractionalSeconds * 1000;
-  } catch {
-    return 0;
-  }
-}
-
 export function ServiceHealthMatrix({
   services = [],
   loading = false,
@@ -130,7 +110,7 @@ export function ServiceHealthMatrix({
       aria-label={i18n.grid.title}
     >
       {services.map(service => {
-        const responseTimeMs = parseTimeSpanToMs(service.responseTime);
+        // responseTimeMs is now directly available from the API
         const lastCheck = service.checkedAt ? new Date(service.checkedAt) : undefined;
 
         return (
@@ -139,7 +119,7 @@ export function ServiceHealthMatrix({
               serviceName={service.serviceName}
               status={service.state}
               errorMessage={service.errorMessage}
-              responseTimeMs={responseTimeMs}
+              responseTimeMs={service.responseTimeMs}
               lastCheck={lastCheck}
               locale={locale}
             />

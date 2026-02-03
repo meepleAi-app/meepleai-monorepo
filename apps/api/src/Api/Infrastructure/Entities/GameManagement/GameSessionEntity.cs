@@ -8,6 +8,14 @@ public class GameSessionEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid GameId { get; set; }
+
+    /// <summary>
+    /// The user who created this session. Used for session quota enforcement.
+    /// Issue #3070: Added for session limits per user tier.
+    /// Nullable for backwards compatibility with existing sessions.
+    /// </summary>
+    public Guid? CreatedByUserId { get; set; }
+
     public string Status { get; set; } = "Setup"; // Setup, InProgress, Completed, Abandoned
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
@@ -19,4 +27,5 @@ public class GameSessionEntity
 
     // Navigation properties
     public GameEntity Game { get; set; } = null!;
+    public UserEntity? CreatedByUser { get; set; }
 }

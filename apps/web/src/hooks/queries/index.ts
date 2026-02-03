@@ -78,6 +78,16 @@ export {
   agentConfigKeys,
 } from './useAgentConfig';
 
+// Agent Typologies queries and mutations (Issue #3249)
+export {
+  useApprovedTypologies,
+  useTypology,
+  useSwitchTypology,
+  agentTypologiesKeys,
+  type SwitchTypologyRequest,
+  type SwitchTypologyResponse,
+} from './useAgentTypologies';
+
 // AI Models Management queries and mutations (Issue #2521)
 export {
   useAiModels,
@@ -133,6 +143,15 @@ export {
   useToggleBadgeDisplay,
   badgeKeys,
 } from './useBadges';
+
+// Session Quota queries (Issue #3075)
+export {
+  useSessionQuota,
+  useSessionQuotaWithStatus,
+  usePrefetchSessionQuota,
+  useInvalidateSessionQuota,
+  sessionQuotaKeys,
+} from './useSessionQuota';
 
 // Re-export from @tanstack/react-query for convenience
 export {

@@ -9,6 +9,8 @@
  * - Check if game is in library
  */
 
+import { z } from 'zod';
+
 import {
   AgentConfigDtoSchema,
   type AgentConfigDto,
@@ -30,6 +32,7 @@ import {
   type GetUserLibraryParams,
   type AddGameToLibraryRequest,
   type UpdateLibraryEntryRequest,
+  type UpdateGameStateRequest,
   type LibraryShareLink,
   type CreateLibraryShareLinkRequest,
   type UpdateLibraryShareLinkRequest,
@@ -51,9 +54,12 @@ export interface LibraryClient {
   removeGame(gameId: string): Promise<void>;
   updateEntry(gameId: string, request: UpdateLibraryEntryRequest): Promise<UserLibraryEntry>;
   getGameStatus(gameId: string): Promise<GameInLibraryStatus>;
+  // Game State Management (Issue #2868)
+  updateGameState(gameId: string, request: UpdateGameStateRequest): Promise<void>;
   // Agent Configuration (Issue #2518)
   getAgentConfig(gameId: string): Promise<AgentConfigDto | null>;
   updateAgentConfig(gameId: string, request: UpdateAgentConfigRequest): Promise<AgentConfigDto>;
+  saveAgentConfig(gameId: string, request: { typologyId: string; modelName: string; costEstimate: number }): Promise<{ success: boolean; configId: string; message: string }>;
   // Library Sharing (Issue #2614)
   getShareLink(): Promise<LibraryShareLink | null>;
   createShareLink(request: CreateLibraryShareLinkRequest): Promise<LibraryShareLink>;
@@ -82,6 +88,12 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
       }
       if (params?.favoritesOnly !== undefined) {
         queryParams.append('favoritesOnly', String(params.favoritesOnly));
+      }
+      // State filter support (Issue #2866)
+      if (params?.stateFilter && params.stateFilter.length > 0) {
+        for (const state of params.stateFilter) {
+          queryParams.append('stateFilter', state);
+        }
       }
       if (params?.sortBy !== undefined) {
         queryParams.append('sortBy', params.sortBy);
@@ -206,6 +218,15 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
     },
 
     /**
+     * Update game state (Nuovo/InPrestito/Wishlist/Owned) (Issue #2868)
+     * @param gameId - Game UUID to update
+     * @param request - New state and optional notes
+     */
+    async updateGameState(gameId: string, request: UpdateGameStateRequest): Promise<void> {
+      await httpClient.put(`/api/v1/library/games/${gameId}/state`, request);
+    },
+
+    /**
      * Get agent configuration for a game in user's library (Issue #2518)
      * @param gameId - Game UUID
      * @returns Agent configuration or null if not configured
@@ -234,6 +255,35 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
       );
       if (!data) {
         throw new Error('Failed to update agent configuration');
+      }
+      return data;
+    },
+
+    /**
+     * Save simplified agent configuration from modal (Issue #3212)
+     * @param gameId - Game UUID
+     * @param request - Simplified agent config (typology + model + cost)
+     * @returns Save response with config ID
+     */
+    async saveAgentConfig(
+      gameId: string,
+      request: { typologyId: string; modelName: string; costEstimate: number }
+    ): Promise<{ success: boolean; configId: string; message: string }> {
+      const data = await httpClient.post<{
+        success: boolean;
+        configId: string;
+        message: string;
+      }>(
+        `/api/v1/library/games/${gameId}/agent-config`,
+        request,
+        z.object({
+          success: z.boolean(),
+          configId: z.string().uuid(),
+          message: z.string(),
+        })
+      );
+      if (!data) {
+        throw new Error('Failed to save agent configuration');
       }
       return data;
     },

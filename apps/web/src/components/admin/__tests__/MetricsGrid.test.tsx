@@ -19,10 +19,10 @@ describe('MetricsGrid', () => {
     it('renders all metrics', () => {
       render(<MetricsGrid metrics={mockMetrics} />);
 
-      expect(screen.getByText('Total Users')).toBeInTheDocument();
-      expect(screen.getByText('Active Sessions')).toBeInTheDocument();
-      expect(screen.getByText('Total Games')).toBeInTheDocument();
-      expect(screen.getByText('API Requests')).toBeInTheDocument();
+      // Verify grid and cards render (language-independent)
+      expect(screen.getByTestId('metrics-grid')).toBeInTheDocument();
+      const labels = screen.getAllByTestId('stat-card-label');
+      expect(labels).toHaveLength(4);
     });
 
     it('renders metric values', () => {
@@ -37,8 +37,8 @@ describe('MetricsGrid', () => {
     it('handles single metric', () => {
       render(<MetricsGrid metrics={[mockMetrics[0]]} />);
 
-      expect(screen.getByText('Total Users')).toBeInTheDocument();
-      expect(screen.getByText('1,247')).toBeInTheDocument();
+      expect(screen.getByTestId('stat-card-label')).toHaveTextContent('Total Users');
+      expect(screen.getByTestId('stat-card-value')).toHaveTextContent('1,247');
     });
 
     it('maintains metric order', () => {
@@ -59,8 +59,10 @@ describe('MetricsGrid', () => {
 
       render(<MetricsGrid metrics={manyMetrics} />);
 
-      expect(screen.getByText('Metric 1')).toBeInTheDocument();
-      expect(screen.getByText('Metric 20')).toBeInTheDocument();
+      const labels = screen.getAllByTestId('stat-card-label');
+      expect(labels).toHaveLength(20);
+      expect(labels[0]).toHaveTextContent('Metric 1');
+      expect(labels[19]).toHaveTextContent('Metric 20');
     });
   });
 
@@ -81,7 +83,7 @@ describe('MetricsGrid', () => {
     it('does not show metrics when loading', () => {
       render(<MetricsGrid metrics={mockMetrics} loading={true} />);
 
-      expect(screen.queryByText('Total Users')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('stat-card-label')).not.toBeInTheDocument();
     });
   });
 
@@ -95,13 +97,13 @@ describe('MetricsGrid', () => {
     it('shows default empty message', () => {
       render(<MetricsGrid metrics={[]} />);
 
-      expect(screen.getByText('No metrics available')).toBeInTheDocument();
+      expect(screen.getByTestId('metrics-grid-empty-message')).toHaveTextContent('No metrics available');
     });
 
     it('shows custom empty message', () => {
       render(<MetricsGrid metrics={[]} emptyStateMessage="No data to display" />);
 
-      expect(screen.getByText('No data to display')).toBeInTheDocument();
+      expect(screen.getByTestId('metrics-grid-empty-message')).toHaveTextContent('No data to display');
     });
 
     it('shows empty state icon', () => {
@@ -117,10 +119,10 @@ describe('MetricsGrid', () => {
       render(<MetricsGrid metrics={mockMetrics} />);
       const grid = screen.getByTestId('metrics-grid');
 
-      expect(grid).toHaveClass('grid-cols-1'); // Mobile
-      expect(grid).toHaveClass('md:grid-cols-2'); // Tablet
-      expect(grid).toHaveClass('lg:grid-cols-3'); // Desktop
-      expect(grid).toHaveClass('xl:grid-cols-4'); // Large desktop
+      // Issue #2850: Responsive grid 2→3→4 columns
+      expect(grid).toHaveClass('grid-cols-2'); // Mobile (2 columns)
+      expect(grid).toHaveClass('md:grid-cols-3'); // Tablet (3 columns)
+      expect(grid).toHaveClass('xl:grid-cols-4'); // Large desktop (4 columns)
     });
 
     it('applies custom className', () => {

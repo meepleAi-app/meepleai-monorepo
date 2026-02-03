@@ -142,7 +142,7 @@ public sealed class OAuthStateValidationTests : IDisposable
         var userInfo = _helper.CreateDiscordUserInfo();
         var sessionResponse = new CreateSessionResponse(
             User: new UserDto(
-                Guid.NewGuid(), "test@discord.com", "Test User", "user", DateTime.UtcNow, false, null),
+                Guid.NewGuid(), "test@discord.com", "Test User", "user", "normal", DateTime.UtcNow, false, null, 1, 0),
             SessionToken: "session_token",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -184,7 +184,7 @@ public sealed class OAuthStateValidationTests : IDisposable
         var userInfo = _helper.CreateGoogleUserInfo();
         var sessionResponse = new CreateSessionResponse(
             User: new UserDto(
-                Guid.NewGuid(), "test@gmail.com", "Test User", "user", DateTime.UtcNow, false, null),
+                Guid.NewGuid(), "test@gmail.com", "Test User", "user", "normal", DateTime.UtcNow, false, null, 1, 0),
             SessionToken: "session_token",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -298,7 +298,7 @@ public sealed class OAuthStateValidationTests : IDisposable
         var userInfo = _helper.CreateGoogleUserInfo();
         var sessionResponse = new CreateSessionResponse(
             User: new UserDto(
-                Guid.NewGuid(), "test@gmail.com", "Test User", "user", DateTime.UtcNow, false, null),
+                Guid.NewGuid(), "test@gmail.com", "Test User", "user", "normal", DateTime.UtcNow, false, null, 1, 0),
             SessionToken: "session_token",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );

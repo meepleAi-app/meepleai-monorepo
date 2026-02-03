@@ -14,7 +14,7 @@
  * Dependencies: #885 (Dashboard page), #886 (API integration + polling)
  */
 
-import { test as base, expect, Page } from './fixtures/chromatic';
+import { test as base, expect, Page } from './fixtures';
 import { AdminHelper } from './pages';
 
 const test = base.extend<{ adminPage: Page }>({

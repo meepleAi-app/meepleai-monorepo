@@ -108,7 +108,7 @@ describe('Timeline Component', () => {
       const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
-      const closeButton = screen.getByText('Chiudi Timeline');
+      const closeButton = screen.getByTestId('close-timeline-button');
       await user.click(closeButton);
 
       expect(onToggle).toHaveBeenCalledTimes(1);
@@ -120,7 +120,7 @@ describe('Timeline Component', () => {
       const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
-      expect(screen.getByText('Filtri Timeline')).toBeInTheDocument();
+      expect(screen.getByTestId('filters-title')).toBeInTheDocument();
     });
 
     it('renders event list in center pane', () => {
@@ -134,7 +134,7 @@ describe('Timeline Component', () => {
       const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
-      expect(screen.getByText('Dettagli Evento')).toBeInTheDocument();
+      expect(screen.getByTestId('event-details-title')).toBeInTheDocument();
     });
 
     it('shows empty state message in details panel initially', () => {
@@ -245,7 +245,7 @@ describe('Timeline Component', () => {
       const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
-      const filtersHeading = screen.getByText('Filtri Timeline');
+      const filtersHeading = screen.getByTestId('filters-title');
       expect(filtersHeading).toBeInTheDocument();
 
       // Find and click the collapse button using its title attribute
@@ -275,7 +275,7 @@ describe('Timeline Component', () => {
       await user.click(expandButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Filtri Timeline')).toBeInTheDocument();
+        expect(screen.getByTestId('filters-title')).toBeInTheDocument();
       });
     });
   });
@@ -286,7 +286,7 @@ describe('Timeline Component', () => {
       const onToggle = vi.fn();
       render(<Timeline events={mockEvents} isVisible={true} onToggleVisibility={onToggle} />);
 
-      const detailsHeading = screen.getByText('Dettagli Evento');
+      const detailsHeading = screen.getByTestId('event-details-title');
       expect(detailsHeading).toBeInTheDocument();
 
       // Find and click the collapse button using its title attribute
@@ -326,7 +326,7 @@ describe('Timeline Component', () => {
       await user.click(expandButton);
 
       await waitFor(() => {
-        expect(screen.getByText('Dettagli Evento')).toBeInTheDocument();
+        expect(screen.getByTestId('event-details-title')).toBeInTheDocument();
       });
     });
   });

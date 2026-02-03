@@ -10,7 +10,7 @@
  * Uses Playwright's network emulation for realistic offline simulation.
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { setupQATestEnvironment, waitForAutoSelection } from './helpers/qa-test-utils';
 
 test.describe('Offline Resilience (Issue #2054)', () => {

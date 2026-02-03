@@ -60,10 +60,10 @@ describe('ActivityFeed', () => {
     vi.useRealTimers();
   });
 
-  it('renders title "Recent Activity"', () => {
+  it('renders title (language-independent)', () => {
     render(<ActivityFeed events={mockEvents} />);
 
-    expect(screen.getByText('Recent Activity')).toBeInTheDocument();
+    expect(screen.getByTestId('activity-list-title')).toBeInTheDocument();
   });
 
   it('renders all events', () => {
@@ -91,7 +91,7 @@ describe('ActivityFeed', () => {
   it('handles empty events array', () => {
     render(<ActivityFeed events={[]} />);
 
-    expect(screen.getByText('No recent activity')).toBeInTheDocument();
+    expect(screen.getByTestId('activity-list-empty-message')).toHaveTextContent('No recent activity');
   });
 
   it('limits events to maxEvents prop', () => {
@@ -166,7 +166,7 @@ describe('ActivityFeed', () => {
   it('applies hover effect class for severity mode', () => {
     const { container } = render(<ActivityFeed events={mockEvents} iconMode="severity" />);
     const listItems = container.querySelectorAll('li');
-    expect(listItems[0].className).toContain('hover:bg-meeple-light-orange');
+    expect(listItems[0].className).toContain('hover:bg-orange-50');
   });
 
   it('applies custom className to card', () => {
@@ -308,7 +308,7 @@ describe('ActivityFeed', () => {
     it('shows enhanced empty state with icon (English)', () => {
       const { container } = render(<ActivityFeed events={[]} locale="en" />);
 
-      expect(screen.getByText('No recent activity')).toBeInTheDocument();
+      expect(screen.getByTestId('activity-list-empty-message')).toHaveTextContent('No recent activity');
       // Check for empty state icon
       const emptyIcon = container.querySelector('svg');
       expect(emptyIcon).toBeInTheDocument();
@@ -317,7 +317,7 @@ describe('ActivityFeed', () => {
     it('shows empty state in Italian when locale="it"', () => {
       render(<ActivityFeed events={[]} locale="it" />);
 
-      expect(screen.getByText('Nessuna attività recente')).toBeInTheDocument();
+      expect(screen.getByTestId('activity-list-empty-message')).toHaveTextContent('Nessuna attività recente');
     });
   });
 
@@ -400,14 +400,14 @@ describe('ActivityFeed', () => {
     it('renders English UI by default', () => {
       render(<ActivityFeed events={mockEvents} />);
 
-      expect(screen.getByText('Recent Activity')).toBeInTheDocument();
+      expect(screen.getByTestId('activity-list-title')).toHaveTextContent('Recent Activity');
       expect(screen.getByRole('link', { name: /view all/i })).toBeInTheDocument();
     });
 
     it('renders Italian UI when locale="it"', () => {
       render(<ActivityFeed events={mockEvents} locale="it" />);
 
-      expect(screen.getByText('Attività Recenti')).toBeInTheDocument();
+      expect(screen.getByTestId('activity-list-title')).toHaveTextContent('Attività Recenti');
       expect(screen.getByRole('link', { name: /vedi tutte/i })).toBeInTheDocument();
     });
   });

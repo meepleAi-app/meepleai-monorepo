@@ -104,7 +104,7 @@ public class GameSessionStateDomainTests
         Assert.NotNull(snapshot);
         Assert.Equal(1, snapshot.TurnNumber);
         Assert.Equal("Turn 1 end", snapshot.Description);
-        Assert.Equal(1, state.Snapshots.Count);
+        Assert.Single(state.Snapshots);
     }
 
     [Fact]

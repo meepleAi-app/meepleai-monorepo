@@ -16,7 +16,7 @@
  * @see apps/web/e2e/pages/upload/UploadPage.ts
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { AuthHelper, USER_FIXTURES } from './pages';
 import { UploadPage } from './pages/upload/UploadPage';
 

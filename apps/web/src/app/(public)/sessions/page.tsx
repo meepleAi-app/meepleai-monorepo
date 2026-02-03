@@ -16,12 +16,14 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { ErrorDisplay } from '@/components/errors';
 import { LoadingButton } from '@/components/loading/LoadingButton';
+import { SessionQuotaBar } from '@/components/sessions/SessionQuotaBar';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import {
@@ -33,7 +35,14 @@ import {
   TableRow,
 } from '@/components/ui/data-display/table';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
+import { useSessionQuotaWithStatus } from '@/hooks/queries/useSessionQuota';
 import { api, GameSessionDto, Game, PaginatedSessionsResponse } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { categorizeError } from '@/lib/errorUtils';
@@ -133,6 +142,38 @@ export default function ActiveSessionsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 20;
 
+  // Session Quota (Issue #3075)
+  const { data: quota, isLoading: quotaLoading } = useSessionQuotaWithStatus();
+
+  // Track if quota warning toast has been shown (Issue #3075 - AC #3)
+  const quotaToastShownRef = useRef(false);
+
+  /**
+   * Show quota warning toast when approaching limit (Issue #3075 - AC #3)
+   * Trigger at 80%+ quota usage (warning or critical level)
+   */
+  useEffect(() => {
+    if (!quota || quotaLoading) return;
+
+    const shouldShowWarning =
+      (quota.warningLevel === 'warning' || quota.warningLevel === 'critical') &&
+      !quotaToastShownRef.current;
+
+    if (shouldShowWarning) {
+      const percentage = quota.percentageUsed;
+      toast.warning('Session Quota Warning', {
+        description: `You have reached ${percentage}% of your available sessions. ${quota.remainingSlots} slots remaining.`,
+        duration: 5000,
+      });
+      quotaToastShownRef.current = true;
+    }
+
+    // Reset toast shown flag when quota improves
+    if (quota.warningLevel === 'none' && quotaToastShownRef.current) {
+      quotaToastShownRef.current = false;
+    }
+  }, [quota, quotaLoading]);
+
   /**
    * Fetch active sessions from API
    */
@@ -170,7 +211,10 @@ export default function ActiveSessionsPage() {
   };
 
   /**
-   * Initialize component - fetch functions are stable, only re-run on page change
+   * Initialize component - intentionally only re-runs on currentPage change
+   * Note: fetchSessions and fetchGames are recreated on each render but are
+   * excluded from dependencies to prevent refetching on unrelated state changes.
+   * Functions access stable state via closure and don't require memoization.
    */
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
@@ -272,6 +316,22 @@ export default function ActiveSessionsPage() {
           <CardDescription>Manage your currently active and paused game sessions</CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Session Quota Bar (Issue #3075) */}
+          {quota && !quotaLoading && (
+            <div className="mb-6">
+              <SessionQuotaBar
+                currentSessions={quota.currentSessions}
+                maxSessions={quota.maxSessions}
+                userTier={quota.userTier}
+                remainingSlots={quota.remainingSlots}
+                canCreateNew={quota.canCreateNew}
+                isUnlimited={quota.isUnlimited}
+                compact={false}
+                showUpgradeLink={true}
+              />
+            </div>
+          )}
+
           {/* Filters */}
           <div className="mb-6 flex gap-4 items-center">
             <label htmlFor="game-filter" className="text-sm font-medium">
@@ -320,12 +380,30 @@ export default function ActiveSessionsPage() {
           {!loading && filteredSessions.length === 0 && (
             <div className="text-center py-12" role="status">
               <p className="text-muted-foreground text-lg mb-4">No active sessions found</p>
-              <Button
-                onClick={() => router.push('/games')}
-                aria-label="Go to games library to start a session"
-              >
-                Start a New Session
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        onClick={() => router.push('/games')}
+                        disabled={quota && !quota.canCreateNew}
+                        aria-label={
+                          quota && !quota.canCreateNew
+                            ? 'Cannot create new session - quota limit reached'
+                            : 'Go to games library to start a session'
+                        }
+                      >
+                        Start a New Session
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {quota && !quota.canCreateNew && (
+                    <TooltipContent>
+                      <p>You have reached your session limit ({quota.maxSessions})</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           )}
 

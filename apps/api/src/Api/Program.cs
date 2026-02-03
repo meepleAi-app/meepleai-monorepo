@@ -512,6 +512,9 @@ v1Api.MapAgentSessionEndpoints();
 // Issue #3483: Chat session persistence endpoints
 v1Api.MapChatSessionEndpoints();
 
+// Issue #3379: Agent test results history & persistence
+v1Api.MapGroup("/admin/test-results").MapAdminTestResultEndpoints();
+
 // Issue #1565: Telemetry test endpoints for HyperDX integration testing
 v1Api.MapTelemetryTestEndpoints();
 v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint

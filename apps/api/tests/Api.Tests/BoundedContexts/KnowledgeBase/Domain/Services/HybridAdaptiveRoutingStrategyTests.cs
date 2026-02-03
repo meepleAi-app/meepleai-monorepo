@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
 using Api.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -27,6 +28,9 @@ public class HybridAdaptiveRoutingStrategyTests
     private readonly Mock<IStrategyModelMappingService> _mockStrategyMappingService;
     private readonly Mock<ITierStrategyAccessService> _mockTierAccessService;
     private readonly Mock<ILlmModelOverrideService> _mockOverrideService;
+    private readonly Mock<IServiceScopeFactory> _mockScopeFactory;
+    private readonly Mock<IServiceScope> _mockScope;
+    private readonly Mock<IServiceProvider> _mockServiceProvider;
 
     public HybridAdaptiveRoutingStrategyTests()
     {
@@ -47,6 +51,16 @@ public class HybridAdaptiveRoutingStrategyTests
         _mockStrategyMappingService = new Mock<IStrategyModelMappingService>();
         _mockTierAccessService = new Mock<ITierStrategyAccessService>();
         _mockOverrideService = new Mock<ILlmModelOverrideService>();
+        _mockScopeFactory = new Mock<IServiceScopeFactory>();
+        _mockScope = new Mock<IServiceScope>();
+        _mockServiceProvider = new Mock<IServiceProvider>();
+
+        // Setup scope factory to return scope with tier access service
+        _mockServiceProvider
+            .Setup(sp => sp.GetService(typeof(ITierStrategyAccessService)))
+            .Returns(_mockTierAccessService.Object);
+        _mockScope.Setup(s => s.ServiceProvider).Returns(_mockServiceProvider.Object);
+        _mockScopeFactory.Setup(f => f.CreateScope()).Returns(_mockScope.Object);
 
         // Default mock setup: all tiers have access to all strategies
         _mockTierAccessService
@@ -78,7 +92,7 @@ public class HybridAdaptiveRoutingStrategyTests
     {
         return new HybridAdaptiveRoutingStrategy(
             _mockStrategyMappingService.Object,
-            _mockTierAccessService.Object,
+            _mockScopeFactory.Object,
             _aiSettings,
             _logger,
             overrideService ?? _mockOverrideService.Object);
@@ -222,7 +236,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         var sut = new HybridAdaptiveRoutingStrategy(
             _mockStrategyMappingService.Object,
-            _mockTierAccessService.Object,
+            _mockScopeFactory.Object,
             preferredSettings,
             _logger);
 
@@ -268,7 +282,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         var sut = new HybridAdaptiveRoutingStrategy(
             _mockStrategyMappingService.Object,
-            _mockTierAccessService.Object,
+            _mockScopeFactory.Object,
             disabledPreferredSettings,
             _logger);
 
@@ -304,7 +318,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         var sut = new HybridAdaptiveRoutingStrategy(
             _mockStrategyMappingService.Object,
-            _mockTierAccessService.Object,
+            _mockScopeFactory.Object,
             disabledOpenRouterSettings,
             _logger);
 
@@ -333,7 +347,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         var sut = new HybridAdaptiveRoutingStrategy(
             _mockStrategyMappingService.Object,
-            _mockTierAccessService.Object,
+            _mockScopeFactory.Object,
             allDisabledSettings,
             _logger);
 

@@ -80,13 +80,13 @@ export function AdminPageClient({ user: _user }: AdminPageClientProps) {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API payload type coercion
-      const result = await api.admin.createPromptVersion(id, payload as any);
+      const result = await api.admin.createPromptVersion(id!, payload as any);
 
       showToast('Version created successfully', 'success');
 
       if (activateImmediately && result.id) {
         try {
-          await api.admin.activatePromptVersion(id, result.id);
+          await api.admin.activatePromptVersion(id!, result.id);
           showToast('Version created and activated', 'success');
         } catch (err) {
           logger.error(

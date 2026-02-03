@@ -13,6 +13,7 @@ using Api.Configuration;
 using Api.Services;
 using Api.Services.LlmClients;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -545,9 +546,19 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             .Setup(s => s.GetAvailableStrategiesAsync(It.IsAny<LlmUserTier>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Enum.GetValues<RagStrategy>().ToList());
 
+        // Setup IServiceScopeFactory to provide ITierStrategyAccessService
+        var mockServiceProvider = new Mock<IServiceProvider>();
+        mockServiceProvider
+            .Setup(sp => sp.GetService(typeof(ITierStrategyAccessService)))
+            .Returns(mockTierAccessService.Object);
+        var mockScope = new Mock<IServiceScope>();
+        mockScope.Setup(s => s.ServiceProvider).Returns(mockServiceProvider.Object);
+        var mockScopeFactory = new Mock<IServiceScopeFactory>();
+        mockScopeFactory.Setup(f => f.CreateScope()).Returns(mockScope.Object);
+
         var routingStrategy = new HybridAdaptiveRoutingStrategy(
             mockStrategyMappingService.Object,
-            mockTierAccessService.Object,
+            mockScopeFactory.Object,
             aiSettings,
             _strategyLogger);
 

@@ -45,17 +45,24 @@ interface SearchParams {
 interface Game {
   id: string;
   title: string;
-  publisher: string | null;
   yearPublished: number | null;
   minPlayers: number | null;
   maxPlayers: number | null;
-  minPlayTimeMinutes: number | null;
-  maxPlayTimeMinutes: number | null;
+  playingTimeMinutes: number | null;
   bggId: number | null;
   createdAt: string;
   imageUrl?: string | null;
-  faqCount?: number | null;
+  thumbnailUrl?: string | null;
   averageRating?: number | null;
+  description?: string | null;
+  status?: string;
+}
+
+interface SharedGamesApiResponse {
+  items: Game[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 interface PaginatedResponse {
@@ -97,7 +104,8 @@ async function fetchGames(
     params.set('page', page.toString());
     params.set('pageSize', pageSize.toString());
 
-    const url = `${API_BASE}/api/v1/games?${params.toString()}`;
+    // Use shared-games endpoint for public catalog
+    const url = `${API_BASE}/api/v1/shared-games?${params.toString()}`;
     const response = await fetch(url, {
       next: { revalidate: 60 }, // Cache for 60 seconds
     });
@@ -106,7 +114,16 @@ async function fetchGames(
       throw new Error(`Failed to fetch games: ${response.status}`);
     }
 
-    return response.json();
+    const data: SharedGamesApiResponse = await response.json();
+
+    // Transform API response to expected format
+    return {
+      games: data.items,
+      total: data.total,
+      page: data.page,
+      pageSize: data.pageSize,
+      totalPages: Math.ceil(data.total / data.pageSize),
+    };
   } catch (error) {
     console.error('Error fetching games:', error);
     return {

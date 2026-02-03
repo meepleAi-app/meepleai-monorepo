@@ -59,7 +59,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="it" suppressHydrationWarning>
-      <body className={`${quicksand.variable} ${nunito.variable}`}>
+      <body className={`${quicksand.variable} ${nunito.variable}`} suppressHydrationWarning>
         <HyperDXProvider>
           <AppProviders>{children}</AppProviders>
         </HyperDXProvider>

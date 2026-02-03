@@ -93,6 +93,7 @@ export default function AboutPage() {
               <Card key={key} className="bg-card">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
+                    {/* eslint-disable-next-line security/detect-object-injection */}
                     <span className="text-2xl">{VALUE_ICONS[key]}</span>
                     {t(`pages.about.values.${key}.title`)}
                   </CardTitle>

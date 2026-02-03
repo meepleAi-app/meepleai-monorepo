@@ -31,6 +31,7 @@ import userEvent from '@testing-library/user-event';
 import { useRouter } from 'next/navigation';
 import SettingsPage from './page';
 import { api } from '@/lib/api';
+import { settingsPatterns } from '@/__tests__/fixtures/common-fixtures';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -211,10 +212,10 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      expect(screen.getByRole('tab', { name: /profile/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /preferences/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /privacy/i })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: /advanced/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: settingsPatterns.tabs.profile })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: settingsPatterns.tabs.preferences })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: settingsPatterns.tabs.privacy })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: settingsPatterns.tabs.account })).toBeInTheDocument();
     });
 
     it('should load user profile on mount', async () => {
@@ -291,22 +292,26 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
+      // Switch to Account tab (password fields are there)
+      const accountTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
+      await user.click(accountTab);
+
       await waitFor(
         () => {
-          expect(screen.getByLabelText(/current password/i)).toBeInTheDocument();
+          expect(screen.getByLabelText(settingsPatterns.labels.currentPassword)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
-      const currentPasswordInput = screen.getByLabelText(/current password/i);
-      const newPasswordInput = screen.getByLabelText(/^new password$/i);
-      const confirmPasswordInput = screen.getByLabelText(/confirm new password/i);
+      const currentPasswordInput = screen.getByLabelText(settingsPatterns.labels.currentPassword);
+      const newPasswordInput = screen.getByLabelText(settingsPatterns.labels.newPassword);
+      const confirmPasswordInput = screen.getByLabelText(settingsPatterns.labels.confirmPassword);
 
       await user.type(currentPasswordInput, 'current123');
       await user.type(newPasswordInput, 'newpass123');
       await user.type(confirmPasswordInput, 'newpass123');
 
-      const changePasswordButton = screen.getByRole('button', { name: /change password/i });
+      const changePasswordButton = screen.getByRole('button', { name: settingsPatterns.buttons.changePassword });
       await user.click(changePasswordButton);
 
       await waitFor(
@@ -345,7 +350,7 @@ describe('SettingsPage', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByText(/error|failed/i)).toBeInTheDocument();
+          expect(screen.getByText(settingsPatterns.text.error)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -358,12 +363,12 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const preferencesTab = screen.getByRole('tab', { name: /preferences/i });
+      const preferencesTab = screen.getByRole('tab', { name: settingsPatterns.tabs.preferences });
       await user.click(preferencesTab);
 
       await waitFor(() => {
-        expect(screen.getByLabelText(/language/i)).toBeInTheDocument();
-        expect(screen.getByLabelText(/theme/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(settingsPatterns.labels.language)).toBeInTheDocument();
+        expect(screen.getByLabelText(settingsPatterns.labels.theme)).toBeInTheDocument();
       });
     });
 
@@ -372,25 +377,25 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const preferencesTab = screen.getByRole('tab', { name: /preferences/i });
+      const preferencesTab = screen.getByRole('tab', { name: settingsPatterns.tabs.preferences });
       await user.click(preferencesTab);
 
       await waitFor(() => {
-        const languageSelect = screen.getByLabelText(/language/i);
+        const languageSelect = screen.getByLabelText(settingsPatterns.labels.language);
         expect(languageSelect).toBeInTheDocument();
       });
 
-      const languageSelect = screen.getByLabelText(/language/i);
+      const languageSelect = screen.getByLabelText(settingsPatterns.labels.language);
       await user.click(languageSelect);
 
-      const italianOption = await screen.findByRole('option', { name: /italiano/i });
+      const italianOption = await screen.findByRole('option', { name: settingsPatterns.options.italiano });
       await user.click(italianOption);
 
       // Radix Select doesn't expose value - verify selection via displayed text
       await waitFor(
         () => {
-          const selectTrigger = screen.getByLabelText(/language/i);
-          expect(selectTrigger).toHaveTextContent(/italiano/i);
+          const selectTrigger = screen.getByLabelText(settingsPatterns.labels.language);
+          expect(selectTrigger).toHaveTextContent(settingsPatterns.options.italiano);
         },
         { timeout: 5000 }
       );
@@ -401,18 +406,18 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const preferencesTab = screen.getByRole('tab', { name: /preferences/i });
+      const preferencesTab = screen.getByRole('tab', { name: settingsPatterns.tabs.preferences });
       await user.click(preferencesTab);
 
       await waitFor(() => {
         const notificationToggle = screen.getByRole('switch', {
-          name: /email notification|notification/i,
+          name: settingsPatterns.switches.emailNotification,
         });
         expect(notificationToggle).toBeInTheDocument();
       });
 
       const notificationToggle = screen.getByRole('switch', {
-        name: /email notification|notification/i,
+        name: settingsPatterns.switches.emailNotification,
       });
 
       const initialState = notificationToggle.getAttribute('aria-checked') === 'true';
@@ -427,25 +432,25 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const preferencesTab = screen.getByRole('tab', { name: /preferences/i });
+      const preferencesTab = screen.getByRole('tab', { name: settingsPatterns.tabs.preferences });
       await user.click(preferencesTab);
 
       await waitFor(() => {
-        const themeSelect = screen.getByLabelText(/theme/i);
+        const themeSelect = screen.getByLabelText(settingsPatterns.labels.theme);
         expect(themeSelect).toBeInTheDocument();
       });
 
-      const themeSelect = screen.getByLabelText(/theme/i);
+      const themeSelect = screen.getByLabelText(settingsPatterns.labels.theme);
       await user.click(themeSelect);
 
-      const darkOption = await screen.findByRole('option', { name: /dark/i });
+      const darkOption = await screen.findByRole('option', { name: settingsPatterns.options.dark });
       await user.click(darkOption);
 
       // Radix Select doesn't expose value - verify selection via displayed text
       await waitFor(
         () => {
-          const selectTrigger = screen.getByLabelText(/theme/i);
-          expect(selectTrigger).toHaveTextContent(/dark/i);
+          const selectTrigger = screen.getByLabelText(settingsPatterns.labels.theme);
+          expect(selectTrigger).toHaveTextContent(settingsPatterns.options.dark);
         },
         { timeout: 5000 }
       );
@@ -458,13 +463,14 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const privacyTab = screen.getByRole('tab', { name: /privacy/i });
-      await user.click(privacyTab);
+      // 2FA settings are in Account tab, not Privacy tab
+      const accountTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
+      await user.click(accountTab);
 
       // Wait for tab to be selected and content to be unhidden
       await waitFor(
         () => {
-          expect(privacyTab).toHaveAttribute('aria-selected', 'true');
+          expect(accountTab).toHaveAttribute('aria-selected', 'true');
         },
         { timeout: 5000 }
       );
@@ -472,7 +478,7 @@ describe('SettingsPage', () => {
       // Wait for tab panel to not have hidden attribute
       await waitFor(
         () => {
-          const tabPanel = screen.getByRole('tabpanel', { name: /privacy/i });
+          const tabPanel = screen.getByRole('tabpanel', { name: settingsPatterns.tabs.account });
           expect(tabPanel).not.toHaveAttribute('hidden');
           // Verify content - use testid to avoid multiple matches
           expect(within(tabPanel).getByTestId('enable-2fa-button')).toBeInTheDocument();
@@ -488,8 +494,9 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const privacyTab = screen.getByRole('tab', { name: /privacy/i });
-      await user.click(privacyTab);
+      // 2FA settings are in Account tab
+      const accountTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
+      await user.click(accountTab);
 
       await waitFor(
         () => {
@@ -519,8 +526,9 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const privacyTab = screen.getByRole('tab', { name: /privacy/i });
-      await user.click(privacyTab);
+      // 2FA settings are in Account tab
+      const accountTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
+      await user.click(accountTab);
 
       const enable2FaButton = await screen.findByTestId('enable-2fa-button');
       await user.click(enable2FaButton);
@@ -533,7 +541,7 @@ describe('SettingsPage', () => {
       );
 
       // Wait for backup codes dialog and dismiss it
-      const savedCodesButton = await screen.findByRole('button', { name: /i've saved my codes/i });
+      const savedCodesButton = await screen.findByRole('button', { name: settingsPatterns.twoFactor.savedCodes });
       await user.click(savedCodesButton);
 
       await waitFor(
@@ -562,12 +570,12 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const privacyTab = screen.getByRole('tab', { name: /privacy/i });
+      const privacyTab = screen.getByRole('tab', { name: settingsPatterns.tabs.privacy });
       await user.click(privacyTab);
 
       await waitFor(
         () => {
-          expect(screen.getByText(/linked accounts/i)).toBeInTheDocument();
+          expect(screen.getByText(settingsPatterns.text.linkedAccounts)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -610,17 +618,17 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const privacyTab = screen.getByRole('tab', { name: /privacy/i });
+      const privacyTab = screen.getByRole('tab', { name: settingsPatterns.tabs.privacy });
       await user.click(privacyTab);
 
       await waitFor(
         () => {
-          expect(screen.getByText(/google/i)).toBeInTheDocument();
+          expect(screen.getByText(settingsPatterns.text.google)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
-      const unlinkButton = screen.getByRole('button', { name: /unlink/i });
+      const unlinkButton = screen.getByRole('button', { name: settingsPatterns.buttons.unlink });
       await user.click(unlinkButton);
 
       // Component uses window.confirm, not a dialog
@@ -646,7 +654,7 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const advancedTab = screen.getByRole('tab', { name: /advanced/i });
+      const advancedTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
       await user.click(advancedTab);
 
       // Wait for tab to be selected
@@ -660,10 +668,10 @@ describe('SettingsPage', () => {
       // Then wait for tab content to render
       await waitFor(
         () => {
-          const tabPanel = screen.getByRole('tabpanel', { name: /advanced/i });
+          const tabPanel = screen.getByRole('tabpanel', { name: settingsPatterns.tabs.account });
           expect(tabPanel).toBeVisible();
           // Verify content within the visible panel
-          expect(within(tabPanel).getByText(/api key authentication/i)).toBeInTheDocument();
+          expect(within(tabPanel).getByText(settingsPatterns.text.apiKeyAuth)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -674,15 +682,15 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const advancedTab = screen.getByRole('tab', { name: /advanced/i });
+      const advancedTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
       await user.click(advancedTab);
 
       // Wait for tab panel to be visible
       await waitFor(
         () => {
-          const tabPanel = screen.getByRole('tabpanel', { name: /advanced/i });
+          const tabPanel = screen.getByRole('tabpanel', { name: settingsPatterns.tabs.account });
           expect(tabPanel).toBeVisible();
-          expect(within(tabPanel).getByText(/api key authentication/i)).toBeInTheDocument();
+          expect(within(tabPanel).getByText(settingsPatterns.text.apiKeyAuth)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -706,13 +714,13 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const advancedTab = screen.getByRole('tab', { name: /advanced/i });
+      const advancedTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
       await user.click(advancedTab);
 
       // Wait for tab panel to be visible first
       await waitFor(
         () => {
-          const tabPanel = screen.getByRole('tabpanel', { name: /advanced/i });
+          const tabPanel = screen.getByRole('tabpanel', { name: settingsPatterns.tabs.account });
           expect(tabPanel).toBeVisible();
         },
         { timeout: 5000 }
@@ -721,8 +729,8 @@ describe('SettingsPage', () => {
       // Then check for sessions content
       await waitFor(
         () => {
-          const tabPanel = screen.getByRole('tabpanel', { name: /advanced/i });
-          expect(within(tabPanel).getByText(/active sessions/i)).toBeInTheDocument();
+          const tabPanel = screen.getByRole('tabpanel', { name: settingsPatterns.tabs.account });
+          expect(within(tabPanel).getByText(settingsPatterns.text.activeSessions)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -750,18 +758,18 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const advancedTab = screen.getByRole('tab', { name: /advanced/i });
+      const advancedTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
       await user.click(advancedTab);
 
       await waitFor(
         () => {
-          const revokeButton = screen.getByRole('button', { name: /revoke/i });
+          const revokeButton = screen.getByRole('button', { name: settingsPatterns.buttons.revoke });
           expect(revokeButton).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
-      const revokeButton = screen.getByRole('button', { name: /revoke/i });
+      const revokeButton = screen.getByRole('button', { name: settingsPatterns.buttons.revoke });
       await user.click(revokeButton);
 
       expect(confirmSpy).toHaveBeenCalled();
@@ -781,15 +789,15 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const advancedTab = screen.getByRole('tab', { name: /advanced/i });
+      const advancedTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
       await user.click(advancedTab);
 
       // Wait for tab panel to be visible
       await waitFor(
         () => {
-          const tabPanel = screen.getByRole('tabpanel', { name: /advanced/i });
+          const tabPanel = screen.getByRole('tabpanel', { name: settingsPatterns.tabs.account });
           expect(tabPanel).toBeVisible();
-          expect(within(tabPanel).getByText(/danger zone/i)).toBeInTheDocument();
+          expect(within(tabPanel).getByText(settingsPatterns.text.dangerZone)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -805,7 +813,7 @@ describe('SettingsPage', () => {
       // Start on profile tab
       await waitFor(
         () => {
-          expect(screen.getByRole('tab', { name: /profile/i })).toHaveAttribute(
+          expect(screen.getByRole('tab', { name: settingsPatterns.tabs.profile })).toHaveAttribute(
             'aria-selected',
             'true'
           );
@@ -814,19 +822,19 @@ describe('SettingsPage', () => {
       );
 
       // Switch to preferences
-      const preferencesTab = screen.getByRole('tab', { name: /preferences/i });
+      const preferencesTab = screen.getByRole('tab', { name: settingsPatterns.tabs.preferences });
       await user.click(preferencesTab);
 
       await waitFor(() => {
         expect(preferencesTab).toHaveAttribute('aria-selected', 'true');
-        expect(screen.getByRole('tab', { name: /profile/i })).toHaveAttribute(
+        expect(screen.getByRole('tab', { name: settingsPatterns.tabs.profile })).toHaveAttribute(
           'aria-selected',
           'false'
         );
       });
 
       // Switch to privacy
-      const privacyTab = screen.getByRole('tab', { name: /privacy/i });
+      const privacyTab = screen.getByRole('tab', { name: settingsPatterns.tabs.privacy });
       await user.click(privacyTab);
 
       await waitFor(() => {
@@ -834,7 +842,7 @@ describe('SettingsPage', () => {
       });
 
       // Switch to advanced
-      const advancedTab = screen.getByRole('tab', { name: /advanced/i });
+      const advancedTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
       await user.click(advancedTab);
 
       await waitFor(() => {
@@ -858,7 +866,7 @@ describe('SettingsPage', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByText(/failed to load profile|error/i)).toBeInTheDocument();
+          expect(screen.getByText(settingsPatterns.text.failedToLoad)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -871,8 +879,9 @@ describe('SettingsPage', () => {
 
       await waitForSettingsLoad();
 
-      const privacyTab = screen.getByRole('tab', { name: /privacy/i });
-      await user.click(privacyTab);
+      // 2FA settings are in Account tab
+      const accountTab = screen.getByRole('tab', { name: settingsPatterns.tabs.account });
+      await user.click(accountTab);
 
       await waitFor(
         () => {
@@ -887,7 +896,7 @@ describe('SettingsPage', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByText(/failed to setup 2fa|error/i)).toBeInTheDocument();
+          expect(screen.getByText(settingsPatterns.text.failedToSetup2fa)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -916,7 +925,7 @@ describe('SettingsPage', () => {
       await user.click(saveButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/network|connection|error/i)).toBeInTheDocument();
+        expect(screen.getByText(settingsPatterns.text.networkError)).toBeInTheDocument();
       });
     });
   });
@@ -971,8 +980,8 @@ describe('SettingsPage', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByLabelText(/display name/i)).toBeInTheDocument();
-          expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+          expect(screen.getByLabelText(settingsPatterns.labels.displayName)).toBeInTheDocument();
+          expect(screen.getByLabelText(settingsPatterns.labels.email)).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -1002,20 +1011,20 @@ describe('SettingsPage', () => {
 
       await waitFor(
         () => {
-          const profileTab = screen.getByRole('tab', { name: /profile/i });
+          const profileTab = screen.getByRole('tab', { name: settingsPatterns.tabs.profile });
           expect(profileTab).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
 
-      const profileTab = screen.getByRole('tab', { name: /profile/i });
+      const profileTab = screen.getByRole('tab', { name: settingsPatterns.tabs.profile });
       profileTab.focus();
 
       await user.keyboard('{ArrowRight}');
 
       await waitFor(
         () => {
-          const preferencesTab = screen.getByRole('tab', { name: /preferences/i });
+          const preferencesTab = screen.getByRole('tab', { name: settingsPatterns.tabs.preferences });
           expect(preferencesTab).toHaveFocus();
         },
         { timeout: 5000 }

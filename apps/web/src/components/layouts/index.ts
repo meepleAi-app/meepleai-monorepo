@@ -1,11 +1,9 @@
 /**
  * Public Layout Components - Issue #2230
+ * Updated: Issue #3104 - Removed PublicHeader (replaced by UnifiedHeader)
  *
  * Esportazioni per i componenti del layout pubblico.
  */
-
-export { PublicHeader } from './PublicHeader';
-export type { PublicHeaderProps, PublicUser } from './PublicHeader';
 
 export { PublicFooter } from './PublicFooter';
 export type { PublicFooterProps } from './PublicFooter';
@@ -24,3 +22,13 @@ export type { PublicLayoutWrapperProps } from './PublicLayoutWrapper';
 
 export { AuthLayout } from './AuthLayout';
 export type { AuthLayoutProps } from './AuthLayout';
+
+/**
+ * Authenticated Layout Components - Issue #3479
+ *
+ * Layout System v2 for authenticated pages.
+ * Combines UnifiedHeader + UnifiedActionBar + SmartFAB.
+ */
+
+export { AuthenticatedLayout } from './AuthenticatedLayout';
+export type { AuthenticatedLayoutProps } from './AuthenticatedLayout';

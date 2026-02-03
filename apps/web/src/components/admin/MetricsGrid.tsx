@@ -67,7 +67,7 @@ function MetricsGridEmpty({ message }: { message: string }) {
       <div className="p-3 bg-[#fef3e2] rounded-full mb-4">
         <BarChart3 className="h-8 w-8 text-[#d2691e]" aria-hidden="true" />
       </div>
-      <p className="text-[#666] text-sm">{message}</p>
+      <p className="text-[#666] text-sm" data-testid="metrics-grid-empty-message">{message}</p>
     </div>
   );
 }

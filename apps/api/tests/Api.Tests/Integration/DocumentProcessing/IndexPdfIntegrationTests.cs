@@ -7,9 +7,11 @@ using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
+using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
+using Microsoft.Extensions.Options;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -59,6 +61,14 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
     private IServiceProvider? _serviceProvider;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
+    private static IOptions<IndexingSettings> CreateIndexingSettings()
+    {
+        var settings = new IndexingSettings { EmbeddingBatchSize = 100 };
+        var optionsMock = new Mock<IOptions<IndexingSettings>>();
+        optionsMock.Setup(x => x.Value).Returns(settings);
+        return optionsMock.Object;
+    }
 
     public IndexPdfIntegrationTests(SharedTestcontainersFixture fixture)
     {
@@ -245,6 +255,10 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         qdrantMock.Setup(q => q.DeleteDocumentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         services.AddSingleton<IQdrantService>(qdrantMock.Object);
+
+        // ISSUE-3197: Register IndexingSettings for batch processing configuration
+        var indexingSettings = new IndexingSettings { EmbeddingBatchSize = 100 };
+        services.AddSingleton(Options.Create(indexingSettings));
     }
 
     private async Task SeedTestDataAsync()
@@ -454,7 +468,8 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
             _serviceProvider!.GetRequiredService<ITextChunkingService>(),
             embeddingMock.Object,
             _serviceProvider!.GetRequiredService<IQdrantService>(),
-            _serviceProvider!.GetRequiredService<ILogger<IndexPdfCommandHandler>>()
+            _serviceProvider!.GetRequiredService<ILogger<IndexPdfCommandHandler>>(),
+            CreateIndexingSettings()
         );
 
         var command = new IndexPdfCommand(pdfId.ToString());
@@ -511,7 +526,8 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
             _serviceProvider!.GetRequiredService<ITextChunkingService>(),
             _serviceProvider!.GetRequiredService<IEmbeddingService>(),
             qdrantMock.Object,
-            _serviceProvider!.GetRequiredService<ILogger<IndexPdfCommandHandler>>()
+            _serviceProvider!.GetRequiredService<ILogger<IndexPdfCommandHandler>>(),
+            CreateIndexingSettings()
         );
 
         var command = new IndexPdfCommand(pdfId.ToString());
@@ -553,6 +569,51 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         vectorDoc.Should().NotBeNull();
         vectorDoc!.ChunkCount.Should().Be(result.ChunkCount);
         vectorDoc.TotalCharacters.Should().Be(largeText.Length);
+    }
+
+    [Fact]
+    public async Task IndexPdf_With602KbEquivalent_CompletesWithBatchProcessing()
+    {
+        // Arrange: Reproduce Issue #3197 scenario
+        // 602KB PDF → ~600,000 characters → ~1,200 chunks (512 chars/chunk)
+        await ResetDatabaseAsync();
+
+        // Generate 600KB text (1,200 paragraphs of 500 chars each)
+        var paragraphs = Enumerable.Range(1, 1200)
+            .Select(i => $"Paragraph {i}: " + string.Join(" ",
+                Enumerable.Range(1, 50).Select(w => $"Word{w}")));
+        var largeText = string.Join("\n\n", paragraphs);
+
+        var pdfId = await CreateTestPdfAsync("Large602KB.pdf", largeText, "completed");
+        var handler = _serviceProvider!.GetRequiredService<IndexPdfCommandHandler>();
+        var command = new IndexPdfCommand(pdfId.ToString());
+
+        // Act: Should complete without OutOfMemoryException
+        var result = await handler.Handle(command, TestCancellationToken);
+
+        // Assert: Indexing completes successfully without OutOfMemoryException
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue("indexing should succeed with batch processing");
+        result.ChunkCount.Should().BeGreaterThan(100, "large text should generate many chunks");
+        result.ErrorMessage.Should().BeNullOrEmpty();
+        result.ErrorCode.Should().BeNull();
+
+        // Verify: VectorDocument created with batch processing
+        var vectorDoc = await _dbContext!.Set<VectorDocumentEntity>()
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
+
+        vectorDoc.Should().NotBeNull();
+        vectorDoc!.IndexingStatus.Should().Be("completed", "batch processing should complete successfully");
+        vectorDoc.ChunkCount.Should().Be(result.ChunkCount);
+        vectorDoc.TotalCharacters.Should().BeGreaterThan(100000, "large text has many characters");
+        vectorDoc.IndexedAt.Should().NotBeNull();
+        vectorDoc.IndexingError.Should().BeNull("no errors should occur with batch processing");
+
+        // Verify: Text chunks saved to PostgreSQL for hybrid search
+        var textChunks = await _dbContext.TextChunks
+            .Where(tc => tc.PdfDocumentId == pdfId)
+            .CountAsync(TestCancellationToken);
+        textChunks.Should().Be(result.ChunkCount, "all chunks should be persisted to PostgreSQL");
     }
     [Fact]
     public async Task IndexNonExistentPdf_ReturnsPdfNotFound()

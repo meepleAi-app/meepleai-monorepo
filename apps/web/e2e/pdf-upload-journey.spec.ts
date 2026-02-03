@@ -8,7 +8,7 @@
  * Then: The PDF should appear in the "Uploaded PDFs" table with correct details
  */
 
-import { test as base, expect, Page } from './fixtures/chromatic';
+import { test as base, expect, Page } from './fixtures';
 import { WaitHelper } from './helpers/WaitHelper';
 import { AuthHelper, USER_FIXTURES } from './pages';
 

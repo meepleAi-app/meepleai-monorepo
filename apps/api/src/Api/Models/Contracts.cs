@@ -424,7 +424,11 @@ internal record UserDto(
     string DisplayName,
     string Role,
     DateTime CreatedAt,
-    DateTime? LastSeenAt
+    DateTime? LastSeenAt,
+    bool IsSuspended = false,
+    string? SuspendReason = null,
+    int Level = 1,
+    int ExperiencePoints = 0
 );
 
 /// <summary>
@@ -529,15 +533,18 @@ internal record ConfigurationImportRequest(
     bool OverwriteExisting = false);
 
 // CONFIG-05: Feature Flags models
+// Issue #3073: Extended to support tier-based feature flags (Free/Normal/Premium)
 internal record FeatureFlagDto(
     string FeatureName,
     bool IsEnabled,
     string? RoleRestriction,
+    string? TierRestriction,
     string? Description);
 
 internal record FeatureFlagUpdateRequest(
     [Required] bool Enabled,
-    string? Role = null);
+    string? Role = null,
+    string? Tier = null);
 
 // EDIT-05: Rule Specification Comments models
 internal record RuleCommentDto(

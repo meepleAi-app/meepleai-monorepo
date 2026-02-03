@@ -1,0 +1,440 @@
+{/* Accessibility.mdx - MeepleAI Accessibility Guidelines */}
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Design System/Accessibility" />
+
+# Accessibility Guidelines
+
+MeepleAI is committed to WCAG 2.1 AA compliance. This guide documents our accessibility patterns, requirements, and testing procedures.
+
+## WCAG 2.1 AA Overview
+
+The Web Content Accessibility Guidelines (WCAG) 2.1 Level AA is our target standard. Key principles:
+
+| Principle | Description |
+|-----------|-------------|
+| **Perceivable** | Information must be presentable in ways users can perceive |
+| **Operable** | UI components must be operable by all users |
+| **Understandable** | Information and operation must be understandable |
+| **Robust** | Content must be robust enough for assistive technologies |
+
+## Color Contrast
+
+### Requirements
+
+| Text Type | Minimum Ratio | Our Standard |
+|-----------|---------------|--------------|
+| Normal text (< 18px) | 4.5:1 | 4.8:1+ |
+| Large text (>= 18px or 14px bold) | 3:1 | 5.2:1+ |
+| UI components & graphics | 3:1 | 4.1:1+ |
+| Focus indicators | 3:1 | 4:1+ |
+
+### Color Adjustments
+
+Our color system was adjusted for WCAG compliance (Issue #2234):
+
+```css
+/* Primary - Darkened for contrast */
+--primary: 25 95% 38%;      /* Was 53%, now 38% */
+
+/* Secondary - Darkened for contrast */
+--secondary: 142 76% 28%;   /* Was 36%, now 28% */
+
+/* Accent - Darkened for contrast */
+--accent: 271 91% 55%;      /* Was 65%, now 55% */
+
+/* Muted foreground - Guaranteed 4.5:1 */
+--muted-foreground: 30 12% 35%;
+```
+
+### Testing Contrast
+
+Use the Storybook a11y addon or browser DevTools to verify contrast:
+
+1. Open component in Storybook
+2. Click the "Accessibility" tab
+3. Review any contrast violations
+4. Fix and re-test
+
+## Focus States
+
+### Focus Ring
+
+All interactive elements must have visible focus indicators:
+
+```css
+:root {
+  --ring-width: 2px;
+  --ring-offset-width: 2px;
+  --ring-offset-color: var(--color-background);
+}
+
+/* Focus ring utility */
+.focus-ring {
+  outline: var(--ring-width) solid hsl(var(--ring));
+  outline-offset: var(--ring-offset-width);
+}
+```
+
+### Focus-Visible
+
+Use `focus-visible` for keyboard-only focus styles:
+
+```tsx
+<button className="
+  focus-visible:outline-none
+  focus-visible:ring-2
+  focus-visible:ring-ring
+  focus-visible:ring-offset-2
+">
+  Button
+</button>
+```
+
+### Dark Mode Focus
+
+Enhanced focus visibility in dark mode:
+
+```css
+.dark {
+  --glow-focus: 0 0 0 3px hsl(var(--ring) / 0.5);
+}
+
+.dark .glow-focus:focus-visible {
+  box-shadow: var(--glow-focus);
+}
+```
+
+## Touch Targets
+
+### Minimum Size
+
+All interactive elements must be at least 44x44 pixels:
+
+```css
+:root {
+  --size-touch-min: 2.75rem; /* 44px */
+}
+
+.touch-target {
+  min-width: var(--size-touch-min);
+  min-height: var(--size-touch-min);
+}
+```
+
+### Spacing
+
+Adjacent touch targets should have adequate spacing:
+
+```tsx
+{/* Adequate spacing between buttons */}
+<div className="flex gap-3">
+  <button className="touch-target">Action 1</button>
+  <button className="touch-target">Action 2</button>
+</div>
+```
+
+## Keyboard Navigation
+
+### Requirements
+
+- All interactive elements must be keyboard accessible
+- Focus order must be logical and intuitive
+- No keyboard traps (users must be able to navigate away)
+
+### Skip Links
+
+```tsx
+<a
+  href="#main-content"
+  className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50"
+>
+  Skip to main content
+</a>
+```
+
+### Keyboard Patterns
+
+| Pattern | Keys | Usage |
+|---------|------|-------|
+| Activate | Enter, Space | Buttons, links |
+| Navigate | Tab | Move between elements |
+| Navigate (reverse) | Shift + Tab | Move backwards |
+| Select | Arrow keys | Menus, selects, tabs |
+| Close | Escape | Modals, dropdowns |
+
+## Screen Readers
+
+### Semantic HTML
+
+Use semantic elements for proper screen reader navigation:
+
+```tsx
+{/* Good */}
+<button onClick={handleClick}>Submit</button>
+<nav aria-label="Main navigation">{/* links */}</nav>
+<main id="main-content">{/* content */}</main>
+
+{/* Avoid */}
+<div onClick={handleClick}>Submit</div>
+<div className="nav">{/* links */}</div>
+```
+
+### ARIA Labels
+
+Provide labels for elements that lack visible text:
+
+```tsx
+{/* Icon button */}
+<button aria-label="Close dialog">
+  <XIcon />
+</button>
+
+{/* Icon with text */}
+<button>
+  <SaveIcon aria-hidden="true" />
+  <span>Save</span>
+</button>
+```
+
+### Live Regions
+
+Announce dynamic content changes:
+
+```tsx
+{/* Status updates */}
+<div role="status" aria-live="polite">
+  {statusMessage}
+</div>
+
+{/* Critical alerts */}
+<div role="alert" aria-live="assertive">
+  {errorMessage}
+</div>
+```
+
+### Screen Reader Only Text
+
+```css
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+```
+
+## Reduced Motion
+
+Respect user preferences for reduced motion:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Disable specific animations */
+  .animate-pulse-meeple,
+  .animate-bounce-slow {
+    animation: none !important;
+  }
+
+  /* Disable transform effects */
+  .hover-card:hover,
+  .hover-button:hover {
+    transform: none !important;
+  }
+}
+```
+
+## Forms
+
+### Labels
+
+All form inputs must have associated labels:
+
+```tsx
+{/* Explicit label association */}
+<label htmlFor="email">Email address</label>
+<input id="email" type="email" />
+
+{/* Implicit association */}
+<label>
+  Email address
+  <input type="email" />
+</label>
+```
+
+### Error Messages
+
+```tsx
+<div className="space-y-2">
+  <label htmlFor="email">Email</label>
+  <input
+    id="email"
+    type="email"
+    aria-invalid={!!error}
+    aria-describedby={error ? "email-error" : undefined}
+  />
+  {error && (
+    <p id="email-error" className="text-destructive text-sm">
+      {error}
+    </p>
+  )}
+</div>
+```
+
+### Required Fields
+
+```tsx
+<label htmlFor="name">
+  Name <span aria-label="required">*</span>
+</label>
+<input id="name" required aria-required="true" />
+```
+
+## Images & Media
+
+### Alt Text
+
+```tsx
+{/* Informative image */}
+<img src="game-cover.jpg" alt="Catan board game box cover" />
+
+{/* Decorative image */}
+<img src="divider.svg" alt="" role="presentation" />
+
+{/* Complex image */}
+<figure>
+  <img src="chart.png" alt="Game popularity trend" />
+  <figcaption>
+    Chart showing increasing board game sales from 2020-2024
+  </figcaption>
+</figure>
+```
+
+### Video & Audio
+
+```tsx
+<video controls>
+  <source src="tutorial.mp4" type="video/mp4" />
+  <track
+    kind="captions"
+    src="tutorial-captions.vtt"
+    srcLang="en"
+    label="English"
+  />
+</video>
+```
+
+## Component Patterns
+
+### Modal Dialogs
+
+```tsx
+<dialog
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="modal-title"
+  aria-describedby="modal-description"
+>
+  <h2 id="modal-title">Confirm Action</h2>
+  <p id="modal-description">Are you sure you want to proceed?</p>
+  <button onClick={handleClose}>Cancel</button>
+  <button onClick={handleConfirm}>Confirm</button>
+</dialog>
+```
+
+### Tabs
+
+```tsx
+<div role="tablist" aria-label="Game sections">
+  <button
+    role="tab"
+    aria-selected={activeTab === 0}
+    aria-controls="panel-0"
+    id="tab-0"
+  >
+    Overview
+  </button>
+  <button
+    role="tab"
+    aria-selected={activeTab === 1}
+    aria-controls="panel-1"
+    id="tab-1"
+  >
+    Rules
+  </button>
+</div>
+<div
+  role="tabpanel"
+  id="panel-0"
+  aria-labelledby="tab-0"
+  hidden={activeTab !== 0}
+>
+  Tab content
+</div>
+```
+
+### Loading States
+
+```tsx
+<button disabled aria-busy="true">
+  <span className="animate-spin" aria-hidden="true">
+    {/* spinner icon */}
+  </span>
+  <span>Loading...</span>
+</button>
+
+{/* Or use aria-live for async loading */}
+<div aria-live="polite" aria-busy={isLoading}>
+  {isLoading ? "Loading..." : content}
+</div>
+```
+
+## Testing Checklist
+
+### Automated Testing
+
+Use the Storybook a11y addon for automated checks:
+
+- Color contrast violations
+- Missing form labels
+- Missing alt text
+- Invalid ARIA usage
+
+### Manual Testing
+
+1. **Keyboard navigation**: Tab through all interactive elements
+2. **Screen reader**: Test with NVDA, VoiceOver, or JAWS
+3. **Zoom**: Test at 200% and 400% zoom levels
+4. **Color modes**: Test in light and dark themes
+5. **Reduced motion**: Enable reduced motion preference
+6. **High contrast**: Test with Windows High Contrast mode
+
+### Testing Tools
+
+| Tool | Purpose |
+|------|---------|
+| axe DevTools | Browser extension for a11y audits |
+| WAVE | Web accessibility evaluation tool |
+| Lighthouse | Chrome DevTools accessibility audit |
+| NVDA | Free Windows screen reader |
+| VoiceOver | Built-in macOS/iOS screen reader |
+
+## Resources
+
+- [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
+- [MDN Accessibility Guide](https://developer.mozilla.org/en-US/docs/Web/Accessibility)
+- [A11y Project Checklist](https://www.a11yproject.com/checklist/)
+- [Inclusive Components](https://inclusive-components.design/)

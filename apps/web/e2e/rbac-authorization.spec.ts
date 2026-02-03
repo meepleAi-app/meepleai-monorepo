@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/helpers/AuthHelper.ts
  */
 
-import { test, expect } from './fixtures/chromatic';
+import { test, expect } from './fixtures';
 import { expectForbiddenOrRedirect, expectPageLoaded } from './helpers/assertions';
 import { WaitHelper } from './helpers/WaitHelper';
 import { AuthHelper } from './pages';

@@ -72,6 +72,14 @@ internal class GameBuilder
         return this;
     }
 
+    private Guid? _sharedGameId;
+
+    public GameBuilder WithSharedGameLink(Guid sharedGameId)
+    {
+        _sharedGameId = sharedGameId;
+        return this;
+    }
+
     /// <summary>
     /// Creates a fully detailed game (all properties set).
     /// </summary>
@@ -95,6 +103,11 @@ internal class GameBuilder
         if (_bggId.HasValue)
         {
             game.LinkToBgg(_bggId.Value, _bggMetadata);
+        }
+
+        if (_sharedGameId.HasValue)
+        {
+            game.LinkToSharedGame(_sharedGameId.Value);
         }
 
         return game;

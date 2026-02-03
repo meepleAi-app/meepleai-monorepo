@@ -13,12 +13,14 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
+// Note: ITierStrategyAccessService is in Api.BoundedContexts.KnowledgeBase.Domain.Services namespace
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 using Api.Services;
 using Api.Services.LlmClients;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 
@@ -49,6 +51,11 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ChatContextDomainService>(); // Issue #857: Chat history context
         services.AddSingleton<AgentOrchestrationService>(); // Issue #867: Agent invocation orchestration
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
+        services.AddSingleton<IAgentPromptBuilder, AgentPromptBuilder>(); // Issue #3184 (AGT-010): Session agent prompt building
+        services.AddSingleton<IModelConfigurationService, ModelConfigurationService>(); // Issue #3377: Models tier endpoint
+        // Issue #3436: Tier-Strategy Access Validation Service
+        // Scoped - uses ITierStrategyAccessRepository which depends on DbContext
+        services.AddScoped<ITierStrategyAccessService, TierStrategyAccessService>();
 
         // Issue #2404: Agent Mode Handlers (Scoped - use repositories and LLM services)
         services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.PlayerModeHandler>();
@@ -90,6 +97,9 @@ internal static class KnowledgeBaseServiceExtensions
         // Domain Services - Routing Strategy
         services.AddSingleton<ILlmRoutingStrategy, HybridAdaptiveRoutingStrategy>();
 
+        // Issue #3435: Strategy-Model mapping service (Singleton - uses IServiceScopeFactory for DB access)
+        services.AddSingleton<IStrategyModelMappingService, StrategyModelMappingService>();
+
         // ISSUE-1725: Model override service for budget-aware downgrading
         services.AddSingleton<ILlmModelOverrideService, LlmModelOverrideService>();
 
@@ -129,12 +139,20 @@ internal static class KnowledgeBaseServiceExtensions
 
     private static void AddInfrastructureServices(IServiceCollection services)
     {
+        // Infrastructure - Unit of Work (Scoped - tied to DbContext lifetime)
+        // Issue #3177: AGT-003 - Required by AgentTypology command handlers
+        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
+
         // Infrastructure - Repositories (Scoped - tied to DbContext lifetime)
         services.AddScoped<IVectorDocumentRepository, VectorDocumentRepository>();
         services.AddScoped<IEmbeddingRepository, EmbeddingRepository>();
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>(); // Issue #924: ChatThread support
         services.AddScoped<ILlmCostLogRepository, LlmCostLogRepository>(); // ISSUE-960: Cost tracking
         services.AddScoped<IAgentRepository, AgentRepository>(); // Issue #866: Agent management
+        services.AddScoped<IAgentTypologyRepository, AgentTypologyRepository>(); // Issue #3175, #3177: AgentTypology CRUD
+        services.AddScoped<IAgentSessionRepository, AgentSessionRepository>(); // Issue #3184 (AGT-010): Agent session lifecycle
+        services.AddScoped<ITierStrategyAccessRepository, TierStrategyAccessRepository>(); // Issue #3436: Tier-Strategy access
+        services.AddScoped<IStrategyModelMappingRepository, StrategyModelMappingRepository>(); // Issue #3435: Strategy-Model mapping
 
         // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
         services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();

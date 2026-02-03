@@ -1,0 +1,116 @@
+### Agent Endpoints Smoke Test Collection
+### Issue #3173: [RAG-002] Agent Endpoints Smoke Test
+### Purpose: Validate all 8 agent endpoints return 2xx responses
+
+@baseUrl = http://localhost:8080/api/v1
+@adminToken = {{$dotenv ADMIN_TOKEN}}
+@userToken = {{$dotenv USER_TOKEN}}
+
+### Variables (Update these after running tests)
+@agentId = REPLACE_WITH_AGENT_ID
+@gameId = REPLACE_WITH_GAME_ID_FROM_RAG001
+
+###
+### 1. POST /agents - Create Agent (Admin)
+### Expected: 201 Created
+POST {{baseUrl}}/agents
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Chess Rules Expert",
+  "type": "RulesExpert",
+  "strategyName": "HybridSearch",
+  "strategyParameters": {
+    "vectorWeight": 0.7,
+    "topK": 5
+  },
+  "isActive": true
+}
+
+###
+### 2. GET /agents - List All Agents
+### Expected: 200 OK
+GET {{baseUrl}}/agents
+Authorization: Bearer {{userToken}}
+
+###
+### 3. GET /agents/{id} - Get Agent by ID
+### Expected: 200 OK
+GET {{baseUrl}}/agents/{{agentId}}
+Authorization: Bearer {{userToken}}
+
+###
+### 4. PUT /agents/{id}/configure - Configure Agent Strategy (Admin)
+### Expected: 200 OK
+PUT {{baseUrl}}/agents/{{agentId}}/configure
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "strategyName": "HybridSearch",
+  "strategyParameters": {
+    "vectorWeight": 0.8,
+    "topK": 10
+  }
+}
+
+###
+### 5. POST /agents/{id}/invoke - Invoke Agent with RAG
+### Expected: 200 OK with citations and response
+POST {{baseUrl}}/agents/{{agentId}}/invoke
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "query": "How do pawns move in chess?",
+  "gameId": "{{gameId}}"
+}
+
+###
+### 6. POST /agents/qa/stream - SSE Streaming QA
+### Expected: 200 OK with SSE events stream
+### Note: Test streaming for 5 minutes minimum
+POST {{baseUrl}}/agents/qa/stream
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "query": "Explain the castling rules in detail",
+  "gameId": "{{gameId}}",
+  "generateFollowUps": true
+}
+
+###
+### 7. GET /library/games/{gameId}/agent-config - Get User Agent Config
+### Expected: 200 OK or 404 if no config exists
+GET {{baseUrl}}/library/games/{{gameId}}/agent-config
+Authorization: Bearer {{userToken}}
+
+###
+### 8. POST /library/games/{gameId}/agent-config - Save User Agent Config
+### Expected: 200 OK
+POST {{baseUrl}}/library/games/{{gameId}}/agent-config
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "agentId": "{{agentId}}",
+  "strategyName": "HybridSearch",
+  "strategyParameters": {
+    "vectorWeight": 0.75,
+    "topK": 8
+  }
+}
+
+###
+### Additional: POST /agents/explain/stream - SSE Streaming Explain (Bonus test)
+### Expected: 200 OK with SSE events stream
+POST {{baseUrl}}/agents/explain/stream
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "ruleName": "Castling",
+  "gameId": "{{gameId}}"
+}

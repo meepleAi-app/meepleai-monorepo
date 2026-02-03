@@ -5,6 +5,8 @@
  * Covers: Agent listing, invocation, configuration.
  */
 
+import { z } from 'zod';
+
 import {
   AgentDtoSchema,
   AgentResponseDtoSchema,
@@ -15,6 +17,7 @@ import {
   AgentDocumentsDtoSchema,
   UpdateAgentDocumentsResponseSchema,
   PlayerModeSuggestionResponseSchema,
+  typologySchema, // Added for AGT-012
   type AgentDto,
   type AgentResponseDto,
   type InvokeAgentRequest,
@@ -27,6 +30,7 @@ import {
   type UpdateAgentDocumentsResponse,
   type PlayerModeSuggestionRequest,
   type PlayerModeSuggestionResponse,
+  type Typology, // Added for AGT-012
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -81,6 +85,29 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      */
     async getById(id: string): Promise<AgentDto | null> {
       return httpClient.get(`/api/v1/agents/${encodeURIComponent(id)}`, AgentDtoSchema);
+    },
+
+    /**
+     * Get approved agent typologies (authenticated endpoint)
+     * Issue #3186 (AGT-012): Agent Config Modal
+     * @param status Filter by status (default: 'Approved')
+     */
+    async getTypologies(status: 'Approved' = 'Approved'): Promise<Typology[]> {
+      const params = new URLSearchParams();
+      params.append('status', status);
+
+      const url = `/api/v1/agent-typologies?${params.toString()}`;
+      const response = await httpClient.get<{
+        success: boolean;
+        typologies: Typology[];
+        total: number;
+      }>(url, z.object({
+        success: z.boolean(),
+        typologies: z.array(typologySchema),
+        total: z.number(),
+      }));
+
+      return response?.typologies ?? [];
     },
 
     // ========== Agent Commands ==========

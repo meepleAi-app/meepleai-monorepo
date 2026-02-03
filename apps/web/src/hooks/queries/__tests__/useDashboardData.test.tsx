@@ -29,6 +29,7 @@ vi.mock('@/lib/api', async importOriginal => {
       admin: {
         getAnalytics: vi.fn(),
         getRecentActivity: vi.fn(),
+        getInfrastructureDetails: vi.fn(),
       },
     },
   };
@@ -74,6 +75,18 @@ const mockActivityData = {
     },
   ],
   totalCount: 1,
+  generatedAt: new Date().toISOString(),
+};
+
+const mockInfrastructureData = {
+  services: [
+    {
+      name: 'API',
+      status: 'Healthy',
+      uptime: 99.9,
+      lastCheck: new Date().toISOString(),
+    },
+  ],
   generatedAt: new Date().toISOString(),
 };
 
@@ -198,9 +211,12 @@ describe('useDashboardData', () => {
   });
 
   describe('useDashboardData (combined hook)', () => {
-    it('fetches both analytics and activity in parallel', async () => {
+    it('fetches analytics, activity, and infrastructure in parallel', async () => {
       vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
       vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+      vi.mocked(apiModule.api.admin.getInfrastructureDetails).mockResolvedValue(
+        mockInfrastructureData
+      );
 
       const { result } = renderHook(() => useDashboardData(10, { enablePolling: false }), {
         wrapper: createWrapper(queryClient),
@@ -212,11 +228,15 @@ describe('useDashboardData', () => {
 
       expect(apiModule.api.admin.getAnalytics).toHaveBeenCalledTimes(1);
       expect(apiModule.api.admin.getRecentActivity).toHaveBeenCalledWith({ limit: 10 });
+      expect(apiModule.api.admin.getInfrastructureDetails).toHaveBeenCalledTimes(1);
     });
 
     it('provides metrics and events convenience accessors', async () => {
       vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
       vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+      vi.mocked(apiModule.api.admin.getInfrastructureDetails).mockResolvedValue(
+        mockInfrastructureData
+      );
 
       const { result } = renderHook(() => useDashboardData(10, { enablePolling: false }), {
         wrapper: createWrapper(queryClient),
@@ -234,6 +254,9 @@ describe('useDashboardData', () => {
       // Use 403 error which triggers immediate failure (no retry per hook logic)
       vi.mocked(apiModule.api.admin.getAnalytics).mockRejectedValue(new Error('403 Forbidden'));
       vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+      vi.mocked(apiModule.api.admin.getInfrastructureDetails).mockResolvedValue(
+        mockInfrastructureData
+      );
 
       const { result } = renderHook(() => useDashboardData(10, { enablePolling: false }), {
         wrapper: createWrapper(queryClient),
@@ -249,6 +272,9 @@ describe('useDashboardData', () => {
     it('provides lastUpdate timestamp', async () => {
       vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
       vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+      vi.mocked(apiModule.api.admin.getInfrastructureDetails).mockResolvedValue(
+        mockInfrastructureData
+      );
 
       const { result } = renderHook(() => useDashboardData(10, { enablePolling: false }), {
         wrapper: createWrapper(queryClient),
@@ -261,9 +287,12 @@ describe('useDashboardData', () => {
       expect(result.current.lastUpdate).toBeInstanceOf(Date);
     });
 
-    it('provides refetch function that refetches both queries', async () => {
+    it('provides refetch function that refetches all queries', async () => {
       vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
       vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+      vi.mocked(apiModule.api.admin.getInfrastructureDetails).mockResolvedValue(
+        mockInfrastructureData
+      );
 
       const { result } = renderHook(() => useDashboardData(10, { enablePolling: false }), {
         wrapper: createWrapper(queryClient),
@@ -276,12 +305,14 @@ describe('useDashboardData', () => {
       // Initial calls
       expect(apiModule.api.admin.getAnalytics).toHaveBeenCalledTimes(1);
       expect(apiModule.api.admin.getRecentActivity).toHaveBeenCalledTimes(1);
+      expect(apiModule.api.admin.getInfrastructureDetails).toHaveBeenCalledTimes(1);
 
       // Trigger refetch
       await result.current.refetch();
 
       expect(apiModule.api.admin.getAnalytics).toHaveBeenCalledTimes(2);
       expect(apiModule.api.admin.getRecentActivity).toHaveBeenCalledTimes(2);
+      expect(apiModule.api.admin.getInfrastructureDetails).toHaveBeenCalledTimes(2);
     });
 
     it('returns empty events array when activity data has no events', async () => {
@@ -292,6 +323,9 @@ describe('useDashboardData', () => {
       };
       vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(mockAnalyticsData);
       vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(emptyActivityData);
+      vi.mocked(apiModule.api.admin.getInfrastructureDetails).mockResolvedValue(
+        mockInfrastructureData
+      );
 
       const { result } = renderHook(() => useDashboardData(10, { enablePolling: false }), {
         wrapper: createWrapper(queryClient),
@@ -308,6 +342,9 @@ describe('useDashboardData', () => {
     it('returns null metrics when analytics data is null', async () => {
       vi.mocked(apiModule.api.admin.getAnalytics).mockResolvedValue(null);
       vi.mocked(apiModule.api.admin.getRecentActivity).mockResolvedValue(mockActivityData);
+      vi.mocked(apiModule.api.admin.getInfrastructureDetails).mockResolvedValue(
+        mockInfrastructureData
+      );
 
       const { result } = renderHook(() => useDashboardData(10, { enablePolling: false }), {
         wrapper: createWrapper(queryClient),

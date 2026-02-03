@@ -545,6 +545,7 @@ export function createCustomTheme(
  */
 export function isValidHSL(hsl: string): boolean {
   // Format: "H S% L%" e.g., "221 83% 53%" or "240 4.8% 95.9%"
+  // eslint-disable-next-line security/detect-unsafe-regex -- Simple HSL validation, input limited to theme strings
   const regex = /^(\d{1,3}(?:\.\d+)?)\s+(\d{1,3}(?:\.\d+)?)%\s+(\d{1,3}(?:\.\d+)?)%$/;
   const match = hsl.match(regex);
 
@@ -559,6 +560,7 @@ export function isValidHSL(hsl: string): boolean {
  * Supports both integer and decimal values (e.g., "221 83% 53%" or "240 4.8% 95.9%")
  */
 export function parseHSL(hsl: string): { h: number; s: number; l: number } | null {
+  // eslint-disable-next-line security/detect-unsafe-regex -- Simple HSL parsing, input limited to theme strings
   const regex = /^(\d{1,3}(?:\.\d+)?)\s+(\d{1,3}(?:\.\d+)?)%\s+(\d{1,3}(?:\.\d+)?)%$/;
   const match = hsl.match(regex);
 

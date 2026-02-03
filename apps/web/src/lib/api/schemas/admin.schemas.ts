@@ -9,6 +9,36 @@ import { z } from 'zod';
 
 import { ApiKeyDtoSchema } from './auth.schemas';
 
+// ========== Publication Workflow (Issue #3480 + #3481) ==========
+
+/**
+ * Approval status for game publication workflow (matches C# ApprovalStatus enum)
+ * Issue #3481: Backend publication workflow
+ */
+export const ApprovalStatusSchema = z.enum(['Draft', 'PendingReview', 'Approved', 'Rejected']);
+export type ApprovalStatus = z.infer<typeof ApprovalStatusSchema>;
+
+/**
+ * Request to publish game to SharedGameCatalog
+ * Issue #3480: Frontend wizard integration
+ */
+export const PublishGameRequestSchema = z.object({
+  status: ApprovalStatusSchema,
+});
+export type PublishGameRequest = z.infer<typeof PublishGameRequestSchema>;
+
+/**
+ * Response from publish game endpoint
+ */
+export const PublishGameResponseSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  isPublished: z.boolean(),
+  approvalStatus: ApprovalStatusSchema,
+  publishedAt: z.string().datetime().nullable(),
+});
+export type PublishGameResponse = z.infer<typeof PublishGameResponseSchema>;
+
 // ========== User Management ==========
 
 export const AdminUserSchema = z.object({
@@ -17,10 +47,19 @@ export const AdminUserSchema = z.object({
   displayName: z.string().min(1),
   role: z.string().min(1),
   createdAt: z.string().datetime(),
+  lastSeenAt: z.string().datetime().nullable().optional(),
   isTwoFactorEnabled: z.boolean().optional(),
+  isSuspended: z.boolean().optional().default(false),
+  suspendReason: z.string().nullable().optional(),
 });
 
 export type AdminUser = z.infer<typeof AdminUserSchema>;
+
+export const SuspendUserRequestSchema = z.object({
+  reason: z.string().optional(),
+});
+
+export type SuspendUserRequest = z.infer<typeof SuspendUserRequestSchema>;
 
 export const CreateUserRequestSchema = z.object({
   email: z.string().email(),
@@ -409,7 +448,7 @@ export const ServiceHealthStatusSchema = z.object({
   state: HealthStateSchema,
   errorMessage: z.string().nullable().optional(),
   checkedAt: z.string().datetime(),
-  responseTime: z.string(), // TimeSpan from backend (e.g., "00:00:00.0150000")
+  responseTimeMs: z.number().nonnegative(), // Response time in milliseconds
 });
 
 export type ServiceHealthStatus = z.infer<typeof ServiceHealthStatusSchema>;

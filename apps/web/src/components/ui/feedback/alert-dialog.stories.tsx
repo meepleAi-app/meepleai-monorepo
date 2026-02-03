@@ -175,7 +175,7 @@ export const LongMessage: Story = {
  * Demonstrates dialog opening and closing behavior.
  */
 export const Interactive: Story = {
-  render: () => {
+  render: function InteractiveStory() {
     const [open, setOpen] = useState(false);
     return (
       <>
@@ -209,7 +209,7 @@ export const Interactive: Story = {
  * Visual comparison of all alert dialog variants.
  */
 export const AllVariants: Story = {
-  render: () => {
+  render: function AllVariantsStory() {
     const [activeVariant, setActiveVariant] = useState<
       'info' | 'success' | 'warning' | 'error' | 'loading' | null
     >(null);

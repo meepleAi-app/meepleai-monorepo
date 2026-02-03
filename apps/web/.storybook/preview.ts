@@ -4,6 +4,7 @@ import type { Preview } from '@storybook/react';
 import React from 'react';
 
 import { withThemeByClassName } from '@storybook/addon-themes';
+import { INITIAL_VIEWPORTS, MINIMAL_VIEWPORTS } from 'storybook/viewport';
 
 import '../src/styles/globals.css'; // Import Tailwind CSS
 import { AuthContext } from '../src/components/auth/AuthProvider';
@@ -42,6 +43,40 @@ const MockAuthProvider = ({ children }: { children: React.ReactNode }) => {
 // Stories that need custom router behavior should use the nextjs.router parameter
 // See: https://storybook.js.org/docs/react/configure/integration/nextjs
 
+// MeepleAI custom viewports matching Tailwind breakpoints
+const meepleViewports = {
+  mobile: {
+    name: 'Mobile',
+    styles: { width: '375px', height: '667px' },
+    type: 'mobile' as const,
+  },
+  mobileLarge: {
+    name: 'Mobile Large',
+    styles: { width: '414px', height: '896px' },
+    type: 'mobile' as const,
+  },
+  tablet: {
+    name: 'Tablet',
+    styles: { width: '768px', height: '1024px' },
+    type: 'tablet' as const,
+  },
+  laptop: {
+    name: 'Laptop',
+    styles: { width: '1024px', height: '768px' },
+    type: 'desktop' as const,
+  },
+  desktop: {
+    name: 'Desktop',
+    styles: { width: '1280px', height: '800px' },
+    type: 'desktop' as const,
+  },
+  desktopLarge: {
+    name: 'Desktop Large',
+    styles: { width: '1440px', height: '900px' },
+    type: 'desktop' as const,
+  },
+};
+
 const preview: Preview = {
   parameters: {
     controls: {
@@ -65,6 +100,14 @@ const preview: Preview = {
           },
         ],
       },
+    },
+    viewport: {
+      viewports: {
+        ...meepleViewports,
+        ...MINIMAL_VIEWPORTS,
+        ...INITIAL_VIEWPORTS,
+      },
+      defaultViewport: 'responsive',
     },
   },
   decorators: [

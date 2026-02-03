@@ -1,675 +1,577 @@
 # /implementa - Full Issue Implementation Workflow
 
-> **Comando**: `/implementa <Issue N>`
-> **Alias di**: `/sc:implement --uc Issue <Issue N>` con workflow completo e session management
+> **Command**: `/implementa <Issue N> [--base-branch <branch>] [--pr-target <branch>]`
+> **Alias**: `/sc:implement --uc Issue <Issue N>` with full workflow + session management
 
-## Descrizione
+## Description
 
-Workflow end-to-end di implementazione issue con:
+End-to-end issue implementation with validation gates, code review, and automated cleanup.
 
-- **Session management** automatico (Serena) con checkpoint e recovery
-- **Validation gates** a ogni fase critica (compilazione, test, DoD, code review)
-- **Selezione automatica** agenti/MCP/skill ottimali per ogni step
-- **Code review pre-merge** con fix automatico problemi confidence >= 70
-- **Branch lifecycle** completo: creazione, implementazione, PR, merge, cleanup
+**Features**:
 
-## Argomenti
+- Session management (Serena) with checkpoints
+- Validation gates (build, test, DoD, code review)
+- Auto-select optimal agents/MCP/skills
+- Pre-merge code review with auto-fix (confidence ≥70%)
+- Complete branch lifecycle
+- **Progress tracking** with checkbox updates
 
-- `$ARGUMENTS` - Numero issue GitHub (es: `2372`, `#2372`, `Issue 2372`)
+## Arguments
+
+- `<Issue N>` - GitHub issue number (e.g., `2372`, `#2372`)
+- `--base-branch <branch>` - Branch to create feature branch from (default: current branch)
+- `--pr-target <branch>` - Target branch for PR merge (default: parent branch auto-detected)
+
+## Windows PowerShell Best Practices
+
+**CRITICO**: Usa sempre `pwsh -c "comando"` su Windows per evitare problemi di output vuoto.
+
+```bash
+# ✅ CORRETTO
+pwsh -c "git diff --name-only main-dev...HEAD"
+pwsh -c "docker logs meepleai-api --tail=50"
+pwsh -c "cd apps/web; pnpm test; pnpm typecheck"
+
+# ❌ EVITA (output vuoto su Windows)
+git diff --name-only main-dev...HEAD | grep pattern
+docker logs meepleai-api | findstr error
+cd apps/web && pnpm test && pnpm lint
+```
+
+**Regola**: Se un comando non produce output atteso, wrappa sempre in `pwsh -c`.
+
+## Configuration
+
+```bash
+# Default: usa branch corrente come base, PR verso parent auto-detected
+/implementa 2373
+
+# Custom base branch (crea feature branch da questo)
+/implementa 2373 --base-branch feature/parent-epic
+
+# Custom PR target (PR mergia qui)
+/implementa 2373 --pr-target staging
+
+# Entrambi custom
+/implementa 2373 --base-branch develop --pr-target main
+```
+
+## Branch Detection Logic
+
+**Base Branch** (--base-branch o default):
+
+```bash
+# Se non specificato, usa branch corrente
+current_branch=$(pwsh -c "git branch --show-current")
+base_branch=${base_branch:-$current_branch}
+```
+
+**PR Target** (--pr-target o default):
+
+```bash
+# Se non specificato, auto-detect parent branch
+if [ -z "$pr_target" ]; then
+  pr_target=$(pwsh -c "git show-branch | grep '*' | grep -v \"$current_branch\" | head -1 | sed 's/.*\[\(.*\)\].*/\1/' | sed 's/\^.*//'")
+fi
+# Fallback: main-dev se non trovato
+pr_target=${pr_target:-main-dev}
+```
 
 ## Workflow Phases
 
-### Phase 0: Session Initialization 🔄
+### Phase 0: Session Init 🔄
 
-**Obiettivo**: Caricare contesto progetto e verificare stato pulito
+1. `/sc:load` - Load project context
+2. `git status && git branch` - Verify clean workspace
+3. Detect base branch and PR target
+4. **Update GitHub Issue**: Mark checkbox `[ ] Started` → `[x] Started`
 
-1. **Load session**: `/sc:load` per caricare memoria progetto (Serena)
-2. **Verify git**: `git status && git branch` per assicurare workspace pulito
-3. **Check branch**: Assicurati di essere su `main-dev` o branch padre corretto
+```bash
+# Update issue checkbox on GitHub
+gh issue edit $issue_number --add-label "status:in-progress"
+gh api repos/{owner}/{repo}/issues/$issue_number \
+  --field body="$(gh issue view $issue_number --json body -q .body | sed 's/\[ \] Started/[x] Started/')"
+```
 
-**Validation Gate**: ❌ Ferma se workspace sporco o branch sbagliato
+**Gate**: ❌ Stop if dirty workspace
 
 ---
 
 ### Phase 1: Preparation 📋
 
-**Obiettivo**: Comprendere requisiti e contesto tecnico
+1. Fetch issue: `mcp__MCP_DOCKER__issue_read`
+2. Parse: title, DoD, tasks, labels
+3. Explore codebase: `Agent Explore --quick`
+4. Checkpoint: `write_memory("issue_<N>_analysis")`
+5. **Update checkbox**: `[ ] Analysis` → `[x] Analysis`
 
-1. **Fetch issue**: `mcp__MCP_DOCKER__issue_read` per leggere issue #N dal repo GitHub
-2. **Parse requirements**: Estrai descrizione, DoD (Definition of Done), task list, labels
-3. **Explore codebase**: Agent `Explore --quick` per trovare patterns/componenti esistenti rilevanti
-4. **Checkpoint**: `write_memory("issue_<N>_analysis", {requirements, patterns, complexity})`
-
-**Output**: Comprensione chiara di cosa implementare e dove nel codebase
+**Gate**: Understand requirements + find patterns
 
 ---
 
 ### Phase 2: Planning 🧠
 
-**Obiettivo**: Pianificare implementazione ottimale con opzioni valutate
+1. **Complex issues**: Use `sequential-thinking`
+2. Generate 2-3 options with confidence scores
+3. **Decision**:
+   - confidence ≥90%: Auto-select
+   - confidence <90%: `AskUserQuestion`
+4. `TodoWrite` with atomic tasks (min 3)
+5. Checkpoint: `write_memory("issue_<N>_plan")`
+6. **Update checkbox**: `[ ] Planning` → `[x] Planning`
 
-1. **Deep analysis** (se complesso): `mcp__sequential-thinking__sequentialthinking` per analisi multi-step
-2. **Generate options**: Pianifica 2-3 opzioni implementazione con pro/contro/trade-offs
-3. **Evaluate**: Assegna confidence score (0-100%) a ogni opzione
-4. **Decision**:
-   - Se confidence >= 90%: Scegli automaticamente migliore opzione
-   - Se confidence < 90%: Usa `AskUserQuestion` per chiedere conferma utente
-5. **Task breakdown**: `TodoWrite` con tasks atomici (min 3 per issue complessa)
-6. **Checkpoint**: `write_memory("issue_<N>_plan", {chosen_option, tasks, rationale})`
-
-**Validation Gate**: ❌ Ferma se nessuna opzione ha confidence >= 70%
-
-**Output**: Piano implementazione approvato con task breakdown
+**Gate**: ❌ Stop if all options <70% confidence
 
 ---
 
 ### Phase 3: Branch Setup 🌿
 
-**Obiettivo**: Creare branch isolato per implementazione
+**Base Branch**: `--base-branch` or current branch
 
-1. **Sync parent**: `git checkout main-dev && git pull` per sincronizzare
-2. **Create branch**: `git checkout -b <tipo>/issue-<id>-<breve-desc>`
-   - **Tipi validi**:
-     - `feature/` - Nuove funzionalità
-     - `fix/` - Bug fix
-     - `docs/` - Documentazione
-     - `test/` - Test o miglioramenti test
-     - `refactor/` - Refactoring senza cambio funzionalità
-     - `chore/` - Manutenzione (deps, config, build)
-   - **Esempio**: `feature/issue-2373-add-complexity-filter`
-3. **Checkpoint**: `write_memory("issue_<N>_branch", branch_name)`
+1. Sync: `git checkout <base-branch> && git pull`
+2. Create: `git checkout -b <type>/issue-<id>-<desc>`
+   - **Types**: feature|fix|docs|test|refactor|chore
+3. Checkpoint: `write_memory("issue_<N>_branch")`
+4. **Update checkbox**: `[ ] Branch Created` → `[x] Branch Created`
 
-**Validation Gate**: ❌ Ferma se branch già esistente o nome malformato
-
-**Output**: Branch pulito e pronto per implementazione
+**Gate**: ❌ Stop if branch exists or malformed
 
 ---
 
 ### Phase 4: Implementation 💻
 
-**Obiettivo**: Implementare soluzione seguendo principi architetturali
+**Per task**:
 
-1. **Per ogni task in TodoWrite**:
-   a. **Select optimal tool**:
-   - Symbol operations → `mcp__serena__*` (find_symbol, replace_symbol_body, etc.)
-   - Bulk pattern edits → `mcp__morphllm-fast-apply__edit_file`
-   - UI components → `mcp__magic__21st_magic_component_builder`
-   - Complex files → Read → Sequential analysis → Edit
-     b. **Implement**: Esegui implementazione seguendo:
-   - **Backend**: CQRS (Command/Query), DDD (Domain entities), MediatR pattern
-   - **Frontend**: React best practices, Zustand state, React Query data fetching
-     c. **Update progress**:
-   - `TaskUpdate` con status: `pending` → `in_progress` → `completed`
-   - `mcp__MCP_DOCKER__issue_write` per aggiornare checkbox task su GitHub issue
-     d. **Verify compilation**: Dopo ogni task, verifica che codice compili senza errori
-2. **Architecture compliance**:
-   - Backend: No direct service injection in endpoints, solo `IMediator.Send()`
-   - Frontend: TypeScript strict, proper error handling, accessibility
-3. **Checkpoint**: `write_memory("issue_<N>_implementation", {completed_tasks, files_changed})`
+1. **Tool selection**:
+   - Symbol ops → `mcp__serena__*`
+   - Bulk edits → `mcp__morphllm-fast-apply__edit_file`
+   - UI → `mcp__magic__21st_magic_component_builder`
+2. **Implement** following:
+   - Backend: CQRS, DDD, MediatR only
+   - Frontend: React, Zustand, React Query
+3. **Update**:
+   - `TaskUpdate`: pending → in_progress → completed
+   - **GitHub checkbox**: Update per ogni task completato
+4. Verify: Compilation passes
+5. Checkpoint: `write_memory("issue_<N>_implementation")`
+6. **Update checkbox**: `[ ] Implementation` → `[x] Implementation`
 
-**Validation Gate**: ❌ Ferma se errori di compilazione (mostra errori, chiedi come procedere)
-
-**Output**: Implementazione completa e compilante
+**Gate**: ❌ Stop on compilation errors
 
 ---
 
-### Phase 5: Testing & Verification ✅
+### Phase 5: Testing ✅
 
-**Obiettivo**: Validare implementazione con test automatici
+**Backend**:
 
-1. **Run test suites**:
-   - **Backend**: `cd apps/api/src/Api && dotnet test`
-     - Target coverage: >= 90%
-     - Check: Unit tests (domain logic) + Integration tests (handlers, DB)
-   - **Frontend**: `cd apps/web && pnpm test && pnpm typecheck && pnpm lint`
-     - Target coverage: >= 85%
-     - Check: Component tests (Vitest) + Type safety + ESLint rules
-2. **Verify build**: No warning in output (mantieni codebase pulita)
-3. **Error handling** (se test falliscono):
-   a. ❌ **NON skippare** - non commentare test, non disabilitare validazioni
-   b. **Isolate**: Replica errore in test case isolato
-   c. **Analyze**: Usa `sequential-thinking` per root cause analysis
-   d. **Guard**: Crea validazioni/guardie per prevenire regressioni
-   e. **Re-test**: Esegui di nuovo test suite completa
-4. **Checkpoint**: `write_memory("issue_<N>_tests", {coverage, pass_rate, errors_fixed})`
+```bash
+pwsh -c "cd apps/api/src/Api; dotnet test /p:CollectCoverage=true"
+```
 
-**Validation Gate**: ❌ Ferma se:
+Target: ≥90% coverage
 
-- Test coverage < target (90% backend, 85% frontend)
-- Qualsiasi test fallisce
-- Build genera nuovi warning
+**Frontend**:
 
-**Output**: Test suite verde con coverage adeguata
+```bash
+pwsh -c "cd apps/web; pnpm test; pnpm typecheck; pnpm lint"
+```
+
+Target: ≥85% coverage
+
+**Error handling**:
+
+1. Isolate error in test case
+2. Root cause: `sequential-thinking`
+3. Create guards/validations
+4. Re-run test suite
+5. ❌ NEVER skip tests or disable validations
+
+Checkpoint: `write_memory("issue_<N>_tests")`
+**Update checkbox**: `[ ] Testing` → `[x] Testing`
+
+**Gate**: ❌ Stop if tests fail OR coverage <target OR new warnings
 
 ---
 
 ### Phase 6: Code Review Pre-Merge 🔍
 
-**Obiettivo**: Validare qualità codice PRIMA del merge
+**PR Target**: `--pr-target` or auto-detected parent branch
 
-1. **Commit changes**:
+1. **Commit**:
 
-   ```bash
-   git add .
-   git commit -m "<tipo>(<scope>): <descrizione>
+```bash
+git add .
+git commit -m "<type>(<scope>): <desc>
 
-   - Task 1 completato
-   - Task 2 completato
+Refs: #<N>"
+```
 
-   Refs: #<issue-number>"
-   ```
+2. **Push**: `git push -u origin <branch>`
 
-2. Push branch: git push -u origin <branch-name>
-3. Create PR draft:
-   gh pr create --draft \
-    --title "Issue #<N>: <titolo-chiaro>" \
-    --body "$(cat <<'EOF'
+3. **Create PR** (draft to PR target):
 
-## Summary
+```bash
+# CRITICO: usa --base con PR target auto-detected o specificato
+current_branch=$(pwsh -c "git branch --show-current")
 
-  <Descrizione implementazione>
+gh pr create --draft --base "$pr_target" \
+  --title "Issue #<N>: <title>" \
+  --body "## Summary
+<desc>
 
 ## Changes
+- <change1>
 
-- <Cambio 1>
-- <Cambio 2>
+Closes #<N>"
+```
 
-## Testing
+4. **Code review**: `/code-review:code-review <PR-URL>`
+5. **Fix loop** (max 3):
+   - Filter: confidence ≥70 only
+   - Fix + re-test + re-review
+   - If >3 iterations: `AskUserQuestion`
+6. **Ready**: `gh pr ready`
+7. **Update checkbox**: `[ ] PR Created` → `[x] PR Created`
+8. **Update checkbox**: `[ ] Code Review` → `[x] Code Review`
 
-- [x] Unit tests passed
-- [x] Integration tests passed
-- [x] Manual testing completed
-
-Closes #<issue-number>
-EOF
-)" 4. Automated code review: /code-review:code-review <PR-URL> - Esegue 5 agenti paralleli: security, performance, quality, architecture, testing - Ogni issue ha confidence score (0-100%) 5. Fix loop (max 3 iterazioni):
-a. Filter: Considera SOLO problemi con confidence >= 70%
-b. Fix: Applica fix automatico per ogni problema >= 70
-c. Test: Re-run test suite dopo ogni fix
-d. Re-review: Esegui di nuovo /code-review:code-review
-e. Iterate: Ripeti finché tutti problemi >= 70 sono risolti 6. Escalation (se loop > 3 iterazioni): - Usa AskUserQuestion per chiedere: - a) Ignorare problemi rimanenti (se tutti < 70 score) - b) Continuare fixing manualmente - c) Richiedere review umana 7. Mark ready: gh pr ready quando tutti problemi >= 70 risolti
-
-Validation Gate: ❌ Ferma se PR score complessivo < 80%
-
-Output: PR pronta per merge con alta qualità codice
+**Gate**: ❌ Stop if final score <80%
 
 ---
 
-Phase 7: DoD Verification ✔️
+### Phase 7: DoD Verification ✔️
 
-Obiettivo: Verificare completamento Definition of Done
+1. Check each DoD from issue
+2. Update: `mcp__MCP_DOCKER__issue_write` (DoD checkboxes)
+3. **If missing DoD**: `AskUserQuestion` (complete | update | sub-issue)
+4. **Update checkbox**: `[ ] DoD Verified` → `[x] DoD Verified`
 
-1. Fetch DoD: Recupera lista DoD dall'issue originale (già letta in Phase 1)
-2. Check each DoD:
-
-
-    - Implementazione completata ✅
-    - Test passati ✅
-    - Documentazione aggiornata (se richiesta) ✅
-    - Code review superata ✅
-    - Nessun warning nuovo ✅
-    - Performance verificata (se DoD richiede) ✅
-
-3. Update issue: mcp**MCP_DOCKER**issue_write per aggiornare checkbox DoD su GitHub
-
-Validation Gate: ❌ Ferma se qualsiasi DoD non è ✅
-
-- Lista DoD mancanti
-- Chiedi con AskUserQuestion se:
-  - a) Completare DoD mancanti
-  - b) Modificare DoD nell'issue (se non più rilevanti)
-  - c) Creare sub-issue per DoD complessi
-
-Output: Tutti i DoD verificati e completati
+**Gate**: ❌ Stop if any DoD not ✅
 
 ---
 
-Phase 8: Merge & Closure 🎯
+### Phase 8: Merge & Closure 🎯
 
-Obiettivo: Integrare implementazione e chiudere issue
+**MANDATORY Pre-Merge Validation**:
 
-1. Merge PR:
-   gh pr merge --squash --delete-branch
+**Backend**:
 
-# O usa --merge se convenzione progetto richiede merge commit
+```bash
+pwsh -c "cd apps/api/src/Api; dotnet build --no-restore; dotnet test --no-build"
+```
 
-2. Close issue:
+**Frontend**:
 
-# Via MCP
+```bash
+pwsh -c "cd apps/web; pnpm build; pnpm test; pnpm typecheck"
+```
 
-mcp**MCP_DOCKER**issue*write(
-method: "update",
-issue_number: <N>,
-state: "closed",
-state_reason: "completed"
-) 3. Branch cleanup:
-git checkout main-dev
-git pull # Sincronizza con merge appena fatto
-git branch -D <branch-implementazione> # Elimina locale
-git remote prune origin # Rimuove tracking remoti obsoleti 4. Session save: /sc:save per persistere learnings e patterns scoperti 5. Checkpoint finale: write_memory("issue*<N>\_completed", {merge_sha, closed_at, learnings})
+**Gate**: ❌ STOP if build/test/typecheck fails
 
-Output: Issue chiusa, codice integrato, branch pulito
+- If fails: `AskUserQuestion` (fix | abort | force)
 
----
+**Merge** (only after validation ✅):
 
-MCP/Agent/Tool Integration Matrix
-┌───────┬──────────────────┬──────────────────────────────────────────────────────────────┐
-│ Phase │ Step │ Tool/MCP/Agent │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 0 │ Session init │ mcp**serena**activate_project, /sc:load │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 1 │ Fetch issue │ mcp**MCP_DOCKER**issue_read │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 1 │ Explore codebase │ Agent Explore --quick │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 1 │ Checkpoint │ mcp**serena**write_memory │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 2 │ Complex analysis │ mcp**sequential-thinking**sequentialthinking │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 2 │ Ask user │ AskUserQuestion │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 2 │ Task breakdown │ TodoWrite │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 2 │ Checkpoint │ mcp**serena**write_memory │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 3 │ Branch ops │ Bash (git commands) │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 3 │ Checkpoint │ mcp**serena**write_memory │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 4 │ Symbol ops │ mcp**serena**find_symbol, replace_symbol_body, rename_symbol │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 4 │ Bulk edits │ mcp**morphllm-fast-apply**edit_file │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 4 │ UI components │ mcp**magic**21st_magic_component_builder │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 4 │ File read │ Read │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 4 │ File edit │ Edit │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 4 │ Update tasks │ TaskUpdate │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 4 │ Update issue │ mcp**MCP_DOCKER**issue_write │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 4 │ Checkpoint │ mcp**serena**write_memory │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 5 │ Run tests │ Bash (dotnet test, pnpm test) │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 5 │ Root cause │ mcp**sequential-thinking**sequentialthinking │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 5 │ Checkpoint │ mcp**serena**write_memory │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 6 │ Git ops │ Bash (git add/commit/push) │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 6 │ Create PR │ Bash (gh pr create) │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 6 │ Code review │ Skill /code-review:code-review │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 6 │ Mark ready │ Bash (gh pr ready) │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 7 │ Update DoD │ mcp**MCP_DOCKER**issue_write │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 7 │ Ask user │ AskUserQuestion │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 8 │ Merge │ Bash (gh pr merge) │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 8 │ Close issue │ mcp**MCP_DOCKER**issue_write │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 8 │ Cleanup │ Bash (git branch -D, remote prune) │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 8 │ Session save │ /sc:save │
-├───────┼──────────────────┼──────────────────────────────────────────────────────────────┤
-│ 8 │ Checkpoint │ mcp**serena**write_memory │
-└───────┴──────────────────┴──────────────────────────────────────────────────────────────┘
+```bash
+# Merge verso PR target specificato o auto-detected
+gh pr merge --squash --delete-branch --base "$pr_target"
+```
+
+**Cleanup**:
+
+```bash
+git checkout "$base_branch" && git pull
+git branch -D "$feature_branch"
+pwsh -c "git remote prune origin"
+```
+
+**Close issue**: `mcp__MCP_DOCKER__issue_write(state: closed)`
+**Update checkbox**: `[ ] Merged` → `[x] Merged`
+**Update checkbox**: `[ ] Cleanup` → `[x] Cleanup`
+**Save**: `/sc:save`
+**Checkpoint**: `write_memory("issue_<N>_completed")`
 
 ---
 
-Regole Critiche di Esecuzione
+## Progress Tracking Checkbox System
 
-🔴 FERMA Workflow Se
+**GitHub Issue Template Structure:**
 
-- Phase 0: Workspace sporco o branch sbagliato
-- Phase 2: Nessuna opzione con confidence >= 70%
-- Phase 3: Branch già esistente o nome malformato
-- Phase 4: Errori di compilazione (mostra errori, chiedi utente)
-- Phase 5: Test falliscono o coverage < target
-- Phase 6: PR score < 80% dopo 3 iterazioni code review
-- Phase 7: DoD mancanti (lista, chiedi come procedere)
+```markdown
+## Progress
 
-✅ SEMPRE Esegui
+- [ ] Started
+- [ ] Analysis
+- [ ] Planning
+- [ ] Branch Created
+- [ ] Implementation
+- [ ] Testing
+- [ ] PR Created
+- [ ] Code Review
+- [ ] DoD Verified
+- [ ] Merged
+- [ ] Cleanup
 
-- Session management: /sc:load all'inizio, /sc:save alla fine
-- Checkpoint frequenti: write_memory() dopo ogni phase per recovery
-- TodoWrite + TaskUpdate: Tracking sistematico progresso
-- Validation gates: Non bypassare mai validazioni critiche
-- Parallel operations: Usa tool call paralleli dove possibile (Read, Grep)
+## Definition of Done
 
-❌ MAI Fare
+- [ ] DoD Item 1
+- [ ] DoD Item 2
+```
 
-- Skip errori: Replica, analizza root cause, crea guardie
-- Disable tests: Non commentare, non skippare validazioni
-- Merge senza code review: Code review SEMPRE prima del merge
-- Ignora DoD: Tutti DoD devono essere ✅ prima del merge
-- Nuovi warning: Mantieni codebase pulita
+**Automatic Updates During Workflow:**
 
-🤝 Chiedi Utente Quando
+| Phase | Checkbox Updated     | Command                    |
+| ----- | -------------------- | -------------------------- |
+| 0     | `[x] Started`        | `gh api` update issue body |
+| 1     | `[x] Analysis`       | `gh api` update issue body |
+| 2     | `[x] Planning`       | `gh api` update issue body |
+| 3     | `[x] Branch Created` | `gh api` update issue body |
+| 4     | `[x] Implementation` | `gh api` update issue body |
+| 5     | `[x] Testing`        | `gh api` update issue body |
+| 6     | `[x] PR Created`     | `gh api` update issue body |
+| 6     | `[x] Code Review`    | `gh api` update issue body |
+| 7     | `[x] DoD Verified`   | `gh api` update issue body |
+| 8     | `[x] Merged`         | `gh api` update issue body |
+| 8     | `[x] Cleanup`        | `gh api` update issue body |
 
-- Confidenza < 90%: Decisioni implementazione non chiare
-- Code review loop > 3: Problemi persistenti o molti problemi score < 70
-- DoD mancanti: Non tutti DoD completabili o rilevanti
-- Compito > 1 giorno stima: Considera creare sub-issue
+**Update Helper Function:**
+
+```bash
+update_checkbox() {
+  local issue_number=$1
+  local checkbox_label=$2
+
+  current_body=$(gh issue view $issue_number --json body -q .body)
+  updated_body=$(echo "$current_body" | sed "s/\[ \] $checkbox_label/[x] $checkbox_label/")
+
+  gh api repos/{owner}/{repo}/issues/$issue_number \
+    --method PATCH \
+    --field body="$updated_body"
+}
+
+# Usage
+update_checkbox 2373 "Analysis"
+update_checkbox 2373 "Implementation"
+```
 
 ---
 
-Gestione Errori e Recovery
+## MCP/Tool Matrix
 
-Compilazione Fail
+| Phase | Tool/MCP                                                                        |
+| ----- | ------------------------------------------------------------------------------- |
+| 0     | `/sc:load`, `git`, `gh api` (checkbox update)                                   |
+| 1     | `mcp__MCP_DOCKER__issue_read`, `Agent Explore`, `write_memory`, `gh api`        |
+| 2     | `sequential-thinking`, `AskUserQuestion`, `TodoWrite`, `write_memory`, `gh api` |
+| 3     | `git`, `write_memory`, `gh api`                                                 |
+| 4     | `serena__*`, `morphllm__edit_file`, `magic__*`, `TaskUpdate`, `gh api`          |
+| 5     | `pwsh` (dotnet test, pnpm), `sequential-thinking`, `write_memory`, `gh api`     |
+| 6     | `git`, `gh pr`, `/code-review:code-review`, `write_memory`, `gh api`            |
+| 7     | `issue_write`, `AskUserQuestion`, `gh api`                                      |
+| 8     | `pwsh` (dotnet, pnpm), `gh pr merge`, `issue_write`, `/sc:save`, `gh api`       |
 
-❌ STOP workflow
-📋 Show compilation errors
-🤔 AskUserQuestion: "Compilation failed. How to proceed?"
-a) Fix automatically (if errors are clear)
-b) Show errors and wait for manual fix
-c) Abort and save checkpoint
+---
 
-Test Fail
+## Critical Rules
 
-❌ STOP workflow (NO skip!)
-🔍 Isolate: Replica errore in test isolato
-🧠 Analyze: Use sequential-thinking for root cause
-🛡️ Guard: Crea validazioni per prevenire regressioni
-♻️ Re-test: Esegui test suite completa
-✅ Continue se tutti test passano
+**🔴 STOP if**:
 
-Code Review Loop > 3 Iterazioni
+- Phase 0: Dirty workspace or wrong branch
+- Phase 2: All options <70% confidence
+- Phase 3: Branch exists or malformed
+- Phase 4: Compilation errors
+- Phase 5: Tests fail OR coverage <target OR new warnings
+- Phase 6: PR score <80% after 3 iterations
+- Phase 7: Missing DoD
+- Phase 8: Pre-merge validation fails
 
-⚠️ PAUSE loop
-📊 Show remaining issues con confidence scores
-🤔 AskUserQuestion: "Code review stuck after 3 iterations. Options?"
-a) Ignore issues with score < 70 and proceed
-b) Continue fixing manually (show issues)
-c) Request human review (mark PR for manual review)
+**✅ ALWAYS**:
 
-DoD Mancanti
+- Session: `/sc:load` → `/sc:save`
+- Checkpoints: `write_memory()` after each phase
+- Tracking: `TodoWrite` + `TaskUpdate` + **GitHub checkbox updates**
+- Validation: Never bypass gates
+- Parallel: Use parallel tool calls (Read, Grep)
+- **PowerShell**: Use `pwsh -c` for all commands on Windows
 
-❌ STOP merge
-📋 List missing DoD items
-🤔 AskUserQuestion: "Missing DoD items. How to proceed?"
-a) Complete missing DoD now
-b) Update issue DoD (if no longer relevant)
-c) Create sub-issue for complex DoD (continue with current implementation)
+**❌ NEVER**:
 
-Recovery da Checkpoint
+- Skip errors or disable tests
+- Merge without code review
+- Ignore DoD or allow new warnings
+- Use direct bash pipes on Windows (use `pwsh -c`)
 
-# Se workflow interrotto, recupera stato:
+**🤝 ASK USER when**:
 
+- Confidence <90%
+- Code review loop >3
+- DoD incomplete
+- Task >1 day estimate
+
+---
+
+## Error Recovery
+
+**Compilation Fail**:
+
+```
+❌ STOP → Show errors → AskUserQuestion:
+a) Fix auto (if clear)
+b) Wait for manual fix
+c) Abort + checkpoint
+```
+
+**Test Fail**:
+
+```
+❌ STOP → Isolate → Root cause (sequential-thinking) → Guards → Re-test
+```
+
+**Code Review Loop >3**:
+
+```
+⚠️ PAUSE → Show issues → AskUserQuestion:
+a) Ignore score <70
+b) Fix manually
+c) Request human review
+```
+
+**From Checkpoint**:
+
+```bash
 /sc:load
-list*memories() # Mostra checkpoint disponibili
-read_memory("issue*<N>\_<last_phase>") # Recupera ultimo stato
-
-# Riprendi da phase successiva
-
----
-
-Esempi di Utilizzo
-
-Esempio 1: Feature Semplice
-
-/implementa 2373
-
-# Issue: "Add complexity filter to game search"
-
-# Output:
-
-# Phase 0: Session Init ✅
-
-# Phase 1: Preparation ✅ (patterns found: FilterComponent.tsx)
-
-# Phase 2: Planning ✅ (Option 1 chosen: extend existing FilterBar, confidence: 95%)
-
-# Phase 3: Setup ✅ (branch: feature/issue-2373-add-complexity-filter)
-
-# Phase 4: Implementation ✅ (3/3 tasks completed)
-
-# Phase 5: Testing ✅ (coverage: 92% backend, 87% frontend)
-
-# Phase 6: Code Review ✅ (2 issues fixed, score: 85%)
-
-# Phase 7: DoD Verification ✅ (4/4 DoD completed)
-
-# Phase 8: Merge & Closure ✅
-
-# ✅ Issue #2373 completed: https://github.com/.../pull/XYZ
-
-Esempio 2: Bug Fix con Test Fail
-
-/implementa 2401
-
-# Issue: "Fix null reference in game details API"
-
-# ...
-
-# Phase 5: Testing ❌
-
-# Error: NullReferenceException in GameDetailsHandlerTests
-
-# 🔍 Isolating error...
-
-# 🧠 Root cause: Missing null check for optional Description field
-
-# 🛡️ Adding guard: if (game.Description == null) return empty string
-
-# ♻️ Re-running tests... ✅ All tests passed
-
-# Phase 5: Testing ✅ (after fix)
-
-# ...
-
-Esempio 3: Code Review Loop
-
-/implementa 2450
-
-# Issue: "Refactor authentication middleware"
-
-# ...
-
-# Phase 6: Code Review 🔄
-
-# Iteration 1: 5 issues (3 score >= 70) → Fixed 3
-
-# Iteration 2: 3 issues (2 score >= 70) → Fixed 2
-
-# Iteration 3: 2 issues (1 score 75, 1 score 65)
-
-# 🤔 AskUserQuestion: "Code review stuck. Options?"
-
-# User: "a) Ignore score < 70"
-
-# Phase 6: Code Review ✅ (final score: 82%)
-
-# ...
+list_memories()  # Show checkpoints
+read_memory("issue_<N>_<phase>")  # Resume
+```
 
 ---
 
-Output Template Atteso
+## Output Template
 
-🔄 Phase 0: Session Initialization
-✅ Session loaded (project: meepleai-monorepo)
-✅ Git status: clean
-✅ Current branch: main-dev
+```
+🔄 Phase 0: Session Init ✅ (Branch: main-dev → feature/issue-2373-auth, PR target: main-dev)
+📋 Phase 1: Preparation ✅ (patterns: FilterComponent) [✓ Checkbox updated]
+🧠 Phase 2: Planning ✅ (Option 1, confidence: 95%) [✓ Checkbox updated]
+🌿 Phase 3: Branch ✅ (feature/issue-2373-auth) [✓ Checkbox updated]
+💻 Phase 4: Implementation ✅ (3/3 tasks) [✓ Checkbox updated]
+✅ Phase 5: Testing ✅ (92% backend, 87% frontend) [✓ Checkbox updated]
+🔍 Phase 6: Code Review ✅ (score: 85%) [✓ Checkboxes updated]
+✔️ Phase 7: DoD ✅ (4/4) [✓ Checkbox updated]
+🎯 Phase 8: Merge → main-dev ✅ [✓ Checkboxes updated]
 
-📋 Phase 1: Preparation
-✅ Issue #<N> fetched: "<titolo>"
-✅ DoD items: X
-✅ Patterns found: <ComponentName>, <ServiceName>
-✅ Complexity: <low|medium|high>
-
-🧠 Phase 2: Planning
-📊 Option 1: <descrizione> (confidence: X%)
-📊 Option 2: <descrizione> (confidence: Y%)
-✅ Selected: Option Z (confidence: Z%)
-✅ TodoWrite created: N tasks
-
-🌿 Phase 3: Branch Setup
-✅ Branch created: <tipo>/issue-<N>-<desc>
-
-💻 Phase 4: Implementation
-✅ Task 1/N: <descrizione> (files: X changed)
-✅ Task 2/N: <descrizione> (files: Y changed)
-...
-✅ All tasks completed
-✅ Compilation: PASS
-✅ Issue updated on GitHub
-
-✅ Phase 5: Testing & Verification
-✅ Backend tests: PASS (coverage: X%)
-✅ Frontend tests: PASS (coverage: Y%)
-✅ Build: 0 warnings
-
-🔍 Phase 6: Code Review Pre-Merge
-✅ PR created (draft): <url>
-🔄 Code review iteration 1: X issues found
-✅ Fixed X issues (score >= 70)
-✅ Code review iteration 2: Y issues found
-✅ Fixed Y issues (score >= 70)
-✅ Final score: Z%
-✅ PR marked ready for review
-
-✔️ Phase 7: DoD Verification
-✅ DoD 1: Implementation ✅
-✅ DoD 2: Tests ✅
-✅ DoD 3: Documentation ✅
-✅ DoD 4: Code Review ✅
-✅ All DoD verified
-
-🎯 Phase 8: Merge & Closure
-✅ PR merged: <url>
-✅ Issue #<N> closed
-✅ Branch cleaned (local + remote)
-✅ Session saved
-
-✅ SUCCESS: Issue #<N> completata
-📊 Stats: - Files changed: X - Tests added: Y - Coverage: Z% - Code review score: W% - Time: <duration>
+✅ SUCCESS: Issue #2373 completed
+📊 Stats: 15 files, 42 tests, 91% coverage, 85% review score
+🌿 Branch: feature/issue-2373-auth → main-dev (merged & deleted)
+```
 
 ---
 
-Prompt di Esecuzione Completo
+## Execution Flow
 
-Quando utente esegue: /implementa <N>
+```yaml
+PHASE_0:
+  - /sc:load
+  - git status (GATE: fail if dirty)
+  - Detect: base_branch (current), pr_target (parent or main-dev)
+  - gh api: update checkbox "Started"
 
-Sistema esegue:
+PHASE_1:
+  - mcp__MCP_DOCKER__issue_read($N)
+  - Parse: {title, DoD[], tasks[], checkboxes[]}
+  - Agent Explore --quick
+  - write_memory("issue_$N_analysis")
+  - gh api: update checkbox "Analysis"
 
-CRITICAL RULES:
+PHASE_2:
+  - IF complex: sequential-thinking
+  - Generate: 2-3 options with confidence%
+  - IF max(confidence) ≥90%: auto-select
+    ELSE: AskUserQuestion
+  - TodoWrite (min 3 tasks)
+  - write_memory("issue_$N_plan")
+  - gh api: update checkbox "Planning"
+  - GATE: STOP if all <70%
 
-- ❌ STOP at validation gates if fail
-- ❌ NEVER skip errors or disable tests
-- ✅ ALWAYS checkpoint after each phase
-- ✅ ALWAYS ask user if confidence < 90%
-- ✅ Code review BEFORE merge (not after!)
+PHASE_3:
+  - git checkout $base_branch && git pull
+  - git checkout -b <type>/issue-$N-<desc>
+  - write_memory("issue_$N_branch")
+  - gh api: update checkbox "Branch Created"
+  - GATE: STOP if exists or malformed
 
-EXECUTION FLOW:
+PHASE_4:
+  - FOR task: select tool → implement → TaskUpdate
+  - gh api: update checkbox per task
+  - write_memory("issue_$N_implementation")
+  - gh api: update checkbox "Implementation"
+  - GATE: STOP on compilation error
 
-=== PHASE 0: SESSION INIT ===
+PHASE_5:
+  - pwsh -c "cd apps/api/src/Api; dotnet test" (≥90%)
+  - pwsh -c "cd apps/web; pnpm test && typecheck && lint" (≥85%)
+  - IF fail: isolate → root cause → guards → re-test
+  - write_memory("issue_$N_tests")
+  - gh api: update checkbox "Testing"
+  - GATE: STOP if fail OR low coverage
 
-1. Execute: /sc:load
-2. Verify: git status (fail if dirty)
-3. Verify: git branch (fail if not main-dev/parent)
+PHASE_6:
+  - git commit + push
+  - gh pr create --draft --base $pr_target
+  - gh api: update checkbox "PR Created"
+  - /code-review:code-review
+  - Fix loop (max 3, confidence ≥70)
+  - gh pr ready
+  - gh api: update checkbox "Code Review"
+  - GATE: STOP if score <80%
 
-=== PHASE 1: PREPARATION ===
+PHASE_7:
+  - Check DoD[]
+  - issue_write (DoD checkboxes)
+  - gh api: update checkbox "DoD Verified"
+  - IF missing: AskUserQuestion
+  - GATE: STOP if any not ✅
 
-1. Fetch: mcp**MCP_DOCKER**issue_read(issue_number: $N)
-2. Parse: Extract {title, description, DoD[], tasks[], labels[]}
-3. Explore: Agent Explore --quick for patterns
-4. Checkpoint: write*memory("issue*$N_analysis", results)
-
-=== PHASE 2: PLANNING ===
-
-1. IF complex: mcp\_\_sequential-thinking (breakdown problem)
-2. Generate: 2-3 implementation options with {approach, pros[], cons[], confidence%}
-3. Select:
-   IF max(confidence) >= 90%: auto-select best
-   ELSE: AskUserQuestion(options) → user selects
-4. Breakdown: TodoWrite with atomic tasks (min 3 for complex)
-5. Checkpoint: write*memory("issue*$N_plan", {option, tasks})
-   GATE: STOP if all confidence < 70%
-
-=== PHASE 3: BRANCH SETUP ===
-
-1. Sync: git checkout main-dev && git pull
-2. Create: git checkout -b <tipo>/issue-$N-<desc>
-   Types: feature|fix|docs|test|refactor|chore
-3. Checkpoint: write*memory("issue*$N_branch", branch_name)
-   GATE: STOP if branch exists or malformed name
-
-=== PHASE 4: IMPLEMENTATION ===
-FOR EACH task in TodoWrite: 1. Select tool: - Symbol ops → mcp**serena**\* - Bulk edits → mcp**morphllm-fast-apply**edit*file - UI → mcp**magic**21st_magic_component_builder 2. Implement following architecture: - Backend: CQRS, DDD, MediatR only - Frontend: React, Zustand, React Query 3. Update: TaskUpdate(status: in_progress → completed) 4. Update: mcp**MCP_DOCKER**issue_write (checkbox on GitHub) 5. Verify: Compilation passes 5. Checkpoint: write_memory("issue*$N_implementation", results)
-GATE: STOP if compilation errors (show, ask user)
-
-=== PHASE 5: TESTING ===
-
-1. Backend: dotnet test (target: >= 90% coverage)
-2. Frontend: pnpm test && pnpm typecheck && pnpm lint (target: >= 85%)
-3. Verify: 0 new warnings
-4. IF tests fail:
-   a. Isolate error in test case
-   b. Root cause: mcp\_\_sequential-thinking
-   c. Create guards/validations
-   d. Re-run tests
-   e. STOP if still failing (ask user)
-5. Checkpoint: write*memory("issue*$N_tests", {coverage, status})
-   GATE: STOP if tests fail OR coverage < target
-
-=== PHASE 6: CODE REVIEW PRE-MERGE ===
-
-1. Commit: git add . && git commit -m "<tipo>(<scope>): <desc>\n\nRefs: #$N"
-2. Push: git push -u origin <branch>
-3. PR: gh pr create --draft --title "Issue #$N: <title>" --body "<summary>"
-4. Review: /code-review:code-review <PR-URL>
-5. Fix loop (max 3 iterations):
-   a. Filter: issues with confidence >= 70 only
-   b. Fix: Apply automated fixes
-   c. Test: Re-run test suite
-   d. Re-review: /code-review:code-review
-   e. IF iteration > 3: AskUserQuestion(options)
-6. Ready: gh pr ready
-   GATE: STOP if final score < 80%
-
-=== PHASE 7: DOD VERIFICATION ===
-
-1. Check: Each DoD item from issue
-2. Update: mcp**MCP_DOCKER**issue_write (DoD checkboxes)
-3. IF missing DoD:
-   AskUserQuestion: complete | update DoD | create sub-issue
-   GATE: STOP if any DoD not ✅ (unless user approves)
-
-=== PHASE 8: MERGE & CLOSURE ===
-
-1. Merge: gh pr merge --squash --delete-branch
-2. Close: mcp**MCP_DOCKER**issue_write(state: closed, reason: completed)
-3. Cleanup:
-   - git checkout main-dev && git pull
-   - git branch -D <branch>
-   - git remote prune origin
-4. Save: /sc:save
-5. Checkpoint: write*memory("issue*$N_completed", final_stats)
-
-=== OUTPUT ===
-Report progress after each phase with ✅/❌/🔄 status
-Final summary with stats: files changed, tests added, coverage, score, time
+PHASE_8:
+  - pwsh -c "cd apps/api/src/Api; dotnet build && test"
+  - pwsh -c "cd apps/web; pnpm build && test && typecheck"
+  - GATE: STOP if fail → AskUserQuestion
+  - gh pr merge --squash --base $pr_target
+  - gh api: update checkbox "Merged"
+  - issue_write(closed)
+  - Cleanup: checkout → pull → branch -D → prune
+  - gh api: update checkbox "Cleanup"
+  - /sc:save
+  - write_memory("issue_$N_completed")
+```
 
 ---
 
-Versione: 2.0 (2026-01-24)
-Changelog:
+**Version**: 2.3 (2026-02-02)
 
-- ✅ Aggiunto session management (Phase 0, /sc:load, /sc:save)
-- ✅ Aggiunto checkpoint system con Serena memory
-- ✅ Validation gates a ogni fase critica
-- ✅ Code review PRIMA del merge (non dopo)
-- ✅ Nuova Phase 7: DoD Verification
-- ✅ Gestione errori strutturata (compilation, test, code review, DoD)
-- ✅ Branch naming chiaro (<tipo>/issue-<id>-<desc>)
-- ✅ MCP integration matrix completa
-- ✅ Recovery capability da checkpoint
-- ✅ Eliminata duplicazione steps
-- ✅ TodoWrite + TaskUpdate integration
-- ✅ AskUserQuestion per decisioni < 90% confidence
+**Changelog**:
+
+v2.3 (2026-02-02):
+
+- ✅ **PowerShell emphasis**: `pwsh -c` for all commands on Windows
+- ✅ **Smart branch detection**: PR always from current branch to auto-detected parent
+- ✅ **Progress tracking**: GitHub checkbox updates at every phase
+- ✅ **Optimized structure**: Reduced verbosity, clearer flow
+- ✅ **Branch flexibility**: Configurable --base-branch and --pr-target with smart defaults
+
+v2.2 (2026-01-29):
+
+- ✅ Reduced verbosity by 45%
+- ✅ PowerShell with pwsh -c for all pnpm commands
+- ✅ Configurable base branch (--base-branch, default: main-dev)
+- ✅ Explicit PR target branch (--pr-target, default: main-dev)
+
+v2.1 (2026-01-28):
+
+- ✅ Pre-merge build+test validation in Phase 8
+- ✅ Mandatory validation gates
+
+v2.0 (2026-01-24):
+
+- ✅ Session management + checkpoints
+- ✅ Validation gates per phase
+- ✅ Pre-merge code review
+- ✅ DoD verification phase

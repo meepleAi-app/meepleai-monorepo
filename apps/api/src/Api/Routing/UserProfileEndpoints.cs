@@ -10,6 +10,7 @@ using DddUpdatePreferencesCommand = Api.BoundedContexts.Authentication.Applicati
 using DddGetUserProfileQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserProfileQuery;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.Routing;
@@ -30,6 +31,8 @@ internal static class UserProfileEndpoints
         MapPreferenceEndpoints(group);
         // USER-ACTIVITY-01: User activity timeline
         MapActivityEndpoints(group);
+        // Issue #3074: User AI usage tracking
+        MapAiUsageEndpoints(group);
 
         return group;
     }
@@ -367,6 +370,65 @@ internal static class UserProfileEndpoints
 **Response**: GetUserActivityResult with filtered activities and total count.")
         .Produces(200)
         .Produces(400)
+        .Produces(401);
+    }
+
+    private static void MapAiUsageEndpoints(RouteGroupBuilder group)
+    {
+        // Get user's AI usage summary (Issue #3074)
+        group.MapGet("/users/me/ai-usage", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            int days = 30,
+            CancellationToken ct = default) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var userId = session!.User!.Id;
+
+            var endDate = DateOnly.FromDateTime(DateTime.UtcNow);
+            var startDate = endDate.AddDays(-days);
+
+            var query = new GetLlmCostReportQuery
+            {
+                StartDate = startDate,
+                EndDate = endDate,
+                UserId = userId
+            };
+
+            var report = await mediator.Send(query, ct).ConfigureAwait(false);
+            logger.LogInformation("AI usage retrieved for user {UserId}: ${TotalCost} over {Days} days",
+                userId, report.TotalCost, days);
+
+            return Results.Json(new
+            {
+                userId,
+                period = new { startDate = startDate.ToString("O", System.Globalization.CultureInfo.InvariantCulture), endDate = endDate.ToString("O", System.Globalization.CultureInfo.InvariantCulture), days },
+                totalCost = report.TotalCost,
+                costsByProvider = report.CostsByProvider,
+                dailyAverage = days > 0 ? Math.Round(report.TotalCost / days, 6) : 0
+            });
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetMyAiUsage")
+        .WithTags("User Profile", "AI Usage")
+        .WithSummary("Get current user's AI usage summary")
+        .WithDescription(@"Returns AI usage statistics for the authenticated user including:
+- Total cost over the specified period
+- Cost breakdown by AI provider (OpenRouter, Ollama)
+- Daily average cost
+
+**Issue**: #3074 - AI Token Usage Tracking Backend.
+
+**Authorization**: Requires active session (cookie-based authentication). Users can only see their own AI usage.
+
+**Query Parameters**:
+- `days` (optional): Number of days to look back (default: 30, max: 365)
+
+**Response**: User AI usage summary with cost breakdown.")
+        .Produces(200)
         .Produces(401);
     }
 }

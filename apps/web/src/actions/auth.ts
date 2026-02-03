@@ -25,12 +25,17 @@ import type { AuthUser } from '@/types';
 
 /**
  * Standard action state returned by all auth actions
+ * Supports 2FA flow with requiresTwoFactor and tempSessionToken
  */
 export interface AuthActionState {
   success: boolean;
   error?: LocalizedError;
   user?: AuthUser;
   message?: string;
+  /** Indicates 2FA is required to complete login */
+  requiresTwoFactor?: boolean;
+  /** Temporary session token for completing 2FA */
+  tempSessionToken?: string | null;
 }
 
 export interface SessionActionState {
@@ -75,14 +80,25 @@ export async function loginAction(
       };
     }
 
-    const authUser = await api.auth.login({
+    const loginResponse = await api.auth.login({
       email,
       password,
     });
 
+    // Check if 2FA is required
+    if (loginResponse.requiresTwoFactor) {
+      return {
+        success: true,
+        requiresTwoFactor: true,
+        tempSessionToken: loginResponse.tempSessionToken,
+        message: 'Verifica a due fattori richiesta.',
+      };
+    }
+
+    // Normal login - extract user from response
     return {
       success: true,
-      user: authUser,
+      user: loginResponse.user ?? undefined,
       message: successMessages.loginSuccess,
     };
   } catch (error) {

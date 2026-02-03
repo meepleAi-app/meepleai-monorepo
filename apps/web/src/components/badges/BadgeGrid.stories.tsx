@@ -2,10 +2,12 @@
  * BadgeGrid Storybook Stories (Issue #2747)
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
+import { BadgeTier, type UserBadgeDto } from '@/types/badges';
 
 import { BadgeGrid } from './BadgeGrid';
-import { BadgeTier, type UserBadgeDto } from '@/types/badges';
+
+import type { Meta, StoryObj } from '@storybook/react';
+
 
 const mockBadges: UserBadgeDto[] = [
   {

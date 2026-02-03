@@ -19,6 +19,8 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Extensions;
 using Api.Middleware.Exceptions;
 using Api.Models;
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -492,6 +494,28 @@ internal static class SharedGameCatalogEndpoints
             .WithDescription("Returns all share requests currently being reviewed by the authenticated admin with lock status and time remaining.")
             .Produces<IReadOnlyCollection<ActiveReviewDto>>()
             .Produces(StatusCodes.Status401Unauthorized);
+
+        // Issue #2893: Bulk approve share requests
+        group.MapPost("/editor/share-requests/bulk-approve", HandleBulkApproveShareRequests)
+            .RequireAuthorization("EditorOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("BulkApproveShareRequests")
+            .WithSummary("Bulk approve share requests (Editor only)")
+            .WithDescription("Approves multiple share requests in a single all-or-nothing transaction. Max 20 per batch. If any approval fails, entire batch rolls back.")
+            .Produces<BulkOperationResult>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Issue #2893: Bulk reject share requests
+        group.MapPost("/editor/share-requests/bulk-reject", HandleBulkRejectShareRequests)
+            .RequireAuthorization("EditorOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("BulkRejectShareRequests")
+            .WithSummary("Bulk reject share requests (Editor only)")
+            .WithDescription("Rejects multiple share requests in a single all-or-nothing transaction with shared reason. Max 20 per batch. If any rejection fails, entire batch rolls back.")
+            .Produces<BulkOperationResult>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound);
     }
 
     // ========================================
@@ -1697,6 +1721,85 @@ internal static class SharedGameCatalogEndpoints
         }
     }
 
+    // Issue #2893: Bulk approve share requests handler
+    private static async Task<IResult> HandleBulkApproveShareRequests(
+        BulkApproveShareRequestsRequest request,
+        IMediator mediator,
+        HttpContext context,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var editorId = session!.User!.Id;
+
+        logger.LogInformation(
+            "Editor {EditorId} bulk approving {Count} share requests",
+            editorId, request.ShareRequestIds.Count);
+
+        try
+        {
+            var command = new BulkApproveShareRequestsCommand(
+                request.ShareRequestIds,
+                editorId,
+                request.TargetSharedGameId,
+                request.AdminNotes);
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "Bulk approval result: {SuccessCount}/{TotalRequested} succeeded",
+                result.SuccessCount, result.TotalRequested);
+
+            return Results.Ok(result);
+        }
+        catch (DomainException ex)
+        {
+            logger.LogWarning(ex, "Domain error during bulk approval");
+            return Results.BadRequest(new { error = "domain_error", message = ex.Message });
+        }
+    }
+
+    // Issue #2893: Bulk reject share requests handler
+    private static async Task<IResult> HandleBulkRejectShareRequests(
+        BulkRejectShareRequestsRequest request,
+        IMediator mediator,
+        HttpContext context,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var editorId = session!.User!.Id;
+
+        logger.LogInformation(
+            "Editor {EditorId} bulk rejecting {Count} share requests with reason: {Reason}",
+            editorId, request.ShareRequestIds.Count, request.Reason);
+
+        try
+        {
+            var command = new BulkRejectShareRequestsCommand(
+                request.ShareRequestIds,
+                editorId,
+                request.Reason);
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "Bulk rejection result: {SuccessCount}/{TotalRequested} succeeded",
+                result.SuccessCount, result.TotalRequested);
+
+            return Results.Ok(result);
+        }
+        catch (DomainException ex)
+        {
+            logger.LogWarning(ex, "Domain error during bulk rejection");
+            return Results.BadRequest(new { error = "domain_error", message = ex.Message });
+        }
+    }
+
     private static async Task<IResult> HandleRequestShareRequestChanges(
         Guid id,
         RequestShareRequestChangesRequest request,
@@ -2198,6 +2301,23 @@ internal record ApproveShareRequestRequest(
 /// Issue #2734
 /// </summary>
 internal record RejectShareRequestRequest(
+    string Reason);
+
+/// <summary>
+/// Request DTO for bulk approving share requests.
+/// Issue #2893
+/// </summary>
+internal record BulkApproveShareRequestsRequest(
+    IReadOnlyList<Guid> ShareRequestIds,
+    Guid? TargetSharedGameId,
+    string? AdminNotes);
+
+/// <summary>
+/// Request DTO for bulk rejecting share requests.
+/// Issue #2893
+/// </summary>
+internal record BulkRejectShareRequestsRequest(
+    IReadOnlyList<Guid> ShareRequestIds,
     string Reason);
 
 /// <summary>

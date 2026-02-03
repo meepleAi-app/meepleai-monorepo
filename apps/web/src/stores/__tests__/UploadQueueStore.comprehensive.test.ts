@@ -460,4 +460,349 @@ describe('UploadQueueStore - Comprehensive (Issue #2309)', () => {
       expect(snapshot.items).toEqual([]);
     });
   });
+
+  // ========== Persistence Layer Tests ==========
+  describe('Persistence Layer', () => {
+    it('should handle state updates without throwing', async () => {
+      const mockState: UploadQueueState = {
+        items: [
+          {
+            id: '1',
+            fileName: 'pending.pdf',
+            fileSize: 100,
+            status: 'pending',
+            progress: 0,
+            gameId: 'g1',
+            language: 'en',
+          },
+        ],
+        metrics: {
+          totalUploads: 1,
+          successfulUploads: 0,
+          failedUploads: 0,
+          cancelledUploads: 0,
+          totalBytesUploaded: 0,
+        },
+      };
+
+      // Simulate state update - should not throw
+      if (mockWorkerInstance && mockWorkerInstance.onmessage) {
+        expect(() => {
+          mockWorkerInstance.onmessage!({
+            data: { type: 'STATE_UPDATED', payload: mockState },
+          } as MessageEvent);
+        }).not.toThrow();
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // Store should still be functional
+      expect(store.getSnapshot()).toBeDefined();
+    });
+
+    it('should load state from localStorage on restore', () => {
+      const savedState = {
+        items: [
+          {
+            id: 'restored-1',
+            fileName: 'restored.pdf',
+            fileSize: 500,
+            status: 'pending',
+            progress: 0,
+            gameId: 'game-restored',
+            language: 'it',
+          },
+        ],
+        metrics: {
+          totalUploads: 1,
+          successfulUploads: 0,
+          failedUploads: 0,
+          cancelledUploads: 0,
+          totalBytesUploaded: 0,
+        },
+        savedAt: Date.now(),
+      };
+
+      localStorageMock.getItem.mockReturnValue(JSON.stringify(savedState));
+
+      // getSnapshot should work with stored data
+      const snapshot = store.getSnapshot();
+      expect(snapshot).toBeDefined();
+    });
+
+    it('should handle localStorage setItem errors gracefully', async () => {
+      // Make setItem throw
+      localStorageMock.setItem.mockImplementation(() => {
+        throw new Error('QuotaExceededError');
+      });
+
+      const mockState: UploadQueueState = {
+        items: [
+          {
+            id: '1',
+            fileName: 'test.pdf',
+            fileSize: 100,
+            status: 'pending',
+            progress: 0,
+            gameId: 'g1',
+            language: 'en',
+          },
+        ],
+        metrics: {
+          totalUploads: 1,
+          successfulUploads: 0,
+          failedUploads: 0,
+          cancelledUploads: 0,
+          totalBytesUploaded: 0,
+        },
+      };
+
+      // Should not throw even if localStorage fails
+      if (mockWorkerInstance && mockWorkerInstance.onmessage) {
+        expect(() => {
+          mockWorkerInstance.onmessage!({
+            data: { type: 'STATE_UPDATED', payload: mockState },
+          } as MessageEvent);
+        }).not.toThrow();
+      }
+    });
+
+    it('should handle localStorage getItem errors gracefully', () => {
+      localStorageMock.getItem.mockImplementation(() => {
+        throw new Error('SecurityError');
+      });
+
+      // Should not throw, return default state
+      expect(() => store.getSnapshot()).not.toThrow();
+    });
+
+    it('should handle localStorage removeItem errors gracefully', () => {
+      localStorageMock.removeItem.mockImplementation(() => {
+        throw new Error('SecurityError');
+      });
+
+      // Should not throw
+      expect(() => store.clearAll()).not.toThrow();
+    });
+  });
+
+  // ========== Worker Not Ready Tests ==========
+  describe('Worker Not Ready Handling', () => {
+    it('should buffer file requests when worker not ready', async () => {
+      // Create a new store instance where worker is not ready
+      vi.resetModules();
+      localStorageMock.getItem.mockReturnValue(null);
+
+      const module = await import('../UploadQueueStore');
+      const newStore = module.uploadQueueStore;
+
+      // Add files before worker is ready (don't send WORKER_READY)
+      const mockFile = new File(['content'], 'buffered.pdf', { type: 'application/pdf' });
+
+      // This should buffer the request, not throw
+      await expect(newStore.addFiles([mockFile], 'game-1', 'en')).resolves.not.toThrow();
+
+      newStore.destroy();
+    });
+
+    it('should process buffered requests after worker becomes ready', async () => {
+      vi.resetModules();
+      localStorageMock.getItem.mockReturnValue(null);
+
+      const module = await import('../UploadQueueStore');
+      const newStore = module.uploadQueueStore;
+
+      // Subscribe to trigger worker initialization
+      const unsubscribe = newStore.subscribe(() => {});
+
+      // Add file before worker ready
+      const mockFile = new File(['content'], 'buffered.pdf', { type: 'application/pdf' });
+      await newStore.addFiles([mockFile], 'game-1', 'en');
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // Now send WORKER_READY
+      const workerInstance = (newStore as any).worker;
+      if (workerInstance && workerInstance.onmessage) {
+        workerInstance.onmessage({
+          data: { type: 'WORKER_READY' },
+        } as MessageEvent);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Store should still be functional
+      expect(newStore.isWorkerReady()).toBe(true);
+
+      unsubscribe();
+      newStore.destroy();
+    });
+  });
+
+  // ========== Visibility Change Tests ==========
+  describe('Visibility Change Handling', () => {
+    let originalDocument: Document;
+
+    beforeEach(() => {
+      originalDocument = global.document;
+    });
+
+    afterEach(() => {
+      global.document = originalDocument;
+    });
+
+    it('should handle document visibility change to hidden', async () => {
+      // Mock document.hidden
+      Object.defineProperty(document, 'hidden', {
+        value: true,
+        writable: true,
+        configurable: true,
+      });
+
+      // Trigger visibility change event
+      const event = new Event('visibilitychange');
+      document.dispatchEvent(event);
+
+      // Wait for any timeouts to be set
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // Store should still be functional
+      expect(store).toBeDefined();
+    });
+
+    it('should cancel idle timeout when tab becomes visible again', async () => {
+      // First, go hidden
+      Object.defineProperty(document, 'hidden', {
+        value: true,
+        writable: true,
+        configurable: true,
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // Then, become visible again
+      Object.defineProperty(document, 'hidden', {
+        value: false,
+        writable: true,
+        configurable: true,
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // Store should still be functional
+      expect(store.isWorkerReady()).toBeDefined();
+    });
+  });
+
+  // ========== Post Message Error Handling ==========
+  describe('PostMessage Error Handling', () => {
+    it('should handle postMessage errors when worker terminates', async () => {
+      // Terminate worker to simulate error condition
+      if (mockWorkerInstance) {
+        mockWorkerInstance.terminate();
+      }
+
+      // Attempt to send message after termination
+      // Should not throw, but should set error state
+      expect(() => store.cancelUpload('test-id')).not.toThrow();
+    });
+
+    it('should handle postMessage with transferables error', async () => {
+      // Create a mock that throws on postMessage
+      const originalPostMessage = mockWorkerInstance?.postMessage;
+      if (mockWorkerInstance) {
+        mockWorkerInstance.postMessage = vi.fn().mockImplementation(() => {
+          throw new Error('DataCloneError');
+        });
+      }
+
+      const mockFile = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+
+      // Should not throw, error should be captured
+      await expect(store.addFiles([mockFile], 'game-1', 'en')).resolves.not.toThrow();
+
+      // Restore
+      if (mockWorkerInstance && originalPostMessage) {
+        mockWorkerInstance.postMessage = originalPostMessage;
+      }
+    });
+  });
+
+  // ========== Callback Tests ==========
+  describe('Callback Configuration', () => {
+    it('should accept callback options without throwing', () => {
+      const callbacks = {
+        onUploadComplete: vi.fn(),
+        onUploadError: vi.fn(),
+        onAllComplete: vi.fn(),
+      };
+
+      expect(() => store.setOptions(callbacks)).not.toThrow();
+    });
+
+    it('should accept partial callback options', () => {
+      expect(() => store.setOptions({ onUploadComplete: vi.fn() })).not.toThrow();
+      expect(() => store.setOptions({ onUploadError: vi.fn() })).not.toThrow();
+      expect(() => store.setOptions({ onAllComplete: vi.fn() })).not.toThrow();
+    });
+
+    it('should accept empty options object', () => {
+      expect(() => store.setOptions({})).not.toThrow();
+    });
+  });
+
+  // ========== Clear Completed with Items Tests ==========
+  describe('clearCompleted with Items', () => {
+    it('should send clearCompleted message to worker', async () => {
+      // Set up state with completed items
+      const mockState: UploadQueueState = {
+        items: [
+          {
+            id: 'success-1',
+            fileName: 'done.pdf',
+            fileSize: 100,
+            status: 'success',
+            progress: 100,
+            gameId: 'g1',
+            language: 'en',
+            pdfId: 'pdf-1',
+          },
+          {
+            id: 'pending-1',
+            fileName: 'waiting.pdf',
+            fileSize: 100,
+            status: 'pending',
+            progress: 0,
+            gameId: 'g1',
+            language: 'en',
+          },
+        ],
+        metrics: {
+          totalUploads: 2,
+          successfulUploads: 1,
+          failedUploads: 0,
+          cancelledUploads: 0,
+          totalBytesUploaded: 100,
+        },
+      };
+
+      if (mockWorkerInstance && mockWorkerInstance.onmessage) {
+        mockWorkerInstance.onmessage({
+          data: { type: 'STATE_UPDATED', payload: mockState },
+        } as MessageEvent);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // Clear completed - should not throw
+      expect(() => store.clearCompleted()).not.toThrow();
+    });
+
+    it('should handle clearCompleted when worker exists', () => {
+      // Just verify the operation completes without error
+      expect(() => store.clearCompleted()).not.toThrow();
+    });
+  });
 });

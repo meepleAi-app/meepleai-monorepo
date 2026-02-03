@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeepleCard - Universal Card System Exploration</title>
+
+  <!-- Fonts matching MeepleAI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* MeepleAI Design Tokens */
+      --background: hsl(30 25% 97%);
+      --foreground: hsl(30 15% 15%);
+      --card: hsl(0 0% 100%);
+      --card-foreground: hsl(30 15% 15%);
+      --muted: hsl(30 20% 90%);
+      --muted-foreground: hsl(30 12% 35%);
+      --border: hsl(30 15% 85%);
+      --primary: hsl(25 95% 38%);
+      --primary-light: hsl(25 95% 53%);
+
+      /* Entity Type Colors */
+      --entity-game: hsl(25 95% 45%);
+      --entity-player: hsl(262 83% 58%);
+      --entity-collection: hsl(168 76% 42%);
+      --entity-event: hsl(350 89% 60%);
+
+      /* Fonts */
+      --font-display: 'Quicksand', sans-serif;
+      --font-body: 'Nunito', sans-serif;
+
+      /* Spacing */
+      --radius: 16px;
+      --radius-sm: 12px;
+    }
+
+    .dark {
+      --background: hsl(0 0% 10%);
+      --foreground: hsl(30 25% 90%);
+      --card: hsl(0 0% 18%);
+      --card-foreground: hsl(30 25% 90%);
+      --muted: hsl(0 0% 20%);
+      --muted-foreground: hsl(0 0% 60%);
+      --border: hsl(0 0% 25%);
+      --primary: hsl(25 95% 60%);
+      --primary-light: hsl(25 95% 65%);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--background);
+      color: var(--foreground);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    /* Subtle wood texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(210, 105, 30, 0.015) 2px, rgba(210, 105, 30, 0.015) 4px),
+        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(139, 90, 60, 0.02) 2px, rgba(139, 90, 60, 0.02) 4px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.6;
+    }
+
+    .dark body::before {
+      opacity: 0.2;
+    }
+
+    /* Header */
+    .page-header {
+      text-align: center;
+      margin-bottom: 3rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .page-header h1 {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .page-header p {
+      color: var(--muted-foreground);
+      font-size: 1.1rem;
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 100;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      font-family: var(--font-display);
+      font-weight: 600;
+      color: var(--foreground);
+      transition: all 0.2s;
+    }
+
+    .theme-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    /* Section Styling */
+    .direction-section {
+      margin-bottom: 4rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .direction-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .direction-badge {
+      background: var(--primary);
+      color: white;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.875rem;
+      padding: 0.375rem 0.875rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .direction-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--foreground);
+    }
+
+    .direction-description {
+      color: var(--muted-foreground);
+      font-size: 0.95rem;
+      margin-left: auto;
+      max-width: 400px;
+      text-align: right;
+    }
+
+    /* Card Grid */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    /* ========================================
+       DIRECTION A: WARM POLYMORPHIC
+       ======================================== */
+
+    .card-a {
+      position: relative;
+      background: var(--card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+
+    .card-a::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: var(--entity-color, var(--entity-game));
+      transition: width 0.3s ease;
+    }
+
+    .card-a:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+    }
+
+    .card-a:hover::before {
+      width: 6px;
+    }
+
+    .card-a[data-entity="game"] { --entity-color: var(--entity-game); }
+    .card-a[data-entity="player"] { --entity-color: var(--entity-player); }
+    .card-a[data-entity="collection"] { --entity-color: var(--entity-collection); }
+    .card-a[data-entity="event"] { --entity-color: var(--entity-event); }
+
+    .card-a .entity-badge {
+      position: absolute;
+      top: 0.75rem;
+      left: 1rem;
+      background: var(--entity-color);
+      color: white;
+      font-family: var(--font-display);
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    .card-a .cover {
+      position: relative;
+      height: 180px;
+      overflow: hidden;
+    }
+
+    .card-a .cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .card-a:hover .cover img {
+      transform: scale(1.05);
+    }
+
+    .card-a .cover::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60%;
+      background: linear-gradient(to top, var(--card) 0%, transparent 100%);
+    }
+
+    .card-a .content {
+      padding: 1rem 1.25rem 1.25rem;
+    }
+
+    .card-a .title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--foreground);
+      margin-bottom: 0.375rem;
+      line-height: 1.3;
+    }
+
+    .card-a .subtitle {
+      font-size: 0.85rem;
+      color: var(--muted-foreground);
+      margin-bottom: 0.75rem;
+    }
+
+    .card-a .metadata {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .card-a .meta-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.75rem;
+      color: var(--muted-foreground);
+      background: var(--muted);
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+    }
+
+    .card-a .meta-chip svg {
+      width: 12px;
+      height: 12px;
+      opacity: 0.7;
+    }
+
+    /* ========================================
+       DIRECTION B: LAYERED DEPTH
+       ======================================== */
+
+    .card-b {
+      position: relative;
+      border-radius: var(--radius);
+      cursor: pointer;
+      padding-top: 1rem;
+    }
+
+    .card-b .card-layer {
+      position: relative;
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card-b:hover .card-layer {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.15);
+    }
+
+    .card-b .cover-wrapper {
+      position: relative;
+      margin: -1rem 0.75rem 0;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+
+    .card-b:hover .cover-wrapper {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+    }
+
+    .card-b .cover-wrapper img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .card-b .entity-indicator {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      width: 32px;
+      height: 32px;
+      background: var(--entity-color, var(--entity-game));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .card-b[data-entity="game"] { --entity-color: var(--entity-game); }
+    .card-b[data-entity="player"] { --entity-color: var(--entity-player); }
+    .card-b[data-entity="collection"] { --entity-color: var(--entity-collection); }
+    .card-b[data-entity="event"] { --entity-color: var(--entity-event); }
+
+    .card-b .entity-indicator svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .card-b .content {
+      padding: 1.25rem;
+    }
+
+    .card-b .title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--foreground);
+      margin-bottom: 0.25rem;
+    }
+
+    .card-b .subtitle {
+      font-size: 0.85rem;
+      color: var(--muted-foreground);
+      margin-bottom: 1rem;
+    }
+
+    .card-b .floating-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.375rem;
+      margin: -0.5rem 0.75rem 0;
+      position: relative;
+      z-index: 5;
+    }
+
+    .card-b .floating-chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--entity-color);
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    .card-b .action-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .card-b .action-btn {
+      flex: 1;
+      padding: 0.5rem;
+      border-radius: 8px;
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-align: center;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .card-b .action-btn.primary {
+      background: var(--entity-color);
+      color: white;
+    }
+
+    .card-b .action-btn.secondary {
+      background: var(--muted);
+      color: var(--foreground);
+    }
+
+    .card-b .action-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    /* ========================================
+       DIRECTION C: UNIFIED CANVAS
+       ======================================== */
+
+    .card-c {
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      height: 260px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card-c:hover {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    }
+
+    .card-c .canvas-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+
+    .card-c:hover .canvas-bg {
+      transform: scale(1.08);
+    }
+
+    .card-c .canvas-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        transparent 0%,
+        rgba(0,0,0,0.1) 30%,
+        rgba(0,0,0,0.7) 70%,
+        rgba(0,0,0,0.9) 100%
+      );
+    }
+
+    .card-c[data-entity="game"] .canvas-overlay {
+      background: linear-gradient(
+        180deg,
+        transparent 0%,
+        hsla(25, 95%, 35%, 0.1) 30%,
+        hsla(25, 95%, 25%, 0.6) 70%,
+        hsla(25, 95%, 15%, 0.9) 100%
+      );
+    }
+
+    .card-c[data-entity="player"] .canvas-overlay {
+      background: linear-gradient(
+        180deg,
+        transparent 0%,
+        hsla(262, 83%, 35%, 0.1) 30%,
+        hsla(262, 83%, 25%, 0.6) 70%,
+        hsla(262, 83%, 15%, 0.9) 100%
+      );
+    }
+
+    .card-c[data-entity="collection"] .canvas-overlay {
+      background: linear-gradient(
+        180deg,
+        transparent 0%,
+        hsla(168, 76%, 30%, 0.1) 30%,
+        hsla(168, 76%, 20%, 0.6) 70%,
+        hsla(168, 76%, 12%, 0.9) 100%
+      );
+    }
+
+    .card-c[data-entity="event"] .canvas-overlay {
+      background: linear-gradient(
+        180deg,
+        transparent 0%,
+        hsla(350, 89%, 40%, 0.1) 30%,
+        hsla(350, 89%, 30%, 0.6) 70%,
+        hsla(350, 89%, 18%, 0.9) 100%
+      );
+    }
+
+    .card-c .entity-ribbon {
+      position: absolute;
+      top: 1rem;
+      right: -2rem;
+      background: var(--entity-color, var(--entity-game));
+      color: white;
+      font-family: var(--font-display);
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 0.25rem 2.5rem;
+      transform: rotate(45deg);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .card-c[data-entity="game"] { --entity-color: var(--entity-game); }
+    .card-c[data-entity="player"] { --entity-color: var(--entity-player); }
+    .card-c[data-entity="collection"] { --entity-color: var(--entity-collection); }
+    .card-c[data-entity="event"] { --entity-color: var(--entity-event); }
+
+    .card-c .content {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 1.5rem;
+      color: white;
+    }
+
+    .card-c .title {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      line-height: 1.2;
+    }
+
+    .card-c .subtitle {
+      font-size: 0.85rem;
+      opacity: 0.85;
+      margin-bottom: 0.75rem;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+
+    .card-c .meta-row {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .card-c .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+
+    .card-c .meta-item svg {
+      width: 14px;
+      height: 14px;
+      opacity: 0.8;
+    }
+
+    /* Layout switch demo */
+    .layout-demo {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 2px dashed var(--border);
+    }
+
+    .layout-demo h3 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: var(--primary);
+    }
+
+    .layout-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .layout-tab {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted-foreground);
+      transition: all 0.2s;
+    }
+
+    .layout-tab.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .layout-tab:hover:not(.active) {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* List Layout variant */
+    .list-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .card-list {
+      display: flex;
+      align-items: center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+      gap: 1rem;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .card-list:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .card-list .list-cover {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .card-list .list-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .card-list .list-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .card-list .list-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.125rem;
+    }
+
+    .card-list .list-subtitle {
+      font-size: 0.8rem;
+      color: var(--muted-foreground);
+    }
+
+    .card-list .list-meta {
+      display: flex;
+      gap: 0.75rem;
+      font-size: 0.75rem;
+      color: var(--muted-foreground);
+    }
+
+    .card-list .entity-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--entity-color);
+    }
+
+    .card-list[data-entity="game"] { --entity-color: var(--entity-game); }
+    .card-list[data-entity="player"] { --entity-color: var(--entity-player); }
+    .card-list[data-entity="collection"] { --entity-color: var(--entity-collection); }
+    .card-list[data-entity="event"] { --entity-color: var(--entity-event); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .direction-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+
+      .direction-description {
+        text-align: left;
+        margin-left: 0;
+        max-width: none;
+      }
+
+      .card-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Dark mode adjustments */
+    .dark .card-a,
+    .dark .card-b .card-layer,
+    .dark .card-list {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .dark .card-a:hover {
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    }
+
+    .dark .card-b:hover .card-layer {
+      box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+    }
+
+    .dark .card-c:hover {
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" onclick="document.body.classList.toggle('dark'); this.textContent = document.body.classList.contains('dark') ? '☀️ Light' : '🌙 Dark'">
+    🌙 Dark
+  </button>
+
+  <header class="page-header">
+    <h1>🎲 MeepleCard Exploration</h1>
+    <p>Universal Card System - 3 Aesthetic Directions × 4 Entity Types</p>
+  </header>
+
+  <!-- DIRECTION A: WARM POLYMORPHIC -->
+  <section class="direction-section">
+    <header class="direction-header">
+      <span class="direction-badge">A</span>
+      <h2 class="direction-title">Warm Polymorphic</h2>
+      <p class="direction-description">Evoluzione naturale dello stile MeepleAI. Bordo sinistro colorato per tipo entità, glass morphism, gradient overlay.</p>
+    </header>
+
+    <div class="card-grid">
+      <!-- Game Card -->
+      <article class="card-a" data-entity="game">
+        <span class="entity-badge">🎲 Game</span>
+        <div class="cover">
+          <img src="https://cf.geekdo-images.com/5CFwjd8zTcGYVUnkXh04hw__opengraph_letterbox/img/cwZqKBblz6FBLv98sLANmJNLkJ8=/fit-in/1200x630/filters:fill(auto)/pic1176894.jpg" alt="Twilight Imperium">
+        </div>
+        <div class="content">
+          <h3 class="title">Twilight Imperium</h3>
+          <p class="subtitle">Fantasy Flight Games · 2017</p>
+          <div class="metadata">
+            <span class="meta-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              3-6
+            </span>
+            <span class="meta-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              4-8h
+            </span>
+            <span class="meta-chip">⭐ 4.7</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Player Card -->
+      <article class="card-a" data-entity="player">
+        <span class="entity-badge">👤 Player</span>
+        <div class="cover">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop" alt="Player Avatar">
+        </div>
+        <div class="content">
+          <h3 class="title">Marco Rossi</h3>
+          <p class="subtitle">@marco_games · Since 2019</p>
+          <div class="metadata">
+            <span class="meta-chip">🎮 142 plays</span>
+            <span class="meta-chip">📚 89 games</span>
+            <span class="meta-chip">🏆 Top 5%</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Collection Card -->
+      <article class="card-a" data-entity="collection">
+        <span class="entity-badge">📚 Collection</span>
+        <div class="cover">
+          <img src="https://images.unsplash.com/photo-1611371805429-8b5c1b2c34ba?w=400&h=300&fit=crop" alt="Board games collection">
+        </div>
+        <div class="content">
+          <h3 class="title">Euro Games Essentials</h3>
+          <p class="subtitle">Curated by @boardgame_guru</p>
+          <div class="metadata">
+            <span class="meta-chip">📦 24 games</span>
+            <span class="meta-chip">👁️ 1.2K views</span>
+            <span class="meta-chip">❤️ 89</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Event Card -->
+      <article class="card-a" data-entity="event">
+        <span class="entity-badge">🎯 Event</span>
+        <div class="cover">
+          <img src="https://images.unsplash.com/photo-1606092195730-5d7b9af1efc5?w=400&h=300&fit=crop" alt="Game night">
+        </div>
+        <div class="content">
+          <h3 class="title">Saturday Game Night</h3>
+          <p class="subtitle">Feb 15, 2026 · 7:00 PM</p>
+          <div class="metadata">
+            <span class="meta-chip">📍 Milano, IT</span>
+            <span class="meta-chip">👥 4/6 spots</span>
+            <span class="meta-chip">🎲 TI4</span>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- DIRECTION B: LAYERED DEPTH -->
+  <section class="direction-section">
+    <header class="direction-header">
+      <span class="direction-badge">B</span>
+      <h2 class="direction-title">Layered Depth</h2>
+      <p class="direction-description">Effetto 3D stratificato. Cover che "sporge" dal container, floating chips, shadow dinamiche.</p>
+    </header>
+
+    <div class="card-grid">
+      <!-- Game Card -->
+      <article class="card-b" data-entity="game">
+        <div class="cover-wrapper">
+          <img src="https://cf.geekdo-images.com/x3zxjr-Vw5iU4yDPg70Jgw__opengraph_letterbox/img/EiJABZjDfwKnXlNd1pjl00_p-hg=/fit-in/1200x630/filters:fill(auto)/pic3490053.jpg" alt="Gloomhaven">
+          <span class="entity-indicator">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          </span>
+        </div>
+        <div class="floating-chips">
+          <span class="floating-chip">1-4 players</span>
+          <span class="floating-chip">2-3h</span>
+          <span class="floating-chip">⭐ 4.8</span>
+        </div>
+        <div class="card-layer">
+          <div class="content">
+            <h3 class="title">Gloomhaven</h3>
+            <p class="subtitle">Cephalofair Games · Dungeon Crawl</p>
+            <div class="action-row">
+              <button class="action-btn primary">Play Now</button>
+              <button class="action-btn secondary">Details</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Player Card -->
+      <article class="card-b" data-entity="player">
+        <div class="cover-wrapper">
+          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=300&fit=crop" alt="Player">
+          <span class="entity-indicator">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+        </div>
+        <div class="floating-chips">
+          <span class="floating-chip">Level 42</span>
+          <span class="floating-chip">🎯 Strategist</span>
+        </div>
+        <div class="card-layer">
+          <div class="content">
+            <h3 class="title">Elena Bianchi</h3>
+            <p class="subtitle">Milan Game Group · Member</p>
+            <div class="action-row">
+              <button class="action-btn primary">Add Friend</button>
+              <button class="action-btn secondary">Profile</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Collection Card -->
+      <article class="card-b" data-entity="collection">
+        <div class="cover-wrapper">
+          <img src="https://images.unsplash.com/photo-1632501641765-e568d28b0015?w=400&h=300&fit=crop" alt="Collection">
+          <span class="entity-indicator">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </span>
+        </div>
+        <div class="floating-chips">
+          <span class="floating-chip">18 games</span>
+          <span class="floating-chip">Public</span>
+        </div>
+        <div class="card-layer">
+          <div class="content">
+            <h3 class="title">Party Games Night</h3>
+            <p class="subtitle">Perfect for 6+ players</p>
+            <div class="action-row">
+              <button class="action-btn primary">Browse</button>
+              <button class="action-btn secondary">Clone</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Event Card -->
+      <article class="card-b" data-entity="event">
+        <div class="cover-wrapper">
+          <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=300&fit=crop" alt="Event">
+          <span class="entity-indicator">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </span>
+        </div>
+        <div class="floating-chips">
+          <span class="floating-chip">Tomorrow</span>
+          <span class="floating-chip">2 spots left</span>
+        </div>
+        <div class="card-layer">
+          <div class="content">
+            <h3 class="title">Gloomhaven Campaign</h3>
+            <p class="subtitle">Session #14 · Chapter 3</p>
+            <div class="action-row">
+              <button class="action-btn primary">Join</button>
+              <button class="action-btn secondary">Details</button>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- DIRECTION C: UNIFIED CANVAS -->
+  <section class="direction-section">
+    <header class="direction-header">
+      <span class="direction-badge">C</span>
+      <h2 class="direction-title">Unified Canvas</h2>
+      <p class="direction-description">Stile editoriale/magazine. Cover che sfuma nel background, typography sovrapposta con text-shadow, feel cinematografico.</p>
+    </header>
+
+    <div class="card-grid">
+      <!-- Game Card -->
+      <article class="card-c" data-entity="game">
+        <img class="canvas-bg" src="https://cf.geekdo-images.com/hGWFm3hbMlCDsfCsauOQ4g__opengraph_letterbox/img/zBNq4UQnOF8KITjchN1oNIcNEew=/fit-in/1200x630/filters:fill(auto)/pic2582929.jpg" alt="Scythe">
+        <div class="canvas-overlay"></div>
+        <span class="entity-ribbon">Game</span>
+        <div class="content">
+          <h3 class="title">Scythe</h3>
+          <p class="subtitle">Stonemaier Games · Area Control</p>
+          <div class="meta-row">
+            <span class="meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              1-5
+            </span>
+            <span class="meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              90-120min
+            </span>
+            <span class="meta-item">⭐ 4.6</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Player Card -->
+      <article class="card-c" data-entity="player">
+        <img class="canvas-bg" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=300&fit=crop" alt="Player">
+        <div class="canvas-overlay"></div>
+        <span class="entity-ribbon">Player</span>
+        <div class="content">
+          <h3 class="title">Alessandro Verdi</h3>
+          <p class="subtitle">Legendary Strategist</p>
+          <div class="meta-row">
+            <span class="meta-item">🏆 Rank #127</span>
+            <span class="meta-item">🎮 312 plays</span>
+            <span class="meta-item">📚 156 games</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Collection Card -->
+      <article class="card-c" data-entity="collection">
+        <img class="canvas-bg" src="https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=400&h=300&fit=crop" alt="Collection">
+        <div class="canvas-overlay"></div>
+        <span class="entity-ribbon">Collection</span>
+        <div class="content">
+          <h3 class="title">Hidden Gems 2025</h3>
+          <p class="subtitle">Underrated masterpieces</p>
+          <div class="meta-row">
+            <span class="meta-item">📦 32 games</span>
+            <span class="meta-item">⭐ Avg 4.2</span>
+            <span class="meta-item">🔥 Trending</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Event Card -->
+      <article class="card-c" data-entity="event">
+        <img class="canvas-bg" src="https://images.unsplash.com/photo-1511882150382-421056c89033?w=400&h=300&fit=crop" alt="Event">
+        <div class="canvas-overlay"></div>
+        <span class="entity-ribbon">Event</span>
+        <div class="content">
+          <h3 class="title">MeepleAI Tournament</h3>
+          <p class="subtitle">Grand Finals · Live Streamed</p>
+          <div class="meta-row">
+            <span class="meta-item">📅 Mar 8, 2026</span>
+            <span class="meta-item">📍 Online</span>
+            <span class="meta-item">🏆 $500 Prize</span>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- LAYOUT VARIANTS DEMO -->
+  <section class="direction-section layout-demo">
+    <h3>📐 Layout Flexibility Demo (Direction A)</h3>
+
+    <div class="layout-tabs">
+      <button class="layout-tab active">Grid</button>
+      <button class="layout-tab">List</button>
+      <button class="layout-tab">Compact</button>
+    </div>
+
+    <div class="list-layout">
+      <article class="card-list" data-entity="game">
+        <span class="entity-dot"></span>
+        <div class="list-cover">
+          <img src="https://cf.geekdo-images.com/5CFwjd8zTcGYVUnkXh04hw__opengraph_letterbox/img/cwZqKBblz6FBLv98sLANmJNLkJ8=/fit-in/1200x630/filters:fill(auto)/pic1176894.jpg" alt="">
+        </div>
+        <div class="list-content">
+          <h4 class="list-title">Twilight Imperium (4th Ed)</h4>
+          <p class="list-subtitle">Fantasy Flight Games · 2017</p>
+        </div>
+        <div class="list-meta">
+          <span>3-6 players</span>
+          <span>4-8h</span>
+          <span>⭐ 4.7</span>
+        </div>
+      </article>
+
+      <article class="card-list" data-entity="player">
+        <span class="entity-dot"></span>
+        <div class="list-cover">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop" alt="">
+        </div>
+        <div class="list-content">
+          <h4 class="list-title">Marco Rossi</h4>
+          <p class="list-subtitle">@marco_games · Since 2019</p>
+        </div>
+        <div class="list-meta">
+          <span>142 plays</span>
+          <span>89 games</span>
+          <span>Top 5%</span>
+        </div>
+      </article>
+
+      <article class="card-list" data-entity="collection">
+        <span class="entity-dot"></span>
+        <div class="list-cover">
+          <img src="https://images.unsplash.com/photo-1611371805429-8b5c1b2c34ba?w=100&h=100&fit=crop" alt="">
+        </div>
+        <div class="list-content">
+          <h4 class="list-title">Euro Games Essentials</h4>
+          <p class="list-subtitle">Curated by @boardgame_guru</p>
+        </div>
+        <div class="list-meta">
+          <span>24 games</span>
+          <span>1.2K views</span>
+          <span>❤️ 89</span>
+        </div>
+      </article>
+
+      <article class="card-list" data-entity="event">
+        <span class="entity-dot"></span>
+        <div class="list-cover">
+          <img src="https://images.unsplash.com/photo-1606092195730-5d7b9af1efc5?w=100&h=100&fit=crop" alt="">
+        </div>
+        <div class="list-content">
+          <h4 class="list-title">Saturday Game Night</h4>
+          <p class="list-subtitle">Feb 15, 2026 · 7:00 PM</p>
+        </div>
+        <div class="list-meta">
+          <span>Milano, IT</span>
+          <span>4/6 spots</span>
+          <span>TI4</span>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <script>
+    // Simple tab interaction demo
+    document.querySelectorAll('.layout-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.layout-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

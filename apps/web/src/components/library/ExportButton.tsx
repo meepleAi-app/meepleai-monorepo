@@ -136,7 +136,7 @@ export function ExportButton({
         {(filteredCount !== undefined || totalCount !== undefined) && (
           <>
             <DropdownMenuSeparator />
-            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+            <div className="px-2 py-1.5 text-xs text-muted-foreground" data-testid="export-count">
               {filteredCount !== undefined && totalCount !== undefined && filteredCount < totalCount
                 ? `${filteredCount} di ${totalCount} giochi`
                 : `${totalCount ?? data.length} giochi`}

@@ -1,7 +1,7 @@
 import path from 'path';
 
 import { defineCoverageReporterConfig } from '@bgotink/playwright-coverage';
-import { ChromaticConfig } from '@chromatic-com/playwright';
+// import { ChromaticConfig } from '@chromatic-com/playwright'; // Type not exported in v0.12.8
 import { defineConfig, devices } from '@playwright/test';
 
 // Issue #2009: Prometheus reporter configuration (typed for TypeScript)
@@ -43,7 +43,7 @@ const prometheusReporter: any[] = process.env.PROMETHEUS_REMOTE_WRITE_URL
     ]
   : [];
 
-export default defineConfig<ChromaticConfig>({
+export default defineConfig({
   testDir: './e2e',
   timeout: process.env.CI === 'true' ? 90000 : 60000, // Issue #20375956158: 90s in CI for accessibility tests, 60s local
   fullyParallel: process.env.CI !== 'true', // Issue #1868: Disable parallel in CI to prevent axe-core race conditions
@@ -107,8 +107,9 @@ export default defineConfig<ChromaticConfig>({
     navigationTimeout: 60000, // 60s for page.goto (increased for dev server)
 
     // Chromatic Playwright fixture options
-    disableAutoSnapshot: false, // Auto-capture at end of test
-    cropToViewport: false, // Capture full page
+    // TODO: Check if these options still exist in current Chromatic version
+    // disableAutoSnapshot: false, // Auto-capture at end of test
+    // cropToViewport: false, // Capture full page
     launchOptions: {
       args: [
         '--no-sandbox',
@@ -170,6 +171,28 @@ export default defineConfig<ChromaticConfig>({
         ...devices['Galaxy Tab S4'],
         viewport: { width: 1024, height: 1366 },
       },
+    },
+
+    // Admin First-Time Setup - Serial execution for first-time deployment validation
+    {
+      name: 'admin-first-time-setup',
+      testDir: './e2e/admin-first-time-setup',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+        storageState: undefined, // No auth state initially
+        trace: 'on-first-retry',
+        video: 'retain-on-failure',
+      },
+      fullyParallel: false, // Serial execution - order matters
+      workers: 1, // Single worker to maintain state
+      timeout: 120000, // 2 min per test (PDF processing takes time)
+      // Optional: Testcontainers integration (enable with E2E_USE_TESTCONTAINERS=true)
+      testMatch: /.*\.spec\.ts/,
+      // Project-specific setup/teardown (optional Testcontainers)
+      // Uncomment to enable isolated infrastructure:
+      // globalSetup: require.resolve('./e2e/admin-first-time-setup/setup.ts'),
+      // globalTeardown: require.resolve('./e2e/admin-first-time-setup/teardown.ts'),
     },
   ],
 

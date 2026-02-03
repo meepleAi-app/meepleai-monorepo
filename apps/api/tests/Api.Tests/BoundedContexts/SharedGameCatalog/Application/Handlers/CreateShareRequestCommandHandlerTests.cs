@@ -274,7 +274,9 @@ public class CreateShareRequestCommandHandlerTests
     private static UserLibraryEntry CreateMockLibraryEntry()
     {
         // Create UserLibraryEntry using reflection since it's a sealed class
+#pragma warning disable SYSLIB0050 // FormatterServices is obsolete but required for test instantiation of sealed classes
         var entry = (UserLibraryEntry)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(UserLibraryEntry));
+#pragma warning restore SYSLIB0050
 
         // Use reflection to set the internal fields
         var userIdProperty = typeof(UserLibraryEntry).GetProperty("UserId");
@@ -314,7 +316,9 @@ public class CreateShareRequestCommandHandlerTests
     private static PdfDocument CreateMockPdfDocument(Guid docId, Guid userId, string fileName, long fileSize)
     {
         // Create PdfDocument using reflection to set properties
+#pragma warning disable SYSLIB0050 // FormatterServices is obsolete but required for test instantiation of sealed classes
         var doc = (PdfDocument)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(PdfDocument));
+#pragma warning restore SYSLIB0050
 
         // Set the ID field
         var idProperty = typeof(PdfDocument).GetProperty("Id");

@@ -246,9 +246,12 @@ public class NotificationRateLimitFilterTests
                     Email: "test@example.com",
                     DisplayName: "Test User",
                     Role: "User",
+                    Tier: "normal",
                     CreatedAt: DateTime.UtcNow,
                     IsTwoFactorEnabled: false,
-                    TwoFactorEnabledAt: null
+                    TwoFactorEnabledAt: null,
+                    Level: 1,
+                    ExperiencePoints: 0
                 );
                 var session = new SessionStatusDto(
                     IsValid: true,

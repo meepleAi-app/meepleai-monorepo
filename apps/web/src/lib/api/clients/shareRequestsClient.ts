@@ -1,4 +1,3 @@
-import type { HttpClient } from '../core/httpClient';
 import {
   CreateShareRequestCommand,
   CreateShareRequestResponse,
@@ -10,6 +9,8 @@ import {
   UserShareRequestDto,
   UserShareRequestDtoSchema,
 } from '../schemas/share-requests.schemas';
+
+import type { HttpClient } from '../core/httpClient';
 
 /**
  * Share Requests API Client

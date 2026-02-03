@@ -115,7 +115,8 @@ public class AnalyzeRulebookCommandHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Analysis.GameTitle.Should().Be("Catan");
+        result.Analysis.Should().NotBeNull();
+        result.Analysis!.GameTitle.Should().Be("Catan");
         result.Analysis.ConfidenceScore.Should().Be(0.92m);
         result.Analysis.IsActive.Should().BeTrue();
         result.Analysis.Version.Should().Be("1.0");
@@ -224,7 +225,8 @@ public class AnalyzeRulebookCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Analysis.Version.Should().Be("1.1"); // Incremented from 1.0
+        result.Analysis.Should().NotBeNull();
+        result.Analysis!.Version.Should().Be("1.1"); // Incremented from 1.0
         result.Analysis.IsActive.Should().BeTrue();
 
         _analysisRepositoryMock.Verify(

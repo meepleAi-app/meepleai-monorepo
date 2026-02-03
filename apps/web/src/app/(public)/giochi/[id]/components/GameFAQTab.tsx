@@ -113,24 +113,24 @@ export function GameFAQTab({ gameId, gameTitle }: GameFAQTabProps) {
         <Accordion type="single" collapsible className="w-full">
           {faqs.map(faq => (
             <AccordionItem key={faq.id} value={faq.id}>
-              <AccordionTrigger className="text-left font-medium hover:no-underline">
-                <div className="flex items-center gap-3 w-full">
-                  <span className="flex-1">{faq.question}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={e => {
-                      e.stopPropagation();
-                      handleUpvote(faq.id);
-                    }}
-                    disabled={upvoting === faq.id}
-                  >
-                    <ThumbsUp className="h-4 w-4 mr-1" />
-                    {faq.upvotes}
-                  </Button>
-                </div>
-              </AccordionTrigger>
+              <div className="flex items-center gap-3 w-full">
+                <AccordionTrigger className="text-left font-medium hover:no-underline flex-1">
+                  {faq.question}
+                </AccordionTrigger>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleUpvote(faq.id);
+                  }}
+                  disabled={upvoting === faq.id}
+                >
+                  <ThumbsUp className="h-4 w-4 mr-1" />
+                  {faq.upvotes}
+                </Button>
+              </div>
               <AccordionContent className="text-muted-foreground leading-relaxed">
                 {faq.answer}
               </AccordionContent>

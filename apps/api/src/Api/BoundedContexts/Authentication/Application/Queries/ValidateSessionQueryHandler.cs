@@ -91,9 +91,12 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
             Email: user.Email.Value,
             DisplayName: user.DisplayName,
             Role: user.Role.Value,
+            Tier: user.Tier.Value,
             CreatedAt: user.CreatedAt,
             IsTwoFactorEnabled: user.IsTwoFactorEnabled,
-            TwoFactorEnabledAt: user.TwoFactorEnabledAt
+            TwoFactorEnabledAt: user.TwoFactorEnabledAt,
+            Level: user.Level,
+            ExperiencePoints: user.ExperiencePoints
         );
     }
 }

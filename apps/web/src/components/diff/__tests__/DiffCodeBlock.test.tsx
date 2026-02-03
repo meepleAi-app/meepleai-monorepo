@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { DiffCodeBlock } from '../DiffCodeBlock';
 import { DiffLine } from '../../../lib/diffProcessor';
 

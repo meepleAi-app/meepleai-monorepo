@@ -2,7 +2,7 @@
  * GameStatusBadge - Issue #2372
  *
  * Displays the publication status of a shared game with appropriate styling.
- * Statuses: Draft (0), Published (1), Archived (2)
+ * Statuses: Draft, PendingApproval, Published, Archived (string enum)
  */
 
 import { GameStatusBadge } from './GameStatusBadge';
@@ -29,7 +29,17 @@ type Story = StoryObj<typeof meta>;
  */
 export const Draft: Story = {
   args: {
-    status: 0,
+    status: 'Draft',
+    size: 'default',
+  },
+};
+
+/**
+ * Pending Approval status - Blue styling for content awaiting review
+ */
+export const PendingApproval: Story = {
+  args: {
+    status: 'PendingApproval',
     size: 'default',
   },
 };
@@ -39,7 +49,7 @@ export const Draft: Story = {
  */
 export const Published: Story = {
   args: {
-    status: 1,
+    status: 'Published',
     size: 'default',
   },
 };
@@ -49,17 +59,7 @@ export const Published: Story = {
  */
 export const Archived: Story = {
   args: {
-    status: 2,
-    size: 'default',
-  },
-};
-
-/**
- * Unknown status - Fallback styling
- */
-export const Unknown: Story = {
-  args: {
-    status: 99,
+    status: 'Archived',
     size: 'default',
   },
 };
@@ -69,7 +69,17 @@ export const Unknown: Story = {
  */
 export const SmallDraft: Story = {
   args: {
-    status: 0,
+    status: 'Draft',
+    size: 'sm',
+  },
+};
+
+/**
+ * Small size - Pending Approval
+ */
+export const SmallPendingApproval: Story = {
+  args: {
+    status: 'PendingApproval',
     size: 'sm',
   },
 };
@@ -79,7 +89,7 @@ export const SmallDraft: Story = {
  */
 export const SmallPublished: Story = {
   args: {
-    status: 1,
+    status: 'Published',
     size: 'sm',
   },
 };
@@ -89,7 +99,7 @@ export const SmallPublished: Story = {
  */
 export const SmallArchived: Story = {
   args: {
-    status: 2,
+    status: 'Archived',
     size: 'sm',
   },
 };
@@ -100,9 +110,10 @@ export const SmallArchived: Story = {
 export const AllStatuses: Story = {
   render: () => (
     <div className="flex items-center gap-4">
-      <GameStatusBadge status={0} />
-      <GameStatusBadge status={1} />
-      <GameStatusBadge status={2} />
+      <GameStatusBadge status="Draft" />
+      <GameStatusBadge status="PendingApproval" />
+      <GameStatusBadge status="Published" />
+      <GameStatusBadge status="Archived" />
     </div>
   ),
 };
@@ -113,9 +124,10 @@ export const AllStatuses: Story = {
 export const AllStatusesSmall: Story = {
   render: () => (
     <div className="flex items-center gap-4">
-      <GameStatusBadge status={0} size="sm" />
-      <GameStatusBadge status={1} size="sm" />
-      <GameStatusBadge status={2} size="sm" />
+      <GameStatusBadge status="Draft" size="sm" />
+      <GameStatusBadge status="PendingApproval" size="sm" />
+      <GameStatusBadge status="Published" size="sm" />
+      <GameStatusBadge status="Archived" size="sm" />
     </div>
   ),
 };
@@ -128,15 +140,17 @@ export const SizeComparison: Story = {
     <div className="space-y-4">
       <div className="flex items-center gap-4">
         <span className="w-20 text-sm text-muted-foreground">Default:</span>
-        <GameStatusBadge status={0} />
-        <GameStatusBadge status={1} />
-        <GameStatusBadge status={2} />
+        <GameStatusBadge status="Draft" />
+        <GameStatusBadge status="PendingApproval" />
+        <GameStatusBadge status="Published" />
+        <GameStatusBadge status="Archived" />
       </div>
       <div className="flex items-center gap-4">
         <span className="w-20 text-sm text-muted-foreground">Small:</span>
-        <GameStatusBadge status={0} size="sm" />
-        <GameStatusBadge status={1} size="sm" />
-        <GameStatusBadge status={2} size="sm" />
+        <GameStatusBadge status="Draft" size="sm" />
+        <GameStatusBadge status="PendingApproval" size="sm" />
+        <GameStatusBadge status="Published" size="sm" />
+        <GameStatusBadge status="Archived" size="sm" />
       </div>
     </div>
   ),

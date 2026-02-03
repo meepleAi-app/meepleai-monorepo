@@ -63,7 +63,7 @@ jobs:
           node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
-          frozen-lockfile: 'false'
+          frozen-lockfile: 'true'
 
       # Stage 1: Lint + TypeCheck (fail fast)
       - name: Lint
@@ -220,7 +220,8 @@ jobs:
       # Stage 4: Backend Integration Tests (Testcontainers)
       # Both stages run sequentially in this job with service containers
       - name: Run Tests
-        timeout-minutes: 15
+        # Issue #3102: Increased from 20 to 30 minutes - integration tests with Testcontainers are slow
+        timeout-minutes: 30
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
@@ -232,6 +233,8 @@ jobs:
           REDIS_URL: localhost:6379
           OPENROUTER_API_KEY: test-key
           CI: true
+          # Issue #3102: Disable rate limiting middleware for integration tests to prevent 429 errors
+          DISABLE_RATE_LIMITING: "true"
         run: |
           # Run Unit tests
           dotnet test \
@@ -244,8 +247,12 @@ jobs:
             -p:CoverletOutput=./coverage/unit-coverage.xml || true
 
           # Run Integration tests
+          # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
+          # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
+          # - FrontendSdk tests: Use FrontendSdkTestFactory with own containers
+          # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
           dotnet test \
-            --filter "Category=Integration" \
+            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk" \
             --logger "console;verbosity=minimal" \
             --no-build \
             --configuration Release \
@@ -282,7 +289,7 @@ jobs:
         uses: ./.github/actions/setup-frontend
         with:
           working-directory: apps/web
-          frozen-lockfile: 'false'
+          frozen-lockfile: 'true'
 
       - name: Setup Playwright
         uses: ./.github/actions/setup-playwright

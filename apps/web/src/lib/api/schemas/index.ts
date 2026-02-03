@@ -60,6 +60,9 @@ export * from './game-contributors.schemas';
 // Agent Configuration schemas (Issue #2518)
 export * from './agent-config.schemas';
 
+// Agent Typologies schemas (Issue #AGT-012)
+export * from './agent-typologies.schemas';
+
 // AI Models Management schemas (Issue #2521)
 export * from './ai-models.schemas';
 
@@ -68,3 +71,9 @@ export * from './badges.schemas';
 
 // Rate Limit Configuration schemas (Issue #2750)
 export * from './rate-limits.schemas';
+
+// Session Quota schemas (Issue #3075)
+export * from './session-quota.schemas';
+
+// Email Verification schemas (Issue #3076)
+export * from './email-verification.schemas';

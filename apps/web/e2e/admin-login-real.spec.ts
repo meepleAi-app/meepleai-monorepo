@@ -19,8 +19,8 @@
  * - Skip in CI (no real backend): Test checks for CI environment
  */
 
+import { test, expect } from './fixtures';
 import { authenticateViaAPI } from './fixtures/auth';
-import { test, expect } from './fixtures/chromatic';
 
 // Get admin credentials from environment or use defaults
 const ADMIN_EMAIL =

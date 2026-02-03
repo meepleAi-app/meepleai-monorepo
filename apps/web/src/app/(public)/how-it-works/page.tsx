@@ -66,6 +66,7 @@ export default function HowItWorksPage() {
             {STEP_KEYS.map((key, index) => (
               <div key={key} className="flex gap-4 items-start">
                 <div className="flex-shrink-0 w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-3xl">
+                  {/* eslint-disable-next-line security/detect-object-injection */}
                   {STEP_ICONS[key]}
                 </div>
                 <Card className="flex-grow">
@@ -100,6 +101,7 @@ export default function HowItWorksPage() {
               <Card key={key} className="bg-card">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center gap-2">
+                    {/* eslint-disable-next-line security/detect-object-injection */}
                     <span className="text-2xl">{FEATURE_ICONS[key]}</span>
                     {t(`pages.howItWorks.features.${key}.title`)}
                   </CardTitle>

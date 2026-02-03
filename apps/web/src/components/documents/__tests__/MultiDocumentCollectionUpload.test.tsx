@@ -213,26 +213,22 @@ describe('MultiDocumentCollectionUpload - Issue #2764 Sprint 4', () => {
   it('should show upload progress during submission', async () => {
     // Arrange
     const user = userEvent.setup();
+    let resolveUpload: (value: Response) => void;
 
-    // Slow down the response to see progress
+    // Use a deferred promise to control upload timing
     global.fetch = vi.fn().mockImplementation((url: string) => {
       if (typeof url === 'string' && url.includes('/api/v1/ingest/pdf')) {
-        return new Promise(resolve => {
-          setTimeout(() => {
-            resolve({
-              ok: true,
-              status: 201,
-              json: () => Promise.resolve({
-                documentId: `pdf-${Date.now()}`,
-                fileName: 'test.pdf',
-                status: 'pending',
-              }),
-            } as Response);
-          }, 100);
+        return new Promise<Response>(resolve => {
+          resolveUpload = resolve;
         });
       }
       return originalFetch(url);
     });
+
+    // Also delay collection creation to keep component in uploading state
+    (api.documents.createCollection as ReturnType<typeof vi.fn>).mockImplementation(
+      () => new Promise(() => {}) // Never resolves - we control timing
+    );
 
     render(
       <MultiDocumentCollectionUpload
@@ -253,10 +249,25 @@ describe('MultiDocumentCollectionUpload - Issue #2764 Sprint 4', () => {
     const submitButton = screen.getByRole('button', { name: /create collection/i });
     await user.click(submitButton);
 
-    // Assert - Progress should appear
+    // Assert - Upload progress button should appear during upload
     await waitFor(() => {
-      expect(screen.getByText(/uploading pdfs/i)).toBeInTheDocument();
+      // Check for the uploading button which appears during upload phase
+      expect(screen.getByRole('button', { name: /uploading/i })).toBeInTheDocument();
     });
+
+    // Also verify the progress Alert is shown
+    expect(screen.getByText(/uploading pdfs/i)).toBeInTheDocument();
+
+    // Clean up - resolve the promise so the test doesn't hang
+    resolveUpload!({
+      ok: true,
+      status: 201,
+      json: () => Promise.resolve({
+        documentId: 'pdf-1',
+        fileName: 'test.pdf',
+        status: 'pending',
+      }),
+    } as Response);
   });
 
   // ============================================================================

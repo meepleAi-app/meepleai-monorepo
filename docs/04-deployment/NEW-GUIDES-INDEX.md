@@ -1,11 +1,106 @@
 # MeepleAI New Deployment Guides - Index
 
 **Created**: 2026-01-18
+**Updated**: 2026-01-30
 **Status**: Production-Ready Documentation
 
 ---
 
 ## 📚 Complete Documentation Set
+
+### Docker & Deployment Workflows (New 2026-01-30)
+
+**1. [Docker Versioning Guide](./docker-versioning-guide.md)** ⭐ NEW
+   - **Purpose**: Complete guide to Docker image versioning and registry management
+   - **Content**:
+     - Semantic versioning strategy (MAJOR.MINOR.PATCH)
+     - GitHub Container Registry setup and usage
+     - Tagging conventions (staging, production, latest)
+     - Multi-tag strategy for flexibility
+     - Build process automation
+     - Registry operations (pull, push, delete)
+     - Security scanning and best practices
+   - **Time to Read**: 15 minutes
+   - **Use Case**: CI/CD setup, image management, version control
+
+---
+
+**2. [Deployment Workflows Guide](./deployment-workflows-guide.md)** ⭐ NEW
+   - **Purpose**: Complete staging → production deployment pipeline
+   - **Content**:
+     - Full deployment pipeline architecture
+     - Staging workflow (auto-deploy on push)
+     - Production workflow (git tag trigger + approval)
+     - Blue-green deployment strategy (zero downtime)
+     - Rollback procedures (3 scenarios)
+     - Health checks and smoke tests
+     - Emergency procedures and hotfix process
+     - Incident response workflow
+   - **Time to Read**: 20 minutes
+   - **Use Case**: Production deployments, rollbacks, emergency fixes
+
+---
+
+**3. [Docker Volume Management](./docker-volume-management.md)** ⭐ NEW
+   - **Purpose**: Complete guide to volume management and data persistence
+   - **Content**:
+     - Named vs anonymous volumes (with comparison)
+     - MeepleAI volume architecture (13 volumes mapped)
+     - Volume operations (create, inspect, remove, copy)
+     - Backup strategies (database dump, tar backup, automated scripts)
+     - Restore procedures (PostgreSQL, volumes, disaster recovery)
+     - Volume migration (server to server, storage upgrade)
+     - Best practices and troubleshooting
+   - **Time to Read**: 25 minutes
+   - **Use Case**: Backup setup, disaster recovery, data migration
+
+---
+
+**4. [Deployment Quick Reference](./deployment-quick-reference.md)** ⭐ NEW
+   - **Purpose**: Fast reference for common deployment tasks
+   - **Content**:
+     - Deploy commands (staging, production)
+     - Docker commands (images, containers, volumes)
+     - Backup & restore commands
+     - Rollback procedures
+     - Health checks
+     - Troubleshooting quick fixes
+     - Emergency procedures
+     - Pre/post-deploy checklists
+   - **Time to Read**: 5 minutes
+   - **Use Case**: Daily operations, emergency reference
+
+---
+
+**5. [Deployment Cheat Sheet](./deployment-cheatsheet.md)** ⭐ NEW
+   - **Purpose**: One-page visual reference for deployment and Docker
+   - **Content**:
+     - Visual deployment flow diagram
+     - Docker essentials (images, containers, volumes)
+     - Quick commands for all operations
+     - Version matrix (dev, staging, prod)
+     - Quick links to all services
+     - Pro tips for faster deploys
+   - **Time to Read**: 3 minutes
+   - **Use Case**: Print and keep on desk, emergency reference
+
+---
+
+**6. [Anonymous Volumes Investigation](./anonymous-volumes-investigation.md)** ⭐ NEW
+   - **Purpose**: Deep dive into anonymous volumes - detection and prevention
+   - **Content**:
+     - What are anonymous volumes and why they're problematic
+     - How they are created (3 scenarios)
+     - Problems they cause (5 major issues)
+     - Detection methods and automated scripts
+     - Prevention strategies (4 approaches)
+     - Cleanup procedures (safe vs aggressive)
+     - MeepleAI audit report (✅ ZERO anonymous volumes)
+     - Case studies and real-world examples
+   - **Time to Read**: 20 minutes
+   - **Use Case**: Volume management, debugging orphaned volumes
+
+---
 
 ### Planning & Cost Analysis
 
@@ -340,6 +435,18 @@
 
 ---
 
-**Last Updated**: 2026-01-18
+**Last Updated**: 2026-01-30
 **Maintainer**: DevOps + Technical Documentation Team
+
+---
+
+## Changelog
+
+### 2026-01-30: Docker & Deployment Workflows
+- ✅ Added **Docker Versioning Guide** - Image tagging, semantic versioning, registry management
+- ✅ Added **Deployment Workflows Guide** - Staging → Production pipeline, blue-green deployment
+- ✅ Added **Docker Volume Management** - Named volumes, backup strategies, disaster recovery
+- ✅ Added **Deployment Quick Reference** - Fast reference cheat sheet for daily operations
+- ✅ Added **Deployment Cheat Sheet** - One-page visual reference for deployment
+- ✅ Added **Anonymous Volumes Investigation** - Deep dive into volume detection and prevention
 

@@ -82,8 +82,8 @@ builder.Host.UseSerilog();
 // ISSUE-2510: Validate secrets from infra/secrets/ directory
 // Load and validate all secrets with 3-level validation (Critical/Important/Optional)
 // Note: Using temporary logger factory since DI container not yet built
-// Issue #2556: Skip secret validation in Testing environment (used by integration tests)
-if (!builder.Environment.IsEnvironment("Testing"))
+// Issue #2556: Skip secret validation in Testing/CI environments (used by integration/E2E tests)
+if (!builder.Environment.IsEnvironment("Testing") && !builder.Environment.IsEnvironment("CI"))
 {
     using var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder.AddSerilog(Log.Logger));
     var tempLogger = loggerFactory.CreateLogger<Program>();
@@ -114,7 +114,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
 }
 else
 {
-    Log.Information("Testing environment detected - skipping secret validation");
+    Log.Information("Testing/CI environment detected - skipping secret validation");
 }
 
 // BGAI-081: Cookie Policy for Development
@@ -220,6 +220,7 @@ builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSe
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 builder.Services.Configure<WeeklyEvaluationConfiguration>(builder.Configuration.GetSection("QualityEvaluation")); // BGAI-042: Weekly evaluation configuration
 builder.Services.Configure<Api.BoundedContexts.Administration.Infrastructure.External.PrometheusOptions>(builder.Configuration.GetSection("Prometheus")); // Issue #893: Prometheus HTTP client configuration
+builder.Services.Configure<IndexingSettings>(builder.Configuration.GetSection(IndexingSettings.SectionName)); // ISSUE-3197: Vector indexing batch configuration
 
 // Issue #1447: Security headers middleware configuration
 builder.Services.AddSecurityHeaders(builder.Configuration);
@@ -287,6 +288,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     // Use camelCase for JSON serialization (JavaScript convention)
     // PropertyNameCaseInsensitive handles deserialization, this handles serialization
     options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+
+    // Serialize enums as strings (e.g., "UserRegistered" instead of 0)
+    // Required for frontend schema validation (zod expects string enum values)
+    options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 
 builder.Services.AddCors(options =>
@@ -368,29 +373,10 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
 
-        // ISSUE-2512: Auto-configuration pipeline - Seed admin user, test user, and AI models
+        // ISSUE-2512: Auto-configuration pipeline - Seed admin user, test user, AI models,
+        // shared games, badges, and rate limits (environment-independent, runs on first startup only)
         var autoConfigService = scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.Administration.Application.Services.IAutoConfigurationService>();
         await autoConfigService.InitializeAsync().ConfigureAwait(false);
-
-        // Seed SharedGameCatalog from PDF rulebooks (Issue: SharedGame seed from rulebooks ≤ 10MB)
-        if (app.Environment.IsDevelopment())
-        {
-            var adminUser = await db.Users.FirstOrDefaultAsync(u => u.Role == "admin").ConfigureAwait(false);
-            if (adminUser != null)
-            {
-                var bggService = scope.ServiceProvider.GetRequiredService<IBggApiService>();
-                await Api.Infrastructure.Seeders.SharedGameSeeder.SeedSharedGamesAsync(
-                    db, bggService, adminUser.Id, app.Logger).ConfigureAwait(false);
-
-                // Seed predefined badges (ISSUE-2731)
-                await Api.Infrastructure.Seeders.BadgeSeeder.SeedBadgesAsync(
-                    db, app.Logger).ConfigureAwait(false);
-
-                // Seed default rate limit configurations (ISSUE-2809)
-                await Api.Infrastructure.Seeders.RateLimitConfigSeeder.SeedRateLimitConfigsAsync(
-                    db, app.Logger).ConfigureAwait(false);
-            }
-        }
     }
 }
 
@@ -469,6 +455,7 @@ v1Api.MapAuthEndpoints();
 v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
+v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
 v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
 v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
@@ -482,7 +469,10 @@ v1Api.MapConfigurationEndpoints();     // System configuration CRUD & operations
 v1Api.MapRateLimitAdminEndpoints();    // Issue #2738: Rate limit admin management
 // v1Api.MapAiModelEndpoints();        // Issue #2580: REMOVED - Replaced by MapAiModelAdminEndpoints (Issue #2567)
 v1Api.MapGameLibraryConfigEndpoints(); // Issue #2444: Game library tier limits config
+v1Api.MapSessionLimitsConfigEndpoints(); // Issue #3070: Session limits config
+v1Api.MapPdfUploadLimitsConfigEndpoints(); // Issue #3072: PDF upload limits config
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
+v1Api.MapDashboardEndpoints();         // Issue #3314: User dashboard aggregated API
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics
 v1Api.MapAlertEndpoints();             // Alert management
@@ -509,6 +499,15 @@ v1Api.MapLedgerModeEndpoints();     // Issue #2405: Ledger Mode endpoints
 
 // Issue #866: Agent management endpoints
 v1Api.MapAgentEndpoints();
+
+// Issue #3377: AI model configuration endpoints
+v1Api.MapModelEndpoints();
+
+// Issue #3177, #3178: Agent typology endpoints (AGT-003, AGT-004)
+v1Api.MapGroup("/agent-typologies").MapAgentTypologyEndpoints();
+
+// Issue #3184 (AGT-010): Agent session lifecycle endpoints
+v1Api.MapAgentSessionEndpoints();
 
 // Issue #1565: Telemetry test endpoints for HyperDX integration testing
 v1Api.MapTelemetryTestEndpoints();
@@ -557,7 +556,8 @@ await app.RunAsync().ConfigureAwait(false);
 // OPS-01: Helper method for database migration logic
 static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
 {
-    if (app.Environment.IsEnvironment("Testing"))
+    // Skip migrations in Testing and CI environments (E2E tests use Testcontainers)
+    if (app.Environment.IsEnvironment("Testing") || app.Environment.IsEnvironment("CI"))
     {
         return true;
     }

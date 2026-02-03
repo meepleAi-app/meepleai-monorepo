@@ -1,21 +1,34 @@
 /**
- * BulkActionBar Component (Issue #2613)
+ * BulkActionBar Component (Issue #2613, #2868)
  *
  * Floating action bar for bulk operations in library.
  * Shows when items are selected, with actions:
+ * - Change game state (Nuovo/InPrestito/Wishlist/Owned)
  * - Mark as favorite
  * - Remove from library
  * - Export selected
  *
  * Responsive: Fixed bottom on mobile (above BottomNav), full width on desktop.
+ * Style: Orange background with white border (Issue #2868)
  */
 
 'use client';
 
 import { useState } from 'react';
 
-import { Download, Heart, Loader2, Trash2, X, CheckSquare, Square } from 'lucide-react';
-import { FileText, FileJson, ChevronDown } from 'lucide-react';
+import {
+  Download,
+  Heart,
+  Loader2,
+  Trash2,
+  X,
+  CheckSquare,
+  Square,
+  RefreshCw,
+  FileText,
+  FileJson,
+  ChevronDown,
+} from 'lucide-react';
 
 import { toast } from '@/components/layout/Toast';
 import {
@@ -26,8 +39,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
 import { Button } from '@/components/ui/primitives/button';
-import { useUpdateLibraryEntry } from '@/hooks/queries/useLibrary';
-import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
+import { useUpdateLibraryEntry, useUpdateGameState } from '@/hooks/queries/useLibrary';
+import type { UserLibraryEntry, GameStateType } from '@/lib/api/schemas/library.schemas';
 import {
   exportLibrary,
   type ExportFormat,
@@ -35,6 +48,22 @@ import {
 } from '@/lib/export/libraryExport';
 
 import { BulkRemoveDialog } from './BulkRemoveDialog';
+
+// State labels for display
+const stateLabels: Record<GameStateType, string> = {
+  Nuovo: 'Nuovo',
+  InPrestito: 'In Prestito',
+  Wishlist: 'Wishlist',
+  Owned: 'Posseduto',
+};
+
+// State icons colors
+const stateColors: Record<GameStateType, string> = {
+  Nuovo: 'text-green-600',
+  InPrestito: 'text-red-600',
+  Wishlist: 'text-yellow-600',
+  Owned: 'text-blue-600',
+};
 
 export interface BulkActionBarProps {
   selectedCount: number;
@@ -56,10 +85,12 @@ export function BulkActionBar({
   onDeselectAll,
 }: BulkActionBarProps) {
   const [isFavoriting, setIsFavoriting] = useState(false);
+  const [isChangingState, setIsChangingState] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
 
   const updateEntry = useUpdateLibraryEntry();
+  const updateGameState = useUpdateGameState();
 
   // Get selected games data
   const selectedGames = games.filter(g => selectedIds.includes(g.gameId));
@@ -93,6 +124,37 @@ export function BulkActionBar({
       toast.error('Errore durante l\'aggiornamento');
     } finally {
       setIsFavoriting(false);
+    }
+  };
+
+  const handleBulkChangeState = async (newState: GameStateType) => {
+    if (isChangingState || selectedIds.length === 0) return;
+
+    setIsChangingState(true);
+    try {
+      const results = await Promise.allSettled(
+        selectedIds.map(gameId =>
+          updateGameState.mutateAsync({ gameId, request: { newState } })
+        )
+      );
+
+      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      const failCount = results.filter(r => r.status === 'rejected').length;
+
+      if (failCount === 0) {
+        // eslint-disable-next-line security/detect-object-injection -- safe: newState is typed enum
+        toast.success(`${successCount} giochi aggiornati a "${stateLabels[newState]}"`);
+      } else if (successCount > 0) {
+        toast.warning(`${successCount} aggiornati, ${failCount} errori`);
+      } else {
+        toast.error('Impossibile cambiare lo stato');
+      }
+
+      onClearSelection();
+    } catch (_error) {
+      toast.error('Errore durante il cambio di stato');
+    } finally {
+      setIsChangingState(false);
     }
   };
 
@@ -131,29 +193,29 @@ export function BulkActionBar({
 
   return (
     <>
-      {/* Floating Action Bar */}
+      {/* Floating Action Bar - Orange with white border (Issue #2868) */}
       <div className="fixed bottom-20 md:bottom-4 left-0 right-0 z-50 px-4">
         <div className="mx-auto max-w-4xl">
-          <div className="bg-background border rounded-lg shadow-lg p-3 flex items-center justify-between gap-3">
+          <div className="bg-orange-500 border-2 border-white rounded-lg shadow-lg p-3 flex items-center justify-between gap-3">
             {/* Left: Selection info */}
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onClearSelection}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 text-white hover:bg-orange-600 hover:text-white"
                 aria-label="Esci dalla selezione"
               >
                 <X className="h-4 w-4" />
               </Button>
-              <span className="text-sm font-medium">
+              <span className="text-sm font-medium text-white">
                 {selectedCount} selezionati
               </span>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleToggleSelectAll}
-                className="hidden sm:flex"
+                className="hidden sm:flex text-white hover:bg-orange-600 hover:text-white"
               >
                 {allSelected ? (
                   <>
@@ -171,13 +233,88 @@ export function BulkActionBar({
 
             {/* Right: Actions */}
             <div className="flex items-center gap-2">
+              {/* Change State Dropdown (Issue #2868) */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={isChangingState}
+                    className="hidden sm:flex bg-white text-orange-600 hover:bg-orange-100"
+                  >
+                    {isChangingState ? (
+                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-1 h-4 w-4" />
+                    )}
+                    Cambia Stato
+                    <ChevronDown className="ml-1 h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleBulkChangeState('Nuovo')}>
+                    <RefreshCw className={`mr-2 h-4 w-4 ${stateColors.Nuovo}`} />
+                    {stateLabels.Nuovo}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleBulkChangeState('InPrestito')}>
+                    <RefreshCw className={`mr-2 h-4 w-4 ${stateColors.InPrestito}`} />
+                    {stateLabels.InPrestito}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleBulkChangeState('Wishlist')}>
+                    <RefreshCw className={`mr-2 h-4 w-4 ${stateColors.Wishlist}`} />
+                    {stateLabels.Wishlist}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleBulkChangeState('Owned')}>
+                    <RefreshCw className={`mr-2 h-4 w-4 ${stateColors.Owned}`} />
+                    {stateLabels.Owned}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Mobile: Change State Icon-only */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    disabled={isChangingState}
+                    className="sm:hidden h-8 w-8 bg-white text-orange-600 hover:bg-orange-100"
+                    aria-label="Cambia Stato"
+                  >
+                    {isChangingState ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleBulkChangeState('Nuovo')}>
+                    <RefreshCw className={`mr-2 h-4 w-4 ${stateColors.Nuovo}`} />
+                    {stateLabels.Nuovo}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleBulkChangeState('InPrestito')}>
+                    <RefreshCw className={`mr-2 h-4 w-4 ${stateColors.InPrestito}`} />
+                    {stateLabels.InPrestito}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleBulkChangeState('Wishlist')}>
+                    <RefreshCw className={`mr-2 h-4 w-4 ${stateColors.Wishlist}`} />
+                    {stateLabels.Wishlist}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleBulkChangeState('Owned')}>
+                    <RefreshCw className={`mr-2 h-4 w-4 ${stateColors.Owned}`} />
+                    {stateLabels.Owned}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               {/* Favorite Button */}
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={handleBulkFavorite}
                 disabled={isFavoriting}
-                className="hidden sm:flex"
+                className="hidden sm:flex bg-white text-orange-600 hover:bg-orange-100"
               >
                 {isFavoriting ? (
                   <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -189,11 +326,11 @@ export function BulkActionBar({
 
               {/* Mobile: Icon-only buttons */}
               <Button
-                variant="outline"
+                variant="secondary"
                 size="icon"
                 onClick={handleBulkFavorite}
                 disabled={isFavoriting}
-                className="sm:hidden h-8 w-8"
+                className="sm:hidden h-8 w-8 bg-white text-orange-600 hover:bg-orange-100"
                 aria-label="Segna come preferiti"
               >
                 {isFavoriting ? (
@@ -207,10 +344,10 @@ export function BulkActionBar({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     disabled={isExporting}
-                    className="hidden sm:flex"
+                    className="hidden sm:flex bg-white text-orange-600 hover:bg-orange-100"
                   >
                     {isExporting ? (
                       <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -246,10 +383,10 @@ export function BulkActionBar({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="icon"
                     disabled={isExporting}
-                    className="sm:hidden h-8 w-8"
+                    className="sm:hidden h-8 w-8 bg-white text-orange-600 hover:bg-orange-100"
                     aria-label="Esporta"
                   >
                     {isExporting ? (
@@ -278,20 +415,20 @@ export function BulkActionBar({
 
               {/* Remove Button */}
               <Button
-                variant="destructive"
+                variant="secondary"
                 size="sm"
                 onClick={() => setShowRemoveDialog(true)}
-                className="hidden sm:flex"
+                className="hidden sm:flex bg-white text-red-600 hover:bg-red-100"
               >
                 <Trash2 className="mr-1 h-4 w-4" />
                 Rimuovi
               </Button>
 
               <Button
-                variant="destructive"
+                variant="secondary"
                 size="icon"
                 onClick={() => setShowRemoveDialog(true)}
-                className="sm:hidden h-8 w-8"
+                className="sm:hidden h-8 w-8 bg-white text-red-600 hover:bg-red-100"
                 aria-label="Rimuovi"
               >
                 <Trash2 className="h-4 w-4" />

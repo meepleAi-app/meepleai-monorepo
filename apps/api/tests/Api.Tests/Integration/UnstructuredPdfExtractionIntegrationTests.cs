@@ -1,9 +1,8 @@
 using Api.Tests.Constants;
+using Api.Tests.Infrastructure;
 using System.Net.Http.Json;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
@@ -19,144 +18,93 @@ namespace Api.Tests.Integration;
 /// <remarks>
 /// Issue #954: BGAI-003-v2 - Integration tests for Unstructured service
 /// Requirements: 12 test cases, Testcontainers, real Italian PDFs, ≥90% coverage
+/// Migrated to SharedTestcontainersFixture for optimized performance (reuses container across tests)
 /// </remarks>
+[Collection("SharedTestcontainers")]
 [Trait("Category", TestCategories.Integration)]
+[Trait("Category", "PDF")]
 public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
 {
+    private readonly SharedTestcontainersFixture _fixture;
     private readonly Action<string> _output;
-    private IContainer? _unstructuredContainer;
     private HttpClient? _httpClient;
     private UnstructuredPdfTextExtractor? _extractor;
-    private const string ContainerImage = "infra-unstructured-service:latest";
-    private const int ServicePort = 8001;
-    private const int UnstructuredTimeoutSeconds = 120; // Allow slow CPU extractions more headroom
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Test PDF paths
-    private const string BarragePdfPath = "../../../../data/barrage_rulebook.pdf";
-    private const string TerraformingMarsPdfPath = "../../../../data/terraforming-mars-regole.pdf";
+    private const string BarragePdfPath = "../../../../data/rulebook/barrage_rulebook.pdf";
+    private const string TerraformingMarsPdfPath = "../../../../data/rulebook/terraforming-mars_rulebook.pdf";
 
     // Helper to check if tests can run
     private void EnsureTestInfrastructureAvailable()
     {
         if (_extractor == null)
         {
-            Assert.Skip($"Docker image '{ContainerImage}' not available. Build with: cd apps/unstructured-service && docker build -t {ContainerImage} .");
+            Assert.Skip("PDF services not enabled. Set TEST_PDF_SERVICES=true and ensure Docker images are built:\n" +
+                       "  cd apps/unstructured-service && docker build -t infra-unstructured-service:latest .");
         }
     }
 
-    public UnstructuredPdfExtractionIntegrationTests()
+    public UnstructuredPdfExtractionIntegrationTests(SharedTestcontainersFixture fixture)
     {
+        _fixture = fixture;
         _output = Console.WriteLine;
     }
 
     public async ValueTask InitializeAsync()
     {
-        // Check if Docker image exists before attempting to start container
-        try
-        {
-            using var client = new Docker.DotNet.DockerClientConfiguration().CreateClient();
-            var images = await client.Images.ListImagesAsync(new Docker.DotNet.Models.ImagesListParameters
-            {
-                Filters = new Dictionary<string, IDictionary<string, bool>>
-                {
-                    ["reference"] = new Dictionary<string, bool> { [ContainerImage] = true }
-                }
-            });
+        _output("Initializing Unstructured integration test infrastructure...");
 
-            if (!images.Any())
-            {
-                _output($"Docker image '{ContainerImage}' not found. Skipping integration tests.");
-                _output("To run these tests, build the image first:");
-                _output($"  cd apps/unstructured-service && docker build -t {ContainerImage} .");
-                return; // Skip initialization - tests will be skipped
-            }
-        }
-        catch (Exception ex)
+        // Check if PDF services are enabled via SharedTestcontainersFixture
+        if (!_fixture.ArePdfServicesEnabled || string.IsNullOrEmpty(_fixture.UnstructuredServiceUrl))
         {
-            _output($"Docker check failed: {ex.Message}. Tests will be skipped.");
-            return;
+            _output("⚠️ PDF services not enabled. Set TEST_PDF_SERVICES=true to run these tests.");
+            _output("   Ensure Docker image is built: cd apps/unstructured-service && docker build -t infra-unstructured-service:latest .");
+            return; // Tests will skip gracefully
         }
 
-        _output("Starting Unstructured service container...");
+        _output($"Using shared Unstructured service at: {_fixture.UnstructuredServiceUrl}");
 
-        // Build container configuration
-        _unstructuredContainer = new ContainerBuilder()
-            .WithImage(ContainerImage)
-            .WithPortBinding(ServicePort, true) // Random host port mapping
-            .WithWaitStrategy(Wait.ForUnixContainer()
-                .UntilHttpRequestIsSucceeded(r => r
-                    .ForPath("/health")
-                    .ForPort(ServicePort)
-                    .ForStatusCode(System.Net.HttpStatusCode.OK)))
-            .WithEnvironment("LOG_LEVEL", "INFO")
-            .WithEnvironment("MAX_FILE_SIZE", "52428800")
-            .WithEnvironment("DEVICE", "cpu")
-            .WithEnvironment("ENABLE_MODEL_WARMUP", "false")
-            .Build();
-
-        // Start container
-        await _unstructuredContainer.StartAsync(TestCancellationToken);
-
-        var containerPort = _unstructuredContainer.GetMappedPublicPort(ServicePort);
-        var baseUrl = $"http://localhost:{containerPort}";
-
-        _output($"Container started. Service available at: {baseUrl}");
-
-        // Create HttpClient
+        // Create HttpClient with shared service URL
         _httpClient = new HttpClient
         {
-            BaseAddress = new Uri(baseUrl),
-            Timeout = TimeSpan.FromSeconds(UnstructuredTimeoutSeconds) // Longer timeout for slow CPU-only extractions
+            BaseAddress = new Uri(_fixture.UnstructuredServiceUrl),
+            Timeout = TimeSpan.FromSeconds(120) // VLM processing timeout for Unstructured extraction
         };
 
-        _output($"Using {UnstructuredTimeoutSeconds}s HTTP timeout for Unstructured extraction to cover large CPU-bound PDFs");
-
-        // Create extractor
+        // Create extractor with dependency injection
         var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
-
-        var mockConfig = new ConfigurationBuilder().Build();
-        var domainService = new PdfTextProcessingDomainService(mockConfig);
+        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
 
         services.AddSingleton<IHttpClientFactory>(sp =>
-        {
-            var factory = new TestHttpClientFactory(_httpClient);
-            return factory;
-        });
+            new TestHttpClientFactory(_httpClient));
 
         var serviceProvider = services.BuildServiceProvider();
-
         var logger = serviceProvider.GetRequiredService<ILogger<UnstructuredPdfTextExtractor>>();
 
         _extractor = new UnstructuredPdfTextExtractor(
             serviceProvider.GetRequiredService<IHttpClientFactory>(),
             logger);
 
-        _output("Test infrastructure initialized");
+        _output("✅ Test infrastructure initialized (using shared Unstructured container)");
     }
 
     public async ValueTask DisposeAsync()
     {
-        _output("Cleaning up test infrastructure...");
+        _output("Cleaning up Unstructured test infrastructure...");
 
         _httpClient?.Dispose();
 
-        if (_unstructuredContainer != null)
-        {
-            await _unstructuredContainer.StopAsync(TestCancellationToken);
-            await _unstructuredContainer.DisposeAsync();
-        }
+        // Container cleanup handled by SharedTestcontainersFixture
+        _output("✅ Cleanup complete (shared container reused for next test)");
 
-        _output("Cleanup complete");
+        await Task.CompletedTask;
     }
 
     [Fact]
     public async Task SimpleItalianPdf_SuccessfulExtraction()
     {
         EnsureTestInfrastructureAvailable();
-        // Skip if Docker image not available
-        if (_extractor == null) Assert.Skip($"Docker image '{ContainerImage}' not available");
 
         // Arrange - Use Barrage rulebook (21MB, Italian)
         if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");

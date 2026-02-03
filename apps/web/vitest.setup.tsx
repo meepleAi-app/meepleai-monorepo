@@ -3,6 +3,13 @@
 // Force NODE_ENV to 'test' to ensure React development build is used in CI
 process.env.NODE_ENV = 'test';
 
+// Issue #3031: Set NEXT_PUBLIC_API_BASE for MSW handlers to work correctly
+// Components that use process.env.NEXT_PUBLIC_API_BASE directly need this set
+// to match the URL patterns used in MSW handlers
+if (!process.env.NEXT_PUBLIC_API_BASE) {
+  process.env.NEXT_PUBLIC_API_BASE = 'http://localhost:8080';
+}
+
 import '@testing-library/jest-dom/vitest';
 import { toHaveNoViolations } from 'jest-axe';
 
@@ -58,6 +65,27 @@ vi.mock('prismjs', () => ({
 // Mock prismjs/components/prism-json
 vi.mock('prismjs/components/prism-json', () => ({}));
 
+// Mock react-image-crop CSS (Issue #3xxx: CSS import not resolvable in Vitest jsdom)
+vi.mock('react-image-crop/dist/ReactCrop.css', () => ({}));
+
+// Mock react-pdf to avoid DOMMatrix errors in jsdom (Issue #3031)
+// react-pdf uses pdfjs-dist which requires browser-only APIs
+vi.mock('react-pdf', () => {
+  const React = require('react');
+  return {
+    Document: React.forwardRef(({ children }: any, ref: any) =>
+      React.createElement('div', { ref, 'data-testid': 'pdf-document' }, children)
+    ),
+    Page: React.forwardRef(({ pageNumber }: any, ref: any) =>
+      React.createElement('div', { ref, 'data-testid': 'pdf-page', 'data-page': pageNumber })
+    ),
+    pdfjs: {
+      GlobalWorkerOptions: { workerSrc: '' },
+      version: '4.0.0',
+    },
+  };
+});
+
 // Mock framer-motion to avoid animation issues in tests
 vi.mock('framer-motion', () => {
   const React = require('react');
@@ -78,6 +106,10 @@ vi.mock('framer-motion', () => {
         drag: _drag,
         dragConstraints: _dragConstraints,
         onAnimationComplete: _onAnimationComplete,
+        layout: _layout,
+        layoutId: _layoutId,
+        variants: _variants,
+        custom: _custom,
         style,
         ...rest
       } = props;
@@ -102,6 +134,8 @@ vi.mock('framer-motion', () => {
       h3: makeMockComponent('h3'),
       section: makeMockComponent('section'),
       article: makeMockComponent('article'),
+      li: makeMockComponent('li'),
+      ul: makeMockComponent('ul'),
     },
     // AnimatePresence mock that renders all children immediately
     // This is necessary because jsdom doesn't support requestAnimationFrame
@@ -537,6 +571,42 @@ beforeAll(() => {
     if (
       typeof args[0] === 'string' &&
       args[0].includes('Error: Not implemented: navigation (except hash changes)')
+    ) {
+      return;
+    }
+    // Suppress styled-jsx attribute warnings (jsx, fill, layout are valid for styled-jsx but not recognized by React DOM)
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('Received `true` for a non-boolean attribute')
+    ) {
+      return;
+    }
+    // Suppress nested button warnings from Radix UI Accordion (AccordionTrigger renders as button)
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('cannot be a descendant of')
+    ) {
+      return;
+    }
+    // Suppress React key warnings that occur during form reset/hydration
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('Each child in a list should have a unique "key" prop')
+    ) {
+      return;
+    }
+    // Suppress NaN value warnings from number inputs during clearing (AgentConfigPanel)
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('Received NaN for the')
+    ) {
+      return;
+    }
+    // Suppress controlled/uncontrolled component switching warnings during form reset
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('A component is changing') &&
+      args[0].includes('controlled')
     ) {
       return;
     }

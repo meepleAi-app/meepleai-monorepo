@@ -91,7 +91,8 @@ describe('UserActivityTimeline', () => {
       render(<UserActivityTimeline userId="user-123" />);
 
       await waitFor(() => {
-        expect(screen.getByText(/no recent activity/i)).toBeInTheDocument();
+        // ActivityTimeline uses ActivityFeed with locale="it", so empty state is Italian
+        expect(screen.getByText(/nessuna attività recente/i)).toBeInTheDocument();
       });
 
       expect(mockAdminGetUserActivity).toHaveBeenCalledWith('user-123', expect.any(Object));
@@ -283,7 +284,9 @@ describe('UserActivityTimeline', () => {
       );
 
       await waitFor(() => {
-        const link = screen.getByRole('link', { name: /view all/i });
+        // ActivityTimeline uses ActivityFeed with locale="it", so link text is "Vedi tutto"
+        // and aria-label is "Vedi tutte le attività"
+        const link = screen.getByRole('link', { name: /vedi tutt/i });
         expect(link).toHaveAttribute('href', '/admin/activity');
       });
     });
@@ -294,7 +297,8 @@ describe('UserActivityTimeline', () => {
       render(<UserActivityTimeline userId="user-123" showViewAll={false} />);
 
       await waitFor(() => {
-        expect(screen.queryByRole('link', { name: /view all/i })).not.toBeInTheDocument();
+        // ActivityTimeline uses Italian locale: "Vedi tutto" / "Vedi tutte le attività"
+        expect(screen.queryByRole('link', { name: /vedi tutt/i })).not.toBeInTheDocument();
       });
     });
   });

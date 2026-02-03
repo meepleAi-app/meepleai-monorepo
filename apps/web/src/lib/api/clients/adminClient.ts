@@ -9,6 +9,9 @@ import { z } from 'zod';
 
 import { getApiBase } from '../core/httpClient';
 import {
+  PublishGameResponseSchema,
+  type ApprovalStatus,
+  type PublishGameResponse,
   AdminUserSchema,
   AdminUserResponseSchema,
   PromptTemplateSchema,
@@ -431,12 +434,14 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       pageSize?: number;
       search?: string;
       role?: string;
+      status?: string;
     }): Promise<PagedResult<AdminUser>> {
       const queryParams = new URLSearchParams();
       if (params?.page) queryParams.set('page', params.page.toString());
       if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
       if (params?.search) queryParams.set('search', params.search);
       if (params?.role && params.role !== 'all') queryParams.set('role', params.role);
+      if (params?.status && params.status !== 'all') queryParams.set('status', params.status);
 
       const query = queryParams.toString();
       const result = await httpClient.get<PagedResult<AdminUser>>(
@@ -444,6 +449,32 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         PagedResultSchema(AdminUserSchema)
       );
       return result ?? { items: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Suspend a user account (admin only)
+     * POST /api/v1/admin/users/{userId}/suspend
+     */
+    async suspendUser(userId: string, reason?: string): Promise<AdminUser> {
+      const response = await httpClient.post(
+        `/api/v1/admin/users/${userId}/suspend`,
+        { reason },
+        AdminUserResponseSchema
+      );
+      return response.user;
+    },
+
+    /**
+     * Unsuspend (reactivate) a user account (admin only)
+     * POST /api/v1/admin/users/{userId}/unsuspend
+     */
+    async unsuspendUser(userId: string): Promise<AdminUser> {
+      const response = await httpClient.post(
+        `/api/v1/admin/users/${userId}/unsuspend`,
+        {},
+        AdminUserResponseSchema
+      );
+      return response.user;
     },
 
     // ========== N8N Workflow Templates ==========
@@ -964,7 +995,262 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
 
       return response.blob();
     },
+
+    // ========== User Detail Endpoints (Issue #2890) ==========
+
+    /**
+     * Get complete user details (admin only)
+     * GET /api/v1/admin/users/{userId}
+     */
+    async getUserDetail(userId: string): Promise<AdminUser> {
+      const result = await httpClient.get(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}`,
+        AdminUserSchema
+      );
+      if (!result) {
+        throw new Error('User not found');
+      }
+      return result;
+    },
+
+    /**
+     * Get user badges including hidden ones (admin only)
+     * GET /api/v1/admin/users/{userId}/badges
+     */
+    async getUserBadges(userId: string): Promise<UserBadge[]> {
+      const UserBadgeSchema = z.object({
+        id: z.string(),
+        code: z.string(),
+        name: z.string(),
+        description: z.string(),
+        iconUrl: z.string().nullable(),
+        tier: z.string(),
+        earnedAt: z.string(),
+        isDisplayed: z.boolean(),
+      });
+      const result = await httpClient.get(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/badges`,
+        z.array(UserBadgeSchema)
+      );
+      return result || [];
+    },
+
+    /**
+     * Get user library statistics (admin only)
+     * GET /api/v1/admin/users/{userId}/library/stats
+     */
+    async getUserLibraryStats(userId: string): Promise<UserLibraryStats> {
+      const UserLibraryStatsSchema = z.object({
+        totalGames: z.number(),
+        sessionsPlayed: z.number(),
+        avgSessionDuration: z.number().nullable(),
+      });
+      const result = await httpClient.get(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/library/stats`,
+        UserLibraryStatsSchema
+      );
+      if (!result) {
+        throw new Error('Library stats not found');
+      }
+      return result;
+    },
+
+    /**
+     * Get user role change history (admin only)
+     * GET /api/v1/admin/users/{userId}/role-history
+     */
+    async getUserRoleHistory(userId: string): Promise<RoleChangeHistory[]> {
+      const RoleChangeHistorySchema = z.object({
+        changedAt: z.string(),
+        oldRole: z.string(),
+        newRole: z.string(),
+        changedBy: z.string(),
+        changedByDisplayName: z.string(),
+        ipAddress: z.string().nullable(),
+      });
+      const result = await httpClient.get(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/role-history`,
+        z.array(RoleChangeHistorySchema)
+      );
+      return result || [];
+    },
+
+    /**
+     * Reset user password (admin only)
+     * POST /api/v1/admin/users/{userId}/reset-password
+     */
+    async resetUserPassword(userId: string, newPassword: string): Promise<void> {
+      await httpClient.post(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/reset-password`,
+        { newPassword },
+        z.object({ message: z.string() })
+      );
+    },
+
+    /**
+     * Send email to user (admin only)
+     * POST /api/v1/admin/users/{userId}/send-email
+     */
+    async sendUserEmail(userId: string, subject: string, body: string): Promise<void> {
+      await httpClient.post(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/send-email`,
+        { subject, body },
+        z.object({ message: z.string() })
+      );
+    },
+
+    /**
+     * Impersonate user for debugging (admin only - HIGH SECURITY RISK)
+     * POST /api/v1/admin/users/{userId}/impersonate
+     */
+    async impersonateUser(userId: string): Promise<ImpersonateUserResponse> {
+      const ImpersonateUserResponseSchema = z.object({
+        sessionToken: z.string(),
+        impersonatedUserId: z.string(),
+        expiresAt: z.string(),
+      });
+      const result = await httpClient.post(
+        `/api/v1/admin/users/${encodeURIComponent(userId)}/impersonate`,
+        {},
+        ImpersonateUserResponseSchema
+      );
+      if (!result) {
+        throw new Error('Failed to impersonate user');
+      }
+      return result;
+    },
+
+    // ========== Agent Typologies Management (Issue #3179) ==========
+
+    /**
+     * Get all agent typologies (Admin/Editor)
+     * AGT-005: Admin typologies list page
+     */
+    async getAgentTypologies(params?: {
+      status?: string;
+      createdBy?: string;
+      search?: string;
+      page?: number;
+      pageSize?: number;
+    }) {
+      const queryParams = new URLSearchParams();
+      if (params?.status && params.status !== 'All') queryParams.set('status', params.status);
+      if (params?.createdBy && params.createdBy !== 'All') queryParams.set('createdBy', params.createdBy);
+      if (params?.search) queryParams.set('search', params.search);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
+
+      const url = `/admin/agent-typologies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const result = await httpClient.get<AgentTypologyListResponse>(url);
+      return result || { typologies: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Get agent typology by ID (Admin/Editor)
+     * AGT-005: View typology details
+     */
+    async getAgentTypologyById(id: string) {
+      return httpClient.get<AgentTypology>(`/admin/agent-typologies/${id}`);
+    },
+
+    /**
+     * Delete agent typology (soft delete, Admin only)
+     * AGT-005: Admin typology management
+     */
+    async deleteAgentTypology(id: string) {
+      await httpClient.delete(`/admin/agent-typologies/${id}`);
+    },
+
+    /**
+     * Approve agent typology (Admin only)
+     * AGT-005: Admin typology approval workflow
+     */
+    async approveAgentTypology(id: string) {
+      return httpClient.post<AgentTypology>(`/admin/agent-typologies/${id}/approve`, {});
+    },
+
+    /**
+     * Reject agent typology (Admin only)
+     * AGT-007: Admin typology rejection workflow
+     */
+    async rejectAgentTypology(id: string, reason: string) {
+      return httpClient.post<AgentTypology>(`/admin/agent-typologies/${id}/reject`, {
+        reason,
+      });
+    },
+
+    // ========== Game Publication (Issue #3480 + #3481) ==========
+
+    /**
+     * Publish game to SharedGameCatalog with approval status
+     * PUT /api/v1/games/{id}/publish
+     *
+     * Issue #3480: Admin wizard publish step
+     * Issue #3481: Backend publication workflow
+     */
+    async publishGameToSharedLibrary(gameId: string, status: ApprovalStatus) {
+      return httpClient.put<PublishGameResponse>(
+        `/api/v1/games/${gameId}/publish`,
+        { status },
+        PublishGameResponseSchema
+      );
+    },
   };
 }
 
 export type AdminClient = ReturnType<typeof createAdminClient>;
+
+// ========== Agent Typology Types (Issue #3179) ==========
+
+export type AgentTypology = {
+  id: string;
+  name: string;
+  description: string;
+  systemMessage: string;
+  status: 'Draft' | 'PendingReview' | 'Approved' | 'Rejected';
+  createdBy: string;
+  createdByDisplayName: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AgentTypologyListResponse = {
+  typologies: AgentTypology[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+// ========== Additional Types for Issue #2890 ==========
+
+export type UserBadge = {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  iconUrl: string | null;
+  tier: string;
+  earnedAt: string;
+  isDisplayed: boolean;
+};
+
+export type UserLibraryStats = {
+  totalGames: number;
+  sessionsPlayed: number;
+  avgSessionDuration: number | null;
+};
+
+export type RoleChangeHistory = {
+  changedAt: string;
+  oldRole: string;
+  newRole: string;
+  changedBy: string;
+  changedByDisplayName: string;
+  ipAddress: string | null;
+};
+
+export type ImpersonateUserResponse = {
+  sessionToken: string;
+  impersonatedUserId: string;
+  expiresAt: string;
+};

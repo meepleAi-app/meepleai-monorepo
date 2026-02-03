@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures/chromatic';
+import { expect, test } from './fixtures';
 import { AuthHelper, USER_FIXTURES } from './pages';
 
 test.describe('Add Game via BGG', () => {

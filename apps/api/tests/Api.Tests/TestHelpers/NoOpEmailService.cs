@@ -14,6 +14,10 @@ internal class NoOpEmailService : IEmailService
     public Task SendTwoFactorDisabledEmailAsync(string toEmail, string toName, bool wasAdminOverride, CancellationToken ct = default)
         => Task.CompletedTask;
 
+    // ISSUE-3071: Email verification
+    public Task SendVerificationEmailAsync(string toEmail, string toName, string verificationToken, CancellationToken ct = default)
+        => Task.CompletedTask;
+
     public Task SendReportEmailAsync(
         IReadOnlyList<string> recipients,
         string reportName,
@@ -110,6 +114,20 @@ internal class NoOpEmailService : IEmailService
         int remainingMonthly,
         int remainingPending,
         string libraryUrl,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    // ISSUE-2886: User suspension emails
+    public Task SendAccountSuspendedEmailAsync(
+        string toEmail,
+        string userName,
+        string? reason,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendAccountReactivatedEmailAsync(
+        string toEmail,
+        string userName,
         CancellationToken ct = default)
         => Task.CompletedTask;
 }

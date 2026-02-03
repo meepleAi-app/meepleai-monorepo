@@ -1,0 +1,280 @@
+{/* Breakpoints.mdx - MeepleAI Responsive System Documentation */}
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Design System/Breakpoints" />
+
+# Responsive Breakpoints
+
+MeepleAI follows a **mobile-first** responsive design approach. Breakpoints are based on Tailwind CSS defaults with additional mobile-specific tokens.
+
+## Breakpoint Scale
+
+| Breakpoint | Min Width | CSS Variable | Target Devices |
+|------------|-----------|--------------|----------------|
+| (default) | 0px | - | Mobile phones |
+| `sm` | 640px | `--breakpoint-sm` | Large phones, small tablets |
+| `md` | 768px | `--breakpoint-md` | Tablets, small laptops |
+| `lg` | 1024px | `--breakpoint-lg` | Laptops, desktops |
+| `xl` | 1280px | `--breakpoint-xl` | Large desktops |
+| `2xl` | 1536px | `--breakpoint-2xl` | Ultra-wide displays |
+
+## CSS Tokens
+
+```css
+:root {
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+
+  /* Mobile reference */
+  --mobile-max-width: 767px;    /* < 768px = mobile */
+  --tablet-min-width: 768px;    /* >= 768px = tablet/desktop */
+}
+```
+
+## Mobile-First Approach
+
+Write base styles for mobile, then add breakpoint modifiers for larger screens.
+
+```tsx
+{/* Mobile-first responsive design */}
+<div className="
+  p-4          {/* Mobile: 16px padding */}
+  md:p-6       {/* Tablet: 24px padding */}
+  lg:p-8       {/* Desktop: 32px padding */}
+">
+  <h1 className="
+    text-2xl     {/* Mobile: 24px */}
+    md:text-3xl  {/* Tablet: 30px */}
+    lg:text-4xl  {/* Desktop: 36px */}
+  ">
+    Responsive Heading
+  </h1>
+</div>
+```
+
+## Common Responsive Patterns
+
+### Grid Columns
+
+```tsx
+<div className="
+  grid
+  grid-cols-1    {/* Mobile: 1 column */}
+  sm:grid-cols-2 {/* Small: 2 columns */}
+  lg:grid-cols-3 {/* Large: 3 columns */}
+  xl:grid-cols-4 {/* XL: 4 columns */}
+  gap-4
+">
+  {items.map(item => <Card key={item.id} />)}
+</div>
+```
+
+### Sidebar Layout
+
+```tsx
+<div className="
+  flex
+  flex-col       {/* Mobile: stacked */}
+  lg:flex-row    {/* Desktop: side-by-side */}
+">
+  <aside className="
+    w-full         {/* Mobile: full width */}
+    lg:w-64        {/* Desktop: fixed sidebar */}
+  ">
+    Sidebar
+  </aside>
+  <main className="flex-1">
+    Content
+  </main>
+</div>
+```
+
+### Navigation
+
+```tsx
+{/* Desktop navigation */}
+<nav className="hidden md:flex">
+  <NavLinks />
+</nav>
+
+{/* Mobile navigation */}
+<nav className="md:hidden">
+  <MobileMenu />
+</nav>
+```
+
+## Mobile-Specific Tokens
+
+Special tokens for mobile viewport optimization (Issue #1092).
+
+### Sizing
+
+| Token | Value | Use Case |
+|-------|-------|----------|
+| `--size-mobile-nav-height` | 4.5rem (72px) | Bottom navigation bar |
+| `--size-mobile-sheet-width` | 20rem (320px) | Mobile drawer width |
+| `--size-mobile-header-height` | 3.5rem (56px) | Mobile header |
+
+### Spacing
+
+| Token | Value | Use Case |
+|-------|-------|----------|
+| `--space-mobile-xs` | 8px | Tight mobile gaps |
+| `--space-mobile-sm` | 12px | Small mobile gaps |
+| `--space-mobile-md` | 16px | Default mobile spacing |
+| `--space-mobile-lg` | 24px | Large mobile gaps |
+
+### Dynamic Viewport
+
+```css
+:root {
+  /* Dynamic viewport units (fixes iOS address bar) */
+  --vh-dynamic: 1dvh;
+  --vw-dynamic: 1dvw;
+}
+
+/* Use for full-height mobile layouts */
+.full-height {
+  height: calc(100 * var(--vh-dynamic));
+}
+```
+
+## Touch Targets
+
+All interactive elements must meet WCAG 2.1 AA minimum touch target sizes.
+
+| Token | Value | Purpose |
+|-------|-------|---------|
+| `--size-touch-min` | 2.75rem (44px) | Minimum touch target |
+
+```tsx
+{/* Ensure touch-friendly buttons */}
+<button className="min-h-[44px] min-w-[44px]">
+  Tap me
+</button>
+
+{/* Using utility class */}
+<button className="touch-target">
+  Tap me
+</button>
+```
+
+## Container Widths
+
+| Token | Value | Use Case |
+|-------|-------|----------|
+| `--max-width-prose` | 65ch | Reading content |
+| `--max-width-form` | 32rem (512px) | Form layouts |
+| `--max-width-content` | 56rem (896px) | Main content |
+| `--max-width-container` | 80rem (1280px) | Full container |
+
+### Usage
+
+```tsx
+<div className="container mx-auto px-4 max-w-[var(--max-width-content)]">
+  Content constrained to 896px
+</div>
+
+<article className="max-w-prose mx-auto">
+  Optimized for reading
+</article>
+```
+
+## Responsive Visibility
+
+### Hide/Show by Breakpoint
+
+```tsx
+{/* Hidden on mobile, visible on tablet+ */}
+<div className="hidden md:block">Desktop only</div>
+
+{/* Visible on mobile, hidden on tablet+ */}
+<div className="md:hidden">Mobile only</div>
+
+{/* Visible only on specific range */}
+<div className="hidden sm:block lg:hidden">Tablet only</div>
+```
+
+### Responsive Display
+
+```tsx
+<div className="
+  block        {/* Mobile: block */}
+  sm:flex      {/* Small+: flex */}
+  lg:grid      {/* Large+: grid */}
+">
+  Content
+</div>
+```
+
+## Storybook Viewport Addon
+
+Use the Storybook viewport addon to preview components at different screen sizes.
+
+### Available Viewports
+
+| Viewport | Width | Device |
+|----------|-------|--------|
+| Mobile (small) | 320px | iPhone SE |
+| Mobile (medium) | 375px | iPhone 12 |
+| Mobile (large) | 414px | iPhone 12 Pro Max |
+| Tablet | 768px | iPad |
+| Laptop | 1024px | MacBook Air |
+| Desktop | 1280px | Desktop |
+| Large Desktop | 1536px | Wide monitor |
+
+### Testing Responsive Components
+
+1. Open a component story
+2. Click the viewport icon in the toolbar
+3. Select a device size to preview
+4. Component should adapt appropriately
+
+## Performance Considerations
+
+### Mobile Optimizations
+
+```css
+/* Disable glass effects on mobile for performance */
+@media (max-width: 767px) {
+  .glass-card {
+    backdrop-filter: none;
+    background: hsl(var(--background));
+  }
+}
+
+/* Reduce animation complexity on mobile */
+@media (max-width: 767px) {
+  .floating-orbs::before,
+  .floating-orbs::after {
+    animation: none;
+    opacity: 0.1;
+  }
+}
+```
+
+### Loading Strategies
+
+```tsx
+{/* Lazy load heavy components on mobile */}
+<div className="hidden lg:block">
+  <HeavyComponent />
+</div>
+<div className="lg:hidden">
+  <LightweightAlternative />
+</div>
+```
+
+## Best Practices
+
+1. **Mobile-first always** - Start with mobile styles, enhance for larger screens
+2. **Test on real devices** - Emulators don't catch all issues
+3. **Touch targets** - Minimum 44x44px for interactive elements
+4. **Consider thumb zones** - Place primary actions in easy-to-reach areas
+5. **Avoid hover-only** - Provide alternatives for touch devices
+6. **Test both orientations** - Portrait and landscape on mobile/tablet
+7. **Performance matters** - Disable complex effects on mobile
+8. **Viewport units** - Use `dvh`/`dvw` for dynamic viewport sizing

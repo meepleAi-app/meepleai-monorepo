@@ -123,7 +123,7 @@ export function SessionWarningModal({
           >
             {remainingMinutes}
           </div>
-          <div className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          <div className="mt-1 text-sm text-slate-600 dark:text-slate-400" data-testid="time-unit">
             {remainingMinutes === 1 ? 'minute remaining' : 'minutes remaining'}
           </div>
         </div>
@@ -145,6 +145,7 @@ export function SessionWarningModal({
             onClick={onLogOut}
             className="flex-1"
             aria-label="Log out now"
+            data-testid="logout-button"
           >
             Log Out Now
           </AccessibleButton>
@@ -154,6 +155,7 @@ export function SessionWarningModal({
             onClick={onStayLoggedIn}
             className="flex-1"
             aria-label="Stay logged in and extend session"
+            data-testid="stay-logged-in-button"
           >
             Stay Logged In
           </AccessibleButton>

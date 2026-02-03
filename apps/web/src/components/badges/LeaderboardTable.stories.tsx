@@ -2,10 +2,11 @@
  * LeaderboardTable Storybook Stories (Issue #2747)
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { LeaderboardTable } from './LeaderboardTable';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Components/Badges/LeaderboardTable',

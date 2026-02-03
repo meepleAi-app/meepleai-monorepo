@@ -54,7 +54,7 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
 
         var userId = Guid.NewGuid();
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(userId, "test@gmail.com", "Test User", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(userId, "test@gmail.com", "Test User", "user", "normal", DateTime.UtcNow, false, null, 1, 0),
             SessionToken: "session_token_123",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -115,7 +115,7 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
         var userInfo = _helper.CreateGoogleUserInfo(email: existingUser.Email);
 
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(existingUser.Id, existingUser.Email, existingUser.DisplayName ?? "Test", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(existingUser.Id, existingUser.Email, existingUser.DisplayName ?? "Test", "user", "normal", DateTime.UtcNow, false, null, 1, 0),
             SessionToken: "session_token_456",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -182,7 +182,7 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
             email: existingUser.Email);
 
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(existingUser.Id, existingUser.Email, existingUser.DisplayName ?? "Test", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(existingUser.Id, existingUser.Email, existingUser.DisplayName ?? "Test", "user", "normal", DateTime.UtcNow, false, null, 1, 0),
             SessionToken: "session_token_789",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -224,7 +224,7 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
 
         var userId = Guid.NewGuid();
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(userId, "test@gmail.com", "Test User", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(userId, "test@gmail.com", "Test User", "user", "normal", DateTime.UtcNow, false, null, 1, 0),
             SessionToken: "session_token",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -268,7 +268,7 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
 
         var userId = Guid.NewGuid();
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(userId, "test@gmail.com", "Test User", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(userId, "test@gmail.com", "Test User", "user", "normal", DateTime.UtcNow, false, null, 1, 0),
             SessionToken: "session_token",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -310,7 +310,7 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
 
         var userId = Guid.NewGuid();
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(userId, "test@gmail.com", "Test User", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(userId, "test@gmail.com", "Test User", "user", "normal", DateTime.UtcNow, false, null, 1, 0),
             SessionToken: "session_token",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );
@@ -372,7 +372,7 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
             email: existingUser.Email);
 
         var sessionResponse = new CreateSessionResponse(
-            User: new UserDto(existingUser.Id, existingUser.Email, existingUser.DisplayName ?? "Test", "user", DateTime.UtcNow, false, null),
+            User: new UserDto(existingUser.Id, existingUser.Email, existingUser.DisplayName ?? "Test", "user", "normal", DateTime.UtcNow, false, null, 1, 0),
             SessionToken: "session_token",
             ExpiresAt: DateTime.UtcNow.AddHours(24)
         );

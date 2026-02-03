@@ -56,18 +56,29 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     {
         ArgumentNullException.ThrowIfNull(query);
         _logger.LogInformation(
-            "Processing AskQuestionQuery: GameId={GameId}, Question={Question}",
+            "[AskQuestionHandler] ENTRY - Processing AskQuestionQuery: GameId={GameId}, Question={Question}",
             query.GameId, query.Question);
 
         // Step 1: Perform vector search and calculate confidence
+        _logger.LogDebug("[AskQuestionHandler] Step 1: Starting vector search...");
+        var sw1 = System.Diagnostics.Stopwatch.StartNew();
         var (searchResults, domainSearchResults, searchConfidence) = await PerformSearchAndCalculateConfidenceAsync(
             query, cancellationToken).ConfigureAwait(false);
+        sw1.Stop();
+        _logger.LogInformation("[AskQuestionHandler] Step 1 DONE: Vector search completed in {ElapsedMs}ms - {ResultCount} results, confidence: {Confidence}",
+            sw1.ElapsedMilliseconds, searchResults.Count, searchConfidence.Value);
 
         // Step 2: Load chat thread context if ThreadId provided
+        _logger.LogDebug("[AskQuestionHandler] Step 2: Loading chat history context...");
+        var sw2 = System.Diagnostics.Stopwatch.StartNew();
         var chatHistoryContext = await LoadChatHistoryContextAsync(
             query.ThreadId, query.GameId, cancellationToken).ConfigureAwait(false);
+        sw2.Stop();
+        _logger.LogInformation("[AskQuestionHandler] Step 2 DONE: Chat context loaded in {ElapsedMs}ms - {ContextLength} chars",
+            sw2.ElapsedMilliseconds, chatHistoryContext?.Length ?? 0);
 
         // Step 3: Build LLM prompts
+        _logger.LogDebug("[AskQuestionHandler] Step 3: Building LLM prompts...");
         var systemPrompt = await _promptTemplateService.GetActivePromptAsync("rag-system-prompt")
             .ConfigureAwait(false) ?? DefaultSystemPrompt;
         var context = string.Join("\n\n", searchResults.Select(sr =>
@@ -77,18 +88,30 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)
             ? _chatContextService.EnrichPromptWithHistory(baseQuestion, chatHistoryContext)
             : baseQuestion;
+        _logger.LogDebug("[AskQuestionHandler] Step 3 DONE: Prompts built - System: {SysLen} chars, User: {UserLen} chars",
+            systemPrompt.Length, userPrompt.Length);
 
         // Step 4: Generate answer with LLM and record metrics
+        _logger.LogDebug("[AskQuestionHandler] Step 4: Generating LLM answer...");
+        var sw4 = System.Diagnostics.Stopwatch.StartNew();
         var (llmResponse, _) = await GenerateLlmAnswerAndRecordMetricsAsync(
             systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+        sw4.Stop();
+        _logger.LogInformation("[AskQuestionHandler] Step 4 DONE: LLM generation completed in {ElapsedMs}ms - Response: {ResponseLength} chars",
+            sw4.ElapsedMilliseconds, llmResponse?.Length ?? 0);
 
         // Step 5: Build validated response with quality metrics and citations
+        _logger.LogDebug("[AskQuestionHandler] Step 5: Building validated response...");
+        var sw5 = System.Diagnostics.Stopwatch.StartNew();
         var response = await BuildValidatedResponseAsync(
-            query, llmResponse, searchResults, domainSearchResults,
+            query, llmResponse ?? string.Empty, searchResults, domainSearchResults,
             searchConfidence, systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+        sw5.Stop();
+        _logger.LogInformation("[AskQuestionHandler] Step 5 DONE: Response validation completed in {ElapsedMs}ms",
+            sw5.ElapsedMilliseconds);
 
         _logger.LogInformation(
-            "AskQuestionQuery completed: OverallConfidence={Confidence}, IsLowQuality={IsLowQuality}",
+            "[AskQuestionHandler] COMPLETE - AskQuestionQuery completed: OverallConfidence={Confidence}, IsLowQuality={IsLowQuality}",
             response.OverallConfidence, response.IsLowQuality);
 
         return response;

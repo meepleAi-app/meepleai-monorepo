@@ -1,0 +1,61 @@
+/**
+ * Agent Theme - Neon Brutalist Color System
+ * Issue #3237 (FRONT-001)
+ *
+ * Design: Industrial gaming + cyber-punk aesthetic
+ * Palette: Neon accents on dark brutalist base
+ */
+
+:root {
+  /* Primary - Neon Cyan (terminal accent) */
+  --agent-accent-cyan: #00ffff;
+  --agent-accent-cyan-dark: #00cccc;
+  --agent-accent-cyan-light: #80ffff;
+
+  /* Secondary - Electric Purple */
+  --agent-accent-purple: #a855f7;
+  --agent-accent-purple-dark: #7c3aed;
+
+  /* Tertiary - Warning Orange */
+  --agent-accent-orange: #fb923c;
+  --agent-accent-red: #ef4444;
+
+  /* Base - Dark Brutalist */
+  --agent-bg-primary: #0a0a0f;
+  --agent-bg-secondary: #1a1a24;
+  --agent-bg-tertiary: #2a2a3a;
+
+  /* Surface - Cards/Panels */
+  --agent-surface-elevated: #1e1e2e;
+  --agent-surface-hover: #2e2e3e;
+
+  /* Borders */
+  --agent-border-subtle: #3a3a4a;
+  --agent-border-emphasis: #4a4a5a;
+  --agent-border-neon: var(--agent-accent-cyan);
+
+  /* Text */
+  --agent-text-primary: #ffffff;
+  --agent-text-secondary: #a0a0b0;
+  --agent-text-tertiary: #707080;
+  --agent-text-muted: #505060;
+
+  /* Semantic */
+  --agent-success: #10b981;
+  --agent-warning: #f59e0b;
+  --agent-error: #ef4444;
+  --agent-info: var(--agent-accent-cyan);
+
+  /* Shadows - Neon glow effects */
+  --agent-glow-cyan: 0 0 20px rgba(0, 255, 255, 0.3);
+  --agent-glow-purple: 0 0 20px rgba(168, 85, 247, 0.3);
+  --agent-shadow-brutal: 4px 4px 0px rgba(0, 0, 0, 0.8);
+}
+
+/* Dark mode overrides (default is dark) */
+@media (prefers-color-scheme: light) {
+  :root {
+    /* Keep dark theme even in light mode preference */
+    /* Agent page is always dark for cyber-punk aesthetic */
+  }
+}

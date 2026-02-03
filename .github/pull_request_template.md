@@ -42,6 +42,36 @@ Closes #
 - [ ] All tests passing locally
 - [ ] **Test names follow BDD convention** (see [Testing Guidelines](../CONTRIBUTING.md#testing-guidelines))
 
+### Coverage Metrics
+
+<!--
+Run coverage and report the delta. See docs/05-testing/backend/coverage-baseline-2026-01-27.md for baseline.
+
+Backend: cd apps/api && dotnet test --collect:"XPlat Code Coverage"
+Frontend: cd apps/web && pnpm test:coverage
+-->
+
+| Metric | Before | After | Delta |
+|--------|--------|-------|-------|
+| Backend Line Coverage | | | |
+| Backend Branch Coverage | | | |
+| Frontend Statement Coverage | | | |
+
+#### Coverage Requirements
+
+- [ ] **Backend coverage ≥50%** (or no decrease from baseline)
+- [ ] **Frontend coverage ≥85%** (or no decrease from baseline)
+- [ ] New code has appropriate test coverage
+- [ ] No coverage regressions in modified files
+
+#### Bounded Context Coverage (Backend)
+
+<!-- If modifying a specific bounded context, verify its coverage -->
+
+| Bounded Context | Tests Before | Tests After | Notes |
+|-----------------|--------------|-------------|-------|
+| | | | |
+
 ### Manual Testing
 
 <!-- Describe any manual testing performed -->
@@ -57,6 +87,8 @@ Closes #
 - [ ] No new warnings introduced
 - [ ] Tests added/updated and passing
 - [ ] **Test names follow BDD-style naming convention** (see [Testing Guidelines](../CONTRIBUTING.md#testing-guidelines))
+- [ ] **Coverage metrics reported above** (see [Coverage Baseline](../docs/05-testing/backend/coverage-baseline-2026-01-27.md))
+- [ ] **No coverage regressions** (coverage delta ≥0%)
 - [ ] Changes are backwards compatible (or breaking changes documented)
 - [ ] No secrets or API keys committed (see [SECURITY.md](../SECURITY.md))
 

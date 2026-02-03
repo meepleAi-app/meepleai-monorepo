@@ -1,8 +1,10 @@
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.Extensions;
-using Api.Services;
+using Api.Infrastructure.Entities;
+using Api.Models;
 using MediatR;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
@@ -12,6 +14,7 @@ namespace Api.Routing;
 /// Feature flag management endpoints (Admin only).
 /// Feature flags are stored as configurations with category "Features".
 /// Provides a simplified interface for toggling and querying feature flags.
+/// Issue #3073: Extended to support tier-based feature flags (Free/Normal/Premium).
 /// </summary>
 internal static class FeatureFlagEndpoints
 {
@@ -21,10 +24,17 @@ internal static class FeatureFlagEndpoints
         MapGetFeatureFlagEndpoint(group);
         MapToggleFeatureFlagEndpoint(group);
         MapCreateFeatureFlagEndpoint(group);
+        MapUpdateFeatureFlagEndpoint(group);
+        MapEnableFeatureForTierEndpoint(group);
+        MapDisableFeatureForTierEndpoint(group);
 
         return group;
     }
 
+    /// <summary>
+    /// GET /admin/feature-flags - List all feature flags with role and tier configurations.
+    /// Issue #3073: Extended to include tier configuration.
+    /// </summary>
     private static void MapListFeatureFlagsEndpoint(RouteGroupBuilder group)
     {
         group.MapGet("/admin/feature-flags", async (
@@ -35,32 +45,25 @@ internal static class FeatureFlagEndpoints
             var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            // Query configurations with "Features" category
-            var query = new GetAllConfigsQuery(
-                Category: "Features",
-                Environment: null,
-                ActiveOnly: false,
-                Page: 1,
-                PageSize: 100
-            );
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            // Use CQRS query for feature flags which includes tier information
+            var flags = await mediator.Send(new GetAllFeatureFlagsQuery(), ct).ConfigureAwait(false);
 
             return Results.Json(new
             {
-                featureFlags = result.Items.Select(c => new
+                featureFlags = flags.Select(f => new
                 {
-                    key = c.Key,
-                    enabled = c.IsActive && string.Equals(c.Value, "true", StringComparison.OrdinalIgnoreCase),
-                    description = c.Description,
-                    lastModified = c.UpdatedAt,
-                    version = c.Version
+                    key = f.FeatureName,
+                    enabled = f.IsEnabled,
+                    roleRestriction = f.RoleRestriction,
+                    tierRestriction = f.TierRestriction,
+                    description = f.Description
                 }),
-                totalCount = result.Total
+                totalCount = flags.Count
             });
         })
         .WithName("ListFeatureFlags")
         .WithTags("Admin", "FeatureFlags")
-        .WithDescription("List all feature flags (configurations with 'Features' category)")
+        .WithDescription("List all feature flags with role and tier configurations")
         .Produces<object>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);
@@ -71,15 +74,14 @@ internal static class FeatureFlagEndpoints
         group.MapGet("/admin/feature-flags/{key}", async (
             string key,
             HttpContext context,
-            IFeatureFlagService featureFlags,
             IMediator mediator,
             CancellationToken ct = default) =>
         {
             var (authorized, _, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            // Use FeatureFlagService to check current status
-            var isEnabled = await featureFlags.IsEnabledAsync(key).ConfigureAwait(false);
+            // Use CQRS query to check current status
+            var isEnabled = await mediator.Send(new IsFeatureEnabledQuery(key), ct).ConfigureAwait(false);
 
             // Get configuration details
             var query = new GetConfigByKeyQuery(key, Environment: null);
@@ -213,6 +215,188 @@ internal static class FeatureFlagEndpoints
         .WithTags("Admin", "FeatureFlags")
         .WithDescription("Create a new feature flag")
         .Produces<object>(StatusCodes.Status201Created)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    /// <summary>
+    /// PUT /admin/feature-flags/{key} - Update feature flag with optional role and tier.
+    /// Issue #3073: Added tier-based update support.
+    /// </summary>
+    private static void MapUpdateFeatureFlagEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPut("/admin/feature-flags/{key}", async (
+            string key,
+            FeatureFlagUpdateRequest request,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var userId = session!.User!.Id.ToString();
+
+            logger.LogInformation(
+                "Admin {AdminId} updating feature flag '{Key}' to {Status} (role={Role}, tier={Tier})",
+                session.User.Id, key, request.Enabled ? "enabled" : "disabled", request.Role, request.Tier);
+
+            // Parse optional role
+            UserRole? role = null;
+            if (!string.IsNullOrWhiteSpace(request.Role) &&
+                Enum.TryParse<UserRole>(request.Role, ignoreCase: true, out var parsedRole))
+            {
+                role = parsedRole;
+            }
+
+            // Parse optional tier
+            UserTier? tier = null;
+            if (!string.IsNullOrWhiteSpace(request.Tier))
+            {
+                tier = UserTier.Parse(request.Tier);
+            }
+
+            // Use CQRS command to update the feature flag
+            var command = new UpdateFeatureFlagCommand(
+                FeatureName: key,
+                Enabled: request.Enabled,
+                Role: role,
+                Tier: tier,
+                UserId: userId);
+
+            await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation("Feature flag '{Key}' updated successfully", key);
+
+            return Results.Json(new
+            {
+                key,
+                enabled = request.Enabled,
+                role = request.Role,
+                tier = request.Tier,
+                message = $"Feature flag '{key}' updated successfully"
+            });
+        })
+        .WithName("UpdateFeatureFlag")
+        .WithTags("Admin", "FeatureFlags")
+        .WithDescription("Update a feature flag with optional role and tier restrictions")
+        .Produces<object>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    /// <summary>
+    /// POST /admin/feature-flags/{key}/tier/{tier}/enable - Enable feature for specific tier.
+    /// Issue #3073: Added tier-based enable endpoint.
+    /// </summary>
+    private static void MapEnableFeatureForTierEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/admin/feature-flags/{key}/tier/{tier}/enable", async (
+            string key,
+            string tier,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            // Validate tier
+            UserTier userTier;
+            try
+            {
+                userTier = UserTier.Parse(tier);
+            }
+            catch (ArgumentException)
+            {
+                return Results.BadRequest(new { error = $"Invalid tier '{tier}'. Valid tiers: free, normal, premium" });
+            }
+
+            var userId = session!.User!.Id.ToString();
+
+            logger.LogInformation(
+                "Admin {AdminId} enabling feature flag '{Key}' for tier {Tier}",
+                session.User.Id, key, tier);
+
+            // Use CQRS command to enable the feature for the tier
+            var command = new EnableFeatureForTierCommand(key, userTier, userId);
+            await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation("Feature flag '{Key}' enabled for tier {Tier}", key, tier);
+
+            return Results.Json(new
+            {
+                key,
+                tier,
+                enabled = true,
+                message = $"Feature flag '{key}' enabled for tier '{tier}'"
+            });
+        })
+        .WithName("EnableFeatureFlagForTier")
+        .WithTags("Admin", "FeatureFlags")
+        .WithDescription("Enable a feature flag for a specific tier (free, normal, premium)")
+        .Produces<object>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    /// <summary>
+    /// POST /admin/feature-flags/{key}/tier/{tier}/disable - Disable feature for specific tier.
+    /// Issue #3073: Added tier-based disable endpoint.
+    /// </summary>
+    private static void MapDisableFeatureForTierEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/admin/feature-flags/{key}/tier/{tier}/disable", async (
+            string key,
+            string tier,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            // Validate tier
+            UserTier userTier;
+            try
+            {
+                userTier = UserTier.Parse(tier);
+            }
+            catch (ArgumentException)
+            {
+                return Results.BadRequest(new { error = $"Invalid tier '{tier}'. Valid tiers: free, normal, premium" });
+            }
+
+            var userId = session!.User!.Id.ToString();
+
+            logger.LogInformation(
+                "Admin {AdminId} disabling feature flag '{Key}' for tier {Tier}",
+                session.User.Id, key, tier);
+
+            // Use CQRS command to disable the feature for the tier
+            var command = new DisableFeatureForTierCommand(key, userTier, userId);
+            await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation("Feature flag '{Key}' disabled for tier {Tier}", key, tier);
+
+            return Results.Json(new
+            {
+                key,
+                tier,
+                enabled = false,
+                message = $"Feature flag '{key}' disabled for tier '{tier}'"
+            });
+        })
+        .WithName("DisableFeatureFlagForTier")
+        .WithTags("Admin", "FeatureFlags")
+        .WithDescription("Disable a feature flag for a specific tier (free, normal, premium)")
+        .Produces<object>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden);

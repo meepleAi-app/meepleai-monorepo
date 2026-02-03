@@ -41,6 +41,7 @@ describe('AuthClient - Core Auth & API Keys (Issue #2309)', () => {
   describe('login', () => {
     it('should login successfully', async () => {
       const request: LoginRequest = { email: 'test@example.com', password: 'password123' };
+      // login() returns LoginResponse directly (not .user)
       const mockResponse = {
         user: {
           id: 'user-1',
@@ -59,8 +60,9 @@ describe('AuthClient - Core Auth & API Keys (Issue #2309)', () => {
         request,
         expect.anything()
       );
-      expect(result).toEqual(mockResponse.user);
-      expect(result.email).toBe('test@example.com');
+      // login() returns full LoginResponse, access user via .user property
+      expect(result).toEqual(mockResponse);
+      expect(result.user.email).toBe('test@example.com');
     });
 
     it('should handle login error', async () => {

@@ -19,11 +19,20 @@ public sealed class User : AggregateRoot<Guid>
     public DateTime CreatedAt { get; private set; }
     public bool IsDemoAccount { get; private set; }
 
+    // Suspension properties
+    public bool IsSuspended { get; private set; }
+    public DateTime? SuspendedAt { get; private set; }
+    public string? SuspendReason { get; private set; }
+
     // User preferences
     public string Language { get; private set; }
     public bool EmailNotifications { get; private set; }
     public string Theme { get; private set; }
     public int DataRetentionDays { get; private set; }
+
+    // Gamification properties (Issue #3141)
+    public int Level { get; private set; }
+    public int ExperiencePoints { get; private set; }
 
     // 2FA properties (DDD Value Objects)
     public TotpSecret? TotpSecret { get; private set; }
@@ -75,6 +84,10 @@ public sealed class User : AggregateRoot<Guid>
         Theme = "system";
         DataRetentionDays = 90;
 
+        // Default gamification (Issue #3141)
+        Level = 1;
+        ExperiencePoints = 0;
+
         IsTwoFactorEnabled = false;
     }
 
@@ -116,6 +129,42 @@ public sealed class User : AggregateRoot<Guid>
     {
         IsDemoAccount = true;
     }
+
+    /// <summary>
+    /// Suspends the user account. Suspended users cannot login.
+    /// </summary>
+    /// <param name="reason">The reason for suspension.</param>
+    /// <exception cref="DomainException">Thrown when user is already suspended.</exception>
+    public void Suspend(string? reason = null)
+    {
+        if (IsSuspended)
+            throw new DomainException("User is already suspended");
+
+        IsSuspended = true;
+        SuspendedAt = DateTime.UtcNow;
+        SuspendReason = reason;
+        AddDomainEvent(new UserSuspendedEvent(Id, reason));
+    }
+
+    /// <summary>
+    /// Unsuspends (reactivates) the user account.
+    /// </summary>
+    /// <exception cref="DomainException">Thrown when user is not suspended.</exception>
+    public void Unsuspend()
+    {
+        if (!IsSuspended)
+            throw new DomainException("User is not suspended");
+
+        IsSuspended = false;
+        SuspendedAt = null;
+        SuspendReason = null;
+        AddDomainEvent(new UserUnsuspendedEvent(Id));
+    }
+
+    /// <summary>
+    /// Checks if the user can authenticate (not suspended).
+    /// </summary>
+    public bool CanAuthenticate() => !IsSuspended;
 
     /// <summary>
     /// Updates the user's email address.
@@ -178,6 +227,41 @@ public sealed class User : AggregateRoot<Guid>
         var oldRole = Role;
         Role = newRole;
         AddDomainEvent(new RoleChangedEvent(Id, oldRole, newRole));
+    }
+
+    /// <summary>
+    /// Sets the user's level (admin-only operation).
+    /// Issue #3141: Allow admins to manually adjust user level.
+    /// </summary>
+    /// <param name="level">New level value (must be 0-100)</param>
+    /// <exception cref="ArgumentException">Thrown when level is out of range</exception>
+    public void SetLevel(int level)
+    {
+        if (level < 0)
+            throw new ArgumentException("Level cannot be negative", nameof(level));
+        if (level > 100)
+            throw new ArgumentException("Level cannot exceed 100", nameof(level));
+
+        if (Level == level)
+            return; // No change
+
+        var oldLevel = Level;
+        Level = level;
+        AddDomainEvent(new UserLevelChangedEvent(Id, oldLevel, level));
+    }
+
+    /// <summary>
+    /// Adds experience points to the user (future gamification).
+    /// Issue #3141: Foundation for XP-based level progression.
+    /// </summary>
+    /// <param name="points">Experience points to add (must be >= 0)</param>
+    /// <exception cref="ArgumentException">Thrown when points is negative</exception>
+    public void AddExperience(int points)
+    {
+        if (points < 0)
+            throw new ArgumentException("Experience points cannot be negative", nameof(points));
+
+        ExperiencePoints += points;
     }
 
     /// <summary>
@@ -444,6 +528,29 @@ public sealed class User : AggregateRoot<Guid>
     {
         _oauthAccounts.Clear();
         _oauthAccounts.AddRange(oauthAccounts);
+    }
+
+    /// <summary>
+    /// Restores suspension state from persistence layer.
+    /// Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreSuspensionState(bool isSuspended, DateTime? suspendedAt, string? suspendReason)
+    {
+        IsSuspended = isSuspended;
+        SuspendedAt = suspendedAt;
+        SuspendReason = suspendReason;
+    }
+
+    /// <summary>
+    /// Restores gamification state (Level/XP) from persistence layer.
+    /// Issue #3141: Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreGamificationState(int level, int experiencePoints)
+    {
+        Level = level;
+        ExperiencePoints = experiencePoints;
     }
 
     #endregion

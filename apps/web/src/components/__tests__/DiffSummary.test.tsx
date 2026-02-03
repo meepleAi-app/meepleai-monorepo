@@ -13,20 +13,20 @@ describe('DiffSummary', () => {
     render(<DiffSummary summary={summary} />);
 
     // Verifica che il titolo sia presente
-    expect(screen.getByText('Riepilogo Modifiche')).toBeInTheDocument();
+    expect(screen.getByTestId('diff-summary-title')).toBeInTheDocument();
 
     // Verifica che tutte le statistiche siano visualizzate correttamente
     expect(screen.getByText('+5')).toBeInTheDocument();
-    expect(screen.getByText('Aggiunte')).toBeInTheDocument();
+    expect(screen.getByTestId('added-label')).toBeInTheDocument();
 
     expect(screen.getByText('~3')).toBeInTheDocument();
-    expect(screen.getByText('Modificate')).toBeInTheDocument();
+    expect(screen.getByTestId('modified-label')).toBeInTheDocument();
 
     expect(screen.getByText('-2')).toBeInTheDocument();
-    expect(screen.getByText('Eliminate')).toBeInTheDocument();
+    expect(screen.getByTestId('deleted-label')).toBeInTheDocument();
 
     expect(screen.getByText('10')).toBeInTheDocument();
-    expect(screen.getByText('Non modificate')).toBeInTheDocument();
+    expect(screen.getByTestId('unchanged-label')).toBeInTheDocument();
   });
 
   it('gestisce correttamente i valori zero', () => {

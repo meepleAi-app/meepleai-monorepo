@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { ErrorBoundary } from '../errors/ErrorBoundary';
 
@@ -17,17 +18,12 @@ describe('ErrorBoundary - Comprehensive Edge Cases', () => {
 
   beforeAll(() => {
     console.error = vi.fn();
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      } as Response)
-    );
+    // Note: MSW is already configured globally in vitest.setup.tsx
+    // No need to mock fetch here - it would conflict with MSW interceptors
   });
 
   afterAll(() => {
     console.error = originalError;
-    delete (global as any).fetch;
   });
 
   beforeEach(() => {
@@ -51,7 +47,7 @@ describe('ErrorBoundary - Comprehensive Edge Cases', () => {
     }).not.toThrow();
 
     // ErrorBoundary should still render fallback UI
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
 
     consoleSpy.mockRestore();
   });
@@ -100,7 +96,7 @@ describe('ErrorBoundary - Comprehensive Edge Cases', () => {
     );
 
     // First error caught
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
 
     // Trigger multiple re-renders with errors
     for (let i = 0; i < 5; i++) {
@@ -111,7 +107,7 @@ describe('ErrorBoundary - Comprehensive Edge Cases', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+        expect(screen.getByTestId('error-title')).toBeInTheDocument();
       });
     }
 
@@ -131,8 +127,8 @@ describe('ErrorBoundary - Comprehensive Edge Cases', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-    expect(screen.getByText('Error Details')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
+    expect(screen.getByTestId('error-details-toggle')).toBeInTheDocument();
 
     // Component should still be responsive despite large stack
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
@@ -149,7 +145,7 @@ describe('ErrorBoundary - Comprehensive Edge Cases', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
     expect(onError).toHaveBeenCalled();
 
     // Verify the error was logged even if errorInfo is incomplete
@@ -169,10 +165,10 @@ describe('ErrorBoundary - Comprehensive Edge Cases', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
 
     // Error details should be safely rendered (no XSS)
-    expect(screen.getByText('Error Details')).toBeInTheDocument();
+    expect(screen.getByTestId('error-details-toggle')).toBeInTheDocument();
   });
 
   it('should handle errors in nested error boundaries', () => {
@@ -217,7 +213,7 @@ describe('ErrorBoundary - Comprehensive Edge Cases', () => {
     );
 
     // Inner boundary should catch the error
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
 
     // Reset and throw in outer component
     throwInner = false;
@@ -229,7 +225,7 @@ describe('ErrorBoundary - Comprehensive Edge Cases', () => {
     );
 
     // Outer boundary should catch the error
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
   });
 
   it('should handle errors with circular references in error object', () => {
@@ -244,8 +240,8 @@ describe('ErrorBoundary - Comprehensive Edge Cases', () => {
     );
 
     // Should handle circular reference gracefully
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-    expect(screen.getByText('Error Details')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
+    expect(screen.getByTestId('error-details-toggle')).toBeInTheDocument();
   });
 
   it('should maintain error boundary state across re-renders', () => {
@@ -264,7 +260,7 @@ describe('ErrorBoundary - Comprehensive Edge Cases', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
 
     // Error state should persist across re-renders of the same boundary
     rerender(
@@ -273,7 +269,7 @@ describe('ErrorBoundary - Comprehensive Edge Cases', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByTestId('error-title')).toBeInTheDocument();
 
     // The error boundary maintains its error state
     // Component doesn't re-render once error is caught

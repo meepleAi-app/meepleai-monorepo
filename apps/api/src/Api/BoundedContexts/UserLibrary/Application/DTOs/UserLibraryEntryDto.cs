@@ -15,6 +15,10 @@ internal record UserLibraryEntryDto(
     DateTime AddedAt,
     string? Notes,
     bool IsFavorite,
+    string CurrentState,
+    DateTime? StateChangedAt = null,
+    string? StateNotes = null,
     AgentConfigDto? CustomAgentConfig = null,
-    CustomPdfDto? CustomPdf = null
+    CustomPdfDto? CustomPdf = null,
+    bool HasPdfDocuments = false
 );

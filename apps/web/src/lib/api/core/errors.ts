@@ -86,6 +86,17 @@ export class NotFoundError extends ApiError {
 }
 
 /**
+ * 409 Conflict - Request conflicts with current state of resource
+ * Used for business rule violations, state conflicts, duplicate resources
+ */
+export class ConflictError extends ApiError {
+  constructor(details: Omit<ApiErrorDetails, 'statusCode'>) {
+    super({ ...details, statusCode: 409 });
+    this.name = 'ConflictError';
+  }
+}
+
+/**
  * 422 Validation Error - Request validation failed
  */
 export class ValidationError extends ApiError {
@@ -308,6 +319,8 @@ export async function createApiError(endpoint: string, response: Response): Prom
       return new ForbiddenError(baseDetails);
     case 404:
       return new NotFoundError(baseDetails);
+    case 409:
+      return new ConflictError(baseDetails);
     case 422:
       return new ValidationError({ ...baseDetails, validationErrors });
     case 429: {

@@ -156,7 +156,7 @@ test.describe('Theme Switching', () => {
     const themeToggle = page.locator('[aria-label*="tema"]').first();
 
     // Check icon in light mode
-    let currentClasses = await html.getAttribute('class');
+    const currentClasses = await html.getAttribute('class');
     const isCurrentlyDark = currentClasses?.includes('dark');
 
     if (isCurrentlyDark) {

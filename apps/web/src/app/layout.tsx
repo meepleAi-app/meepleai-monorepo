@@ -19,6 +19,9 @@ import { AppProviders } from './providers';
 import type { Metadata, Viewport } from 'next';
 import '../styles/globals.css';
 import '../styles/diff-viewer.css';
+import '../styles/agent-theme.css';
+import '../styles/agent-typography.css';
+import '../styles/agent-animations.css';
 import 'prismjs/themes/prism-tomorrow.css';
 
 const quicksand = Quicksand({

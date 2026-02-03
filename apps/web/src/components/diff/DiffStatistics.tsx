@@ -34,25 +34,25 @@ export function DiffStatistics({ statistics, compact = false }: DiffStatisticsPr
     <div className="diff-statistics" data-testid="diff-statistics">
       <div className="diff-stat-item diff-stat-item--added">
         <span className="diff-stat-value">+{statistics.added}</span>
-        <span className="diff-stat-label">Added</span>
+        <span className="diff-stat-label" data-testid="added-label">Added</span>
       </div>
       <div className="diff-stat-item diff-stat-item--deleted">
         <span className="diff-stat-value">-{statistics.deleted}</span>
-        <span className="diff-stat-label">Deleted</span>
+        <span className="diff-stat-label" data-testid="deleted-label">Deleted</span>
       </div>
       {statistics.modified > 0 && (
         <div className="diff-stat-item diff-stat-item--modified">
           <span className="diff-stat-value">~{statistics.modified}</span>
-          <span className="diff-stat-label">Modified</span>
+          <span className="diff-stat-label" data-testid="modified-label">Modified</span>
         </div>
       )}
       <div className="diff-stat-item diff-stat-item--unchanged">
         <span className="diff-stat-value">{statistics.unchanged}</span>
-        <span className="diff-stat-label">Unchanged</span>
+        <span className="diff-stat-label" data-testid="unchanged-label">Unchanged</span>
       </div>
       <div className="diff-stat-item diff-stat-item--total">
         <span className="diff-stat-value">{statistics.totalLines}</span>
-        <span className="diff-stat-label">Total Lines</span>
+        <span className="diff-stat-label" data-testid="total-lines-label">Total Lines</span>
       </div>
     </div>
   );

@@ -592,6 +592,56 @@ describe('BulkActionBar', () => {
       expect(screen.getByTestId('custom-test-id-clear')).toBeInTheDocument();
     });
   });
+
+  describe('Variant Styling (Issue #2888)', () => {
+    it('should render with default variant styling', () => {
+      render(
+        <BulkActionBar
+          selectedCount={3}
+          totalCount={10}
+          actions={defaultActions}
+          onClearSelection={mockClearSelection}
+          variant="default"
+        />
+      );
+
+      const container = screen.getByTestId('bulk-action-bar');
+      expect(container).toHaveClass('bg-muted/50');
+      expect(container).toHaveClass('border-border');
+    });
+
+    it('should render with floating variant styling', () => {
+      render(
+        <BulkActionBar
+          selectedCount={3}
+          totalCount={10}
+          actions={defaultActions}
+          onClearSelection={mockClearSelection}
+          variant="floating"
+        />
+      );
+
+      const container = screen.getByTestId('bulk-action-bar');
+      expect(container).toHaveClass('border-2');
+      expect(container).toHaveClass('border-orange-500');
+      expect(container).toHaveClass('bg-white');
+      expect(container).not.toHaveClass('bg-muted/50');
+    });
+
+    it('should default to default variant when not specified', () => {
+      render(
+        <BulkActionBar
+          selectedCount={3}
+          totalCount={10}
+          actions={defaultActions}
+          onClearSelection={mockClearSelection}
+        />
+      );
+
+      const container = screen.getByTestId('bulk-action-bar');
+      expect(container).toHaveClass('bg-muted/50');
+    });
+  });
 });
 
 describe('EmptyBulkActionBar', () => {

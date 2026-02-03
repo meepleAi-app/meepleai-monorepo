@@ -293,8 +293,9 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                 return (false, "Invalid game ID format.", null);
             }
 
+            // Support both games.Id (library entry) and games.SharedGameId (catalog reference)
             var existingGame = await _db.Games
-                .Where(g => g.Id == parsedGameId)
+                .Where(g => g.Id == parsedGameId || g.SharedGameId == parsedGameId)
                 .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
             if (existingGame == null)
@@ -302,8 +303,9 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                 return (false, "Game not found. Please select a valid game before uploading.", null);
             }
 
-            _logger.LogInformation("Using existing game {GameId} for PDF upload", parsedGameId);
-            return (true, null, parsedGameId);
+            _logger.LogInformation("Using existing game {GameId} for PDF upload (matched by {InputId})",
+                existingGame.Id, parsedGameId);
+            return (true, null, existingGame.Id);  // Return games.Id, not input SharedGameId
         }
 
         // New path: metadata provided (auto-create)

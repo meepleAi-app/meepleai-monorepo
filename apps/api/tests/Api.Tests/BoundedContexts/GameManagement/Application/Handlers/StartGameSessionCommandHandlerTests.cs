@@ -1,8 +1,10 @@
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Handlers;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Moq;
@@ -20,17 +22,31 @@ public class StartGameSessionCommandHandlerTests
 {
     private readonly Mock<IGameSessionRepository> _sessionRepositoryMock;
     private readonly Mock<IGameRepository> _gameRepositoryMock;
+    private readonly Mock<ISessionQuotaService> _quotaServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly StartGameSessionCommandHandler _handler;
+
+    // Default test user values (Issue #3070)
+    private static readonly Guid DefaultUserId = Guid.NewGuid();
+    private static readonly UserTier DefaultUserTier = UserTier.Normal;
+    private static readonly Role DefaultUserRole = Role.User;
 
     public StartGameSessionCommandHandlerTests()
     {
         _sessionRepositoryMock = new Mock<IGameSessionRepository>();
         _gameRepositoryMock = new Mock<IGameRepository>();
+        _quotaServiceMock = new Mock<ISessionQuotaService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+
+        // Setup quota service to allow by default (Issue #3070)
+        _quotaServiceMock
+            .Setup(s => s.CheckQuotaAsync(It.IsAny<Guid>(), It.IsAny<UserTier>(), It.IsAny<Role>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SessionQuotaResult.Allowed(currentCount: 0, maxAllowed: 10));
+
         _handler = new StartGameSessionCommandHandler(
             _sessionRepositoryMock.Object,
             _gameRepositoryMock.Object,
+            _quotaServiceMock.Object,
             _unitOfWorkMock.Object);
     }
     [Fact]
@@ -43,9 +59,9 @@ public class StartGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        var command = new StartGameSessionCommand(
-            GameId: gameId,
-            Players: new List<SessionPlayerRequest>
+        var command = CreateCommand(
+            gameId: gameId,
+            players: new List<SessionPlayerRequest>
             {
                 new("Alice", 1, "Blue"),
                 new("Bob", 2, "Red")
@@ -93,9 +109,9 @@ public class StartGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        var command = new StartGameSessionCommand(
-            GameId: gameId,
-            Players: new List<SessionPlayerRequest>
+        var command = CreateCommand(
+            gameId: gameId,
+            players: new List<SessionPlayerRequest>
             {
                 new("Alice", 1, "Blue"),
                 new("Bob", 2, "Red"),
@@ -125,9 +141,9 @@ public class StartGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        var command = new StartGameSessionCommand(
-            GameId: gameId,
-            Players: new List<SessionPlayerRequest>
+        var command = CreateCommand(
+            gameId: gameId,
+            players: new List<SessionPlayerRequest>
             {
                 new("Player 1", 1, "Red"),
                 new("Player 2", 2, "Blue")
@@ -152,9 +168,9 @@ public class StartGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        var command = new StartGameSessionCommand(
-            GameId: gameId,
-            Players: new List<SessionPlayerRequest>
+        var command = CreateCommand(
+            gameId: gameId,
+            players: new List<SessionPlayerRequest>
             {
                 new("Player 1", 1, null),
                 new("Player 2", 2, null)
@@ -174,12 +190,12 @@ public class StartGameSessionCommandHandlerTests
     public async Task Handle_EmptyGameId_ThrowsValidationException()
     {
         // Arrange
-        var command = new StartGameSessionCommand(
-            GameId: Guid.Empty,
-            Players: new List<SessionPlayerRequest>
+        var command = CreateCommand(
+            gameId: Guid.Empty,
+            players: new List<SessionPlayerRequest>
             {
                 new("Player 1", 1)
-            }.AsReadOnly());
+            });
 
         // Act & Assert
         await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
@@ -200,9 +216,9 @@ public class StartGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        var command = new StartGameSessionCommand(
-            GameId: gameId,
-            Players: new List<SessionPlayerRequest>().AsReadOnly());
+        var command = CreateCommand(
+            gameId: gameId,
+            players: new List<SessionPlayerRequest>());
 
         // Act & Assert
         await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
@@ -224,16 +240,16 @@ public class StartGameSessionCommandHandlerTests
             .ReturnsAsync(game);
 
         // 5 players when game max is 4
-        var command = new StartGameSessionCommand(
-            GameId: gameId,
-            Players: new List<SessionPlayerRequest>
+        var command = CreateCommand(
+            gameId: gameId,
+            players: new List<SessionPlayerRequest>
             {
                 new("Player 1", 1),
                 new("Player 2", 2),
                 new("Player 3", 3),
                 new("Player 4", 4),
                 new("Player 5", 5)
-            }.AsReadOnly());
+            });
 
         // Act & Assert
         await Assert.ThrowsAsync<Api.SharedKernel.Domain.Exceptions.ValidationException>(
@@ -257,6 +273,24 @@ public class StartGameSessionCommandHandlerTests
         );
     }
 
+    /// <summary>
+    /// Helper method to create StartGameSessionCommand with required parameters (Issue #3070).
+    /// </summary>
+    private static StartGameSessionCommand CreateCommand(
+        Guid gameId,
+        IEnumerable<SessionPlayerRequest> players,
+        Guid? userId = null,
+        UserTier? userTier = null,
+        Role? userRole = null)
+    {
+        return new StartGameSessionCommand(
+            GameId: gameId,
+            Players: players.ToList().AsReadOnly(),
+            UserId: userId ?? DefaultUserId,
+            UserTier: userTier ?? DefaultUserTier,
+            UserRole: userRole ?? DefaultUserRole);
+    }
+
     [Fact]
     public async Task Handle_NonExistentGame_ThrowsInvalidOperationException()
     {
@@ -266,9 +300,9 @@ public class StartGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Game?)null);
 
-        var command = new StartGameSessionCommand(
-            GameId: gameId,
-            Players: new List<SessionPlayerRequest>
+        var command = CreateCommand(
+            gameId: gameId,
+            players: new List<SessionPlayerRequest>
             {
                 new("Player 1", 1, null),
                 new("Player 2", 2, null)
@@ -296,9 +330,9 @@ public class StartGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        var command = new StartGameSessionCommand(
-            GameId: gameId,
-            Players: new List<SessionPlayerRequest>
+        var command = CreateCommand(
+            gameId: gameId,
+            players: new List<SessionPlayerRequest>
             {
                 new("Third", 3, null),
                 new("First", 1, null),
@@ -323,9 +357,9 @@ public class StartGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        var command = new StartGameSessionCommand(
-            GameId: gameId,
-            Players: new List<SessionPlayerRequest>
+        var command = CreateCommand(
+            gameId: gameId,
+            players: new List<SessionPlayerRequest>
             {
                 new("Player 1", 1, null),
                 new("Player 2", 2, null)
@@ -358,9 +392,9 @@ public class StartGameSessionCommandHandlerTests
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        var command = new StartGameSessionCommand(
-            GameId: gameId,
-            Players: new List<SessionPlayerRequest>
+        var command = CreateCommand(
+            gameId: gameId,
+            players: new List<SessionPlayerRequest>
             {
                 new("Player 1", 1, null),
                 new("Player 2", 2, null)

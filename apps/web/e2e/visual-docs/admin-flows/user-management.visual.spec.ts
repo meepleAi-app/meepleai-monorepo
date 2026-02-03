@@ -10,7 +10,7 @@
  * @see docs/08-user-flows/admin-role/02-user-management.md
  */
 
-import { test } from '../../fixtures/chromatic';
+import { test } from '../../fixtures';
 import { AuthHelper, USER_FIXTURES } from '../../pages';
 import {
   ScreenshotHelper,

@@ -83,11 +83,12 @@ export function ChatSidebar() {
             <div className="mt-2 text-[11px] text-center">
               <span
                 className={cn('text-[#5f6368]', isAtThreadLimit && 'text-[#d93025] font-semibold')}
+                data-testid="thread-count"
               >
                 {activeThreadCount} / {MAX_THREADS_PER_GAME} thread attivi
               </span>
               {isAtThreadLimit && (
-                <div className="mt-1 text-[10px] text-[#d93025]">
+                <div className="mt-1 text-[10px] text-[#d93025]" data-testid="thread-limit-warning">
                   (thread più vecchio sarà archiviato)
                 </div>
               )}

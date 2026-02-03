@@ -4,7 +4,7 @@
  * @see apps/web/e2e/pages/ - Page Object Model architecture
  */
 
-import { test as base, expect, Page } from './fixtures/chromatic';
+import { test as base, expect, Page } from './fixtures';
 // ✅ REMOVED IMPORTS: mockGamesAPI, mockAgentsAPI, waitForAutoSelection (no longer needed)
 import { WaitHelper } from './helpers/WaitHelper';
 import { AuthHelper, USER_FIXTURES } from './pages';

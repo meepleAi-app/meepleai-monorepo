@@ -28,7 +28,7 @@ describe('TimelineFilters Component', () => {
         />
       );
 
-      expect(screen.getByText('Filtri Timeline')).toBeInTheDocument();
+      expect(screen.getByTestId('filters-title')).toBeInTheDocument();
     });
 
     it('renders collapsed state with minimal UI', () => {
@@ -418,7 +418,7 @@ describe('TimelineFilters Component', () => {
         />
       );
 
-      const resetButton = screen.getByText('Ripristina Filtri');
+      const resetButton = screen.getByTestId('reset-filters-button');
       await user.click(resetButton);
 
       expect(mockOnFiltersChange).toHaveBeenCalledWith({

@@ -54,6 +54,9 @@ internal class ResetGamePdfCommandHandler : ICommandHandler<ResetGamePdfCommand,
             AddedAt: entry.AddedAt,
             Notes: entry.Notes?.Value,
             IsFavorite: entry.IsFavorite,
+            CurrentState: entry.CurrentState.Value.ToString(),
+            StateChangedAt: entry.CurrentState.ChangedAt,
+            StateNotes: entry.CurrentState.StateNotes,
             CustomAgentConfig: entry.CustomAgentConfig is not null
                 ? new AgentConfigDto(
                     LlmModel: entry.CustomAgentConfig.LlmModel,

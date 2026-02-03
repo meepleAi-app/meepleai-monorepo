@@ -24,6 +24,14 @@ internal class GameSessionEntityConfiguration : IEntityTypeConfiguration<GameSes
             .HasForeignKey(e => e.GameId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // Foreign key to User (creator) - Issue #3070: Session quota enforcement
+        builder.Property(e => e.CreatedByUserId)
+            .IsRequired(false); // Nullable for backwards compatibility
+        builder.HasOne(e => e.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(e => e.CreatedByUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // Session properties
         builder.Property(e => e.Status)
             .IsRequired()
@@ -60,5 +68,9 @@ internal class GameSessionEntityConfiguration : IEntityTypeConfiguration<GameSes
         // Index on StartedAt for chronological queries
         builder.HasIndex(e => e.StartedAt)
             .HasDatabaseName("IX_GameSessions_StartedAt");
+
+        // Issue #3070: Index on CreatedByUserId + Status for quota queries
+        builder.HasIndex(e => new { e.CreatedByUserId, e.Status })
+            .HasDatabaseName("IX_GameSessions_CreatedByUserId_Status");
     }
 }

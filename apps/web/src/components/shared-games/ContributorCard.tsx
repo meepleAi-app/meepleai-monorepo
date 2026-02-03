@@ -9,10 +9,11 @@
 import { formatDistanceToNow } from 'date-fns';
 import { User, Award } from 'lucide-react';
 import Link from 'next/link';
-import type { GameContributorDto } from '@/lib/api';
-import { cn } from '@/lib/utils';
+
 import { BadgeIcon } from '@/components/badges/BadgeIcon';
 import { Badge } from '@/components/ui/data-display/badge';
+import type { GameContributorDto } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 interface ContributorCardProps {
   contributor: GameContributorDto;
@@ -38,6 +39,7 @@ export function ContributorCard({ contributor, featured = false }: ContributorCa
         {/* Avatar */}
         <div className="relative flex-shrink-0">
           {contributor.avatarUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element -- External user-provided avatar URL */
             <img
               src={contributor.avatarUrl}
               alt={contributor.userName}

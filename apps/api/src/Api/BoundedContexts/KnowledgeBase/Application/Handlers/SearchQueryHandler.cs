@@ -43,21 +43,28 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            "Processing SearchQuery: GameId={GameId}, Query={Query}, Mode={SearchMode}, TopK={TopK}",
+            "[SearchQueryHandler] ENTRY - Processing SearchQuery: GameId={GameId}, Query={Query}, Mode={SearchMode}, TopK={TopK}",
             query.GameId, query.Query, query.SearchMode, query.TopK);
 
         // Validate search parameters
         _vectorSearchService.ValidateSearchParameters(query.TopK, query.MinScore);
 
         // Generate query embedding
+        _logger.LogDebug("[SearchQueryHandler] Step 1: Generating embedding via IEmbeddingService...");
+        var sw1 = System.Diagnostics.Stopwatch.StartNew();
         var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(
             query.Query,
             query.Language,
             cancellationToken).ConfigureAwait(false);
+        sw1.Stop();
+        _logger.LogInformation("[SearchQueryHandler] Step 1 DONE: Embedding generated in {ElapsedMs}ms - Success: {Success}",
+            sw1.ElapsedMilliseconds, queryEmbedding.Success);
 
         var queryVector = new Vector(queryEmbedding.ToFloatArray());
 
         // Execute search based on mode
+        _logger.LogDebug("[SearchQueryHandler] Step 2: Executing {SearchMode} search...", query.SearchMode);
+        var sw2 = System.Diagnostics.Stopwatch.StartNew();
         var searchResults = query.SearchMode.ToLowerInvariant() switch
         {
             "vector" => await PerformVectorSearchAsync(
@@ -68,6 +75,9 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
 
             _ => throw new ArgumentException($"Invalid search mode: {query.SearchMode}", nameof(query))
         } ?? new List<Domain.Entities.SearchResult>();
+        sw2.Stop();
+        _logger.LogInformation("[SearchQueryHandler] Step 2 DONE: {SearchMode} search completed in {ElapsedMs}ms - {ResultCount} results",
+            query.SearchMode, sw2.ElapsedMilliseconds, searchResults.Count);
 
         // Map to DTOs
         var dtos = searchResults.Select(sr => new SearchResultDto(
@@ -80,7 +90,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         )).ToList();
 
         _logger.LogInformation(
-            "SearchQuery completed: Found {ResultCount} results",
+            "[SearchQueryHandler] COMPLETE - SearchQuery completed: Found {ResultCount} results",
             dtos.Count);
 
         return dtos;

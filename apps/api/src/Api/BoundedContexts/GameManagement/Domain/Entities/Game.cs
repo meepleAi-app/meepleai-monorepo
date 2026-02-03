@@ -27,6 +27,11 @@ internal sealed class Game : AggregateRoot<Guid>
     public string? IconUrl { get; private set; }
     public string? ImageUrl { get; private set; }
 
+    // Publication Workflow (Issue #3481)
+    public bool IsPublished { get; private set; }
+    public ApprovalStatus ApprovalStatus { get; private set; }
+    public DateTime? PublishedAt { get; private set; }
+
     /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
@@ -110,6 +115,25 @@ internal sealed class Game : AggregateRoot<Guid>
             throw new ArgumentException("SharedGameId cannot be empty", nameof(sharedGameId));
 
         SharedGameId = sharedGameId;
+    }
+
+    /// <summary>
+    /// Publishes game to SharedGameCatalog with approval status.
+    /// Issue #3481: Admin-controlled publication workflow.
+    /// </summary>
+    public void Publish(ApprovalStatus status)
+    {
+        if (!Enum.IsDefined(status))
+            throw new ArgumentException($"Invalid approval status: {status}", nameof(status));
+
+        if (status == ApprovalStatus.Approved && SharedGameId == null)
+            throw new InvalidOperationException("Cannot approve game without linking to SharedGameCatalog first");
+
+        IsPublished = status == ApprovalStatus.Approved;
+        ApprovalStatus = status;
+        PublishedAt = status == ApprovalStatus.Approved ? DateTime.UtcNow : null;
+
+        AddDomainEvent(new GamePublishedEvent(Id, status, PublishedAt));
     }
 
     /// <summary>

@@ -41,7 +41,9 @@ internal static class SessionValidationExtensions
     public static (bool IsAuthenticated, SessionStatusDto Session, IResult? ErrorResult)
         TryGetActiveSession(this HttpContext context)
     {
-        if (!context.Items.TryGetValue(nameof(SessionStatusDto), out var value) ||
+        var hasSessionItem = context.Items.TryGetValue(nameof(SessionStatusDto), out var value);
+
+        if (!hasSessionItem ||
             value is not SessionStatusDto session ||
             !session.IsValid ||
             session.User == null)
@@ -107,7 +109,7 @@ internal static class SessionValidationExtensions
         if (session.User == null ||
             !string.Equals(session.User.Role, requiredRole.ToString(), StringComparison.OrdinalIgnoreCase))
         {
-            return (false, Results.StatusCode(StatusCodes.Status403Forbidden));
+            return (false, Results.Forbid());
         }
 
         return (true, null);

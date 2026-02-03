@@ -45,9 +45,16 @@ namespace Api.Tests.Integration;
 /// 5. Mid-vector store cancellation
 /// 6. Random timing cancellation (stress test)
 /// </summary>
+/// <remarks>
+/// Issue #3102: These tests use SharedTestcontainersFixture which conflicts with CI service containers.
+/// In CI, the PostgreSQL service container on port 5432 can interfere with Testcontainers-managed databases,
+/// causing "terminating connection due to administrator command" errors (PostgreSQL 57P01).
+/// Tests are skipped in CI to avoid flaky behavior.
+/// </remarks>
 [Collection("SharedTestcontainers")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2031")]
+[Trait("SkipInCI", "Testcontainers conflict with service containers")]
 public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

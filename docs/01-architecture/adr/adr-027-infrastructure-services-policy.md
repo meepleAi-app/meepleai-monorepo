@@ -1,4 +1,4 @@
-# ADR-017: Infrastructure Services Policy
+# ADR-027: Infrastructure Services Policy
 
 **Status**: Accepted
 **Date**: 2025-12-07

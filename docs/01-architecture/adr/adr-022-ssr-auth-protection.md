@@ -1,4 +1,4 @@
-# ADR-015: Server-Side Rendering (SSR) Authentication Protection
+# ADR-022: Server-Side Rendering (SSR) Authentication Protection
 
 **Status**: ✅ Accepted
 **Date**: 2025-11-22

@@ -1,4 +1,4 @@
-# ADR-017: Document Collections for Multi-Document Support
+# ADR-026: Document Collections for Multi-Document Support
 
 **Status**: Accepted
 **Date**: 2025-12-12

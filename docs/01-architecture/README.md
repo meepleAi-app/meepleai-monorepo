@@ -10,14 +10,16 @@
 01-architecture/
 ├── overview/                      # High-level architecture documents
 │   ├── system-architecture.md    # Complete system architecture (60+ pages) ⭐
-│   └── consolidation-strategy.md # Architecture consolidation plan
-├── adr/                          # Architecture Decision Records
+│   └── archive/                  # Historical documents
+├── adr/                          # Architecture Decision Records (24 total)
 │   ├── adr-001-hybrid-rag.md    # Hybrid RAG (Vector + Keyword) ⭐
 │   ├── adr-002-multilingual-embedding.md
 │   ├── adr-003-pdf-processing.md
 │   ├── adr-003b-unstructured-pdf.md ⭐
 │   ├── adr-004-ai-agents.md
-│   └── adr-007-hybrid-llm.md
+│   ├── adr-007-hybrid-llm.md
+│   ├── ... (see adr/README.md for full index)
+│   └── adr-040-hyperdx-observability.md
 ├── diagrams/                     # Architecture diagrams (Mermaid)
 │   ├── bounded-contexts-interactions.md
 │   ├── cqrs-mediatr-flow.md
@@ -62,12 +64,14 @@
                           ↓ HTTP/REST
 ┌─────────────────────────────────────────────────────────┐
 │           Backend API (ASP.NET Core 9)                   │
-│     7 Bounded Contexts (DDD + CQRS/MediatR)             │
+│     11 Bounded Contexts (DDD + CQRS/MediatR)            │
 │  ┌────────────────┐  ┌────────────────┐                │
-│  │ Authentication │  │ GameManagement │                │
-│  │ KnowledgeBase  │  │ DocumentProc   │                │
-│  │ Workflow       │  │ SysConfig      │                │
-│  │ Administration │  └────────────────┘                │
+│  │ Administration │  │ Authentication │                │
+│  │ DocumentProc   │  │ GameManagement │                │
+│  │ KnowledgeBase  │  │ SessionTracking│                │
+│  │ SharedCatalog  │  │ SystemConfig   │                │
+│  │ UserLibrary    │  │ UserNotify     │                │
+│  │ Workflow       │  └────────────────┘                │
 │  └────────────────┘                                     │
 └─────────────────────────────────────────────────────────┘
          ↓                    ↓                    ↓
@@ -78,7 +82,7 @@
 ```
 
 **Key Characteristics**:
-- **DDD with 7 Bounded Contexts** - Clear domain boundaries
+- **DDD with 11 Bounded Contexts** - Clear domain boundaries
 - **CQRS with MediatR** - Command/Query separation
 - **Microservices** - Independent, scalable services
 - **Event-Driven** - Domain events for decoupling
@@ -106,26 +110,27 @@
 | Document | Description | Pages | Priority |
 |----------|-------------|-------|----------|
 | [System Architecture](./overview/system-architecture.md) | Complete system design, tech stack, patterns, and architecture | 60+ | ⭐ Essential |
-| [Consolidation Strategy](./overview/consolidation-strategy.md) | Plan for consolidating architecture documentation | 10 | Optional |
 
 **When to read**:
 - **System Architecture**: First document for all new team members
-- **Consolidation Strategy**: For architects planning documentation updates
+
+> **Note**: Historical documents (e.g., Consolidation Strategy) are in `overview/archive/`
 
 ---
 
 ### Architecture Decision Records (ADRs)
 
 **ADRs document major architectural decisions with context, alternatives, and consequences.**
+**See [adr/README.md](./adr/README.md) for the complete index of 24 ADRs.**
 
 | ADR | Title | Status | Priority |
 |-----|-------|--------|----------|
 | [ADR-001](./adr/adr-001-hybrid-rag.md) | Hybrid RAG Architecture (Vector + Keyword RRF) | Accepted | ⭐ Essential |
-| [ADR-002](./adr/adr-002-multilingual-embedding.md) | Multilingual Embedding Strategy (BGE-M3) | Accepted | Recommended |
-| [ADR-003](./adr/adr-003-pdf-processing.md) | PDF Processing Pipeline (3-stage fallback) | Superseded by 003b | Optional |
 | [ADR-003b](./adr/adr-003b-unstructured-pdf.md) | Unstructured PDF Extraction (Production) | Accepted | ⭐ Essential |
-| [ADR-004](./adr/adr-004-ai-agents.md) | AI Agents Bounded Context | Accepted | Optional |
+| [ADR-006](./adr/adr-006-multi-layer-validation.md) | Multi-Layer Validation Framework | Accepted | ⭐ Essential |
 | [ADR-007](./adr/adr-007-hybrid-llm.md) | Hybrid LLM Architecture (Multi-model consensus) | Accepted | Recommended |
+| [ADR-021](./adr/adr-021-auto-configuration-system.md) | Auto-Configuration System for Secrets | Implemented | High |
+| [ADR-040](./adr/adr-040-hyperdx-observability.md) | HyperDX for Unified Observability | Accepted | High |
 
 **Key ADRs Explained**:
 
@@ -313,7 +318,7 @@ Authentication/
 **Status**: 100% complete as of 2025-12-13T10:57:05.887Z
 
 **Achievements**:
-- ✅ 7 bounded contexts migrated
+- ✅ 11 bounded contexts migrated
 - ✅ 72+ CQRS handlers operational
 - ✅ 60+ endpoints migrated to MediatR
 - ✅ 2,070 lines legacy code removed
@@ -333,15 +338,13 @@ See [Legacy Code Dashboard](../../02-development/refactoring/legacy-code-dashboa
 - ✅ 3-stage PDF pipeline (Q4 2024)
 - ✅ Multi-model LLM consensus (Q4 2024)
 
-**In Progress**:
-- 🔄 API Gateway (Kong/Nginx) (Q1 2025)
-- 🔄 Event sourcing (selected contexts) (Q1 2025)
-
-**Planned**:
-- [ ] GraphQL API (Q2 2025)
-- [ ] CQRS read replicas (Q2 2025)
-- [ ] Kubernetes deployment (Q2 2025)
-- [ ] Service mesh (Istio) (Q3 2025)
+**Planned** (TBD):
+- [ ] API Gateway (Kong/Nginx)
+- [ ] Event sourcing (selected contexts)
+- [ ] GraphQL API
+- [ ] CQRS read replicas
+- [ ] Kubernetes deployment
+- [ ] Service mesh (Istio)
 
 ---
 
@@ -416,8 +419,9 @@ graph TD
 
 ---
 
-**Last Updated**: 2025-12-13T10:59:23.970Z
+**Last Updated**: 2026-02-03
 **Maintainer**: Architecture Team
-**Total Documents**: 20+ files
-**ADRs**: 6 active decisions
+**Total Documents**: 30+ files
+**ADRs**: 24 decisions (22 Accepted/Implemented, 1 Rejected, 1 Deprecated)
+**Bounded Contexts**: 11
 

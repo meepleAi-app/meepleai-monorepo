@@ -1,4 +1,4 @@
-# ADR-015: HyperDX for Unified Observability
+# ADR-040: HyperDX for Unified Observability
 
 **Status**: Accepted
 **Date**: 2025-12-06

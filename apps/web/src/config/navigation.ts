@@ -30,9 +30,10 @@ export interface NavItem {
 
 /**
  * Primary navigation items for authenticated users.
- * Order: Home, Library, Catalog, Chat, Profile
+ * Order by priority: Dashboard → Library → Chat → Toolkit → Catalogo → Profilo
  *
- * Mobile shows first 3, tablet shows 4, desktop shows all 5.
+ * Mobile shows first 4, tablet shows 5, desktop shows all (but nav is in header).
+ * ActionBar is mobile-only; desktop uses UnifiedHeader for navigation.
  */
 export const NAV_ITEMS: NavItem[] = [
   {
@@ -56,24 +57,34 @@ export const NAV_ITEMS: NavItem[] = [
     activePattern: /^\/library/,
   },
   {
-    id: 'catalog',
-    href: '/games',
-    icon: 'gamepad-2',
-    label: 'Catalogo',
-    ariaLabel: 'Sfoglia il catalogo giochi',
-    priority: 3,
-    testId: 'nav-catalog',
-    activePattern: /^\/games/,
-  },
-  {
     id: 'chat',
     href: '/chat',
     icon: 'message-square',
     label: 'Chat',
     ariaLabel: 'Apri la chat AI',
-    priority: 4,
+    priority: 3,
     testId: 'nav-chat',
     activePattern: /^\/chat/,
+  },
+  {
+    id: 'toolkit',
+    href: '/toolkit',
+    icon: 'dice-6',
+    label: 'Toolkit',
+    ariaLabel: 'Vai al toolkit di gioco',
+    priority: 4,
+    testId: 'nav-toolkit',
+    activePattern: /^\/toolkit/,
+  },
+  {
+    id: 'catalog',
+    href: '/games',
+    icon: 'gamepad-2',
+    label: 'Catalogo',
+    ariaLabel: 'Sfoglia il catalogo giochi',
+    priority: 5,
+    testId: 'nav-catalog',
+    activePattern: /^\/games/,
   },
   {
     id: 'profile',
@@ -81,7 +92,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'user',
     label: 'Profilo',
     ariaLabel: 'Vai al tuo profilo',
-    priority: 5,
+    priority: 6,
     testId: 'nav-profile',
     activePattern: /^\/profile/,
   },
@@ -89,22 +100,23 @@ export const NAV_ITEMS: NavItem[] = [
 
 /**
  * Maximum visible navigation items per breakpoint.
- * Context actions fill remaining slots.
+ * ActionBar is mobile-only; desktop navigation is handled by UnifiedHeader.
  */
 export const MAX_NAV_ITEMS = {
-  mobile: 3,
-  tablet: 4,
-  desktop: 5,
+  mobile: 4,   // Home, Library, Chat, Toolkit
+  tablet: 5,   // + Catalogo
+  desktop: 6,  // All items (but desktop uses header, not actionbar)
 } as const;
 
 /**
  * Total slots available per breakpoint.
- * Includes nav items + context actions + overflow button.
+ * Includes nav items + FAB (primary action) + context actions + overflow button.
+ * Note: ActionBar is mobile/tablet only. Desktop uses UnifiedHeader.
  */
 export const TOTAL_SLOTS = {
-  mobile: 5,    // 3 nav + 1 context + 1 overflow
-  tablet: 6,    // 4 nav + 1 context + 1 overflow
-  desktop: 9,   // 5 nav + 3 context + 1 overflow
+  mobile: 6,    // 4 nav + 1 FAB + 1 overflow
+  tablet: 7,    // 5 nav + 1 FAB + 1 overflow
+  desktop: 8,   // 6 nav + 1 FAB + 1 overflow (but not rendered on desktop)
 } as const;
 
 /**

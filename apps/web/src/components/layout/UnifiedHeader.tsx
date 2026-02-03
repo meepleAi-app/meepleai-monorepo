@@ -58,8 +58,8 @@ interface NavItem {
 
 /**
  * Navigation items for the header
- * Order: Dashboard, Library, Catalog, Chat, Profile (Issue #2860)
- * Settings moved to user dropdown menu
+ * Order by priority: Dashboard → Library → Chat → Toolkit → Catalogo → Profilo → Admin
+ * Settings moved to dedicated icon in header right side
  */
 const NAV_ITEMS: NavItem[] = [
   {
@@ -75,12 +75,6 @@ const NAV_ITEMS: NavItem[] = [
     ariaLabel: 'Navigate to your game library',
   },
   {
-    href: '/games',
-    icon: Gamepad2,
-    label: 'Catalogo',
-    ariaLabel: 'Navigate to games catalog',
-  },
-  {
     href: '/chat',
     icon: MessageSquare,
     label: 'Chat',
@@ -91,6 +85,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: Dice6,
     label: 'Toolkit',
     ariaLabel: 'Navigate to game session toolkit',
+  },
+  {
+    href: '/games',
+    icon: Gamepad2,
+    label: 'Catalogo',
+    ariaLabel: 'Navigate to games catalog',
   },
   {
     href: '/profile',
@@ -189,19 +189,6 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
         );
       })}
     </nav>
-  );
-
-  // Mobile Settings Button (shown in top bar on mobile)
-  const MobileSettingsButton = () => (
-    <Link
-      href="/settings"
-      className="md:hidden"
-      aria-label="Navigate to settings"
-    >
-      <Button variant="ghost" size="icon">
-        <Settings className="h-5 w-5" />
-      </Button>
-    </Link>
   );
 
   // User Menu
@@ -320,9 +307,16 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
         {/* Center: Desktop Navigation */}
         <DesktopNav />
 
-        {/* Right: Mobile Settings + Notifications + User Menu */}
+        {/* Right: Settings + Notifications + User Menu */}
         <div className="flex items-center gap-2">
-          <MobileSettingsButton />
+          <Link
+            href="/settings"
+            aria-label="Navigate to settings"
+          >
+            <Button variant="ghost" size="icon">
+              <Settings className="h-5 w-5" />
+            </Button>
+          </Link>
           <NotificationBell />
           <UserMenu />
         </div>

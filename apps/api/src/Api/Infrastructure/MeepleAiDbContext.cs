@@ -103,6 +103,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<UserRateLimitOverrideEntity> UserRateLimitOverrides => Set<UserRateLimitOverrideEntity>(); // ISSUE-2730: User overrides
     public DbSet<TierStrategyAccessEntity> TierStrategyAccess => Set<TierStrategyAccessEntity>(); // ISSUE-3438: Tier-strategy access control
     public DbSet<StrategyModelMappingEntity> StrategyModelMappings => Set<StrategyModelMappingEntity>(); // ISSUE-3438: Strategy-model mapping
+    public DbSet<ChatSessionEntity> ChatSessions => Set<ChatSessionEntity>(); // ISSUE-3483: Chat session persistence
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();
@@ -163,6 +164,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.AgentTypology>(); // ISSUE-3175
         modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.TypologyPromptTemplate>(); // ISSUE-3175
         modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.AgentSession>(); // ISSUE-3183
+        modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession>(); // ISSUE-3483
 
         // GST-001: SessionTracking domain entities
         modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.Session>(); // ISSUE-3160

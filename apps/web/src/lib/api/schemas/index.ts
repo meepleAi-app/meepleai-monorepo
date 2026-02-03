@@ -77,3 +77,6 @@ export * from './session-quota.schemas';
 
 // Email Verification schemas (Issue #3076)
 export * from './email-verification.schemas';
+
+// Chat Sessions schemas (Issue #3484)
+export * from './chat-sessions.schemas';

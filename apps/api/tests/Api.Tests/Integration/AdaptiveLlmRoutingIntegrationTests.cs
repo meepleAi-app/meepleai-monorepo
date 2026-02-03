@@ -538,15 +538,12 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 return mapping.FallbackModels;
             });
 
+        // Setup IServiceScopeFactory to provide ITierStrategyAccessService
         var mockTierAccessService = new Mock<ITierStrategyAccessService>();
         mockTierAccessService
             .Setup(s => s.HasAccessToStrategyAsync(It.IsAny<LlmUserTier>(), It.IsAny<RagStrategy>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        mockTierAccessService
-            .Setup(s => s.GetAvailableStrategiesAsync(It.IsAny<LlmUserTier>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Enum.GetValues<RagStrategy>().ToList());
 
-        // Setup IServiceScopeFactory to provide ITierStrategyAccessService
         var mockServiceProvider = new Mock<IServiceProvider>();
         mockServiceProvider
             .Setup(sp => sp.GetService(typeof(ITierStrategyAccessService)))

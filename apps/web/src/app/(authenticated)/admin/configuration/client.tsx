@@ -65,7 +65,6 @@ const TABS: Tab[] = [
 export function AdminPageClient() {
   const { user, loading: authLoading } = useAuthUser();
 
-  if (!user) return null;
   // State
   const [activeTab, setActiveTab] = useState<TabId>('feature-flags');
   const [configurations, setConfigurations] = useState<SystemConfigurationDto[]>([]);
@@ -126,6 +125,9 @@ export function AdminPageClient() {
       toast.error('Failed to invalidate cache');
     }
   };
+
+  // Early return after all hooks
+  if (!user) return null;
 
   // Loading state
   if (dataLoading) {

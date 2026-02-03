@@ -114,6 +114,7 @@ export const TOTAL_SLOTS = {
 export function getNavItemsForBreakpoint(
   breakpoint: 'mobile' | 'tablet' | 'desktop'
 ): NavItem[] {
+  // eslint-disable-next-line security/detect-object-injection -- breakpoint is typed union, not user input
   const max = MAX_NAV_ITEMS[breakpoint];
   return [...NAV_ITEMS]
     .sort((a, b) => a.priority - b.priority)
@@ -127,6 +128,7 @@ export function getNavItemsForBreakpoint(
 export function getOverflowNavItems(
   breakpoint: 'mobile' | 'tablet' | 'desktop'
 ): NavItem[] {
+  // eslint-disable-next-line security/detect-object-injection -- breakpoint is typed union, not user input
   const max = MAX_NAV_ITEMS[breakpoint];
   return [...NAV_ITEMS]
     .sort((a, b) => a.priority - b.priority)
@@ -154,5 +156,6 @@ export function isNavItemActive(item: NavItem, pathname: string): boolean {
 export function getContextActionSlots(
   breakpoint: 'mobile' | 'tablet' | 'desktop'
 ): number {
+  // eslint-disable-next-line security/detect-object-injection -- breakpoint is typed union, not user input
   return TOTAL_SLOTS[breakpoint] - MAX_NAV_ITEMS[breakpoint] - 1;
 }

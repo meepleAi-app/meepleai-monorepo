@@ -53,7 +53,6 @@ const categories = [
 export function AdminPageClient() {
   const { user, loading: authLoading } = useAuthUser();
 
-  if (!user) return null;
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<WorkflowTemplateDetail | null>(null);
   const [category, setCategory] = useState<string>('');
@@ -140,6 +139,9 @@ export function AdminPageClient() {
       setImporting(false);
     }
   };
+
+  // Early return after all hooks
+  if (!user) return null;
 
   return (
     <AdminAuthGuard loading={authLoading} user={user}>

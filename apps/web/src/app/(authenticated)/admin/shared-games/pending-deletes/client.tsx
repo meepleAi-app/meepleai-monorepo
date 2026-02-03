@@ -61,9 +61,6 @@ export function PendingDeletesClient() {
   const { sharedGames } = useApiClient();
   const { user, loading: authLoading } = useAuthUser();
 
-  // Early return if no user
-  if (!user) return null;
-
   // State
   const [requests, setRequests] = useState<DeleteRequest[]>([]);
   const [total, setTotal] = useState(0);
@@ -171,6 +168,9 @@ export function PendingDeletesClient() {
 
   // Calculate pagination
   const totalPages = Math.ceil(total / pageSize);
+
+  // Early return after all hooks
+  if (!user) return null;
 
   return (
     <AdminAuthGuard loading={authLoading} user={user}>

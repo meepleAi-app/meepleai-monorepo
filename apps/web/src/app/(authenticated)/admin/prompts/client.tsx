@@ -50,8 +50,6 @@ export function AdminPageClient() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthUser();
 
-  if (!user) return null;
-
   // Data state - ALL hooks must be called unconditionally
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -217,6 +215,9 @@ export function AdminPageClient() {
   const navigateToDetails = (id: string) => {
     router.push(`/admin/prompts/${id}`);
   };
+
+  // Early return after all hooks
+  if (!user) return null;
 
   return (
     <AdminAuthGuard loading={authLoading} user={user} backgroundClass="min-h-dvh">

@@ -1,8 +1,8 @@
 /**
  * Game Catalog Page (Issue #1838: PAGE-003)
  *
- * Server Component for browsing games with hybrid grid/list view.
- * Uses URL searchParams for all state (view, search, page).
+ * Public showcase for SharedGames catalog - browse all available board games.
+ * Server Component for SEO-friendly rendering with client components for interactivity.
  *
  * Route: /games
  * Features:
@@ -12,16 +12,17 @@
  * - Responsive grid (2→3→4 columns)
  * - Search with debounce (300ms)
  * - Pagination (20 games/page)
+ * - "Aggiungi Gioco" button visible only for Editor/Admin roles
+ *
+ * Data Source: SharedGameCatalog bounded context
  *
  * @see docs/wireframes page 3 "Catalogo Giochi (Hybrid View)"
  * @see Issue #1838 PAGE-003
  */
 
 import { Metadata } from 'next';
-import Link from 'next/link';
 
-import { Button } from '@/components/ui/primitives/button';
-
+import { AddGameButton } from './components/AddGameButton';
 import { GameGrid } from './components/GameGrid';
 import { Pagination } from './components/Pagination';
 import { SearchBar } from './components/SearchBar';
@@ -144,9 +145,8 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
             Esplora {total} giochi da tavolo. Cerca, filtra e scopri le regole.
           </p>
         </div>
-        <Link href="/games/add">
-          <Button>Aggiungi Gioco</Button>
-        </Link>
+        {/* Add Game button - visible only for Editor/Admin */}
+        <AddGameButton />
       </div>
 
       {/* Toolbar: Search + View Toggle */}

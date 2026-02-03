@@ -14,8 +14,29 @@ import type { LucideIcon } from 'lucide-react';
 /**
  * Supported layout contexts for context-aware navigation
  * Each context determines which actions are available in ActionBar and FAB
+ *
+ * Issue #3479 - Extended contexts for Layout System v2
  */
-export type LayoutContext = 'default' | 'library' | 'game_detail' | 'session_active' | 'chat' | 'search' | 'settings';
+export type LayoutContext =
+  // Core contexts
+  | 'default'
+  | 'dashboard'
+  | 'library'
+  | 'library_empty'
+  | 'library_selection'
+  | 'game_detail'
+  | 'game_detail_not_owned'
+  | 'session_active'
+  | 'session_setup'
+  | 'session_end'
+  | 'chat'
+  | 'document_viewer'
+  | 'catalog'
+  | 'search'
+  | 'wishlist'
+  | 'notifications'
+  | 'profile'
+  | 'settings';
 
 /**
  * Device viewport classification

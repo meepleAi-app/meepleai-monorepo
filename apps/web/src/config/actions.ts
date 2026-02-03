@@ -10,9 +10,36 @@ import type { Action, LayoutContext } from '@/types/layout';
 /**
  * Context-specific action configurations.
  * Actions are ordered by priority (lower number = higher priority = more visible).
+ *
+ * Issue #3479 - Extended contexts for Layout System v2
  */
 export const CONTEXT_ACTIONS: Record<LayoutContext, Action[]> = {
   default: [],
+
+  dashboard: [
+    {
+      id: 'quick-play',
+      icon: 'play',
+      label: 'Gioca',
+      priority: 1,
+      action: 'dashboard:quick-play',
+      variant: 'primary',
+    },
+    {
+      id: 'add-game',
+      icon: 'plus',
+      label: 'Aggiungi',
+      priority: 2,
+      action: 'dashboard:add-game',
+    },
+    {
+      id: 'recent',
+      icon: 'history',
+      label: 'Recenti',
+      priority: 3,
+      action: 'dashboard:recent',
+    },
+  ],
 
   library: [
     {
@@ -49,6 +76,63 @@ export const CONTEXT_ACTIONS: Record<LayoutContext, Action[]> = {
       label: 'Esporta',
       priority: 5,
       action: 'library:export',
+    },
+  ],
+
+  library_empty: [
+    {
+      id: 'add',
+      icon: 'plus',
+      label: 'Aggiungi primo gioco',
+      priority: 1,
+      action: 'library:add',
+      variant: 'primary',
+    },
+    {
+      id: 'browse',
+      icon: 'gamepad-2',
+      label: 'Sfoglia catalogo',
+      priority: 2,
+      action: 'library:browse-catalog',
+    },
+    {
+      id: 'import',
+      icon: 'download',
+      label: 'Importa',
+      priority: 3,
+      action: 'library:import',
+    },
+  ],
+
+  library_selection: [
+    {
+      id: 'compare',
+      icon: 'bar-chart-2',
+      label: 'Confronta',
+      priority: 1,
+      action: 'library:compare',
+    },
+    {
+      id: 'batch-play',
+      icon: 'play',
+      label: 'Gioca insieme',
+      priority: 2,
+      action: 'library:batch-play',
+    },
+    {
+      id: 'batch-export',
+      icon: 'download',
+      label: 'Esporta',
+      priority: 3,
+      action: 'library:batch-export',
+    },
+    {
+      id: 'batch-delete',
+      icon: 'trash-2',
+      label: 'Rimuovi',
+      priority: 4,
+      action: 'library:batch-delete',
+      variant: 'destructive',
     },
   ],
 
@@ -98,6 +182,71 @@ export const CONTEXT_ACTIONS: Record<LayoutContext, Action[]> = {
     },
   ],
 
+  game_detail_not_owned: [
+    {
+      id: 'add',
+      icon: 'plus',
+      label: 'Aggiungi',
+      priority: 1,
+      action: 'game:add-to-library',
+      variant: 'primary',
+    },
+    {
+      id: 'wishlist',
+      icon: 'heart',
+      label: 'Wishlist',
+      priority: 2,
+      action: 'game:wishlist',
+    },
+    {
+      id: 'ask-ai',
+      icon: 'message-square',
+      label: 'Chiedi AI',
+      priority: 3,
+      action: 'game:ask-ai',
+    },
+    {
+      id: 'share',
+      icon: 'share',
+      label: 'Condividi',
+      priority: 4,
+      action: 'game:share',
+    },
+  ],
+
+  session_setup: [
+    {
+      id: 'start',
+      icon: 'play',
+      label: 'Inizia',
+      priority: 1,
+      action: 'session:start',
+      variant: 'primary',
+    },
+    {
+      id: 'add-player',
+      icon: 'user-plus',
+      label: 'Giocatore',
+      priority: 2,
+      action: 'session:add-player',
+    },
+    {
+      id: 'rules',
+      icon: 'book-open',
+      label: 'Regole',
+      priority: 3,
+      action: 'session:rules',
+    },
+    {
+      id: 'cancel',
+      icon: 'x',
+      label: 'Annulla',
+      priority: 4,
+      action: 'session:cancel',
+      variant: 'destructive',
+    },
+  ],
+
   session_active: [
     {
       id: 'ask-ai',
@@ -135,6 +284,173 @@ export const CONTEXT_ACTIONS: Record<LayoutContext, Action[]> = {
       priority: 5,
       action: 'session:end',
       variant: 'destructive',
+    },
+  ],
+
+  session_end: [
+    {
+      id: 'save',
+      icon: 'save',
+      label: 'Salva',
+      priority: 1,
+      action: 'session:save-results',
+      variant: 'primary',
+    },
+    {
+      id: 'share',
+      icon: 'share',
+      label: 'Condividi',
+      priority: 2,
+      action: 'session:share-results',
+    },
+    {
+      id: 'rematch',
+      icon: 'rotate-ccw',
+      label: 'Rivincita',
+      priority: 3,
+      action: 'session:rematch',
+    },
+    {
+      id: 'back',
+      icon: 'home',
+      label: 'Home',
+      priority: 4,
+      action: 'session:back-home',
+    },
+  ],
+
+  document_viewer: [
+    {
+      id: 'ask-ai',
+      icon: 'message-square',
+      label: 'Chiedi AI',
+      priority: 1,
+      action: 'document:ask-ai',
+      variant: 'primary',
+    },
+    {
+      id: 'zoom-in',
+      icon: 'zoom-in',
+      label: 'Zoom +',
+      priority: 2,
+      action: 'document:zoom-in',
+    },
+    {
+      id: 'zoom-out',
+      icon: 'zoom-out',
+      label: 'Zoom -',
+      priority: 3,
+      action: 'document:zoom-out',
+    },
+    {
+      id: 'bookmark',
+      icon: 'bookmark',
+      label: 'Segnalibro',
+      priority: 4,
+      action: 'document:bookmark',
+    },
+    {
+      id: 'download',
+      icon: 'download',
+      label: 'Scarica',
+      priority: 5,
+      action: 'document:download',
+    },
+  ],
+
+  catalog: [
+    {
+      id: 'filter',
+      icon: 'filter',
+      label: 'Filtra',
+      priority: 1,
+      action: 'catalog:filter',
+    },
+    {
+      id: 'sort',
+      icon: 'arrow-up-down',
+      label: 'Ordina',
+      priority: 2,
+      action: 'catalog:sort',
+    },
+    {
+      id: 'view',
+      icon: 'layout-grid',
+      label: 'Vista',
+      priority: 3,
+      action: 'catalog:view',
+    },
+  ],
+
+  wishlist: [
+    {
+      id: 'sort',
+      icon: 'arrow-up-down',
+      label: 'Ordina',
+      priority: 1,
+      action: 'wishlist:sort',
+    },
+    {
+      id: 'share',
+      icon: 'share',
+      label: 'Condividi',
+      priority: 2,
+      action: 'wishlist:share',
+    },
+    {
+      id: 'export',
+      icon: 'download',
+      label: 'Esporta',
+      priority: 3,
+      action: 'wishlist:export',
+    },
+  ],
+
+  notifications: [
+    {
+      id: 'mark-read',
+      icon: 'check-check',
+      label: 'Letti tutti',
+      priority: 1,
+      action: 'notifications:mark-all-read',
+    },
+    {
+      id: 'filter',
+      icon: 'filter',
+      label: 'Filtra',
+      priority: 2,
+      action: 'notifications:filter',
+    },
+    {
+      id: 'settings',
+      icon: 'settings',
+      label: 'Impostazioni',
+      priority: 3,
+      action: 'notifications:settings',
+    },
+  ],
+
+  profile: [
+    {
+      id: 'edit',
+      icon: 'edit',
+      label: 'Modifica',
+      priority: 1,
+      action: 'profile:edit',
+    },
+    {
+      id: 'share',
+      icon: 'share',
+      label: 'Condividi',
+      priority: 2,
+      action: 'profile:share',
+    },
+    {
+      id: 'stats',
+      icon: 'bar-chart-2',
+      label: 'Statistiche',
+      priority: 3,
+      action: 'profile:stats',
     },
   ],
 

@@ -129,9 +129,11 @@ export function RequireRole({
   }, [allowedRoles, router, unauthorizedRedirect, unauthenticatedRedirect]);
 
   // Show loading state while checking authentication
+  // Note: We render a minimal loading indicator that doesn't hide the parent layout
+  // This allows the navbar/layout to remain visible during auth check
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
           <p className="text-gray-600">Verifica autorizzazioni...</p>

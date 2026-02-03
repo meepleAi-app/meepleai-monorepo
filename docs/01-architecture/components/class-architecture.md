@@ -74,7 +74,7 @@ graph TB
 
 ### 1.2 Bounded Contexts
 
-Il sistema è organizzato in **7 Bounded Contexts** indipendenti:
+Il sistema è organizzato in **11 Bounded Contexts** indipendenti:
 
 ```mermaid
 graph LR
@@ -2758,7 +2758,7 @@ pie title Legacy Code Removal (5,387 linee)
 ### Pattern Architetturali Chiave
 
 1. **Domain-Driven Design (DDD)**:
-   - 7 Bounded Contexts ben separati
+   - 11 Bounded Contexts ben separati
    - Domain logic isolato in Aggregates e Value Objects
    - Domain Services per logica cross-aggregate
    - 42 Domain Events per side-effects

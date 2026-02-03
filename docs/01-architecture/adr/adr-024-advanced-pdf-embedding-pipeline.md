@@ -1,4 +1,4 @@
-# ADR-016: Advanced PDF Embedding Pipeline with Hybrid Indexing
+# ADR-024: Advanced PDF Embedding Pipeline with Hybrid Indexing
 
 **Status**: Accepted
 **Date**: 2025-12-03

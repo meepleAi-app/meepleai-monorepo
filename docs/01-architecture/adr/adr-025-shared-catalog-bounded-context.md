@@ -1,4 +1,4 @@
-# ADR-016: SharedGameCatalog Bounded Context Separation
+# ADR-025: SharedGameCatalog Bounded Context Separation
 
 **Status**: Accepted
 **Date**: 2026-01-14

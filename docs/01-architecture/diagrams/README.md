@@ -45,7 +45,7 @@ Contenuto:
 ---
 
 ### 3. [Bounded Contexts Interactions](./bounded-contexts-interactions.md)
-**Interazioni tra i 7 Bounded Contexts DDD**
+**Interazioni tra gli 11 Bounded Contexts DDD**
 
 Contenuto:
 - Class diagram per ogni Bounded Context:
@@ -166,7 +166,7 @@ Infrastructure Layer (Repositories + External Services + EF Core)
 ```
 
 ### Patterns Implementati
-- **Domain-Driven Design (DDD)**: 7 bounded contexts, aggregates, value objects
+- **Domain-Driven Design (DDD)**: 11 bounded contexts, aggregates, value objects
 - **CQRS (Command Query Responsibility Segregation)**: Separazione write/read
 - **MediatR**: Mediator pattern per loose coupling
 - **Repository Pattern**: Infrastructure isolation

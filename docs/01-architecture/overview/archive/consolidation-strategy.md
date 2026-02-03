@@ -1,6 +1,11 @@
 # Board Game AI Feature Integration - Consolidation Strategy
 
-**Status**: Approved for Implementation
+> **⚠️ ARCHIVED DOCUMENT** (2026-02-03)
+> This document is historical. The consolidation described here has been completed.
+> The system now runs on the consolidated architecture with 11 bounded contexts.
+> See [system-architecture.md](../system-architecture.md) for current architecture.
+
+**Status**: ~~Approved for Implementation~~ **COMPLETED**
 **Version**: 2.0 (Revised with Consolidation)
 **Date**: 2025-01-15
 **Decision**: Integrate Board Game AI features into existing MeepleAI (ASP.NET Core)
@@ -12,7 +17,7 @@
 ### ✅ APPROVED: Integrate Board Game AI features into MeepleAI ASP.NET Core
 
 **Rationale**:
-- Existing system production-ready (90%+ coverage, DDD architecture, 7 bounded contexts)
+- Existing system production-ready (90%+ coverage, DDD architecture, 11 bounded contexts)
 - Infrastructure proven (PostgreSQL 16, Qdrant, Redis, observability stack)
 - Team expertise in C#/.NET (avoid learning curve)
 - Faster time-to-market (extend vs rebuild)
@@ -34,7 +39,7 @@
 **Core Framework**:
 - ASP.NET Core 9.0 Minimal APIs (existing)
 - EF Core 9.0 (existing)
-- DDD Architecture with 7 bounded contexts (existing)
+- DDD Architecture with 11 bounded contexts (existing)
 - **NEW**: Multi-model validation service (OpenRouter API)
 - **NEW**: Italian localization services
 

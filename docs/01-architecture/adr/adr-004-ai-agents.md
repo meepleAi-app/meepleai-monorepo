@@ -15,8 +15,8 @@ MeepleAI requires AI agents for intelligent game rules interpretation, move vali
 1. A new 8th bounded context ("AI Agents Context")?
 2. Integrated within existing bounded contexts (primarily KnowledgeBase)?
 
-**Current Architecture**: 7 bounded contexts
-- Authentication, GameManagement, KnowledgeBase, DocumentProcessing, WorkflowIntegration, SystemConfiguration, Administration
+**Current Architecture**: 11 bounded contexts
+- Administration, Authentication, DocumentProcessing, GameManagement, KnowledgeBase, SessionTracking, SharedGameCatalog, SystemConfiguration, UserLibrary, UserNotifications, WorkflowIntegration
 
 **KnowledgeBase Context** currently handles:
 - RAG pipeline (hybrid vector + keyword search)

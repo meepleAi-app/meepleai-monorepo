@@ -22,3 +22,13 @@ export type { PublicLayoutWrapperProps } from './PublicLayoutWrapper';
 
 export { AuthLayout } from './AuthLayout';
 export type { AuthLayoutProps } from './AuthLayout';
+
+/**
+ * Authenticated Layout Components - Issue #3479
+ *
+ * Layout System v2 for authenticated pages.
+ * Combines UnifiedHeader + UnifiedActionBar + SmartFAB.
+ */
+
+export { AuthenticatedLayout } from './AuthenticatedLayout';
+export type { AuthenticatedLayoutProps } from './AuthenticatedLayout';

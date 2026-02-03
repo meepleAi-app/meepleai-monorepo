@@ -73,6 +73,13 @@ export type {
   MultiSelectBarProps,
 } from './ActionBar';
 
+// Layout System v2 - UnifiedActionBar (#3479)
+export {
+  UnifiedActionBar,
+  UnifiedActionBarSpacer,
+} from './ActionBar';
+export type { UnifiedActionBarProps } from './ActionBar';
+
 // Phase 5: Smart FAB (#3291)
 export { SmartFAB, QuickMenu } from './SmartFAB';
 export type { SmartFABProps, QuickMenuProps } from './SmartFAB';

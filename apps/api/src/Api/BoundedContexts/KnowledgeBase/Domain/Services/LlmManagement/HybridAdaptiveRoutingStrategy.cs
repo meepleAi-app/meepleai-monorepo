@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.SystemConfiguration.Application.Services;
 using Api.BoundedContexts.SystemConfiguration.Domain.Enums;
 using Api.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -20,20 +21,20 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 {
     private readonly IStrategyModelMappingService _strategyModelMappingService;
-    private readonly ITierStrategyAccessService _tierStrategyAccessService;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILlmModelOverrideService _modelOverrideService;
     private readonly ILogger<HybridAdaptiveRoutingStrategy> _logger;
     private readonly IOptions<AiProviderSettings> _aiSettings;
 
     public HybridAdaptiveRoutingStrategy(
         IStrategyModelMappingService strategyModelMappingService,
-        ITierStrategyAccessService tierStrategyAccessService,
+        IServiceScopeFactory serviceScopeFactory,
         IOptions<AiProviderSettings> aiSettings,
         ILogger<HybridAdaptiveRoutingStrategy> logger,
         ILlmModelOverrideService? modelOverrideService = null)
     {
         _strategyModelMappingService = strategyModelMappingService ?? throw new ArgumentNullException(nameof(strategyModelMappingService));
-        _tierStrategyAccessService = tierStrategyAccessService ?? throw new ArgumentNullException(nameof(tierStrategyAccessService));
+        _serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
         _aiSettings = aiSettings ?? throw new ArgumentNullException(nameof(aiSettings));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _modelOverrideService = modelOverrideService ?? new NullModelOverrideService();
@@ -83,12 +84,16 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 
     /// <summary>
     /// Validate that the user's tier has access to the requested strategy.
+    /// Uses IServiceScopeFactory to resolve scoped ITierStrategyAccessService.
     /// </summary>
     private TierAccessValidation ValidateTierAccess(LlmUserTier tier, RagStrategy strategy, string userId)
     {
         try
         {
-            var hasAccess = _tierStrategyAccessService
+            using var scope = _serviceScopeFactory.CreateScope();
+            var tierStrategyAccessService = scope.ServiceProvider.GetRequiredService<ITierStrategyAccessService>();
+
+            var hasAccess = tierStrategyAccessService
                 .HasAccessToStrategyAsync(tier, strategy, CancellationToken.None)
                 .GetAwaiter()
                 .GetResult();
@@ -102,7 +107,7 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
                 return TierAccessValidation.Valid();
             }
 
-            var availableStrategies = _tierStrategyAccessService
+            var availableStrategies = tierStrategyAccessService
                 .GetAvailableStrategiesAsync(tier, CancellationToken.None)
                 .GetAwaiter()
                 .GetResult();

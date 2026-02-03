@@ -5,6 +5,14 @@
  * Layout wrapper per pagine pubbliche dell'applicazione.
  * Compone UnifiedHeader + content area + PublicFooter + BottomNav (mobile).
  *
+ * @deprecated For authenticated pages - Issue #3479
+ * For authenticated routes, use AuthenticatedLayout instead which provides:
+ * - UnifiedActionBar (combined bottom nav + context actions)
+ * - SmartFAB (context-aware floating action button)
+ * - Better mobile-first experience
+ *
+ * This component should only be used for truly public pages (marketing, login, etc.)
+ *
  * Features:
  * - Container responsive
  * - Min-height per footer sticky

@@ -18,6 +18,14 @@ import {
   Search,
   Settings,
   Home,
+  User,
+  Heart,
+  Bell,
+  FileText,
+  PlayCircle,
+  CheckCircle,
+  ListPlus,
+  PlusCircle,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -36,6 +44,7 @@ interface ContextConfig {
 
 /**
  * Context-to-display mapping
+ * Issue #3479 - Extended contexts for Layout System v2
  */
 const CONTEXT_CONFIG: Record<LayoutContext, ContextConfig> = {
   default: {
@@ -43,30 +52,85 @@ const CONTEXT_CONFIG: Record<LayoutContext, ContextConfig> = {
     label: 'Home',
     emoji: '🏠',
   },
+  dashboard: {
+    icon: Home,
+    label: 'Dashboard',
+    emoji: '🏠',
+  },
   library: {
     icon: Library,
     label: 'La mia libreria',
     emoji: '📚',
+  },
+  library_empty: {
+    icon: PlusCircle,
+    label: 'Aggiungi giochi',
+    emoji: '➕',
+  },
+  library_selection: {
+    icon: ListPlus,
+    label: 'Selezione',
+    emoji: '☑️',
   },
   game_detail: {
     icon: Gamepad2,
     label: 'Dettagli gioco',
     emoji: '🎲',
   },
+  game_detail_not_owned: {
+    icon: Gamepad2,
+    label: 'Dettagli gioco',
+    emoji: '🎲',
+  },
+  session_setup: {
+    icon: PlayCircle,
+    label: 'Preparazione partita',
+    emoji: '🎯',
+  },
   session_active: {
     icon: Play,
     label: 'Sessione attiva',
     emoji: '▶️',
+  },
+  session_end: {
+    icon: CheckCircle,
+    label: 'Fine partita',
+    emoji: '🏆',
+  },
+  document_viewer: {
+    icon: FileText,
+    label: 'Documento',
+    emoji: '📄',
   },
   chat: {
     icon: MessageSquare,
     label: 'Chat AI',
     emoji: '🤖',
   },
+  catalog: {
+    icon: Gamepad2,
+    label: 'Catalogo',
+    emoji: '🎮',
+  },
   search: {
     icon: Search,
     label: 'Ricerca',
     emoji: '🔍',
+  },
+  wishlist: {
+    icon: Heart,
+    label: 'Wishlist',
+    emoji: '❤️',
+  },
+  notifications: {
+    icon: Bell,
+    label: 'Notifiche',
+    emoji: '🔔',
+  },
+  profile: {
+    icon: User,
+    label: 'Profilo',
+    emoji: '👤',
   },
   settings: {
     icon: Settings,

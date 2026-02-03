@@ -1,6 +1,10 @@
 /**
  * BottomNav - Mobile bottom navigation (Global)
  *
+ * @deprecated Issue #3479 - Use UnifiedActionBar instead.
+ * This component is deprecated and will be removed in a future release.
+ * For authenticated pages, use AuthenticatedLayout which includes UnifiedActionBar.
+ *
  * Primary mobile navigation with 5 main app sections.
  * Fixed bottom sticky nav, hidden on desktop (≥768px).
  *

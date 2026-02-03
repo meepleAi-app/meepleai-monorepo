@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, main-dev]
+    branches: [main, main-staging, main-dev, frontend-dev, backend-dev]
   pull_request:
-    branches: [main, main-dev]
+    branches: [main, main-staging, main-dev, frontend-dev, backend-dev]
   workflow_dispatch:
 
 # Cancel in-progress runs for same PR/branch

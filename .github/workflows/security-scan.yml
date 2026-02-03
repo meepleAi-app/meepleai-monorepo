@@ -2,12 +2,12 @@ name: Security Scan
 
 on:
   push:
-    branches: [main]
+    branches: [main, main-staging]
     paths:
       - 'apps/**'
       - '.github/workflows/**'
   pull_request:
-    branches: [main]
+    branches: [main, main-staging]
   schedule:
     - cron: '0 2 * * 1' # Weekly on Mondays
   workflow_dispatch:

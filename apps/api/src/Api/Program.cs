@@ -509,6 +509,9 @@ v1Api.MapGroup("/agent-typologies").MapAgentTypologyEndpoints();
 // Issue #3184 (AGT-010): Agent session lifecycle endpoints
 v1Api.MapAgentSessionEndpoints();
 
+// Issue #3483: Chat session persistence endpoints
+v1Api.MapChatSessionEndpoints();
+
 // Issue #1565: Telemetry test endpoints for HyperDX integration testing
 v1Api.MapTelemetryTestEndpoints();
 v1Api.MapTestTelemetryEndpoints(); // Issue #1567: Manual span test endpoint

@@ -57,7 +57,6 @@ type BulkRoleModalState = {
 export function AdminPageClient() {
   const { user, loading: authLoading } = useAuthUser();
 
-  if (!user) return null;
   // State
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
@@ -395,6 +394,9 @@ export function AdminPageClient() {
     onUnsuspend: (user) => handleUnsuspend(user.id, user.email),
     onDelete: (user) => handleDelete(user.id, user.email),
   }), [handleSuspend, handleUnsuspend, handleDelete]);
+
+  // Early return after all hooks
+  if (!user) return null;
 
   if (dataLoading) {
     return (

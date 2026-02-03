@@ -26,6 +26,7 @@ internal static class PdfEndpoints
     public static RouteGroupBuilder MapPdfEndpoints(this RouteGroupBuilder group)
     {
         MapStandardUploadEndpoint(group);
+        MapPrivatePdfUploadEndpoint(group); // Issue #3479: Private PDF Upload
         MapChunkedUploadEndpoints(group);
         // Removed: MapBggEndpoints(group) - BGG belongs to AiEndpoints (Issue #2366)
         MapRetrievalEndpoints(group);
@@ -41,6 +42,24 @@ internal static class PdfEndpoints
     {
         group.MapPost("/ingest/pdf", HandleStandardUpload)
              .DisableAntiforgery(); // Ensure we can post files
+    }
+
+    /// <summary>
+    /// Issue #3479: Private PDF upload endpoint for UserLibraryEntry.
+    /// POST /users/{userId}/library/entries/{entryId}/pdf
+    /// </summary>
+    private static void MapPrivatePdfUploadEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/users/{userId:guid}/library/entries/{entryId:guid}/pdf", HandlePrivatePdfUpload)
+             .DisableAntiforgery()
+             .RequireSession()
+             .WithName("UploadPrivatePdf")
+             .WithOpenApi(operation =>
+             {
+                 operation.Summary = "Upload a private PDF for a library entry";
+                 operation.Description = "Uploads a private PDF file and associates it with a user's library entry. The PDF will be processed and indexed in a private namespace.";
+                 return operation;
+             });
     }
 
     private static void MapChunkedUploadEndpoints(RouteGroupBuilder group)
@@ -762,6 +781,91 @@ internal static class PdfEndpoints
             pageCount = result.PageCount,
             processingStatus = result.ProcessingStatus
         });
+    }
+
+    /// <summary>
+    /// Issue #3479: Handle private PDF upload for UserLibraryEntry.
+    /// </summary>
+    private static async Task<IResult> HandlePrivatePdfUpload(
+        Guid userId,
+        Guid entryId,
+        HttpContext context,
+        IMediator mediator,
+        IFeatureFlagService featureFlags,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        // Check feature flag
+        if (!await featureFlags.IsEnabledAsync("Features.PdfUpload").ConfigureAwait(false))
+        {
+            return Results.Json(
+                new { error = "feature_disabled", message = "PDF uploads are currently disabled" },
+                statusCode: 403);
+        }
+
+        // Validate session
+        var (authenticated, session, error) = context.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        // Verify user matches session
+        if (session!.User!.Id != userId)
+        {
+            logger.LogWarning(
+                "User {SessionUserId} attempted to upload PDF as user {RequestedUserId}",
+                session.User.Id, userId);
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        // Read file from form
+        var form = await context.Request.ReadFormAsync(ct).ConfigureAwait(false);
+        var file = form.Files.GetFile("file");
+
+        if (file == null || file.Length == 0)
+        {
+            return Results.BadRequest(new
+            {
+                error = "validation_failed",
+                message = "No file provided. Please select a PDF file to upload."
+            });
+        }
+
+        // Create and send command
+        var command = new UploadPrivatePdfCommand(userId, entryId, file);
+
+        try
+        {
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "Private PDF {PdfId} uploaded for library entry {EntryId} by user {UserId}",
+                result.PdfId, entryId, userId);
+
+            return Results.Created(
+                $"/api/v1/pdfs/{result.PdfId}",
+                new
+                {
+                    pdfId = result.PdfId,
+                    fileName = result.FileName,
+                    fileSize = result.FileSize,
+                    status = result.Status,
+                    sseStreamUrl = result.SseStreamUrl
+                });
+        }
+        catch (Api.Middleware.Exceptions.NotFoundException ex)
+        {
+            logger.LogWarning(ex, "Library entry not found for private PDF upload: {Message}", ex.Message);
+            return Results.NotFound(new { error = ex.Message });
+        }
+        catch (Api.Middleware.Exceptions.ForbiddenException ex)
+        {
+            logger.LogWarning(ex, "Forbidden access for private PDF upload: {Message}", ex.Message);
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+        catch (Api.SharedKernel.Domain.Exceptions.ValidationException ex)
+        {
+            logger.LogWarning(ex, "Validation failed for private PDF upload: {Message}", ex.Message);
+            return Results.BadRequest(new { error = "validation_failed", message = ex.Message });
+        }
     }
 
     /// <summary>

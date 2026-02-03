@@ -3,10 +3,13 @@
  * Issue #3479 - Layout System v2: Unified Layout for Authenticated Pages
  *
  * Combines:
- * - UnifiedHeader (desktop nav + mobile top bar)
- * - SmartFAB (context-aware floating action button)
- * - UnifiedActionBar (bottom nav + context actions)
+ * - UnifiedHeader (desktop nav + settings + notifications + user menu)
+ * - UnifiedActionBar (mobile-only: bottom nav + integrated FAB + context actions)
  * - Breadcrumb (navigation context)
+ *
+ * Navigation structure:
+ * - Desktop: UnifiedHeader handles all navigation
+ * - Mobile: UnifiedHeader (top) + UnifiedActionBar (bottom with integrated FAB)
  *
  * This layout replaces PublicLayout for authenticated routes.
  */
@@ -17,7 +20,6 @@ import { type ReactNode } from 'react';
 
 import { UnifiedActionBar, UnifiedActionBarSpacer } from '@/components/layout/ActionBar';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
-import { SmartFAB } from '@/components/layout/SmartFAB';
 import { UnifiedHeader } from '@/components/layout/UnifiedHeader';
 import { cn } from '@/lib/utils';
 
@@ -26,9 +28,7 @@ export interface AuthenticatedLayoutProps {
   children: ReactNode;
   /** Whether to show the breadcrumb navigation */
   showBreadcrumb?: boolean;
-  /** Whether to show the SmartFAB */
-  showFAB?: boolean;
-  /** Whether to show the UnifiedActionBar (bottom nav) */
+  /** Whether to show the UnifiedActionBar (mobile bottom nav with FAB) */
   showActionBar?: boolean;
   /** Additional CSS classes for the main content area */
   className?: string;
@@ -41,20 +41,19 @@ export interface AuthenticatedLayoutProps {
  *
  * Main layout component for authenticated pages.
  * Provides unified navigation experience with:
- * - Desktop: Header with full nav + breadcrumbs
- * - Mobile: Compact header + bottom nav bar + FAB
+ * - Desktop: Header with full nav + settings + breadcrumbs
+ * - Mobile: Compact header + bottom nav bar with integrated FAB
  */
 export function AuthenticatedLayout({
   children,
   showBreadcrumb = true,
-  showFAB = true,
   showActionBar = true,
   className,
   fullWidth = false,
 }: AuthenticatedLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Top Header - UnifiedHeader */}
+      {/* Top Header - UnifiedHeader (Desktop nav, Mobile top bar) */}
       <UnifiedHeader />
 
       {/* Main Content Area */}
@@ -79,10 +78,7 @@ export function AuthenticatedLayout({
         </div>
       </main>
 
-      {/* Smart FAB - Mobile only, context-aware */}
-      {showFAB && <SmartFAB />}
-
-      {/* Unified ActionBar - Bottom navigation + context actions */}
+      {/* Unified ActionBar - Mobile only: bottom nav + integrated FAB */}
       {showActionBar && (
         <>
           <UnifiedActionBar />

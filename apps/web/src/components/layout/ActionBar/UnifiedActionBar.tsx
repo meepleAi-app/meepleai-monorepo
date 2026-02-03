@@ -2,12 +2,13 @@
  * UnifiedActionBar Component
  * Issue #3479 - Layout System v2: Unified ActionBar
  *
- * Bottom navigation bar that combines:
- * - Primary navigation items (Home, Library, Catalog, etc.)
- * - Context-specific actions (Add, Filter, Play, etc.)
+ * Mobile-only bottom navigation bar that combines:
+ * - Primary navigation items (Home, Library, Chat, Toolkit, etc.)
+ * - Integrated FAB for context-specific primary action
  * - Overflow menu for extra items
  *
- * Replaces separate BottomNav + ActionBar with a single unified component.
+ * Desktop navigation is handled by UnifiedHeader.
+ * This component replaces both BottomNav and SmartFAB.
  */
 
 'use client';
@@ -42,6 +43,7 @@ import {
   Save,
   RotateCcw,
   MoreVertical,
+  Dice6,
   // Extended icons for Layout System v2
   BarChart2,
   Trash2,
@@ -69,6 +71,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
+import { useFAB } from '@/hooks/useFAB';
+import { useLongPress } from '@/hooks/useLongPress';
 import {
   useUnifiedActionBar,
   type UnifiedItem,
@@ -85,6 +89,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'gamepad-2': Gamepad2,
   'message-square': MessageSquare,
   user: User,
+  'dice-6': Dice6,
   // Action icons
   plus: Plus,
   filter: Filter,
@@ -128,19 +133,39 @@ export interface UnifiedActionBarProps
 /**
  * UnifiedActionBar Component
  *
- * Single bottom bar combining navigation and context actions.
+ * Mobile-only bottom bar combining navigation and integrated FAB.
+ * Desktop navigation is handled by UnifiedHeader.
  */
 export const UnifiedActionBar = forwardRef<HTMLElement, UnifiedActionBarProps>(
   function UnifiedActionBar({ staggerDelay = 50, className, ...props }, ref) {
     const {
       visibleNavItems,
-      visibleContextActions,
       overflowItems,
       hasOverflow,
       isVisible,
       breakpoint,
       handleItemClick,
     } = useUnifiedActionBar();
+
+    // FAB integration
+    const {
+      config: fabConfig,
+      isQuickMenuOpen,
+      openQuickMenu,
+      closeQuickMenu,
+      triggerAction: triggerFABAction,
+      triggerQuickAction,
+    } = useFAB();
+
+    // Long press for FAB quick menu
+    const fabLongPressHandlers = useLongPress(openQuickMenu, {
+      onClick: triggerFABAction,
+    });
+
+    // Don't render on desktop - navigation is in UnifiedHeader
+    if (breakpoint === 'desktop') {
+      return null;
+    }
 
     // Don't render if not visible
     if (!isVisible) {
@@ -150,12 +175,17 @@ export const UnifiedActionBar = forwardRef<HTMLElement, UnifiedActionBarProps>(
     // Calculate animation delays
     const navItemCount = visibleNavItems.length;
 
+    // Get FAB icon
+    const FABIconComponent = fabConfig ? (ICON_MAP[fabConfig.icon] ?? Plus) : Plus;
+
     return (
       <nav
         ref={ref}
         className={cn(
           // Fixed positioning at bottom
           'fixed bottom-0 left-0 right-0 z-40',
+          // Hide on desktop (md+)
+          'md:hidden',
 
           // Height with safe area
           'h-[72px]',
@@ -189,35 +219,96 @@ export const UnifiedActionBar = forwardRef<HTMLElement, UnifiedActionBarProps>(
               item={item}
               onClick={() => handleItemClick(item)}
               animationDelay={index * staggerDelay}
-              variant={breakpoint === 'desktop' ? 'icon-label' : 'icon-label'}
+              variant="icon-label"
             />
           ))}
 
-          {/* Separator between nav and actions (desktop only) */}
-          {breakpoint === 'desktop' && visibleContextActions.length > 0 && (
-            <div
-              className="h-8 w-px bg-border/50 mx-1"
-              aria-hidden="true"
-            />
+          {/* Integrated FAB - Primary Action Button */}
+          {fabConfig && (
+            <div className="relative">
+              {/* Quick Menu (shown on long press) */}
+              {isQuickMenuOpen && (
+                <div
+                  className={cn(
+                    'absolute bottom-full mb-2 right-1/2 translate-x-1/2',
+                    'flex flex-col gap-2 p-2',
+                    'bg-background/95 dark:bg-card/95',
+                    'backdrop-blur-[16px]',
+                    'rounded-xl border border-border/50',
+                    'shadow-lg',
+                    'animate-in fade-in-0 slide-in-from-bottom-2'
+                  )}
+                >
+                  {fabConfig.quickMenuItems.map((item) => {
+                    const QuickIcon = ICON_MAP[item.icon] ?? Plus;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          triggerQuickAction(item.id);
+                          closeQuickMenu();
+                        }}
+                        className={cn(
+                          'flex items-center gap-2 px-3 py-2',
+                          'text-sm text-muted-foreground',
+                          'hover:text-primary hover:bg-muted/50',
+                          'rounded-lg transition-colors'
+                        )}
+                      >
+                        <QuickIcon className="h-4 w-4" />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* FAB Button */}
+              <button
+                type="button"
+                className={cn(
+                  'flex flex-col items-center justify-center gap-0.5',
+                  'min-w-[52px] min-h-[52px]',
+                  'px-3 py-2',
+                  'rounded-full',
+                  'bg-primary text-primary-foreground',
+                  'shadow-lg hover:shadow-xl',
+                  'transition-all duration-200',
+                  'hover:scale-105 active:scale-95',
+                  'focus-visible:outline-none focus-visible:ring-2',
+                  'focus-visible:ring-[hsl(262_83%_62%)] focus-visible:ring-offset-2',
+                  'animate-in fade-in-0 slide-in-from-bottom-2',
+                  isQuickMenuOpen && 'rotate-45'
+                )}
+                style={{
+                  animationDelay: `${navItemCount * staggerDelay}ms`,
+                  animationFillMode: 'backwards',
+                }}
+                aria-label={fabConfig.label}
+                aria-expanded={isQuickMenuOpen}
+                aria-haspopup="menu"
+                data-testid="actionbar-fab"
+                {...fabLongPressHandlers}
+              >
+                <FABIconComponent
+                  className={cn(
+                    'h-5 w-5',
+                    'transition-transform duration-200',
+                    isQuickMenuOpen && 'rotate-45'
+                  )}
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
           )}
-
-          {/* Context Actions */}
-          {visibleContextActions.map((item, index) => (
-            <UnifiedActionBarItem
-              key={item.id}
-              item={item}
-              onClick={() => handleItemClick(item)}
-              animationDelay={(navItemCount + index) * staggerDelay}
-              variant={breakpoint === 'desktop' ? 'icon-label' : 'icon-only'}
-            />
-          ))}
 
           {/* Overflow Menu */}
           {hasOverflow && (
             <UnifiedOverflowMenu
               items={overflowItems}
               onItemClick={handleItemClick}
-              animationDelay={(navItemCount + visibleContextActions.length) * staggerDelay}
+              animationDelay={(navItemCount + 1) * staggerDelay}
             />
           )}
         </div>

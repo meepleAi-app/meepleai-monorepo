@@ -46,7 +46,10 @@ internal record GameDetailDto(
 
     // Custom configurations
     AgentConfigDto? CustomAgentConfig = null,
-    CustomPdfDto? CustomPdf = null
+    CustomPdfDto? CustomPdf = null,
+
+    // Labels
+    LabelDto[]? Labels = null
 );
 
 /// <summary>

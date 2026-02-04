@@ -10,10 +10,13 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Caching;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.ContextEngineering;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 // Note: ITierStrategyAccessService is in Api.BoundedContexts.KnowledgeBase.Domain.Services namespace
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
@@ -38,6 +41,7 @@ internal static class KnowledgeBaseServiceExtensions
         AddInfrastructureServices(services);
         AddApplicationServices(services);
         AddChunkingAndRerankingServices(services, configuration);
+        AddCachingServices(services, configuration);
 
         return services;
     }
@@ -64,6 +68,19 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #2405: Ledger Mode Handler + State Parser
         services.AddScoped<IAgentModeHandler, Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes.LedgerModeHandler>();
         services.AddScoped<IStateParser, NaturalLanguageStateParser>();
+
+        // ISSUE-3491: Context Engineering Framework
+        services.AddSingleton<ITokenEstimator, SimpleTokenEstimator>();
+        services.AddSingleton<IContextRetrievalStrategy, TemporalScoringStrategy>();
+        services.AddSingleton<IContextRetrievalStrategy, PositionSimilarityStrategy>();
+        services.AddSingleton<IContextRetrievalStrategy, HybridSearchStrategy>();
+        services.AddSingleton<IContextRetrievalStrategy, CapabilityMatchingStrategy>();
+        services.AddScoped<IContextSource, ConversationMemorySource>();
+        services.AddScoped<IContextSource, GameStateSource>();
+        services.AddScoped<IContextSource, StrategyPatternSource>();
+
+        // ISSUE-3492: Hybrid Search with Reranking Pipeline
+        services.AddScoped<IHybridSearchEngine, HybridSearchEngine>();
     }
 
     private static void AddValidationServices(IServiceCollection services)
@@ -155,6 +172,10 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IAgentTestResultRepository, AgentTestResultRepository>(); // Issue #3379: Agent test results
         services.AddScoped<ITierStrategyAccessRepository, TierStrategyAccessRepository>(); // Issue #3436: Tier-Strategy access
         services.AddScoped<IStrategyModelMappingRepository, StrategyModelMappingRepository>(); // Issue #3435: Strategy-Model mapping
+        // Issue #3493: PostgreSQL Schema Extensions for Multi-Agent System
+        services.AddScoped<IConversationMemoryRepository, ConversationMemoryRepository>();
+        services.AddScoped<IAgentGameStateSnapshotRepository, AgentGameStateSnapshotRepository>();
+        services.AddScoped<IStrategyPatternRepository, StrategyPatternRepository>();
 
         // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
         services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();
@@ -225,5 +246,25 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Application Services - Resilient Retrieval with Reranking
         services.AddScoped<IRerankedRetrievalService, ResilientRetrievalService>();
+    }
+
+    private static void AddCachingServices(IServiceCollection services, IConfiguration? configuration)
+    {
+        // ISSUE-3494: Multi-Tier Cache Configuration
+        if (configuration != null)
+        {
+            services.Configure<MultiTierCacheConfiguration>(
+                configuration.GetSection(MultiTierCacheConfiguration.SectionName));
+        }
+        else
+        {
+            // Fallback: configure with defaults via lambda (resolved at runtime)
+            services.AddOptions<MultiTierCacheConfiguration>()
+                .Configure<IConfiguration>((opts, cfg) =>
+                    cfg.GetSection(MultiTierCacheConfiguration.SectionName).Bind(opts));
+        }
+
+        // ISSUE-3494: Multi-Tier Cache Service (Singleton for L1 in-memory cache consistency)
+        services.AddSingleton<IMultiTierCache, MultiTierCache>();
     }
 }

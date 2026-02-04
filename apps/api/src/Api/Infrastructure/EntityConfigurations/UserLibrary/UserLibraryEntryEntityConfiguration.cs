@@ -132,6 +132,11 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
             .HasForeignKey(c => c.UserLibraryEntryId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasMany(e => e.Labels)
+            .WithOne(l => l.UserLibraryEntry)
+            .HasForeignKey(l => l.UserLibraryEntryId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // Indexes for new query scenarios
         builder.HasIndex(e => e.CurrentState)
             .HasDatabaseName("IX_UserLibraryEntries_CurrentState");

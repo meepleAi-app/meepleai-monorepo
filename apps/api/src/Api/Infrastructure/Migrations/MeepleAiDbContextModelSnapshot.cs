@@ -1559,6 +1559,98 @@ namespace Api.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentTestResultEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CitationsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("citations_json");
+
+                    b.Property<double>("ConfidenceScore")
+                        .HasColumnType("double precision")
+                        .HasColumnName("confidence_score");
+
+                    b.Property<decimal>("CostEstimate")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)")
+                        .HasColumnName("cost_estimate");
+
+                    b.Property<DateTime>("ExecutedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("executed_at");
+
+                    b.Property<Guid>("ExecutedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("executed_by");
+
+                    b.Property<bool>("IsSaved")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_saved");
+
+                    b.Property<int>("LatencyMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("latency_ms");
+
+                    b.Property<string>("ModelUsed")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model_used");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Query")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("query");
+
+                    b.Property<string>("Response")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("response");
+
+                    b.Property<string>("StrategyOverride")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("strategy_override");
+
+                    b.Property<int>("TokensUsed")
+                        .HasColumnType("integer")
+                        .HasColumnName("tokens_used");
+
+                    b.Property<Guid>("TypologyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("typology_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExecutedAt")
+                        .HasDatabaseName("ix_agent_test_results_executed_at");
+
+                    b.HasIndex("ExecutedBy")
+                        .HasDatabaseName("ix_agent_test_results_executed_by");
+
+                    b.HasIndex("IsSaved")
+                        .HasDatabaseName("ix_agent_test_results_is_saved");
+
+                    b.HasIndex("TypologyId")
+                        .HasDatabaseName("ix_agent_test_results_typology_id");
+
+                    b.HasIndex("TypologyId", "ExecutedAt")
+                        .HasDatabaseName("ix_agent_test_results_typology_executed_at");
+
+                    b.ToTable("agent_test_results", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5694,6 +5786,25 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Agent");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentTestResultEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("ExecutedBy")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity", "Typology")
+                        .WithMany()
+                        .HasForeignKey("TypologyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Typology");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.ChatSessionEntity", b =>

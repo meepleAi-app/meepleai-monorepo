@@ -281,3 +281,22 @@ async def route_query(query: str, user: User) -> RoutingDecision:
 - Model selection validation
 
 **Source**: Design from TOMAC-RAG final spec
+
+---
+
+## Admin Configuration
+
+The tier-strategy access matrix and model mappings can be configured by administrators.
+
+**Admin UI**: Navigate to **Admin** → **RAG** → **Tier Strategy Config**
+
+**Capabilities**:
+- Enable/disable strategies per tier
+- Customize strategy → model mappings
+- Configure fallback models
+- Reset to system defaults
+
+**Related Documentation**:
+- [Admin Configuration Guide](../../04-admin/rag-tier-strategy-config.md)
+- [Migration Guide](../../02-development/migrations/tier-strategy-refactor.md)
+- [RAG Flow Diagram](diagrams/rag-flow-current.md)

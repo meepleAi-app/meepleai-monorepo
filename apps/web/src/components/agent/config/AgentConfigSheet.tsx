@@ -1,6 +1,8 @@
 /**
  * Agent Config Sheet - Main Configuration Container
  * Issue #3238 (FRONT-002)
+ * Issue #3375 - Agent Session Launch API Integration
+ * Issue #3376 - Added Strategy, ModelTier, CostPreview
  *
  * Responsive layout:
  * - Mobile (0-640px): Bottom sheet, 90vh
@@ -24,10 +26,13 @@ import {
   SheetFooter,
 } from '@/components/ui/navigation/sheet';
 import { Button } from '@/components/ui/primitives/button';
+import { useAgentSessionLaunch } from '@/hooks/useAgentSessionLaunch';
 
+import { CostPreview } from './CostPreview';
 import { GameSelector } from './GameSelector';
-import { ModelSelector } from './ModelSelector';
+import { ModelTierSelector } from './ModelTierSelector';
 import { SlotCards } from './SlotCards';
+import { StrategySelector } from './StrategySelector';
 import { TemplateCarousel } from './TemplateCarousel';
 import { TokenQuotaDisplay } from './TokenQuotaDisplay';
 import { ActionBar } from '../shared/ActionBar';
@@ -36,13 +41,27 @@ interface AgentConfigSheetProps {
   isOpen: boolean;
   onClose: () => void;
   gameId: string;
+  gameSessionId?: string;
   gameTitle: string;
 }
 
 type ViewState = 'config' | 'template-info' | 'model-pricing';
 
-export function AgentConfigSheet({ isOpen, onClose, gameId: _gameId, gameTitle }: AgentConfigSheetProps) {
+export function AgentConfigSheet({
+  isOpen,
+  onClose,
+  gameId,
+  gameSessionId,
+  gameTitle,
+}: AgentConfigSheetProps) {
   const [view, setView] = useState<ViewState>('config');
+
+  // Issue #3375: Agent Session Launch
+  const { launch, isLaunching } = useAgentSessionLaunch({
+    onSuccess: () => {
+      onClose();
+    },
+  });
 
   const handleBack = () => {
     if (view === 'template-info' || view === 'model-pricing') {
@@ -100,11 +119,17 @@ export function AgentConfigSheet({ isOpen, onClose, gameId: _gameId, gameTitle }
               {/* Game Selection - Issue #3239 */}
               <GameSelector />
 
+              {/* Strategy Selection - Issue #3376 */}
+              <StrategySelector />
+
               {/* Template Carousel - Issue #3239 */}
               <TemplateCarousel />
 
-              {/* Model Selection - Issue #3239 */}
-              <ModelSelector />
+              {/* Model Tier Selection - Issue #3376 */}
+              <ModelTierSelector userTier="free" />
+
+              {/* Cost Preview - Issue #3376 */}
+              <CostPreview />
 
               {/* Token Quota - Issue #3240 */}
               <TokenQuotaDisplay />
@@ -138,8 +163,14 @@ export function AgentConfigSheet({ isOpen, onClose, gameId: _gameId, gameTitle }
           <div className="w-full">
             <ActionBar
               state="config"
-              onLaunch={() => {}}
+              onLaunch={() => {
+                // Issue #3375: Launch agent session
+                if (gameSessionId) {
+                  launch(gameSessionId, { gameId });
+                }
+              }}
               onCancel={onClose}
+              disabled={isLaunching}
             />
           </div>
         </SheetFooter>

@@ -1,6 +1,7 @@
 /**
  * UI Slice - Agent UI State Management
  * Issue #3238 (FRONT-002)
+ * Issue #3376 - Added strategy and tier selection
  *
  * Manages ephemeral UI state (not persisted)
  */
@@ -18,6 +19,10 @@ export interface UISlice {
   selectedTypologyId: string | null;
   selectedModelId: string | null;
 
+  // Strategy & Tier Selection (Issue #3376)
+  selectedStrategyId: string | null;
+  selectedTierId: string | null;
+
   // Actions
   openConfig: () => void;
   closeConfig: () => void;
@@ -31,6 +36,10 @@ export interface UISlice {
   setSelectedTypology: (typologyId: string | null) => void;
   setSelectedModel: (modelId: string | null) => void;
   clearSelections: () => void;
+
+  // Strategy & Tier Actions (Issue #3376)
+  setSelectedStrategy: (strategyId: string | null) => void;
+  setSelectedTier: (tierId: string | null) => void;
 }
 
 export const createUISlice: StateCreator<AgentStore, [], [], UISlice> = set => ({
@@ -40,6 +49,8 @@ export const createUISlice: StateCreator<AgentStore, [], [], UISlice> = set => (
   selectedGameId: null,
   selectedTypologyId: null,
   selectedModelId: null,
+  selectedStrategyId: 'BALANCED', // Default strategy
+  selectedTierId: 'free', // Default tier
 
   // Config actions
   openConfig: () => set({ isConfigOpen: true }),
@@ -56,5 +67,15 @@ export const createUISlice: StateCreator<AgentStore, [], [], UISlice> = set => (
   setSelectedTypology: typologyId => set({ selectedTypologyId: typologyId }),
   setSelectedModel: modelId => set({ selectedModelId: modelId }),
   clearSelections: () =>
-    set({ selectedGameId: null, selectedTypologyId: null, selectedModelId: null }),
+    set({
+      selectedGameId: null,
+      selectedTypologyId: null,
+      selectedModelId: null,
+      selectedStrategyId: 'BALANCED',
+      selectedTierId: 'free',
+    }),
+
+  // Strategy & Tier actions (Issue #3376)
+  setSelectedStrategy: strategyId => set({ selectedStrategyId: strategyId }),
+  setSelectedTier: tierId => set({ selectedTierId: tierId }),
 });

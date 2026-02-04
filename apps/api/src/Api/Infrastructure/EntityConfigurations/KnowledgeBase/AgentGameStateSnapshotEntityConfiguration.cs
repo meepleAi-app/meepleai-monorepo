@@ -36,7 +36,9 @@ internal class AgentGameStateSnapshotEntityConfiguration : IEntityTypeConfigurat
         builder.Property(e => e.CreatedAt)
             .IsRequired();
 
-        // Note: Vector embedding for position similarity search deferred to Issue #3533
+        // Issue #3547: Vector embedding for position similarity search
+        builder.Property(e => e.Embedding)
+            .HasColumnType("vector(1536)");
 
         // Indexes for query performance
         builder.HasIndex(e => e.GameId);

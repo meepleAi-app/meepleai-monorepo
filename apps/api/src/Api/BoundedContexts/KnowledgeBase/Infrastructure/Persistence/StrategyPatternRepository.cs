@@ -105,7 +105,8 @@ internal class StrategyPatternRepository : RepositoryBase, IStrategyPatternRepos
         Vector? embedding = null;
         if (entity.Embedding != null)
         {
-            embedding = new Vector(entity.Embedding);
+            // Issue #3547: Convert Pgvector.Vector → float[] → Domain.Vector
+            embedding = new Vector(entity.Embedding.ToArray());
         }
 
         return new StrategyPattern(
@@ -134,7 +135,8 @@ internal class StrategyPatternRepository : RepositoryBase, IStrategyPatternRepos
             BoardConditionsJson = pattern.BoardConditionsJson,
             MoveSequenceJson = pattern.MoveSequenceJson,
             Source = pattern.Source,
-            Embedding = pattern.Embedding?.Values
+            // Issue #3547: Convert Domain.Vector → float[] → Pgvector.Vector
+            Embedding = pattern.Embedding != null ? new Pgvector.Vector(pattern.Embedding.Values) : null
         };
     }
 }

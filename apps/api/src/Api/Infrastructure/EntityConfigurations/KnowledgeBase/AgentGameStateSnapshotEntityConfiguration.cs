@@ -12,7 +12,8 @@ internal class AgentGameStateSnapshotEntityConfiguration : IEntityTypeConfigurat
 {
     public void Configure(EntityTypeBuilder<AgentGameStateSnapshotEntity> builder)
     {
-        builder.ToTable("game_state_snapshots");
+        // Issue #3547: Renamed to avoid conflict with GameManagement's game_state_snapshots
+        builder.ToTable("agent_game_state_snapshots");
 
         builder.HasKey(e => e.Id);
 

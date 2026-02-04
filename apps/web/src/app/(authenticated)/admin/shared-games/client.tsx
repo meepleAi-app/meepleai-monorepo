@@ -27,6 +27,7 @@ import {
   LayoutGrid,
   List,
   Clock,
+  Upload,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -50,7 +51,7 @@ import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api, type SharedGame } from '@/lib/api';
 
-import { GameCard, GameCardSkeleton, SharedGamesFilters, SharedGamesStats } from './_components';
+import { GameCard, GameCardSkeleton, ImportFromBggModal, SharedGamesFilters, SharedGamesStats } from './_components';
 import { useSharedGamesQuery } from './_hooks';
 
 // ========== Types ==========
@@ -74,6 +75,7 @@ function SharedGamesClientInner() {
 
   // Modal states
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [gameToDelete, setGameToDelete] = useState<SharedGame | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -248,6 +250,10 @@ function SharedGamesClientInner() {
                 </Button>
               </Link>
             )}
+            <Button variant="outline" onClick={() => setIsImportModalOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import from BGG
+            </Button>
             <Button onClick={handleCreate}>
               <Plus className="h-4 w-4 mr-2" />
               New Game
@@ -473,6 +479,18 @@ function SharedGamesClientInner() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Import from BGG Modal */}
+        <ImportFromBggModal
+          open={isImportModalOpen}
+          onOpenChange={setIsImportModalOpen}
+          onSuccess={(gameId) => {
+            addToast('success', 'Game imported successfully from BGG');
+            refetch();
+            // Optionally navigate to the game detail page
+            router.push(`/admin/shared-games/${gameId}`);
+          }}
+        />
 
         {/* Toast Notifications */}
         <div className="fixed bottom-4 right-4 z-50 space-y-2">

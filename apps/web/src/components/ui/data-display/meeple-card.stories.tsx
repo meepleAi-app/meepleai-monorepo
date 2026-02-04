@@ -9,7 +9,8 @@
  */
 
 import { useState } from 'react';
-import { Users, Clock, Calendar, MapPin, Trophy, Gamepad2, BookOpen, Star, Heart, Share2 } from 'lucide-react';
+
+import { Users, Clock, Calendar, MapPin, Trophy, Gamepad2, BookOpen, Star } from 'lucide-react';
 
 import { MeepleCard, MeepleCardSkeleton } from './meeple-card';
 

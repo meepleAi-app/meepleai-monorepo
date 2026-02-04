@@ -60,7 +60,16 @@ export function createDashboardClient(config: DashboardClientConfig): DashboardC
 
   return {
     async getInsights(): Promise<InsightsResponse> {
-      return httpClient.get<InsightsResponse>('/api/v1/dashboard/insights');
+      const response = await httpClient.get<InsightsResponse>('/api/v1/dashboard/insights');
+      if (!response) {
+        // Return empty insights if null response
+        return {
+          insights: [],
+          generatedAt: new Date().toISOString(),
+          nextRefresh: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        };
+      }
+      return response;
     },
   };
 }

@@ -1,44 +1,105 @@
-# RAG Strategy Documentation - MeepleAI
+# MeepleAI RAG System Documentation
 
 **TOMAC-RAG**: Token-Optimized Modular Adaptive Corrective RAG
 
----
-
-## 🚀 Quick Start
-
-### For Developers
-1. **Start Here**: [00-overview.md](00-overview.md) - Executive summary
-2. **Understand**: [HOW-IT-WORKS.md](HOW-IT-WORKS.md) - Complete system walkthrough
-3. **Implement**: [10-implementation-guide.md](10-implementation-guide.md) - Step-by-step guide
-
-### For Architects
-1. **Explore**: [appendix/B-variant-comparison.md](appendix/B-variant-comparison.md) - 36 variants comparison
-2. **Analyze**: [appendix/F-calculation-formulas.md](appendix/F-calculation-formulas.md) - Token/cost formulas
-3. **Configure**: [appendix/G-admin-configuration-system.md](appendix/G-admin-configuration-system.md) - Admin system
-
-### For Product/Business
-1. **ROI**: [00-overview.md](00-overview.md#performance-targets) - Performance targets & costs
-2. **Pricing**: [appendix/E-model-pricing-2026.md](appendix/E-model-pricing-2026.md) - Current model costs
-3. **Timeline**: [13-deployment-rollout.md](13-deployment-rollout.md) - 12-week roadmap
+> **Single Source of Truth**: `apps/web/src/components/rag-dashboard/rag-data.ts`
+>
+> All values in this documentation are synced from the frontend data file.
 
 ---
 
-## 📊 Interactive Dashboard
+## Quick Navigation
 
-**→ [Open HTML Dashboard](index.html) ←**
-
-Features:
-- 6 strategies comparison (sortable, filterable)
-- Token & cost calculator (real-time estimates)
-- Architecture diagrams (visual 6-layer system)
-- Research sources (53 citations with links)
+| Audience | Start Here |
+|----------|------------|
+| **Developers** | [Implementation Guide](10-implementation-guide.md) |
+| **Architects** | [Technical Reference](15-technical-reference.md) |
+| **Business** | [Overview](00-overview.md) |
+| **Everyone** | [Interactive Dashboard](/rag) |
 
 ---
 
-## 🎯 6 Routing Strategies
+## Implementation Status
 
-| Strategy | Tokens | Cost | Latency | Accuracy | Usage |
-|----------|--------|------|---------|----------|-------|
+### POC (Current) vs TOMAC-RAG (Planned)
+
+```
+POC Implemented ████████████░░░░░░░░ ~55%
+```
+
+| Component | POC Status | TOMAC-RAG Plan |
+|-----------|------------|----------------|
+| **Hybrid Search** | Implemented | Same |
+| **Vector Search (Qdrant)** | Implemented | Same |
+| **Keyword Search (PostgreSQL)** | Implemented | Same |
+| **RRF Fusion** | Implemented | Same |
+| **LLM Generation** | Implemented | Enhanced |
+| **Circuit Breaker** | Implemented | Same |
+| **Response Cache** | Implemented | + Semantic |
+| **L1 Strategy Router** | - | Planned |
+| **L4 CRAG Evaluation** | - | Planned |
+| **L6 Self-RAG Validation** | - | Planned |
+| **Reranker Integration** | Container ready | Planned |
+
+### POC Architecture (Working Now)
+
+```
+User Query
+    │
+    ▼
+┌─────────────────────────────────────────────────────────┐
+│ EMBEDDING SERVICE (:8000)                               │
+│ text-embedding-3-large → 3072 dimensions                │
+└─────────────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────────────┐
+│ HYBRID SEARCH                                           │
+│ ┌─────────────────┐    ┌─────────────────┐             │
+│ │ SEMANTIC        │    │ KEYWORD         │             │
+│ │ Qdrant :6333    │    │ PostgreSQL :5432│             │
+│ │ cosine sim      │    │ tsvector FTS    │             │
+│ │ HNSW index      │    │ ts_rank_cd      │             │
+│ └────────┬────────┘    └────────┬────────┘             │
+│          │                      │                       │
+│          └──────────┬───────────┘                       │
+│                     ▼                                   │
+│            ┌─────────────────┐                          │
+│            │ RRF FUSION      │                          │
+│            │ k=60            │                          │
+│            │ vector: 0.7     │                          │
+│            │ keyword: 0.3    │                          │
+│            └─────────────────┘                          │
+└─────────────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────────────┐
+│ CONTEXT ASSEMBLY                                        │
+│ Top-K chunks → Deduplication → Format for LLM           │
+└─────────────────────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────────────────────┐
+│ LLM GENERATION (HybridLlmService)                       │
+│ ┌─────────────────┐    ┌─────────────────┐             │
+│ │ OLLAMA :11434   │ ←→ │ OPENROUTER      │             │
+│ │ llama3.3:70b    │    │ gpt-4o-mini     │             │
+│ │ LOCAL (FREE)    │    │ EXTERNAL (PAID) │             │
+│ └─────────────────┘    └─────────────────┘             │
+│         ↑                                               │
+│         │ Circuit Breaker: 5 fails → 30s open           │
+└─────────────────────────────────────────────────────────┘
+    │
+    ▼
+Response (Streaming)
+```
+
+---
+
+## 6 TOMAC-RAG Strategies
+
+| Strategy | Tokens | Cost | Latency | Accuracy | Expected Usage |
+|----------|--------|------|---------|----------|----------------|
 | ⚡ **FAST** | 2,060 | $0.0001 | <200ms | 78-85% | 60-70% |
 | ⚖️ **BALANCED** | 2,820 | $0.01 | 1-2s | 85-92% | 25-30% |
 | 🎯 **PRECISE** | 22,396 | $0.132 | 5-10s | 95-98% | 5-10% |
@@ -46,158 +107,207 @@ Features:
 | 🗳️ **CONSENSUS** | 18,000 | $0.09 | 10-20s | 97-99% | 1-3% |
 | ⚙️ **CUSTOM** | Variable | Variable | Variable | Variable | <1% |
 
-**Source of Truth**: `apps/web/src/components/rag-dashboard/rag-data.ts`
+### Strategy → Layer Mapping
+
+| Strategy | L1 Routing | L2 Cache | L3 Retrieval | L4 CRAG | L5 Generation | L6 Validation |
+|----------|------------|----------|--------------|---------|---------------|---------------|
+| ⚡ FAST | ✓ | ✓ | Basic | - | Single-pass | - |
+| ⚖️ BALANCED | ✓ | ✓ | Hybrid | ✓ | Single-pass | - |
+| 🎯 PRECISE | ✓ | - | Multi-hop | ✓ | Multi-agent | ✓ Self-RAG |
+| 🔍 EXPERT | ✓ | - | Web+Local | - | Synthesis | - |
+| 🗳️ CONSENSUS | ✓ | - | Standard | - | 3-LLM Voting | - |
 
 ---
 
-## 🔐 User Tier Access
-
-> **IMPORTANT**: User tier affects **ACCESS CONTROL ONLY**, not cost.
-> Cost is determined by **STRATEGY + MODEL selection**.
-> See [Appendix E](appendix/E-model-pricing-2026.md) for pricing.
-
-| Tier | Access | Max Strategy | Cache TTL |
-|------|--------|--------------|-----------|
-| 🚫 Anonymous | **NO ACCESS** | - | - |
-| 👤 User | ✅ | BALANCED | 48h |
-| ✏️ Editor | ✅ | PRECISE | 72h |
-| 👑 Admin | ✅ | CONSENSUS | 168h |
-| ⭐ Premium | ✅ | CONSENSUS | 336h |
-
----
-
-## 🏗️ 6-Layer Architecture
+## 6-Layer Architecture (TOMAC-RAG Full)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Query → L1 Routing → Strategy Selection                │
+│ L1: ROUTING                                             │
+│ Query classification → Strategy selection               │
+│ (User tier × Template × Complexity)                     │
 ├─────────────────────────────────────────────────────────┤
-│  L2 Cache │ Semantic similarity (80% hit rate target)   │
+│ L2: CACHE                                               │
+│ Semantic similarity matching (80% hit rate target)      │
+│ Redis + Embedding similarity                            │
 ├─────────────────────────────────────────────────────────┤
-│  L3 Retrieval │ Vector + Hybrid + Multi-hop (adaptive)  │
+│ L3: RETRIEVAL                                           │
+│ Vector + Keyword + RRF Fusion (adaptive depth)          │
+│ Qdrant + PostgreSQL + Optional Reranker                 │
 ├─────────────────────────────────────────────────────────┤
-│  L4 CRAG │ T5-Large evaluator + web search fallback     │
+│ L4: CRAG EVALUATION                                     │
+│ T5-Large evaluator + Web search fallback                │
+│ Correct/Ambiguous/Incorrect classification              │
 ├─────────────────────────────────────────────────────────┤
-│  L5 Generation │ Template-specific LLM responses        │
+│ L5: GENERATION                                          │
+│ Template-specific LLM responses                         │
+│ Single-pass / Multi-agent / Voting                      │
 ├─────────────────────────────────────────────────────────┤
-│  L6 Validation │ Self-RAG + citation checking           │
+│ L6: VALIDATION                                          │
+│ Self-RAG reflection + Citation checking                 │
+│ Hallucination detection + Auto-escalation               │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📚 Documentation Structure
+## User Tier Access Control
 
-### Core Architecture
+> **Note**: Tier determines ACCESS to strategies, not COST.
+> Cost is determined by strategy + model selection.
+
+| Tier | RAG Access | Max Strategy | Cache TTL |
+|------|------------|--------------|-----------|
+| Anonymous | NO | - | - |
+| User | YES | BALANCED | 48h |
+| Editor | YES | PRECISE | 72h |
+| Admin | YES | CONSENSUS + CUSTOM | 168h |
+| Premium | YES | CONSENSUS | 336h |
+
+---
+
+## Key Parameters (Configurable)
+
+### POC Parameters (Current)
+
+| Parameter | Value | Effect |
+|-----------|-------|--------|
+| `rrf_k` | 60 | RRF smoothing factor |
+| `vector_weight` | 0.7 | Semantic search weight |
+| `keyword_weight` | 0.3 | Keyword search weight |
+| `top_k` | 10 | Retrieved chunks |
+| `embedding_dims` | 3072 | Vector dimensions |
+| `temperature` | 0.7 | LLM creativity |
+| `circuit_breaker_threshold` | 5 | Failures before failover |
+| `circuit_breaker_duration` | 30s | Recovery time |
+
+### TOMAC-RAG Parameters (Planned)
+
+| Parameter | Value | Effect |
+|-----------|-------|--------|
+| `semantic_cache_threshold` | 0.95 | Cache hit similarity |
+| `crag_relevance_threshold` | 0.7 | CRAG evaluation gate |
+| `complexity_threshold_fast` | 0.3 | FAST strategy cutoff |
+| `complexity_threshold_balanced` | 0.7 | BALANCED cutoff |
+| `self_rag_enabled` | true | Enable L6 validation |
+
+---
+
+## Docker Services
+
+| Service | Port | Purpose | Status |
+|---------|------|---------|--------|
+| PostgreSQL | 5432 | FTS + Storage | Running |
+| Qdrant | 6333 | Vector DB | Running |
+| Redis | 6379 | Cache | Running |
+| Ollama | 11434 | Local LLM | Running |
+| Embedding | 8000 | text-embedding-3-large | Running |
+| SmolDocling | 8002 | VLM PDF extraction | Running |
+| Reranker | 8001 | bge-reranker-v2-m3 | Ready |
+| Orchestrator | 8003 | LangGraph | Partial |
+
+---
+
+## Documentation Structure
+
+### Core Docs
 | Doc | Description |
 |-----|-------------|
-| [00-overview.md](00-overview.md) | Executive summary with performance targets |
-| [HOW-IT-WORKS.md](HOW-IT-WORKS.md) | Complete step-by-step explanation |
-| [02-layer1-routing.md](02-layer1-routing.md) | 3D routing (user tier × template × complexity) |
-| [03-layer2-caching.md](03-layer2-caching.md) | Semantic cache (80% hit rate) |
-| [04-layer3-retrieval.md](04-layer3-retrieval.md) | Modular retrieval strategies |
-| [05-layer4-crag-evaluation.md](05-layer4-crag-evaluation.md) | CRAG evaluator + decompose-recompose |
-| [06-layer5-generation.md](06-layer5-generation.md) | Template-specific generation |
-| [07-layer6-validation.md](07-layer6-validation.md) | Self-validation + auto-escalation |
+| [00-overview.md](00-overview.md) | Executive summary |
+| [HOW-IT-WORKS.md](HOW-IT-WORKS.md) | System walkthrough |
+| [15-technical-reference.md](15-technical-reference.md) | Code-level reference |
 
-### Advanced Topics
+### Layer Docs
 | Doc | Description |
 |-----|-------------|
-| [08-token-optimization.md](08-token-optimization.md) | 10 optimization techniques |
-| [09-multi-agent-orchestration.md](09-multi-agent-orchestration.md) | LangGraph 3-agent system |
-| [14-admin-phase-model-config.md](14-admin-phase-model-config.md) | Per-phase model configuration |
+| [02-layer1-routing.md](02-layer1-routing.md) | L1: Strategy routing |
+| [03-layer2-caching.md](03-layer2-caching.md) | L2: Semantic cache |
+| [04-layer3-retrieval.md](04-layer3-retrieval.md) | L3: Hybrid search |
+| [05-layer4-crag-evaluation.md](05-layer4-crag-evaluation.md) | L4: CRAG quality gate |
+| [06-layer5-generation.md](06-layer5-generation.md) | L5: LLM generation |
+| [07-layer6-validation.md](07-layer6-validation.md) | L6: Self-RAG validation |
 
 ### Implementation
 | Doc | Description |
 |-----|-------------|
-| [10-implementation-guide.md](10-implementation-guide.md) | Code examples, setup, deployment |
-| [11-testing-strategy.md](11-testing-strategy.md) | Unit/integration/performance tests |
-| [12-monitoring-metrics.md](12-monitoring-metrics.md) | Prometheus + Grafana setup |
-| [13-deployment-rollout.md](13-deployment-rollout.md) | 12-week phased deployment |
+| [10-implementation-guide.md](10-implementation-guide.md) | Code examples |
+| [11-testing-strategy.md](11-testing-strategy.md) | Test specs |
+| [12-monitoring-metrics.md](12-monitoring-metrics.md) | Prometheus + Grafana |
+| [13-deployment-rollout.md](13-deployment-rollout.md) | 12-week roadmap |
 
 ### Appendices
 | Doc | Description |
 |-----|-------------|
-| [A-research-sources.md](appendix/A-research-sources.md) | 53 research sources |
-| [B-variant-comparison.md](appendix/B-variant-comparison.md) | 36 variants comparison matrix |
-| [C-token-cost-breakdown.md](appendix/C-token-cost-breakdown.md) | Detailed token analysis |
-| [D-data-consistency-audit.md](appendix/D-data-consistency-audit.md) | Data consistency validation |
-| [E-model-pricing-2026.md](appendix/E-model-pricing-2026.md) | Current model pricing reference |
-| [F-calculation-formulas.md](appendix/F-calculation-formulas.md) | Token/cost calculation formulas |
-| [G-admin-configuration-system.md](appendix/G-admin-configuration-system.md) | Admin configuration system |
-
-### RAG Variants (46+ docs)
-| Doc | Description |
-|-----|-------------|
-| [variants/README.md](variants/README.md) | Index of all 46+ variant implementations |
-| [variants/adaptive-rag.md](variants/adaptive-rag.md) | Adaptive RAG with 6 strategies |
-| [variants/self-rag.md](variants/self-rag.md) | Self-RAG with reflection |
-| [variants/crag-corrective.md](variants/crag-corrective.md) | Corrective RAG implementation |
+| [appendix/E-model-pricing-2026.md](appendix/E-model-pricing-2026.md) | LLM pricing |
+| [appendix/F-calculation-formulas.md](appendix/F-calculation-formulas.md) | Token/cost formulas |
+| [appendix/G-admin-configuration-system.md](appendix/G-admin-configuration-system.md) | Admin config |
+| [variants/README.md](variants/README.md) | 46+ RAG variants catalog |
 
 ---
 
-## 📈 Key Metrics
-
-| Metric | Baseline | TOMAC-RAG | Improvement |
-|--------|----------|-----------|-------------|
-| Accuracy (rule lookup) | 80% | 95% | **+15%** |
-| Accuracy (strategy) | 75% | 90% | **+15%** |
-| Avg Tokens/Query | 2,000 | 1,310 | **-35%** |
-| Monthly Cost (100K) | $800 | $2,053* | See note |
-| Cache Hit Rate | 40% | 80% | **+100%** |
-
-*Note: Monthly cost increased due to updated 2026 model pricing and multi-agent strategies. See [appendix/E-model-pricing-2026.md](appendix/E-model-pricing-2026.md) for details.
-
----
-
-## 🛠️ Frontend Components
+## Frontend Components
 
 Location: `apps/web/src/components/rag-dashboard/`
 
-| Component | Description |
-|-----------|-------------|
-| `RagDashboard.tsx` | Main container with dual view mode |
-| `types.ts` | TypeScript interfaces (legacy) |
-| `rag-data.ts` | **Single Source of Truth** for all data |
-| `types-configurable.ts` | Configurable parameter types |
-| `RagConfigurationForm.tsx` | Admin configuration form |
+| Component | Purpose |
+|-----------|---------|
+| `rag-data.ts` | **Single Source of Truth** |
+| `RagDashboard.tsx` | Main dashboard (tabbed layout) |
+| `PocStatus.tsx` | POC vs TOMAC-RAG status |
+| `ParameterGuide.tsx` | Parameters & strategies guide |
+| `TechnicalReference.tsx` | Code examples, infrastructure |
+| `StrategySelector.tsx` | Strategy selection UI |
+| `CostCalculator.tsx` | Cost projection tool |
+
+### Access the Dashboard
+
+```
+http://localhost:3000/rag
+```
 
 ---
 
-## 🛠️ Implementation Status
+## Key Metrics
 
-- [x] **Phase 0: Research** (Complete) - 36 variants, 53 sources
-- [x] **Phase 0: Documentation** (Complete) - 14 docs + 7 appendices
-- [ ] **Phase 1: Foundation** (Weeks 1-4) - Cache + FAST strategy
-- [ ] **Phase 2: Quality** (Weeks 5-8) - CRAG + BALANCED
-- [ ] **Phase 3: Advanced** (Weeks 9-12) - Self-RAG + PRECISE + Multi-Agent
-
----
-
-## ❓ FAQ
-
-**Q: Why 6 strategies instead of 3?**
-A: Extended from original 3 (FAST/BALANCED/PRECISE) to include EXPERT (web search), CONSENSUS (multi-LLM voting), and CUSTOM (admin-configured) for complete coverage.
-
-**Q: Why does monthly cost show higher than original estimate?**
-A: Original $419 estimate used 2025 pricing. Updated 2026 pricing and inclusion of multi-agent strategies (PRECISE, CONSENSUS) increases cost to ~$2,053 at 100K queries. See Appendix E.
-
-**Q: Can Anonymous users access the system?**
-A: No. Authentication is required. Anonymous users receive `AuthenticationRequiredException`.
-
-**Q: Where is the Single Source of Truth for data?**
-A: `apps/web/src/components/rag-dashboard/rag-data.ts` contains all canonical values for strategies, layers, pricing, and metrics.
+| Metric | Baseline | Target | Current (POC) |
+|--------|----------|--------|---------------|
+| Rule lookup accuracy | 80% | 95% | ~85% |
+| Strategy accuracy | 75% | 90% | ~80% |
+| Avg tokens/query | 2,000 | 1,310 | ~2,500 |
+| Cache hit rate | 40% | 80% | ~50% |
+| Monthly cost (100K) | $800 | $419 | ~$500 |
 
 ---
 
-## 📞 Support
+## Infographic
 
-- **Questions**: Create issue with label `rag-strategy`
-- **Bug Reports**: Issue with label `bug:rag`
-- **Feature Requests**: Issue with label `enhancement:rag`
+Download the visual architecture diagram:
+- **PDF**: [meepleai-rag-architecture.pdf](meepleai-rag-architecture.pdf)
+- **Web**: [/docs/meepleai-rag-architecture.pdf](/docs/meepleai-rag-architecture.pdf)
 
 ---
 
-**Last Updated**: 2026-02-02
-**Version**: 2.0
-**Status**: Design Complete | Implementation Pending
+## FAQ
+
+**Q: What's the difference between POC and TOMAC-RAG?**
+A: POC implements Hybrid Search + LLM Generation. TOMAC-RAG adds L1 Routing, L2 Semantic Cache, L4 CRAG evaluation, and L6 Self-RAG validation.
+
+**Q: Which strategy should I use?**
+A:
+- Simple FAQ → FAST (free, <200ms)
+- Complex rules → BALANCED (validated)
+- Critical decisions → PRECISE (multi-agent)
+- External info needed → EXPERT (web search)
+- High-stakes arbitration → CONSENSUS (3-LLM voting)
+
+**Q: Where is the single source of truth?**
+A: `apps/web/src/components/rag-dashboard/rag-data.ts`
+
+**Q: Can anonymous users access RAG?**
+A: No. Authentication required.
+
+---
+
+**Last Updated**: 2026-02-04
+**Version**: 3.0
+**Status**: POC Running | TOMAC-RAG Planning

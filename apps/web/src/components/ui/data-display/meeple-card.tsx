@@ -6,7 +6,7 @@
  * (Direction C) for a distinctive MeepleAI aesthetic.
  *
  * @module components/ui/data-display/meeple-card
- * @see Issue #XXXX - Universal Card System
+ * @see Issue #3326 - Core MeepleCard Component Implementation
  *
  * Features:
  * - Entity types: game, player, collection, event, custom

@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using Npgsql;
+using Pgvector.EntityFrameworkCore; // Issue #3547: Enable pgvector type mapping
 using StackExchange.Redis;
 using Xunit;
 
@@ -169,7 +170,7 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
 
             services.AddDbContext<MeepleAiDbContext>(options =>
             {
-                options.UseNpgsql(_connectionString);
+                options.UseNpgsql(_connectionString, o => o.UseVector()); // Issue #3547: Enable pgvector type mapping
                 options.EnableSensitiveDataLogging(); // Better error messages
             });
 

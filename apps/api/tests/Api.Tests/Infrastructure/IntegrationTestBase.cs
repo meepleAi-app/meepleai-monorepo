@@ -8,6 +8,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Npgsql;
+using Pgvector.EntityFrameworkCore; // Issue #3547: Enable pgvector type mapping
 using Xunit;
 
 namespace Api.Tests.Infrastructure;
@@ -83,7 +84,7 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
 
         // Create initial DbContext to run migrations
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(_connectionString)
+            .UseNpgsql(_connectionString, o => o.UseVector()) // Issue #3547: Enable pgvector type mapping
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 
@@ -123,7 +124,7 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
     private void CreateFreshDbContext()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(_connectionString)
+            .UseNpgsql(_connectionString, o => o.UseVector()) // Issue #3547: Enable pgvector type mapping
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .EnableSensitiveDataLogging() // For better error messages
             .Options;
@@ -141,7 +142,7 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
     protected MeepleAiDbContext CreateIndependentDbContext()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(_connectionString)
+            .UseNpgsql(_connectionString, o => o.UseVector()) // Issue #3547: Enable pgvector type mapping
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .EnableSensitiveDataLogging()
             .Options;
@@ -178,7 +179,7 @@ public abstract class IntegrationTestBase<TRepository> : IAsyncLifetime
 
         // Create temporary DbContext for cleanup
         var tempOptions = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(_connectionString)
+            .UseNpgsql(_connectionString, o => o.UseVector()) // Issue #3547: Enable pgvector type mapping
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 

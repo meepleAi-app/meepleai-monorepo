@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Moq;
+using Pgvector.EntityFrameworkCore; // Issue #3547: Enable pgvector type mapping
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Xunit;
@@ -338,7 +339,7 @@ internal static class E2ESharedInfrastructure
         }
 
         var optionsBuilder = new DbContextOptionsBuilder<MeepleAiDbContext>();
-        optionsBuilder.UseNpgsql(_databaseConnectionString);
+        optionsBuilder.UseNpgsql(_databaseConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector type mapping
         optionsBuilder.ConfigureWarnings(warnings =>
             warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
 
@@ -473,7 +474,7 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
                 var connStr = configuration.GetConnectionString("DefaultConnection")
                     ?? throw new InvalidOperationException("DefaultConnection not configured");
 
-                options.UseNpgsql(connStr);
+                options.UseNpgsql(connStr, o => o.UseVector()); // Issue #3547: Enable pgvector type mapping
                 options.ConfigureWarnings(warnings =>
                     warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
             });

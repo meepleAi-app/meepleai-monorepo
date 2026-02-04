@@ -66,7 +66,7 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
             // Issue #2031 fix: Use ContainerBuilder instead of PostgreSqlBuilder
             // to avoid exec-based wait strategy that causes "cannot hijack" errors
             _postgresContainer = new ContainerBuilder()
-                .WithImage("postgres:16-alpine")
+                .WithImage("pgvector/pgvector:pg16")  // Issue #3547: Use pgvector image for Vector column support
                 .WithEnvironment("POSTGRES_USER", "testuser")
                 .WithEnvironment("POSTGRES_PASSWORD", "testpass")
                 .WithEnvironment("POSTGRES_DB", "frontend_sdk_test")

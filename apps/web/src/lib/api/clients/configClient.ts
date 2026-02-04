@@ -399,6 +399,32 @@ export function createConfigClient({ httpClient }: CreateConfigClientParams) {
       const body = key ? { key } : {};
       return httpClient.post('/api/v1/admin/configurations/cache/invalidate', body);
     },
+
+    // ========== Feature Flag Tier Operations (Issue #3335) ==========
+
+    /**
+     * Enable a feature flag for a specific tier
+     * @param featureKey Feature flag key (e.g., "Features:RAG")
+     * @param tier Subscription tier (free, normal, premium)
+     */
+    async enableFeatureForTier(featureKey: string, tier: string): Promise<{ success: boolean }> {
+      return httpClient.post<{ success: boolean }>(
+        `/api/v1/admin/feature-flags/${encodeURIComponent(featureKey)}/tier/${encodeURIComponent(tier.toLowerCase())}/enable`,
+        {}
+      );
+    },
+
+    /**
+     * Disable a feature flag for a specific tier
+     * @param featureKey Feature flag key (e.g., "Features:RAG")
+     * @param tier Subscription tier (free, normal, premium)
+     */
+    async disableFeatureForTier(featureKey: string, tier: string): Promise<{ success: boolean }> {
+      return httpClient.post<{ success: boolean }>(
+        `/api/v1/admin/feature-flags/${encodeURIComponent(featureKey)}/tier/${encodeURIComponent(tier.toLowerCase())}/disable`,
+        {}
+      );
+    },
   };
 }
 

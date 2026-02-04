@@ -116,36 +116,75 @@ export default function FeatureFlagsTab({
     }
   };
 
-  const handleTierToggle = async (flag: SystemConfigurationDto, _tier: SubscriptionTier) => {
-    // Guard: Tier toggle requires backend #3073 to be complete
-    // For now, show informational message instead of misleading success
-    toast.info(
-      `Tier-based access control is coming soon. Backend support (#3073) required for '${flag.key.replace('Features:', '')}'.`
-    );
-    // When backend #3073 is ready, uncomment and update:
-    // setToggling(`${flag.id}-${tier}`);
-    // const tierField = TIER_FIELD_MAP[tier];
-    // const newValue = !(flag[tierField] ?? false);
-    // await api.config.updateTierConfiguration(flag.id, tier, newValue);
-    // toast.success(`${tier} tier ${newValue ? 'enabled' : 'disabled'}`);
-    // onConfigurationChange();
+  const handleTierToggle = async (flag: SystemConfigurationDto, tier: SubscriptionTier) => {
+    // Issue #3335: Tier-based feature access toggle
+    setToggling(`${flag.id}-${tier}`);
+    const tierField = TIER_FIELD_MAP[tier];
+    const currentValue = flag[tierField] ?? false;
+    const newValue = !currentValue;
+
+    try {
+      // Use the feature key format expected by the backend
+      const featureKey = flag.key;
+
+      if (newValue) {
+        await api.config.enableFeatureForTier(featureKey, tier.toLowerCase());
+      } else {
+        await api.config.disableFeatureForTier(featureKey, tier.toLowerCase());
+      }
+
+      toast.success(
+        `${tier} tier ${newValue ? 'enabled' : 'disabled'} for '${flag.key.replace('Features:', '')}'`
+      );
+      onConfigurationChange();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update tier access';
+      toast.error(errorMessage);
+    } finally {
+      setToggling(null);
+    }
   };
 
   const handleBulkTierAction = useCallback(
-    async (tier: SubscriptionTier, _enable: boolean) => {
+    async (tier: SubscriptionTier, enable: boolean) => {
       if (selectedFlags.size === 0) {
         toast.error('No feature flags selected');
         return;
       }
 
-      // Guard: Bulk tier actions require backend #3073 to be complete
-      // For now, show informational message instead of misleading success
-      toast.info(
-        `Bulk tier updates coming soon. Backend support (#3073) required for ${tier} tier changes.`
-      );
-      // When backend #3073 is ready, implement actual bulk tier updates
+      // Issue #3335: Bulk tier-based feature access updates
+      const selectedFlagsList = featureFlags.filter(f => selectedFlags.has(f.id));
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const flag of selectedFlagsList) {
+        try {
+          if (enable) {
+            await api.config.enableFeatureForTier(flag.key, tier.toLowerCase());
+          } else {
+            await api.config.disableFeatureForTier(flag.key, tier.toLowerCase());
+          }
+          successCount++;
+        } catch {
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(
+          `${tier} tier ${enable ? 'enabled' : 'disabled'} for ${successCount} flag(s)`
+        );
+        onConfigurationChange();
+      }
+
+      if (errorCount > 0) {
+        toast.error(`Failed to update ${errorCount} flag(s)`);
+      }
+
+      // Clear selection after bulk action
+      setSelectedFlags(new Set());
     },
-    [selectedFlags]
+    [selectedFlags, featureFlags, onConfigurationChange]
   );
 
   const toggleFlagSelection = useCallback((flagId: string) => {

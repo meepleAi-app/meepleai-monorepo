@@ -105,7 +105,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: pgvector/pgvector:pg16  # Issue #3547: Use pgvector image for Vector column support
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
@@ -172,7 +172,7 @@ jobs:
       - name: Pull Test Container Images
         run: |
           echo "📦 Pulling test container images for cache..."
-          docker pull postgres:16-alpine || true
+          docker pull pgvector/pgvector:pg16 || true  # Issue #3547: Use pgvector image
           docker pull redis:7-alpine || true
           echo "✅ Test images pulled and cached"
 

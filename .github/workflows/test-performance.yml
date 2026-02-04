@@ -112,7 +112,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16  # Issue #3547: Use pgvector image for Vector column support
         env:
           POSTGRES_USER: 'postgres'
           POSTGRES_PASSWORD: 'testpass123'

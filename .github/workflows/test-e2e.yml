@@ -68,7 +68,7 @@ jobs:
     # Service containers for backend
     services:
       postgres:
-        image: postgres:16-alpine
+        image: pgvector/pgvector:pg16  # Issue #3547: Use pgvector image for Vector column support
         env:
           POSTGRES_DB: meepleai_test
           POSTGRES_USER: postgres
@@ -361,7 +361,7 @@ jobs:
     # Service containers for backend
     services:
       postgres:
-        image: postgres:16-alpine
+        image: pgvector/pgvector:pg16  # Issue #3547: Use pgvector image for Vector column support
         env:
           POSTGRES_DB: meepleai_test
           POSTGRES_USER: postgres

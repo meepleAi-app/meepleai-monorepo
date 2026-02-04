@@ -71,7 +71,7 @@ public class BulkImportStressTests : IAsyncLifetime
 
         // Start PostgreSQL container with optimized settings
         _postgresContainer = new ContainerBuilder()
-            .WithImage("postgres:16-alpine")
+            .WithImage("pgvector/pgvector:pg16")  // Issue #3547: Use pgvector image for Vector column support
             .WithEnvironment("POSTGRES_USER", "postgres")
             .WithEnvironment("POSTGRES_PASSWORD", "postgres")
             .WithEnvironment("POSTGRES_DB", "stress_test")

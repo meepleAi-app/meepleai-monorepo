@@ -18,9 +18,9 @@ public static class TestcontainersConfiguration
 
     /// <summary>
     /// PostgreSQL container image.
-    /// Alpine variant for smaller size and faster pull.
+    /// Issue #3547: Using pgvector image for Vector column support (pgvector extension).
     /// </summary>
-    public const string PostgresImage = "postgres:16-alpine";
+    public const string PostgresImage = "pgvector/pgvector:pg16";
 
     /// <summary>
     /// Redis container image.

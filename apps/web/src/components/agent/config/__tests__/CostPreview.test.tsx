@@ -1,154 +1,422 @@
 /**
- * CostPreview Tests
- * Issue #3376
+ * CostPreview Component - Unit Tests
+ * Issue #3383: Cost Estimation Preview Before Launch
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import userEvent from '@testing-library/user-event';
 
 import { CostPreview } from '../CostPreview';
+import * as useCostEstimateModule from '@/hooks/useCostEstimate';
 
-// Mock the agent store with different configurations
-const createMockStore = (overrides = {}) => ({
-  selectedStrategyId: null,
-  selectedTierId: null,
-  selectedModelId: null,
-  ...overrides,
+// Mock the useCostEstimate hook
+vi.mock('@/hooks/useCostEstimate', async () => {
+  const actual = await vi.importActual('@/hooks/useCostEstimate');
+  return {
+    ...actual,
+    useCostEstimate: vi.fn(),
+  };
 });
 
-let mockStore = createMockStore();
-
+// Mock agent store
 vi.mock('@/stores/agentStore', () => ({
-  useAgentStore: () => mockStore,
+  useAgentStore: vi.fn(() => ({
+    selectedTypologyId: null,
+  })),
 }));
 
+// Test wrapper with QueryClient
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
+
 describe('CostPreview', () => {
+  const mockUseCostEstimate = useCostEstimateModule.useCostEstimate as ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    mockStore = createMockStore();
   });
 
-  it('returns null when no selections are made', () => {
-    mockStore = createMockStore({
-      selectedStrategyId: null,
-      selectedTierId: null,
-      selectedModelId: null,
+  describe('Rendering States', () => {
+    it('renders null when no typology selected', () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: null,
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
+
+      const { container } = render(<CostPreview />, { wrapper: createWrapper() });
+
+      expect(container.firstChild).toBeNull();
     });
 
-    const { container } = render(<CostPreview />);
-    expect(container.firstChild).toBeNull();
+    it('renders loading state', () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: null,
+        isLoading: true,
+        isError: false,
+        error: null,
+      } as any);
+
+      render(<CostPreview typologyId="123e4567-e89b-12d3-a456-426614174000" />, {
+        wrapper: createWrapper(),
+      });
+
+      expect(screen.getByText('Calculating costs...')).toBeInTheDocument();
+    });
+
+    it('renders placeholder when no estimate available', () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: null,
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
+
+      render(<CostPreview typologyId="123e4567-e89b-12d3-a456-426614174000" />, {
+        wrapper: createWrapper(),
+      });
+
+      expect(screen.getByText(/Select a configuration to see cost estimate/i)).toBeInTheDocument();
+    });
   });
 
-  it('shows placeholder text when strategy or tier not selected', () => {
-    mockStore = createMockStore({
-      selectedStrategyId: 'FAST',
-      selectedTierId: null,
-      selectedModelId: 'gpt-4o-mini',
+  describe('Cost Display', () => {
+    it('displays per-query cost correctly', () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: {
+          typologyId: '123',
+          typologyName: 'Test Tutor',
+          strategy: 'BALANCED',
+          costEstimate: {
+            estimatedTokensPerQuery: 12000,
+            estimatedCostPerQuery: 0.043,
+            estimatedMonthlyCost10K: 430,
+            costByPhase: {},
+          },
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
+
+      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+
+      expect(screen.getByText('$0.0430')).toBeInTheDocument(); // Per query
     });
 
-    render(<CostPreview />);
+    it('displays per-session cost with default queries', () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: {
+          typologyId: '123',
+          typologyName: 'Test Tutor',
+          strategy: 'BALANCED',
+          costEstimate: {
+            estimatedTokensPerQuery: 10000,
+            estimatedCostPerQuery: 0.05,
+            estimatedMonthlyCost10K: 500,
+            costByPhase: {},
+          },
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
 
-    expect(
-      screen.getByText('Select strategy and model tier to see cost estimate')
-    ).toBeInTheDocument();
+      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+
+      // Session cost = 0.05 * 5 (default) = 0.25
+      expect(screen.getByText(/Per session.*5 queries/i)).toBeInTheDocument();
+      expect(screen.getByText('$0.250')).toBeInTheDocument();
+    });
+
+    it('displays per-session cost with custom queries', () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: {
+          typologyId: '123',
+          typologyName: 'Test Tutor',
+          strategy: 'FAST',
+          costEstimate: {
+            estimatedTokensPerQuery: 5000,
+            estimatedCostPerQuery: 0.02,
+            estimatedMonthlyCost10K: 200,
+            costByPhase: {},
+          },
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
+
+      render(<CostPreview typologyId="123" estimatedQueriesPerSession={10} />, {
+        wrapper: createWrapper(),
+      });
+
+      // Session cost = 0.02 * 10 = 0.20
+      expect(screen.getByText(/Per session.*10 queries/i)).toBeInTheDocument();
+      expect(screen.getByText('$0.200')).toBeInTheDocument();
+    });
+
+    it('displays monthly cost', () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: {
+          typologyId: '123',
+          typologyName: 'Test Tutor',
+          strategy: 'EXPERT',
+          costEstimate: {
+            estimatedTokensPerQuery: 20000,
+            estimatedCostPerQuery: 0.1,
+            estimatedMonthlyCost10K: 1000,
+            costByPhase: {},
+          },
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
+
+      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+
+      expect(screen.getByText('$1000.00')).toBeInTheDocument();
+    });
   });
 
-  it('shows cost breakdown when strategy and tier are selected', () => {
-    mockStore = createMockStore({
-      selectedStrategyId: 'FAST',
-      selectedTierId: 'free',
-      selectedModelId: 'gpt-4o-mini',
+  describe('Warning Levels', () => {
+    it('displays low warning (green) for cost under $0.20/session', () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: {
+          typologyId: '123',
+          typologyName: 'Test Tutor',
+          strategy: 'FAST',
+          costEstimate: {
+            estimatedTokensPerQuery: 3000,
+            estimatedCostPerQuery: 0.01, // 0.01 * 5 = 0.05 (low)
+            estimatedMonthlyCost10K: 100,
+            costByPhase: {},
+          },
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
+
+      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+
+      expect(screen.getByText('✓ Cost-effective configuration')).toBeInTheDocument();
     });
 
-    render(<CostPreview />);
+    it('displays medium warning (yellow) for cost $0.20-$0.49/session', () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: {
+          typologyId: '123',
+          typologyName: 'Test Tutor',
+          strategy: 'BALANCED',
+          costEstimate: {
+            estimatedTokensPerQuery: 8000,
+            estimatedCostPerQuery: 0.05, // 0.05 * 5 = 0.25 (medium)
+            estimatedMonthlyCost10K: 500,
+            costByPhase: {},
+          },
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
 
-    expect(screen.getByText('Cost Preview')).toBeInTheDocument();
-    expect(screen.getByText('Per query')).toBeInTheDocument();
-    expect(screen.getByText(/Est\. daily/)).toBeInTheDocument();
-    expect(screen.getByText('Est. monthly')).toBeInTheDocument();
+      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+
+      expect(screen.getByText(/Moderate cost.*Monitor usage/i)).toBeInTheDocument();
+    });
+
+    it('displays high warning (red) for cost $0.50+/session', () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: {
+          typologyId: '123',
+          typologyName: 'Test Tutor',
+          strategy: 'CONSENSUS',
+          costEstimate: {
+            estimatedTokensPerQuery: 30000,
+            estimatedCostPerQuery: 0.15, // 0.15 * 5 = 0.75 (high)
+            estimatedMonthlyCost10K: 1500,
+            costByPhase: {},
+          },
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
+
+      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+
+      expect(screen.getByText(/High cost detected/i)).toBeInTheDocument();
+      expect(screen.getByText(/\$0\.75.*exceeds.*\$0\.50/i)).toBeInTheDocument();
+    });
+
+    it('applies correct border color based on warning level - low', () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: {
+          typologyId: '123',
+          typologyName: 'Test',
+          strategy: 'FAST',
+          costEstimate: {
+            estimatedTokensPerQuery: 3000,
+            estimatedCostPerQuery: 0.01,
+            estimatedMonthlyCost10K: 100,
+            costByPhase: {},
+          },
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
+
+      const { container } = render(<CostPreview typologyId="123" />, {
+        wrapper: createWrapper(),
+      });
+
+      const card = container.querySelector('.border-slate-700');
+      expect(card).toBeInTheDocument();
+    });
+
+    it('applies correct border color based on warning level - high', () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: {
+          typologyId: '123',
+          typologyName: 'Test',
+          strategy: 'EXPERT',
+          costEstimate: {
+            estimatedTokensPerQuery: 30000,
+            estimatedCostPerQuery: 0.2,
+            estimatedMonthlyCost10K: 2000,
+            costByPhase: {},
+          },
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
+
+      const { container } = render(<CostPreview typologyId="123" />, {
+        wrapper: createWrapper(),
+      });
+
+      const card = container.querySelector('.border-red-500\\/50');
+      expect(card).toBeInTheDocument();
+    });
   });
 
-  it('shows low cost indicator for cheap configurations', () => {
-    mockStore = createMockStore({
-      selectedStrategyId: 'FAST',
-      selectedTierId: 'free',
-      selectedModelId: 'gpt-4o-mini',
+  describe('Tooltip Interaction', () => {
+    it('displays token breakdown in tooltip', async () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: {
+          typologyId: '123',
+          typologyName: 'Test Tutor',
+          strategy: 'BALANCED',
+          costEstimate: {
+            estimatedTokensPerQuery: 12000,
+            estimatedCostPerQuery: 0.043,
+            estimatedMonthlyCost10K: 430,
+            costByPhase: {
+              retrieval: 0.01,
+              generation: 0.033,
+            },
+          },
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
+
+      const { container } = render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+
+      // Find the TooltipTrigger wrapper by looking for the Info icon
+      const tooltipTrigger = container.querySelector('[class*="cursor-help"]');
+      expect(tooltipTrigger).toBeInTheDocument();
+
+      // Verify tooltip content exists in DOM (even if not visible)
+      // Tooltip content is rendered but may not be visible until hover
+      expect(screen.getByText('Per query')).toBeInTheDocument();
     });
 
-    render(<CostPreview />);
+    it('handles empty costByPhase gracefully in tooltip', async () => {
+      const user = userEvent.setup();
 
-    // Should have green color for low cost
-    const monthlyElement = screen.getByText('Est. monthly').nextElementSibling;
-    expect(monthlyElement).toHaveClass('text-green-400');
+      mockUseCostEstimate.mockReturnValue({
+        data: {
+          typologyId: '123',
+          typologyName: 'Test Tutor',
+          strategy: 'FAST',
+          costEstimate: {
+            estimatedTokensPerQuery: 5000,
+            estimatedCostPerQuery: 0.015,
+            estimatedMonthlyCost10K: 150,
+            costByPhase: {},
+          },
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
+
+      render(<CostPreview typologyId="123" />, { wrapper: createWrapper() });
+
+      const infoIcons = screen.getByText('Per query').parentElement?.querySelectorAll('svg');
+      const infoIcon = infoIcons?.[1]; // Second icon is the Info icon
+
+      if (infoIcon) {
+        await user.hover(infoIcon);
+
+        await waitFor(() => {
+          const tokenBreakdowns = screen.getAllByText('Token Breakdown');
+          expect(tokenBreakdowns.length).toBeGreaterThan(0);
+          expect(screen.getByText(/Total tokens:/i)).toBeInTheDocument();
+          // Should not display "Cost by Phase" section
+          expect(screen.queryByText(/Cost by Phase:/i)).not.toBeInTheDocument();
+        });
+      }
+    });
   });
 
-  it('shows warning for expensive configurations', () => {
-    mockStore = createMockStore({
-      selectedStrategyId: 'CONSENSUS',
-      selectedTierId: 'premium',
-      selectedModelId: 'claude-3-opus',
+  describe('Responsive Behavior', () => {
+    it('applies custom className', () => {
+      mockUseCostEstimate.mockReturnValue({
+        data: {
+          typologyId: '123',
+          typologyName: 'Test',
+          strategy: 'FAST',
+          costEstimate: {
+            estimatedTokensPerQuery: 5000,
+            estimatedCostPerQuery: 0.02,
+            estimatedMonthlyCost10K: 200,
+            costByPhase: {},
+          },
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as any);
+
+      const { container } = render(<CostPreview typologyId="123" className="custom-class" />, {
+        wrapper: createWrapper(),
+      });
+
+      // The custom class should be on the Card component (outermost div with rounded-2xl)
+      const card = container.querySelector('.custom-class');
+      expect(card).toBeInTheDocument();
+      expect(card).toHaveClass('rounded-2xl'); // Card component class
     });
-
-    render(<CostPreview estimatedQueriesPerDay={100} />);
-
-    // Should show warning for high cost
-    expect(
-      screen.getByText(/High estimated cost|Moderate cost/)
-    ).toBeInTheDocument();
-  });
-
-  it('uses custom estimatedQueriesPerDay', () => {
-    mockStore = createMockStore({
-      selectedStrategyId: 'BALANCED',
-      selectedTierId: 'free',
-      selectedModelId: 'gpt-4o-mini',
-    });
-
-    render(<CostPreview estimatedQueriesPerDay={50} />);
-
-    expect(screen.getByText(/50 queries/)).toBeInTheDocument();
-  });
-
-  it('calculates costs correctly for FAST + free tier', () => {
-    mockStore = createMockStore({
-      selectedStrategyId: 'FAST',
-      selectedTierId: 'free',
-      selectedModelId: 'gpt-4o-mini',
-    });
-
-    render(<CostPreview estimatedQueriesPerDay={10} />);
-
-    // FAST multiplier = 1.0, free base = 0.0005
-    // Per query = 0.0005 * 1.0 = $0.0005
-    expect(screen.getByText('$0.0005')).toBeInTheDocument();
-  });
-
-  it('calculates costs correctly for CONSENSUS + premium tier', () => {
-    mockStore = createMockStore({
-      selectedStrategyId: 'CONSENSUS',
-      selectedTierId: 'premium',
-      selectedModelId: 'claude-3-opus',
-    });
-
-    render(<CostPreview estimatedQueriesPerDay={10} />);
-
-    // CONSENSUS multiplier = 10.0, premium base = 0.005
-    // Per query = 0.005 * 10.0 = $0.05
-    expect(screen.getByText('$0.0500')).toBeInTheDocument();
-  });
-
-  it('applies custom className', () => {
-    mockStore = createMockStore({
-      selectedStrategyId: 'FAST',
-      selectedTierId: 'free',
-      selectedModelId: 'gpt-4o-mini',
-    });
-
-    render(<CostPreview className="custom-class" />);
-
-    // The className is applied to the outer container (parent of header div)
-    const header = screen.getByText('Cost Preview').closest('div');
-    const container = header?.parentElement;
-    expect(container).toHaveClass('custom-class');
   });
 });

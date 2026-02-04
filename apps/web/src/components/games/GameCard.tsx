@@ -115,6 +115,14 @@ function getPlaceholderImage(): string {
   return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="160" height="220" viewBox="0 0 160 220"%3E%3Crect width="160" height="220" fill="%23334155"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="48" fill="%239CA3AF"%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E';
 }
 
+/**
+ * Check if an image URL is external (not a data URI or local path)
+ */
+function isExternalImage(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return url.startsWith('http://') || url.startsWith('https://');
+}
+
 // ============================================================================
 // GameCard Component
 // ============================================================================
@@ -169,6 +177,8 @@ export const GameCard = React.memo(function GameCard({
           loading="lazy"
           placeholder="blur"
           blurDataURL={getPlaceholderImage()}
+          // Skip Next.js image optimization for external URLs to avoid DNS issues in Docker
+          unoptimized={isExternalImage(game.imageUrl)}
         />
 
         {/* Grid: Top-right badges overlay */}

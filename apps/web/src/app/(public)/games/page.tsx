@@ -22,6 +22,8 @@
 
 import { Metadata } from 'next';
 
+import { type Game } from '@/lib/api';
+
 import { AddGameButton } from './components/AddGameButton';
 import { GameGrid } from './components/GameGrid';
 import { Pagination } from './components/Pagination';
@@ -42,7 +44,8 @@ interface SearchParams {
   page?: string;
 }
 
-interface Game {
+/** Raw API response from shared-games endpoint */
+interface SharedGamesApiItem {
   id: string;
   title: string;
   yearPublished: number | null;
@@ -59,7 +62,7 @@ interface Game {
 }
 
 interface SharedGamesApiResponse {
-  items: Game[];
+  items: SharedGamesApiItem[];
   total: number;
   page: number;
   pageSize: number;
@@ -93,6 +96,25 @@ export const metadata: Metadata = {
 // Server Actions / Data Fetching
 // ============================================================================
 
+/** Map API response item to Game type expected by GameGrid */
+function mapApiItemToGame(item: SharedGamesApiItem): Game {
+  return {
+    id: item.id,
+    title: item.title,
+    publisher: null, // Not provided by shared-games API
+    yearPublished: item.yearPublished,
+    minPlayers: item.minPlayers,
+    maxPlayers: item.maxPlayers,
+    minPlayTimeMinutes: item.playingTimeMinutes, // Map single field to min
+    maxPlayTimeMinutes: item.playingTimeMinutes, // Map single field to max
+    bggId: item.bggId,
+    createdAt: item.createdAt,
+    imageUrl: item.imageUrl,
+    description: item.description,
+    averageRating: item.averageRating,
+  };
+}
+
 async function fetchGames(
   search?: string,
   page: number = 1,
@@ -116,9 +138,9 @@ async function fetchGames(
 
     const data: SharedGamesApiResponse = await response.json();
 
-    // Transform API response to expected format
+    // Transform API response to expected format with proper type mapping
     return {
-      games: data.items,
+      games: data.items.map(mapApiItemToGame),
       total: data.total,
       page: data.page,
       pageSize: data.pageSize,

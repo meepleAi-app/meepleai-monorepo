@@ -24,6 +24,7 @@ import {
   LibraryQuotaResponseSchema,
   LibraryShareLinkSchema,
   SharedLibrarySchema,
+  GameDetailDtoSchema,
   type PaginatedLibraryResponse,
   type UserLibraryStats,
   type UserLibraryEntry,
@@ -37,6 +38,7 @@ import {
   type CreateLibraryShareLinkRequest,
   type UpdateLibraryShareLinkRequest,
   type SharedLibrary,
+  type GameDetailDto,
 } from '../schemas/library.schemas';
 
 
@@ -54,6 +56,8 @@ export interface LibraryClient {
   removeGame(gameId: string): Promise<void>;
   updateEntry(gameId: string, request: UpdateLibraryEntryRequest): Promise<UserLibraryEntry>;
   getGameStatus(gameId: string): Promise<GameInLibraryStatus>;
+  // Game Detail (Issue #3513)
+  getGameDetail(gameId: string): Promise<GameDetailDto>;
   // Game State Management (Issue #2868)
   updateGameState(gameId: string, request: UpdateGameStateRequest): Promise<void>;
   // Agent Configuration (Issue #2518)
@@ -215,6 +219,22 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
         GameInLibraryStatusSchema
       );
       return data ?? { inLibrary: false, isFavorite: false };
+    },
+
+    /**
+     * Get comprehensive game detail with stats, sessions, and checklist (Issue #3513)
+     * @param gameId - Game UUID in user's library
+     * @returns Complete game detail with all metadata and statistics
+     */
+    async getGameDetail(gameId: string): Promise<GameDetailDto> {
+      const data = await httpClient.get<GameDetailDto>(
+        `/api/v1/library/games/${gameId}`,
+        GameDetailDtoSchema
+      );
+      if (!data) {
+        throw new Error('Game not found in library');
+      }
+      return data;
     },
 
     /**

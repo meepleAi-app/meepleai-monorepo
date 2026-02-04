@@ -103,15 +103,14 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
   const stateInfo = stateConfig[currentState];
   const StateIcon = stateInfo.icon;
 
-  /**
-   * Play statistics - currently placeholder data
-   * TODO(Backend): Add GET /api/v1/library/games/{gameId}/statistics endpoint
-   * Expected schema: { gamesPlayed: number; lastPlayed: ISO8601; winRate: number }
-   */
-  const hasPlayStats = false; // Will be: gameDetail.playStats !== undefined
-  const stats = hasPlayStats
-    ? { gamesPlayed: 0, lastPlayed: '', winRate: 0 } // Will be: gameDetail.playStats
-    : null;
+  // Play statistics from backend GameDetailDto
+  const hasPlayStats = gameDetail.timesPlayed > 0;
+  const stats = {
+    gamesPlayed: gameDetail.timesPlayed,
+    lastPlayed: gameDetail.lastPlayed,
+    winRate: gameDetail.winRate,
+    avgDuration: gameDetail.avgDuration,
+  };
 
   const handleStateChange = async (newState: GameStateType) => {
     try {
@@ -264,41 +263,29 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
             </p>
           </div>
 
-          {/* Play Stats - Conditional rendering */}
-          {stats ? (
-            <>
-              {/* Games Played */}
-              <div className="rounded-xl bg-[rgba(45,42,38,0.04)] p-4 text-center">
-                <p className="mb-1 font-nunito text-xs text-[#9C958A]">Partite giocate</p>
-                <p className="font-quicksand text-base font-semibold text-[#2D2A26]">
-                  {stats.gamesPlayed}
-                </p>
-              </div>
+          {/* Games Played */}
+          <div className="rounded-xl bg-[rgba(45,42,38,0.04)] p-4 text-center">
+            <p className="mb-1 font-nunito text-xs text-[#9C958A]">Partite giocate</p>
+            <p className="font-quicksand text-base font-semibold text-[#2D2A26]">
+              {stats.gamesPlayed}
+            </p>
+          </div>
 
-              {/* Last Played */}
-              <div className="rounded-xl bg-[rgba(45,42,38,0.04)] p-4 text-center">
-                <p className="mb-1 font-nunito text-xs text-[#9C958A]">Ultima partita</p>
-                <p className="font-quicksand text-base font-semibold text-[#2D2A26]">
-                  {stats.lastPlayed}
-                </p>
-              </div>
+          {/* Last Played */}
+          <div className="rounded-xl bg-[rgba(45,42,38,0.04)] p-4 text-center">
+            <p className="mb-1 font-nunito text-xs text-[#9C958A]">Ultima partita</p>
+            <p className="font-quicksand text-base font-semibold text-[#2D2A26]">
+              {stats.lastPlayed ? formatDate(stats.lastPlayed) : 'Mai'}
+            </p>
+          </div>
 
-              {/* Win Rate */}
-              <div className="rounded-xl bg-[rgba(45,42,38,0.04)] p-4 text-center">
-                <p className="mb-1 font-nunito text-xs text-[#9C958A]">Win rate</p>
-                <p className="font-quicksand text-base font-semibold text-emerald-600">
-                  {stats.winRate}%
-                </p>
-              </div>
-            </>
-          ) : (
-            /* Placeholder for future play statistics feature */
-            <div className="col-span-3 flex items-center justify-center rounded-xl bg-[rgba(45,42,38,0.02)] p-4">
-              <p className="font-nunito text-sm italic text-[#9C958A]">
-                Statistiche di gioco disponibili prossimamente
-              </p>
-            </div>
-          )}
+          {/* Win Rate */}
+          <div className="rounded-xl bg-[rgba(45,42,38,0.04)] p-4 text-center">
+            <p className="mb-1 font-nunito text-xs text-[#9C958A]">Win rate</p>
+            <p className="font-quicksand text-base font-semibold text-emerald-600">
+              {stats.winRate ?? 'N/A'}
+            </p>
+          </div>
         </div>
 
         {/* Notes Section */}

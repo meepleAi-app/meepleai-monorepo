@@ -1,5 +1,7 @@
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -31,6 +33,7 @@ internal static class KnowledgeBaseEndpoints
         MapChatUpdateEndpoints(group);
         MapChatMessageEndpoints(group);
         MapChatExportEndpoints(group);
+        MapContextEngineeringEndpoints(group);
 
         return group;
     }
@@ -645,6 +648,68 @@ internal static class KnowledgeBaseEndpoints
             null,
             statusCode: 200);
     }
+
+    private static void MapContextEngineeringEndpoints(RouteGroupBuilder group)
+    {
+        // ISSUE-3491: Context Engineering Framework - Assemble context from multiple sources
+        group.MapPost("/context-engineering/assemble", HandleAssembleContext)
+            .WithName("AssembleContext")
+            .RequireSession()
+            .WithTags("ContextEngineering")
+            .WithDescription("Assemble context from multiple sources for AI agent prompts");
+
+        // ISSUE-3491: Context Engineering Framework - Get available context sources
+        group.MapGet("/context-engineering/sources", HandleGetContextSources)
+            .WithName("GetContextSources")
+            .RequireSession()
+            .WithTags("ContextEngineering")
+            .WithDescription("Retrieve available context sources and their metadata");
+    }
+
+    private static async Task<IResult> HandleAssembleContext(
+        AssembleContextRequest req,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.User!.Id;
+
+        var command = new AssembleContextCommand(
+            Query: req.Query,
+            GameId: req.GameId,
+            UserId: userId,
+            SessionId: req.SessionId,
+            MaxTotalTokens: req.MaxTotalTokens ?? 8000,
+            MinRelevance: req.MinRelevance ?? 0.5,
+            SourcePriorities: req.SourcePriorities,
+            MinTokensPerSource: req.MinTokensPerSource,
+            MaxTokensPerSource: req.MaxTokensPerSource,
+            IncludeEmbedding: req.IncludeEmbedding ?? true
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        logger.LogInformation(
+            "User {UserId} assembled context: {ItemCount} items, {TokenCount} tokens, {DurationMs}ms",
+            userId, result.Items.Count, result.TotalTokens, result.Metrics.TotalDurationMs);
+
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetContextSources(
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var query = new GetContextSourcesQuery();
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        logger.LogInformation("Retrieved {SourceCount} context sources", result.Count);
+
+        return Results.Ok(result);
+    }
 }
 
 /// <summary>
@@ -664,4 +729,19 @@ internal record KnowledgeBaseSearchRequest(
 /// </summary>
 internal record UpdateChatThreadTitleRequest(
     string Title
+);
+
+/// <summary>
+/// Request model for context assembly (Issue #3491).
+/// </summary>
+internal record AssembleContextRequest(
+    string Query,
+    Guid? GameId = null,
+    Guid? SessionId = null,
+    int? MaxTotalTokens = null,
+    double? MinRelevance = null,
+    IDictionary<string, int>? SourcePriorities = null,
+    IDictionary<string, int>? MinTokensPerSource = null,
+    IDictionary<string, int>? MaxTokensPerSource = null,
+    bool? IncludeEmbedding = null
 );

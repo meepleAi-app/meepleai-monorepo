@@ -141,3 +141,29 @@ export const UpdatePdfUploadLimitsRequestSchema = z.object({
 });
 
 export type UpdatePdfUploadLimitsRequest = z.infer<typeof UpdatePdfUploadLimitsRequestSchema>;
+
+// ========== PDF Tier Upload Limits (Issue #3333) ==========
+
+export const PdfTierUploadLimitsDtoSchema = z.object({
+  freeDailyLimit: z.number().int().min(1).max(1000),
+  freeWeeklyLimit: z.number().int().min(1).max(5000),
+  normalDailyLimit: z.number().int().min(1).max(1000),
+  normalWeeklyLimit: z.number().int().min(1).max(5000),
+  premiumDailyLimit: z.number().int().min(1).max(1000),
+  premiumWeeklyLimit: z.number().int().min(1).max(5000),
+  lastUpdatedAt: z.string().datetime(),
+  lastUpdatedByUserId: z.string().uuid().nullable(),
+});
+
+export type PdfTierUploadLimitsDto = z.infer<typeof PdfTierUploadLimitsDtoSchema>;
+
+export const UpdatePdfTierUploadLimitsRequestSchema = z.object({
+  freeDailyLimit: z.number().int().min(1).max(1000),
+  freeWeeklyLimit: z.number().int().min(1).max(5000),
+  normalDailyLimit: z.number().int().min(1).max(1000),
+  normalWeeklyLimit: z.number().int().min(1).max(5000),
+  premiumDailyLimit: z.number().int().min(1).max(1000),
+  premiumWeeklyLimit: z.number().int().min(1).max(5000),
+});
+
+export type UpdatePdfTierUploadLimitsRequest = z.infer<typeof UpdatePdfTierUploadLimitsRequestSchema>;

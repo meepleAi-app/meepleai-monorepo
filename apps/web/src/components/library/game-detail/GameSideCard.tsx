@@ -26,7 +26,6 @@ import {
 import Link from 'next/link';
 
 import { PdfUploadModal } from '@/components/library/PdfUploadModal';
-import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 

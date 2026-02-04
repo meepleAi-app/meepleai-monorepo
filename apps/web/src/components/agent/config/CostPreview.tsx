@@ -1,163 +1,205 @@
 /**
  * Cost Preview - Display estimated cost before agent launch
- * Issue #3376
+ * Issue #3383: Cost Estimation Preview Before Launch
  *
- * Shows cost breakdown based on selected strategy and model
+ * Real-time cost preview with API integration:
+ * - Fetches actual pricing from backend
+ * - Per-query and per-session estimates
+ * - Warning indicators for high costs
+ * - Token breakdown tooltips
  */
 
 'use client';
 
-import { Calculator, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Calculator, AlertTriangle, TrendingUp, Info } from 'lucide-react';
 
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
+import { useCostEstimate, calculateSessionCost, getCostWarningLevel } from '@/hooks/useCostEstimate';
 import { cn } from '@/lib/utils';
 import { useAgentStore } from '@/stores/agentStore';
 
-import type { ModelTier } from './ModelTierSelector';
-import type { RagStrategy } from './StrategySelector';
-
-interface CostEstimate {
-  perQuery: number;
-  estimatedDaily: number;
-  estimatedMonthly: number;
-}
-
-// Cost multipliers by strategy
-const strategyMultipliers: Record<RagStrategy, number> = {
-  FAST: 1.0,
-  BALANCED: 1.5,
-  PRECISE: 2.5,
-  EXPERT: 5.0,
-  CONSENSUS: 10.0,
-  CUSTOM: 3.0,
-};
-
-// Base costs by model tier (per 1K tokens)
-const tierBaseCosts: Record<ModelTier, number> = {
-  free: 0.0005,
-  normal: 0.001,
-  premium: 0.005,
-  custom: 0.003,
-};
-
 interface CostPreviewProps {
   className?: string;
-  estimatedQueriesPerDay?: number;
+  typologyId?: string | null;
+  estimatedQueriesPerSession?: number;
 }
 
-export function CostPreview({ className, estimatedQueriesPerDay = 10 }: CostPreviewProps) {
-  const { selectedStrategyId, selectedTierId, selectedModelId } = useAgentStore();
+export function CostPreview({
+  className,
+  typologyId,
+  estimatedQueriesPerSession = 5,
+}: CostPreviewProps) {
+  const { selectedTypologyId } = useAgentStore();
 
-  // Calculate cost estimate
-  const calculateCost = (): CostEstimate | null => {
-    if (!selectedStrategyId || !selectedTierId) {
-      return null;
-    }
+  // Use provided typologyId or fall back to store selection
+  const activeTypologyId = typologyId || selectedTypologyId;
 
-    const baseCost = tierBaseCosts[selectedTierId as ModelTier] || 0.001;
-    const multiplier = strategyMultipliers[selectedStrategyId as RagStrategy] || 1.0;
+  // Fetch real-time cost estimate from API
+  const { data: estimate, isLoading } = useCostEstimate(activeTypologyId);
 
-    const perQuery = baseCost * multiplier;
-    const estimatedDaily = perQuery * estimatedQueriesPerDay;
-    const estimatedMonthly = estimatedDaily * 30;
-
-    return {
-      perQuery,
-      estimatedDaily,
-      estimatedMonthly,
-    };
-  };
-
-  const cost = calculateCost();
-
-  // Determine warning level
-  const getWarningLevel = (monthly: number): 'low' | 'medium' | 'high' | null => {
-    if (monthly < 1) return 'low';
-    if (monthly < 10) return 'medium';
-    if (monthly >= 10) return 'high';
+  // Early return if no typology selected
+  if (!activeTypologyId) {
     return null;
-  };
+  }
 
-  const warningLevel = cost ? getWarningLevel(cost.estimatedMonthly) : null;
+  // Loading state
+  if (isLoading) {
+    return (
+      <Card className={cn('border-slate-700 bg-slate-800/50', className)}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-200">
+            <Calculator className="h-4 w-4 text-slate-400" />
+            Cost Preview
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-slate-500 italic">Calculating costs...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  if (!selectedStrategyId && !selectedTierId && !selectedModelId) {
+  // No estimate available
+  if (!estimate?.costEstimate) {
+    return (
+      <Card className={cn('border-slate-700 bg-slate-800/50', className)}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-200">
+            <Calculator className="h-4 w-4 text-slate-400" />
+            Cost Preview
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-slate-500 italic">
+            Select a configuration to see cost estimate
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { costEstimate } = estimate;
+  const perQueryCost = costEstimate.estimatedCostPerQuery;
+  const sessionCost = calculateSessionCost(perQueryCost, estimatedQueriesPerSession);
+  const warningLevel = getCostWarningLevel(sessionCost);
+
+  const borderColor =
+    warningLevel === 'high'
+      ? 'border-red-500/50'
+      : warningLevel === 'medium'
+        ? 'border-yellow-500/50'
+        : 'border-slate-700';
+
+  const bgColor =
+    warningLevel === 'high'
+      ? 'bg-red-500/10'
+      : warningLevel === 'medium'
+        ? 'bg-yellow-500/10'
+        : 'bg-slate-800/50';
+
+  if (!activeTypologyId) {
     return null;
   }
 
   return (
-    <div
-      className={cn(
-        'rounded-lg border p-4',
-        warningLevel === 'high'
-          ? 'border-red-500/50 bg-red-500/10'
-          : warningLevel === 'medium'
-            ? 'border-yellow-500/50 bg-yellow-500/10'
-            : 'border-slate-700 bg-slate-800/50',
-        className
-      )}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <Calculator className="h-4 w-4 text-slate-400" />
-        <span className="text-sm font-medium text-slate-200">Cost Preview</span>
+    <Card className={cn(borderColor, bgColor, className)}>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between text-sm font-medium text-slate-200">
+          <div className="flex items-center gap-2">
+            <Calculator className="h-4 w-4 text-slate-400" />
+            Cost Preview
+          </div>
+          {warningLevel === 'high' && <AlertTriangle className="h-4 w-4 text-red-400" />}
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        {/* Per-Query Cost */}
+        <div className="flex justify-between items-center">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1 text-sm text-slate-400 cursor-help">
+                  <span>Per query</span>
+                  <Info className="h-3 w-3" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="space-y-1 text-xs">
+                  <p className="font-medium">Token Breakdown</p>
+                  <p>Total tokens: {costEstimate.estimatedTokensPerQuery.toLocaleString()}</p>
+                  {Object.entries(costEstimate.costByPhase).length > 0 && (
+                    <>
+                      <p className="font-medium mt-2">Cost by Phase:</p>
+                      {Object.entries(costEstimate.costByPhase).map(([phase, cost]) => (
+                        <p key={phase}>
+                          {phase}: ${cost.toFixed(4)}
+                        </p>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <span className="text-lg font-bold text-white">${perQueryCost.toFixed(4)}</span>
+        </div>
+
+        {/* Per-Session Cost */}
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-slate-500">
+            Per session ({estimatedQueriesPerSession} queries)
+          </span>
+          <span className="text-slate-300">${sessionCost.toFixed(3)}</span>
+        </div>
+
+        {/* Monthly Cost (10K queries) */}
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-slate-500">Monthly (10K queries)</span>
+          <span
+            className={cn(
+              'font-medium',
+              warningLevel === 'high'
+                ? 'text-red-400'
+                : warningLevel === 'medium'
+                  ? 'text-yellow-400'
+                  : 'text-green-400'
+            )}
+          >
+            ${costEstimate.estimatedMonthlyCost10K.toFixed(2)}
+          </span>
+        </div>
+
+        {/* Warning Messages */}
         {warningLevel === 'high' && (
-          <AlertTriangle className="h-4 w-4 text-red-400 ml-auto" />
+          <div className="mt-3 flex items-start gap-2 text-xs text-red-300 bg-red-500/10 border border-red-500/30 rounded-md p-2">
+            <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+            <span>
+              High cost detected. Session cost (${sessionCost.toFixed(2)}) exceeds $0.50. Consider
+              optimizing your configuration.
+            </span>
+          </div>
         )}
-      </div>
 
-      {cost ? (
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-slate-400">Per query</span>
-            <span className="text-lg font-bold text-white">
-              ${cost.perQuery.toFixed(4)}
-            </span>
+        {warningLevel === 'medium' && (
+          <div className="mt-3 flex items-start gap-2 text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-500/30 rounded-md p-2">
+            <TrendingUp className="h-3 w-3 mt-0.5 flex-shrink-0" />
+            <span>Moderate cost. Monitor usage to stay within budget.</span>
           </div>
+        )}
 
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-slate-500">
-              Est. daily ({estimatedQueriesPerDay} queries)
-            </span>
-            <span className="text-slate-300">${cost.estimatedDaily.toFixed(2)}</span>
+        {warningLevel === 'low' && (
+          <div className="mt-3 text-xs text-green-300">
+            ✓ Cost-effective configuration
           </div>
-
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-slate-500">Est. monthly</span>
-            <span
-              className={cn(
-                'font-medium',
-                warningLevel === 'high'
-                  ? 'text-red-400'
-                  : warningLevel === 'medium'
-                    ? 'text-yellow-400'
-                    : 'text-green-400'
-              )}
-            >
-              ${cost.estimatedMonthly.toFixed(2)}
-            </span>
-          </div>
-
-          {warningLevel === 'high' && (
-            <div className="mt-3 flex items-start gap-2 text-xs text-red-300">
-              <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
-              <span>
-                High estimated cost. Consider using BALANCED strategy or a lower-tier model.
-              </span>
-            </div>
-          )}
-
-          {warningLevel === 'medium' && (
-            <div className="mt-3 flex items-start gap-2 text-xs text-yellow-300">
-              <TrendingUp className="h-3 w-3 mt-0.5 flex-shrink-0" />
-              <span>
-                Moderate cost. Monitor usage to stay within budget.
-              </span>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="text-sm text-slate-500 italic">
-          Select strategy and model tier to see cost estimate
-        </div>
-      )}
-    </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

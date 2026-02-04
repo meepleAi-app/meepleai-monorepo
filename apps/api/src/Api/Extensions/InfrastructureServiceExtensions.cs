@@ -10,6 +10,7 @@ using Api.Configuration;
 using Api.Models;
 using Api.SharedKernel.Application.Services;
 using Microsoft.Extensions.Options;
+using Pgvector.EntityFrameworkCore; // ISSUE-3493: pgvector support
 
 namespace Api.Extensions;
 
@@ -94,6 +95,9 @@ internal static class InfrastructureServiceExtensions
 
                     // Batch size for bulk operations
                     npgsqlOptions.MaxBatchSize(100);
+
+                    // ISSUE-3493: Enable pgvector extension for vector similarity search
+                    npgsqlOptions.UseVector();
                 });
 
                 // Performance optimizations

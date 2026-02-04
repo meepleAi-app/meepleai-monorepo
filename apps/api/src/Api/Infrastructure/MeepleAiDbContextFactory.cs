@@ -4,6 +4,7 @@ using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Pgvector.EntityFrameworkCore; // ISSUE-3493: pgvector support
 
 namespace Api.Infrastructure;
 
@@ -34,7 +35,11 @@ internal class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDb
             ?? Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
             ?? BuildConnectionStringFromEnvVars(); // Issue #2152: Build from POSTGRES_* vars
 
-        optionsBuilder.UseNpgsql(connectionString);
+        optionsBuilder.UseNpgsql(connectionString, npgsqlOptions =>
+        {
+            // ISSUE-3493: Enable pgvector extension for vector similarity search
+            npgsqlOptions.UseVector();
+        });
 
         // Create no-op dependencies for design-time operations (migrations)
         var mediator = new NoOpMediator();

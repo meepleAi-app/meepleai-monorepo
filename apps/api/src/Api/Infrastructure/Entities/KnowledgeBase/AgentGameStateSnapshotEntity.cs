@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Pgvector; // ISSUE-3493: pgvector Vector type
 
 namespace Api.Infrastructure.Entities.KnowledgeBase;
 
@@ -7,7 +8,7 @@ namespace Api.Infrastructure.Entities.KnowledgeBase;
 /// EF Core entity for agent game state snapshot persistence.
 /// Issue #3493: PostgreSQL Schema Extensions for Multi-Agent System.
 /// </summary>
-[Table("game_state_snapshots")]
+[Table("agent_game_state_snapshots")]
 public class AgentGameStateSnapshotEntity
 {
     [Key]
@@ -37,8 +38,8 @@ public class AgentGameStateSnapshotEntity
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
-    [Column("embedding", TypeName = "vector(1536)")]
-    public float[]? Embedding { get; set; }
+    [Column("embedding")]
+    public Vector? Embedding { get; set; }
 
     // Navigation properties
     public AgentSessionEntity? AgentSession { get; set; }

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Pgvector; // ISSUE-3493: pgvector Vector type
 
 namespace Api.Infrastructure.Entities.KnowledgeBase;
 
@@ -43,6 +44,6 @@ public class StrategyPatternEntity
     [MaxLength(100)]
     public string? Source { get; set; }
 
-    [Column("embedding", TypeName = "vector(1536)")]
-    public float[]? Embedding { get; set; }
+    [Column("embedding")]
+    public Vector? Embedding { get; set; }
 }

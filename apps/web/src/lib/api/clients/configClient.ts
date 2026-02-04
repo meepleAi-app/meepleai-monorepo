@@ -12,6 +12,7 @@ import {
   ConfigurationExportDtoSchema,
   GameLibraryLimitsDtoSchema,
   PdfUploadLimitsDtoSchema,
+  PdfTierUploadLimitsDtoSchema,
   type SystemConfigurationDto,
   type PagedResult,
   type ConfigurationHistoryDto,
@@ -21,6 +22,8 @@ import {
   type UpdateGameLibraryLimitsRequest,
   type PdfUploadLimitsDto,
   type UpdatePdfUploadLimitsRequest,
+  type PdfTierUploadLimitsDto,
+  type UpdatePdfTierUploadLimitsRequest,
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -386,6 +389,46 @@ export function createConfigClient({ httpClient }: CreateConfigClientParams) {
 
       if (!response) {
         throw new Error('Failed to update PDF upload limits');
+      }
+
+      return response;
+    },
+
+    // ========== PDF Tier Upload Limits (Issue #3333) ==========
+
+    /**
+     * Get current PDF upload tier limits configuration
+     * @returns Current daily/weekly limits for each tier
+     */
+    async getPdfTierUploadLimits(): Promise<PdfTierUploadLimitsDto> {
+      const response = await httpClient.get(
+        '/api/v1/admin/config/pdf-tier-upload-limits',
+        PdfTierUploadLimitsDtoSchema
+      );
+
+      if (!response) {
+        throw new Error('Failed to fetch PDF tier upload limits');
+      }
+
+      return response;
+    },
+
+    /**
+     * Update PDF upload tier limits configuration
+     * @param request Updated tier limits
+     * @returns Updated limits configuration
+     */
+    async updatePdfTierUploadLimits(
+      request: UpdatePdfTierUploadLimitsRequest
+    ): Promise<PdfTierUploadLimitsDto> {
+      const response = await httpClient.put(
+        '/api/v1/admin/config/pdf-tier-upload-limits',
+        request,
+        PdfTierUploadLimitsDtoSchema
+      );
+
+      if (!response) {
+        throw new Error('Failed to update PDF tier upload limits');
       }
 
       return response;

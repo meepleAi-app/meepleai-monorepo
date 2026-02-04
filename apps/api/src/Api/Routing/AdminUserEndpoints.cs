@@ -1,7 +1,9 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.Authentication.Application.Commands.AccountLockout;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserBadges;
 using Api.Extensions;
@@ -154,6 +156,42 @@ internal static class AdminUserEndpoints
         .WithSummary("Unsuspend (reactivate) a user account")
         .Produces<Api.Models.UserDto>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status404NotFound);
+
+        // ISSUE-3339: Account Lockout - Unlock endpoint
+        group.MapPost("/admin/users/{id}/unlock", HandleUnlockAccount)
+        .WithName("UnlockAccount")
+        .WithTags("Admin")
+        .WithSummary("Unlock a locked user account")
+        .WithDescription(@"Manually unlock a user account that was locked due to too many failed login attempts.
+
+**Authorization**: Admin only
+
+**Behavior**:
+- Resets failed login attempts counter to 0
+- Clears lockout timestamp
+- Creates audit log entry
+
+**Issue**: #3339 - Account Lockout After Failed Login Attempts")
+        .Produces<UnlockAccountResult>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status404NotFound);
+
+        // ISSUE-3339: Get account lockout status
+        group.MapGet("/admin/users/{id}/lockout-status", HandleGetLockoutStatus)
+        .WithName("GetLockoutStatus")
+        .WithTags("Admin")
+        .WithSummary("Get account lockout status")
+        .WithDescription(@"Get the current lockout status for a user account.
+
+**Authorization**: Admin only
+
+**Response**: Lockout status including failed attempts count, lock status, and remaining lockout time
+
+**Issue**: #3339 - Account Lockout After Failed Login Attempts")
+        .Produces<AccountLockoutStatusDto>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status404NotFound);
     }
@@ -478,6 +516,74 @@ internal static class AdminUserEndpoints
         {
             logger.LogWarning(ex, "Domain error unsuspending user {UserId}", id);
             return Results.BadRequest(new { error = "domain_error", message = ex.Message });
+        }
+    }
+
+    // ISSUE-3339: Unlock account handler
+    private static async Task<IResult> HandleUnlockAccount(
+        string id,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        if (!Guid.TryParse(id, out var userId))
+        {
+            return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+        }
+
+        logger.LogInformation("Admin {AdminId} unlocking account {UserId}", session!.User!.Id, userId);
+
+        try
+        {
+            var command = new UnlockAccountCommand(userId, session.User.Id);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("Account {UserId} unlocked successfully by admin {AdminId}", userId, session.User.Id);
+            return Results.Ok(result);
+        }
+        catch (NotFoundException ex)
+        {
+            logger.LogWarning(ex, "User {UserId} not found for unlock", userId);
+            return Results.NotFound(new { error = "User not found" });
+        }
+        catch (DomainException ex)
+        {
+            logger.LogWarning(ex, "Domain error unlocking account {UserId}", userId);
+            return Results.BadRequest(new { error = "domain_error", message = ex.Message });
+        }
+    }
+
+    // ISSUE-3339: Get lockout status handler
+    private static async Task<IResult> HandleGetLockoutStatus(
+        string id,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        if (!Guid.TryParse(id, out var userId))
+        {
+            return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+        }
+
+        logger.LogInformation("Admin {AdminId} checking lockout status for user {UserId}", session!.User!.Id, userId);
+
+        try
+        {
+            var query = new GetAccountLockoutStatusQuery(userId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (NotFoundException ex)
+        {
+            logger.LogWarning(ex, "User {UserId} not found for lockout status", userId);
+            return Results.NotFound(new { error = "User not found" });
         }
     }
 

@@ -218,7 +218,8 @@ public class LoginCommandHandlerTests
         Assert.Equal("Invalid email or password", exception.Message);
 
         _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
-        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // Issue #3339: SaveChangesAsync IS called to persist failed login attempt
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -635,6 +636,140 @@ public class LoginCommandHandlerTests
 
         // Handler calls GetByEmailAsync during validation (Issue #2554)
         _userRepositoryMock.Verify(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // === ACCOUNT LOCKOUT TESTS (Issue #3339) ===
+
+    [Fact]
+    public async Task Handle_WithLockedAccount_ThrowsDomainException()
+    {
+        // Arrange
+        var password = "SecurePassword123!";
+        var user = CreateTestUser("user@example.com", password, is2FAEnabled: false);
+
+        // Lock the account (simulate 5 failed attempts)
+        for (int i = 0; i < 5; i++)
+        {
+            user.RecordFailedLogin("127.0.0.1");
+        }
+
+        var command = new LoginCommand(
+            Email: "user@example.com",
+            Password: password,
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        _userRepositoryMock
+            .Setup(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<DomainException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        Assert.Contains("locked", exception.Message, StringComparison.OrdinalIgnoreCase);
+
+        _sessionRepositoryMock.Verify(x => x.AddAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithWrongPassword_IncrementsFailedAttempts()
+    {
+        // Arrange
+        var user = CreateTestUser("user@example.com", "CorrectPassword123!", is2FAEnabled: false);
+        var initialAttempts = user.FailedLoginAttempts;
+
+        var command = new LoginCommand(
+            Email: "user@example.com",
+            Password: "WrongPassword123!",
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        _userRepositoryMock
+            .Setup(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DomainException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        // Verify failed attempts incremented
+        Assert.Equal(initialAttempts + 1, user.FailedLoginAttempts);
+
+        // Verify SaveChangesAsync was called to persist the failed attempt
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_FifthFailedAttempt_LocksAccount()
+    {
+        // Arrange
+        var user = CreateTestUser("user@example.com", "CorrectPassword123!", is2FAEnabled: false);
+
+        // Simulate 4 previous failed attempts
+        for (int i = 0; i < 4; i++)
+        {
+            user.RecordFailedLogin("127.0.0.1");
+        }
+
+        var command = new LoginCommand(
+            Email: "user@example.com",
+            Password: "WrongPassword123!",
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        _userRepositoryMock
+            .Setup(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<DomainException>(
+            () => _handler.Handle(command, TestContext.Current.CancellationToken)
+        );
+
+        // Verify account is now locked
+        Assert.True(user.IsLockedOut());
+        Assert.Contains("locked", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Handle_SuccessfulLogin_ResetsFailedAttempts()
+    {
+        // Arrange
+        var password = "SecurePassword123!";
+        var user = CreateTestUser("user@example.com", password, is2FAEnabled: false);
+
+        // Simulate 3 previous failed attempts
+        for (int i = 0; i < 3; i++)
+        {
+            user.RecordFailedLogin("127.0.0.1");
+        }
+        Assert.Equal(3, user.FailedLoginAttempts);
+
+        var command = new LoginCommand(
+            Email: "user@example.com",
+            Password: password,
+            IpAddress: "127.0.0.1",
+            UserAgent: "TestAgent"
+        );
+
+        _userRepositoryMock
+            .Setup(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        // Act
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.RequiresTwoFactor);
+        Assert.Equal(0, user.FailedLoginAttempts);
+        Assert.Null(user.LockedUntil);
     }
 
     private User CreateTestUser(string email, string password, bool is2FAEnabled)

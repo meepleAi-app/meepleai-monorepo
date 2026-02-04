@@ -39,6 +39,10 @@ internal class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
         builder.Property(e => e.Level).IsRequired().HasDefaultValue(1);
         builder.Property(e => e.ExperiencePoints).IsRequired().HasDefaultValue(0);
 
+        // ISSUE-3339: Account Lockout
+        builder.Property(e => e.FailedLoginAttempts).IsRequired().HasDefaultValue(0);
+        builder.Property(e => e.LockedUntil);
+
         // Relationships
         builder.HasMany(e => e.Sessions)
             .WithOne(s => s.User)

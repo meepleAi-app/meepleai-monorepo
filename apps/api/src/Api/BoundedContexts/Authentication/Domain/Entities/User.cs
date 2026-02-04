@@ -34,6 +34,10 @@ public sealed class User : AggregateRoot<Guid>
     public int Level { get; private set; }
     public int ExperiencePoints { get; private set; }
 
+    // Account lockout properties (Issue #3339)
+    public int FailedLoginAttempts { get; private set; }
+    public DateTime? LockedUntil { get; private set; }
+
     // 2FA properties (DDD Value Objects)
     public TotpSecret? TotpSecret { get; private set; }
     public bool IsTwoFactorEnabled { get; private set; }
@@ -87,6 +91,10 @@ public sealed class User : AggregateRoot<Guid>
         // Default gamification (Issue #3141)
         Level = 1;
         ExperiencePoints = 0;
+
+        // Default lockout state (Issue #3339)
+        FailedLoginAttempts = 0;
+        LockedUntil = null;
 
         IsTwoFactorEnabled = false;
     }
@@ -263,6 +271,106 @@ public sealed class User : AggregateRoot<Guid>
 
         ExperiencePoints += points;
     }
+
+    #region Account Lockout (Issue #3339)
+
+    /// <summary>
+    /// Default maximum failed login attempts before account lockout.
+    /// </summary>
+    public const int DefaultMaxFailedAttempts = 5;
+
+    /// <summary>
+    /// Default lockout duration in minutes.
+    /// </summary>
+    public const int DefaultLockoutDurationMinutes = 15;
+
+    /// <summary>
+    /// Checks if the account is currently locked out.
+    /// </summary>
+    /// <param name="timeProvider">Optional time provider for testing.</param>
+    /// <returns>True if account is locked and lockout period has not expired.</returns>
+    public bool IsLockedOut(TimeProvider? timeProvider = null)
+    {
+        if (LockedUntil == null) return false;
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        return now < LockedUntil;
+    }
+
+    /// <summary>
+    /// Gets the remaining lockout duration.
+    /// </summary>
+    /// <param name="timeProvider">Optional time provider for testing.</param>
+    /// <returns>Remaining lockout time, or TimeSpan.Zero if not locked.</returns>
+    public TimeSpan GetRemainingLockoutDuration(TimeProvider? timeProvider = null)
+    {
+        if (LockedUntil == null) return TimeSpan.Zero;
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        var remaining = LockedUntil.Value - now;
+        return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+    }
+
+    /// <summary>
+    /// Records a failed login attempt and locks account if threshold exceeded.
+    /// Issue #3339: Account lockout after failed login attempts.
+    /// </summary>
+    /// <param name="ipAddress">IP address of the failed attempt (for audit).</param>
+    /// <param name="maxAttempts">Maximum failed attempts before lockout (default: 5).</param>
+    /// <param name="lockoutMinutes">Lockout duration in minutes (default: 15).</param>
+    /// <param name="timeProvider">Optional time provider for testing.</param>
+    /// <returns>True if account was locked as a result of this attempt.</returns>
+    public bool RecordFailedLogin(
+        string? ipAddress = null,
+        int maxAttempts = DefaultMaxFailedAttempts,
+        int lockoutMinutes = DefaultLockoutDurationMinutes,
+        TimeProvider? timeProvider = null)
+    {
+        // If already locked, don't increment counter
+        if (IsLockedOut(timeProvider))
+            return false;
+
+        FailedLoginAttempts++;
+
+        if (FailedLoginAttempts >= maxAttempts)
+        {
+            var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+            LockedUntil = now.AddMinutes(lockoutMinutes);
+            AddDomainEvent(new AccountLockedEvent(Id, FailedLoginAttempts, LockedUntil.Value, ipAddress));
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Records a successful login and resets the failed attempts counter.
+    /// Issue #3339: Reset counter on successful login.
+    /// </summary>
+    public void RecordSuccessfulLogin()
+    {
+        if (FailedLoginAttempts > 0 || LockedUntil != null)
+        {
+            FailedLoginAttempts = 0;
+            LockedUntil = null;
+        }
+    }
+
+    /// <summary>
+    /// Manually unlocks the account (admin operation).
+    /// Issue #3339: Admin can manually unlock accounts.
+    /// </summary>
+    /// <param name="adminId">ID of the admin performing the unlock.</param>
+    /// <exception cref="DomainException">Thrown when account is not locked.</exception>
+    public void Unlock(Guid adminId)
+    {
+        if (LockedUntil == null && FailedLoginAttempts == 0)
+            throw new DomainException("Account is not locked");
+
+        FailedLoginAttempts = 0;
+        LockedUntil = null;
+        AddDomainEvent(new AccountUnlockedEvent(Id, wasManualUnlock: true, adminId));
+    }
+
+    #endregion
 
     /// <summary>
     /// Enables two-factor authentication for this user with TOTP secret and backup codes.
@@ -551,6 +659,17 @@ public sealed class User : AggregateRoot<Guid>
     {
         Level = level;
         ExperiencePoints = experiencePoints;
+    }
+
+    /// <summary>
+    /// Restores lockout state from persistence layer.
+    /// Issue #3339: Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreLockoutState(int failedLoginAttempts, DateTime? lockedUntil)
+    {
+        FailedLoginAttempts = failedLoginAttempts;
+        LockedUntil = lockedUntil;
     }
 
     #endregion

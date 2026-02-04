@@ -51,9 +51,29 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
         if (user == null)
             throw new DomainException("Invalid email or password");
 
+        // Issue #3339: Check if account is locked out
+        if (user.IsLockedOut())
+        {
+            var remainingTime = user.GetRemainingLockoutDuration();
+            var remainingMinutes = (int)Math.Ceiling(remainingTime.TotalMinutes);
+            throw new DomainException($"Account is locked. Please try again in {remainingMinutes} minute(s).");
+        }
+
         // Verify password
         if (!user.VerifyPassword(command.Password))
+        {
+            // Issue #3339: Record failed login attempt
+            var wasLocked = user.RecordFailedLogin(command.IpAddress);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            if (wasLocked)
+                throw new DomainException("Account has been locked due to too many failed login attempts. Please try again in 15 minutes.");
+
             throw new DomainException("Invalid email or password");
+        }
+
+        // Issue #3339: Reset failed attempts on successful login
+        user.RecordSuccessfulLogin();
 
         // Issue #2886: Check if user is suspended
         if (user.IsSuspended)

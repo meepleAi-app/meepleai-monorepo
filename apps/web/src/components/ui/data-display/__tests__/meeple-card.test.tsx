@@ -335,10 +335,29 @@ describe('MeepleCard', () => {
 
       expect(onClick).not.toHaveBeenCalled();
     });
+
+    it('should not make card interactive when it has action buttons (prevents nested-interactive)', () => {
+      const cardClick = vi.fn();
+      render(
+        <MeepleCard
+          {...defaultProps}
+          variant="featured"
+          onClick={cardClick}
+          actions={[{ label: 'Action' }]}
+        />
+      );
+
+      // Card should not be a button when it has actions
+      expect(screen.queryByRole('button', { name: /game/i })).not.toBeInTheDocument();
+
+      // Clicking the card should not trigger onClick
+      fireEvent.click(screen.getByTestId('meeple-card'));
+      expect(cardClick).not.toHaveBeenCalled();
+    });
   });
 
   describe('Accessibility', () => {
-    it('should have role="button" when clickable', () => {
+    it('should have role="button" when clickable (without actions)', () => {
       render(<MeepleCard {...defaultProps} onClick={() => {}} />);
 
       expect(screen.getByRole('button')).toBeInTheDocument();
@@ -350,7 +369,23 @@ describe('MeepleCard', () => {
       expect(screen.queryByRole('button')).not.toBeInTheDocument();
     });
 
-    it('should have tabIndex={0} when clickable', () => {
+    it('should not have role="button" when clickable but has actions (prevents nested-interactive)', () => {
+      render(
+        <MeepleCard
+          {...defaultProps}
+          variant="featured"
+          onClick={() => {}}
+          actions={[{ label: 'Action' }]}
+        />
+      );
+
+      // The card itself should not be a button
+      expect(screen.queryByRole('button', { name: /game/i })).not.toBeInTheDocument();
+      // But action buttons should exist
+      expect(screen.getByRole('button', { name: 'Action' })).toBeInTheDocument();
+    });
+
+    it('should have tabIndex={0} when clickable (without actions)', () => {
       render(<MeepleCard {...defaultProps} onClick={() => {}} />);
 
       expect(screen.getByTestId('meeple-card')).toHaveAttribute('tabIndex', '0');
@@ -368,10 +403,18 @@ describe('MeepleCard', () => {
       expect(screen.getByLabelText('Game: Test Game')).toBeInTheDocument();
     });
 
-    it('should render as article element', () => {
+    it('should render as article element when not interactive', () => {
       render(<MeepleCard {...defaultProps} />);
 
       expect(screen.getByRole('article')).toBeInTheDocument();
+    });
+
+    it('should render as div element when interactive (article cannot have role=button)', () => {
+      render(<MeepleCard {...defaultProps} onClick={() => {}} />);
+
+      // Should be a button (div with role=button), not article
+      expect(screen.getByRole('button')).toBeInTheDocument();
+      expect(screen.queryByRole('article')).not.toBeInTheDocument();
     });
   });
 

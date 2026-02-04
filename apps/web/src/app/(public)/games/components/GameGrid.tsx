@@ -1,7 +1,7 @@
 /**
  * GameGrid Component (Issue #1838: PAGE-003)
  *
- * Server component for rendering games in grid or list layout.
+ * Client component for rendering games in grid or list layout.
  * Uses existing GameCard component (UI-003) with responsive grid.
  *
  * Features:
@@ -9,9 +9,14 @@
  * - List layout: Full-width cards
  * - Empty state with friendly message
  * - Loading skeleton (20 cards)
+ * - Click navigation to game detail page
  */
 
+'use client';
+
 import React from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { GameCard } from '@/components/games/GameCard';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -27,6 +32,13 @@ export interface GameGridProps {
 }
 
 export function GameGrid({ games, variant, loading = false }: GameGridProps) {
+  const router = useRouter();
+
+  const handleGameClick = (gameId: string) => {
+    // Navigate to public game detail page (Issue #3522)
+    router.push(`/games/${gameId}`);
+  };
+
   // Loading skeleton
   if (loading) {
     return (
@@ -63,7 +75,12 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {games.map(game => (
-          <GameCard key={game.id} game={game} variant="grid" />
+          <GameCard
+            key={game.id}
+            game={game}
+            variant="grid"
+            onClick={() => handleGameClick(game.id)}
+          />
         ))}
       </div>
     );
@@ -73,7 +90,12 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
   return (
     <div className="flex flex-col gap-4">
       {games.map(game => (
-        <GameCard key={game.id} game={game} variant="list" />
+        <GameCard
+          key={game.id}
+          game={game}
+          variant="list"
+          onClick={() => handleGameClick(game.id)}
+        />
       ))}
     </div>
   );

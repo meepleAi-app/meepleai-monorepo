@@ -640,9 +640,10 @@ export function useSharedLibrary(
 // ========================================
 
 /**
- * Combined library game detail data
+ * Combined library game detail for Game Detail page (Issue #3513)
  *
- * Merges UserLibraryEntry (user-specific data) with SharedGameDetail (full game info)
+ * Uses the backend's GET /library/games/{gameId} endpoint for efficient
+ * single-request data fetching with all metadata and play statistics.
  */
 export interface LibraryGameDetail {
   // Library-specific data
@@ -655,36 +656,51 @@ export interface LibraryGameDetail {
   currentState: string;
   stateChangedAt: string | null;
   stateNotes: string | null;
+  isAvailableForPlay: boolean;
   hasPdfDocuments: boolean;
-  // Basic game info from library entry
+  // Game metadata
   gameTitle: string;
   gamePublisher: string | null;
   gameYearPublished: number | null;
   gameIconUrl: string | null;
   gameImageUrl: string | null;
-  // Extended game info from SharedGame (optional, may not be loaded)
-  description?: string;
-  minPlayers?: number;
-  maxPlayers?: number;
-  playingTimeMinutes?: number;
+  description: string | null;
+  minPlayers: number | null;
+  maxPlayers: number | null;
+  playingTimeMinutes: number | null;
   minAge?: number;
-  complexityRating?: number | null;
-  averageRating?: number | null;
+  complexityRating: number | null;
+  averageRating: number | null;
+  // Play statistics (from GameDetailDto)
+  timesPlayed: number;
+  lastPlayed: string | null;
+  winRate: string | null;
+  avgDuration: string | null;
+  // Extended data (from SharedGame via parallel fetch)
   categories?: Array<{ id: string; name: string; slug: string }>;
   mechanics?: Array<{ id: string; name: string; slug: string }>;
   designers?: Array<{ id: string; name: string }>;
   publishers?: Array<{ id: string; name: string }>;
   bggId?: number | null;
+  // Recent sessions (if loaded)
+  recentSessions?: Array<{
+    id: string;
+    playedAt: string;
+    durationMinutes: number;
+    durationFormatted: string;
+    didWin: boolean | null;
+    players: string | null;
+    notes: string | null;
+  }>;
 }
 
 /**
  * Hook to fetch library game detail for Game Detail page (Issue #3513)
  *
- * This hook combines:
- * 1. UserLibraryEntry - user-specific data (notes, favorite, state)
- * 2. SharedGameDetail - full game information (categories, mechanics, designers)
+ * Uses the efficient GET /library/games/{gameId} endpoint that returns
+ * all game metadata and play statistics in a single request.
  *
- * Uses parallel queries for optimal performance.
+ * For extended data (categories, mechanics, designers), fetches SharedGame in parallel.
  *
  * @param gameId - Game UUID (same as SharedGame.id)
  * @param enabled - Whether to run the query (default: true)
@@ -697,50 +713,55 @@ export function useLibraryGameDetail(
   return useQuery({
     queryKey: libraryKeys.gameDetail(gameId),
     queryFn: async (): Promise<LibraryGameDetail | null> => {
-      // Fetch library entry and shared game detail in parallel
-      const [libraryResponse, sharedGame] = await Promise.all([
-        api.library.getLibrary({ page: 1, pageSize: 100 }),
-        api.sharedGames.getById(gameId),
+      // Fetch game detail (efficient single endpoint) and shared game (for extended data) in parallel
+      const [gameDetail, sharedGame] = await Promise.all([
+        api.library.getGameDetail(gameId).catch(() => null),
+        api.sharedGames.getById(gameId).catch(() => null),
       ]);
 
-      // Find the library entry for this game
-      const libraryEntry = libraryResponse.items.find((item) => item.gameId === gameId);
-
-      if (!libraryEntry) {
+      if (!gameDetail) {
         // Game not in user's library
         return null;
       }
 
-      // Combine library entry with shared game detail
+      // Map GameDetailDto to LibraryGameDetail
       const result: LibraryGameDetail = {
         // Library-specific data
-        libraryEntryId: libraryEntry.id,
-        userId: libraryEntry.userId,
-        gameId: libraryEntry.gameId,
-        addedAt: libraryEntry.addedAt,
-        notes: libraryEntry.notes ?? null,
-        isFavorite: libraryEntry.isFavorite,
-        currentState: libraryEntry.currentState,
-        stateChangedAt: libraryEntry.stateChangedAt ?? null,
-        stateNotes: libraryEntry.stateNotes ?? null,
-        hasPdfDocuments: libraryEntry.hasPdfDocuments,
-        // Basic game info from library entry
-        gameTitle: libraryEntry.gameTitle,
-        gamePublisher: libraryEntry.gamePublisher ?? null,
-        gameYearPublished: libraryEntry.gameYearPublished ?? null,
-        gameIconUrl: libraryEntry.gameIconUrl ?? null,
-        gameImageUrl: libraryEntry.gameImageUrl ?? null,
+        libraryEntryId: gameDetail.id,
+        userId: gameDetail.userId,
+        gameId: gameDetail.gameId,
+        addedAt: gameDetail.addedAt,
+        notes: gameDetail.notes,
+        isFavorite: gameDetail.isFavorite,
+        currentState: gameDetail.currentState,
+        stateChangedAt: gameDetail.stateChangedAt,
+        stateNotes: gameDetail.stateNotes,
+        isAvailableForPlay: gameDetail.isAvailableForPlay,
+        hasPdfDocuments: !!gameDetail.customPdf,
+        // Game metadata
+        gameTitle: gameDetail.gameTitle,
+        gamePublisher: gameDetail.gamePublisher,
+        gameYearPublished: gameDetail.gameYearPublished,
+        gameIconUrl: gameDetail.gameIconUrl,
+        gameImageUrl: gameDetail.gameImageUrl,
+        description: gameDetail.gameDescription,
+        minPlayers: gameDetail.minPlayers,
+        maxPlayers: gameDetail.maxPlayers,
+        playingTimeMinutes: gameDetail.playTimeMinutes,
+        complexityRating: gameDetail.complexityRating,
+        averageRating: gameDetail.averageRating,
+        // Play statistics
+        timesPlayed: gameDetail.timesPlayed,
+        lastPlayed: gameDetail.lastPlayed,
+        winRate: gameDetail.winRate,
+        avgDuration: gameDetail.avgDuration,
+        // Recent sessions
+        recentSessions: gameDetail.recentSessions ?? undefined,
       };
 
-      // Add extended info from SharedGame if available
+      // Add extended info from SharedGame if available (categories, mechanics, designers)
       if (sharedGame) {
-        result.description = sharedGame.description;
-        result.minPlayers = sharedGame.minPlayers;
-        result.maxPlayers = sharedGame.maxPlayers;
-        result.playingTimeMinutes = sharedGame.playingTimeMinutes;
         result.minAge = sharedGame.minAge;
-        result.complexityRating = sharedGame.complexityRating;
-        result.averageRating = sharedGame.averageRating;
         result.categories = sharedGame.categories;
         result.mechanics = sharedGame.mechanics;
         result.designers = sharedGame.designers;

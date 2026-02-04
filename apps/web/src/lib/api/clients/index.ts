@@ -27,3 +27,4 @@ export * from './rateLimitsClient'; // ISSUE-2750
 export * from './emailVerificationClient'; // ISSUE-3076
 export * from './chatSessionsClient'; // ISSUE-3484
 export * from './testResultsClient'; // ISSUE-3379
+export * from './tierStrategyClient'; // ISSUE-3440

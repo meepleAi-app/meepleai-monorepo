@@ -136,6 +136,12 @@ vi.mock('framer-motion', () => {
       article: makeMockComponent('article'),
       li: makeMockComponent('li'),
       ul: makeMockComponent('ul'),
+      // SVG elements (Issue #3302: CacheHitGauge uses motion.circle)
+      svg: makeMockComponent('svg'),
+      circle: makeMockComponent('circle'),
+      path: makeMockComponent('path'),
+      rect: makeMockComponent('rect'),
+      g: makeMockComponent('g'),
     },
     // AnimatePresence mock that renders all children immediately
     // This is necessary because jsdom doesn't support requestAnimationFrame

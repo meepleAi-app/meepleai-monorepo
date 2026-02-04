@@ -64,3 +64,95 @@ export type { DashboardNavProps } from './DashboardNav';
 export type { SectionGroupProps } from './SectionGroup';
 export type { ProgressIndicatorProps } from './ProgressIndicator';
 export type { UseScrollSpyOptions } from './hooks/useScrollSpy';
+
+// Retrieval Strategy Components (Issue #3300, #3301)
+export {
+  // Cards (Issue #3300)
+  RetrievalStrategyCard,
+  RetrievalStrategyGrid,
+  // Modal (Issue #3301)
+  StrategyDetailModal,
+  StrategyFlowDiagram,
+  StrategyExample,
+  // Data
+  RETRIEVAL_STRATEGIES,
+  RETRIEVAL_STRATEGY_ORDER,
+  STRATEGY_DETAILS,
+  getAllRetrievalStrategies,
+  getRetrievalStrategy,
+  getStrategyDetails,
+} from './retrieval-strategies';
+export type {
+  RetrievalStrategyType,
+  RetrievalStrategy,
+  RetrievalStrategyCardProps,
+  RetrievalStrategyGridProps,
+  StrategyMetrics,
+  MetricTier,
+  StrategyDetailModalProps,
+  StrategyDetailContent,
+  FlowStep,
+  StrategyExampleType,
+} from './retrieval-strategies';
+
+// Performance Metrics Components (Issue #3302)
+export {
+  // Main container
+  PerformanceMetrics,
+  // Individual widgets
+  LatencyChart,
+  TokenDistribution,
+  CacheHitGauge,
+  AccuracyScore,
+  CostBreakdown,
+  // Data
+  MOCK_RAG_METRICS,
+  generateMockMetrics,
+} from './metrics';
+export type {
+  RagMetrics,
+  LatencyMetrics,
+  TokenUsage,
+  CacheMetrics,
+  AccuracyMetrics,
+  CostMetrics,
+  PerformanceMetricsProps,
+  LatencyChartProps,
+  TokenDistributionProps,
+  CacheHitGaugeProps,
+  AccuracyScoreProps,
+  CostBreakdownProps,
+} from './metrics';
+
+// Configuration Panel Components (Issue #3303)
+export {
+  // Main container
+  StrategyConfigPanel,
+  // Individual config components
+  GenerationParams,
+  RetrievalParams,
+  RerankerSettings,
+  ModelSelector,
+  StrategySpecificSettings,
+  // Constants
+  DEFAULT_RAG_CONFIG,
+  STRATEGY_PRESETS,
+  LLM_MODELS,
+  RERANKER_MODELS,
+} from './config';
+export type {
+  RagConfig,
+  GenerationParamsType,
+  RetrievalParamsType,
+  RerankerSettingsType,
+  ModelSelection,
+  StrategySpecificSettingsType,
+  LlmModelId,
+  RerankerModelId,
+  GenerationParamsProps,
+  RetrievalParamsProps,
+  RerankerSettingsProps,
+  ModelSelectorProps,
+  StrategySpecificProps,
+  StrategyConfigPanelProps,
+} from './config';

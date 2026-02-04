@@ -19,6 +19,7 @@ public class MeepleAiDbContext : DbContext
 {
     private readonly IMediator _mediator;
     private readonly IDomainEventCollector _eventCollector;
+    private readonly bool _isInMemoryDatabase;
 
     public MeepleAiDbContext(
         DbContextOptions<MeepleAiDbContext> options,
@@ -28,6 +29,11 @@ public class MeepleAiDbContext : DbContext
     {
         _mediator = mediator;
         _eventCollector = eventCollector;
+
+        // Issue #3578: Detect InMemory provider for unit tests
+        // Check extensions to see if InMemory provider is being used
+        _isInMemoryDatabase = options.Extensions
+            .Any(e => e.GetType().Name.Contains("InMemory", StringComparison.OrdinalIgnoreCase));
     }
 
     public DbSet<UserEntity> Users => Set<UserEntity>();
@@ -140,8 +146,21 @@ public class MeepleAiDbContext : DbContext
         ArgumentNullException.ThrowIfNull(modelBuilder);
         base.OnModelCreating(modelBuilder);
 
+        // Issue #3578: Ignore Pgvector.Vector type for InMemory database (unit tests)
+        // InMemory provider can't handle pgvector types - they're only used with PostgreSQL
+        // IMPORTANT: This must be called BEFORE ApplyConfigurationsFromAssembly
+        if (_isInMemoryDatabase)
+        {
+            modelBuilder.Ignore<Vector>();
+        }
+
         // Issue #3547: Enable pgvector extension for embedding columns
-        modelBuilder.HasPostgresExtension("vector");
+        // Issue #3578: Skip pgvector extension for InMemory database (unit tests)
+        // InMemory provider doesn't support PostgreSQL extensions and Pgvector.Vector type
+        if (!_isInMemoryDatabase)
+        {
+            modelBuilder.HasPostgresExtension("vector");
+        }
 
         // Apply all entity configurations from assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MeepleAiDbContext).Assembly);

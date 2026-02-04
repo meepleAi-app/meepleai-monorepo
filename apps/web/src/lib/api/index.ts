@@ -44,6 +44,7 @@ import {
   createChatSessionsClient,
   createTestResultsClient,
   createTierStrategyClient,
+  createDashboardClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -68,6 +69,7 @@ import {
   type ChatSessionsClient,
   type TestResultsClient,
   type TierStrategyClient,
+  type DashboardClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -223,6 +225,9 @@ export interface ApiClient {
   /** Tier-Strategy Admin Configuration (Issue #3440) */
   tierStrategy: TierStrategyClient;
 
+  /** Dashboard Insights (Issue #3316, #3319) */
+  dashboard: DashboardClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -297,6 +302,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     chatSessions: createChatSessionsClient({ httpClient }), // ISSUE-3484
     testResults: createTestResultsClient({ httpClient }), // ISSUE-3379
     tierStrategy: createTierStrategyClient({ httpClient }), // ISSUE-3440
+    dashboard: createDashboardClient({ httpClient }), // ISSUE-3316, ISSUE-3319
     delete: (path: string) => httpClient.delete(path),
   };
 

@@ -4,7 +4,7 @@ Extended state for maintaining conversation context across 10+ turns.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Optional
 from uuid import UUID
 
@@ -52,10 +52,10 @@ class TutorState(GameAgentState):
             assistant_message: Assistant's response
         """
         self.conversation_history.append(
-            Message(role="user", content=user_message, timestamp=datetime.utcnow())
+            Message(role="user", content=user_message, timestamp=datetime.now(UTC))
         )
         self.conversation_history.append(
-            Message(role="assistant", content=assistant_message, timestamp=datetime.utcnow())
+            Message(role="assistant", content=assistant_message, timestamp=datetime.now(UTC))
         )
         self.turn_count += 1
 
@@ -77,5 +77,17 @@ class TutorState(GameAgentState):
         return self.conversation_history[-(num_turns * 2):]
 
     def should_summarize(self) -> bool:
-        """Check if conversation should be summarized."""
-        return self.needs_summarization or self.turn_count >= self.max_turns_before_summary
+        """
+        Check if conversation should be summarized.
+
+        Returns True if:
+        - needs_summarization flag is set OR
+        - turn count exceeds threshold AND no summary exists yet
+
+        Once a summary exists, returns False until needs_summarization is explicitly set.
+        """
+        if self.needs_summarization:
+            return True
+        if self.conversation_summary and not self.needs_summarization:
+            return False
+        return self.turn_count >= self.max_turns_before_summary

@@ -5,7 +5,7 @@ Tests integration between TutorAgent and HybridSearchEngine.
 
 import pytest
 from uuid import uuid4
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.infrastructure.api_client import MeepleAIApiClient
 from src.application.tutor_agent import TutorAgent
@@ -49,8 +49,14 @@ class TestHybridSearchIntegration:
         with patch.object(tutor_with_search.api_client, 'hybrid_search', new_callable=AsyncMock) as mock_search:
             mock_search.return_value = sample_search_results
 
-            with patch.object(tutor_with_search.llm, 'ainvoke', new_callable=AsyncMock) as mock_llm:
-                mock_llm.return_value = AsyncMock(content="Setup response")
+            # Mock the chain response instead of llm directly
+            mock_response = AsyncMock()
+            mock_response.content = "Setup response"
+
+            with patch.object(tutor_with_search, 'TUTOR_PROMPT') as mock_prompt:
+                mock_chain = AsyncMock()
+                mock_chain.ainvoke.return_value = mock_response
+                mock_prompt.__or__ = MagicMock(return_value=mock_chain)
 
                 result = await tutor_with_search.execute(state)
 
@@ -72,13 +78,19 @@ class TestHybridSearchIntegration:
         with patch.object(tutor_with_search.api_client, 'hybrid_search', new_callable=AsyncMock) as mock_search:
             mock_search.return_value = sample_search_results
 
-            with patch.object(tutor_with_search.llm, 'ainvoke', new_callable=AsyncMock) as mock_llm:
-                mock_llm.return_value = AsyncMock(content="Rules explanation")
+            # Mock the chain response
+            mock_response = AsyncMock()
+            mock_response.content = "Rules explanation"
+
+            with patch.object(tutor_with_search, 'TUTOR_PROMPT') as mock_prompt:
+                mock_chain = AsyncMock()
+                mock_chain.ainvoke.return_value = mock_response
+                mock_prompt.__or__ = MagicMock(return_value=mock_chain)
 
                 await tutor_with_search.execute(state)
 
                 # Verify LLM was called with retrieved context
-                llm_call_args = mock_llm.call_args[0][0]
+                llm_call_args = mock_chain.ainvoke.call_args[0][0]
                 assert "Setup instructions" in str(llm_call_args) or "Place board" in str(llm_call_args)
 
     @pytest.mark.asyncio
@@ -99,20 +111,21 @@ class TestHybridSearchIntegration:
         with patch.object(tutor_with_search.api_client, 'hybrid_search', new_callable=AsyncMock) as mock_search:
             mock_search.return_value = {"results": []}
 
-            with patch.object(tutor_with_search.llm, 'ainvoke', new_callable=AsyncMock) as mock_llm:
-                # First call: reformulation
-                # Second call: response generation
-                mock_llm.side_effect = [
-                    AsyncMock(content="How does chess work?"),  # Reformulated
-                    AsyncMock(content="Chess is played by..."),  # Response
-                ]
+            # Mock chain responses
+            mock_response = AsyncMock()
+            mock_response.content = "Chess is played by..."
+
+            with patch.object(tutor_with_search, 'TUTOR_PROMPT') as mock_prompt:
+                mock_chain = AsyncMock()
+                mock_chain.ainvoke.return_value = mock_response
+                mock_prompt.__or__ = MagicMock(return_value=mock_chain)
 
                 result = await tutor_with_search.execute(state)
 
-                # Search should be called with reformulated query
+                # Search should be called with original query (no reformulation in current impl)
                 mock_search.assert_called_once()
                 search_query = mock_search.call_args.kwargs["query"]
-                assert "chess" in search_query.lower() or "How does it work?" in search_query
+                assert "How does it work?" in search_query
 
     @pytest.mark.asyncio
     async def test_search_failure_graceful_degradation(self, tutor_with_search):
@@ -126,8 +139,14 @@ class TestHybridSearchIntegration:
         with patch.object(tutor_with_search.api_client, 'hybrid_search', new_callable=AsyncMock) as mock_search:
             mock_search.side_effect = Exception("API unavailable")
 
-            with patch.object(tutor_with_search.llm, 'ainvoke', new_callable=AsyncMock) as mock_llm:
-                mock_llm.return_value = AsyncMock(content="Response without search")
+            # Mock chain response
+            mock_response = AsyncMock()
+            mock_response.content = "Response without search"
+
+            with patch.object(tutor_with_search, 'TUTOR_PROMPT') as mock_prompt:
+                mock_chain = AsyncMock()
+                mock_chain.ainvoke.return_value = mock_response
+                mock_prompt.__or__ = MagicMock(return_value=mock_chain)
 
                 result = await tutor_with_search.execute(state)
 
@@ -160,8 +179,14 @@ class TestHybridSearchIntegration:
         with patch.object(tutor_with_search.api_client, 'hybrid_search', new_callable=AsyncMock) as mock_search:
             mock_search.return_value = {"results": []}
 
-            with patch.object(tutor_with_search.llm, 'ainvoke', new_callable=AsyncMock) as mock_llm:
-                mock_llm.return_value = AsyncMock(content="Response")
+            # Mock chain response
+            mock_response = AsyncMock()
+            mock_response.content = "Response"
+
+            with patch.object(tutor_with_search, 'TUTOR_PROMPT') as mock_prompt:
+                mock_chain = AsyncMock()
+                mock_chain.ainvoke.return_value = mock_response
+                mock_prompt.__or__ = MagicMock(return_value=mock_chain)
 
                 start = time.perf_counter()
                 await tutor_with_search.execute(state)

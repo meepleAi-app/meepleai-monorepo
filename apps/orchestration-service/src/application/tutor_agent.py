@@ -4,6 +4,7 @@ LangGraph-based stateful conversation with context retention across 10+ turns.
 """
 
 import logging
+from datetime import datetime, UTC
 from typing import Any
 
 from langgraph.graph import StateGraph, END
@@ -134,7 +135,7 @@ Answer the user's question helpfully and concisely."""),
         logger.info(f"Processing turn {state.turn_count + 1} for session {state.session_id}")
 
         return {
-            "updated_at": datetime.utcnow(),
+            "updated_at": datetime.now(UTC),
         }
 
     async def _summarize_node(self, state: TutorState) -> dict[str, Any]:
@@ -329,14 +330,18 @@ Return ONLY the reformulated query, nothing else."""
             logger.info(f"Starting tutor workflow for session {state.session_id}")
 
             # Run the compiled graph
-            result = await self.graph.ainvoke(state)
+            result_dict = await self.graph.ainvoke(state)
+
+            # Update state with results (LangGraph returns dict)
+            for key, value in result_dict.items():
+                setattr(state, key, value)
 
             # Add the turn to history
-            if state.user_query and result.get("agent_response"):
-                result.add_turn(state.user_query, result.agent_response)
+            if state.user_query and state.agent_response:
+                state.add_turn(state.user_query, state.agent_response)
 
-            logger.info(f"Tutor workflow completed (turn {result.turn_count})")
-            return result
+            logger.info(f"Tutor workflow completed (turn {state.turn_count})")
+            return state
 
         except Exception as e:
             logger.error(f"Tutor workflow failed: {e}", exc_info=True)

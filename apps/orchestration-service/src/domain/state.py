@@ -4,7 +4,7 @@ Domain models for multi-agent orchestration state.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, UTC
 from enum import Enum
 from typing import Optional
 from uuid import UUID
@@ -31,7 +31,7 @@ class Message:
     """Conversation message."""
     role: str  # "user" or "assistant"
     content: str
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     metadata: dict = field(default_factory=dict)
 
 
@@ -50,7 +50,7 @@ class Move:
     """Pending move for validation."""
     move_notation: str
     player: str
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -90,8 +90,8 @@ class GameAgentState:
     retry_count: int = 0
 
     # Metadata
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass

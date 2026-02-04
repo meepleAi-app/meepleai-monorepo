@@ -7,7 +7,7 @@ import logging
 import time
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import AsyncIterator
 
 import httpx
@@ -33,8 +33,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Global instances
-orchestrator: GameOrchestrator
-intent_cache: IntentCache
+orchestrator: GameOrchestrator = None  # type: ignore
+intent_cache: IntentCache = None  # type: ignore
 
 
 # Metrics (simple in-memory counters for Prometheus)
@@ -144,7 +144,7 @@ async def health_check():
         status=overall_status,
         version="0.1.0",
         dependencies=dependencies,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(UTC),
     )
 
 

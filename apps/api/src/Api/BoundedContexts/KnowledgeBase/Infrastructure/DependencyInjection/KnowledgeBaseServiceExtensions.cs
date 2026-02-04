@@ -10,11 +10,13 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.AgentModes;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Analytics;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Caching;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.ContextEngineering;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.QualityTracking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 // Note: ITierStrategyAccessService is in Api.BoundedContexts.KnowledgeBase.Domain.Services namespace
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
@@ -39,6 +41,7 @@ internal static class KnowledgeBaseServiceExtensions
         AddInfrastructureServices(services);
         AddApplicationServices(services);
         AddChunkingAndRerankingServices(services, configuration);
+        AddCachingServices(services, configuration);
 
         return services;
     }
@@ -243,5 +246,25 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Application Services - Resilient Retrieval with Reranking
         services.AddScoped<IRerankedRetrievalService, ResilientRetrievalService>();
+    }
+
+    private static void AddCachingServices(IServiceCollection services, IConfiguration? configuration)
+    {
+        // ISSUE-3494: Multi-Tier Cache Configuration
+        if (configuration != null)
+        {
+            services.Configure<MultiTierCacheConfiguration>(
+                configuration.GetSection(MultiTierCacheConfiguration.SectionName));
+        }
+        else
+        {
+            // Fallback: configure with defaults via lambda (resolved at runtime)
+            services.AddOptions<MultiTierCacheConfiguration>()
+                .Configure<IConfiguration>((opts, cfg) =>
+                    cfg.GetSection(MultiTierCacheConfiguration.SectionName).Bind(opts));
+        }
+
+        // ISSUE-3494: Multi-Tier Cache Service (Singleton for L1 in-memory cache consistency)
+        services.AddSingleton<IMultiTierCache, MultiTierCache>();
     }
 }

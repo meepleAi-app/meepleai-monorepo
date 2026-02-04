@@ -63,8 +63,13 @@ Answer the user's question helpfully and concisely."""),
         ("user", "{query}")
     ])
 
-    def __init__(self):
-        """Initialize Tutor agent with LangGraph workflow."""
+    def __init__(self, api_client=None):
+        """
+        Initialize Tutor agent with LangGraph workflow.
+
+        Args:
+            api_client: Optional MeepleAIApiClient for dependency injection
+        """
         self.llm = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0.7,
@@ -73,6 +78,7 @@ Answer the user's question helpfully and concisely."""),
             default_headers={"HTTP-Referer": "https://meepleai.app", "X-Title": "MeepleAI"},
             timeout=10.0,
         )
+        self.api_client = api_client
         self.graph = self._build_workflow()
 
     def _build_workflow(self) -> StateGraph:
@@ -166,19 +172,87 @@ Answer the user's question helpfully and concisely."""),
 
     async def _search_knowledge_node(self, state: TutorState) -> dict[str, Any]:
         """
-        Search knowledge base for relevant information.
+        Search knowledge base using HybridSearchEngine.
 
-        PLACEHOLDER: Real implementation in Issue #3502 (Hybrid Search Integration).
+        ISSUE-3502: Integrates with .NET API's hybrid search from Issue #3492.
+        Routes queries by intent type to appropriate retrieval strategy.
         """
-        logger.info("Searching knowledge base")
+        logger.info("Searching knowledge base with hybrid search")
 
-        # Placeholder: Would integrate with HybridSearchEngine
-        # from context engineering framework (Issue #3492)
+        # Reformulate query if needed (use context for ambiguous queries)
+        search_query = await self._reformulate_query(state)
 
+        # Call hybrid search if API client available
+        if self.api_client:
+            try:
+                search_results = await self.api_client.hybrid_search(
+                    game_id=state.game_id,
+                    query=search_query,
+                    intent_type=state.intent.value if state.intent else None,
+                    top_k=5,
+                )
+
+                chunks = search_results.get("results", [])
+                logger.info(f"Retrieved {len(chunks)} chunks from hybrid search")
+
+                return {
+                    "retrieved_chunks": chunks,
+                    "search_query": search_query,
+                }
+
+            except Exception as e:
+                logger.error(f"Hybrid search failed: {e}")
+                # Continue without search results
+                return {"retrieved_chunks": [], "search_query": search_query}
+
+        # No API client available - placeholder mode
+        logger.warning("API client not available, using placeholder search")
         return {
             "retrieved_chunks": [],
-            "search_query": state.user_query,
+            "search_query": search_query,
         }
+
+    async def _reformulate_query(self, state: TutorState) -> str:
+        """
+        Reformulate query using conversation context for ambiguous queries.
+
+        Example: "How does it move?" → "How does the knight move in chess?"
+        """
+        query = state.user_query or ""
+
+        # Check if query is ambiguous (contains pronouns or lacks context)
+        ambiguous_indicators = ["it", "that", "this", "they", "those"]
+        is_ambiguous = any(word in query.lower().split() for word in ambiguous_indicators)
+
+        if not is_ambiguous or len(state.conversation_history) == 0:
+            return query
+
+        # Use conversation context to reformulate
+        try:
+            recent_context = "\n".join([
+                f"{msg.role}: {msg.content}"
+                for msg in state.get_recent_context(num_turns=2)
+            ])
+
+            reformulation_prompt = f"""Given this conversation context:
+{recent_context}
+
+The user asks: "{query}"
+
+Reformulate this query to be self-contained and clear, incorporating necessary context.
+Return ONLY the reformulated query, nothing else."""
+
+            chain = self.llm
+            response = await chain.ainvoke([{"role": "user", "content": reformulation_prompt}])
+
+            reformulated = response.content.strip()
+            logger.info(f"Reformulated query: '{query}' → '{reformulated}'")
+
+            return reformulated
+
+        except Exception as e:
+            logger.warning(f"Query reformulation failed: {e}")
+            return query  # Use original query on failure
 
     async def _generate_response_node(self, state: TutorState) -> dict[str, Any]:
         """Generate tutor response using conversation context and retrieved knowledge."""
@@ -198,8 +272,14 @@ Answer the user's question helpfully and concisely."""),
                     for msg in state.get_recent_context(num_turns=5)
                 ])
 
-            # Retrieved context (placeholder - will be from hybrid search)
-            retrieved_context = "No additional knowledge retrieved (hybrid search not yet integrated)."
+            # Retrieved context from hybrid search
+            if state.retrieved_chunks:
+                retrieved_context = "\n\n".join([
+                    f"[{i+1}] {chunk.get('content', '')[:200]}..."
+                    for i, chunk in enumerate(state.retrieved_chunks[:3])
+                ])
+            else:
+                retrieved_context = "No relevant knowledge found in search."
 
             # Generate response
             chain = self.TUTOR_PROMPT | self.llm

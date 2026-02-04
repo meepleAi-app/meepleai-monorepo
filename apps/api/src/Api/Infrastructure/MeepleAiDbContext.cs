@@ -104,6 +104,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<TierStrategyAccessEntity> TierStrategyAccess => Set<TierStrategyAccessEntity>(); // ISSUE-3438: Tier-strategy access control
     public DbSet<StrategyModelMappingEntity> StrategyModelMappings => Set<StrategyModelMappingEntity>(); // ISSUE-3438: Strategy-model mapping
     public DbSet<ChatSessionEntity> ChatSessions => Set<ChatSessionEntity>(); // ISSUE-3483: Chat session persistence
+    public DbSet<AgentTestResultEntity> AgentTestResults => Set<AgentTestResultEntity>(); // ISSUE-3379: Agent test results persistence
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();

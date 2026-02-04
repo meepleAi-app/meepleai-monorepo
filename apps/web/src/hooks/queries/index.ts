@@ -165,6 +165,16 @@ export {
   chatSessionKeys,
 } from './useChatSessions';
 
+// Tier Strategy Configuration queries and mutations (Issue #3440)
+export {
+  useTierStrategyMatrix,
+  useStrategyModelMappings,
+  useUpdateTierStrategyAccess,
+  useUpdateStrategyModelMapping,
+  useResetTierStrategyConfig,
+  tierStrategyKeys,
+} from './useTierStrategy';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

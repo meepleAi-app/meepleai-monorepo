@@ -144,8 +144,8 @@ describe('GameCard - Accessibility', () => {
     it('should have accessible rating display', () => {
       render(<GameCard game={mockGame} variant="grid" showRating={true} />);
 
-      // Rating stars should have accessible name
-      const rating = screen.getByRole('img', { name: /rating: 7.8/i });
+      // Rating container should have accessible label with "Rating: X out of 10"
+      const rating = screen.getByLabelText(/rating: 7.8 out of 10/i);
       expect(rating).toBeInTheDocument();
     });
   });

@@ -124,7 +124,7 @@ FASE 8 - Infrastructure & Testing
 | 17 | #3498 | Conversation Memory - Temporal RAG | 5 | ✅ Done | #3540 |
 | 18 | #3499 | REST API Endpoint /agents/tutor/query | 3 | ✅ Done | #3540 |
 | 19 | #3502 | Hybrid Search Integration | 3 | ✅ Done | #3540 |
-| 20 | #3501 | Beta Testing & User Feedback | 3 | ⏳ Ready | - |
+| 20 | #3501 | Beta Testing & User Feedback | 5 | ✅ Done | Docs |
 
 ### Stream C: Frontend AI Integration
 | Seq | Issue | Titolo | SP | Status | PR |

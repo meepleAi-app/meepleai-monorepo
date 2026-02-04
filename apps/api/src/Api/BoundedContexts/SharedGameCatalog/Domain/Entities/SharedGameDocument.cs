@@ -25,6 +25,12 @@ public sealed partial class SharedGameDocument : Entity<Guid>
     private readonly DateTime _createdAt;
     private Guid _createdBy;
 
+    // Approval workflow fields
+    private DocumentApprovalStatus _approvalStatus;
+    private Guid? _approvedBy;
+    private DateTime? _approvedAt;
+    private string? _approvalNotes;
+
     /// <summary>
     /// Gets the unique identifier of this document association.
     /// </summary>
@@ -71,6 +77,26 @@ public sealed partial class SharedGameDocument : Entity<Guid>
     public Guid CreatedBy => _createdBy;
 
     /// <summary>
+    /// Gets the approval status of this document for RAG processing.
+    /// </summary>
+    public DocumentApprovalStatus ApprovalStatus => _approvalStatus;
+
+    /// <summary>
+    /// Gets the ID of the admin who approved this document (null if not yet approved).
+    /// </summary>
+    public Guid? ApprovedBy => _approvedBy;
+
+    /// <summary>
+    /// Gets the timestamp when this document was approved (null if not yet approved).
+    /// </summary>
+    public DateTime? ApprovedAt => _approvedAt;
+
+    /// <summary>
+    /// Gets optional notes from the approver.
+    /// </summary>
+    public string? ApprovalNotes => _approvalNotes;
+
+    /// <summary>
     /// Parameterless constructor for EF Core.
     /// </summary>
     private SharedGameDocument() : base()
@@ -89,7 +115,11 @@ public sealed partial class SharedGameDocument : Entity<Guid>
         bool isActive,
         IEnumerable<string>? tags,
         DateTime createdAt,
-        Guid createdBy) : base(id)
+        Guid createdBy,
+        DocumentApprovalStatus approvalStatus = DocumentApprovalStatus.Pending,
+        Guid? approvedBy = null,
+        DateTime? approvedAt = null,
+        string? approvalNotes = null) : base(id)
     {
         _id = id;
         _sharedGameId = sharedGameId;
@@ -100,6 +130,10 @@ public sealed partial class SharedGameDocument : Entity<Guid>
         _tags = tags?.ToList() ?? new List<string>();
         _createdAt = createdAt;
         _createdBy = createdBy;
+        _approvalStatus = approvalStatus;
+        _approvedBy = approvedBy;
+        _approvedAt = approvedAt;
+        _approvalNotes = approvalNotes;
     }
 
     /// <summary>
@@ -220,6 +254,60 @@ public sealed partial class SharedGameDocument : Entity<Guid>
     {
         var normalizedTag = NormalizeTag(tag);
         return _tags.Contains(normalizedTag, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Approves this document for RAG processing.
+    /// </summary>
+    /// <param name="approvedBy">The ID of the admin approving the document</param>
+    /// <param name="notes">Optional notes from the approver</param>
+    /// <exception cref="InvalidOperationException">Thrown when document is already approved or rejected</exception>
+    public void Approve(Guid approvedBy, string? notes = null)
+    {
+        if (_approvalStatus != DocumentApprovalStatus.Pending)
+            throw new InvalidOperationException($"Cannot approve document with status {_approvalStatus}");
+
+        if (approvedBy == Guid.Empty)
+            throw new ArgumentException("ApprovedBy cannot be empty", nameof(approvedBy));
+
+        _approvalStatus = DocumentApprovalStatus.Approved;
+        _approvedBy = approvedBy;
+        _approvedAt = DateTime.UtcNow;
+        _approvalNotes = notes;
+    }
+
+    /// <summary>
+    /// Rejects this document from RAG processing.
+    /// </summary>
+    /// <param name="rejectedBy">The ID of the admin rejecting the document</param>
+    /// <param name="reason">Reason for rejection</param>
+    /// <exception cref="InvalidOperationException">Thrown when document is already approved or rejected</exception>
+    public void Reject(Guid rejectedBy, string reason)
+    {
+        if (_approvalStatus != DocumentApprovalStatus.Pending)
+            throw new InvalidOperationException($"Cannot reject document with status {_approvalStatus}");
+
+        if (rejectedBy == Guid.Empty)
+            throw new ArgumentException("RejectedBy cannot be empty", nameof(rejectedBy));
+
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ArgumentException("Rejection reason is required", nameof(reason));
+
+        _approvalStatus = DocumentApprovalStatus.Rejected;
+        _approvedBy = rejectedBy;
+        _approvedAt = DateTime.UtcNow;
+        _approvalNotes = reason;
+    }
+
+    /// <summary>
+    /// Resets approval status to Pending (admin can re-review).
+    /// </summary>
+    public void ResetApproval()
+    {
+        _approvalStatus = DocumentApprovalStatus.Pending;
+        _approvedBy = null;
+        _approvedAt = null;
+        _approvalNotes = null;
     }
 
     /// <summary>

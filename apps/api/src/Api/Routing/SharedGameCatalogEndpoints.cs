@@ -178,6 +178,23 @@ internal static class SharedGameCatalogEndpoints
             .WithDescription("Returns all games in PendingApproval status awaiting admin review.")
             .Produces<PagedResult<SharedGameDto>>();
 
+        // Get approval queue with filters - Issue #3533
+        group.MapGet("/admin/shared-games/approval-queue", HandleGetApprovalQueue)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("GetApprovalQueue")
+            .WithSummary("Get filtered approval queue (Admin only)")
+            .WithDescription("Returns games pending approval with urgency, submitter, and PDF filters.")
+            .Produces<IReadOnlyList<ApprovalQueueItemDto>>();
+
+        // Approve document for RAG processing - Issue #3533
+        group.MapPost("/admin/shared-games/{id:guid}/documents/{docId:guid}/approve", HandleApproveDocument)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("ApproveDocumentForRag")
+            .WithSummary("Approve document for RAG processing (Admin only)")
+            .WithDescription("Approves a document and triggers RAG embedding workflow.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
         // Archive game (Published → Archived)
         group.MapPost("/admin/shared-games/{id:guid}/archive", HandleArchiveGame)
             .RequireAuthorization("AdminOnlyPolicy")
@@ -630,11 +647,22 @@ internal static class SharedGameCatalogEndpoints
 
     private static async Task<IResult> HandleListAllGames(
         IMediator mediator,
+        [FromQuery] string? status = null,
+        [FromQuery] string? search = null,
+        [FromQuery] string? sortBy = null,
+        [FromQuery] Guid? submittedBy = null,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        var query = new GetAllSharedGamesQuery(null, pageNumber, pageSize);
+        // Issue #3533: Parse status string to enum
+        GameStatus? statusEnum = null;
+        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<GameStatus>(status, ignoreCase: true, out var parsedStatus))
+        {
+            statusEnum = parsedStatus;
+        }
+
+        var query = new GetFilteredSharedGamesQuery(statusEnum, search, pageNumber, pageSize, sortBy, submittedBy);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
@@ -887,6 +915,41 @@ internal static class SharedGameCatalogEndpoints
         var query = new CheckBggDuplicateQuery(bggId);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
+    }
+
+    // Issue #3533: New handlers for admin approval workflow
+    private static async Task<IResult> HandleGetApprovalQueue(
+        IMediator mediator,
+        [FromQuery] bool? urgency = null,
+        [FromQuery] Guid? submitter = null,
+        [FromQuery] bool? hasPdfs = null,
+        CancellationToken ct = default)
+    {
+        var query = new GetApprovalQueueQuery(urgency, submitter, hasPdfs);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleApproveDocument(
+        Guid id,
+        Guid docId,
+        IMediator mediator,
+        HttpContext context,
+        [FromBody] ApproveDocumentRequest? request,
+        CancellationToken ct)
+    {
+        // Extract approver userId from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var approvedBy))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new ApproveDocumentForRagProcessingCommand(docId, approvedBy, request?.Notes);
+        await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.NoContent();
     }
 
     private static async Task<IResult> HandleUpdateFromBgg(
@@ -2214,6 +2277,12 @@ internal record RejectDeleteRequest(string Reason);
 /// Issue #2514: Approval workflow implementation
 /// </summary>
 internal record RejectPublicationRequest(string Reason);
+
+/// <summary>
+/// Request DTO for approving a document for RAG processing.
+/// Issue #3533: Admin approval workflow
+/// </summary>
+internal record ApproveDocumentRequest(string? Notes);
 
 /// <summary>
 /// Request DTO for adding a quick question manually.

@@ -26,7 +26,7 @@ const STATUS_CONFIG: Record<
 };
 
 export function ApprovalStatusBadge({ status, className }: ApprovalStatusBadgeProps) {
-  // eslint-disable-next-line security/detect-object-injection -- status is type-safe ApprovalStatus enum
+   
   const config = STATUS_CONFIG[status];
 
   if (!config) {

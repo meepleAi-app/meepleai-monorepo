@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-object-injection */
+ 
 /**
  * PdfDocumentList Component - Issue #2391 Sprint 1
  *

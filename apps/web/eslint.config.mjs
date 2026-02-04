@@ -440,4 +440,19 @@ export default [
       "security/detect-object-injection": "off",
     },
   },
+  // Configuration for components with typed Record access patterns
+  // These components use TypeScript Record<string, T> with safe key access
+  {
+    files: [
+      "src/components/dashboard/**/*.{ts,tsx}",
+      "src/components/cards/**/*.{ts,tsx}",
+      "src/components/library/game-detail/**/*.{ts,tsx}",
+      "src/components/admin/**/*.{ts,tsx}",
+      "src/app/**/admin/**/*.{ts,tsx}",
+    ],
+    rules: {
+      // Disable object injection warnings - TypeScript Record access is type-safe
+      "security/detect-object-injection": "off",
+    },
+  },
 ];

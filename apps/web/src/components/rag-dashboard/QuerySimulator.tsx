@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { cn } from '@/lib/utils';
 
-import { TIER_STRATEGY_ACCESS } from './rag-data';
+import { TIER_STRATEGY_ACCESS, STRATEGIES } from './rag-data';
 import { RAG_LAYERS, MODELS } from './types';
 
 import type { RagStrategy, UserTier, QueryTemplate, QueryAnalysis } from './types';
@@ -103,17 +103,10 @@ function selectStrategy(tier: UserTier, complexity: number, availableStrategies:
 function estimateTokens(strategy: RagStrategy, cacheHit: boolean): number {
   if (cacheHit) return 50 + Math.floor(Math.random() * 50);
 
-  // Token values aligned with rag-data.ts
-  const baseTokens: Record<RagStrategy, number> = {
-    FAST: 2060,
-    BALANCED: 2820,
-    PRECISE: 22396,
-    EXPERT: 15000,
-    CONSENSUS: 18000,
-    CUSTOM: 5000,
-  };
+  // Token values from STRATEGIES (Single Source of Truth in rag-data.ts)
+  const baseTokens = STRATEGIES[strategy].tokens;
 
-  return baseTokens[strategy] + Math.floor(Math.random() * 500) - 250;
+  return baseTokens + Math.floor(Math.random() * 500) - 250;
 }
 
 function analyzeQuery(query: string, tier: UserTier): QueryAnalysis {

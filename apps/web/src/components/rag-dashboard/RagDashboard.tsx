@@ -10,28 +10,32 @@
  * Aesthetic: "Neural Gaming Interface" - sci-fi command center meets data visualization
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 
 import { motion } from 'framer-motion';
-import { Dices, Code2, Briefcase, BookOpen, GitBranch, ExternalLink } from 'lucide-react';
+import { Dices, Code2, Briefcase, BookOpen, GitBranch, ExternalLink, RotateCcw } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
 
 import { AgentRagIntegration } from './AgentRagIntegration';
 import { AgentRoleConfigurator } from './AgentRoleConfigurator';
 import { ArchitectureExplorer } from './ArchitectureExplorer';
+import { Breadcrumbs } from './Breadcrumbs';
 import { CostCalculator } from './CostCalculator';
 import { DashboardNav } from './DashboardNav';
 import { DashboardSidebar } from './DashboardSidebar';
 import { DecisionWalkthrough } from './DecisionWalkthrough';
+import { GlobalSearch } from './GlobalSearch';
+import { useAccordionState } from './hooks/useAccordionState';
 import { useScrollSpy } from './hooks/useScrollSpy';
+import { ScrollProgressBar } from './ScrollProgressBar';
 import { LayerDeepDocs } from './LayerDeepDocs';
 import { ModelSelectionOptimizer } from './ModelSelectionOptimizer';
 import { PerformanceMetricsTable } from './PerformanceMetricsTable';
 import { PromptTemplateBuilder } from './PromptTemplateBuilder';
 import { QuerySimulator } from './QuerySimulator';
 import { METRICS } from './rag-data';
-import { SectionGroup } from './SectionGroup';
+import { AccordionSection, SectionGroup } from './SectionGroup';
 import { StatsGrid } from './StatsGrid';
 import { TokenFlowVisualizer } from './TokenFlowVisualizer';
 import { DEFAULT_STATS } from './types';
@@ -145,9 +149,11 @@ function ViewToggle({ mode, onChange }: ViewToggleProps) {
 interface HeaderProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
+  onResetAccordion?: () => void;
+  onOpenSection?: (sectionId: string) => void;
 }
 
-function DashboardHeader({ viewMode, onViewModeChange }: HeaderProps) {
+function DashboardHeader({ viewMode, onViewModeChange, onResetAccordion, onOpenSection }: HeaderProps) {
   return (
     <motion.header
       className="relative overflow-hidden"
@@ -184,9 +190,26 @@ function DashboardHeader({ viewMode, onViewModeChange }: HeaderProps) {
 
           {/* Actions */}
           <div className="flex items-center gap-4">
+            {/* Global Search */}
+            <GlobalSearch
+              viewMode={viewMode}
+              onOpenSection={onOpenSection}
+            />
+
             <ViewToggle mode={viewMode} onChange={onViewModeChange} />
 
             <div className="hidden items-center gap-2 md:flex">
+              {onResetAccordion && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onResetAccordion}
+                  title="Reset section collapse state"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Reset
+                </Button>
+              )}
               <Button variant="outline" size="sm" asChild>
                 <a href="/docs/03-api/rag/README.md" target="_blank">
                   <BookOpen className="mr-2 h-4 w-4" />
@@ -208,7 +231,36 @@ function DashboardHeader({ viewMode, onViewModeChange }: HeaderProps) {
 }
 
 // =============================================================================
-// Section Wrapper
+// Default Open Sections (First section of each group)
+// =============================================================================
+
+// Default open sections: first section of each group for good UX
+// These are open by default when the page loads (or localStorage is empty)
+const DEFAULT_OPEN_SECTIONS = [
+  // UNDERSTAND group
+  'overview',
+  'architecture',
+  'layers',
+  // EXPLORE group
+  'query-sim',
+  'token-flow',
+  'walkthrough',
+  // COMPARE group
+  'variants',
+  'performance',
+  // BUILD group
+  'prompts',
+  'roles',
+  'agent-integration',
+  // OPTIMIZE group
+  'cost',
+  'model-optimizer',
+  // BUSINESS view
+  'executive-summary',
+];
+
+// =============================================================================
+// Section Wrapper with Accordion Support
 // =============================================================================
 
 interface SectionProps {
@@ -217,16 +269,47 @@ interface SectionProps {
   description?: string;
   icon?: React.ReactNode;
   children: React.ReactNode;
-  delay?: number;
+  /** Whether this section uses accordion behavior */
+  accordion?: boolean;
+  /** Whether the section is open (for accordion mode) */
+  isOpen?: boolean;
+  /** Toggle callback (for accordion mode) */
+  onToggle?: () => void;
 }
 
-function Section({ id, title, description, icon, children, delay = 0 }: SectionProps) {
+function Section({
+  id,
+  title,
+  description,
+  icon,
+  children,
+  accordion = false,
+  isOpen = true,
+  onToggle,
+}: SectionProps) {
+  // Accordion mode - use AccordionSection
+  if (accordion && onToggle) {
+    return (
+      <AccordionSection
+        id={id}
+        title={title}
+        description={description}
+        icon={icon}
+        isOpen={isOpen}
+        onToggle={onToggle}
+      >
+        {children}
+      </AccordionSection>
+    );
+  }
+
+  // Non-accordion mode - render with motion animation
   return (
     <motion.section
       id={id}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4 }}
+      transition={{ duration: 0.4 }}
       className="scroll-mt-24 space-y-4"
     >
       <div className="flex items-center gap-3">
@@ -326,11 +409,35 @@ export function RagDashboard() {
   // Track active section with scroll spy
   const activeSection = useScrollSpy(allSectionIds);
 
+  // Accordion state with localStorage persistence
+  const {
+    isOpen,
+    toggleSection,
+    resetToDefaults,
+    openSection,
+  } = useAccordionState({
+    defaultOpen: DEFAULT_OPEN_SECTIONS,
+  });
+
+  // Memoized toggle callback factory
+  const createToggle = useCallback(
+    (sectionId: string) => () => toggleSection(sectionId),
+    [toggleSection]
+  );
+
   return (
     <div className="rag-dashboard min-h-screen">
+      {/* Scroll Progress Bar */}
+      <ScrollProgressBar />
+
       <div className="relative z-10">
         {/* Header */}
-        <DashboardHeader viewMode={viewMode} onViewModeChange={setViewMode} />
+        <DashboardHeader
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          onResetAccordion={resetToDefaults}
+          onOpenSection={openSection}
+        />
 
         {/* Mobile Navigation */}
         <DashboardNav groups={NAVIGATION_GROUPS} activeSection={activeSection} />
@@ -346,6 +453,13 @@ export function RagDashboard() {
 
           {/* Content */}
           <main className="mx-auto max-w-5xl flex-1 space-y-16 px-4 py-8 md:px-6">
+            {/* Breadcrumb Navigation */}
+            <Breadcrumbs
+              activeSection={activeSection}
+              groups={NAVIGATION_GROUPS}
+              className="mb-4"
+            />
+
             {/* Quick Links for Business View */}
             {viewMode === 'business' && <QuickLinks />}
 
@@ -367,6 +481,9 @@ export function RagDashboard() {
                     ? 'Key performance metrics for the TOMAC-RAG system'
                     : 'Key business metrics and cost efficiency indicators'
                 }
+                accordion
+                isOpen={isOpen('overview')}
+                onToggle={createToggle('overview')}
               >
                 <StatsGrid stats={DEFAULT_STATS} viewMode={viewMode} />
               </Section>
@@ -377,6 +494,9 @@ export function RagDashboard() {
                   id="architecture"
                   title="Architecture Explorer"
                   description="Interactive system architecture diagram"
+                  accordion
+                  isOpen={isOpen('architecture')}
+                  onToggle={createToggle('architecture')}
                 >
                   <ArchitectureExplorer />
                 </Section>
@@ -388,6 +508,9 @@ export function RagDashboard() {
                   id="layers"
                   title="Layer Documentation"
                   description="Detailed technical docs with code examples and decision trees"
+                  accordion
+                  isOpen={isOpen('layers')}
+                  onToggle={createToggle('layers')}
                 >
                   <LayerDeepDocs />
                 </Section>
@@ -408,6 +531,9 @@ export function RagDashboard() {
                 id="query-sim"
                 title="Query Simulator"
                 description="Test the routing system with sample queries"
+                accordion
+                isOpen={isOpen('query-sim')}
+                onToggle={createToggle('query-sim')}
               >
                 <QuerySimulator />
               </Section>
@@ -417,6 +543,9 @@ export function RagDashboard() {
                 id="token-flow"
                 title="Token Flow"
                 description="Visualize token consumption through each layer"
+                accordion
+                isOpen={isOpen('token-flow')}
+                onToggle={createToggle('token-flow')}
               >
                 <TokenFlowVisualizer />
               </Section>
@@ -430,6 +559,9 @@ export function RagDashboard() {
                     ? 'Step-by-step visualization of RAG decision process'
                     : 'See how queries are processed through the system'
                 }
+                accordion
+                isOpen={isOpen('walkthrough')}
+                onToggle={createToggle('walkthrough')}
               >
                 <DecisionWalkthrough />
               </Section>
@@ -450,6 +582,9 @@ export function RagDashboard() {
                   id="variants"
                   title={`${METRICS.totalVariants} RAG Variants`}
                   description="Interactive comparison of all strategy × template × tier combinations"
+                  accordion
+                  isOpen={isOpen('variants')}
+                  onToggle={createToggle('variants')}
                 >
                   <VariantComparisonTool />
                 </Section>
@@ -459,6 +594,9 @@ export function RagDashboard() {
                   id="performance"
                   title="Performance Metrics"
                   description="Real-time performance data across strategies and query types"
+                  accordion
+                  isOpen={isOpen('performance')}
+                  onToggle={createToggle('performance')}
                 >
                   <PerformanceMetricsTable />
                 </Section>
@@ -480,6 +618,9 @@ export function RagDashboard() {
                   id="prompts"
                   title="Prompt Builder"
                   description="Interactive tool to assemble and preview RAG prompts"
+                  accordion
+                  isOpen={isOpen('prompts')}
+                  onToggle={createToggle('prompts')}
                 >
                   <PromptTemplateBuilder />
                 </Section>
@@ -489,6 +630,9 @@ export function RagDashboard() {
                   id="roles"
                   title="Agent Roles"
                   description="Pre-built agent configurations with system prompts"
+                  accordion
+                  isOpen={isOpen('roles')}
+                  onToggle={createToggle('roles')}
                 >
                   <AgentRoleConfigurator />
                 </Section>
@@ -498,6 +642,9 @@ export function RagDashboard() {
                   id="agent-integration"
                   title="Agent-RAG Integration"
                   description="How MeepleAI agents assemble prompts with RAG context"
+                  accordion
+                  isOpen={isOpen('agent-integration')}
+                  onToggle={createToggle('agent-integration')}
                 >
                   <AgentRagIntegration />
                 </Section>
@@ -522,6 +669,9 @@ export function RagDashboard() {
                     ? 'Estimate monthly costs based on usage patterns'
                     : 'Project ROI and cost savings with TOMAC-RAG optimization'
                 }
+                accordion
+                isOpen={isOpen('cost')}
+                onToggle={createToggle('cost')}
               >
                 <CostCalculator />
               </Section>
@@ -532,6 +682,9 @@ export function RagDashboard() {
                   id="model-optimizer"
                   title="Model Selection"
                   description="Optimize model choices based on cost, speed, and quality requirements"
+                  accordion
+                  isOpen={isOpen('model-optimizer')}
+                  onToggle={createToggle('model-optimizer')}
                 >
                   <ModelSelectionOptimizer />
                 </Section>
@@ -546,6 +699,9 @@ export function RagDashboard() {
                 id="executive-summary"
                 title="Executive Summary"
                 description="Key takeaways for stakeholders"
+                accordion
+                isOpen={isOpen('executive-summary')}
+                onToggle={createToggle('executive-summary')}
               >
                 <ExecutiveSummary />
               </Section>

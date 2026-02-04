@@ -1,7 +1,7 @@
 # Sequenza Implementazione Issue - MeepleAI
 
-**Last Updated**: 2026-02-03
-**Total Open Issues**: 116
+**Last Updated**: 2026-02-04
+**Total Open Issues**: 108 (-8 completed today)
 **Active Epics**: 17
 
 ---
@@ -127,11 +127,11 @@ FASE 8 - Infrastructure & Testing
 | 20 | #3501 | Beta Testing & User Feedback | 3 | #3502 |
 
 ### Stream C: Frontend AI Integration
-| Seq | Issue | Titolo | SP | Dipendenze |
-|:---:|:-----:|--------|:--:|:----------:|
-| 21 | #3373 | Streaming SSE in Ask page | 3 | #3499 |
-| 22 | #3374 | Cancel processing button UI | 2 | #3373 |
-| 23 | #3383 | Cost Estimation Preview | 3 | #3374 |
+| Seq | Issue | Titolo | SP | Status | PR |
+|:---:|:-----:|--------|:--:|:------:|:--:|
+| 21 | #3373 | Streaming SSE in Ask page | 3 | ✅ Done | #3542 |
+| 22 | #3374 | Cancel processing button UI | 2 | ✅ Done | #3433 |
+| 23 | #3383 | Cost Estimation Preview | 3 | ⏳ Ready | - |
 
 **Epic Reference**: #3490 Multi-Agent Game AI System
 

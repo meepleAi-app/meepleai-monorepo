@@ -11,6 +11,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { usePathname } from 'next/navigation';
 import { vi } from 'vitest';
 import { BottomNav } from '../BottomNav';
@@ -20,7 +21,38 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
 }));
 
+// Mock useCurrentUser hook to return authenticated user
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: vi.fn(() => ({
+    data: {
+      id: 'test-user-id',
+      email: 'test@example.com',
+      username: 'testuser',
+    },
+    isLoading: false,
+    error: null,
+  })),
+}));
+
 const mockUsePathname = usePathname as ReturnType<typeof vi.fn>;
+
+// Helper to create QueryClient wrapper for tests
+const createQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+const renderWithQueryClient = (ui: React.ReactElement) => {
+  const queryClient = createQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {ui}
+    </QueryClientProvider>
+  );
+};
 
 describe('BottomNav', () => {
   beforeEach(() => {
@@ -29,7 +61,7 @@ describe('BottomNav', () => {
 
   describe('Rendering', () => {
     it('should render all 5 navigation items', () => {
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       // Check all labels are present (Issue #2860 updated labels)
       expect(screen.getByText('Home')).toBeInTheDocument();
@@ -40,7 +72,7 @@ describe('BottomNav', () => {
     });
 
     it('should render correct ARIA labels', () => {
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       expect(screen.getByLabelText('Navigate to home page')).toBeInTheDocument();
       expect(screen.getByLabelText('Navigate to your game library')).toBeInTheDocument();
@@ -50,19 +82,19 @@ describe('BottomNav', () => {
     });
 
     it('should have primary navigation landmark', () => {
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
       const nav = screen.getByRole('navigation', { name: /primary mobile navigation/i });
       expect(nav).toBeInTheDocument();
     });
 
     it('should render as a fixed bottom nav', () => {
-      const { container } = render(<BottomNav />);
+      const { container } = renderWithQueryClient(<BottomNav />);
       const nav = container.querySelector('nav');
       expect(nav).toHaveClass('fixed', 'bottom-0', 'left-0', 'right-0');
     });
 
     it('should be hidden on desktop (md breakpoint)', () => {
-      const { container } = render(<BottomNav />);
+      const { container } = renderWithQueryClient(<BottomNav />);
       const nav = container.querySelector('nav');
       expect(nav).toHaveClass('md:hidden');
     });
@@ -71,7 +103,7 @@ describe('BottomNav', () => {
   describe('Active State Logic', () => {
     it('should mark / as active when pathname is /', () => {
       mockUsePathname.mockReturnValue('/');
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const homeLink = screen.getByLabelText('Navigate to home page');
       expect(homeLink).toHaveAttribute('aria-current', 'page');
@@ -79,7 +111,7 @@ describe('BottomNav', () => {
 
     it('should mark /library as active for /library routes', () => {
       mockUsePathname.mockReturnValue('/library');
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const libraryLink = screen.getByLabelText('Navigate to your game library');
       expect(libraryLink).toHaveAttribute('aria-current', 'page');
@@ -87,7 +119,7 @@ describe('BottomNav', () => {
 
     it('should mark /games as active for /games/* routes', () => {
       mockUsePathname.mockReturnValue('/games/catan');
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const catalogLink = screen.getByLabelText('Navigate to games catalog');
       expect(catalogLink).toHaveAttribute('aria-current', 'page');
@@ -95,7 +127,7 @@ describe('BottomNav', () => {
 
     it('should mark /chat as active for /chat/* routes', () => {
       mockUsePathname.mockReturnValue('/chat/thread-123');
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const chatLink = screen.getByLabelText('Navigate to chat interface');
       expect(chatLink).toHaveAttribute('aria-current', 'page');
@@ -103,7 +135,7 @@ describe('BottomNav', () => {
 
     it('should mark /profile as active for /profile routes', () => {
       mockUsePathname.mockReturnValue('/profile');
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const profileLink = screen.getByLabelText('Navigate to your profile');
       expect(profileLink).toHaveAttribute('aria-current', 'page');
@@ -111,7 +143,7 @@ describe('BottomNav', () => {
 
     it('should not mark multiple items as active', () => {
       mockUsePathname.mockReturnValue('/chat');
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const activeLinks = screen
         .getAllByRole('link')
@@ -121,7 +153,7 @@ describe('BottomNav', () => {
 
     it('should apply inactive styles to non-active links', () => {
       mockUsePathname.mockReturnValue('/chat');
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const homeLink = screen.getByLabelText('Navigate to home page');
       expect(homeLink).not.toHaveAttribute('aria-current');
@@ -131,7 +163,7 @@ describe('BottomNav', () => {
 
   describe('Accessibility (WCAG 2.1 AA)', () => {
     it('should have minimum touch target size (44x44px)', () => {
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const links = screen.getAllByRole('link');
       links.forEach(link => {
@@ -140,7 +172,7 @@ describe('BottomNav', () => {
     });
 
     it('should have keyboard focus indicators', () => {
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const links = screen.getAllByRole('link');
       links.forEach(link => {
@@ -149,7 +181,7 @@ describe('BottomNav', () => {
     });
 
     it('should mark icons as aria-hidden', () => {
-      const { container } = render(<BottomNav />);
+      const { container } = renderWithQueryClient(<BottomNav />);
 
       // Lucide icons render as <svg> with aria-hidden
       const icons = container.querySelectorAll('svg');
@@ -160,7 +192,7 @@ describe('BottomNav', () => {
     });
 
     it('should have smooth transitions for hover/active states', () => {
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const links = screen.getAllByRole('link');
       links.forEach(link => {
@@ -171,7 +203,7 @@ describe('BottomNav', () => {
 
   describe('Navigation', () => {
     it('should render correct href attributes', () => {
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       expect(screen.getByLabelText('Navigate to home page')).toHaveAttribute('href', '/');
       expect(screen.getByLabelText('Navigate to your game library')).toHaveAttribute(
@@ -184,7 +216,7 @@ describe('BottomNav', () => {
     });
 
     it('should use Next.js Link component for client-side navigation', () => {
-      const { container } = render(<BottomNav />);
+      const { container } = renderWithQueryClient(<BottomNav />);
 
       // Next.js Link renders as <a> with href
       const links = container.querySelectorAll('a[href^="/"]');
@@ -195,7 +227,7 @@ describe('BottomNav', () => {
   describe('Design System Compliance (Playful Boardroom)', () => {
     it('should use purple color for active state', () => {
       mockUsePathname.mockReturnValue('/');
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const activeLink = screen.getByLabelText('Navigate to home page');
       // Active color uses HSL purple: hsl(262 83% 62%)
@@ -204,26 +236,26 @@ describe('BottomNav', () => {
 
     it('should use muted-foreground for inactive state', () => {
       mockUsePathname.mockReturnValue('/');
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const inactiveLink = screen.getByLabelText('Navigate to games catalog');
       expect(inactiveLink).toHaveClass('text-muted-foreground');
     });
 
     it('should have shadow-lg for elevation', () => {
-      const { container } = render(<BottomNav />);
+      const { container } = renderWithQueryClient(<BottomNav />);
       const nav = container.querySelector('nav');
       expect(nav).toHaveClass('shadow-lg');
     });
 
     it('should have z-50 for stacking context', () => {
-      const { container } = render(<BottomNav />);
+      const { container } = renderWithQueryClient(<BottomNav />);
       const nav = container.querySelector('nav');
       expect(nav).toHaveClass('z-50');
     });
 
     it('should use correct icon size (24x24px)', () => {
-      const { container } = render(<BottomNav />);
+      const { container } = renderWithQueryClient(<BottomNav />);
 
       const icons = container.querySelectorAll('svg');
       icons.forEach(icon => {
@@ -232,7 +264,7 @@ describe('BottomNav', () => {
     });
 
     it('should use correct label font size (10px)', () => {
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const labels = screen.getAllByText(/Home|Libreria|Catalogo|Chat|Profilo/);
       labels.forEach(label => {
@@ -241,7 +273,7 @@ describe('BottomNav', () => {
     });
 
     it('should use Inter font for labels', () => {
-      render(<BottomNav />);
+      renderWithQueryClient(<BottomNav />);
 
       const labels = screen.getAllByText(/Home|Libreria|Catalogo|Chat|Profilo/);
       labels.forEach(label => {

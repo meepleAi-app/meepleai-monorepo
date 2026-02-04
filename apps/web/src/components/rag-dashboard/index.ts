@@ -19,6 +19,9 @@ export { AgentRoleConfigurator } from './AgentRoleConfigurator';
 export { DecisionWalkthrough } from './DecisionWalkthrough';
 export { ModelSelectionOptimizer } from './ModelSelectionOptimizer';
 export { PerformanceMetricsTable } from './PerformanceMetricsTable';
+export { TechnicalReference } from './TechnicalReference';
+export { PocStatus } from './PocStatus';
+export { ParameterGuide } from './ParameterGuide';
 
 export * from './types';
 export * from './types-configurable';

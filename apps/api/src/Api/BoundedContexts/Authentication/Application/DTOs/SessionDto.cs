@@ -20,10 +20,12 @@ internal record SessionDto(
 
 /// <summary>
 /// DTO for session status check.
+/// Issue #3340: Added SessionId for device tracking.
 /// </summary>
 internal record SessionStatusDto(
     bool IsValid,
     UserDto? User,
     DateTime? ExpiresAt,
-    DateTime? LastSeenAt
+    DateTime? LastSeenAt,
+    Guid? SessionId = null
 );

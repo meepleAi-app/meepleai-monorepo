@@ -212,9 +212,9 @@ function getSecurityHeaders(requestOrigin?: string) {
     'Content-Security-Policy': [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Required for Next.js hydration
-      "style-src 'self' 'unsafe-inline'", // Required for Tailwind CSS
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Required for Tailwind CSS + Google Fonts
       "img-src 'self' data: https:", // Allow images from data URIs and HTTPS
-      "font-src 'self' data:",
+      "font-src 'self' data: https://fonts.gstatic.com", // Allow Google Fonts files
       `connect-src ${connectSrcParts.join(' ')}`, // Allow API backend requests
       "frame-ancestors 'none'", // Prevent clickjacking
       "base-uri 'self'",

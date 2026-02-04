@@ -405,6 +405,10 @@ internal static class InfrastructureServiceExtensions
         // Background task orchestration with distributed coordination (Redis)
         services.AddSingleton<IBackgroundTaskOrchestrator, RedisBackgroundTaskOrchestrator>();
 
+        // Issue #3541: BGG import queue service
+        services.AddScoped<Infrastructure.Services.IBggImportQueueService, Infrastructure.Services.BggImportQueueService>();
+        services.AddHostedService<Infrastructure.BackgroundServices.BggImportQueueBackgroundService>();
+
         // Issue #936: Infisical secrets management client (POC)
         services.AddHttpClient("Infisical", client =>
         {

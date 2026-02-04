@@ -96,7 +96,7 @@ internal static class SharedGameSeeder
         Guid systemUserId)
     {
 #pragma warning disable S1075 // URIs should not be hardcoded - Acceptable for placeholder images when BGG data missing
-        const string PlaceholderImageBase = "https://via.placeholder.com";
+        const string PlaceholderImageBase = "https://placehold.co";
 #pragma warning restore S1075
 
         return new SharedGameEntity
@@ -127,7 +127,7 @@ internal static class SharedGameSeeder
         Guid systemUserId)
     {
 #pragma warning disable S1075 // URIs should not be hardcoded - Acceptable for placeholder images in seed data
-        const string PlaceholderImageBase = "https://via.placeholder.com";
+        const string PlaceholderImageBase = "https://placehold.co";
 #pragma warning restore S1075
 
         return new SharedGameEntity

@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260204133152_AddBggImportQueueTable")]
+    partial class AddBggImportQueueTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -4827,54 +4830,6 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("users", (string)null);
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.GameLabelEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Color")
-                        .IsRequired()
-                        .HasMaxLength(7)
-                        .HasColumnType("character varying(7)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsPredefined")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsPredefined")
-                        .HasDatabaseName("IX_GameLabels_IsPredefined");
-
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasDatabaseName("IX_GameLabels_Name_Predefined")
-                        .HasFilter("is_predefined = true");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("IX_GameLabels_UserId");
-
-                    b.HasIndex("UserId", "Name")
-                        .IsUnique()
-                        .HasDatabaseName("IX_GameLabels_UserId_Name")
-                        .HasFilter("is_predefined = false");
-
-                    b.ToTable("game_labels", (string)null);
-                });
-
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.LibraryShareLinkEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4991,36 +4946,6 @@ namespace Api.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("chk_game_checklists_display_order", "\"DisplayOrder\" >= 0");
                         });
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserGameLabelEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("AssignedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("LabelId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UserLibraryEntryId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("LabelId")
-                        .HasDatabaseName("IX_UserGameLabels_LabelId");
-
-                    b.HasIndex("UserLibraryEntryId")
-                        .HasDatabaseName("IX_UserGameLabels_UserLibraryEntryId");
-
-                    b.HasIndex("UserLibraryEntryId", "LabelId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_UserGameLabels_EntryId_LabelId");
-
-                    b.ToTable("user_game_labels", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserGameSessionEntity", b =>
@@ -6492,16 +6417,6 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.GameLabelEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.LibraryShareLinkEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
@@ -6520,25 +6435,6 @@ namespace Api.Infrastructure.Migrations
                         .HasForeignKey("UserLibraryEntryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("UserLibraryEntry");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserGameLabelEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.UserLibrary.GameLabelEntity", "Label")
-                        .WithMany("GameLabels")
-                        .HasForeignKey("LabelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity", "UserLibraryEntry")
-                        .WithMany("Labels")
-                        .HasForeignKey("UserLibraryEntryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Label");
 
                     b.Navigation("UserLibraryEntry");
                 });
@@ -6763,16 +6659,9 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("Sessions");
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.GameLabelEntity", b =>
-                {
-                    b.Navigation("GameLabels");
-                });
-
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity", b =>
                 {
                     b.Navigation("Checklist");
-
-                    b.Navigation("Labels");
 
                     b.Navigation("Sessions");
                 });

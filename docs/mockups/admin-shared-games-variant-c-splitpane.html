@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VARIANT C: Split-Pane Master-Detail - MeepleAI Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* === MEEPLEAI DESIGN SYSTEM === */
+        :root {
+            --meeple-orange: hsl(25 95% 53%);
+            --meeple-orange-dark: hsl(25 95% 38%);
+            --meeple-orange-light: hsl(30 100% 94%);
+            --meeple-purple: hsl(262 83% 62%);
+            --meeple-purple-dark: hsl(271 91% 55%);
+            --bg-primary: hsl(30 25% 97%);
+            --bg-secondary: hsl(30 20% 94%);
+            --bg-tertiary: hsl(30 18% 90%);
+            --bg-elevated: hsl(0 0% 100%);
+            --text-primary: hsl(30 15% 15%);
+            --text-secondary: hsl(30 12% 35%);
+            --text-tertiary: hsl(30 10% 55%);
+            --border-primary: hsl(30 15% 85%);
+            --status-draft: hsl(45 93% 47%);
+            --status-pending: hsl(262 83% 62%);
+            --status-approved: hsl(142 76% 36%);
+            --status-processing: hsl(221 83% 53%);
+            --font-quicksand: 'Quicksand', sans-serif;
+            --font-nunito: 'Nunito', sans-serif;
+            --radius: 0.625rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-nunito);
+            font-size: 15px;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            -webkit-font-smoothing: antialiased;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(210, 105, 30, 0.015) 2px, rgba(210, 105, 30, 0.015) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(139, 90, 60, 0.02) 2px, rgba(139, 90, 60, 0.02) 4px);
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.6;
+        }
+
+        h1, h2, h3 {
+            font-family: var(--font-quicksand);
+            font-weight: 700;
+        }
+
+        /* VARIANT C: SPLIT-PANE LAYOUT */
+        .layout {
+            display: grid;
+            grid-template-rows: 72px 1fr;
+            height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: var(--bg-elevated);
+            backdrop-filter: blur(12px);
+            border-bottom: 2px solid var(--border-primary);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: var(--font-quicksand);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .breadcrumbs {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-tertiary);
+        }
+
+        /* Split Pane Container */
+        .split-container {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Left Master Pane - Scrollable List */
+        .master-pane {
+            background: var(--bg-secondary);
+            border-right: 2px solid var(--border-primary);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .master-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-primary);
+            background: var(--bg-elevated);
+        }
+
+        .master-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .master-controls {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .search-master {
+            flex: 1;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.625rem 0.875rem 0.625rem 2.5rem;
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius);
+            background: var(--bg-primary);
+            font-size: 0.875rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--meeple-orange);
+            box-shadow: 0 0 0 3px rgba(210, 105, 30, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: var(--text-tertiary);
+        }
+
+        .filter-pills {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-primary);
+            background: var(--bg-elevated);
+            flex-wrap: wrap;
+        }
+
+        .pill {
+            padding: 0.375rem 0.875rem;
+            border-radius: 9999px;
+            border: 1px solid var(--border-primary);
+            background: transparent;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .pill:hover {
+            border-color: var(--meeple-orange);
+            background: var(--meeple-orange-light);
+        }
+
+        .pill.active {
+            background: var(--meeple-orange);
+            border-color: var(--meeple-orange);
+            color: white;
+        }
+
+        .master-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.75rem;
+        }
+
+        /* Compact List Item */
+        .list-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius);
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .list-item:hover {
+            border-color: var(--meeple-orange);
+            box-shadow: 0 4px 8px rgba(210, 105, 30, 0.1);
+            transform: translateX(4px);
+        }
+
+        .list-item.selected {
+            border-color: var(--meeple-orange);
+            border-width: 2px;
+            background: var(--meeple-orange-light);
+        }
+
+        .list-thumb {
+            width: 70px;
+            height: 70px;
+            border-radius: var(--radius);
+            object-fit: cover;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+
+        .list-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .list-title {
+            font-family: var(--font-quicksand);
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.375rem;
+            color: var(--text-primary);
+        }
+
+        .list-meta {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            margin-bottom: 0.5rem;
+        }
+
+        .list-status {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        /* Right Detail Pane - Fixed */
+        .detail-pane {
+            background: var(--bg-primary);
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .detail-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-tertiary);
+        }
+
+        .detail-empty-icon {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 1.5rem;
+            opacity: 0.3;
+        }
+
+        /* Detail Content */
+        .detail-content {
+            max-width: 900px;
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border-primary);
+        }
+
+        .detail-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .detail-subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .detail-section {
+            background: var(--bg-elevated);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            border-radius: calc(var(--radius) * 1.5);
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+            color: var(--text-primary);
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+        }
+
+        .meta-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-tertiary);
+        }
+
+        .meta-value {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            font-family: var(--font-quicksand);
+            font-size: 0.9375rem;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-primary {
+            background: var(--meeple-orange);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--meeple-orange-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(210, 105, 30, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-primary);
+            color: var(--text-primary);
+        }
+
+        .btn-purple {
+            background: linear-gradient(135deg, var(--meeple-purple), var(--meeple-purple-dark));
+            color: white;
+        }
+
+        .btn-purple:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.375rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-badge.draft {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--status-draft);
+        }
+
+        .status-badge.pending {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--status-pending);
+        }
+
+        .status-badge.approved {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--status-approved);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Document Card */
+        .doc-card {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            transition: all 0.15s ease;
+        }
+
+        .doc-card:hover {
+            border-color: var(--meeple-orange);
+            box-shadow: 0 4px 12px rgba(210, 105, 30, 0.1);
+        }
+
+        .doc-card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .doc-icon-large {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius);
+            background: rgba(239, 68, 68, 0.1);
+            color: hsl(0 72% 51%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .doc-title-large {
+            flex: 1;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .doc-meta-large {
+            display: flex;
+            gap: 1.25rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .doc-actions-card {
+            display: flex;
+            gap: 0.75rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-primary);
+        }
+
+        /* Upload Area - Large */
+        .upload-area-large {
+            border: 3px dashed var(--border-primary);
+            border-radius: calc(var(--radius) * 1.5);
+            padding: 3.5rem 2rem;
+            text-align: center;
+            background: var(--bg-secondary);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .upload-area-large:hover {
+            border-color: var(--meeple-orange);
+            background: var(--meeple-orange-light);
+        }
+
+        .upload-icon-large {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1.5rem;
+            color: var(--meeple-orange);
+        }
+
+        /* Utilities */
+        .hidden { display: none; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 100;
+        }
+
+        /* Tag */
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.625rem;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- Top Bar with Breadcrumbs -->
+        <div class="top-bar">
+            <div class="logo">
+                <span style="font-size: 1.875rem;">🎲</span>
+                <span>MeepleAI</span>
+            </div>
+            <div class="breadcrumbs">
+                <span>Admin</span>
+                <span>/</span>
+                <span style="color: var(--text-primary); font-weight: 700;">Shared Games</span>
+            </div>
+            <div style="flex: 1;"></div>
+            <button class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Import from BGG
+            </button>
+            <button class="btn btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="16"></line>
+                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+                New Game
+            </button>
+        </div>
+
+        <!-- Split Pane -->
+        <div class="split-container">
+            <!-- LEFT: Master List -->
+            <div class="master-pane">
+                <div class="master-header">
+                    <div class="master-title">Games Catalog</div>
+                    <div style="font-size: 0.875rem; color: var(--text-tertiary); font-weight: 600; margin-bottom: 1rem;">2,847 games • 23 pending approval</div>
+
+                    <div class="master-controls">
+                        <div class="search-master">
+                            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                            <input type="text" class="search-input" placeholder="Search...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Pills -->
+                <div class="filter-pills">
+                    <button class="pill active">All (2,847)</button>
+                    <button class="pill">Pending (23)</button>
+                    <button class="pill">Draft (142)</button>
+                    <button class="pill">Published (2,682)</button>
+                </div>
+
+                <!-- Scrollable List -->
+                <div class="master-list">
+                    <div class="list-item selected" onclick="selectGame(this)">
+                        <img src="https://placehold.co/70x70/8b5cf6/ffffff?text=🎲" class="list-thumb">
+                        <div class="list-content">
+                            <div class="list-title">Catan</div>
+                            <div class="list-meta">BGG: 13 • 3-4 players • editor@example.com</div>
+                            <div class="list-status">
+                                <span class="status-badge pending" style="font-size: 0.65rem; padding: 0.25rem 0.625rem;">
+                                    <span class="status-dot" style="width: 5px; height: 5px;"></span>
+                                    Pending
+                                </span>
+                                <span class="tag">2 PDFs</span>
+                                <span style="font-size: 0.75rem; color: var(--text-tertiary);">2d ago</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="list-item" onclick="selectGame(this)">
+                        <img src="https://placehold.co/70x70/10b981/ffffff?text=🎯" class="list-thumb">
+                        <div class="list-content">
+                            <div class="list-title">Ticket to Ride</div>
+                            <div class="list-meta">BGG: 9209 • 2-5 players • admin@example.com</div>
+                            <div class="list-status">
+                                <span class="status-badge approved" style="font-size: 0.65rem; padding: 0.25rem 0.625rem;">
+                                    <span class="status-dot" style="width: 5px; height: 5px;"></span>
+                                    Published
+                                </span>
+                                <span class="tag">3 PDFs</span>
+                                <span style="font-size: 0.75rem; color: var(--text-tertiary);">5d ago</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="list-item" onclick="selectGame(this)">
+                        <img src="https://placehold.co/70x70/f59e0b/ffffff?text=🦅" class="list-thumb">
+                        <div class="list-content">
+                            <div class="list-title">Wingspan</div>
+                            <div class="list-meta">BGG: 266192 • 1-5 players • editor@example.com</div>
+                            <div class="list-status">
+                                <span class="status-badge draft" style="font-size: 0.65rem; padding: 0.25rem 0.625rem;">
+                                    <span class="status-dot" style="width: 5px; height: 5px;"></span>
+                                    Draft
+                                </span>
+                                <span class="tag">No PDFs</span>
+                                <span style="font-size: 0.75rem; color: var(--text-tertiary);">1h ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Detail Panel -->
+            <div class="detail-pane">
+                <div class="detail-content">
+                    <!-- Detail Header -->
+                    <div class="detail-header">
+                        <div>
+                            <h1 class="detail-title">Catan</h1>
+                            <p class="detail-subtitle">BGG ID: 13 • Imported 2 days ago by editor@example.com</p>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-end;">
+                            <span class="status-badge pending" style="padding: 0.5rem 1.25rem; font-size: 0.8125rem;">
+                                <span class="status-dot"></span>
+                                Pending Approval
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Game Info Section -->
+                    <div class="detail-section">
+                        <h2 class="section-title">Game Information</h2>
+                        <div style="display: grid; grid-template-columns: 180px 1fr; gap: 2rem; margin-bottom: 1.5rem;">
+                            <img src="https://placehold.co/180x180/8b5cf6/ffffff?text=🎲+Catan&font=roboto" style="border-radius: var(--radius); box-shadow: 0 8px 16px rgba(0,0,0,0.12);">
+                            <div class="meta-grid">
+                                <div class="meta-item">
+                                    <div class="meta-label">Players</div>
+                                    <div class="meta-value">3-4 <span style="font-size: 0.875rem; color: var(--text-tertiary); font-weight: 500;">(Best: 3-4)</span></div>
+                                </div>
+                                <div class="meta-item">
+                                    <div class="meta-label">Playing Time</div>
+                                    <div class="meta-value">60-120 min</div>
+                                </div>
+                                <div class="meta-item">
+                                    <div class="meta-label">Complexity</div>
+                                    <div class="meta-value">2.3 / 5.0</div>
+                                </div>
+                                <div class="meta-item">
+                                    <div class="meta-label">Year Published</div>
+                                    <div class="meta-value">1995</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.9375rem; color: var(--text-secondary); line-height: 1.7;">
+                            In Catan, players try to be the dominant force on the island of Catan by building settlements, cities, and roads. On each turn dice are rolled to determine what resources the island produces. Players collect these resources to build up their civilizations...
+                        </div>
+                    </div>
+
+                    <!-- Documents Section -->
+                    <div class="detail-section">
+                        <div class="flex-between" style="margin-bottom: 1.5rem;">
+                            <h2 class="section-title" style="margin-bottom: 0;">Game Documents</h2>
+                            <button class="btn btn-secondary" style="padding: 0.625rem 1.25rem;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="16"></line>
+                                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                                </svg>
+                                Upload PDF
+                            </button>
+                        </div>
+
+                        <!-- Existing Documents -->
+                        <div class="doc-card">
+                            <div class="doc-card-header">
+                                <div class="doc-icon-large">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                    </svg>
+                                </div>
+                                <div style="flex: 1;">
+                                    <div class="doc-title-large">Catan_Rulebook_EN_v4.pdf</div>
+                                    <div class="doc-meta-large">
+                                        <span>2.4 MB</span>
+                                        <span>•</span>
+                                        <span>16 pages</span>
+                                        <span>•</span>
+                                        <span>editor@example.com</span>
+                                    </div>
+                                </div>
+                                <span class="status-badge approved">
+                                    <span class="status-dot"></span>
+                                    Processed
+                                </span>
+                            </div>
+                            <div class="doc-actions-card">
+                                <button class="btn btn-secondary" style="flex: 1; padding: 0.625rem;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                    </svg>
+                                    Download
+                                </button>
+                                <button class="btn btn-secondary" style="padding: 0.625rem;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="doc-card" style="border-color: var(--meeple-purple); border-width: 2px; background: rgba(139, 92, 246, 0.03);">
+                            <div class="doc-card-header">
+                                <div class="doc-icon-large" style="background: rgba(139, 92, 246, 0.15); color: var(--meeple-purple);">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                    </svg>
+                                </div>
+                                <div style="flex: 1;">
+                                    <div class="doc-title-large">Catan_QuickReference.pdf</div>
+                                    <div class="doc-meta-large">
+                                        <span>1.1 MB</span>
+                                        <span>•</span>
+                                        <span>4 pages</span>
+                                        <span>•</span>
+                                        <span>Uploaded 1 day ago</span>
+                                    </div>
+                                </div>
+                                <span class="status-badge pending">
+                                    <span class="status-dot"></span>
+                                    Awaiting Approval
+                                </span>
+                            </div>
+                            <div style="background: rgba(139, 92, 246, 0.1); padding: 0.875rem; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.875rem;">
+                                <div style="font-weight: 700; margin-bottom: 0.25rem; color: var(--meeple-purple);">📝 Editor Upload</div>
+                                <div style="color: var(--text-secondary);">This PDF requires <strong>Admin approval</strong> before RAG embedding processing begins.</div>
+                            </div>
+                            <div class="doc-actions-card">
+                                <button class="btn btn-purple" style="flex: 1;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    Approve for Processing
+                                </button>
+                                <button class="btn btn-secondary">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                    Reject
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Approval Section -->
+                    <div class="detail-section" style="background: linear-gradient(135deg, var(--meeple-orange-light) 0%, rgba(255,255,255,0.5) 100%);">
+                        <h2 class="section-title">Admin Actions</h2>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                            <button class="btn btn-secondary" style="width: 100%;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Edit Metadata
+                            </button>
+                            <button class="btn btn-secondary" style="width: 100%;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                Preview as User
+                            </button>
+                            <button class="btn btn-primary" style="width: 100%; grid-column: span 2;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                Approve & Publish Game
+                            </button>
+                            <button class="btn btn-secondary" style="width: 100%; grid-column: span 2; color: hsl(0 72% 51%); border-color: hsl(0 72% 51%);">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                                Reject Submission
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme Toggle -->
+    <div class="theme-toggle">
+        <button class="btn btn-secondary" onclick="document.documentElement.classList.toggle('dark')" style="border-radius: 50%; width: 48px; height: 48px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+            </svg>
+        </button>
+    </div>
+
+    <script>
+        function selectGame(element) {
+            document.querySelectorAll('.list-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            element.classList.add('selected');
+        }
+    </script>
+</body>
+</html>

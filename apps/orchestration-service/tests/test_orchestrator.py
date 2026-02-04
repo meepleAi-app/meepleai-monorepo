@@ -97,3 +97,34 @@ class TestGameOrchestrator:
 
         # Should complete with response
         assert result.agent_response is not None
+    @pytest.mark.asyncio
+    async def test_tutor_route_placeholder_response(self, orchestrator, base_state):
+        """Test tutor agent placeholder response."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        base_state.current_agent = "tutor"
+        base_state.user_query = "Test query"
+
+        # Mock intent classifier
+        with patch.object(orchestrator.intent_classifier, 'prompt') as mock_prompt:
+            mock_chain = AsyncMock()
+            mock_response = AsyncMock()
+            mock_response.content = "Intent: SETUP\nConfidence: 0.9"
+            mock_chain.ainvoke.return_value = mock_response
+            mock_prompt.__or__ = MagicMock(return_value=mock_chain)
+
+            result = await orchestrator._tutor_route_node(base_state)
+
+            assert "agent_response" in result
+            assert result["confidence_score"] >= 0.0
+
+    def test_route_decision_defaults_to_tutor(self, base_state):
+        """Test route_decision defaults to tutor for unknown intents."""
+        from src.application.orchestrator import GameOrchestrator
+        
+        orch = GameOrchestrator()
+        base_state.intent = None  # Unknown intent
+        
+        result = orch._route_decision(base_state)
+        
+        assert result == "tutor"

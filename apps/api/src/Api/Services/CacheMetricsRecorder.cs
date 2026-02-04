@@ -138,4 +138,93 @@ internal class CacheMetricsRecorder : ICacheMetricsRecorder
 
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc />
+    public Task RecordCachePromotionAsync(string fromTier, string toTier)
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (!_config.MetricsEnabled)
+                    return;
+
+                var tags = new KeyValuePair<string, object?>[]
+                {
+                    new("from_tier", fromTier),
+                    new("to_tier", toTier)
+                };
+
+                MeepleAiMetrics.CachePromotionsTotal.Add(1, tags);
+            }
+#pragma warning disable CA1031
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                _logger.LogError(ex, "Failed to record cache promotion metric from {FromTier} to {ToTier}",
+                    fromTier, toTier);
+            }
+        });
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task RecordAdaptiveTtlAsync(string classification, double ttlSeconds)
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (!_config.MetricsEnabled)
+                    return;
+
+                var tags = new KeyValuePair<string, object?>[]
+                {
+                    new("classification", classification),
+                    new("ttl_seconds", ttlSeconds)
+                };
+
+                MeepleAiMetrics.CacheTtlAdjustmentsTotal.Add(1, tags);
+            }
+#pragma warning disable CA1031
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                _logger.LogError(ex, "Failed to record adaptive TTL metric for classification={Classification}",
+                    classification);
+            }
+        });
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task RecordCacheLatencyAsync(string operation, double latencyMs)
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (!_config.MetricsEnabled)
+                    return;
+
+                var tags = new KeyValuePair<string, object?>[]
+                {
+                    new("operation", operation)
+                };
+
+                MeepleAiMetrics.CacheOperationLatency.Record(latencyMs, tags);
+            }
+#pragma warning disable CA1031
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                _logger.LogError(ex, "Failed to record cache latency metric for operation={Operation}",
+                    operation);
+            }
+        });
+
+        return Task.CompletedTask;
+    }
 }

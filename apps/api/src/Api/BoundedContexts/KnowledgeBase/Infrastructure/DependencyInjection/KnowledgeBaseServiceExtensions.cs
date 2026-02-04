@@ -78,6 +78,20 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IContextSource, ConversationMemorySource>();
         services.AddScoped<IContextSource, GameStateSource>();
         services.AddScoped<IContextSource, StrategyPatternSource>();
+        // Context Assembler (Scoped - uses scoped context sources)
+        services.AddScoped<ContextAssembler>(sp =>
+        {
+            var sources = sp.GetServices<IContextSource>();
+            var strategies = sp.GetServices<IContextRetrievalStrategy>();
+            var options = new ContextAssemblerOptions
+            {
+                EnableParallelRetrieval = true,
+                DefaultMaxItemsPerSource = 10,
+                AllowPartialItems = false,
+                RetrievalTimeoutMs = 5000
+            };
+            return new ContextAssembler(sources, strategies, options);
+        });
 
         // ISSUE-3492: Hybrid Search with Reranking Pipeline
         services.AddScoped<IHybridSearchEngine, HybridSearchEngine>();

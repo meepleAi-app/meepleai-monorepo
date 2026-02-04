@@ -4,6 +4,7 @@ using Api.Tests.TestHelpers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using Pgvector.EntityFrameworkCore; // Issue #3547: Enable pgvector type mapping
 
 namespace Api.Tests.Infrastructure;
 
@@ -20,7 +21,7 @@ public static class TestHelpers
     public static async Task<MeepleAiDbContext> CreateDbContextAndMigrateAsync(string connectionString)
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547: Enable pgvector type mapping
             .ConfigureWarnings(warnings =>
                 warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .EnableSensitiveDataLogging()

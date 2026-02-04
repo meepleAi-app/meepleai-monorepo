@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using Pgvector.EntityFrameworkCore; // Issue #3547: Enable pgvector type mapping
 using StackExchange.Redis;
 using Xunit;
 using Api.Infrastructure;
@@ -813,7 +814,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     public MeepleAiDbContext CreateDbContext(string connectionString, IMediator? mediator = null)
     {
         var optionsBuilder = new DbContextOptionsBuilder<MeepleAiDbContext>();
-        optionsBuilder.UseNpgsql(connectionString);
+        optionsBuilder.UseNpgsql(connectionString, o => o.UseVector()); // Issue #3547: Enable pgvector type mapping
 
         // Use provided mediator or create a new one
         var contextMediator = mediator ?? CreateMediator();

@@ -281,6 +281,29 @@ tests/Api.Tests/          # Backend test suite
 - ❌ Domain services directly in endpoints
 - ❌ Shared models between commands/queries
 
+### Card Components
+
+- Use `MeepleCard` for all entity displays (games, players, collections, events)
+- Do NOT use deprecated `GameCard` or `PlayerCard` components
+- Entity types: game (orange), player (purple), collection (teal), event (rose)
+- Variants: grid (default), list, compact, featured, hero
+
+```tsx
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+
+<MeepleCard
+  entity="game"
+  variant="grid"
+  title={game.title}
+  subtitle={game.publisher}
+  imageUrl={game.imageUrl}
+  rating={game.averageRating}
+  ratingMax={10}
+/>
+```
+
+**Docs**: `docs/frontend/components/meeple-card.md` | `docs/design-system/cards.md`
+
 ### Recent Learnings (Issues)
 
 | Issue | Learning |
@@ -294,5 +317,5 @@ tests/Api.Tests/          # Backend test suite
 
 ---
 
-**Last Updated**: 2026-02-03
+**Last Updated**: 2026-02-04
 **License**: Proprietary

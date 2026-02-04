@@ -15,7 +15,7 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import BoardGameAskClient from '../BoardGameAskClient';
-import { useChatQuery } from '@/lib/hooks/useChatQuery';
+import { useStreamingChat } from '@/lib/hooks/useStreamingChat';
 
 // Mock dependencies
 vi.mock('@/lib/api', () => ({
@@ -25,7 +25,7 @@ vi.mock('@/lib/api', () => ({
     },
   },
 }));
-vi.mock('@/lib/hooks/useChatQuery');
+vi.mock('@/lib/hooks/useStreamingChat');
 vi.mock('next/link', () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>
@@ -84,14 +84,22 @@ const mockGames = [
 
 const firstGameId = mockGames[0].id;
 
-const mockQueryState = {
-  isLoading: false,
+const mockStreamState = {
+  isStreaming: false,
+  currentAnswer: '',
+  citations: [],
+  stateMessage: '',
+  confidence: null,
   error: null,
-  state: null,
+  followUpQuestions: [],
+  totalTokens: 0,
+  estimatedReadingTimeMinutes: null,
 };
 
-const mockQueryControls = {
-  askQuestion: vi.fn().mockResolvedValue(undefined),
+const mockStreamControls = {
+  startStreaming: vi.fn().mockResolvedValue(undefined),
+  stopStreaming: vi.fn(),
+  reset: vi.fn(),
 };
 
 describe('BoardGameAskClient', () => {
@@ -99,7 +107,7 @@ describe('BoardGameAskClient', () => {
     vi.clearAllMocks();
     const { api } = await import('@/lib/api');
     vi.mocked(api.games.getAll).mockResolvedValue(mockGames);
-    (useChatQuery as any).mockReturnValue([mockQueryState, mockQueryControls]);
+    (useStreamingChat as any).mockReturnValue([mockStreamState, mockStreamControls]);
   });
 
   // ============================================================================
@@ -227,7 +235,7 @@ describe('BoardGameAskClient', () => {
       await user.keyboard('{Control>}{Enter}{/Control}');
 
       await waitFor(() => {
-        expect(mockQueryControls.askQuestion).toHaveBeenCalledWith(firstGameId, 'Test question');
+        expect(mockStreamControls.startStreaming).toHaveBeenCalledWith(firstGameId, 'Test question');
       });
     });
 
@@ -243,9 +251,9 @@ describe('BoardGameAskClient', () => {
     });
 
     it('should be disabled during query loading', async () => {
-      (useChatQuery as any).mockReturnValue([
-        { ...mockQueryState, isLoading: true },
-        mockQueryControls,
+      (useStreamingChat as any).mockReturnValue([
+        { ...mockStreamState, isStreaming: true },
+        mockStreamControls,
       ]);
 
       render(<BoardGameAskClient />);
@@ -272,9 +280,9 @@ describe('BoardGameAskClient', () => {
     });
 
     it('should show loading state during query', async () => {
-      (useChatQuery as any).mockReturnValue([
-        { ...mockQueryState, isLoading: true },
-        mockQueryControls,
+      (useStreamingChat as any).mockReturnValue([
+        { ...mockStreamState, isStreaming: true },
+        mockStreamControls,
       ]);
 
       render(<BoardGameAskClient />);
@@ -299,7 +307,7 @@ describe('BoardGameAskClient', () => {
       await user.click(button);
 
       await waitFor(() => {
-        expect(mockQueryControls.askQuestion).toHaveBeenCalledWith(firstGameId, 'Test question');
+        expect(mockStreamControls.startStreaming).toHaveBeenCalledWith(firstGameId, 'Test question');
       });
     });
   });
@@ -313,11 +321,11 @@ describe('BoardGameAskClient', () => {
       const user = userEvent.setup();
       const onCompleteMock = vi.fn();
 
-      (useChatQuery as any).mockImplementation(callbacks => {
+      (useStreamingChat as any).mockImplementation(callbacks => {
         onCompleteMock.mockImplementation(() => {
-          callbacks.onComplete('Answer text', [], {});
+          callbacks.onComplete('Answer text', [], null);
         });
-        return [mockQueryState, { askQuestion: onCompleteMock }];
+        return [mockStreamState, { ...mockStreamControls, startStreaming: onCompleteMock }];
       });
 
       render(<BoardGameAskClient />);
@@ -341,13 +349,14 @@ describe('BoardGameAskClient', () => {
       const user = userEvent.setup();
       let capturedOnComplete: any;
 
-      (useChatQuery as any).mockImplementation(callbacks => {
+      (useStreamingChat as any).mockImplementation(callbacks => {
         capturedOnComplete = callbacks.onComplete;
         return [
-          mockQueryState,
+          mockStreamState,
           {
-            askQuestion: vi.fn().mockImplementation(() => {
-              capturedOnComplete('This is the answer', [], {});
+            ...mockStreamControls,
+            startStreaming: vi.fn().mockImplementation(() => {
+              capturedOnComplete('This is the answer', [], null);
             }),
           },
         ];
@@ -383,13 +392,14 @@ describe('BoardGameAskClient', () => {
         },
       ];
 
-      (useChatQuery as any).mockImplementation(callbacks => {
+      (useStreamingChat as any).mockImplementation(callbacks => {
         capturedOnComplete = callbacks.onComplete;
         return [
-          mockQueryState,
+          mockStreamState,
           {
-            askQuestion: vi.fn().mockImplementation(() => {
-              capturedOnComplete('Answer with citations', mockCitations, {});
+            ...mockStreamControls,
+            startStreaming: vi.fn().mockImplementation(() => {
+              capturedOnComplete('Answer with citations', mockCitations, null);
             }),
           },
         ];
@@ -419,13 +429,14 @@ describe('BoardGameAskClient', () => {
       const user = userEvent.setup();
       let capturedOnComplete: any;
 
-      (useChatQuery as any).mockImplementation(callbacks => {
+      (useStreamingChat as any).mockImplementation(callbacks => {
         capturedOnComplete = callbacks.onComplete;
         return [
-          mockQueryState,
+          mockStreamState,
           {
-            askQuestion: vi.fn().mockImplementation(() => {
-              capturedOnComplete('Answer', [], {});
+            ...mockStreamControls,
+            startStreaming: vi.fn().mockImplementation(() => {
+              capturedOnComplete('Answer', [], null);
             }),
           },
         ];
@@ -458,9 +469,9 @@ describe('BoardGameAskClient', () => {
 
   describe('Error Handling', () => {
     it('should display query error from API', async () => {
-      (useChatQuery as any).mockReturnValue([
-        { ...mockQueryState, error: 'Failed to process question' },
-        mockQueryControls,
+      (useStreamingChat as any).mockReturnValue([
+        { ...mockStreamState, error: new Error('Failed to process question') },
+        mockStreamControls,
       ]);
 
       render(<BoardGameAskClient />);
@@ -471,9 +482,9 @@ describe('BoardGameAskClient', () => {
     });
 
     it('should display loading state indicator during query', async () => {
-      (useChatQuery as any).mockReturnValue([
-        { ...mockQueryState, isLoading: true, state: 'Processing your question...' },
-        mockQueryControls,
+      (useStreamingChat as any).mockReturnValue([
+        { ...mockStreamState, isStreaming: true, stateMessage: 'Processing your question...' },
+        mockStreamControls,
       ]);
 
       render(<BoardGameAskClient />);
@@ -502,16 +513,17 @@ describe('BoardGameAskClient', () => {
         },
       ];
 
-      (useChatQuery as any).mockImplementation(callbacks => {
+      (useStreamingChat as any).mockImplementation(callbacks => {
         capturedOnComplete = callbacks.onComplete;
         return [
-          mockQueryState,
+          mockStreamState,
           {
-            askQuestion: vi.fn().mockImplementation(() => {
+            ...mockStreamControls,
+            startStreaming: vi.fn().mockImplementation(() => {
               capturedOnComplete(
                 'No, you cannot play a development card on the same turn you bought it.',
                 mockCitations,
-                {}
+                null
               );
             }),
           },
@@ -651,8 +663,8 @@ describe('BoardGameAskClient', () => {
         expect(screen.getByText(/question must be less than 2000 characters/i)).toBeInTheDocument();
       });
 
-      // Verify askQuestion was NOT called
-      expect(mockQueryControls.askQuestion).not.toHaveBeenCalled();
+      // Verify startStreaming was NOT called
+      expect(mockStreamControls.startStreaming).not.toHaveBeenCalled();
     });
 
     it('should support Meta+Enter keyboard shortcut on Mac', async () => {
@@ -670,7 +682,7 @@ describe('BoardGameAskClient', () => {
       await user.keyboard('{Meta>}{Enter}{/Meta}');
 
       await waitFor(() => {
-        expect(mockQueryControls.askQuestion).toHaveBeenCalledWith(
+        expect(mockStreamControls.startStreaming).toHaveBeenCalledWith(
           firstGameId,
           'Mac keyboard test'
         );
@@ -679,14 +691,14 @@ describe('BoardGameAskClient', () => {
 
     it('should call onError callback when query fails', async () => {
       const user = userEvent.setup();
-      const onErrorMock = vi.fn();
 
-      (useChatQuery as any).mockImplementation(callbacks => {
+      (useStreamingChat as any).mockImplementation(callbacks => {
         return [
-          mockQueryState,
+          mockStreamState,
           {
-            askQuestion: vi.fn().mockImplementation(() => {
-              callbacks.onError('Query failed');
+            ...mockStreamControls,
+            startStreaming: vi.fn().mockImplementation(() => {
+              callbacks.onError(new Error('Query failed'));
             }),
           },
         ];

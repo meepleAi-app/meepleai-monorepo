@@ -5,6 +5,8 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
 using MediatR;
 
+// Issue #3319: Dashboard insights response DTO
+
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.Routing;
 
@@ -41,6 +43,29 @@ internal static class DashboardEndpoints
 
 **Authorization**: Requires active session (cookie-based authentication).")
             .Produces<DashboardResponseDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .WithOpenApi();
+
+        // Issue #3319: AI-powered dashboard insights
+        group.MapGet("/dashboard/insights", HandleGetDashboardInsights)
+            .RequireSession()
+            .RequireAuthorization()
+            .WithName("GetDashboardInsights")
+            .WithTags("Dashboard")
+            .WithSummary("Get AI-powered insights for user dashboard")
+            .WithDescription(@"Returns personalized AI insights based on user's library, play history, and activity.
+
+**Insight Types**:
+- **Backlog**: Games not played for 30+ days
+- **RulesReminder**: Recently saved chat rules
+- **Recommendation**: Games similar to user's favorites
+- **Streak**: Play streak encouragement
+- **Achievement**: Progress toward achievements
+
+**Performance**: 15-minute Redis cache for optimal response times.
+
+**Authorization**: Requires active session (cookie-based authentication).")
+            .Produces<DashboardInsightsResponseDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .WithOpenApi();
 
@@ -160,6 +185,20 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
         var query = new GetDashboardQuery(session.User!.Id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        return Results.Json(result);
+    }
+
+    private static async Task<IResult> HandleGetDashboardInsights(
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        // Session validated by RequireSession filter
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+        var query = new GetDashboardInsightsQuery(session.User!.Id);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Json(result);

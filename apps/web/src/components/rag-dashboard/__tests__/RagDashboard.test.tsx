@@ -78,6 +78,33 @@ vi.mock('../PerformanceMetricsTable', () => ({
   PerformanceMetricsTable: () => <div data-testid="performance-metrics">PerformanceMetricsTable</div>,
 }));
 
+// Mock navigation components to avoid duplicate text issues
+vi.mock('../DashboardSidebar', () => ({
+  DashboardSidebar: () => <aside data-testid="dashboard-sidebar">Sidebar</aside>,
+}));
+
+vi.mock('../DashboardNav', () => ({
+  DashboardNav: () => <nav data-testid="dashboard-nav">MobileNav</nav>,
+}));
+
+vi.mock('../ProgressIndicator', () => ({
+  ProgressIndicator: () => <div data-testid="progress-indicator">Progress</div>,
+}));
+
+// Mock IntersectionObserver for useScrollSpy
+class MockIntersectionObserver {
+  constructor(callback: IntersectionObserverCallback) {
+    // no-op
+  }
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+}
+vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
+
 // Import after mocking
 import { RagDashboard } from '../RagDashboard';
 
@@ -476,14 +503,19 @@ describe('RagDashboard', () => {
       const { container } = render(<RagDashboard />);
 
       const main = container.querySelector('main');
-      expect(main).toHaveClass('max-w-7xl');
+      expect(main).toHaveClass('max-w-5xl');
     });
 
-    it('should have grid layout for main sections', () => {
-      const { container } = render(<RagDashboard />);
+    it('should render sidebar navigation', () => {
+      render(<RagDashboard />);
 
-      const grid = container.querySelector('.grid.lg\\:grid-cols-2');
-      expect(grid).toBeInTheDocument();
+      expect(screen.getByTestId('dashboard-sidebar')).toBeInTheDocument();
+    });
+
+    it('should render mobile navigation', () => {
+      render(<RagDashboard />);
+
+      expect(screen.getByTestId('dashboard-nav')).toBeInTheDocument();
     });
   });
 

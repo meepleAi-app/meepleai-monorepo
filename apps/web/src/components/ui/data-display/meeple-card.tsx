@@ -6,7 +6,7 @@
  * (Direction C) for a distinctive MeepleAI aesthetic.
  *
  * @module components/ui/data-display/meeple-card
- * @see Issue #XXXX - Universal Card System
+ * @see Issue #3326 - Core MeepleCard Component Implementation
  *
  * Features:
  * - Entity types: game, player, collection, event, custom
@@ -541,27 +541,34 @@ export const MeepleCard = React.memo(function MeepleCard({
   className,
   'data-testid': testId,
 }: MeepleCardProps) {
-  const hasClickHandler = !!onClick;
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
   const isHeroOrFeatured = variant === 'hero' || variant === 'featured';
+
+  // Determine if card should be interactive
+  // Avoid nested-interactive: don't make card clickable when it has action buttons
+  const isInteractive = !!onClick && !showActions;
 
   if (loading) {
     return <MeepleCardSkeleton variant={variant} />;
   }
 
+  // Use div for interactive cards (article cannot have role="button")
+  // Use article for semantic non-interactive cards
+  const Component = isInteractive ? 'div' : 'article';
+
   return (
-    <article
+    <Component
       className={cn(meepleCardVariants({ variant }), className)}
-      onClick={onClick}
-      role={hasClickHandler ? 'button' : undefined}
-      tabIndex={hasClickHandler ? 0 : undefined}
+      onClick={isInteractive ? onClick : undefined}
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
       onKeyDown={
-        hasClickHandler
+        isInteractive
           ? e => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                onClick();
+                onClick?.();
               }
             }
           : undefined
@@ -660,7 +667,7 @@ export const MeepleCard = React.memo(function MeepleCard({
           </span>
         )}
       </div>
-    </article>
+    </Component>
   );
 });
 

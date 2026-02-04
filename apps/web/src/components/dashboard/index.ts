@@ -31,3 +31,6 @@ export { QuickActions, type QuickActionsProps, type QuickAction } from './QuickA
 export { QuickActionCard, type QuickActionCardProps } from './QuickActionCard';
 export { LibraryQuotaWidget, type LibraryQuotaWidgetProps } from './LibraryQuotaWidget';
 export { ActiveSessionsPanel, type ActiveSessionsPanelProps } from './ActiveSessionsPanel';
+
+// MeepleCard-based dashboard components (Issue #3334)
+export { MeepleGameWidget, MeepleGameWidgetSkeleton, type DashboardGame, type MeepleGameWidgetProps } from './MeepleGameWidget';

@@ -1,17 +1,17 @@
-/* eslint-disable security/detect-object-injection -- Safe Record access with provider name keys */
 /**
- * PersonalUsagePageClient - Issue #3080
+ * PersonalUsagePageClient - Issue #3080, enhanced in Issue #3338
  *
  * Client component for user's personal AI usage page.
- * Shows usage statistics, cost breakdown, and provider details.
+ * Shows detailed usage statistics including token counts, cost breakdown,
+ * model usage, operation breakdown, and daily usage time series.
  */
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Calendar, TrendingUp, DollarSign, Activity, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Calendar, DollarSign, Activity, RefreshCw, Zap, Hash } from 'lucide-react';
 import Link from 'next/link';
 import {
   BarChart,
@@ -25,6 +25,8 @@ import {
   Pie,
   Cell,
   Legend,
+  AreaChart,
+  Area,
 } from 'recharts';
 
 import { LoadingButton } from '@/components/loading/LoadingButton';
@@ -35,24 +37,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-
-type UserAiUsageResponse = {
-  userId: string;
-  period: {
-    startDate: string;
-    endDate: string;
-    days: number;
-  };
-  totalCost: number;
-  costsByProvider: Record<string, number>;
-  dailyAverage: number;
-};
+import type { UserAiUsageDto } from '@/lib/api/schemas';
 
 // Colors from MeepleAI design system
-const PROVIDER_COLORS: Record<string, string> = {
-  'OpenRouter': '#d2691e',
-  'Ollama': '#8b5cf6',
-  'Default': '#666666',
+const MODEL_COLORS: string[] = [
+  '#d2691e', // Orange
+  '#8b5cf6', // Purple
+  '#16a34a', // Green
+  '#dc2626', // Red
+  '#2563eb', // Blue
+  '#eab308', // Yellow
+  '#ec4899', // Pink
+  '#666666', // Gray
+];
+
+const OPERATION_COLORS: Record<string, string> = {
+  'chat': '#d2691e',
+  'rag_query': '#8b5cf6',
+  'embedding': '#16a34a',
+  'explain': '#2563eb',
+  'qa': '#ec4899',
+  'unknown': '#666666',
 };
 
 function UsageStat({
@@ -88,7 +93,7 @@ export function PersonalUsagePageClient() {
     isLoading,
     error,
     refetch,
-  } = useQuery<UserAiUsageResponse>({
+  } = useQuery<UserAiUsageDto>({
     queryKey: ['user-ai-usage', days],
     queryFn: async () => {
       const response = await fetch(`/api/v1/users/me/ai-usage?days=${days}`, {
@@ -107,20 +112,45 @@ export function PersonalUsagePageClient() {
     return `$${cost.toFixed(2)}`;
   };
 
-  const providerChartData = usage?.costsByProvider
-    ? Object.entries(usage.costsByProvider).map(([name, value]) => ({
-        name,
-        value,
-        color: PROVIDER_COLORS[name] ?? PROVIDER_COLORS['Default'],
-      }))
-    : [];
+  const formatTokens = (tokens: number) => {
+    if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)}M`;
+    if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}K`;
+    return tokens.toString();
+  };
 
-  const topProvider = usage?.costsByProvider
-    ? Object.entries(usage.costsByProvider).reduce(
-        (a, b) => (a[1] > b[1] ? a : b),
-        ['N/A', 0] as [string, number]
-      )
-    : null;
+  // Transform model usage data for charts
+  const modelChartData = useMemo(() => {
+    if (!usage?.byModel) return [];
+    return usage.byModel.map((item, index) => ({
+      name: item.model.split('/').pop() ?? item.model, // Show last part of model name
+      fullName: item.model,
+      tokens: item.tokens,
+      cost: item.cost,
+      color: MODEL_COLORS[index % MODEL_COLORS.length],
+    }));
+  }, [usage]);
+
+  // Transform operation usage data for charts
+  const operationChartData = useMemo(() => {
+    if (!usage?.byOperation) return [];
+    return usage.byOperation.map(item => ({
+      name: item.operation,
+      count: item.count,
+      tokens: item.tokens,
+      color: OPERATION_COLORS[item.operation] ?? OPERATION_COLORS['unknown'],
+    }));
+  }, [usage]);
+
+  // Transform daily usage data for time series chart
+  const dailyUsageChartData = useMemo(() => {
+    if (!usage?.dailyUsage) return [];
+    return usage.dailyUsage.map(item => ({
+      date: item.date,
+      tokens: item.tokens,
+    }));
+  }, [usage]);
+
+  const topModel = modelChartData.length > 0 ? modelChartData[0] : null;
 
   if (error) {
     return (
@@ -197,71 +227,105 @@ export function PersonalUsagePageClient() {
         <>
           <div className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <UsageStat
+              icon={Zap}
+              label="Total Tokens"
+              value={formatTokens(usage.totalTokens)}
+              subValue={usage.totalTokens === 0 ? 'No usage yet' : `Last ${days} days`}
+            />
+
+            <UsageStat
               icon={DollarSign}
               label="Total Cost"
-              value={formatCost(usage.totalCost)}
-              subValue={usage.totalCost === 0 ? 'Free tier usage' : `Last ${usage.period.days} days`}
+              value={formatCost(usage.totalCostUsd)}
+              subValue={usage.totalCostUsd === 0 ? 'Free tier' : undefined}
             />
 
             <UsageStat
-              icon={TrendingUp}
-              label="Daily Average"
-              value={formatCost(usage.dailyAverage)}
-            />
-
-            <UsageStat
-              icon={Activity}
-              label="Top Provider"
-              value={topProvider ? topProvider[0] : 'N/A'}
-              subValue={topProvider && topProvider[1] > 0 ? formatCost(topProvider[1]) : undefined}
+              icon={Hash}
+              label="Requests"
+              value={usage.requestCount.toString()}
+              subValue={topModel ? `Top: ${topModel.name}` : undefined}
             />
 
             <UsageStat
               icon={Calendar}
               label="Period"
-              value={`${usage.period.days} days`}
-              subValue={`${usage.period.startDate.split('T')[0]} - ${usage.period.endDate.split('T')[0]}`}
+              value={`${days} days`}
+              subValue={`${usage.period.from} - ${usage.period.to}`}
             />
           </div>
 
-          {/* Cost by Provider Chart */}
-          {providerChartData.length > 0 && (
+          {/* Daily Usage Time Series */}
+          {dailyUsageChartData.length > 0 && (
             <div className="mb-6 rounded-xl border bg-card p-6 shadow-sm">
               <h3 className="mb-4 font-['Quicksand',sans-serif] text-lg font-bold">
-                Cost by Provider
+                Daily Token Usage
+              </h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={dailyUsageChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(value) => value.slice(-5)} // Show MM-DD
+                    fontSize={12}
+                  />
+                  <YAxis tickFormatter={(value) => formatTokens(value)} fontSize={12} />
+                  <Tooltip
+                    formatter={(value: number) => [formatTokens(value), 'Tokens']}
+                    labelFormatter={(label) => `Date: ${label}`}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="tokens"
+                    stroke="#d2691e"
+                    fill="#d2691e"
+                    fillOpacity={0.3}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Usage by Model */}
+          {modelChartData.length > 0 && (
+            <div className="mb-6 rounded-xl border bg-card p-6 shadow-sm">
+              <h3 className="mb-4 font-['Quicksand',sans-serif] text-lg font-bold">
+                Usage by Model
               </h3>
               <div className="grid gap-6 lg:grid-cols-2">
                 {/* Pie Chart */}
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
                     <Pie
-                      data={providerChartData}
+                      data={modelChartData}
                       cx="50%"
                       cy="50%"
                       innerRadius={50}
                       outerRadius={80}
-                      dataKey="value"
+                      dataKey="tokens"
                       nameKey="name"
-                      label={({ name, value }) => `${name}: ${formatCost(value)}`}
+                      label={({ name, value }) => `${name}: ${formatTokens(Number(value) || 0)}`}
                     >
-                      {providerChartData.map((entry, index) => (
+                      {modelChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => formatCost(value)} />
+                    <Tooltip
+                      formatter={(value: number) => [formatTokens(value), 'Tokens']}
+                    />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
 
                 {/* Bar Chart */}
                 <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={providerChartData}>
+                  <BarChart data={modelChartData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis tickFormatter={(value) => formatCost(value)} />
-                    <Tooltip formatter={(value: number) => formatCost(value)} />
-                    <Bar dataKey="value" fill="#d2691e" radius={[4, 4, 0, 0]}>
-                      {providerChartData.map((entry, index) => (
+                    <XAxis type="number" tickFormatter={(value) => formatTokens(value)} />
+                    <YAxis type="category" dataKey="name" width={80} fontSize={12} />
+                    <Tooltip formatter={(value: number) => formatTokens(value)} />
+                    <Bar dataKey="tokens" fill="#d2691e" radius={[0, 4, 4, 0]}>
+                      {modelChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Bar>
@@ -271,26 +335,57 @@ export function PersonalUsagePageClient() {
             </div>
           )}
 
-          {/* Provider List */}
-          {providerChartData.length > 0 && (
-            <div className="rounded-xl border bg-card p-6 shadow-sm">
+          {/* Usage by Operation */}
+          {operationChartData.length > 0 && (
+            <div className="mb-6 rounded-xl border bg-card p-6 shadow-sm">
               <h3 className="mb-4 font-['Quicksand',sans-serif] text-lg font-bold">
-                Provider Details
+                Usage by Operation
               </h3>
               <div className="space-y-3">
-                {providerChartData.map(({ name, value, color }) => (
+                {operationChartData.map(({ name, count, tokens, color }) => (
                   <div key={name} className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
                     <div className="flex items-center gap-3">
                       <div
                         className="h-4 w-4 rounded-full"
                         style={{ backgroundColor: color }}
                       />
-                      <span className="font-medium">{name}</span>
+                      <span className="font-medium capitalize">{name.replace('_', ' ')}</span>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold">{formatCost(value)}</p>
+                      <p className="font-bold">{count} requests</p>
                       <p className="text-xs text-muted-foreground">
-                        {usage.totalCost > 0 ? `${((value / usage.totalCost) * 100).toFixed(1)}%` : '0%'}
+                        {formatTokens(tokens)} tokens
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Model Details List */}
+          {modelChartData.length > 0 && (
+            <div className="rounded-xl border bg-card p-6 shadow-sm">
+              <h3 className="mb-4 font-['Quicksand',sans-serif] text-lg font-bold">
+                Model Details
+              </h3>
+              <div className="space-y-3">
+                {modelChartData.map(({ name, fullName, tokens, cost, color }) => (
+                  <div key={fullName} className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="h-4 w-4 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                      <div>
+                        <span className="font-medium">{name}</span>
+                        <p className="text-xs text-muted-foreground">{fullName}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold">{formatTokens(tokens)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatCost(cost)}
                       </p>
                     </div>
                   </div>
@@ -300,7 +395,7 @@ export function PersonalUsagePageClient() {
           )}
 
           {/* Empty State */}
-          {providerChartData.length === 0 && (
+          {modelChartData.length === 0 && operationChartData.length === 0 && (
             <div className="rounded-xl border bg-card p-12 text-center shadow-sm">
               <Activity className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
               <h3 className="mb-2 font-['Quicksand',sans-serif] text-lg font-bold">
@@ -314,7 +409,7 @@ export function PersonalUsagePageClient() {
 
           {/* Period Info */}
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            Data from {usage.period.startDate.split('T')[0]} to {usage.period.endDate.split('T')[0]}
+            Data from {usage.period.from} to {usage.period.to}
           </div>
         </>
       )}

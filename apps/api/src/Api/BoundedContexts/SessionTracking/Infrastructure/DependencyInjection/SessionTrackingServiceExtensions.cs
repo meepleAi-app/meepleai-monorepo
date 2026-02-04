@@ -25,6 +25,9 @@ internal static class SessionTrackingServiceExtensions
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
+        // Register domain services
+        services.AddScoped<ISessionQuotaService, SessionQuotaService>();
+
         // GST-003: Register SSE synchronization service (singleton for shared state)
         services.AddSingleton<ISessionSyncService, SessionSyncService>();
 

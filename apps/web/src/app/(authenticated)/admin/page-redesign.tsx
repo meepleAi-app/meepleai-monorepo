@@ -369,7 +369,7 @@ function ChartsSection() {
                 className="w-full rounded-t-lg bg-gradient-to-t from-orange-500 to-amber-400 transition-all hover:from-orange-600 hover:to-amber-500"
                 style={{ height: `${(value / maxRequests) * 100}%` }}
               />
-              {/* eslint-disable-next-line security/detect-object-injection -- Safe: index is from map callback within array bounds */}
+              { }
               <span className="text-xs text-stone-500">{days[index]}</span>
             </div>
           ))}

@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-object-injection -- Safe template data object access */
+ 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';

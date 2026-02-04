@@ -77,7 +77,7 @@ internal class TutorQueryCommandHandler : IRequestHandler<TutorQueryCommand, Tut
         }
     }
 
-    private record OrchestrationResponse(
+    private sealed record OrchestrationResponse(
         [property: JsonPropertyName("agent_type")] string AgentType,
         [property: JsonPropertyName("response")] string Response,
         [property: JsonPropertyName("confidence")] double Confidence,

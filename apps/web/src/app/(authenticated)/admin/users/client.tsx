@@ -94,7 +94,7 @@ export function AdminPageClient() {
 
   const handleRowSelectionChange = useCallback((updater: RowSelectionState | ((old: RowSelectionState) => RowSelectionState)) => {
     const newSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
-    // eslint-disable-next-line security/detect-object-injection -- id is from Object.keys(newSelection), accessing own properties
+     
     setSelectedUsers(new Set(Object.keys(newSelection).filter(id => newSelection[id])));
   }, [rowSelection]);
 

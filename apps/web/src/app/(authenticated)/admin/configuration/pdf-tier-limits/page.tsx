@@ -1,6 +1,7 @@
+import { PdfTierLimitsClient } from './client';
+
 import type { Metadata } from 'next';
 
-import { PdfTierLimitsClient } from './client';
 
 export const metadata: Metadata = {
   title: 'PDF Tier Upload Limits | Admin Configuration',

@@ -319,7 +319,7 @@ internal sealed class LruCache<TKey, TValue> : IDisposable where TKey : notnull
     /// <summary>
     /// Internal cache entry structure.
     /// </summary>
-    private class CacheEntry
+    private sealed class CacheEntry
     {
         public required TKey Key { get; init; }
         public required TValue Value { get; set; }

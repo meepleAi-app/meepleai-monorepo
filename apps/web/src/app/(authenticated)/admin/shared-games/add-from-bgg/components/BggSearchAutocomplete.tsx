@@ -94,7 +94,7 @@ export function BggSearchAutocomplete({ onSelect }: BggSearchAutocompleteProps) 
       case 'Enter':
         e.preventDefault();
         if (highlightedIndex >= 0 && highlightedIndex < results.length) {
-          // eslint-disable-next-line security/detect-object-injection
+           
           onSelect(results[highlightedIndex]);
           setIsOpen(false);
         }

@@ -42,7 +42,7 @@ export function PublishConfirmModal({
   pdfFileName,
   approvalStatus,
 }: PublishConfirmModalProps) {
-  // eslint-disable-next-line security/detect-object-injection -- approvalStatus is type-safe ApprovalStatus enum
+   
   const statusInfo = STATUS_LABELS[approvalStatus];
 
   return (

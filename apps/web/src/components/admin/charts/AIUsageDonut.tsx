@@ -36,7 +36,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 function getCategoryColor(category: string): string {
-  // eslint-disable-next-line security/detect-object-injection -- Safe: category is from known data, with fallback to 'Default'
+   
   return CATEGORY_COLORS[category] ?? CATEGORY_COLORS['Default'];
 }
 

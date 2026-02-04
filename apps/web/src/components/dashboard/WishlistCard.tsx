@@ -118,9 +118,9 @@ export const WishlistCard = memo(function WishlistCard({
   className,
 }: WishlistCardProps) {
   const { game, priority, targetPrice, notes, visibility, addedAt, isGifted } = data;
-  // eslint-disable-next-line security/detect-object-injection -- priority is from typed WishlistPriority union
+   
   const priorityConfig = PRIORITY_CONFIG[priority];
-  // eslint-disable-next-line security/detect-object-injection -- visibility is from typed WishlistVisibility union
+   
   const visibilityConfig = VISIBILITY_CONFIG[visibility];
   const VisibilityIcon = visibilityConfig.icon;
 

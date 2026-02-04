@@ -104,7 +104,7 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
   const StateIcon = stateInfo.icon;
 
   // Play statistics from backend GameDetailDto
-  const hasPlayStats = gameDetail.timesPlayed > 0;
+  const _hasPlayStats = gameDetail.timesPlayed > 0;
   const stats = {
     gamesPlayed: gameDetail.timesPlayed,
     lastPlayed: gameDetail.lastPlayed,

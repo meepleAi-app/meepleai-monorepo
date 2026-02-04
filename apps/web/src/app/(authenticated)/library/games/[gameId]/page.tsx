@@ -10,10 +10,10 @@
 
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
 
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
 
 import { GameDetailHero } from '@/components/library/game-detail/GameDetailHero';
 import { GameSideCard } from '@/components/library/game-detail/GameSideCard';

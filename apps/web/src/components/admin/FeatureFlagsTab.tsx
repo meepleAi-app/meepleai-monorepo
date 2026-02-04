@@ -346,17 +346,17 @@ export default function FeatureFlagsTab({
                           <div
                             className={cn(
                               'inline-flex items-center gap-1.5 cursor-help',
-                              // eslint-disable-next-line security/detect-object-injection -- tier is from controlled TIER_ORDER array
+                               
                               TIER_COLORS[tier]
                             )}
                           >
-                            {/* eslint-disable-next-line security/detect-object-injection -- tier is from controlled TIER_ORDER array */}
+                            { }
                             {TIER_ICONS[tier]}
                             <span>{tier}</span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          {/* eslint-disable-next-line security/detect-object-injection -- tier is from controlled TIER_ORDER array */}
+                          { }
                           <p>{TIER_DESCRIPTIONS[tier]}</p>
                         </TooltipContent>
                       </Tooltip>
@@ -419,9 +419,9 @@ export default function FeatureFlagsTab({
                     {/* Tier Toggles */}
                     {hasTierSupport &&
                       TIER_ORDER.map(tier => {
-                        // eslint-disable-next-line security/detect-object-injection -- tier is from controlled TIER_ORDER array
+                         
                         const tierField = TIER_FIELD_MAP[tier];
-                        // eslint-disable-next-line security/detect-object-injection -- tierField is from controlled TIER_FIELD_MAP
+                         
                         const tierValue = flag[tierField];
                         const isTierEnabled = tierValue === true;
                         const isTierToggling = toggling === `${flag.id}-${tier}`;

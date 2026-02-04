@@ -1,27 +1,17 @@
 /**
- * Admin Edit Game Page - Server Component Wrapper
- * Issue #2372: SharedGameCatalog Phase 3 Frontend Admin UI
+ * Game Detail Page - Issue #3536
  *
- * Security:
- * - RequireRole: Admin/Editor access for editing games
- * - Uses GameForm component for consistent validation
+ * Route: /admin/shared-games/[id]
+ * Displays game details with tabbed interface for metadata, documents, and review history.
  */
 
-import { Metadata } from 'next';
+import { GameDetailClient } from './client';
 
-import { RequireRole } from '@/components/auth/RequireRole';
-
-import { EditGameClient } from './client';
-
-export const metadata: Metadata = {
-  title: 'Modifica Gioco | MeepleAI Admin',
-  description: 'Modifica i dettagli di un gioco nel catalogo condiviso',
-};
-
-export default function EditGamePage() {
-  return (
-    <RequireRole allowedRoles={['Admin', 'Editor']}>
-      <EditGameClient />
-    </RequireRole>
-  );
+interface GameDetailPageProps {
+  params: Promise<{ id: string }>;
 }
+
+export default function GameDetailPage({ params }: GameDetailPageProps) {
+  return <GameDetailClient params={params} />;
+}
+

@@ -9,6 +9,7 @@ from .state import (
     GameAgentState,
     WorkflowResult,
 )
+from .tutor_state import TutorState
 
 __all__ = [
     "AgentType",
@@ -18,4 +19,5 @@ __all__ = [
     "Move",
     "GameAgentState",
     "WorkflowResult",
+    "TutorState",
 ]

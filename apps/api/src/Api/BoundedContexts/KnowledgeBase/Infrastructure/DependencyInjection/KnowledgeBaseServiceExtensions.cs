@@ -81,6 +81,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-3492: Hybrid Search with Reranking Pipeline
         services.AddScoped<IHybridSearchEngine, HybridSearchEngine>();
+
+        // ISSUE-3491: Context Assembler (orchestrates multi-source context assembly)
+        services.AddScoped<ContextAssembler>();
     }
 
     private static void AddValidationServices(IServiceCollection services)

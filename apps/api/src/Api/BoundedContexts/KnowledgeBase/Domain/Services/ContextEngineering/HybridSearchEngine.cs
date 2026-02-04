@@ -205,7 +205,7 @@ internal sealed class HybridSearchEngine : IHybridSearchEngine
             {
                 ["document_id"] = r.PdfDocumentId,
                 ["game_id"] = r.GameId.ToString(),
-                ["page_number"] = r.PageNumber,
+                ["page_number"] = r.PageNumber ?? 0,
                 ["chunk_index"] = r.ChunkIndex,
                 ["vector_score"] = r.VectorScore?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "",
                 ["keyword_score"] = r.KeywordScore?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "",

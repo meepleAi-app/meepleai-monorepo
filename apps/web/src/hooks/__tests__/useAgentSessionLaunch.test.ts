@@ -8,9 +8,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { useAgentSessionLaunch } from '../useAgentSessionLaunch';
 
-// Mock dependencies
-const mockPush = vi.fn();
-const mockToast = vi.fn();
+// Use vi.hoisted to define mocks before vi.mock hoisting
+const { mockPush, mockToast } = vi.hoisted(() => ({
+  mockPush: vi.fn(),
+  mockToast: vi.fn(),
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -18,16 +20,19 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/components/ui/feedback/use-toast', () => ({
-  useToast: () => ({
-    toast: mockToast,
-  }),
+// Mock sonner toast - the hook imports directly from 'sonner'
+vi.mock('sonner', () => ({
+  toast: {
+    success: mockToast,
+    error: mockToast,
+  },
 }));
 
 const mockLaunch = vi.fn();
 
 vi.mock('@/lib/api/core/httpClient', () => ({
   createHttpClient: () => ({}),
+  HttpClient: vi.fn().mockImplementation(() => ({})),
 }));
 
 vi.mock('@/lib/api/clients/agentSessionsClient', () => ({
@@ -78,11 +83,8 @@ describe('useAgentSessionLaunch', () => {
       initialGameStateJson: '{}',
     });
     expect(onSuccess).toHaveBeenCalledWith('session-abc');
-    expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'Agent Launched',
-      })
-    );
+    // sonner API: toast.success(title, { description })
+    expect(mockToast).toHaveBeenCalledWith('Agent Launched', expect.anything());
   });
 
   it('redirects to chat page after successful launch', async () => {
@@ -121,12 +123,8 @@ describe('useAgentSessionLaunch', () => {
     expect(agentSessionId).toBeNull();
     expect(result.current.error).toEqual(error);
     expect(onError).toHaveBeenCalledWith(error);
-    expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'Launch Failed',
-        variant: 'destructive',
-      })
-    );
+    // sonner API: toast.error(title, { description })
+    expect(mockToast).toHaveBeenCalledWith('Launch Failed', expect.anything());
   });
 
   it('handles quota exceeded error', async () => {
@@ -138,11 +136,8 @@ describe('useAgentSessionLaunch', () => {
       await result.current.launch('game-session-123');
     });
 
-    expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'Quota Exceeded',
-      })
-    );
+    // sonner API: toast.error(title, { description })
+    expect(mockToast).toHaveBeenCalledWith('Quota Exceeded', expect.anything());
   });
 
   it('handles invalid configuration error', async () => {
@@ -154,11 +149,8 @@ describe('useAgentSessionLaunch', () => {
       await result.current.launch('game-session-123');
     });
 
-    expect(mockToast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'Invalid Configuration',
-      })
-    );
+    // sonner API: toast.error(title, { description })
+    expect(mockToast).toHaveBeenCalledWith('Invalid Configuration', expect.anything());
   });
 
   it('uses override values when provided', async () => {

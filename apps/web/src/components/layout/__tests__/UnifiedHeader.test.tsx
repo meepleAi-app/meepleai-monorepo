@@ -56,8 +56,13 @@ describe('UnifiedHeader', () => {
     vi.clearAllMocks();
     mockUsePathname.mockReturnValue('/');
     mockUseRouter.mockReturnValue({ push: mockPush });
+    // Default to authenticated user for most tests
     mockUseCurrentUser.mockReturnValue({
-      data: null,
+      data: {
+        id: 'test-user-id',
+        email: 'test@example.com',
+        username: 'testuser',
+      },
       isLoading: false,
     });
   });
@@ -90,6 +95,10 @@ describe('UnifiedHeader', () => {
     });
 
     it('should render login button when not authenticated', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: null,
+        isLoading: false,
+      });
       render(<UnifiedHeader />);
       expect(screen.getByText('Accedi')).toBeInTheDocument();
     });
@@ -316,14 +325,13 @@ describe('UnifiedHeader', () => {
   });
 
   describe('Mobile Layout', () => {
-    it('should render mobile settings button', () => {
+    it('should render settings button for authenticated users', () => {
       render(<UnifiedHeader />);
 
-      // Mobile settings button is visible on mobile (md:hidden)
-      // Issue #2860: Settings moved to dropdown, but mobile button still exists
-      const settingsButtons = screen.getAllByLabelText('Navigate to settings');
-      const mobileButton = settingsButtons.find(btn => btn.closest('.md\\:hidden'));
-      expect(mobileButton).toBeInTheDocument();
+      // Issue #2860: Settings button is part of the header actions
+      const settingsButton = screen.getByLabelText('Navigate to settings');
+      expect(settingsButton).toBeInTheDocument();
+      expect(settingsButton).toHaveAttribute('href', '/settings');
     });
 
     it('should hide desktop nav on mobile (md:flex)', () => {

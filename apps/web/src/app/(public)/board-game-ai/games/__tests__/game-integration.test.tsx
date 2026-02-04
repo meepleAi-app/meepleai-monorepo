@@ -219,8 +219,8 @@ describe('Game Components Integration Tests (Issue #2307)', () => {
 
       // STEP 2: Verify card displays game details
       expect(screen.getByText('Catan')).toBeInTheDocument();
-      expect(screen.getByText('Kosmos')).toBeInTheDocument();
-      expect(screen.getByText('1995')).toBeInTheDocument();
+      // Publisher and year are combined in subtitle
+      expect(screen.getByText('Kosmos · 1995')).toBeInTheDocument();
 
       // STEP 3: Verify metadata icons and values
       const card = screen.getByRole('button', { name: /game: catan/i });
@@ -229,11 +229,8 @@ describe('Game Components Integration Tests (Issue #2307)', () => {
       // Player count
       expect(cardContent.getByText('3–4')).toBeInTheDocument();
 
-      // Play time
-      expect(cardContent.getByText('60–120 min')).toBeInTheDocument();
-
-      // Year
-      expect(cardContent.getByText('1995')).toBeInTheDocument();
+      // Play time (format: Xm or X–Ym)
+      expect(cardContent.getByText('60–120m')).toBeInTheDocument();
 
       // STEP 4: Verify BGG badge (game has bggId)
       expect(cardContent.getByText('BGG')).toBeInTheDocument();

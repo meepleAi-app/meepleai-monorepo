@@ -83,3 +83,6 @@ export * from './chat-sessions.schemas';
 
 // Tier-Strategy Configuration schemas (Issue #3440)
 export * from './tier-strategy.schemas';
+
+// AI Usage Tracking schemas (Issue #3338)
+export * from './ai-usage.schemas';

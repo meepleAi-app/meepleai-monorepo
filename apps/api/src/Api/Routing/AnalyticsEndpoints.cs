@@ -9,6 +9,9 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
 
+// Issue #3338: AI Token Usage Tracking per User
+using GetUserDetailedAiUsageQuery = Api.BoundedContexts.KnowledgeBase.Application.Queries.GetUserDetailedAiUsageQuery;
+
 namespace Api.Routing;
 
 /// <summary>
@@ -156,6 +159,17 @@ internal static class AnalyticsEndpoints
         group.MapPost("/llm-costs/check-alerts", HandleCheckLlmCostAlerts)
         .WithTags("Admin", "LLM", "Alerts")
         .WithName("CheckLlmCostAlerts");
+
+        // Issue #3338: AI Token Usage Tracking per User - Admin can view any user's usage
+        group.MapGet("/admin/users/{userId:guid}/ai-usage", HandleGetUserAiUsage)
+        .WithName("GetUserAiUsage")
+        .WithTags("Admin", "AI Usage")
+        .WithSummary("Get detailed AI usage for a specific user")
+        .WithDescription("Returns detailed AI usage statistics for the specified user including token counts, costs, and breakdowns by model and operation.")
+        .Produces<Api.BoundedContexts.KnowledgeBase.Application.DTOs.UserAiUsageDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound);
     }
 
 
@@ -431,6 +445,26 @@ internal static class AnalyticsEndpoints
 
         var query = new GetAiUsageStatsQuery();
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    // Issue #3338: AI Token Usage Tracking per User - Handler method
+    private static async Task<IResult> HandleGetUserAiUsage(
+        Guid userId,
+        HttpContext context,
+        IMediator mediator,
+        int days = 30,
+        CancellationToken ct = default)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var endDate = DateOnly.FromDateTime(DateTime.UtcNow);
+        var startDate = endDate.AddDays(-days);
+
+        var query = new GetUserDetailedAiUsageQuery(userId, startDate, endDate);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
         return Results.Ok(result);
     }
 }

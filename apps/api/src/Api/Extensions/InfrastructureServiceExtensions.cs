@@ -415,6 +415,21 @@ internal static class InfrastructureServiceExtensions
             policy.WaitAndRetryAsync(2, retryAttempt =>
                 TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
 
+        // ISSUE-3499: Orchestration service client for Tutor agent
+        services.AddHttpClient("OrchestrationService", client =>
+        {
+#pragma warning disable S1075
+            client.BaseAddress = new Uri("http://orchestration-service:8004");
+#pragma warning restore S1075
+            client.Timeout = TimeSpan.FromSeconds(10);
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+            MaxConnectionsPerServer = 20,
+        });
+
         return services;
     }
 }

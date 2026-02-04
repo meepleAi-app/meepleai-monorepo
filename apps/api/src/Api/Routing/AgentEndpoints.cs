@@ -26,6 +26,7 @@ internal static class AgentEndpoints
         MapInvokeAgentEndpoint(group);
         MapUpdateAgentDocumentsEndpoint(group);
         MapGetAgentDocumentsEndpoint(group);
+        MapTutorQueryEndpoint(group); // ISSUE-3499
 
         return group;
     }
@@ -296,7 +297,52 @@ internal static class AgentEndpoints
         .Produces(404)
         .Produces(500);
     }
+
+    private static void MapTutorQueryEndpoint(RouteGroupBuilder group)
+    {
+        // ISSUE-3499: Query Tutor agent
+        group.MapPost("/agents/tutor/query", async (
+            TutorQueryRequest req,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            // Session validated by RequireSessionFilter
+            _ = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+
+            var command = new TutorQueryCommand(
+                GameId: req.GameId,
+                SessionId: req.SessionId,
+                Query: req.Query
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "Tutor query completed for session {SessionId}: confidence={Confidence}, time={Time}ms",
+                req.SessionId, result.Confidence, result.ExecutionTimeMs);
+
+            return Results.Ok(result);
+        })
+        .RequireSession()
+        .WithName("TutorQuery")
+        .WithTags("Agents", "Tutor")
+        .Produces<TutorQueryResponse>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(500);
+    }
 }
+
+/// <summary>
+/// Request for tutor agent query.
+/// </summary>
+internal record TutorQueryRequest(
+    Guid GameId,
+    Guid SessionId,
+    string Query
+);
 
 // Request DTOs
 internal record CreateAgentRequest(

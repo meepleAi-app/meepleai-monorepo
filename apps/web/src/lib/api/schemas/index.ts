@@ -80,3 +80,6 @@ export * from './email-verification.schemas';
 
 // Chat Sessions schemas (Issue #3484)
 export * from './chat-sessions.schemas';
+
+// Tier-Strategy Configuration schemas (Issue #3440)
+export * from './tier-strategy.schemas';

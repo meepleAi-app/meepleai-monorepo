@@ -1,11 +1,28 @@
 /**
  * AgentConfigSheet Component Tests
  * Issue #3238: [FRONT-002] Main agent configuration container
+ * Issue #3375: Agent Session Launch API Integration
+ * Issue #3376: Added Strategy, ModelTier, CostPreview
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+
+// Mock Next.js router (required by useAgentSessionLaunch)
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+}));
+
+// Mock useAgentSessionLaunch hook (Issue #3375)
+vi.mock('@/hooks/useAgentSessionLaunch', () => ({
+  useAgentSessionLaunch: () => ({
+    launch: vi.fn(),
+    isLaunching: false,
+  }),
+}));
 
 // Mock child components to isolate testing
 vi.mock('../GameSelector', () => ({
@@ -26,6 +43,19 @@ vi.mock('../TemplateCarousel', () => ({
 
 vi.mock('../TokenQuotaDisplay', () => ({
   TokenQuotaDisplay: () => <div data-testid="token-quota">Token Quota</div>,
+}));
+
+// Mock Issue #3376 components
+vi.mock('../StrategySelector', () => ({
+  StrategySelector: () => <div data-testid="strategy-selector">Strategy Selector</div>,
+}));
+
+vi.mock('../ModelTierSelector', () => ({
+  ModelTierSelector: () => <div data-testid="model-tier-selector">Model Tier Selector</div>,
+}));
+
+vi.mock('../CostPreview', () => ({
+  CostPreview: () => <div data-testid="cost-preview">Cost Preview</div>,
 }));
 
 vi.mock('../../shared/ActionBar', () => ({
@@ -71,9 +101,12 @@ describe('AgentConfigSheet', () => {
       render(<AgentConfigSheet {...defaultProps} />);
       expect(screen.getByTestId('game-selector')).toBeInTheDocument();
       expect(screen.getByTestId('template-carousel')).toBeInTheDocument();
-      expect(screen.getByTestId('model-selector')).toBeInTheDocument();
       expect(screen.getByTestId('token-quota')).toBeInTheDocument();
       expect(screen.getByTestId('slot-cards')).toBeInTheDocument();
+      // Issue #3376 components
+      expect(screen.getByTestId('strategy-selector')).toBeInTheDocument();
+      expect(screen.getByTestId('model-tier-selector')).toBeInTheDocument();
+      expect(screen.getByTestId('cost-preview')).toBeInTheDocument();
     });
 
     it('renders action bar', () => {

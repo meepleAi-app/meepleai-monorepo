@@ -12,7 +12,7 @@ internal class AgentGameStateSnapshotEntityConfiguration : IEntityTypeConfigurat
 {
     public void Configure(EntityTypeBuilder<AgentGameStateSnapshotEntity> builder)
     {
-        builder.ToTable("game_state_snapshots");
+        builder.ToTable("agent_game_state_snapshots");
 
         builder.HasKey(e => e.Id);
 
@@ -35,9 +35,9 @@ internal class AgentGameStateSnapshotEntityConfiguration : IEntityTypeConfigurat
         builder.Property(e => e.CreatedAt)
             .IsRequired();
 
-        // Vector embedding for position similarity search
-        builder.Property(e => e.Embedding)
-            .HasColumnType("vector(1536)");
+        // Vector embedding for position similarity search (ISSUE-3493: pgvector)
+        // Column type inferred by pgvector EF Core extension
+        builder.Property(e => e.Embedding);
 
         // Indexes for query performance
         builder.HasIndex(e => e.GameId);

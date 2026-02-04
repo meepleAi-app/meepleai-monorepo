@@ -35,9 +35,9 @@ internal class ConversationMemoryEntityConfiguration : IEntityTypeConfiguration<
         builder.Property(e => e.Timestamp)
             .IsRequired();
 
-        // Vector embedding for semantic search
-        builder.Property(e => e.Embedding)
-            .HasColumnType("vector(1536)");
+        // Vector embedding for semantic search (ISSUE-3493: pgvector)
+        // Column type inferred by pgvector EF Core extension
+        builder.Property(e => e.Embedding);
 
         // Indexes for query performance
         builder.HasIndex(e => e.SessionId);

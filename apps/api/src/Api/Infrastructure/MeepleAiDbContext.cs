@@ -105,6 +105,9 @@ public class MeepleAiDbContext : DbContext
     public DbSet<StrategyModelMappingEntity> StrategyModelMappings => Set<StrategyModelMappingEntity>(); // ISSUE-3438: Strategy-model mapping
     public DbSet<ChatSessionEntity> ChatSessions => Set<ChatSessionEntity>(); // ISSUE-3483: Chat session persistence
     public DbSet<AgentTestResultEntity> AgentTestResults => Set<AgentTestResultEntity>(); // ISSUE-3379: Agent test results persistence
+    public DbSet<ConversationMemoryEntity> ConversationMemories => Set<ConversationMemoryEntity>(); // ISSUE-3493: Temporal RAG
+    public DbSet<AgentGameStateSnapshotEntity> AgentGameStateSnapshots => Set<AgentGameStateSnapshotEntity>(); // ISSUE-3493: Position similarity
+    public DbSet<StrategyPatternEntity> StrategyPatterns => Set<StrategyPatternEntity>(); // ISSUE-3493: Cached evaluations
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();
@@ -132,6 +135,9 @@ public class MeepleAiDbContext : DbContext
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
         base.OnModelCreating(modelBuilder);
+
+        // ISSUE-3493: Enable pgvector extension for vector similarity search
+        modelBuilder.HasPostgresExtension("vector");
 
         // Apply all entity configurations from assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MeepleAiDbContext).Assembly);

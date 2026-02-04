@@ -102,7 +102,8 @@ internal class AgentGameStateSnapshotRepository : RepositoryBase, IAgentGameStat
         Vector? embedding = null;
         if (entity.Embedding != null)
         {
-            embedding = new Vector(entity.Embedding);
+            // Convert Pgvector.Vector to domain Vector (float[])
+            embedding = new Vector(entity.Embedding.ToArray());
         }
 
         var snapshot = new AgentGameStateSnapshot(
@@ -132,7 +133,7 @@ internal class AgentGameStateSnapshotRepository : RepositoryBase, IAgentGameStat
             TurnNumber = snapshot.TurnNumber,
             ActivePlayerId = snapshot.ActivePlayerId,
             CreatedAt = snapshot.CreatedAt,
-            Embedding = snapshot.Embedding?.Values
+            Embedding = snapshot.Embedding != null ? new Pgvector.Vector(snapshot.Embedding.Values) : null
         };
     }
 }

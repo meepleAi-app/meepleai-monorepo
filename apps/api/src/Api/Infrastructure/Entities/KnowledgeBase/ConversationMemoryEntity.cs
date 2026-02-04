@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Pgvector; // ISSUE-3493: pgvector Vector type
 
 namespace Api.Infrastructure.Entities.KnowledgeBase;
 
@@ -38,8 +39,8 @@ public class ConversationMemoryEntity
     [Column("timestamp")]
     public DateTime Timestamp { get; set; }
 
-    [Column("embedding", TypeName = "vector(1536)")]
-    public float[]? Embedding { get; set; }
+    [Column("embedding")]
+    public Vector? Embedding { get; set; }
 
     // Navigation properties
     public UserEntity? User { get; set; }

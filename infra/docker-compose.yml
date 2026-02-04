@@ -361,6 +361,55 @@ services:
     #           count: 1
     #           capabilities: [gpu]
 
+  # ISSUE-3495: LangGraph Orchestration Service for Multi-Agent Coordination
+  orchestration-service:
+    build:
+      context: ../apps/orchestration-service
+      dockerfile: ./Dockerfile
+    container_name: meepleai-orchestrator
+    restart: unless-stopped
+    profiles: [ai, full]
+    ports:
+      - "127.0.0.1:8004:8004"
+    environment:
+      - LOG_LEVEL=INFO
+      - PORT=8004
+      - EMBEDDING_SERVICE_URL=http://embedding-service:8000
+      - RERANKER_SERVICE_URL=http://reranker-service:8003
+      - UNSTRUCTURED_SERVICE_URL=http://unstructured-service:8001
+      - SMOLDOCLING_SERVICE_URL=http://smoldocling-service:8002
+      - DATABASE_URL=${DATABASE_URL:-postgresql://meepleai:meepleai@postgres:5432/meepleai}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - QDRANT_URL=http://qdrant:6333
+      - LANGGRAPH_TIMEOUT=30
+      - MAX_WORKFLOW_DEPTH=10
+      - METRICS_ENABLED=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - meepleai
+    depends_on:
+      embedding-service:
+        condition: service_healthy
+      reranker-service:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
   # OPS-02: OpenTelemetry Observability Stack
   # Seq and Jaeger removed - replaced by HyperDX unified observability (see docker-compose.hyperdx.yml)
   # Migration: Issue #1564 - HyperDX provides logs, traces, and session replay in one platform

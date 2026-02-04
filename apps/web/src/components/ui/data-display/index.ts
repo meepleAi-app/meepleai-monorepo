@@ -13,3 +13,6 @@ export * from './collapsible';
 export * from './stat-card';
 export * from './status-card';
 export * from './activity-list';
+
+// Issue #3326: MeepleCard - Universal card component system
+export * from './meeple-card';

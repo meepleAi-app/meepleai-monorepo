@@ -50,3 +50,17 @@ export type {
 export { RagConfigurationForm } from './RagConfigurationForm';
 export { StrategyCard } from './StrategyCard';
 export { StrategySelector } from './StrategySelector';
+
+// Navigation components
+export { DashboardSidebar } from './DashboardSidebar';
+export { DashboardNav } from './DashboardNav';
+export { SectionGroup } from './SectionGroup';
+export { ProgressIndicator } from './ProgressIndicator';
+export { useScrollSpy, scrollToSection } from './hooks/useScrollSpy';
+export { NAVIGATION_GROUPS } from './RagDashboard';
+
+export type { NavGroup, NavSection, DashboardSidebarProps } from './DashboardSidebar';
+export type { DashboardNavProps } from './DashboardNav';
+export type { SectionGroupProps } from './SectionGroup';
+export type { ProgressIndicatorProps } from './ProgressIndicator';
+export type { UseScrollSpyOptions } from './hooks/useScrollSpy';

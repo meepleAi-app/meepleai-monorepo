@@ -43,7 +43,7 @@ function segmentToLabel(segment: string): string {
   };
 
   if (Object.prototype.hasOwnProperty.call(specialLabels, segment)) {
-    // eslint-disable-next-line security/detect-object-injection -- Safe: specialLabels is a const Record
+     
     return specialLabels[segment];
   }
 
@@ -63,7 +63,7 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
 
   let currentPath = '';
   for (let i = 0; i < segments.length; i++) {
-    // eslint-disable-next-line security/detect-object-injection -- Safe: i is a controlled loop index
+     
     const segment = segments[i];
     currentPath += `/${segment}`;
 

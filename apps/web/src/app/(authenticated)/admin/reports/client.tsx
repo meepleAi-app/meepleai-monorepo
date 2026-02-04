@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-object-injection -- Safe typed Record access with status string keys */
+ 
 'use client';
 
 /**

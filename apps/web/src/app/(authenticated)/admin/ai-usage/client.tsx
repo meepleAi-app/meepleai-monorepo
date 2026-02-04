@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-object-injection -- Safe Record access with provider/role name keys */
+ 
 /**
  * AiUsageDashboardClient - Issue #3080
  *

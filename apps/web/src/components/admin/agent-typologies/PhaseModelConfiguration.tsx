@@ -124,7 +124,7 @@ interface PhaseConfigRowProps {
 }
 
 function PhaseConfigRow({ phaseName, config, isRequired, onChange, onRemove, disabled }: PhaseConfigRowProps) {
-  // eslint-disable-next-line security/detect-object-injection -- phaseName is from controlled STRATEGY_PHASES constant
+   
   const phaseInfo = PHASE_LABELS[phaseName] || { label: phaseName, description: '', defaultModel: 'claude-3-5-haiku-20241022' };
 
   return (
@@ -224,7 +224,7 @@ export function PhaseModelConfiguration({
   const [localPhaseModels, setLocalPhaseModels] = useState<StrategyPhaseModels>(phaseModels);
   const [localOptions, setLocalOptions] = useState<StrategyOptions>(strategyOptions || {});
 
-  // eslint-disable-next-line security/detect-object-injection -- strategy is from controlled props
+   
   const phases = STRATEGY_PHASES[strategy] || STRATEGY_PHASES.CUSTOM;
   const isRagStrategy = ['FAST', 'BALANCED', 'PRECISE', 'EXPERT', 'CONSENSUS', 'CUSTOM'].includes(strategy);
 
@@ -238,7 +238,7 @@ export function PhaseModelConfiguration({
 
       phases.required.forEach((phase) => {
         if (!newPhaseModels[phase as keyof StrategyPhaseModels]) {
-          // eslint-disable-next-line security/detect-object-injection -- phase is from controlled STRATEGY_PHASES.required array
+           
           const phaseInfo = PHASE_LABELS[phase];
           newPhaseModels[phase as keyof StrategyPhaseModels] = {
             model: phaseInfo?.defaultModel || 'claude-3-5-haiku-20241022',
@@ -283,7 +283,7 @@ export function PhaseModelConfiguration({
 
   // Add optional phase
   const addPhase = (phaseName: string) => {
-    // eslint-disable-next-line security/detect-object-injection -- phaseName is from controlled STRATEGY_PHASES.optional array
+     
     const phaseInfo = PHASE_LABELS[phaseName];
     const newPhaseModels = {
       ...localPhaseModels,
@@ -362,7 +362,7 @@ export function PhaseModelConfiguration({
             key={phaseName}
             phaseName={phaseName}
             config={localPhaseModels[phaseName as keyof StrategyPhaseModels] || {
-              // eslint-disable-next-line security/detect-object-injection -- phaseName is from controlled STRATEGY_PHASES.required array
+               
               model: PHASE_LABELS[phaseName]?.defaultModel || 'claude-3-5-haiku-20241022',
               maxTokens: 500,
               temperature: 0.7,
@@ -405,7 +405,7 @@ export function PhaseModelConfiguration({
               </SelectTrigger>
               <SelectContent>
                 {availableOptionalPhases.map((phase) => {
-                  // eslint-disable-next-line security/detect-object-injection -- phase is from controlled STRATEGY_PHASES.optional array
+                   
                   const phaseLabel = PHASE_LABELS[phase]?.label || phase;
                   return (
                     <SelectItem key={phase} value={phase}>
@@ -465,7 +465,7 @@ export function PhaseModelConfiguration({
             <AlertDescription>
               Configura tutte le fasi richieste: {phases.required.filter(
                 (phase) => !localPhaseModels[phase as keyof StrategyPhaseModels]
-              // eslint-disable-next-line security/detect-object-injection -- p is from controlled STRATEGY_PHASES.required array
+               
               ).map((p) => PHASE_LABELS[p]?.label || p).join(', ')}
             </AlertDescription>
           </Alert>

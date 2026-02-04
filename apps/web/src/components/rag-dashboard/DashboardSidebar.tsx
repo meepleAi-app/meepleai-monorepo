@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
+
 import { scrollToSection } from './hooks/useScrollSpy';
 import { ProgressIndicator } from './ProgressIndicator';
 

@@ -1,63 +1,43 @@
 /**
- * Shared Games Catalog Admin Client - Issue #2372
+ * Shared Games Catalog Admin Client - Issue #3534 (Refactored)
  *
- * Admin interface for managing shared game catalog:
- * - List all games with filters (status, search, category, mechanic)
- * - Create new game
- * - Edit existing game
- * - Publish/Archive/Delete games
+ * Admin dashboard with card grid layout for managing shared game catalog:
+ * - Stats cards showing key metrics
+ * - Card grid with responsive layout (1-4 columns)
+ * - Advanced filters with URL params for shareable links
+ * - React Query for data fetching
  * - Role-based permissions (Admin vs Editor)
  *
  * Backend Integration:
- * - GET /api/v1/admin/shared-games (via api.sharedGames.getAll)
- * - POST /api/v1/admin/shared-games (via api.sharedGames.create)
- * - PUT /api/v1/admin/shared-games/:id (via api.sharedGames.update)
- * - POST /api/v1/admin/shared-games/:id/publish
- * - POST /api/v1/admin/shared-games/:id/archive
- * - DELETE /api/v1/admin/shared-games/:id
+ * - GET /api/v1/admin/shared-games (filtered list)
+ * - GET /api/v1/admin/shared-games/approval-queue (approval queue)
+ * - POST /api/v1/admin/shared-games/:id/documents/:docId/approve
  */
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { Suspense, useCallback, useState, useEffect } from 'react';
 
+import { useQuery } from '@tanstack/react-query';
 import {
   Plus,
   Trash2,
-  Edit,
-  Search,
   AlertCircle,
-  Archive,
-  Eye,
-  MoreHorizontal,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
+  RefreshCw,
+  LayoutGrid,
+  List,
   Clock,
+  Upload,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { AdminAuthGuard, GameStatusBadge, PlayersBadge, PlayTimeBadge } from '@/components/admin';
+import { AdminAuthGuard } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Spinner } from '@/components/loading';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/data-display/table';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/navigation/dropdown-menu';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Dialog,
   DialogContent,
@@ -66,24 +46,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import {
-  api,
-  type SharedGame,
-  type GameCategory,
-  type GameMechanic,
-  type PagedSharedGames,
-} from '@/lib/api';
+import { api, type SharedGame } from '@/lib/api';
+
+import { GameCard, GameCardSkeleton, ImportFromBggModal, SharedGamesFilters, SharedGamesStats } from './_components';
+import { useSharedGamesQuery } from './_hooks';
 
 // ========== Types ==========
 
@@ -93,38 +62,76 @@ type ToastMessage = {
   message: string;
 };
 
-type GameStatusFilter = 'all' | '0' | '1' | '2'; // all, Draft, Published, Archived
+type ViewMode = 'grid' | 'list';
 
 // ========== Main Component ==========
 
-export function SharedGamesClient() {
+function SharedGamesClientInner() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuthUser();
 
-  // Data state
-  const [games, setGames] = useState<SharedGame[]>([]);
-  const [_categories, setCategories] = useState<GameCategory[]>([]);
-  const [_mechanics, setMechanics] = useState<GameMechanic[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
-
-  // Pagination state
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(20);
-  const [total, setTotal] = useState(0);
-
-  // Filter state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<GameStatusFilter>('all');
+  // View mode state (persisted in localStorage)
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
   // Modal states
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [gameToDelete, setGameToDelete] = useState<SharedGame | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Toast management
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Check if user is admin
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
+
+  // Load view mode preference
+  useEffect(() => {
+    const saved = localStorage.getItem('sharedGames.viewMode');
+    if (saved === 'grid' || saved === 'list') {
+      setViewMode(saved);
+    }
+  }, []);
+
+  // Save view mode preference
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('sharedGames.viewMode', mode);
+  }, []);
+
+  // Use React Query hook for data
+  const {
+    data: gamesData,
+    isLoading,
+    error,
+    refetch,
+    filters,
+    setSearch,
+    setStatus,
+    setSortBy,
+    setPage,
+    setSubmittedBy,
+    totalPages,
+  } = useSharedGamesQuery({ defaultPageSize: 20 });
+
+  // Fetch stats data
+  const { data: statsData } = useQuery({
+    queryKey: ['admin', 'shared-games', 'stats'],
+    queryFn: async () => {
+      // Fetch pending approvals count
+      const pendingResult = await api.sharedGames.getPendingApprovals({ pageSize: 1 });
+      const totalResult = await api.sharedGames.getAll({ pageSize: 1 });
+
+      return {
+        totalGames: totalResult.total,
+        pendingApprovals: pendingResult.total,
+        pdfCoveragePercent: 45, // TODO: Implement actual calculation
+        avgReviewDays: 3, // TODO: Implement actual calculation
+      };
+    },
+    staleTime: 60000, // 1 minute
+  });
 
   const addToast = useCallback((type: 'success' | 'error' | 'info', message: string) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
@@ -134,95 +141,15 @@ export function SharedGamesClient() {
     }, 5000);
   }, []);
 
-  // Check if user is admin (for delete permissions)
-  const isAdmin = user?.role?.toLowerCase() === 'admin';
-
-  // Fetch reference data (categories, mechanics) and pending approvals count
-  useEffect(() => {
-    const fetchReferenceData = async () => {
-      try {
-        const [categoriesResult, mechanicsResult] = await Promise.all([
-          api.sharedGames.getCategories(),
-          api.sharedGames.getMechanics(),
-        ]);
-        setCategories(categoriesResult);
-        setMechanics(mechanicsResult);
-      } catch (err) {
-        console.error('Failed to fetch reference data:', err);
-        // Non-critical, don't show error toast
-      }
-    };
-
-    const fetchPendingApprovalsCount = async () => {
-      if (isAdmin) {
-        try {
-          const result = await api.sharedGames.getPendingApprovals({ pageSize: 1 });
-          setPendingApprovalsCount(result.total);
-        } catch (err) {
-          console.error('Failed to fetch pending approvals count:', err);
-        }
-      }
-    };
-
-    fetchReferenceData();
-    fetchPendingApprovalsCount();
-  }, [isAdmin]);
-
-  // Fetch games
-  const fetchGames = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      const params: { status?: number; page?: number; pageSize?: number } = {
-        page,
-        pageSize,
-      };
-
-      if (statusFilter !== 'all') {
-        params.status = parseInt(statusFilter, 10);
-      }
-
-      const result: PagedSharedGames = await api.sharedGames.getAll(params);
-
-      // Filter by search term on client-side (for now)
-      let filteredItems = result.items;
-      if (searchTerm.trim()) {
-        const term = searchTerm.toLowerCase();
-        filteredItems = result.items.filter(
-          game =>
-            game.title.toLowerCase().includes(term) || game.description.toLowerCase().includes(term)
-        );
-      }
-
-      setGames(filteredItems);
-      setTotal(result.total);
-    } catch (err) {
-      console.error('Failed to fetch games:', err);
-      addToast('error', 'Errore nel caricamento dei giochi');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, statusFilter, searchTerm, addToast]);
-
-  useEffect(() => {
-    fetchGames();
-  }, [fetchGames]);
-
-  // Handle search
-  const handleSearch = () => {
-    setPage(1);
-    fetchGames();
-  };
-
   // Handle publish
   const handlePublish = async (game: SharedGame) => {
     try {
       await api.sharedGames.publish(game.id);
-      addToast('success', `"${game.title}" pubblicato con successo`);
-      fetchGames();
+      addToast('success', `"${game.title}" published successfully`);
+      refetch();
     } catch (err) {
       console.error('Failed to publish game:', err);
-      addToast('error', 'Errore nella pubblicazione del gioco');
+      addToast('error', 'Failed to publish game');
     }
   };
 
@@ -230,11 +157,11 @@ export function SharedGamesClient() {
   const handleArchive = async (game: SharedGame) => {
     try {
       await api.sharedGames.archive(game.id);
-      addToast('success', `"${game.title}" archiviato con successo`);
-      fetchGames();
+      addToast('success', `"${game.title}" archived successfully`);
+      refetch();
     } catch (err) {
       console.error('Failed to archive game:', err);
-      addToast('error', "Errore nell'archiviazione del gioco");
+      addToast('error', 'Failed to archive game');
     }
   };
 
@@ -251,7 +178,7 @@ export function SharedGamesClient() {
 
     // Editors must provide a reason
     if (!isAdmin && !deleteReason.trim()) {
-      addToast('error', 'Devi fornire una motivazione per la richiesta di eliminazione');
+      addToast('error', 'Please provide a reason for the delete request');
       return;
     }
 
@@ -259,22 +186,20 @@ export function SharedGamesClient() {
       setIsDeleting(true);
 
       if (isAdmin) {
-        // Admin: immediate deletion
         await api.sharedGames.delete(gameToDelete.id);
-        addToast('success', `"${gameToDelete.title}" eliminato con successo`);
+        addToast('success', `"${gameToDelete.title}" deleted successfully`);
       } else {
-        // Editor: create delete request for admin approval
         await api.sharedGames.requestDelete(gameToDelete.id, { reason: deleteReason });
-        addToast('info', 'Richiesta di eliminazione inviata. Un admin la valuterà.');
+        addToast('info', 'Delete request submitted for admin approval');
       }
 
       setIsDeleteModalOpen(false);
       setGameToDelete(null);
       setDeleteReason('');
-      fetchGames();
+      refetch();
     } catch (err) {
       console.error('Failed to delete game:', err);
-      addToast('error', "Errore nell'eliminazione del gioco");
+      addToast('error', 'Failed to delete game');
     } finally {
       setIsDeleting(false);
     }
@@ -286,272 +211,210 @@ export function SharedGamesClient() {
   };
 
   // Navigate to edit page
-  const handleEdit = (gameId: string) => {
-    router.push(`/admin/shared-games/${gameId}/edit`);
+  const handleEdit = (game: SharedGame) => {
+    router.push(`/admin/shared-games/${game.id}`);
+  };
+
+  // Navigate to preview
+  const handlePreview = (game: SharedGame) => {
+    router.push(`/admin/shared-games/${game.id}`);
   };
 
   // Pagination
-  const totalPages = Math.ceil(total / pageSize);
-  const canPrevPage = page > 1;
-  const canNextPage = page < totalPages;
+  const canPrevPage = filters.page > 1;
+  const canNextPage = filters.page < totalPages;
+
+  const games = gamesData?.items ?? [];
 
   return (
     <AdminAuthGuard loading={authLoading} user={user}>
-      <div className="container mx-auto p-6 max-w-7xl">
+      <div className="container mx-auto space-y-6 p-6 max-w-7xl">
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Shared Game Catalog</h1>
+            <p className="text-muted-foreground">
+              Manage the shared game catalog with CRUD operations and BGG integration
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Pending Approvals Link (Admin Only) */}
+            {isAdmin && statsData && statsData.pendingApprovals > 0 && (
+              <Link href="/admin/shared-games/pending-approvals">
+                <Button variant="outline" className="relative">
+                  <Clock className="h-4 w-4 mr-2" />
+                  Approvals
+                  <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {statsData.pendingApprovals > 99 ? '99+' : statsData.pendingApprovals}
+                  </span>
+                </Button>
+              </Link>
+            )}
+            <Button variant="outline" onClick={() => setIsImportModalOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import from BGG
+            </Button>
+            <Button onClick={handleCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Game
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <SharedGamesStats
+          totalGames={statsData?.totalGames ?? 0}
+          pendingApprovals={statsData?.pendingApprovals ?? 0}
+          pdfCoveragePercent={statsData?.pdfCoveragePercent ?? 0}
+          avgReviewDays={statsData?.avgReviewDays ?? 0}
+          isLoading={!statsData}
+        />
+
+        {/* Main Content Card */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle>Catalogo Giochi Condivisi</CardTitle>
+                <CardTitle>Games</CardTitle>
                 <CardDescription>
-                  Gestisci il catalogo condiviso di giochi da tavolo. Crea, modifica, pubblica e
-                  archivia i giochi.
+                  {gamesData?.total ?? 0} games in catalog
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-3">
-                {/* Pending Approvals Link (Admin Only) */}
-                {isAdmin && (
-                  <Link href="/admin/shared-games/pending-approvals">
-                    <Button variant="outline" className="relative">
-                      <Clock className="h-4 w-4 mr-2" />
-                      Approvazioni
-                      {pendingApprovalsCount > 0 && (
-                        <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                          {pendingApprovalsCount > 99 ? '99+' : pendingApprovalsCount}
-                        </span>
-                      )}
-                    </Button>
-                  </Link>
-                )}
-                <Button onClick={handleCreate}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nuovo Gioco
+              <div className="flex items-center gap-2">
+                {/* View Mode Toggle */}
+                <Tabs value={viewMode} onValueChange={(v: string) => handleViewModeChange(v as ViewMode)}>
+                  <TabsList className="h-9">
+                    <TabsTrigger value="grid" className="px-3">
+                      <LayoutGrid className="h-4 w-4" />
+                    </TabsTrigger>
+                    <TabsTrigger value="list" className="px-3">
+                      <List className="h-4 w-4" />
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                {/* Refresh Button */}
+                <Button variant="outline" size="icon" onClick={() => refetch()}>
+                  <RefreshCw className="h-4 w-4" />
+                  <span className="sr-only">Refresh</span>
                 </Button>
               </div>
             </div>
           </CardHeader>
+
           <CardContent className="space-y-6">
             {/* Filters */}
-            <div className="flex items-center gap-4 flex-wrap">
-              {/* Search */}
-              <div className="flex items-center gap-2 flex-1 min-w-[300px]">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Cerca per titolo o descrizione..."
-                    className="pl-10"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                  />
-                </div>
-                <Button variant="secondary" onClick={handleSearch}>
-                  Cerca
-                </Button>
-              </div>
+            <SharedGamesFilters
+              search={filters.search}
+              status={filters.status}
+              sortBy={filters.sortBy}
+              submittedBy={filters.submittedBy}
+              onSearchChange={setSearch}
+              onStatusChange={setStatus}
+              onSortChange={setSortBy}
+              onSubmitterChange={isAdmin ? setSubmittedBy : undefined}
+              isAdmin={isAdmin}
+              debounceMs={300}
+            />
 
-              {/* Status filter */}
-              <div className="flex items-center gap-2">
-                <Label htmlFor="status-filter" className="shrink-0">
-                  Stato:
-                </Label>
-                <Select
-                  value={statusFilter}
-                  onValueChange={(value: GameStatusFilter) => {
-                    setStatusFilter(value);
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger id="status-filter" className="w-[150px]">
-                    <SelectValue placeholder="Tutti" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tutti</SelectItem>
-                    <SelectItem value="0">Bozza</SelectItem>
-                    <SelectItem value="1">Pubblicato</SelectItem>
-                    <SelectItem value="2">Archiviato</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>
-                {total} {total === 1 ? 'gioco' : 'giochi'} totali
-              </span>
-              {statusFilter !== 'all' && (
-                <span className="text-primary">
-                  (filtrato per{' '}
-                  {statusFilter === '0'
-                    ? 'bozze'
-                    : statusFilter === '1'
-                      ? 'pubblicati'
-                      : 'archiviati'}
-                  )
-                </span>
-              )}
-            </div>
-
-            {/* Loading State */}
-            {loading && (
-              <div className="flex justify-center py-12">
-                <Spinner size="lg" />
-              </div>
-            )}
-
-            {/* Empty State */}
-            {!loading && games.length === 0 && (
-              <Alert>
+            {/* Error State */}
+            {error && (
+              <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  {searchTerm || statusFilter !== 'all'
-                    ? 'Nessun gioco trovato con i filtri selezionati.'
-                    : 'Nessun gioco nel catalogo. Clicca "Nuovo Gioco" per aggiungerne uno.'}
+                  Failed to load games. Please try again.
                 </AlertDescription>
               </Alert>
             )}
 
-            {/* Games Table */}
-            {!loading && games.length > 0 && (
-              <>
-                <div className="border rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[80px]">Immagine</TableHead>
-                        <TableHead className="w-[25%]">Titolo</TableHead>
-                        <TableHead className="w-[15%]">Giocatori</TableHead>
-                        <TableHead className="w-[15%]">Durata</TableHead>
-                        <TableHead className="w-[15%]">Stato</TableHead>
-                        <TableHead className="w-[15%]">Creato</TableHead>
-                        <TableHead className="w-[10%] text-right">Azioni</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {games.map(game => (
-                        <TableRow key={game.id}>
-                          {/* Thumbnail */}
-                          <TableCell>
-                            {game.thumbnailUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={game.thumbnailUrl}
-                                alt={game.title}
-                                className="w-12 h-12 object-cover rounded"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
-                                <FileText className="h-6 w-6 text-muted-foreground" />
-                              </div>
-                            )}
-                          </TableCell>
+            {/* Loading State */}
+            {isLoading && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <GameCardSkeleton key={i} />
+                ))}
+              </div>
+            )}
 
-                          {/* Title & Year */}
-                          <TableCell>
-                            <div className="font-medium">{game.title}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {game.yearPublished}
-                            </div>
-                          </TableCell>
+            {/* Empty State */}
+            {!isLoading && games.length === 0 && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {filters.search || filters.status !== 'all'
+                    ? 'No games found matching your filters.'
+                    : 'No games in the catalog. Click "New Game" to add one.'}
+                </AlertDescription>
+              </Alert>
+            )}
 
-                          {/* Players */}
-                          <TableCell>
-                            <PlayersBadge min={game.minPlayers} max={game.maxPlayers} />
-                          </TableCell>
+            {/* Games Grid */}
+            {!isLoading && games.length > 0 && viewMode === 'grid' && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {games.map((game) => (
+                  <GameCard
+                    key={game.id}
+                    game={game}
+                    isAdmin={isAdmin}
+                    onEdit={handleEdit}
+                    onPreview={handlePreview}
+                    onPublish={handlePublish}
+                    onArchive={handleArchive}
+                    onDelete={handleDeleteClick}
+                  />
+                ))}
+              </div>
+            )}
 
-                          {/* Playing Time */}
-                          <TableCell>
-                            <PlayTimeBadge minutes={game.playingTimeMinutes} />
-                          </TableCell>
-
-                          {/* Status */}
-                          <TableCell>
-                            <GameStatusBadge status={game.status} />
-                          </TableCell>
-
-                          {/* Created Date */}
-                          <TableCell className="text-sm text-muted-foreground">
-                            {new Date(game.createdAt).toLocaleDateString('it-IT')}
-                          </TableCell>
-
-                          {/* Actions */}
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEdit(game.id)}>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Modifica
-                                </DropdownMenuItem>
-
-                                {/* Publish (only for Draft) */}
-                                {game.status === 'Draft' && (
-                                  <DropdownMenuItem onClick={() => handlePublish(game)}>
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    Pubblica
-                                  </DropdownMenuItem>
-                                )}
-
-                                {/* Archive (only for Published) */}
-                                {game.status === 'Published' && (
-                                  <DropdownMenuItem onClick={() => handleArchive(game)}>
-                                    <Archive className="h-4 w-4 mr-2" />
-                                    Archivia
-                                  </DropdownMenuItem>
-                                )}
-
-                                <DropdownMenuSeparator />
-
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteClick(game)}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  {isAdmin ? 'Elimina' : 'Richiedi Eliminazione'}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      Pagina {page} di {totalPages}
+            {/* Games List View (fallback to simple list for now) */}
+            {!isLoading && games.length > 0 && viewMode === 'list' && (
+              <div className="space-y-2">
+                {games.map((game) => (
+                  <div
+                    key={game.id}
+                    className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded bg-muted" />
+                      <div>
+                        <p className="font-medium">{game.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {game.yearPublished} • {game.minPlayers}-{game.maxPlayers} players
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage(p => p - 1)}
-                        disabled={!canPrevPage}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        Precedente
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage(p => p + 1)}
-                        disabled={!canNextPage}
-                      >
-                        Successivo
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(game)}>
+                      View
+                    </Button>
                   </div>
-                )}
-              </>
+                ))}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4">
+                <div className="text-sm text-muted-foreground">
+                  Page {filters.page} of {totalPages}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(filters.page - 1)}
+                    disabled={!canPrevPage}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(filters.page + 1)}
+                    disabled={!canNextPage}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -560,23 +423,23 @@ export function SharedGamesClient() {
         <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{isAdmin ? 'Elimina Gioco' : 'Richiedi Eliminazione'}</DialogTitle>
+              <DialogTitle>{isAdmin ? 'Delete Game' : 'Request Deletion'}</DialogTitle>
               <DialogDescription>
                 {isAdmin
-                  ? `Sei sicuro di voler eliminare "${gameToDelete?.title}"? Questa azione non può essere annullata.`
-                  : `La tua richiesta di eliminazione per "${gameToDelete?.title}" sarà inviata a un amministratore per l'approvazione.`}
+                  ? `Are you sure you want to delete "${gameToDelete?.title}"? This action cannot be undone.`
+                  : `Your deletion request for "${gameToDelete?.title}" will be sent to an admin for approval.`}
               </DialogDescription>
             </DialogHeader>
 
             {/* Reason (required for Editors) */}
             {!isAdmin && (
               <div className="space-y-2 mt-4">
-                <Label htmlFor="delete-reason">Motivazione *</Label>
+                <Label htmlFor="delete-reason">Reason *</Label>
                 <Textarea
                   id="delete-reason"
-                  placeholder="Spiega perché questo gioco dovrebbe essere eliminato..."
+                  placeholder="Explain why this game should be deleted..."
                   value={deleteReason}
-                  onChange={e => setDeleteReason(e.target.value)}
+                  onChange={(e) => setDeleteReason(e.target.value)}
                   rows={3}
                 />
               </div>
@@ -592,7 +455,7 @@ export function SharedGamesClient() {
                 }}
                 disabled={isDeleting}
               >
-                Annulla
+                Cancel
               </Button>
               <Button
                 variant="destructive"
@@ -602,25 +465,40 @@ export function SharedGamesClient() {
                 {isDeleting ? (
                   <>
                     <Spinner size="sm" className="mr-2" />
-                    {isAdmin ? 'Eliminazione...' : 'Invio...'}
+                    {isAdmin ? 'Deleting...' : 'Submitting...'}
                   </>
                 ) : isAdmin ? (
-                  'Elimina'
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </>
                 ) : (
-                  'Invia Richiesta'
+                  'Submit Request'
                 )}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
+        {/* Import from BGG Modal */}
+        <ImportFromBggModal
+          open={isImportModalOpen}
+          onOpenChange={setIsImportModalOpen}
+          onSuccess={(gameId) => {
+            addToast('success', 'Game imported successfully from BGG');
+            refetch();
+            // Optionally navigate to the game detail page
+            router.push(`/admin/shared-games/${gameId}`);
+          }}
+        />
+
         {/* Toast Notifications */}
         <div className="fixed bottom-4 right-4 z-50 space-y-2">
-          {toasts.map(toast => (
+          {toasts.map((toast) => (
             <Alert
               key={toast.id}
               variant={toast.type === 'error' ? 'destructive' : 'default'}
-              className="w-96"
+              className="w-96 shadow-lg"
             >
               <AlertDescription>{toast.message}</AlertDescription>
             </Alert>
@@ -628,5 +506,20 @@ export function SharedGamesClient() {
         </div>
       </div>
     </AdminAuthGuard>
+  );
+}
+
+// Wrap with Suspense for useSearchParams
+export function SharedGamesClient() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-96 items-center justify-center">
+          <Spinner size="lg" />
+        </div>
+      }
+    >
+      <SharedGamesClientInner />
+    </Suspense>
   );
 }

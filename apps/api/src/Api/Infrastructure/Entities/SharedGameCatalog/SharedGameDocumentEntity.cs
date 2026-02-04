@@ -53,6 +53,26 @@ public class SharedGameDocumentEntity
     /// </summary>
     public Guid CreatedBy { get; set; }
 
+    /// <summary>
+    /// Approval status (0=Pending, 1=Approved, 2=Rejected).
+    /// </summary>
+    public int ApprovalStatus { get; set; }
+
+    /// <summary>
+    /// User who approved/rejected this document (null if pending).
+    /// </summary>
+    public Guid? ApprovedBy { get; set; }
+
+    /// <summary>
+    /// Timestamp of approval/rejection (null if pending).
+    /// </summary>
+    public DateTime? ApprovedAt { get; set; }
+
+    /// <summary>
+    /// Optional notes from approver (reason for rejection or approval notes).
+    /// </summary>
+    public string? ApprovalNotes { get; set; }
+
     // Navigation properties
     public SharedGameEntity SharedGame { get; set; } = default!;
     public PdfDocumentEntity PdfDocument { get; set; } = default!;

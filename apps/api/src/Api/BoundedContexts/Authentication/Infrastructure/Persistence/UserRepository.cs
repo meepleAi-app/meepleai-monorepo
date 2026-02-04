@@ -93,7 +93,10 @@ public class UserRepository : RepositoryBase, IUserRepository
             // ISSUE-2886: Suspension fields
             IsSuspended = entity.IsSuspended,
             SuspendedAt = entity.SuspendedAt,
-            SuspendReason = entity.SuspendReason
+            SuspendReason = entity.SuspendReason,
+            // ISSUE-3339: Account Lockout
+            FailedLoginAttempts = entity.FailedLoginAttempts,
+            LockedUntil = entity.LockedUntil
         };
 
         // Map backup codes
@@ -154,6 +157,10 @@ public class UserRepository : RepositoryBase, IUserRepository
         // ISSUE-3141: Update gamification fields
         existingUser.Level = entity.Level;
         existingUser.ExperiencePoints = entity.ExperiencePoints;
+
+        // ISSUE-3339: Update lockout state
+        existingUser.FailedLoginAttempts = entity.FailedLoginAttempts;
+        existingUser.LockedUntil = entity.LockedUntil;
 
         // Synchronize backup codes collection (delete old, add new)
         // This ensures we don't duplicate codes on every update
@@ -284,6 +291,9 @@ public class UserRepository : RepositoryBase, IUserRepository
 
         // ISSUE-3141: Restore gamification state
         user.RestoreGamificationState(entity.Level, entity.ExperiencePoints);
+
+        // ISSUE-3339: Restore lockout state
+        user.RestoreLockoutState(entity.FailedLoginAttempts, entity.LockedUntil);
 
         return user;
     }

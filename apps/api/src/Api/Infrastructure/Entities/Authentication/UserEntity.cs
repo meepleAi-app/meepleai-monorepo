@@ -39,6 +39,10 @@ public class UserEntity
     public int Level { get; set; } = 1;
     public int ExperiencePoints { get; set; }
 
+    // ISSUE-3339: Account Lockout
+    public int FailedLoginAttempts { get; set; }
+    public DateTime? LockedUntil { get; set; }
+
     // Navigation properties
     public ICollection<UserSessionEntity> Sessions { get; set; } = new List<UserSessionEntity>();
     public ICollection<UserBackupCodeEntity> BackupCodes { get; set; } = new List<UserBackupCodeEntity>();

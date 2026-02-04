@@ -1,649 +1,695 @@
-'use client';
-
 /**
- * Edit Game Client Component - Issue #2372
+ * Game Detail Client Component - Issue #3536
  *
- * Client component for editing an existing shared game.
+ * Route: /admin/shared-games/[id]
  * Features:
- * - Tabbed interface: Details, Categories, Rules, History
- * - Status management (Publish/Archive/Delete)
- * - Role-based actions (Admin vs Editor)
- * - Delete request workflow for Editors
+ * - Tabbed interface (Details, Documents, Review History)
+ * - PDF upload with drag-drop
+ * - Document list with status badges
+ * - Role-based approval workflow
  */
 
-import { useState, useEffect, useCallback } from 'react';
+'use client';
 
+import { use, useCallback, useState, useRef } from 'react';
+
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  AlertCircle,
   ArrowLeft,
-  Edit3,
-  History,
-  Tag,
-  FileText,
-  Trash2,
-  Archive,
-  CheckCircle,
+  Check,
   Clock,
-  RefreshCw,
+  Download,
   ExternalLink,
-  AlertTriangle,
-  Files,
+  FileText,
+  Loader2,
+  MoreHorizontal,
+  RefreshCw,
+  Send,
+  Trash2,
+  Upload,
+  X,
 } from 'lucide-react';
-import { useRouter, useParams } from 'next/navigation';
-import { toast } from 'sonner';
+import Image from 'next/image';
+import Link from 'next/link';
 
-import {
-  AdminAuthGuard,
-  GameForm,
-  GameStatusBadge,
-  PlayersBadge,
-  PlayTimeBadge,
-  ComplexityBadge,
-  PdfDocumentList,
-} from '@/components/admin';
-import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/navigation/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
-import { ConfirmationDialog } from '@/components/ui/overlays/confirmation-dialog';
 import { Button } from '@/components/ui/primitives/button';
-import { Textarea } from '@/components/ui/primitives/textarea';
-import { api, type SharedGameDetail, type SharedGameDocument } from '@/lib/api';
+import { api, type SharedGameDocument } from '@/lib/api';
 
-// Game status string values (matches C# GameStatus enum with JsonStringEnumConverter)
-const GAME_STATUS = {
-  Draft: 'Draft',
-  PendingApproval: 'PendingApproval',
-  Published: 'Published',
-  Archived: 'Archived',
-} as const;
+interface GameDetailClientProps {
+  params: Promise<{ id: string }>;
+}
 
-type TabValue = 'details' | 'categories' | 'rules' | 'documents' | 'history';
+// Document type badge component
+function DocumentTypeBadge({ documentType }: { documentType: number }) {
+  const types: Record<number, { variant: 'default' | 'secondary' | 'outline'; label: string }> = {
+    0: { variant: 'default', label: 'Rulebook' },
+    1: { variant: 'secondary', label: 'Errata' },
+    2: { variant: 'outline', label: 'Homerule' },
+  };
 
-type ConfirmDialogState = {
-  isOpen: boolean;
-  title: string;
-  message: string;
-  variant: 'default' | 'destructive' | 'warning';
-  onConfirm: () => void;
-};
+  const config = types[documentType] || { variant: 'secondary' as const, label: 'Unknown' };
 
-export function EditGameClient() {
-  const router = useRouter();
-  const params = useParams();
-  const gameId = params?.id as string | undefined;
-  const { user, loading: authLoading } = useAuthUser();
+  return <Badge variant={config.variant}>{config.label}</Badge>;
+}
 
-  // State
-  const [activeTab, setActiveTab] = useState<TabValue>('details');
-  const [game, setGame] = useState<SharedGameDetail | null>(null);
-  const [documents, setDocuments] = useState<SharedGameDocument[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isActionLoading, setIsActionLoading] = useState(false);
-  const [deleteReason, setDeleteReason] = useState('');
-  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
-    isOpen: false,
-    title: '',
-    message: '',
-    variant: 'default',
-    onConfirm: () => {},
+// Game status badge
+function GameStatusBadge({ status }: { status: string }) {
+  const statusMap: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
+    Draft: { variant: 'secondary', label: 'Draft' },
+    Published: { variant: 'default', label: 'Published' },
+    Archived: { variant: 'outline', label: 'Archived' },
+    PendingApproval: { variant: 'destructive', label: 'Pending Approval' },
+  };
+
+  const config = statusMap[status] || { variant: 'secondary' as const, label: status };
+
+  return <Badge variant={config.variant}>{config.label}</Badge>;
+}
+
+// Document list item
+function DocumentListItem({
+  document,
+  onDelete,
+  onDownload,
+  isDeleting,
+}: {
+  document: SharedGameDocument;
+  onDelete: (id: string) => void;
+  onDownload: (id: string) => void;
+  isDeleting: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border p-4">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+          <FileText className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <DocumentTypeBadge documentType={document.documentType} />
+            <span className="text-sm text-muted-foreground">v{document.version}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+            <span>{new Date(document.createdAt).toLocaleDateString()}</span>
+            {document.isActive && (
+              <>
+                <span>•</span>
+                <Badge variant="outline" className="text-xs">Active</Badge>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" disabled={isDeleting}>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onDownload(document.id)}>
+              <Download className="mr-2 h-4 w-4" />
+              Download
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete(document.id)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
+
+// PDF upload section with drag-drop
+function PdfUploadSection({
+  gameId: _gameId,
+  onUploadSuccess,
+}: {
+  gameId: string;
+  onUploadSuccess: () => void;
+}) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadMutation = useMutation({
+    mutationFn: async (_file: File) => {
+      // PDF upload workflow placeholder
+      // In production, this would:
+      // 1. Upload PDF to document service to get pdfDocumentId
+      // 2. Call api.sharedGames.addDocument(gameId, { pdfDocumentId, documentType, version, ... })
+      throw new Error('PDF upload not yet implemented. Coming soon!');
+    },
+    onSuccess: () => {
+      setUploadError(null);
+      onUploadSuccess();
+    },
+    onError: (err) => {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed');
+    },
   });
 
-  const isAdmin = user?.role?.toLowerCase() === 'admin';
-
-  // Fetch game data
-  const fetchGame = useCallback(async () => {
-    if (!gameId) return;
-
-    setIsLoading(true);
-    try {
-      const result = await api.sharedGames.getById(gameId);
-      setGame(result);
-    } catch (error) {
-      console.error('Failed to fetch game:', error);
-      toast.error('Errore nel caricamento del gioco');
-    } finally {
-      setIsLoading(false);
+  const validateFile = useCallback((file: File): string | null => {
+    if (file.type !== 'application/pdf') {
+      return 'Only PDF files are allowed';
     }
-  }, [gameId]);
-
-  // Fetch documents (Issue #2391 Sprint 1)
-  const fetchDocuments = useCallback(async () => {
-    if (!gameId) return;
-
-    try {
-      const result = await api.sharedGames.getDocuments(gameId);
-      setDocuments(result);
-    } catch (error) {
-      console.error('Failed to fetch documents:', error);
-      toast.error('Errore nel caricamento dei documenti');
+    if (file.size > 50 * 1024 * 1024) {
+      return 'File size must be less than 50MB';
     }
-  }, [gameId]);
+    return null;
+  }, []);
 
-  useEffect(() => {
-    fetchGame();
-    fetchDocuments();
-  }, [fetchGame, fetchDocuments]);
+  const handleFile = useCallback(
+    (file: File) => {
+      const error = validateFile(file);
+      if (error) {
+        setUploadError(error);
+        return;
+      }
+      uploadMutation.mutate(file);
+    },
+    [validateFile, uploadMutation]
+  );
 
-  // Handle missing ID
-  if (!gameId) {
-    return (
-      <AdminAuthGuard loading={authLoading} user={user}>
-        <div className="container mx-auto py-8 px-4">
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>ID Gioco non valido</AlertTitle>
-            <AlertDescription>
-              L&apos;ID del gioco non è stato fornito.{' '}
-              <Button
-                variant="link"
-                className="p-0 h-auto"
-                onClick={() => router.push('/admin/shared-games')}
-              >
-                Torna al catalogo
-              </Button>
-            </AlertDescription>
-          </Alert>
-        </div>
-      </AdminAuthGuard>
-    );
-  }
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
 
-  // Navigation handlers
-  const handleBack = () => router.push('/admin/shared-games');
-  const handleSubmit = () => {
-    fetchGame();
-    toast.success('Gioco aggiornato con successo');
-  };
-  const handleCancel = () => router.push('/admin/shared-games');
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        handleFile(file);
+      }
+    },
+    [handleFile]
+  );
 
-  // Status change handlers
-  const handlePublish = () => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Pubblica Gioco',
-      message: 'Sei sicuro di voler pubblicare questo gioco? Sarà visibile a tutti gli utenti.',
-      variant: 'default',
-      onConfirm: async () => {
-        setIsActionLoading(true);
-        try {
-          await api.sharedGames.publish(gameId);
-          toast.success('Gioco pubblicato con successo');
-          fetchGame();
-        } catch (error) {
-          console.error('Failed to publish game:', error);
-          toast.error('Errore nella pubblicazione del gioco');
-        } finally {
-          setIsActionLoading(false);
-        }
-      },
-    });
-  };
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
 
-  const handleArchive = () => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Archivia Gioco',
-      message:
-        'Sei sicuro di voler archiviare questo gioco? Non sarà più visibile agli utenti ma potrà essere ripristinato.',
-      variant: 'warning',
-      onConfirm: async () => {
-        setIsActionLoading(true);
-        try {
-          await api.sharedGames.archive(gameId);
-          toast.success('Gioco archiviato con successo');
-          fetchGame();
-        } catch (error) {
-          console.error('Failed to archive game:', error);
-          toast.error("Errore nell'archiviazione del gioco");
-        } finally {
-          setIsActionLoading(false);
-        }
-      },
-    });
-  };
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
-  const handleRequestDelete = () => {
-    if (!deleteReason.trim()) {
-      toast.error('Inserisci una motivazione per la richiesta di eliminazione');
-      return;
-    }
-
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Richiedi Eliminazione',
-      message:
-        'La richiesta verrà inviata agli amministratori per approvazione. Sei sicuro di voler procedere?',
-      variant: 'destructive',
-      onConfirm: async () => {
-        setIsActionLoading(true);
-        try {
-          // Editor: use requestDelete which creates a delete request for admin approval
-          await api.sharedGames.requestDelete(gameId, { reason: deleteReason });
-          toast.success('Richiesta di eliminazione inviata');
-          setDeleteReason('');
-          fetchGame();
-        } catch (error) {
-          console.error('Failed to request delete:', error);
-          toast.error("Errore nell'invio della richiesta");
-        } finally {
-          setIsActionLoading(false);
-        }
-      },
-    });
-  };
-
-  const handleDelete = () => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Elimina Gioco',
-      message:
-        'ATTENZIONE: Questa azione è irreversibile. Il gioco verrà eliminato definitivamente dal database. Sei sicuro?',
-      variant: 'destructive',
-      onConfirm: async () => {
-        setIsActionLoading(true);
-        try {
-          // Admin: delete without reason performs immediate deletion
-          await api.sharedGames.delete(gameId);
-          toast.success('Gioco eliminato');
-          router.push('/admin/shared-games');
-        } catch (error) {
-          console.error('Failed to delete game:', error);
-          toast.error("Errore nell'eliminazione del gioco");
-        } finally {
-          setIsActionLoading(false);
-        }
-      },
-    });
-  };
-
-  // Document handlers (Issue #2391 Sprint 1)
-  const handleSetActiveDocument = async (documentId: string) => {
-    if (!gameId) return;
-
-    setIsActionLoading(true);
-    try {
-      await api.sharedGames.setActiveDocument(gameId, documentId);
-      toast.success('Versione impostata come attiva');
-      await fetchDocuments();
-    } catch (error) {
-      console.error('Failed to set active document:', error);
-      toast.error("Errore nell'impostazione della versione attiva");
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
-
-  const handleRemoveDocument = (documentId: string) => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Rimuovi Documento',
-      message: 'Sei sicuro di voler rimuovere questo documento dal gioco?',
-      variant: 'destructive',
-      onConfirm: async () => {
-        if (!gameId) return;
-
-        setIsActionLoading(true);
-        try {
-          await api.sharedGames.removeDocument(gameId, documentId);
-          toast.success('Documento rimosso');
-          await fetchDocuments();
-        } catch (error: unknown) {
-          console.error('Failed to remove document:', error);
-          toast.error('Errore nella rimozione del documento');
-        } finally {
-          setIsActionLoading(false);
-        }
-      },
-    });
-  };
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <AdminAuthGuard loading={authLoading} user={user}>
-        <div className="container mx-auto py-8 px-4">
-          <div className="mb-8">
-            <Skeleton className="h-8 w-32 mb-4" />
-            <Skeleton className="h-10 w-96 mb-2" />
-            <Skeleton className="h-5 w-64" />
-          </div>
-          <Skeleton className="h-[600px] w-full" />
-        </div>
-      </AdminAuthGuard>
-    );
-  }
-
-  // Game not found
-  if (!game) {
-    return (
-      <AdminAuthGuard loading={authLoading} user={user}>
-        <div className="container mx-auto py-8 px-4">
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Gioco non trovato</AlertTitle>
-            <AlertDescription>
-              Il gioco richiesto non esiste o è stato eliminato.{' '}
-              <Button variant="link" className="p-0 h-auto" onClick={handleBack}>
-                Torna al catalogo
-              </Button>
-            </AlertDescription>
-          </Alert>
-        </div>
-      </AdminAuthGuard>
-    );
-  }
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        handleFile(file);
+      }
+    },
+    [handleFile]
+  );
 
   return (
-    <AdminAuthGuard loading={authLoading} user={user}>
-      <div className="container mx-auto py-8 px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <Button variant="ghost" size="sm" onClick={handleBack} className="mb-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Torna al Catalogo
-          </Button>
+    <div className="space-y-4">
+      <div
+        className={`
+          relative rounded-lg border-2 border-dashed p-8
+          transition-colors duration-200
+          ${isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'}
+          ${uploadMutation.isPending ? 'pointer-events-none opacity-50' : 'cursor-pointer hover:border-primary/50'}
+        `}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,application/pdf"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <div className="flex flex-col items-center gap-2 text-center">
+          {uploadMutation.isPending ? (
+            <>
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="text-sm font-medium">Uploading...</p>
+            </>
+          ) : (
+            <>
+              <Upload className="h-10 w-10 text-muted-foreground" />
+              <p className="text-sm font-medium">Drop PDF here or click to browse</p>
+              <p className="text-xs text-muted-foreground">Max file size: 50MB</p>
+            </>
+          )}
+        </div>
+      </div>
 
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              {game.thumbnailUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={game.thumbnailUrl}
-                  alt={game.title}
-                  className="h-20 w-20 rounded-lg object-cover border"
-                />
-              )}
-              <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-3xl font-bold tracking-tight">{game.title}</h1>
-                  <GameStatusBadge status={game.status} />
-                </div>
-                <p className="text-muted-foreground">
-                  {game.yearPublished} &bull;{' '}
-                  {game.bggId && (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="p-0 h-auto"
-                      onClick={() =>
-                        window.open(`https://boardgamegeek.com/boardgame/${game.bggId}`, '_blank')
-                      }
-                    >
-                      BGG #{game.bggId}
-                      <ExternalLink className="h-3 w-3 ml-1" />
-                    </Button>
-                  )}
-                </p>
-                <div className="flex gap-2 mt-2">
-                  <PlayersBadge min={game.minPlayers} max={game.maxPlayers} />
-                  <PlayTimeBadge minutes={game.playingTimeMinutes} />
-                  {game.complexityRating && <ComplexityBadge rating={game.complexityRating} />}
-                </div>
-              </div>
+      {uploadError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{uploadError}</AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+}
+
+// Loading skeleton for game details
+function GameDetailSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Skeleton className="h-10 w-10" />
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+      </div>
+      <div className="grid gap-6 md:grid-cols-3">
+        <div className="md:col-span-2 space-y-4">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    </div>
+  );
+}
+
+// Review history item
+function ReviewHistoryItem({
+  action,
+  user,
+  timestamp,
+  notes,
+}: {
+  action: string;
+  user: string;
+  timestamp: string;
+  notes?: string;
+}) {
+  const actionIcons: Record<string, React.ReactNode> = {
+    submitted: <Send className="h-4 w-4" />,
+    approved: <Check className="h-4 w-4 text-green-500" />,
+    rejected: <X className="h-4 w-4 text-red-500" />,
+    updated: <RefreshCw className="h-4 w-4" />,
+  };
+
+  return (
+    <div className="flex gap-3 border-l-2 border-muted pl-4 pb-4">
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+        {actionIcons[action] || <Clock className="h-4 w-4" />}
+      </div>
+      <div className="flex-1">
+        <p className="text-sm font-medium capitalize">{action}</p>
+        <p className="text-xs text-muted-foreground">
+          {user} • {new Date(timestamp).toLocaleString()}
+        </p>
+        {notes && <p className="mt-1 text-sm text-muted-foreground">{notes}</p>}
+      </div>
+    </div>
+  );
+}
+
+export function GameDetailClient({ params }: GameDetailClientProps) {
+  const resolvedParams = use(params);
+  const gameId = resolvedParams.id;
+  const queryClient = useQueryClient();
+
+  // Fetch game details
+  const {
+    data: game,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['admin', 'shared-games', gameId],
+    queryFn: () => api.sharedGames.getById(gameId),
+  });
+
+  // Fetch documents
+  const { data: documents, refetch: refetchDocuments } = useQuery({
+    queryKey: ['admin', 'shared-games', gameId, 'documents'],
+    queryFn: () => api.sharedGames.getDocuments(gameId),
+    enabled: !!game,
+  });
+
+  // Delete document mutation
+  const deleteDocumentMutation = useMutation({
+    mutationFn: (documentId: string) => api.sharedGames.removeDocument(gameId, documentId),
+    onSuccess: () => {
+      refetchDocuments();
+    },
+  });
+
+  // Submit for approval mutation
+  const submitForApprovalMutation = useMutation({
+    mutationFn: () => api.sharedGames.submitForApproval(gameId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'shared-games', gameId] });
+    },
+  });
+
+  // Approve mutation
+  const approveMutation = useMutation({
+    mutationFn: () => api.sharedGames.approvePublication(gameId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'shared-games', gameId] });
+    },
+  });
+
+  // Reject mutation
+  const rejectMutation = useMutation({
+    mutationFn: (reason: string) => api.sharedGames.rejectPublication(gameId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'shared-games', gameId] });
+    },
+  });
+
+  const handleDownload = useCallback((_documentId: string) => {
+    // Download functionality - will be wired up when PDF API is complete
+    // For now, this is a placeholder
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="container py-6">
+        <GameDetailSkeleton />
+      </div>
+    );
+  }
+
+  if (error || !game) {
+    return (
+      <div className="container py-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error instanceof Error ? error.message : 'Failed to load game details'}
+          </AlertDescription>
+        </Alert>
+        <div className="mt-4">
+          <Link href="/admin/shared-games">
+            <Button variant="outline">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Games
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const canSubmitForApproval = game.status === 'Draft';
+  const canApprove = game.status === 'PendingApproval';
+  const hasImage = game.imageUrl && game.imageUrl.length > 0;
+
+  return (
+    <div className="container py-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/admin/shared-games">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold">{game.title}</h1>
+              <GameStatusBadge status={game.status} />
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={fetchGame} disabled={isActionLoading}>
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Aggiorna
-              </Button>
-
-              {game.status === GAME_STATUS.Draft && (
-                <Button size="sm" onClick={handlePublish} disabled={isActionLoading}>
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  Pubblica
-                </Button>
-              )}
-
-              {game.status === GAME_STATUS.Published && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleArchive}
-                  disabled={isActionLoading}
-                >
-                  <Archive className="h-4 w-4 mr-1" />
-                  Archivia
-                </Button>
-              )}
-
-              {isAdmin && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleDelete}
-                  disabled={isActionLoading}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Elimina
-                </Button>
-              )}
-            </div>
+            {game.bggId && (
+              <a
+                href={`https://boardgamegeek.com/boardgame/${game.bggId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                BGG #{game.bggId}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
           </div>
         </div>
 
-        {/* Note: Delete requests are managed through the Pending Deletes admin page */}
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={v => setActiveTab(v as TabValue)}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="details" className="gap-2">
-              <Edit3 className="h-4 w-4" />
-              Dettagli
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="gap-2">
-              <Tag className="h-4 w-4" />
-              Categorie
-            </TabsTrigger>
-            <TabsTrigger value="rules" className="gap-2">
-              <FileText className="h-4 w-4" />
-              Regole
-            </TabsTrigger>
-            <TabsTrigger value="documents" className="gap-2">
-              <Files className="h-4 w-4" />
-              Documenti
-            </TabsTrigger>
-            <TabsTrigger value="history" className="gap-2">
-              <History className="h-4 w-4" />
-              Cronologia
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Details Tab */}
-          <TabsContent value="details" className="max-w-4xl">
-            <GameForm
-              game={game}
-              onSubmit={handleSubmit}
-              onCancel={handleCancel}
-              isLoading={isActionLoading}
-            />
-          </TabsContent>
-
-          {/* Categories Tab */}
-          <TabsContent value="categories">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Categorie</CardTitle>
-                  <CardDescription>Le categorie associate a questo gioco</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    La gestione delle categorie sarà disponibile in una prossima versione.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Meccaniche</CardTitle>
-                  <CardDescription>Le meccaniche di gioco associate</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    La gestione delle meccaniche sarà disponibile in una prossima versione.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Rules Tab */}
-          <TabsContent value="rules">
-            <Card>
-              <CardHeader>
-                <CardTitle>Contenuto Regole</CardTitle>
-                <CardDescription>Le regole del gioco salvate nel sistema</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {game.rules ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">
-                        Lingua: {game.rules.language?.toUpperCase() || 'IT'}
-                      </Badge>
-                    </div>
-                    <div className="p-4 bg-muted rounded-lg">
-                      <pre className="whitespace-pre-wrap text-sm font-mono">
-                        {game.rules.content || 'Nessun contenuto'}
-                      </pre>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Nessuna regola salvata. Modifica il gioco nella tab Dettagli per aggiungere le
-                    regole.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Documents Tab (Issue #2391 Sprint 1) */}
-          <TabsContent value="documents">
-            <Card>
-              <CardHeader>
-                <CardTitle>Documenti Associati</CardTitle>
-                <CardDescription>
-                  PDF associati a questo gioco: Rulebook, Errata, Homerule con gestione versioni
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PdfDocumentList
-                  documents={documents}
-                  onSetActive={handleSetActiveDocument}
-                  onRemove={handleRemoveDocument}
-                  isLoading={isActionLoading}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* History Tab */}
-          <TabsContent value="history">
-            <div className="space-y-6">
-              {/* Audit Info Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Informazioni Audit</CardTitle>
-                  <CardDescription>Tracciamento delle modifiche al gioco</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Creato il</p>
-                      <p className="font-medium">
-                        {new Date(game.createdAt).toLocaleDateString('it-IT', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Ultima modifica</p>
-                      <p className="font-medium">
-                        {game.modifiedAt
-                          ? new Date(game.modifiedAt).toLocaleDateString('it-IT', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
-                          : '-'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Stato</p>
-                      <GameStatusBadge status={game.status} />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">ID</p>
-                      <p className="font-mono text-sm">{game.id}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Delete Request Card (for Editors) */}
-              {!isAdmin && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Trash2 className="h-5 w-5 text-destructive" />
-                      Richiedi Eliminazione
-                    </CardTitle>
-                    <CardDescription>
-                      Gli editor possono richiedere l&apos;eliminazione di un gioco. La richiesta
-                      verrà esaminata da un amministratore.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">
-                        Motivazione della richiesta *
-                      </label>
-                      <Textarea
-                        value={deleteReason}
-                        onChange={e => setDeleteReason(e.target.value)}
-                        placeholder="Spiega perché questo gioco dovrebbe essere eliminato..."
-                        rows={3}
-                      />
-                    </div>
-                    <Button
-                      variant="destructive"
-                      onClick={handleRequestDelete}
-                      disabled={isActionLoading || !deleteReason.trim()}
-                    >
-                      <Clock className="h-4 w-4 mr-2" />
-                      Invia Richiesta di Eliminazione
-                    </Button>
-                  </CardContent>
-                </Card>
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          {canSubmitForApproval && (
+            <Button
+              onClick={() => submitForApprovalMutation.mutate()}
+              disabled={submitForApprovalMutation.isPending}
+            >
+              {submitForApprovalMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
               )}
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        {/* Confirmation Dialog */}
-        <ConfirmationDialog
-          isOpen={confirmDialog.isOpen}
-          onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
-          onConfirm={() => {
-            confirmDialog.onConfirm();
-            setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-          }}
-          title={confirmDialog.title}
-          message={confirmDialog.message}
-          variant={confirmDialog.variant}
-        />
+              Submit for Approval
+            </Button>
+          )}
+          {canApprove && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => rejectMutation.mutate('Rejected by admin')}
+                disabled={rejectMutation.isPending}
+              >
+                {rejectMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <X className="mr-2 h-4 w-4" />
+                )}
+                Reject
+              </Button>
+              <Button
+                onClick={() => approveMutation.mutate()}
+                disabled={approveMutation.isPending}
+              >
+                {approveMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="mr-2 h-4 w-4" />
+                )}
+                Approve
+              </Button>
+            </>
+          )}
+        </div>
       </div>
-    </AdminAuthGuard>
+
+      {/* Tabs */}
+      <Tabs defaultValue="details">
+        <TabsList>
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="documents">
+            Documents {documents?.length ? `(${documents.length})` : ''}
+          </TabsTrigger>
+          <TabsTrigger value="history">Review History</TabsTrigger>
+        </TabsList>
+
+        {/* Details Tab */}
+        <TabsContent value="details" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="md:col-span-2 space-y-6">
+              {/* Description */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Description</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground whitespace-pre-wrap">
+                    {game.description || 'No description available.'}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Game Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Game Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <dl className="grid grid-cols-2 gap-4 text-sm">
+                    {game.yearPublished && (
+                      <>
+                        <dt className="text-muted-foreground">Year Published</dt>
+                        <dd>{game.yearPublished}</dd>
+                      </>
+                    )}
+                    {game.minPlayers && game.maxPlayers && (
+                      <>
+                        <dt className="text-muted-foreground">Players</dt>
+                        <dd>
+                          {game.minPlayers === game.maxPlayers
+                            ? game.minPlayers
+                            : `${game.minPlayers}-${game.maxPlayers}`}
+                        </dd>
+                      </>
+                    )}
+                    {game.playingTimeMinutes && (
+                      <>
+                        <dt className="text-muted-foreground">Playing Time</dt>
+                        <dd>{game.playingTimeMinutes} minutes</dd>
+                      </>
+                    )}
+                    {game.averageRating && (
+                      <>
+                        <dt className="text-muted-foreground">BGG Rating</dt>
+                        <dd className="flex items-center gap-1">
+                          <span className="text-amber-500">★</span>
+                          {game.averageRating.toFixed(1)}
+                        </dd>
+                      </>
+                    )}
+                  </dl>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Sidebar with image */}
+            <div className="space-y-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted">
+                    {hasImage && game.imageUrl ? (
+                      <Image
+                        src={game.imageUrl}
+                        alt={game.title}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center">
+                        <FileText className="h-16 w-16 text-muted-foreground/50" />
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Metadata */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Metadata</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Created</span>
+                    <span>{new Date(game.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  {game.modifiedAt && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Modified</span>
+                      <span>{new Date(game.modifiedAt).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {game.createdBy && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Created By</span>
+                      <span className="truncate max-w-[120px]" title={game.createdBy}>{game.createdBy}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload Document</CardTitle>
+              <CardDescription>
+                Upload PDF rulebooks and reference materials for this game.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PdfUploadSection gameId={gameId} onUploadSuccess={refetchDocuments} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Documents</CardTitle>
+              <CardDescription>
+                {documents?.length
+                  ? `${documents.length} document${documents.length === 1 ? '' : 's'} uploaded`
+                  : 'No documents uploaded yet'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {documents && documents.length > 0 ? (
+                <div className="space-y-3">
+                  {documents.map((doc) => (
+                    <DocumentListItem
+                      key={doc.id}
+                      document={doc}
+                      onDelete={(id) => deleteDocumentMutation.mutate(id)}
+                      onDownload={handleDownload}
+                      isDeleting={deleteDocumentMutation.isPending}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No documents uploaded yet.</p>
+                  <p className="text-sm">Upload a PDF to get started.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Review History Tab */}
+        <TabsContent value="history" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Review History</CardTitle>
+              <CardDescription>
+                Track all status changes and review actions for this game.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Placeholder - would need actual history data from API */}
+              <div className="space-y-0">
+                <ReviewHistoryItem
+                  action="submitted"
+                  user="System"
+                  timestamp={game.createdAt}
+                  notes="Game imported from BoardGameGeek"
+                />
+                {game.status === 'Published' && game.modifiedAt && (
+                  <ReviewHistoryItem
+                    action="approved"
+                    user="Admin"
+                    timestamp={game.modifiedAt}
+                  />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

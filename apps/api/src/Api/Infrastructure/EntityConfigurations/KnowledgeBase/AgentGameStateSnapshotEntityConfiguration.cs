@@ -12,7 +12,8 @@ internal class AgentGameStateSnapshotEntityConfiguration : IEntityTypeConfigurat
 {
     public void Configure(EntityTypeBuilder<AgentGameStateSnapshotEntity> builder)
     {
-        builder.ToTable("game_state_snapshots");
+        // Issue #3547: Renamed to avoid conflict with GameManagement's game_state_snapshots
+        builder.ToTable("agent_game_state_snapshots");
 
         builder.HasKey(e => e.Id);
 
@@ -36,8 +37,9 @@ internal class AgentGameStateSnapshotEntityConfiguration : IEntityTypeConfigurat
             .IsRequired();
 
         // Vector embedding for position similarity search
-        builder.Property(e => e.Embedding)
-            .HasColumnType("vector(1536)");
+        // TEMPORARY: Commented out until pgvector migration is created (Issue #3533)
+        // builder.Property(e => e.Embedding)
+        //     .HasColumnType("vector(1536)");
 
         // Indexes for query performance
         builder.HasIndex(e => e.GameId);

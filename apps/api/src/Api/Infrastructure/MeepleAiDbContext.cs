@@ -11,6 +11,7 @@ using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Pgvector; // Issue #3547: Value converter for float[] → Vector mapping
 
 namespace Api.Infrastructure;
 
@@ -138,6 +139,9 @@ public class MeepleAiDbContext : DbContext
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
         base.OnModelCreating(modelBuilder);
+
+        // Issue #3547: Enable pgvector extension for embedding columns
+        modelBuilder.HasPostgresExtension("vector");
 
         // Apply all entity configurations from assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MeepleAiDbContext).Assembly);

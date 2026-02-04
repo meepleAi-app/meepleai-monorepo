@@ -60,6 +60,22 @@ internal class SharedGameDocumentEntityConfiguration : IEntityTypeConfiguration<
             .HasColumnName("created_by")
             .IsRequired();
 
+        // Approval workflow fields
+        builder.Property(e => e.ApprovalStatus)
+            .HasColumnName("approval_status")
+            .IsRequired()
+            .HasDefaultValue(0); // Pending
+
+        builder.Property(e => e.ApprovedBy)
+            .HasColumnName("approved_by");
+
+        builder.Property(e => e.ApprovedAt)
+            .HasColumnName("approved_at");
+
+        builder.Property(e => e.ApprovalNotes)
+            .HasColumnName("approval_notes")
+            .HasMaxLength(1000);
+
         // Indexes
         builder.HasIndex(e => e.SharedGameId)
             .HasDatabaseName("ix_shared_game_documents_shared_game_id");

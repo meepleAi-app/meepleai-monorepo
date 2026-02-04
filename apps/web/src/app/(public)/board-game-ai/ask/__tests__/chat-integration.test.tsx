@@ -8,7 +8,7 @@
  * 4. ChatInput: Keyboard shortcuts (Ctrl+Enter) → Character limit validation
  *
  * Pattern: Vitest + React Testing Library
- * Mocks: useChatQuery hook, API calls
+ * Mocks: useStreamingChat hook, API calls
  */
 
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
@@ -17,8 +17,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
 import BoardGameAskClient from '../BoardGameAskClient';
-import { useChatQuery } from '@/lib/hooks/useChatQuery';
-import type { Citation } from '@/types';
+import { useStreamingChat } from '@/lib/hooks/useStreamingChat';
+import type { Citation } from '@/lib/api/schemas/streaming.schemas';
 
 // Mock dependencies
 vi.mock('@/lib/api', () => ({
@@ -28,7 +28,7 @@ vi.mock('@/lib/api', () => ({
     },
   },
 }));
-vi.mock('@/lib/hooks/useChatQuery');
+vi.mock('@/lib/hooks/useStreamingChat');
 vi.mock('next/link', () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>
@@ -87,18 +87,23 @@ const mockCitations: Citation[] = [
   },
 ];
 
-const mockQueryState = {
-  state: null,
+// Mock state matching useStreamingChat interface (Issue #3373)
+const mockStreamState = {
+  isStreaming: false,
   currentAnswer: '',
-  snippets: [],
   citations: [],
+  stateMessage: '',
   confidence: null,
-  isLoading: false,
   error: null,
+  followUpQuestions: [],
+  totalTokens: 0,
+  estimatedReadingTimeMinutes: null,
 };
 
-const mockQueryControls = {
-  askQuestion: vi.fn().mockResolvedValue(undefined),
+// Mock controls matching useStreamingChat interface
+const mockStreamControls = {
+  startStreaming: vi.fn().mockResolvedValue(undefined),
+  stopStreaming: vi.fn(),
   reset: vi.fn(),
 };
 
@@ -107,7 +112,7 @@ describe('Chat Integration Tests - Issue #2307', () => {
     vi.clearAllMocks();
     const { api } = await import('@/lib/api');
     vi.mocked(api.games.getAll).mockResolvedValue(mockGames);
-    (useChatQuery as any).mockReturnValue([mockQueryState, mockQueryControls]);
+    (useStreamingChat as any).mockReturnValue([mockStreamState, mockStreamControls]);
   });
 
   // ============================================================================
@@ -119,19 +124,20 @@ describe('Chat Integration Tests - Issue #2307', () => {
       let capturedOnComplete: any;
 
       // Mock hook to simulate SSE streaming completion
-      (useChatQuery as any).mockImplementation((callbacks: any) => {
+      (useStreamingChat as any).mockImplementation((callbacks: any) => {
         capturedOnComplete = callbacks.onComplete;
         return [
-          mockQueryState,
+          mockStreamState,
           {
-            askQuestion: vi.fn().mockImplementation(async () => {
+            startStreaming: vi.fn().mockImplementation(async () => {
               // Simulate async response with citations
               capturedOnComplete(
                 'No, you cannot play a development card on the same turn you bought it.',
                 mockCitations,
-                { confidence: 0.93 }
+                0.93
               );
             }),
+            stopStreaming: vi.fn(),
             reset: vi.fn(),
           },
         ];
@@ -194,13 +200,13 @@ describe('Chat Integration Tests - Issue #2307', () => {
 
     it('should show loading states during SSE streaming', async () => {
       // Mock loading state during streaming
-      (useChatQuery as any).mockReturnValue([
+      (useStreamingChat as any).mockReturnValue([
         {
-          ...mockQueryState,
-          isLoading: true,
-          state: 'Searching knowledge base...',
+          ...mockStreamState,
+          isStreaming: true,
+          stateMessage: 'Searching knowledge base...',
         },
-        mockQueryControls,
+        mockStreamControls,
       ]);
 
       render(<BoardGameAskClient />);
@@ -232,18 +238,19 @@ describe('Chat Integration Tests - Issue #2307', () => {
       const user = userEvent.setup();
       let capturedOnComplete: any;
 
-      (useChatQuery as any).mockImplementation((callbacks: any) => {
+      (useStreamingChat as any).mockImplementation((callbacks: any) => {
         capturedOnComplete = callbacks.onComplete;
         return [
-          mockQueryState,
+          mockStreamState,
           {
-            askQuestion: vi.fn().mockImplementation(() => {
+            startStreaming: vi.fn().mockImplementation(() => {
               capturedOnComplete(
                 'Answer with multiple citations from different pages',
                 mockCitations,
-                { confidence: 0.95 }
+                0.95
               );
             }),
+            stopStreaming: vi.fn(),
             reset: vi.fn(),
           },
         ];
@@ -308,14 +315,15 @@ describe('Chat Integration Tests - Issue #2307', () => {
         },
       ];
 
-      (useChatQuery as any).mockImplementation((callbacks: any) => {
+      (useStreamingChat as any).mockImplementation((callbacks: any) => {
         capturedOnComplete = callbacks.onComplete;
         return [
-          mockQueryState,
+          mockStreamState,
           {
-            askQuestion: vi.fn().mockImplementation(() => {
-              capturedOnComplete('Answer text', incompleteCitations, { confidence: 0.7 });
+            startStreaming: vi.fn().mockImplementation(() => {
+              capturedOnComplete('Answer text', incompleteCitations, 0.7);
             }),
+            stopStreaming: vi.fn(),
             reset: vi.fn(),
           },
         ];
@@ -376,16 +384,17 @@ describe('Chat Integration Tests - Issue #2307', () => {
         },
       ];
 
-      (useChatQuery as any).mockImplementation((callbacks: any) => {
+      (useStreamingChat as any).mockImplementation((callbacks: any) => {
         onCompleteCallback = callbacks.onComplete;
         return [
-          mockQueryState,
+          mockStreamState,
           {
-            askQuestion: vi.fn().mockImplementation(() => {
+            startStreaming: vi.fn().mockImplementation(() => {
               const response = responses[callCount % responses.length];
-              onCompleteCallback(response.answer, response.citations, response.metadata);
+              onCompleteCallback(response.answer, response.citations, response.metadata.confidence);
               callCount++;
             }),
+            stopStreaming: vi.fn(),
             reset: vi.fn(),
           },
         ];
@@ -445,14 +454,15 @@ describe('Chat Integration Tests - Issue #2307', () => {
       const user = userEvent.setup();
       let onCompleteCallback: any;
 
-      (useChatQuery as any).mockImplementation((callbacks: any) => {
+      (useStreamingChat as any).mockImplementation((callbacks: any) => {
         onCompleteCallback = callbacks.onComplete;
         return [
-          mockQueryState,
+          mockStreamState,
           {
-            askQuestion: vi.fn().mockImplementation(() => {
-              onCompleteCallback('Short answer', [], { confidence: 0.8 });
+            startStreaming: vi.fn().mockImplementation(() => {
+              onCompleteCallback('Short answer', [], 0.8);
             }),
+            stopStreaming: vi.fn(),
             reset: vi.fn(),
           },
         ];
@@ -513,7 +523,7 @@ describe('Chat Integration Tests - Issue #2307', () => {
       await user.keyboard('{Control>}{Enter}{/Control}');
 
       await waitFor(() => {
-        expect(mockQueryControls.askQuestion).toHaveBeenCalledWith(
+        expect(mockStreamControls.startStreaming).toHaveBeenCalledWith(
           mockGames[0].id,
           'Test keyboard shortcut'
         );
@@ -543,7 +553,7 @@ describe('Chat Integration Tests - Issue #2307', () => {
       await user.keyboard('{Meta>}{Enter}{/Meta}');
 
       await waitFor(() => {
-        expect(mockQueryControls.askQuestion).toHaveBeenCalledWith(
+        expect(mockStreamControls.startStreaming).toHaveBeenCalledWith(
           mockGames[0].id,
           'Mac keyboard test'
         );
@@ -574,7 +584,7 @@ describe('Chat Integration Tests - Issue #2307', () => {
       });
 
       // Verify askQuestion was NOT called
-      expect(mockQueryControls.askQuestion).not.toHaveBeenCalled();
+      expect(mockStreamControls.startStreaming).not.toHaveBeenCalled();
     });
 
     it('should prevent submission of empty or whitespace-only questions', async () => {
@@ -597,7 +607,7 @@ describe('Chat Integration Tests - Issue #2307', () => {
       expect(submitButton).toBeDisabled();
 
       // Verify no submission occurred
-      expect(mockQueryControls.askQuestion).not.toHaveBeenCalled();
+      expect(mockStreamControls.startStreaming).not.toHaveBeenCalled();
     });
 
     it('should trim whitespace and submit valid question', async () => {
@@ -620,7 +630,7 @@ describe('Chat Integration Tests - Issue #2307', () => {
 
       // Verify trimmed question was submitted
       await waitFor(() => {
-        expect(mockQueryControls.askQuestion).toHaveBeenCalledWith(
+        expect(mockStreamControls.startStreaming).toHaveBeenCalledWith(
           mockGames[0].id,
           'Valid question with spaces'
         );
@@ -641,9 +651,9 @@ describe('Chat Integration Tests - Issue #2307', () => {
     });
 
     it('should disable input during loading to prevent duplicate submissions', async () => {
-      (useChatQuery as any).mockReturnValue([
-        { ...mockQueryState, isLoading: true },
-        mockQueryControls,
+      (useStreamingChat as any).mockReturnValue([
+        { ...mockStreamState, isStreaming: true },
+        mockStreamControls,
       ]);
 
       render(<BoardGameAskClient />);

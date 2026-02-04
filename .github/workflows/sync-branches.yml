@@ -53,7 +53,7 @@ Co-Authored-By: GitHub Actions <github-actions[bot]@users.noreply.github.com>"
         run: |
           echo "## ✅ Branch Sync Completed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**main** → **main-dev** sync successful" >> $GITHUB_STEP_SUMMARY
+          echo "**main** -> **main-dev** sync successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Commit**: \`$(git rev-parse --short HEAD)\`" >> $GITHUB_STEP_SUMMARY
           echo "**Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY

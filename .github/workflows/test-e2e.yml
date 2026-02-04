@@ -142,7 +142,7 @@ jobs:
           done
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
 
@@ -315,7 +315,7 @@ jobs:
 
       - name: Comment PR with Results
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const passRate = ${{ steps.metrics.outputs.pass_rate }};
@@ -429,7 +429,7 @@ jobs:
           done
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
 

@@ -139,7 +139,7 @@ jobs:
 
       - name: Comment PR with Chromatic Results
         if: github.event_name == 'pull_request' && steps.chromatic.outputs.url != ''
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           CHROMATIC_URL: ${{ steps.chromatic.outputs.url }}
           BUILD_URL: ${{ steps.chromatic.outputs.buildUrl }}
@@ -184,7 +184,7 @@ jobs:
     if: always() && github.event_name == 'pull_request'
     steps:
       - name: Generate Summary
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           PLAYWRIGHT_STATUS: ${{ needs.playwright-visual.result }}
           CHROMATIC_STATUS: ${{ needs.chromatic.result }}

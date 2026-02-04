@@ -39,6 +39,8 @@ export const libraryKeys = {
   stats: () => [...libraryKeys.all, 'stats'] as const,
   quota: () => [...libraryKeys.all, 'quota'] as const,
   gameStatus: (gameId: string) => [...libraryKeys.all, 'status', gameId] as const,
+  // Game detail key (Issue #3513)
+  gameDetail: (gameId: string) => [...libraryKeys.all, 'detail', gameId] as const,
   // Share link keys (Issue #2614)
   shareLink: () => [...libraryKeys.all, 'shareLink'] as const,
   sharedLibrary: (shareToken: string) => [...libraryKeys.all, 'shared', shareToken] as const,
@@ -630,5 +632,125 @@ export function useSharedLibrary(
     enabled: enabled && !!shareToken,
     staleTime: 2 * 60 * 1000, // Shared library can change (2min)
     retry: false, // Don't retry on 404 (invalid/expired token)
+  });
+}
+
+// ========================================
+// Library Game Detail Hook (Issue #3513)
+// ========================================
+
+/**
+ * Combined library game detail data
+ *
+ * Merges UserLibraryEntry (user-specific data) with SharedGameDetail (full game info)
+ */
+export interface LibraryGameDetail {
+  // Library-specific data
+  libraryEntryId: string;
+  userId: string;
+  gameId: string;
+  addedAt: string;
+  notes: string | null;
+  isFavorite: boolean;
+  currentState: string;
+  stateChangedAt: string | null;
+  stateNotes: string | null;
+  hasPdfDocuments: boolean;
+  // Basic game info from library entry
+  gameTitle: string;
+  gamePublisher: string | null;
+  gameYearPublished: number | null;
+  gameIconUrl: string | null;
+  gameImageUrl: string | null;
+  // Extended game info from SharedGame (optional, may not be loaded)
+  description?: string;
+  minPlayers?: number;
+  maxPlayers?: number;
+  playingTimeMinutes?: number;
+  minAge?: number;
+  complexityRating?: number | null;
+  averageRating?: number | null;
+  categories?: Array<{ id: string; name: string; slug: string }>;
+  mechanics?: Array<{ id: string; name: string; slug: string }>;
+  designers?: Array<{ id: string; name: string }>;
+  publishers?: Array<{ id: string; name: string }>;
+  bggId?: number | null;
+}
+
+/**
+ * Hook to fetch library game detail for Game Detail page (Issue #3513)
+ *
+ * This hook combines:
+ * 1. UserLibraryEntry - user-specific data (notes, favorite, state)
+ * 2. SharedGameDetail - full game information (categories, mechanics, designers)
+ *
+ * Uses parallel queries for optimal performance.
+ *
+ * @param gameId - Game UUID (same as SharedGame.id)
+ * @param enabled - Whether to run the query (default: true)
+ * @returns UseQueryResult with combined library game detail
+ */
+export function useLibraryGameDetail(
+  gameId: string,
+  enabled: boolean = true
+): UseQueryResult<LibraryGameDetail | null, Error> {
+  return useQuery({
+    queryKey: libraryKeys.gameDetail(gameId),
+    queryFn: async (): Promise<LibraryGameDetail | null> => {
+      // Fetch library entry and shared game detail in parallel
+      const [libraryResponse, sharedGame] = await Promise.all([
+        api.library.getLibrary({ page: 1, pageSize: 100 }),
+        api.sharedGames.getById(gameId),
+      ]);
+
+      // Find the library entry for this game
+      const libraryEntry = libraryResponse.items.find((item) => item.gameId === gameId);
+
+      if (!libraryEntry) {
+        // Game not in user's library
+        return null;
+      }
+
+      // Combine library entry with shared game detail
+      const result: LibraryGameDetail = {
+        // Library-specific data
+        libraryEntryId: libraryEntry.id,
+        userId: libraryEntry.userId,
+        gameId: libraryEntry.gameId,
+        addedAt: libraryEntry.addedAt,
+        notes: libraryEntry.notes ?? null,
+        isFavorite: libraryEntry.isFavorite,
+        currentState: libraryEntry.currentState,
+        stateChangedAt: libraryEntry.stateChangedAt ?? null,
+        stateNotes: libraryEntry.stateNotes ?? null,
+        hasPdfDocuments: libraryEntry.hasPdfDocuments,
+        // Basic game info from library entry
+        gameTitle: libraryEntry.gameTitle,
+        gamePublisher: libraryEntry.gamePublisher ?? null,
+        gameYearPublished: libraryEntry.gameYearPublished ?? null,
+        gameIconUrl: libraryEntry.gameIconUrl ?? null,
+        gameImageUrl: libraryEntry.gameImageUrl ?? null,
+      };
+
+      // Add extended info from SharedGame if available
+      if (sharedGame) {
+        result.description = sharedGame.description;
+        result.minPlayers = sharedGame.minPlayers;
+        result.maxPlayers = sharedGame.maxPlayers;
+        result.playingTimeMinutes = sharedGame.playingTimeMinutes;
+        result.minAge = sharedGame.minAge;
+        result.complexityRating = sharedGame.complexityRating;
+        result.averageRating = sharedGame.averageRating;
+        result.categories = sharedGame.categories;
+        result.mechanics = sharedGame.mechanics;
+        result.designers = sharedGame.designers;
+        result.publishers = sharedGame.publishers;
+        result.bggId = sharedGame.bggId;
+      }
+
+      return result;
+    },
+    enabled: enabled && !!gameId,
+    staleTime: 2 * 60 * 1000, // Library details can change (2min)
   });
 }

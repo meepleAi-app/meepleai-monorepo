@@ -272,3 +272,45 @@ export const GameDetailDtoSchema = z.object({
 });
 
 export type GameDetailDto = z.infer<typeof GameDetailDtoSchema>;
+
+// ========================================
+// Game Labels Schemas (Issue #3512)
+// ========================================
+
+/**
+ * Label DTO matching backend LabelDto contract.
+ * Labels can be predefined (system) or custom (user-created).
+ */
+export const LabelDtoSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().max(50),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Must be valid hex color'),
+  isPredefined: z.boolean(),
+  createdAt: z.string().datetime(),
+});
+
+export type LabelDto = z.infer<typeof LabelDtoSchema>;
+
+/**
+ * Request to create a custom label.
+ */
+export const CreateCustomLabelRequestSchema = z.object({
+  name: z.string().min(1).max(50),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Must be valid hex color'),
+});
+
+export type CreateCustomLabelRequest = z.infer<typeof CreateCustomLabelRequestSchema>;
+
+/**
+ * Predefined label constants matching backend PredefinedLabels.cs
+ */
+export const PREDEFINED_LABELS = {
+  FAMILY: { id: 'a1b2c3d4-1111-1111-1111-111111111111', name: 'Family', color: '#22c55e' },
+  STRATEGY: { id: 'a1b2c3d4-2222-2222-2222-222222222222', name: 'Strategy', color: '#3b82f6' },
+  PARTY: { id: 'a1b2c3d4-3333-3333-3333-333333333333', name: 'Party', color: '#f59e0b' },
+  COOPERATIVE: { id: 'a1b2c3d4-4444-4444-4444-444444444444', name: 'Cooperative', color: '#8b5cf6' },
+  SOLO: { id: 'a1b2c3d4-5555-5555-5555-555555555555', name: 'Solo', color: '#ec4899' },
+  FILLER: { id: 'a1b2c3d4-6666-6666-6666-666666666666', name: 'Filler', color: '#6b7280' },
+  CLASSIC: { id: 'a1b2c3d4-7777-7777-7777-777777777777', name: 'Classic', color: '#78716c' },
+  KIDS: { id: 'a1b2c3d4-8888-8888-8888-888888888888', name: 'Kids', color: '#14b8a6' },
+} as const;

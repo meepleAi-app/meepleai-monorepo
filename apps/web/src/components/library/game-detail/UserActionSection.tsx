@@ -1,10 +1,10 @@
 /**
- * UserActionSection Component (Issue #3513)
+ * UserActionSection Component (Issue #3513, #3514, #3515)
  *
  * Bottom section with user-specific actions and information:
  * - Collection status (Owned/Wishlist/etc.) with dropdown
  * - Favorite toggle
- * - Labels/tags
+ * - Labels/tags with API integration
  * - Play statistics (games played, last played, win rate)
  * - Notes section
  * - Remove from collection action
@@ -24,7 +24,6 @@ import {
   FileText,
   Loader2,
   Package,
-  Plus,
   Star,
   Trash2,
 } from 'lucide-react';
@@ -33,6 +32,7 @@ import { toast } from 'sonner';
 
 import { EditNotesModal } from '@/components/library/EditNotesModal';
 import { FavoriteToggle } from '@/components/library/FavoriteToggle';
+import { LabelBadge, LabelSelector } from '@/components/library/labels';
 import { RemoveGameDialog } from '@/components/library/RemoveGameDialog';
 import {
   DropdownMenu,
@@ -41,8 +41,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
 import { Button } from '@/components/ui/primitives/button';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import type { LibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useUpdateGameState } from '@/hooks/queries/useLibrary';
+import { useGameLabels, useRemoveLabelFromGame } from '@/hooks/queries/useLabels';
 import type { GameStateType } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';
 
@@ -78,21 +80,16 @@ const stateConfig: Record<GameStateType, { label: string; color: string; bgColor
   },
 };
 
-// Label configuration
-const predefinedLabels = [
-  { id: 'family', name: 'Family', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
-  { id: 'strategy', name: 'Strategy', color: 'bg-purple-500/20 text-purple-600 border-purple-500/30' },
-  { id: 'solo', name: 'Solo', color: 'bg-cyan-500/20 text-cyan-600 border-cyan-500/30' },
-  { id: 'party', name: 'Party', color: 'bg-amber-500/20 text-amber-600 border-amber-500/30' },
-];
-
 export function UserActionSection({ gameDetail }: UserActionSectionProps) {
   const router = useRouter();
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
-  const [activeLabels, setActiveLabels] = useState<string[]>([]);
 
   const updateGameState = useUpdateGameState();
+
+  // Fetch labels for this game (Issue #3514)
+  const { data: gameLabels = [], isLoading: isLoadingLabels } = useGameLabels(gameDetail.gameId);
+  const removeLabelMutation = useRemoveLabelFromGame();
 
   // Type-safe state validation
   const currentState: GameStateType = useMemo(() => {
@@ -129,10 +126,18 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
     }
   };
 
-  const handleLabelToggle = (labelId: string) => {
-    setActiveLabels((prev) =>
-      prev.includes(labelId) ? prev.filter((id) => id !== labelId) : [...prev, labelId]
-    );
+  const handleRemoveLabel = async (labelId: string) => {
+    try {
+      await removeLabelMutation.mutateAsync({
+        gameId: gameDetail.gameId,
+        labelId,
+      });
+      toast.success('Etichetta rimossa');
+    } catch (error) {
+      toast.error('Errore', {
+        description: "Impossibile rimuovere l'etichetta",
+      });
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -227,30 +232,35 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
           </Button>
         </div>
 
-        {/* Labels Row */}
+        {/* Labels Row (Issue #3514) */}
         <div className="mb-6 flex flex-wrap items-center gap-2 border-t border-[rgba(45,42,38,0.08)] pt-6">
           <span className="mr-2 font-nunito text-sm text-[#9C958A]">Etichette:</span>
 
-          {predefinedLabels.map((label) => (
-            <button
-              key={label.id}
-              onClick={() => handleLabelToggle(label.id)}
-              className={cn(
-                'inline-flex items-center rounded-full border px-3 py-1 font-nunito text-sm font-medium transition-all',
-                activeLabels.includes(label.id)
-                  ? label.color
-                  : 'border-[rgba(45,42,38,0.12)] bg-transparent text-[#9C958A] hover:border-[rgba(45,42,38,0.2)] hover:text-[#6B665C]'
-              )}
-            >
-              {label.name}
-            </button>
-          ))}
+          {isLoadingLabels ? (
+            <>
+              <Skeleton className="h-6 w-16 rounded-full" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-6 w-14 rounded-full" />
+            </>
+          ) : (
+            <>
+              {gameLabels.map((label) => (
+                <LabelBadge
+                  key={label.id}
+                  label={label}
+                  onRemove={handleRemoveLabel}
+                  disabled={removeLabelMutation.isPending}
+                />
+              ))}
+            </>
+          )}
 
-          {/* Add Label Button */}
-          <button className="inline-flex items-center gap-1 rounded-full bg-[rgba(45,42,38,0.04)] px-3 py-1 font-nunito text-sm font-medium text-[#6B665C] transition-colors hover:bg-[rgba(45,42,38,0.08)]">
-            <Plus className="h-3.5 w-3.5" />
-            Aggiungi
-          </button>
+          {/* Add Label Selector */}
+          <LabelSelector
+            gameId={gameDetail.gameId}
+            currentLabels={gameLabels}
+            disabled={isLoadingLabels}
+          />
         </div>
 
         {/* Stats Grid */}

@@ -144,6 +144,13 @@
 
 **[User Guides](10-user-guides/README.md)** - Admin and user documentation
 
+**Admin Guides**:
+- **[Shared Games Catalog Management](10-user-guides/admin-shared-games-management.md)** - BGG import, PDF workflows, approval queue
+- [Share Requests Admin Guide](10-user-guides/share-requests-admin-guide.md) - User share request management
+
+**User Guides**:
+- [Share Game Guide](10-user-guides/share-game-guide.md) - Contributing games to the catalog
+
 **Topics Covered**:
 - Administrator guides
 - End-user documentation
@@ -318,6 +325,6 @@ export async function askQuestion(
 
 ---
 
-**Version**: 1.4
-**Last Updated**: 2026-01-26
+**Version**: 1.5
+**Last Updated**: 2026-02-04
 **Maintainers**: Engineering Team

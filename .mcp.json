@@ -1,5 +1,13 @@
 {
   "mcpServers": {
+    "superdesign": {
+      "command": "npx",
+      "args": ["-y", "@jonthebeef/superdesign-mcp-claude-code"]
+    },
+    "figma": {
+      "type": "http",
+      "url": "https://mcp.figma.com/mcp"
+    },
     "github-project-manager": {
       "command": "docker",
       "args": ["exec", "-i", "mcp-github", "node", "/app/src/index.js"]

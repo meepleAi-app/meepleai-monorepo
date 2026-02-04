@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-object-injection -- Safe typed Record access with event type string keys */
+ 
 /**
  * UserActivityFilters Component - Issue #911
  *

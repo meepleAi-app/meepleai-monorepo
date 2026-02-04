@@ -166,7 +166,7 @@ export const NotificationItem = memo(function NotificationItem({
   className,
 }: NotificationItemProps) {
   const { type, title, body, status, isActionable, actions, createdAt, deepLink } = data;
-  // eslint-disable-next-line security/detect-object-injection -- type is from typed NotificationType union
+   
   const config = NOTIFICATION_CONFIG[type];
   const Icon = config.icon;
 

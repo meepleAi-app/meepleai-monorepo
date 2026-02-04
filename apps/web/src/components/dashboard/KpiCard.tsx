@@ -153,7 +153,7 @@ export function KpiCard({
   className,
   testId,
 }: KpiCardProps) {
-  // eslint-disable-next-line security/detect-object-injection -- iconColor is from typed ColorVariant union
+   
   const colors = colorVariants[iconColor];
 
   if (isLoading) {

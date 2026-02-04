@@ -53,7 +53,7 @@ export function ServiceHealthMatrix({
   if (loading) {
     const skeletonCount = 6; // Default skeleton count
     // Safe layout class access
-    // eslint-disable-next-line security/detect-object-injection -- layout is typed union of literal strings
+     
     const layoutClass = layout in layoutClasses ? layoutClasses[layout] : layoutClasses.auto;
     return (
       <div
@@ -100,7 +100,7 @@ export function ServiceHealthMatrix({
 
   // Main grid
   // Safe layout class access
-  // eslint-disable-next-line security/detect-object-injection -- layout is typed union of literal strings
+   
   const layoutClass = layout in layoutClasses ? layoutClasses[layout] : layoutClasses.auto;
   return (
     <div

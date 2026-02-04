@@ -16,6 +16,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 
+import { motion } from 'framer-motion';
 import {
   AlertCircle,
   ArrowLeft,
@@ -24,7 +25,6 @@ import {
   Users,
   Clock,
   Gauge,
-  Calendar,
   Tag,
   Cog,
   User as UserIcon,
@@ -33,7 +33,6 @@ import {
   BookOpen,
   Trash2,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';

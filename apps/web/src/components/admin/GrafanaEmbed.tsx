@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-object-injection -- Safe dashboard config Record access */
+ 
 'use client';
 
 import React, { useState, useEffect } from 'react';

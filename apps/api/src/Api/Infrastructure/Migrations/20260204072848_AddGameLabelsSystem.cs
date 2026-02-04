@@ -69,7 +69,7 @@ namespace Api.Infrastructure.Migrations
                 table: "game_labels",
                 column: "Name",
                 unique: true,
-                filter: "is_predefined = true");
+                filter: "\"IsPredefined\" = true");
 
             migrationBuilder.CreateIndex(
                 name: "IX_GameLabels_UserId",
@@ -81,7 +81,7 @@ namespace Api.Infrastructure.Migrations
                 table: "game_labels",
                 columns: new[] { "UserId", "Name" },
                 unique: true,
-                filter: "is_predefined = false");
+                filter: "\"IsPredefined\" = false");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserGameLabels_EntryId_LabelId",

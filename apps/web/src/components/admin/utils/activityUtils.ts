@@ -99,7 +99,7 @@ export function getActivityType(eventType: string): ActivityType {
     AlertResolved: 'system',
   };
 
-  // eslint-disable-next-line security/detect-object-injection -- Safe: accessing known mapping with string key, fallback provided
+   
   return eventToType[eventType] ?? 'system';
 }
 

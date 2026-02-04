@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-object-injection -- Safe badge count Record access */
+ 
 /**
  * AdminSidebar Component - Issue #881
  *

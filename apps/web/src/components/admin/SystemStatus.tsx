@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-object-injection -- Safe status config Record access */
+ 
 /**
  * SystemStatus Component - Issue #885
  *

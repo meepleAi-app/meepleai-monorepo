@@ -1,10 +1,14 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
+
 import { scrollToSection } from './hooks/useScrollSpy';
+
 import type { NavGroup } from './DashboardSidebar';
 
 export interface DashboardNavProps {

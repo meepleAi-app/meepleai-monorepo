@@ -156,7 +156,7 @@ export const ActivityItem = memo(function ActivityItem({
   className,
 }: ActivityItemProps) {
   const { type, title, timestamp, details, game, user } = data;
-  // eslint-disable-next-line security/detect-object-injection -- type is from typed ActivityType union
+   
   const config = ACTIVITY_CONFIG[type];
   const Icon = config.icon;
 

@@ -80,7 +80,8 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
             IsValid: true,
             User: userDto,
             ExpiresAt: session.ExpiresAt,
-            LastSeenAt: session.LastSeenAt
+            LastSeenAt: session.LastSeenAt,
+            SessionId: session.Id
         );
     }
 

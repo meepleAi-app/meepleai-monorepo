@@ -486,6 +486,7 @@ v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 v1Api.MapWorkflowEndpoints();          // n8n workflow integration
 v1Api.MapSessionEndpoints();           // Session management
+v1Api.MapDeviceEndpoints();            // Issue #3340: Device tracking and management
 v1Api.MapApiKeyEndpoints();            // API key management
 v1Api.MapCacheEndpoints();             // Cache management
 v1Api.MapAdminUserEndpoints();         // User management

@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   sync-dev:
-    name: Auto-Sync main → main-dev
+    name: Auto-Sync main to main-dev
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,9 +28,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Sync main → main-dev
+      - name: Sync main -> main-dev
         run: |
-          echo "🔄 Syncing main → main-dev after production release..."
+          echo "🔄 Syncing main -> main-dev after production release..."
 
           # Fetch latest changes
           git fetch origin main-dev

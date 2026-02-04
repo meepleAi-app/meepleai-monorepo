@@ -21,6 +21,8 @@ vi.mock('../../../lib/api', async (importOriginal) => {
       config: {
         updateConfiguration: vi.fn(),
         bulkUpdate: vi.fn(),
+        enableFeatureForTier: vi.fn(),
+        disableFeatureForTier: vi.fn(),
       },
     },
   };
@@ -371,8 +373,11 @@ describe('FeatureFlagsTab', () => {
       expect(screen.getByTestId('feature-flags-bulk-actions-action-disable-free')).toBeInTheDocument();
     });
 
-    it('shows info toast for bulk tier actions (pending backend #3073)', async () => {
+    it('calls enableFeatureForTier for bulk tier actions', async () => {
       const user = userEvent.setup();
+
+      // Mock successful API call
+      mockApi.config.enableFeatureForTier = vi.fn().mockResolvedValue({});
 
       render(
         <FeatureFlagsTab configurations={mockTierConfigurations} onConfigurationChange={mockOnChange} />
@@ -387,12 +392,8 @@ describe('FeatureFlagsTab', () => {
       await user.click(enablePremiumButton);
 
       await waitFor(() => {
-        // Bulk tier actions show info toast until backend #3073 is ready
-        expect(mockToast.info).toHaveBeenCalledWith(
-          expect.stringContaining('Backend support (#3073) required')
-        );
-        // API should NOT be called since tier updates aren't supported yet
-        expect(mockApi.config.bulkUpdate).not.toHaveBeenCalled();
+        // Backend #3073 is now implemented - API should be called
+        expect(mockApi.config.enableFeatureForTier).toHaveBeenCalled();
       });
     });
   });

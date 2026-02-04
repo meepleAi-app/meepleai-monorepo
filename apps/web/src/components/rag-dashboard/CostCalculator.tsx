@@ -16,10 +16,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-d
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
+import { MODEL_PRICING, STRATEGIES } from './rag-data';
+
 import type { CostProjection, RagStrategy } from './types';
 
 // =============================================================================
-// Cost Constants - Synced with rag-data.ts (Single Source of Truth)
+// Cost Constants - Derived from rag-data.ts (Single Source of Truth)
 // See: docs/03-api/rag/appendix/E-model-pricing-2026.md
 // =============================================================================
 
@@ -31,36 +33,37 @@ import type { CostProjection, RagStrategy } from './types';
  */
 
 /**
- * Strategy cost per 1M tokens (input/output).
- * Updated 2026-02-02 from appendix/E-model-pricing-2026.md
- *
- * FAST: Llama 3.3 70B (free via OpenRouter)
- * BALANCED: DeepSeek Chat ($0.28 input, $0.42 output)
- * PRECISE: Claude Opus 4.5 ($5 input, $25 output) + Sonnet + Haiku mix
- * EXPERT: Claude Sonnet 4.5 ($3 input, $15 output)
- * CONSENSUS: Mixed (Sonnet + GPT-4o + DeepSeek)
- * CUSTOM: Claude Haiku 4.5 ($1 input, $5 output)
+ * Get model pricing from Single Source of Truth
+ */
+function getModelPricing(modelId: string): { input: number; output: number } {
+  const model = MODEL_PRICING.find((m) => m.id === modelId);
+  if (!model) return { input: 0, output: 0 };
+  return { input: model.inputCost, output: model.outputCost };
+}
+
+/**
+ * Strategy cost derived from rag-data.ts MODEL_PRICING
+ * Uses primary model for each strategy
  */
 const STRATEGY_COSTS: Record<RagStrategy, { input: number; output: number }> = {
-  FAST: { input: 0, output: 0 }, // Free models (Llama 3.3)
-  BALANCED: { input: 0.28, output: 0.42 }, // DeepSeek Chat
+  FAST: getModelPricing('llama-3.3-70b'), // Free via OpenRouter
+  BALANCED: getModelPricing('deepseek-chat'), // DeepSeek Chat
   PRECISE: { input: 3, output: 15 }, // Weighted avg (Haiku + Sonnet + Opus)
-  EXPERT: { input: 3, output: 15 }, // Claude Sonnet 4.5
+  EXPERT: getModelPricing('claude-sonnet-4.5'), // Claude Sonnet 4.5
   CONSENSUS: { input: 2.5, output: 10 }, // Weighted avg (Sonnet + GPT-4o + DeepSeek)
-  CUSTOM: { input: 1, output: 5 }, // Claude Haiku 4.5
+  CUSTOM: getModelPricing('claude-haiku-4.5'), // Claude Haiku 4.5
 };
 
 /**
- * Base tokens per strategy.
- * Updated 2026-02-02 from rag-data.ts and appendix/F-calculation-formulas.md
+ * Base tokens per strategy - derived from STRATEGIES in rag-data.ts
  */
 const BASE_TOKENS: Record<RagStrategy, number> = {
-  FAST: 2060, // L1 + L2 + L3_FAST + L5 = 320 + 50 + 1500 + 200
-  BALANCED: 2820, // L1 + L2 + L3_BALANCED + L4_CRAG + L5
-  PRECISE: 22396, // Multi-agent with Self-RAG reflection
-  EXPERT: 15000, // Web search + multi-hop reasoning
-  CONSENSUS: 18000, // 3 voters × 4500 + aggregator
-  CUSTOM: 5000, // Variable, admin-configured
+  FAST: STRATEGIES.FAST.tokens,
+  BALANCED: STRATEGIES.BALANCED.tokens,
+  PRECISE: STRATEGIES.PRECISE.tokens,
+  EXPERT: STRATEGIES.EXPERT.tokens,
+  CONSENSUS: STRATEGIES.CONSENSUS.tokens,
+  CUSTOM: STRATEGIES.CUSTOM.tokens,
 };
 
 // =============================================================================

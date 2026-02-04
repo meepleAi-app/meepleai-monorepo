@@ -30,6 +30,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-d
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
+import { STRATEGIES } from './rag-data';
+
 import type { RagStrategy, QueryTemplate } from './types';
 
 // =============================================================================
@@ -263,13 +265,17 @@ A: No, if there is at least one adjacent settlement/city with a player who has c
   },
 ];
 
-const STRATEGY_CONFIGS: Record<RagStrategy, { label: string; icon: React.ReactNode; description: string }> = {
-  FAST: { label: 'FAST', icon: <Zap className="h-4 w-4" />, description: 'Quick response, minimal processing' },
-  BALANCED: { label: 'BALANCED', icon: <Scale className="h-4 w-4" />, description: 'CRAG evaluation, quality checks' },
-  PRECISE: { label: 'PRECISE', icon: <Target className="h-4 w-4" />, description: 'Multi-agent, full validation' },
-  EXPERT: { label: 'EXPERT', icon: <Zap className="h-4 w-4" />, description: 'Web search + multi-hop reasoning' },
-  CONSENSUS: { label: 'CONSENSUS', icon: <Scale className="h-4 w-4" />, description: '3-voter LLM consensus' },
-  CUSTOM: { label: 'CUSTOM', icon: <Target className="h-4 w-4" />, description: 'Admin-defined phases' },
+/**
+ * Strategy configuration for UI display.
+ * Uses STRATEGIES from rag-data.ts as Single Source of Truth for descriptions.
+ */
+const STRATEGY_UI_CONFIG: Record<RagStrategy, { label: string; icon: React.ReactNode; description: string }> = {
+  FAST: { label: 'FAST', icon: <Zap className="h-4 w-4" />, description: STRATEGIES.FAST.descriptionEn },
+  BALANCED: { label: 'BALANCED', icon: <Scale className="h-4 w-4" />, description: STRATEGIES.BALANCED.descriptionEn },
+  PRECISE: { label: 'PRECISE', icon: <Target className="h-4 w-4" />, description: STRATEGIES.PRECISE.descriptionEn },
+  EXPERT: { label: 'EXPERT', icon: <Zap className="h-4 w-4" />, description: STRATEGIES.EXPERT.descriptionEn },
+  CONSENSUS: { label: 'CONSENSUS', icon: <Scale className="h-4 w-4" />, description: STRATEGIES.CONSENSUS.descriptionEn },
+  CUSTOM: { label: 'CUSTOM', icon: <Target className="h-4 w-4" />, description: STRATEGIES.CUSTOM.descriptionEn },
 };
 
 // =============================================================================
@@ -504,7 +510,7 @@ ${template.outputFormat}
               </div>
               <div className="flex gap-2">
                 {(['FAST', 'BALANCED', 'PRECISE'] as RagStrategy[]).map(strategy => {
-                  const config = STRATEGY_CONFIGS[strategy];
+                  const config = STRATEGY_UI_CONFIG[strategy];
                   return (
                     <button
                       key={strategy}

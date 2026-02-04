@@ -147,18 +147,19 @@ describe('PromptTemplateBuilder', () => {
     it('should display strategy descriptions', () => {
       render(<PromptTemplateBuilder />);
 
-      expect(screen.getByText(/Quick response/i)).toBeInTheDocument();
-      expect(screen.getByText(/CRAG evaluation/i)).toBeInTheDocument();
-      expect(screen.getByText(/Multi-agent/i)).toBeInTheDocument();
+      // Descriptions from rag-data.ts Single Source of Truth
+      expect(screen.getByText(/Simple FAQs, quick responses/i)).toBeInTheDocument();
+      expect(screen.getByText(/Standard queries with CRAG validation/i)).toBeInTheDocument();
+      expect(screen.getByText(/Critical queries, multi-agent pipeline/i)).toBeInTheDocument();
     });
 
     it('should have BALANCED selected by default', () => {
       render(<PromptTemplateBuilder />);
 
-      // Find the BALANCED button in the strategy section
+      // Find the BALANCED button in the strategy section (description from rag-data.ts)
       const strategyButtons = screen.getAllByRole('button');
       const balancedButton = strategyButtons.find(
-        btn => btn.textContent?.includes('BALANCED') && btn.textContent?.includes('CRAG')
+        btn => btn.textContent?.includes('BALANCED') && btn.textContent?.includes('Standard queries')
       );
       expect(balancedButton).toHaveClass('border-primary');
     });

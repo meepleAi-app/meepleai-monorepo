@@ -20,9 +20,10 @@ from src.api import (
     HealthResponse,
     ErrorResponse,
 )
-from src.application import GameOrchestrator
+from src.application import GameOrchestrator, IntentClassifier
 from src.config import settings
 from src.domain import GameAgentState, Message
+from src.infrastructure import IntentCache
 
 # Configure logging
 logging.basicConfig(
@@ -31,8 +32,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Global orchestrator instance
+# Global instances
 orchestrator: GameOrchestrator
+intent_cache: IntentCache
 
 
 # Metrics (simple in-memory counters for Prometheus)
@@ -48,20 +50,30 @@ metrics = {
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan manager."""
-    global orchestrator
+    global orchestrator, intent_cache
 
     logger.info("🚀 Starting MeepleAI Orchestration Service")
     logger.info(f"Config: LangGraph timeout={settings.langgraph_timeout}s, max_depth={settings.max_workflow_depth}")
 
     try:
-        # Initialize LangGraph orchestrator
-        orchestrator = GameOrchestrator()
+        # Initialize Redis cache for intent classification (ISSUE-3496)
+        intent_cache = IntentCache()
+        await intent_cache.connect()
+
+        # Initialize intent classifier with Redis cache
+        intent_classifier = IntentClassifier(redis_cache=intent_cache)
+        logger.info("✅ Intent classifier initialized with Redis cache")
+
+        # Initialize LangGraph orchestrator with intent classifier
+        orchestrator = GameOrchestrator(intent_classifier=intent_classifier)
         logger.info("✅ LangGraph orchestrator initialized successfully")
 
         yield
 
     finally:
         logger.info("🛑 Shutting down MeepleAI Orchestration Service")
+        if intent_cache:
+            await intent_cache.disconnect()
 
 
 # Create FastAPI app

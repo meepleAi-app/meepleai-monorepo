@@ -520,4 +520,151 @@ describe('LibraryClient - Issue #3026', () => {
       });
     });
   });
+
+  describe('Game Labels (Issue #3512)', () => {
+    const mockLabel = {
+      id: 'label-123',
+      name: 'Strategy',
+      color: '#3b82f6',
+      isPredefined: true,
+      createdAt: '2024-01-15T10:00:00Z',
+    };
+
+    const mockCustomLabel = {
+      id: 'label-456',
+      name: 'My Custom',
+      color: '#22c55e',
+      isPredefined: false,
+      createdAt: '2024-01-16T10:00:00Z',
+    };
+
+    describe('getLabels', () => {
+      it('should fetch all available labels', async () => {
+        const mockLabels = [mockLabel, mockCustomLabel];
+        vi.mocked(mockHttpClient.get).mockResolvedValue(mockLabels);
+
+        const client = createLibraryClient({ httpClient: mockHttpClient });
+        const result = await client.getLabels();
+
+        expect(result).toEqual(mockLabels);
+        expect(mockHttpClient.get).toHaveBeenCalledWith(
+          '/api/v1/library/labels',
+          expect.any(Object)
+        );
+      });
+
+      it('should return empty array when no labels', async () => {
+        vi.mocked(mockHttpClient.get).mockResolvedValue(null);
+
+        const client = createLibraryClient({ httpClient: mockHttpClient });
+        const result = await client.getLabels();
+
+        expect(result).toEqual([]);
+      });
+    });
+
+    describe('getGameLabels', () => {
+      it('should fetch labels for specific game', async () => {
+        const mockLabels = [mockLabel];
+        vi.mocked(mockHttpClient.get).mockResolvedValue(mockLabels);
+
+        const client = createLibraryClient({ httpClient: mockHttpClient });
+        const result = await client.getGameLabels('game-456');
+
+        expect(result).toEqual(mockLabels);
+        expect(mockHttpClient.get).toHaveBeenCalledWith(
+          '/api/v1/library/games/game-456/labels',
+          expect.any(Object)
+        );
+      });
+
+      it('should return empty array when game has no labels', async () => {
+        vi.mocked(mockHttpClient.get).mockResolvedValue(null);
+
+        const client = createLibraryClient({ httpClient: mockHttpClient });
+        const result = await client.getGameLabels('game-456');
+
+        expect(result).toEqual([]);
+      });
+    });
+
+    describe('addLabelToGame', () => {
+      it('should add label to game', async () => {
+        vi.mocked(mockHttpClient.post).mockResolvedValue(mockLabel);
+
+        const client = createLibraryClient({ httpClient: mockHttpClient });
+        const result = await client.addLabelToGame('game-456', 'label-123');
+
+        expect(result).toEqual(mockLabel);
+        expect(mockHttpClient.post).toHaveBeenCalledWith(
+          '/api/v1/library/games/game-456/labels/label-123',
+          {},
+          expect.any(Object)
+        );
+      });
+
+      it('should throw error when add fails', async () => {
+        vi.mocked(mockHttpClient.post).mockResolvedValue(null);
+
+        const client = createLibraryClient({ httpClient: mockHttpClient });
+
+        await expect(client.addLabelToGame('game-456', 'label-123')).rejects.toThrow(
+          'Failed to add label to game'
+        );
+      });
+    });
+
+    describe('removeLabelFromGame', () => {
+      it('should remove label from game', async () => {
+        vi.mocked(mockHttpClient.delete).mockResolvedValue(undefined);
+
+        const client = createLibraryClient({ httpClient: mockHttpClient });
+        await client.removeLabelFromGame('game-456', 'label-123');
+
+        expect(mockHttpClient.delete).toHaveBeenCalledWith(
+          '/api/v1/library/games/game-456/labels/label-123'
+        );
+      });
+    });
+
+    describe('createCustomLabel', () => {
+      it('should create custom label', async () => {
+        vi.mocked(mockHttpClient.post).mockResolvedValue(mockCustomLabel);
+
+        const client = createLibraryClient({ httpClient: mockHttpClient });
+        const result = await client.createCustomLabel({
+          name: 'My Custom',
+          color: '#22c55e',
+        });
+
+        expect(result).toEqual(mockCustomLabel);
+        expect(mockHttpClient.post).toHaveBeenCalledWith(
+          '/api/v1/library/labels',
+          { name: 'My Custom', color: '#22c55e' },
+          expect.any(Object)
+        );
+      });
+
+      it('should throw error when creation fails', async () => {
+        vi.mocked(mockHttpClient.post).mockResolvedValue(null);
+
+        const client = createLibraryClient({ httpClient: mockHttpClient });
+
+        await expect(
+          client.createCustomLabel({ name: 'Test', color: '#ff0000' })
+        ).rejects.toThrow('Failed to create custom label');
+      });
+    });
+
+    describe('deleteCustomLabel', () => {
+      it('should delete custom label', async () => {
+        vi.mocked(mockHttpClient.delete).mockResolvedValue(undefined);
+
+        const client = createLibraryClient({ httpClient: mockHttpClient });
+        await client.deleteCustomLabel('label-456');
+
+        expect(mockHttpClient.delete).toHaveBeenCalledWith('/api/v1/library/labels/label-456');
+      });
+    });
+  });
 });

@@ -25,6 +25,7 @@ import {
   LibraryShareLinkSchema,
   SharedLibrarySchema,
   GameDetailDtoSchema,
+  LabelDtoSchema,
   type PaginatedLibraryResponse,
   type UserLibraryStats,
   type UserLibraryEntry,
@@ -39,6 +40,8 @@ import {
   type UpdateLibraryShareLinkRequest,
   type SharedLibrary,
   type GameDetailDto,
+  type LabelDto,
+  type CreateCustomLabelRequest,
 } from '../schemas/library.schemas';
 
 
@@ -70,6 +73,13 @@ export interface LibraryClient {
   updateShareLink(shareToken: string, request: UpdateLibraryShareLinkRequest): Promise<LibraryShareLink>;
   revokeShareLink(shareToken: string): Promise<void>;
   getSharedLibrary(shareToken: string): Promise<SharedLibrary | null>;
+  // Game Labels (Issue #3512)
+  getLabels(): Promise<LabelDto[]>;
+  getGameLabels(gameId: string): Promise<LabelDto[]>;
+  addLabelToGame(gameId: string, labelId: string): Promise<LabelDto>;
+  removeLabelFromGame(gameId: string, labelId: string): Promise<void>;
+  createCustomLabel(request: CreateCustomLabelRequest): Promise<LabelDto>;
+  deleteCustomLabel(labelId: string): Promise<void>;
 }
 
 /**
@@ -377,6 +387,87 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
         `/api/v1/library/shared/${shareToken}`,
         SharedLibrarySchema
       );
+    },
+
+    // ========================================
+    // Game Labels Methods (Issue #3512)
+    // ========================================
+
+    /**
+     * Get all available labels (predefined + user custom)
+     * @returns Array of label DTOs
+     */
+    async getLabels(): Promise<LabelDto[]> {
+      const data = await httpClient.get<LabelDto[]>(
+        '/api/v1/library/labels',
+        z.array(LabelDtoSchema)
+      );
+      return data ?? [];
+    },
+
+    /**
+     * Get labels assigned to a specific game
+     * @param gameId - Game UUID in user's library
+     * @returns Array of labels assigned to the game
+     */
+    async getGameLabels(gameId: string): Promise<LabelDto[]> {
+      const data = await httpClient.get<LabelDto[]>(
+        `/api/v1/library/games/${gameId}/labels`,
+        z.array(LabelDtoSchema)
+      );
+      return data ?? [];
+    },
+
+    /**
+     * Add a label to a game in user's library
+     * @param gameId - Game UUID
+     * @param labelId - Label UUID (predefined or custom)
+     * @returns The added label DTO
+     */
+    async addLabelToGame(gameId: string, labelId: string): Promise<LabelDto> {
+      const data = await httpClient.post<LabelDto>(
+        `/api/v1/library/games/${gameId}/labels/${labelId}`,
+        {},
+        LabelDtoSchema
+      );
+      if (!data) {
+        throw new Error('Failed to add label to game');
+      }
+      return data;
+    },
+
+    /**
+     * Remove a label from a game in user's library
+     * @param gameId - Game UUID
+     * @param labelId - Label UUID to remove
+     */
+    async removeLabelFromGame(gameId: string, labelId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/library/games/${gameId}/labels/${labelId}`);
+    },
+
+    /**
+     * Create a custom label for the user
+     * @param request - Label name and color
+     * @returns Created label DTO
+     */
+    async createCustomLabel(request: CreateCustomLabelRequest): Promise<LabelDto> {
+      const data = await httpClient.post<LabelDto>(
+        '/api/v1/library/labels',
+        request,
+        LabelDtoSchema
+      );
+      if (!data) {
+        throw new Error('Failed to create custom label');
+      }
+      return data;
+    },
+
+    /**
+     * Delete a custom label
+     * @param labelId - Label UUID (must be user's custom label, not predefined)
+     */
+    async deleteCustomLabel(labelId: string): Promise<void> {
+      await httpClient.delete(`/api/v1/library/labels/${labelId}`);
     },
   };
 }

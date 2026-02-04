@@ -1,114 +1,106 @@
 'use client';
 
 /**
- * RagDashboard Component
+ * RagDashboard Component - Compact Tabbed Layout
  *
- * Main dashboard component assembling all RAG visualization sections.
- * Features dual-audience view switching (Technical/Business) and
- * User Journey navigation pattern.
+ * Consolidated dashboard with tabbed navigation to reduce page length.
+ * All 12+ sections grouped into 5 main tabs.
  *
- * Aesthetic: "Neural Gaming Interface" - sci-fi command center meets data visualization
+ * Aesthetic: "Neural Command Center" - compact, efficient, sci-fi
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState } from 'react';
 
-import { motion } from 'framer-motion';
-import { Dices, Code2, Briefcase, BookOpen, GitBranch, ExternalLink, RotateCcw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Dices,
+  Code2,
+  Briefcase,
+  BookOpen,
+  GitBranch,
+  Zap,
+  Bot,
+  Cpu,
+  LineChart,
+  Workflow,
+  ChevronRight,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
 
 import { AgentRagIntegration } from './AgentRagIntegration';
 import { AgentRoleConfigurator } from './AgentRoleConfigurator';
 import { ArchitectureExplorer } from './ArchitectureExplorer';
-import { Breadcrumbs } from './Breadcrumbs';
 import { CostCalculator } from './CostCalculator';
-import { DashboardNav } from './DashboardNav';
-import { DashboardSidebar } from './DashboardSidebar';
 import { DecisionWalkthrough } from './DecisionWalkthrough';
-import { GlobalSearch } from './GlobalSearch';
-import { useAccordionState } from './hooks/useAccordionState';
-import { useScrollSpy } from './hooks/useScrollSpy';
-import { ScrollProgressBar } from './ScrollProgressBar';
 import { LayerDeepDocs } from './LayerDeepDocs';
 import { ModelSelectionOptimizer } from './ModelSelectionOptimizer';
+import { ParameterGuide } from './ParameterGuide';
 import { PerformanceMetricsTable } from './PerformanceMetricsTable';
+import { PocStatus } from './PocStatus';
 import { PromptTemplateBuilder } from './PromptTemplateBuilder';
 import { QuerySimulator } from './QuerySimulator';
 import { METRICS } from './rag-data';
-import { AccordionSection, SectionGroup } from './SectionGroup';
 import { StatsGrid } from './StatsGrid';
+import { TechnicalReference } from './TechnicalReference';
 import { TokenFlowVisualizer } from './TokenFlowVisualizer';
 import { DEFAULT_STATS } from './types';
 import { VariantComparisonTool } from './VariantComparisonTool';
 
-import type { NavGroup } from './DashboardSidebar';
 import type { ViewMode } from './types';
 
 import './rag-dashboard.css';
 
 // =============================================================================
-// Navigation Configuration
+// Types
 // =============================================================================
 
-export const NAVIGATION_GROUPS: NavGroup[] = [
+type TechnicalTab = 'overview' | 'architecture' | 'agents' | 'performance' | 'walkthrough';
+
+interface TabConfig {
+  id: TechnicalTab;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+}
+
+// =============================================================================
+// Tab Configuration
+// =============================================================================
+
+const TECHNICAL_TABS: TabConfig[] = [
   {
-    id: 'understand',
-    label: 'Understand',
-    icon: '🎓',
-    description: 'Learn how TOMAC-RAG works',
-    sections: [
-      { id: 'overview', label: 'System Overview' },
-      { id: 'architecture', label: 'Architecture' },
-      { id: 'layers', label: 'Layer Documentation' },
-    ],
+    id: 'overview',
+    label: 'Overview',
+    icon: <Zap className="h-4 w-4" />,
+    description: 'POC Status, Stats, Query Simulator',
   },
   {
-    id: 'explore',
-    label: 'Explore',
-    icon: '🔍',
-    description: 'Test and visualize the system',
-    sections: [
-      { id: 'query-sim', label: 'Query Simulator' },
-      { id: 'token-flow', label: 'Token Flow' },
-      { id: 'walkthrough', label: 'Decision Walkthrough' },
-    ],
+    id: 'architecture',
+    label: 'Architecture',
+    icon: <Cpu className="h-4 w-4" />,
+    description: 'System Design, Layers, Technical Reference',
   },
   {
-    id: 'compare',
-    label: 'Compare',
-    icon: '⚖️',
-    description: 'Compare strategies and performance',
-    sections: [
-      { id: 'variants', label: '31 RAG Variants' },
-      { id: 'performance', label: 'Performance Metrics' },
-    ],
+    id: 'agents',
+    label: 'Agents & Prompts',
+    icon: <Bot className="h-4 w-4" />,
+    description: 'Agent Integration, Roles, Prompt Builder',
   },
   {
-    id: 'build',
-    label: 'Build',
-    icon: '🔨',
-    description: 'Tools for implementation',
-    sections: [
-      { id: 'prompts', label: 'Prompt Builder' },
-      { id: 'roles', label: 'Agent Roles' },
-      { id: 'agent-integration', label: 'Agent Integration' },
-    ],
+    id: 'performance',
+    label: 'Cost & Metrics',
+    icon: <LineChart className="h-4 w-4" />,
+    description: 'Cost Calculator, Model Selection, Variants',
   },
   {
-    id: 'optimize',
-    label: 'Optimize',
-    icon: '💰',
-    description: 'Cost and model optimization',
-    sections: [
-      { id: 'cost', label: 'Cost Calculator' },
-      { id: 'model-optimizer', label: 'Model Selection' },
-    ],
+    id: 'walkthrough',
+    label: 'Walkthrough',
+    icon: <Workflow className="h-4 w-4" />,
+    description: 'Decision Flow Visualization',
   },
 ];
-
-// Get all section IDs for scroll spy
-const getAllSectionIds = (groups: NavGroup[]): string[] =>
-  groups.flatMap((g) => g.sections.map((s) => s.id));
 
 // =============================================================================
 // View Mode Toggle
@@ -143,83 +135,56 @@ function ViewToggle({ mode, onChange }: ViewToggleProps) {
 }
 
 // =============================================================================
-// Header Section
+// Compact Header
 // =============================================================================
 
 interface HeaderProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
-  onResetAccordion?: () => void;
-  onOpenSection?: (sectionId: string) => void;
 }
 
-function DashboardHeader({ viewMode, onViewModeChange, onResetAccordion, onOpenSection }: HeaderProps) {
+function DashboardHeader({ viewMode, onViewModeChange }: HeaderProps) {
   return (
     <motion.header
-      className="relative overflow-hidden"
+      className="relative overflow-hidden border-b border-border/50"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.4 }}
     >
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-purple-500/10 to-orange-500/10" />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/80" />
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-purple-500/5 to-orange-500/5" />
 
-      <div className="relative z-10 px-6 py-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          {/* Title */}
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl" />
-              <div className="relative rounded-2xl bg-gradient-to-br from-primary to-purple-600 p-3">
-                <Dices className="h-8 w-8 text-white" />
-              </div>
+      <div className="relative z-10 py-4 px-6">
+        <div className="flex items-center justify-between gap-4">
+          {/* Title - Compact */}
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-primary to-purple-600 p-2 rounded-xl">
+              <Dices className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="font-quicksand text-2xl font-bold md:text-3xl">
-                <span className="text-foreground">MeepleAI</span>{' '}
+              <h1 className="text-xl font-bold font-quicksand flex items-center gap-2">
+                <span className="text-foreground">MeepleAI</span>
                 <span className="bg-gradient-to-r from-primary via-purple-500 to-orange-500 bg-clip-text text-transparent">
-                  RAG Strategy Dashboard
+                  RAG Dashboard
                 </span>
               </h1>
-              <p className="mt-1 text-muted-foreground">
-                Token-Optimized Modular Adaptive Corrective RAG (TOMAC-RAG)
-              </p>
+              <p className="text-xs text-muted-foreground">TOMAC-RAG System</p>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-4">
-            {/* Global Search */}
-            <GlobalSearch
-              viewMode={viewMode}
-              onOpenSection={onOpenSection}
-            />
-
+          <div className="flex items-center gap-3">
             <ViewToggle mode={viewMode} onChange={onViewModeChange} />
 
-            <div className="hidden items-center gap-2 md:flex">
-              {onResetAccordion && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onResetAccordion}
-                  title="Reset section collapse state"
-                >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Reset
-                </Button>
-              )}
-              <Button variant="outline" size="sm" asChild>
+            <div className="hidden md:flex items-center gap-2">
+              <Button variant="ghost" size="sm" asChild>
                 <a href="/docs/03-api/rag/README.md" target="_blank">
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  Docs
+                  <BookOpen className="h-4 w-4" />
                 </a>
               </Button>
-              <Button variant="outline" size="sm" asChild>
+              <Button variant="ghost" size="sm" asChild>
                 <a href="https://github.com/meepleai" target="_blank" rel="noopener noreferrer">
-                  <GitBranch className="mr-2 h-4 w-4" />
-                  Source
+                  <GitBranch className="h-4 w-4" />
                 </a>
               </Button>
             </div>
@@ -231,168 +196,311 @@ function DashboardHeader({ viewMode, onViewModeChange, onResetAccordion, onOpenS
 }
 
 // =============================================================================
-// Default Open Sections (First section of each group)
+// Tab Navigation Sidebar
 // =============================================================================
 
-// Default open sections: first section of each group for good UX
-// These are open by default when the page loads (or localStorage is empty)
-const DEFAULT_OPEN_SECTIONS = [
-  // UNDERSTAND group
-  'overview',
-  'architecture',
-  'layers',
-  // EXPLORE group
-  'query-sim',
-  'token-flow',
-  'walkthrough',
-  // COMPARE group
-  'variants',
-  'performance',
-  // BUILD group
-  'prompts',
-  'roles',
-  'agent-integration',
-  // OPTIMIZE group
-  'cost',
-  'model-optimizer',
-  // BUSINESS view
-  'executive-summary',
-];
+interface TabNavProps {
+  activeTab: TechnicalTab;
+  onTabChange: (tab: TechnicalTab) => void;
+}
+
+function TabNavSidebar({ activeTab, onTabChange }: TabNavProps) {
+  return (
+    <nav className="hidden lg:block w-56 shrink-0 border-r border-border/50 pr-4">
+      <div className="sticky top-4 space-y-1">
+        {TECHNICAL_TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all',
+              'hover:bg-muted/50',
+              activeTab === tab.id
+                ? 'bg-primary/10 text-primary border-l-2 border-primary'
+                : 'text-muted-foreground'
+            )}
+          >
+            <span
+              className={cn(
+                'p-1.5 rounded-md',
+                activeTab === tab.id ? 'bg-primary/20' : 'bg-muted/50'
+              )}
+            >
+              {tab.icon}
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm">{tab.label}</div>
+              <div className="text-xs text-muted-foreground truncate">{tab.description}</div>
+            </div>
+            {activeTab === tab.id && <ChevronRight className="h-4 w-4 text-primary" />}
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+}
 
 // =============================================================================
-// Section Wrapper with Accordion Support
+// Mobile Tab Bar
+// =============================================================================
+
+interface MobileTabBarProps {
+  activeTab: TechnicalTab;
+  onTabChange: (tab: TechnicalTab) => void;
+}
+
+function MobileTabBar({ activeTab, onTabChange }: MobileTabBarProps) {
+  return (
+    <div className="lg:hidden overflow-x-auto pb-2 mb-4 -mx-4 px-4">
+      <div className="flex gap-2 min-w-max">
+        {TECHNICAL_TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all',
+              activeTab === tab.id
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+            )}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// Section Wrapper (Simplified)
 // =============================================================================
 
 interface SectionProps {
-  id: string;
   title: string;
   description?: string;
-  icon?: React.ReactNode;
   children: React.ReactNode;
-  /** Whether this section uses accordion behavior */
-  accordion?: boolean;
-  /** Whether the section is open (for accordion mode) */
-  isOpen?: boolean;
-  /** Toggle callback (for accordion mode) */
-  onToggle?: () => void;
+  className?: string;
 }
 
-function Section({
-  id,
-  title,
-  description,
-  icon,
-  children,
-  accordion = false,
-  isOpen = true,
-  onToggle,
-}: SectionProps) {
-  // Accordion mode - use AccordionSection
-  if (accordion && onToggle) {
-    return (
-      <AccordionSection
-        id={id}
-        title={title}
-        description={description}
-        icon={icon}
-        isOpen={isOpen}
-        onToggle={onToggle}
-      >
-        {children}
-      </AccordionSection>
-    );
-  }
-
-  // Non-accordion mode - render with motion animation
+function Section({ title, description, children, className }: SectionProps) {
   return (
-    <motion.section
-      id={id}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="scroll-mt-24 space-y-4"
-    >
-      <div className="flex items-center gap-3">
-        {icon && <div className="text-primary">{icon}</div>}
-        <div>
-          <h3 className="font-quicksand text-lg font-semibold">{title}</h3>
-          {description && <p className="text-sm text-muted-foreground">{description}</p>}
-        </div>
+    <div className={cn('space-y-4', className)}>
+      <div>
+        <h2 className="text-lg font-semibold font-quicksand">{title}</h2>
+        {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </div>
       {children}
-    </motion.section>
+    </div>
   );
 }
 
 // =============================================================================
-// Quick Links (Business View)
+// Technical View - Tabbed Content
 // =============================================================================
 
-function QuickLinks() {
-  const links = [
-    { label: 'Executive Summary', href: '#executive-summary' },
-    { label: 'Cost Projections', href: '#cost' },
-    { label: 'ROI Analysis', href: '#overview' },
-    { label: 'Implementation Timeline', href: '#architecture' },
-  ];
+interface TechnicalViewProps {
+  activeTab: TechnicalTab;
+  onTabChange: (tab: TechnicalTab) => void;
+}
 
+function TechnicalView({ activeTab, onTabChange }: TechnicalViewProps) {
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 flex flex-wrap gap-2">
-      {links.map((link) => (
-        <a
-          key={link.label}
-          href={link.href}
-          className="flex items-center gap-2 rounded-lg bg-muted/50 px-4 py-2 text-sm transition-colors hover:bg-muted"
-        >
-          {link.label}
-          <ExternalLink className="h-3 w-3 opacity-50" />
-        </a>
-      ))}
-    </motion.div>
+    <div className="flex gap-6">
+      {/* Sidebar Navigation */}
+      <TabNavSidebar activeTab={activeTab} onTabChange={onTabChange} />
+
+      {/* Main Content */}
+      <div className="flex-1 min-w-0">
+        {/* Mobile Tab Bar */}
+        <MobileTabBar activeTab={activeTab} onTabChange={onTabChange} />
+
+        {/* Tab Content */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-8"
+          >
+            {activeTab === 'overview' && (
+              <>
+                <Section title="POC Status" description="Current implementation vs TOMAC-RAG plan">
+                  <PocStatus />
+                </Section>
+
+                <Section title="System Overview" description="Key performance metrics">
+                  <StatsGrid stats={DEFAULT_STATS} viewMode="technical" />
+                </Section>
+
+                <div className="grid lg:grid-cols-2 gap-6">
+                  <Section title="Query Simulator" description="Test routing system">
+                    <QuerySimulator />
+                  </Section>
+
+                  <Section title="Token Flow" description="Token consumption by layer">
+                    <TokenFlowVisualizer />
+                  </Section>
+                </div>
+              </>
+            )}
+
+            {activeTab === 'architecture' && (
+              <>
+                <Section title="Architecture Explorer" description="Interactive system diagram">
+                  <ArchitectureExplorer />
+                </Section>
+
+                <Section
+                  title="Technical Reference"
+                  description="Code examples, infrastructure, algorithms"
+                >
+                  <TechnicalReference />
+                </Section>
+
+                <Section title="Layer Documentation" description="Detailed technical docs">
+                  <LayerDeepDocs />
+                </Section>
+              </>
+            )}
+
+            {activeTab === 'agents' && (
+              <>
+                <Section
+                  title="Agent-RAG Integration"
+                  description="Prompt assembly with RAG context"
+                >
+                  <AgentRagIntegration />
+                </Section>
+
+                <div className="grid lg:grid-cols-2 gap-6">
+                  <Section title="Agent Roles" description="Pre-built configurations">
+                    <AgentRoleConfigurator />
+                  </Section>
+
+                  <Section title="Prompt Builder" description="Assemble and preview prompts">
+                    <PromptTemplateBuilder />
+                  </Section>
+                </div>
+              </>
+            )}
+
+            {activeTab === 'performance' && (
+              <>
+                <Section
+                  title="Parametri & Strategie"
+                  description="Configurazione completa del sistema RAG"
+                >
+                  <ParameterGuide />
+                </Section>
+
+                <Section title="Cost Projection" description="Monthly cost estimates">
+                  <CostCalculator />
+                </Section>
+
+                <div className="grid lg:grid-cols-2 gap-6">
+                  <Section title="Model Selection" description="Optimize model choices">
+                    <ModelSelectionOptimizer />
+                  </Section>
+
+                  <Section title="Performance Metrics" description="Real-time data">
+                    <PerformanceMetricsTable />
+                  </Section>
+                </div>
+
+                <Section
+                  title={`${METRICS.totalVariants} RAG Variants`}
+                  description="Strategy × Template × Tier combinations"
+                >
+                  <VariantComparisonTool />
+                </Section>
+              </>
+            )}
+
+            {activeTab === 'walkthrough' && (
+              <Section
+                title="Decision Walkthrough"
+                description="Step-by-step visualization of RAG decision process"
+              >
+                <DecisionWalkthrough />
+              </Section>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }
 
 // =============================================================================
-// Executive Summary (Business View Only)
+// Business View - Compact
 // =============================================================================
 
-function ExecutiveSummary() {
+function BusinessView() {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
-    >
-      {/* Value Proposition */}
-      <div className="rounded-xl border border-green-500/20 bg-gradient-to-br from-green-500/10 to-green-500/5 p-6">
-        <h3 className="mb-3 font-semibold text-green-600 dark:text-green-400">Cost Efficiency</h3>
-        <ul className="space-y-2 text-sm text-muted-foreground">
-          <li>• {Math.abs(METRICS.tokenReduction)}% token reduction vs naive RAG</li>
-          <li>• {METRICS.cacheHitRateTarget}% cache hit rate = instant responses</li>
-          <li>• Free tier models for 60-70% of queries</li>
-        </ul>
-      </div>
+    <div className="space-y-8">
+      {/* Stats Overview */}
+      <Section
+        title="System Overview"
+        description="Key business metrics and cost efficiency indicators"
+      >
+        <StatsGrid stats={DEFAULT_STATS} viewMode="business" />
+      </Section>
 
-      {/* Quality */}
-      <div className="rounded-xl border border-blue-500/20 bg-gradient-to-br from-blue-500/10 to-blue-500/5 p-6">
-        <h3 className="mb-3 font-semibold text-blue-600 dark:text-blue-400">Quality Assurance</h3>
-        <ul className="space-y-2 text-sm text-muted-foreground">
-          <li>• {METRICS.accuracy.ruleLookup.target}% accuracy target for rules</li>
-          <li>• CRAG evaluation prevents hallucinations</li>
-          <li>• Self-RAG catches 15% errors automatically</li>
-        </ul>
-      </div>
+      {/* Executive Summary Cards */}
+      <Section title="Executive Summary" description="Key takeaways for stakeholders">
+        <div className="grid md:grid-cols-3 gap-4">
+          {/* Cost Efficiency */}
+          <div className="p-5 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20">
+            <h3 className="font-semibold text-green-600 dark:text-green-400 mb-2 text-sm">
+              Cost Efficiency
+            </h3>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              <li>• {Math.abs(METRICS.tokenReduction)}% token reduction</li>
+              <li>• {METRICS.cacheHitRateTarget}% cache hit rate</li>
+              <li>• Free models for 60-70% queries</li>
+            </ul>
+          </div>
 
-      {/* Scalability */}
-      <div className="rounded-xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-purple-500/5 p-6">
-        <h3 className="mb-3 font-semibold text-purple-600 dark:text-purple-400">Scalability</h3>
-        <ul className="space-y-2 text-sm text-muted-foreground">
-          <li>• {METRICS.totalVariants} configurable RAG variants</li>
-          <li>• User tier-based resource allocation</li>
-          <li>• Adaptive strategy selection</li>
-        </ul>
-      </div>
-    </motion.div>
+          {/* Quality */}
+          <div className="p-5 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20">
+            <h3 className="font-semibold text-blue-600 dark:text-blue-400 mb-2 text-sm">
+              Quality Assurance
+            </h3>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              <li>• {METRICS.accuracy.ruleLookup.target}% accuracy target</li>
+              <li>• CRAG prevents hallucinations</li>
+              <li>• Self-RAG auto-correction</li>
+            </ul>
+          </div>
+
+          {/* Scalability */}
+          <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20">
+            <h3 className="font-semibold text-purple-600 dark:text-purple-400 mb-2 text-sm">
+              Scalability
+            </h3>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              <li>• {METRICS.totalVariants} configurable variants</li>
+              <li>• Tier-based allocation</li>
+              <li>• Adaptive strategy selection</li>
+            </ul>
+          </div>
+        </div>
+      </Section>
+
+      {/* Cost Calculator */}
+      <Section title="Cost Projection" description="Project ROI and cost savings">
+        <CostCalculator />
+      </Section>
+
+      {/* Decision Walkthrough */}
+      <Section title="How It Works" description="See how queries are processed through the system">
+        <DecisionWalkthrough />
+      </Section>
+    </div>
   );
 }
 
@@ -402,326 +510,52 @@ function ExecutiveSummary() {
 
 export function RagDashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>('technical');
-
-  // Memoize section IDs to prevent unnecessary re-renders
-  const allSectionIds = useMemo(() => getAllSectionIds(NAVIGATION_GROUPS), []);
-
-  // Track active section with scroll spy
-  const activeSection = useScrollSpy(allSectionIds);
-
-  // Accordion state with localStorage persistence
-  const {
-    isOpen,
-    toggleSection,
-    resetToDefaults,
-    openSection,
-  } = useAccordionState({
-    defaultOpen: DEFAULT_OPEN_SECTIONS,
-  });
-
-  // Memoized toggle callback factory
-  const createToggle = useCallback(
-    (sectionId: string) => () => toggleSection(sectionId),
-    [toggleSection]
-  );
+  const [activeTab, setActiveTab] = useState<TechnicalTab>('overview');
 
   return (
     <div className="rag-dashboard min-h-screen">
-      {/* Scroll Progress Bar */}
-      <ScrollProgressBar />
-
       <div className="relative z-10">
-        {/* Header */}
-        <DashboardHeader
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          onResetAccordion={resetToDefaults}
-          onOpenSection={openSection}
-        />
+        {/* Compact Header */}
+        <DashboardHeader viewMode={viewMode} onViewModeChange={setViewMode} />
 
-        {/* Mobile Navigation */}
-        <DashboardNav groups={NAVIGATION_GROUPS} activeSection={activeSection} />
-
-        {/* Main Content with Sidebar */}
-        <div className="flex">
-          {/* Desktop Sidebar */}
-          <DashboardSidebar
-            groups={NAVIGATION_GROUPS}
-            activeSection={activeSection}
-            showProgress={true}
-          />
-
-          {/* Content */}
-          <main className="mx-auto max-w-5xl flex-1 space-y-16 px-4 py-8 md:px-6">
-            {/* Breadcrumb Navigation */}
-            <Breadcrumbs
-              activeSection={activeSection}
-              groups={NAVIGATION_GROUPS}
-              className="mb-4"
-            />
-
-            {/* Quick Links for Business View */}
-            {viewMode === 'business' && <QuickLinks />}
-
-            {/* ============================================================ */}
-            {/* UNDERSTAND Group                                             */}
-            {/* ============================================================ */}
-            <SectionGroup
-              id="understand"
-              label="Understand"
-              icon="🎓"
-              description="Learn how TOMAC-RAG works"
-            >
-              {/* System Overview */}
-              <Section
-                id="overview"
-                title="System Overview"
-                description={
-                  viewMode === 'technical'
-                    ? 'Key performance metrics for the TOMAC-RAG system'
-                    : 'Key business metrics and cost efficiency indicators'
-                }
-                accordion
-                isOpen={isOpen('overview')}
-                onToggle={createToggle('overview')}
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 md:px-6 py-6">
+          <AnimatePresence mode="wait">
+            {viewMode === 'technical' ? (
+              <motion.div
+                key="technical"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
               >
-                <StatsGrid stats={DEFAULT_STATS} viewMode={viewMode} />
-              </Section>
-
-              {/* Architecture (Technical View Only) */}
-              {viewMode === 'technical' && (
-                <Section
-                  id="architecture"
-                  title="Architecture Explorer"
-                  description="Interactive system architecture diagram"
-                  accordion
-                  isOpen={isOpen('architecture')}
-                  onToggle={createToggle('architecture')}
-                >
-                  <ArchitectureExplorer />
-                </Section>
-              )}
-
-              {/* Layer Deep Documentation (Technical View Only) */}
-              {viewMode === 'technical' && (
-                <Section
-                  id="layers"
-                  title="Layer Documentation"
-                  description="Detailed technical docs with code examples and decision trees"
-                  accordion
-                  isOpen={isOpen('layers')}
-                  onToggle={createToggle('layers')}
-                >
-                  <LayerDeepDocs />
-                </Section>
-              )}
-            </SectionGroup>
-
-            {/* ============================================================ */}
-            {/* EXPLORE Group                                                */}
-            {/* ============================================================ */}
-            <SectionGroup
-              id="explore"
-              label="Explore"
-              icon="🔍"
-              description="Test and visualize the system"
-            >
-              {/* Query Simulator */}
-              <Section
-                id="query-sim"
-                title="Query Simulator"
-                description="Test the routing system with sample queries"
-                accordion
-                isOpen={isOpen('query-sim')}
-                onToggle={createToggle('query-sim')}
+                <TechnicalView activeTab={activeTab} onTabChange={setActiveTab} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="business"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
               >
-                <QuerySimulator />
-              </Section>
-
-              {/* Token Flow */}
-              <Section
-                id="token-flow"
-                title="Token Flow"
-                description="Visualize token consumption through each layer"
-                accordion
-                isOpen={isOpen('token-flow')}
-                onToggle={createToggle('token-flow')}
-              >
-                <TokenFlowVisualizer />
-              </Section>
-
-              {/* Decision Walkthrough */}
-              <Section
-                id="walkthrough"
-                title="Decision Walkthrough"
-                description={
-                  viewMode === 'technical'
-                    ? 'Step-by-step visualization of RAG decision process'
-                    : 'See how queries are processed through the system'
-                }
-                accordion
-                isOpen={isOpen('walkthrough')}
-                onToggle={createToggle('walkthrough')}
-              >
-                <DecisionWalkthrough />
-              </Section>
-            </SectionGroup>
-
-            {/* ============================================================ */}
-            {/* COMPARE Group (Technical View Only)                          */}
-            {/* ============================================================ */}
-            {viewMode === 'technical' && (
-              <SectionGroup
-                id="compare"
-                label="Compare"
-                icon="⚖️"
-                description="Compare strategies and performance"
-              >
-                {/* Variant Comparison Tool */}
-                <Section
-                  id="variants"
-                  title={`${METRICS.totalVariants} RAG Variants`}
-                  description="Interactive comparison of all strategy × template × tier combinations"
-                  accordion
-                  isOpen={isOpen('variants')}
-                  onToggle={createToggle('variants')}
-                >
-                  <VariantComparisonTool />
-                </Section>
-
-                {/* Performance Metrics */}
-                <Section
-                  id="performance"
-                  title="Performance Metrics"
-                  description="Real-time performance data across strategies and query types"
-                  accordion
-                  isOpen={isOpen('performance')}
-                  onToggle={createToggle('performance')}
-                >
-                  <PerformanceMetricsTable />
-                </Section>
-              </SectionGroup>
+                <BusinessView />
+              </motion.div>
             )}
+          </AnimatePresence>
+        </main>
 
-            {/* ============================================================ */}
-            {/* BUILD Group (Technical View Only)                            */}
-            {/* ============================================================ */}
-            {viewMode === 'technical' && (
-              <SectionGroup
-                id="build"
-                label="Build"
-                icon="🔨"
-                description="Tools for implementation"
-              >
-                {/* Prompt Builder */}
-                <Section
-                  id="prompts"
-                  title="Prompt Builder"
-                  description="Interactive tool to assemble and preview RAG prompts"
-                  accordion
-                  isOpen={isOpen('prompts')}
-                  onToggle={createToggle('prompts')}
-                >
-                  <PromptTemplateBuilder />
-                </Section>
-
-                {/* Agent Roles */}
-                <Section
-                  id="roles"
-                  title="Agent Roles"
-                  description="Pre-built agent configurations with system prompts"
-                  accordion
-                  isOpen={isOpen('roles')}
-                  onToggle={createToggle('roles')}
-                >
-                  <AgentRoleConfigurator />
-                </Section>
-
-                {/* Agent Integration */}
-                <Section
-                  id="agent-integration"
-                  title="Agent-RAG Integration"
-                  description="How MeepleAI agents assemble prompts with RAG context"
-                  accordion
-                  isOpen={isOpen('agent-integration')}
-                  onToggle={createToggle('agent-integration')}
-                >
-                  <AgentRagIntegration />
-                </Section>
-              </SectionGroup>
-            )}
-
-            {/* ============================================================ */}
-            {/* OPTIMIZE Group                                               */}
-            {/* ============================================================ */}
-            <SectionGroup
-              id="optimize"
-              label="Optimize"
-              icon="💰"
-              description="Cost and model optimization"
-            >
-              {/* Cost Calculator */}
-              <Section
-                id="cost"
-                title="Cost Projection"
-                description={
-                  viewMode === 'technical'
-                    ? 'Estimate monthly costs based on usage patterns'
-                    : 'Project ROI and cost savings with TOMAC-RAG optimization'
-                }
-                accordion
-                isOpen={isOpen('cost')}
-                onToggle={createToggle('cost')}
-              >
-                <CostCalculator />
-              </Section>
-
-              {/* Model Selection (Technical View Only) */}
-              {viewMode === 'technical' && (
-                <Section
-                  id="model-optimizer"
-                  title="Model Selection"
-                  description="Optimize model choices based on cost, speed, and quality requirements"
-                  accordion
-                  isOpen={isOpen('model-optimizer')}
-                  onToggle={createToggle('model-optimizer')}
-                >
-                  <ModelSelectionOptimizer />
-                </Section>
-              )}
-            </SectionGroup>
-
-            {/* ============================================================ */}
-            {/* Business Summary (Business View Only)                        */}
-            {/* ============================================================ */}
-            {viewMode === 'business' && (
-              <Section
-                id="executive-summary"
-                title="Executive Summary"
-                description="Key takeaways for stakeholders"
-                accordion
-                isOpen={isOpen('executive-summary')}
-                onToggle={createToggle('executive-summary')}
-              >
-                <ExecutiveSummary />
-              </Section>
-            )}
-          </main>
-        </div>
-
-        {/* Footer */}
-        <footer className="mt-16 border-t border-border px-6 py-8 text-center text-sm text-muted-foreground">
-          <p>
-            MeepleAI RAG Dashboard • Built with Next.js 14 + shadcn/ui •{' '}
-            <a
-              href="https://github.com/meepleai"
-              className="text-primary hover:underline"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View on GitHub
-            </a>
-          </p>
+        {/* Compact Footer */}
+        <footer className="mt-8 py-4 px-6 border-t border-border/50 text-center text-xs text-muted-foreground">
+          MeepleAI RAG Dashboard • Next.js 14 + shadcn/ui •{' '}
+          <a
+            href="https://github.com/meepleai"
+            className="text-primary hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            GitHub
+          </a>
         </footer>
       </div>
     </div>

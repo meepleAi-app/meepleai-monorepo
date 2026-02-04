@@ -3,7 +3,7 @@ ISSUE-3495: API Request/Response Schemas
 Pydantic models for REST API validation.
 """
 
-from datetime import datetime, UTC
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -60,7 +60,7 @@ class HealthResponse(BaseModel):
     status: str = Field(description="Service status (healthy/unhealthy)")
     version: str = Field(description="Service version")
     dependencies: dict[str, str] = Field(description="Dependent service statuses")
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
     model_config = {"json_schema_extra": {
         "example": {

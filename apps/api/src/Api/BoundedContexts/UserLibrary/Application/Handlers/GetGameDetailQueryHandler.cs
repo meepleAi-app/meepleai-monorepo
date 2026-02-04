@@ -5,6 +5,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Handlers;
 
@@ -16,6 +17,7 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
 {
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
+    private readonly IGameLabelRepository _labelRepository;
     private readonly HybridCache _cache;
     private readonly ILogger<GetGameDetailQueryHandler> _logger;
 
@@ -28,11 +30,13 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
     public GetGameDetailQueryHandler(
         IUserLibraryRepository libraryRepository,
         ISharedGameRepository sharedGameRepository,
+        IGameLabelRepository labelRepository,
         HybridCache cache,
         ILogger<GetGameDetailQueryHandler> logger)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
+        _labelRepository = labelRepository ?? throw new ArgumentNullException(nameof(labelRepository));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -123,6 +127,16 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     );
                 }
 
+                // Get labels for this entry
+                var labels = await _labelRepository.GetLabelsForEntryAsync(entry.Id, cancel).ConfigureAwait(false);
+                var labelsDto = labels.Select(l => new LabelDto(
+                    Id: l.Id,
+                    Name: l.Name,
+                    Color: l.Color,
+                    IsPredefined: l.IsPredefined,
+                    CreatedAt: l.CreatedAt
+                )).ToArray();
+
                 _logger.LogInformation("Retrieved game detail for {GameId} for user {UserId}", query.GameId, query.UserId);
 
                 return new GameDetailDto(
@@ -164,7 +178,8 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     RecentSessions: recentSessions,
                     Checklist: checklist,
                     CustomAgentConfig: customAgentConfig,
-                    CustomPdf: customPdf
+                    CustomPdf: customPdf,
+                    Labels: labelsDto
                 );
             },
             options: CacheOptions,

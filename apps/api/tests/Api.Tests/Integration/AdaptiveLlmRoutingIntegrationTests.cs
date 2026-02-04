@@ -538,24 +538,24 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
                 return mapping.FallbackModels;
             });
 
-        var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
-        var mockServiceScope = new Mock<IServiceScope>();
-        var mockServiceProvider = new Mock<IServiceProvider>();
-
         // Setup IServiceScopeFactory to provide ITierStrategyAccessService
         var mockTierAccessService = new Mock<ITierStrategyAccessService>();
         mockTierAccessService
             .Setup(s => s.HasAccessToStrategyAsync(It.IsAny<LlmUserTier>(), It.IsAny<RagStrategy>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+
+        var mockServiceProvider = new Mock<IServiceProvider>();
         mockServiceProvider
             .Setup(sp => sp.GetService(typeof(ITierStrategyAccessService)))
             .Returns(mockTierAccessService.Object);
-        mockServiceScope.Setup(s => s.ServiceProvider).Returns(mockServiceProvider.Object);
-        mockServiceScopeFactory.Setup(f => f.CreateScope()).Returns(mockServiceScope.Object);
+        var mockScope = new Mock<IServiceScope>();
+        mockScope.Setup(s => s.ServiceProvider).Returns(mockServiceProvider.Object);
+        var mockScopeFactory = new Mock<IServiceScopeFactory>();
+        mockScopeFactory.Setup(f => f.CreateScope()).Returns(mockScope.Object);
 
         var routingStrategy = new HybridAdaptiveRoutingStrategy(
             mockStrategyMappingService.Object,
-            mockServiceScopeFactory.Object,
+            mockScopeFactory.Object,
             aiSettings,
             _strategyLogger);
 

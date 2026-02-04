@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
@@ -26,6 +27,7 @@ internal static class AgentEndpoints
         MapInvokeAgentEndpoint(group);
         MapUpdateAgentDocumentsEndpoint(group);
         MapGetAgentDocumentsEndpoint(group);
+        MapAskAgentQuestionEndpoint(group); // POC: Agent search strategy testing
         MapTutorQueryEndpoint(group); // ISSUE-3499
 
         return group;
@@ -298,6 +300,43 @@ internal static class AgentEndpoints
         .Produces(500);
     }
 
+    /// <summary>
+    /// POC: Ask agent a question with selectable search strategy and token tracking
+    /// </summary>
+    private static void MapAskAgentQuestionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/chat/ask", async (
+            AskAgentQuestionRequest req,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            var command = new AskAgentQuestionCommand
+            {
+                Question = req.Question,
+                Strategy = req.Strategy,
+                SessionId = req.SessionId,
+                GameId = req.GameId,
+                Language = req.Language,
+                TopK = req.TopK ?? 5,
+                MinScore = req.MinScore ?? 0.6
+            };
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "Agent question answered: strategy={Strategy}, tokens={Tokens}, cost=${Cost}, latency={Latency}ms",
+                result.Strategy, result.TokenUsage.TotalTokens, result.CostBreakdown.TotalCost, result.LatencyMs);
+
+            return Results.Ok(result);
+        })
+        .WithName("AskAgentQuestion")
+        .WithTags("POC")
+        .Produces<AgentChatResponse>(200)
+        .Produces(400)
+        .Produces(500);
+    }
+
     private static void MapTutorQueryEndpoint(RouteGroupBuilder group)
     {
         // ISSUE-3499: Query Tutor agent
@@ -370,4 +409,17 @@ internal record InvokeAgentRequest(
 /// </summary>
 internal record UpdateAgentDocumentsRequest(
     IReadOnlyList<Guid>? DocumentIds
+);
+
+/// <summary>
+/// POC: Request to ask agent a question with search strategy selection
+/// </summary>
+internal record AskAgentQuestionRequest(
+    string Question,
+    Api.BoundedContexts.KnowledgeBase.Domain.Enums.AgentSearchStrategy Strategy,
+    string? SessionId = null,
+    Guid? GameId = null,
+    string? Language = null,
+    int? TopK = null,
+    double? MinScore = null
 );

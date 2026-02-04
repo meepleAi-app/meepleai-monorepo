@@ -19,6 +19,7 @@ internal static class UserLibraryServiceExtensions
         // Register repositories
         services.AddScoped<IUserLibraryRepository, UserLibraryRepository>();
         services.AddScoped<ILibraryShareLinkRepository, LibraryShareLinkRepository>();
+        services.AddScoped<IGameLabelRepository, GameLabelRepository>();
 
         // Register domain services
         services.AddScoped<IGameLibraryQuotaService, GameLibraryQuotaService>();

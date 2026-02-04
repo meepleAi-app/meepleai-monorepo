@@ -100,8 +100,7 @@ internal class ConversationMemoryRepository : RepositoryBase, IConversationMemor
         Vector? embedding = null;
         if (entity.Embedding != null)
         {
-            // Convert Pgvector.Vector to domain Vector (float[])
-            embedding = new Vector(entity.Embedding.ToArray());
+            embedding = new Vector(entity.Embedding);
         }
 
         return new ConversationMemory(
@@ -126,7 +125,7 @@ internal class ConversationMemoryRepository : RepositoryBase, IConversationMemor
             Content = memory.Content,
             MessageType = memory.MessageType,
             Timestamp = memory.Timestamp,
-            Embedding = memory.Embedding != null ? new Pgvector.Vector(memory.Embedding.Values) : null
+            Embedding = memory.Embedding?.Values
         };
     }
 }

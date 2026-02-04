@@ -27,7 +27,7 @@ export type { AuthLayoutProps } from './AuthLayout';
  * Authenticated Layout Components - Issue #3479
  *
  * Layout System v2 for authenticated pages.
- * Combines UnifiedHeader + UnifiedActionBar + SmartFAB.
+ * Combines UnifiedHeader (desktop nav) + UnifiedActionBar (mobile nav with integrated FAB).
  */
 
 export { AuthenticatedLayout } from './AuthenticatedLayout';

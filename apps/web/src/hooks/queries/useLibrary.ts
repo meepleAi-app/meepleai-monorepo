@@ -39,6 +39,8 @@ export const libraryKeys = {
   stats: () => [...libraryKeys.all, 'stats'] as const,
   quota: () => [...libraryKeys.all, 'quota'] as const,
   gameStatus: (gameId: string) => [...libraryKeys.all, 'status', gameId] as const,
+  // Game detail key (Issue #3513)
+  gameDetail: (gameId: string) => [...libraryKeys.all, 'detail', gameId] as const,
   // Share link keys (Issue #2614)
   shareLink: () => [...libraryKeys.all, 'shareLink'] as const,
   sharedLibrary: (shareToken: string) => [...libraryKeys.all, 'shared', shareToken] as const,
@@ -630,5 +632,146 @@ export function useSharedLibrary(
     enabled: enabled && !!shareToken,
     staleTime: 2 * 60 * 1000, // Shared library can change (2min)
     retry: false, // Don't retry on 404 (invalid/expired token)
+  });
+}
+
+// ========================================
+// Library Game Detail Hook (Issue #3513)
+// ========================================
+
+/**
+ * Combined library game detail for Game Detail page (Issue #3513)
+ *
+ * Uses the backend's GET /library/games/{gameId} endpoint for efficient
+ * single-request data fetching with all metadata and play statistics.
+ */
+export interface LibraryGameDetail {
+  // Library-specific data
+  libraryEntryId: string;
+  userId: string;
+  gameId: string;
+  addedAt: string;
+  notes: string | null;
+  isFavorite: boolean;
+  currentState: string;
+  stateChangedAt: string | null;
+  stateNotes: string | null;
+  isAvailableForPlay: boolean;
+  hasPdfDocuments: boolean;
+  // Game metadata
+  gameTitle: string;
+  gamePublisher: string | null;
+  gameYearPublished: number | null;
+  gameIconUrl: string | null;
+  gameImageUrl: string | null;
+  description: string | null;
+  minPlayers: number | null;
+  maxPlayers: number | null;
+  playingTimeMinutes: number | null;
+  minAge?: number;
+  complexityRating: number | null;
+  averageRating: number | null;
+  // Play statistics (from GameDetailDto)
+  timesPlayed: number;
+  lastPlayed: string | null;
+  winRate: string | null;
+  avgDuration: string | null;
+  // Extended data (from SharedGame via parallel fetch)
+  categories?: Array<{ id: string; name: string; slug: string }>;
+  mechanics?: Array<{ id: string; name: string; slug: string }>;
+  designers?: Array<{ id: string; name: string }>;
+  publishers?: Array<{ id: string; name: string }>;
+  bggId?: number | null;
+  // Recent sessions (if loaded)
+  recentSessions?: Array<{
+    id: string;
+    playedAt: string;
+    durationMinutes: number;
+    durationFormatted: string;
+    didWin: boolean | null;
+    players: string | null;
+    notes: string | null;
+  }>;
+}
+
+/**
+ * Hook to fetch library game detail for Game Detail page (Issue #3513)
+ *
+ * Uses the efficient GET /library/games/{gameId} endpoint that returns
+ * all game metadata and play statistics in a single request.
+ *
+ * For extended data (categories, mechanics, designers), fetches SharedGame in parallel.
+ *
+ * @param gameId - Game UUID (same as SharedGame.id)
+ * @param enabled - Whether to run the query (default: true)
+ * @returns UseQueryResult with combined library game detail
+ */
+export function useLibraryGameDetail(
+  gameId: string,
+  enabled: boolean = true
+): UseQueryResult<LibraryGameDetail | null, Error> {
+  return useQuery({
+    queryKey: libraryKeys.gameDetail(gameId),
+    queryFn: async (): Promise<LibraryGameDetail | null> => {
+      // Fetch game detail (efficient single endpoint) and shared game (for extended data) in parallel
+      const [gameDetail, sharedGame] = await Promise.all([
+        api.library.getGameDetail(gameId).catch(() => null),
+        api.sharedGames.getById(gameId).catch(() => null),
+      ]);
+
+      if (!gameDetail) {
+        // Game not in user's library
+        return null;
+      }
+
+      // Map GameDetailDto to LibraryGameDetail
+      const result: LibraryGameDetail = {
+        // Library-specific data
+        libraryEntryId: gameDetail.id,
+        userId: gameDetail.userId,
+        gameId: gameDetail.gameId,
+        addedAt: gameDetail.addedAt,
+        notes: gameDetail.notes,
+        isFavorite: gameDetail.isFavorite,
+        currentState: gameDetail.currentState,
+        stateChangedAt: gameDetail.stateChangedAt,
+        stateNotes: gameDetail.stateNotes,
+        isAvailableForPlay: gameDetail.isAvailableForPlay,
+        hasPdfDocuments: !!gameDetail.customPdf,
+        // Game metadata
+        gameTitle: gameDetail.gameTitle,
+        gamePublisher: gameDetail.gamePublisher,
+        gameYearPublished: gameDetail.gameYearPublished,
+        gameIconUrl: gameDetail.gameIconUrl,
+        gameImageUrl: gameDetail.gameImageUrl,
+        description: gameDetail.gameDescription,
+        minPlayers: gameDetail.minPlayers,
+        maxPlayers: gameDetail.maxPlayers,
+        playingTimeMinutes: gameDetail.playTimeMinutes,
+        complexityRating: gameDetail.complexityRating,
+        averageRating: gameDetail.averageRating,
+        // Play statistics
+        timesPlayed: gameDetail.timesPlayed,
+        lastPlayed: gameDetail.lastPlayed,
+        winRate: gameDetail.winRate,
+        avgDuration: gameDetail.avgDuration,
+        // Recent sessions
+        recentSessions: gameDetail.recentSessions ?? undefined,
+      };
+
+      // Add extended info from SharedGame if available (categories, mechanics, designers)
+      if (sharedGame) {
+        result.minAge = sharedGame.minAge;
+        result.categories = sharedGame.categories;
+        result.mechanics = sharedGame.mechanics;
+        result.designers = sharedGame.designers;
+        result.publishers = sharedGame.publishers;
+        result.bggId = sharedGame.bggId;
+      }
+
+      return result;
+    },
+    enabled: enabled && !!gameId,
+    staleTime: 2 * 60 * 1000, // Library details can change (2min)
   });
 }

@@ -94,6 +94,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
     public DbSet<LibraryShareLinkEntity> LibraryShareLinks => Set<LibraryShareLinkEntity>(); // ISSUE-2614: Library sharing
+    public DbSet<GameLabelEntity> GameLabels => Set<GameLabelEntity>(); // ISSUE-3512: Game labels for library
+    public DbSet<UserGameLabelEntity> UserGameLabels => Set<UserGameLabelEntity>(); // ISSUE-3512: User game label assignments
     public DbSet<GameSessionStateEntity> GameSessionStates => Set<GameSessionStateEntity>(); // ISSUE-2403: Sprint 4 - Game session state tracking
     public DbSet<GameStateSnapshotEntity> GameStateSnapshots => Set<GameStateSnapshotEntity>(); // ISSUE-2403: Sprint 4 - State snapshots
     public DbSet<AiModelConfigurationEntity> AiModelConfigurations => Set<AiModelConfigurationEntity>(); // ISSUE-2512: Auto-configuration pipeline - AI model seed
@@ -108,6 +110,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ConversationMemoryEntity> ConversationMemories => Set<ConversationMemoryEntity>(); // ISSUE-3493: Temporal RAG
     public DbSet<AgentGameStateSnapshotEntity> AgentGameStateSnapshots => Set<AgentGameStateSnapshotEntity>(); // ISSUE-3493: Position similarity
     public DbSet<StrategyPatternEntity> StrategyPatterns => Set<StrategyPatternEntity>(); // ISSUE-3493: Cached evaluations
+    public DbSet<BggImportQueueEntity> BggImportQueue => Set<BggImportQueueEntity>(); // ISSUE-3541: BGG import queue service
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();
@@ -135,9 +138,6 @@ public class MeepleAiDbContext : DbContext
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
         base.OnModelCreating(modelBuilder);
-
-        // ISSUE-3493: Enable pgvector extension for vector similarity search
-        modelBuilder.HasPostgresExtension("vector");
 
         // Apply all entity configurations from assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MeepleAiDbContext).Assembly);

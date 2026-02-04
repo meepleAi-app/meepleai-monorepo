@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - main
-      - main-staging
       - main-dev
 
 jobs:
@@ -19,77 +18,43 @@ jobs:
           echo "PR: $SOURCE_BRANCH -> $BASE_BRANCH"
 
           # ============================================
-          # MAIN branch policy (PRODUCTION)
+          # MAIN branch policy
           # ============================================
-          # main can ONLY be updated from main-staging
+          # main can only be updated from main-dev
           if [[ "$BASE_BRANCH" == "main" ]]; then
-            if [[ "$SOURCE_BRANCH" != "main-staging" ]]; then
-              echo "::error::Branch 'main' (PRODUCTION) can only be updated from 'main-staging'"
+            if [[ "$SOURCE_BRANCH" != "main-dev" ]]; then
+              echo "::error::Branch 'main' can only be updated from 'main-dev'"
               echo "::error::Attempted merge from: $SOURCE_BRANCH"
               echo ""
-              echo "Workflow: feature -> main-dev -> main-staging -> main"
-              echo ""
-              echo "To release to production:"
-              echo "  1. Merge your changes to main-dev"
-              echo "  2. Promote main-dev to main-staging"
-              echo "  3. Create PR: main-staging -> main"
+              echo "Workflow: feature -> frontend-dev -> main-dev -> main"
               exit 1
             fi
-            echo "✅ Valid: main-staging -> main (PRODUCTION RELEASE)"
+            echo "✅ Valid: main-dev -> main"
           fi
 
           # ============================================
-          # MAIN-STAGING branch policy (PRE-PRODUCTION)
-          # ============================================
-          # main-staging can be updated from:
-          # - main-dev (primary promotion path)
-          # - hotfix/* branches (emergency fixes)
-          # - Direct commits allowed (no PR required)
-          if [[ "$BASE_BRANCH" == "main-staging" ]]; then
-            ALLOWED_PATTERNS="^(main-dev|hotfix/|fix/|chore/)"
-
-            if ! echo "$SOURCE_BRANCH" | grep -qE "$ALLOWED_PATTERNS"; then
-              echo "::error::Branch 'main-staging' can only be updated from allowed branches"
-              echo "::error::Attempted merge from: $SOURCE_BRANCH"
-              echo ""
-              echo "Allowed patterns:"
-              echo "  - main-dev (primary path)"
-              echo "  - hotfix/* (emergency fixes)"
-              echo "  - fix/* (bug fixes)"
-              echo "  - chore/* (maintenance)"
-              echo ""
-              echo "Note: Direct commits to main-staging are also allowed (no PR required)"
-              exit 1
-            fi
-            echo "✅ Valid: $SOURCE_BRANCH -> main-staging"
-          fi
-
-          # ============================================
-          # MAIN-DEV branch policy (DEVELOPMENT)
+          # MAIN-DEV branch policy
           # ============================================
           # main-dev can be updated from:
-          # - frontend-dev, backend-dev (primary paths)
-          # - feature/* branches (new features)
-          # - fix/*, docs/*, test/*, refactor/*, chore/* branches
-          # - Direct commits allowed (no PR required for solo dev)
+          # - frontend-dev (primary path)
+          # - feature/* branches (hotfixes, backend features)
+          # - fix/*, docs/*, refactor/*, chore/* branches
           if [[ "$BASE_BRANCH" == "main-dev" ]]; then
-            ALLOWED_PATTERNS="^(frontend-dev|backend-dev|feature/|fix/|docs/|test/|refactor/|chore/|release/)"
+            ALLOWED_PATTERNS="^(frontend-dev|feature/|fix/|docs/|test/|refactor/|chore/|release/)"
 
             if ! echo "$SOURCE_BRANCH" | grep -qE "$ALLOWED_PATTERNS"; then
               echo "::error::Branch 'main-dev' can only be updated from allowed branches"
               echo "::error::Attempted merge from: $SOURCE_BRANCH"
               echo ""
               echo "Allowed patterns:"
-              echo "  - frontend-dev, backend-dev (domain branches)"
-              echo "  - feature/* (new features)"
-              echo "  - fix/* (bug fixes)"
-              echo "  - docs/* (documentation)"
-              echo "  - test/* (test additions)"
-              echo "  - refactor/* (code refactoring)"
-              echo "  - chore/* (maintenance)"
-              echo "  - release/* (release preparation)"
-              echo ""
-              echo "Note: Direct commits to main-dev are also allowed (no PR required)"
+              echo "  - frontend-dev"
+              echo "  - feature/*"
+              echo "  - fix/*"
+              echo "  - docs/*"
+              echo "  - test/*"
+              echo "  - refactor/*"
+              echo "  - chore/*"
+              echo "  - release/*"
               exit 1
             fi
             echo "✅ Valid: $SOURCE_BRANCH -> main-dev"

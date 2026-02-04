@@ -27,3 +27,13 @@ export { SharedLibraryGameCard } from './SharedLibraryGameCard';
 
 // View Mode Toggle (Issue #2866)
 export { ViewModeToggle, type ViewModeToggleProps, type ViewMode } from './ViewModeToggle';
+
+// Game Detail Components (Issue #3513)
+export {
+  GameDetailHero,
+  type GameDetailHeroProps,
+  GameSideCard,
+  type GameSideCardProps,
+  UserActionSection,
+  type UserActionSectionProps,
+} from './game-detail';

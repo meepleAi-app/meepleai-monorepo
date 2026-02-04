@@ -5,7 +5,7 @@ Tests PostgreSQL state persistence and retrieval.
 
 import pytest
 from uuid import uuid4
-from datetime import datetime, UTC
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.infrastructure.conversation_repository import ConversationRepository
@@ -35,14 +35,9 @@ class TestConversationRepository:
     @pytest.mark.asyncio
     async def test_save_state_serializes_correctly(self, repository, sample_state):
         """Test state serialization to database."""
-        # Create async context manager mock
+        mock_pool = AsyncMock()
         mock_conn = AsyncMock()
-        mock_acquire = AsyncMock()
-        mock_acquire.__aenter__.return_value = mock_conn
-        mock_acquire.__aexit__.return_value = None
-
-        mock_pool = MagicMock()
-        mock_pool.acquire.return_value = mock_acquire
+        mock_pool.acquire.return_value.__aenter__.return_value = mock_conn
 
         repository.pool = mock_pool
 
@@ -66,18 +61,13 @@ class TestConversationRepository:
             "SessionId": session_id,
             "ConversationHistory": '[{"role": "user", "content": "Hello", "timestamp": "2026-02-04T10:00:00"}]',
             "Metadata": '{"turn_count": 1, "conversation_summary": null, "previous_topics": [], "intent": "setup"}',
-            "CreatedAt": datetime.now(UTC),
+            "CreatedAt": datetime.utcnow(),
         }
 
-        # Create async context manager mock
+        mock_pool = AsyncMock()
         mock_conn = AsyncMock()
         mock_conn.fetchrow.return_value = mock_row
-        mock_acquire = AsyncMock()
-        mock_acquire.__aenter__.return_value = mock_conn
-        mock_acquire.__aexit__.return_value = None
-
-        mock_pool = MagicMock()
-        mock_pool.acquire.return_value = mock_acquire
+        mock_pool.acquire.return_value.__aenter__.return_value = mock_conn
 
         repository.pool = mock_pool
 

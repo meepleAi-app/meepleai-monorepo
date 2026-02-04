@@ -64,15 +64,6 @@ public class HybridAdaptiveRoutingStrategyTests
         _mockScope.Setup(s => s.ServiceProvider).Returns(_mockServiceProvider.Object);
         _mockScopeFactory.Setup(f => f.CreateScope()).Returns(_mockScope.Object);
 
-        // Setup service scope factory to resolve ITierStrategyAccessService
-        var mockServiceScope = new Mock<IServiceScope>();
-        var mockServiceProvider = new Mock<IServiceProvider>();
-        mockServiceProvider
-            .Setup(p => p.GetService(typeof(ITierStrategyAccessService)))
-            .Returns(_mockTierAccessService.Object);
-        mockServiceScope.Setup(s => s.ServiceProvider).Returns(mockServiceProvider.Object);
-        _mockServiceScopeFactory.Setup(f => f.CreateScope()).Returns(mockServiceScope.Object);
-
         // Default mock setup: all tiers have access to all strategies
         _mockTierAccessService
             .Setup(s => s.HasAccessToStrategyAsync(It.IsAny<LlmUserTier>(), It.IsAny<RagStrategy>(), It.IsAny<CancellationToken>()))
@@ -103,7 +94,7 @@ public class HybridAdaptiveRoutingStrategyTests
     {
         return new HybridAdaptiveRoutingStrategy(
             _mockStrategyMappingService.Object,
-            _mockServiceScopeFactory.Object,
+            _mockScopeFactory.Object,
             _aiSettings,
             _logger,
             overrideService ?? _mockOverrideService.Object);
@@ -247,7 +238,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         var sut = new HybridAdaptiveRoutingStrategy(
             _mockStrategyMappingService.Object,
-            _mockServiceScopeFactory.Object,
+            _mockScopeFactory.Object,
             preferredSettings,
             _logger);
 
@@ -293,7 +284,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         var sut = new HybridAdaptiveRoutingStrategy(
             _mockStrategyMappingService.Object,
-            _mockServiceScopeFactory.Object,
+            _mockScopeFactory.Object,
             disabledPreferredSettings,
             _logger);
 
@@ -329,7 +320,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         var sut = new HybridAdaptiveRoutingStrategy(
             _mockStrategyMappingService.Object,
-            _mockServiceScopeFactory.Object,
+            _mockScopeFactory.Object,
             disabledOpenRouterSettings,
             _logger);
 
@@ -358,7 +349,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         var sut = new HybridAdaptiveRoutingStrategy(
             _mockStrategyMappingService.Object,
-            _mockServiceScopeFactory.Object,
+            _mockScopeFactory.Object,
             allDisabledSettings,
             _logger);
 

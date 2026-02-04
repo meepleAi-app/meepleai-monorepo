@@ -1,0 +1,2332 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin: Shared Games Catalog - MeepleAI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* === MEEPLEAI DESIGN SYSTEM === */
+        :root {
+            /* MeepleAI Brand Colors */
+            --meeple-orange: hsl(25 95% 53%);
+            --meeple-orange-dark: hsl(25 95% 38%);
+            --meeple-orange-light: hsl(30 100% 94%);
+            --meeple-purple: hsl(262 83% 62%);
+            --meeple-purple-dark: hsl(271 91% 55%);
+
+            /* Warm Beige Palette */
+            --bg-primary: hsl(30 25% 97%);
+            --bg-secondary: hsl(30 20% 94%);
+            --bg-tertiary: hsl(30 18% 90%);
+            --bg-elevated: hsl(0 0% 100%);
+
+            /* Text Colors */
+            --text-primary: hsl(30 15% 15%);
+            --text-secondary: hsl(30 12% 35%);
+            --text-tertiary: hsl(30 10% 55%);
+
+            /* Borders */
+            --border-primary: hsl(30 15% 85%);
+            --border-secondary: hsl(30 12% 75%);
+
+            /* Status Colors */
+            --status-draft: hsl(45 93% 47%);
+            --status-pending: hsl(262 83% 62%);
+            --status-approved: hsl(142 76% 36%);
+            --status-processing: hsl(221 83% 53%);
+            --status-rejected: hsl(0 72% 51%);
+
+            /* Typography */
+            --font-quicksand: 'Quicksand', sans-serif;
+            --font-nunito: 'Nunito', sans-serif;
+
+            /* Spacing */
+            --radius: 0.625rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+        }
+
+        /* Dark Mode */
+        .dark {
+            --bg-primary: hsl(0 0% 10%);
+            --bg-secondary: hsl(0 0% 15%);
+            --bg-tertiary: hsl(0 0% 20%);
+            --bg-elevated: hsl(0 0% 18%);
+            --text-primary: hsl(30 25% 90%);
+            --text-secondary: hsl(0 0% 60%);
+            --text-tertiary: hsl(0 0% 50%);
+            --border-primary: hsl(0 0% 25%);
+            --border-secondary: hsl(0 0% 30%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-nunito);
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            -webkit-font-smoothing: antialiased;
+            position: relative;
+        }
+
+        /* MeepleAI Wood Texture Overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(210, 105, 30, 0.015) 2px, rgba(210, 105, 30, 0.015) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(139, 90, 60, 0.02) 2px, rgba(139, 90, 60, 0.02) 4px);
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.6;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(210, 105, 30, 0.03), transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-quicksand);
+            font-weight: 700;
+        }
+
+        /* Layout */
+        .layout {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Sidebar - Glass Morphism */
+        .sidebar {
+            background: var(--bg-secondary);
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-right: 1px solid var(--border-primary);
+            padding: 1.5rem 0.5rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 0 1rem 1.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: var(--font-quicksand);
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .sidebar-logo-icon {
+            font-size: 1.875rem;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+            padding: 0 0.5rem;
+        }
+
+        .sidebar-nav-item {
+            margin-bottom: 0.25rem;
+        }
+
+        .sidebar-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 1.25rem;
+            border-radius: var(--radius);
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-nav-link:hover {
+            background: rgba(210, 105, 30, 0.08);
+            color: var(--text-primary);
+            transform: translateX(2px);
+        }
+
+        .sidebar-nav-link.active {
+            background: linear-gradient(135deg, var(--meeple-purple) 0%, var(--meeple-purple-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+        }
+
+        .sidebar-nav-icon {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-badge {
+            margin-left: auto;
+            background: var(--meeple-orange);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            min-width: 1.5rem;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Page Header */
+        .page-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .page-title {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .page-subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .page-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Buttons - MeepleAI Style */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-lg);
+            font-family: var(--font-quicksand);
+            font-size: 0.9375rem;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--meeple-orange);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--meeple-orange-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(210, 105, 30, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .btn-secondary {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--meeple-orange);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .btn-purple {
+            background: linear-gradient(135deg, var(--meeple-purple) 0%, var(--meeple-purple-dark) 100%);
+            color: white;
+        }
+
+        .btn-purple:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        /* KPI Cards - MeepleAI Style */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            position: relative;
+            overflow: hidden;
+            background: var(--bg-elevated);
+            background: linear-gradient(135deg, var(--bg-elevated) 0%, rgba(255,255,255,0.5) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 1.25rem;
+            box-shadow: 0 1px 3px rgba(139, 90, 60, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(139, 90, 60, 0.12);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            right: -1.5rem;
+            top: -1.5rem;
+            width: 4rem;
+            height: 4rem;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(210, 105, 30, 0.1), rgba(255, 165, 0, 0.1));
+            transition: transform 0.3s ease;
+        }
+
+        .kpi-card:hover::before {
+            transform: scale(1.5);
+        }
+
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .kpi-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: var(--radius);
+            background: var(--meeple-orange-light);
+            color: var(--meeple-orange);
+        }
+
+        .kpi-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+        }
+
+        .kpi-badge.success {
+            background: rgba(16, 185, 129, 0.15);
+            color: hsl(142 76% 28%);
+        }
+
+        .kpi-badge.warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: hsl(45 93% 35%);
+        }
+
+        .kpi-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            margin-bottom: 0.25rem;
+        }
+
+        .kpi-value {
+            font-family: var(--font-quicksand);
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        .kpi-trend {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            font-weight: 600;
+        }
+
+        .kpi-trend.positive {
+            color: hsl(142 76% 36%);
+        }
+
+        .kpi-trend.neutral {
+            color: var(--text-tertiary);
+        }
+
+        /* Game Cards - Board Game Box Style */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .game-card {
+            position: relative;
+            background: var(--bg-elevated);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(139, 90, 60, 0.08);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .game-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(139, 90, 60, 0.15);
+        }
+
+        .game-card-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+        }
+
+        .game-card-content {
+            padding: 1.25rem;
+        }
+
+        .game-card-header {
+            margin-bottom: 1rem;
+        }
+
+        .game-card-title {
+            font-family: var(--font-quicksand);
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.875rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-badge.draft {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--status-draft);
+        }
+
+        .status-badge.pending {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--status-pending);
+        }
+
+        .status-badge.approved {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--status-approved);
+        }
+
+        .status-badge.processing {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--status-processing);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .game-meta {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .game-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .game-submitter {
+            font-size: 0.8125rem;
+            color: var(--text-tertiary);
+            margin-bottom: 0.75rem;
+        }
+
+        .game-card-actions {
+            display: flex;
+            gap: 0.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-primary);
+        }
+
+        .icon-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.375rem;
+            padding: 0.625rem 1rem;
+            border: 1px solid var(--border-primary);
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: var(--radius);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .icon-btn:hover {
+            background: var(--bg-secondary);
+            border-color: var(--meeple-orange);
+            color: var(--meeple-orange);
+        }
+
+        .icon-btn.primary {
+            background: var(--meeple-orange);
+            border-color: var(--meeple-orange);
+            color: white;
+        }
+
+        .icon-btn.primary:hover {
+            background: var(--meeple-orange-dark);
+            box-shadow: 0 4px 8px rgba(210, 105, 30, 0.2);
+        }
+
+        /* Filters Bar */
+        .filters {
+            background: var(--bg-elevated);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1.25rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 280px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.75rem;
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.9375rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--meeple-orange);
+            box-shadow: 0 0 0 3px rgba(210, 105, 30, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+            width: 18px;
+            height: 18px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+        }
+
+        .filter-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-tertiary);
+        }
+
+        .filter-select {
+            padding: 0.625rem 0.875rem;
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .filter-select:hover {
+            border-color: var(--meeple-orange);
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--meeple-orange);
+            box-shadow: 0 0 0 3px rgba(210, 105, 30, 0.1);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            max-width: 700px;
+            width: 92%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            padding: 2rem;
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .modal-title {
+            font-family: var(--font-quicksand);
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .modal-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9375rem;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .modal-footer {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid var(--border-primary);
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.9375rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--meeple-orange);
+            box-shadow: 0 0 0 3px rgba(210, 105, 30, 0.1);
+        }
+
+        .form-help {
+            font-size: 0.8125rem;
+            color: var(--text-tertiary);
+            margin-top: 0.375rem;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 3rem 2rem;
+            text-align: center;
+            background: var(--bg-secondary);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: var(--meeple-orange);
+            background: var(--meeple-orange-light);
+        }
+
+        .upload-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 1rem;
+            color: var(--meeple-orange);
+            opacity: 0.7;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-primary);
+            padding-bottom: 0;
+        }
+
+        .tab {
+            padding: 0.875rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            font-family: var(--font-quicksand);
+            font-size: 0.9375rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-bottom: -2px;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+            border-radius: var(--radius) var(--radius) 0 0;
+        }
+
+        .tab.active {
+            color: var(--meeple-orange);
+            border-bottom-color: var(--meeple-orange);
+        }
+
+        /* Approval Queue List */
+        .approval-list {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+        }
+
+        .approval-item {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border-primary);
+            display: grid;
+            grid-template-columns: 100px 1fr auto;
+            gap: 1.25rem;
+            align-items: center;
+            transition: background 0.15s ease;
+        }
+
+        .approval-item:last-child {
+            border-bottom: none;
+        }
+
+        .approval-item:hover {
+            background: var(--bg-secondary);
+        }
+
+        .approval-thumbnail {
+            width: 100px;
+            height: 100px;
+            border-radius: var(--radius-lg);
+            object-fit: cover;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .approval-info {
+            min-width: 0;
+        }
+
+        .approval-title {
+            font-family: var(--font-quicksand);
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .approval-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.625rem;
+            flex-wrap: wrap;
+        }
+
+        .approval-tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 0.25rem 0.75rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .tag.urgent {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--status-rejected);
+            color: var(--status-rejected);
+        }
+
+        .approval-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        /* Table View */
+        .table-container {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background: var(--bg-secondary);
+            padding: 1rem 1.25rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-tertiary);
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .data-table td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-primary);
+            font-size: 0.9375rem;
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tbody tr {
+            transition: background 0.15s ease;
+        }
+
+        .data-table tbody tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        /* Document Item */
+        .doc-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            margin-bottom: 0.75rem;
+            transition: all 0.15s ease;
+        }
+
+        .doc-item:hover {
+            border-color: var(--meeple-orange);
+            box-shadow: 0 4px 8px rgba(210, 105, 30, 0.1);
+        }
+
+        .doc-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius);
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--status-rejected);
+        }
+
+        .doc-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .doc-title {
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .doc-meta {
+            font-size: 0.8125rem;
+            color: var(--text-tertiary);
+        }
+
+        .doc-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        /* Alert Boxes */
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: var(--radius-lg);
+            border-left: 3px solid;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: var(--status-draft);
+            color: var(--text-primary);
+        }
+
+        .alert-info {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: var(--status-pending);
+            color: var(--text-primary);
+        }
+
+        .alert-title {
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Utilities */
+        .hidden { display: none; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .text-center { text-align: center; }
+
+        /* View Toggle */
+        .view-toggle {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--bg-secondary);
+            padding: 0.25rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-primary);
+        }
+
+        .view-toggle-btn {
+            padding: 0.5rem 0.75rem;
+            background: transparent;
+            border: none;
+            border-radius: calc(var(--radius) - 2px);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .view-toggle-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .view-toggle-btn.active {
+            background: var(--bg-elevated);
+            color: var(--meeple-orange);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Page Navigation */
+        .page-nav {
+            display: none;
+        }
+
+        .page-nav.show {
+            display: block;
+        }
+
+        /* Checkbox */
+        .checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border-primary);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .checkbox:checked {
+            background: var(--meeple-orange);
+            border-color: var(--meeple-orange);
+        }
+
+        /* Role Badge */
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .role-badge.admin {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--meeple-purple);
+        }
+
+        .role-badge.editor {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--status-approved);
+        }
+
+        .role-badge.user {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-tertiary);
+        }
+
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1.5rem;
+            opacity: 0.3;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <!-- Layout -->
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="sidebar-logo-icon">🎲</span>
+                    <span>MeepleAI</span>
+                </div>
+            </div>
+            <nav>
+                <ul class="sidebar-nav">
+                    <li class="sidebar-nav-item">
+                        <a href="#page-dashboard" class="sidebar-nav-link active" onclick="showPage('page-dashboard')">
+                            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="14" width="7" height="7"></rect>
+                                <rect x="3" y="14" width="7" height="7"></rect>
+                            </svg>
+                            Shared Games
+                            <span class="sidebar-badge">23</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="#page-approval-queue" class="sidebar-nav-link" onclick="showPage('page-approval-queue')">
+                            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 11l3 3L22 4"></path>
+                                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                            </svg>
+                            Approval Queue
+                            <span class="sidebar-badge">23</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="#page-documents" class="sidebar-nav-link" onclick="showPage('page-documents')">
+                            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                                <path d="M14 2v6h6"></path>
+                            </svg>
+                            Documents
+                        </a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="#page-users-roles" class="sidebar-nav-link" onclick="showPage('page-users-roles')">
+                            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 00-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 010 7.75"></path>
+                            </svg>
+                            Users & Roles
+                        </a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="#" class="sidebar-nav-link">
+                            <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M12 1v6m0 6v6"></path>
+                            </svg>
+                            Settings
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- PAGE 1: DASHBOARD -->
+            <div id="page-dashboard" class="page-nav show">
+                <header class="page-header">
+                    <h1 class="page-title">Shared Games Catalog</h1>
+                    <p class="page-subtitle">Manage community game database, import from BGG, and handle approvals</p>
+
+                    <div class="page-actions">
+                        <button class="btn btn-primary" onclick="showModal('import-modal')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Import from BGG
+                        </button>
+                        <button class="btn btn-secondary">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="16"></line>
+                                <line x1="8" y1="12" x2="16" y2="12"></line>
+                            </svg>
+                            Create Manually
+                        </button>
+                        <button class="btn btn-ghost">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            Export Data
+                        </button>
+                    </div>
+                </header>
+
+                <!-- KPI Stats -->
+                <div class="stats-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="14" width="7" height="7"></rect>
+                                    <rect x="3" y="14" width="7" height="7"></rect>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="kpi-title">Total Games</div>
+                        <div class="kpi-value">2,847</div>
+                        <div class="kpi-trend positive">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="18 15 12 9 6 15"></polyline>
+                            </svg>
+                            +127 this month
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon" style="background: rgba(139, 92, 246, 0.15); color: var(--meeple-purple);">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 11l3 3L22 4"></path>
+                                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                                </svg>
+                            </div>
+                            <span class="kpi-badge warning">Action needed</span>
+                        </div>
+                        <div class="kpi-title">Pending Approval</div>
+                        <div class="kpi-value" style="color: var(--meeple-purple);">23</div>
+                        <div class="kpi-trend neutral">5 urgent (>7 days)</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--status-approved);">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                                    <path d="M14 2v6h6"></path>
+                                </svg>
+                            </div>
+                            <span class="kpi-badge success">66% coverage</span>
+                        </div>
+                        <div class="kpi-title">Games with PDFs</div>
+                        <div class="kpi-value">1,892</div>
+                        <div class="kpi-trend neutral">Target: 75%</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon" style="background: rgba(59, 130, 246, 0.15); color: var(--status-processing);">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="kpi-title">Avg Review Time</div>
+                        <div class="kpi-value">2.4<span style="font-size: 1.25rem; color: var(--text-secondary); font-weight: 400;">d</span></div>
+                        <div class="kpi-trend positive">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            Improved 18%
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <input type="text" class="search-input" placeholder="Search by title, BGG ID, or publisher...">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Status</label>
+                        <select class="filter-select">
+                            <option>All Statuses</option>
+                            <option>Draft</option>
+                            <option>Pending Approval</option>
+                            <option>Published</option>
+                            <option>Processing</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Sort</label>
+                        <select class="filter-select">
+                            <option>Recently Updated</option>
+                            <option>Oldest First</option>
+                            <option>Title A-Z</option>
+                            <option>Most Popular</option>
+                        </select>
+                    </div>
+                    <div class="view-toggle">
+                        <button class="view-toggle-btn active">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="14" width="7" height="7"></rect>
+                                <rect x="3" y="14" width="7" height="7"></rect>
+                            </svg>
+                        </button>
+                        <button class="view-toggle-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="8" y1="6" x2="21" y2="6"></line>
+                                <line x1="8" y1="12" x2="21" y2="12"></line>
+                                <line x1="8" y1="18" x2="21" y2="18"></line>
+                                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Games Grid -->
+                <div class="games-grid">
+                    <div class="game-card" onclick="showModal('game-detail-modal')">
+                        <img src="https://placehold.co/280x200/8b5cf6/ffffff?text=🎲+Catan&font=roboto" class="game-card-image" alt="Catan">
+                        <div class="game-card-content">
+                            <div class="game-card-header">
+                                <h3 class="game-card-title">Catan</h3>
+                                <span class="status-badge pending">
+                                    <span class="status-dot"></span>
+                                    Pending
+                                </span>
+                            </div>
+                            <div class="game-meta">
+                                <span class="game-meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+                                        <circle cx="9" cy="7" r="4"></circle>
+                                    </svg>
+                                    3-4
+                                </span>
+                                <span class="game-meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                    60-120m
+                                </span>
+                            </div>
+                            <div class="game-submitter">Submitted by editor@example.com • 2 days ago</div>
+                            <div class="game-card-actions">
+                                <button class="icon-btn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                    Preview
+                                </button>
+                                <button class="icon-btn primary">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    Approve
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="game-card">
+                        <img src="https://placehold.co/280x200/10b981/ffffff?text=🎯+Ticket+to+Ride&font=roboto" class="game-card-image" alt="Ticket to Ride">
+                        <div class="game-card-content">
+                            <div class="game-card-header">
+                                <h3 class="game-card-title">Ticket to Ride</h3>
+                                <span class="status-badge approved">
+                                    <span class="status-dot"></span>
+                                    Published
+                                </span>
+                            </div>
+                            <div class="game-meta">
+                                <span class="game-meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+                                        <circle cx="9" cy="7" r="4"></circle>
+                                    </svg>
+                                    2-5
+                                </span>
+                                <span class="game-meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                    30-60m
+                                </span>
+                            </div>
+                            <div class="game-submitter">Published • 5 days ago • 3 PDFs</div>
+                            <div class="game-card-actions">
+                                <button class="icon-btn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                    Edit
+                                </button>
+                                <button class="icon-btn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                    </svg>
+                                    PDFs
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="game-card">
+                        <img src="https://placehold.co/280x200/f59e0b/ffffff?text=🦅+Wingspan&font=roboto" class="game-card-image" alt="Wingspan">
+                        <div class="game-card-content">
+                            <div class="game-card-header">
+                                <h3 class="game-card-title">Wingspan</h3>
+                                <span class="status-badge draft">
+                                    <span class="status-dot"></span>
+                                    Draft
+                                </span>
+                            </div>
+                            <div class="game-meta">
+                                <span class="game-meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+                                        <circle cx="9" cy="7" r="4"></circle>
+                                    </svg>
+                                    1-5
+                                </span>
+                                <span class="game-meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                    40-70m
+                                </span>
+                            </div>
+                            <div class="game-submitter">Last edited 1 hour ago • No PDFs</div>
+                            <div class="game-card-actions">
+                                <button class="icon-btn primary">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
+                                    Continue Editing
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="game-card">
+                        <img src="https://placehold.co/280x200/3b82f6/ffffff?text=⚔️+7+Wonders&font=roboto" class="game-card-image" alt="7 Wonders">
+                        <div class="game-card-content">
+                            <div class="game-card-header">
+                                <h3 class="game-card-title">7 Wonders</h3>
+                                <span class="status-badge processing">
+                                    <span class="status-dot"></span>
+                                    Processing
+                                </span>
+                            </div>
+                            <div class="game-meta">
+                                <span class="game-meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+                                        <circle cx="9" cy="7" r="4"></circle>
+                                    </svg>
+                                    2-7
+                                </span>
+                                <span class="game-meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                    30m
+                                </span>
+                            </div>
+                            <div class="game-submitter">PDF embedding in progress • ETA 3 min</div>
+                            <div class="game-card-actions">
+                                <button class="icon-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="10 8 16 12 10 16 10 8"></polyline>
+                                    </svg>
+                                    Processing...
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE 2: APPROVAL QUEUE -->
+            <div id="page-approval-queue" class="page-nav">
+                <header class="page-header">
+                    <h1 class="page-title">Approval Queue</h1>
+                    <p class="page-subtitle">Review and approve games submitted by editors</p>
+                </header>
+
+                <!-- Queue Stats -->
+                <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 2rem;">
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon" style="background: rgba(139, 92, 246, 0.15); color: var(--meeple-purple);">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 11l3 3L22 4"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="kpi-title">Pending Review</div>
+                        <div class="kpi-value" style="color: var(--meeple-purple);">23</div>
+                        <div class="kpi-trend">5 urgent (>7 days)</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--status-approved);">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="kpi-title">This Week</div>
+                        <div class="kpi-value">47</div>
+                        <div class="kpi-trend neutral">32 approved • 15 rejected</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon" style="background: rgba(59, 130, 246, 0.15); color: var(--status-processing);">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="kpi-title">Avg Review Time</div>
+                        <div class="kpi-value">2.4<span style="font-size: 1.25rem; color: var(--text-secondary);">d</span></div>
+                        <div class="kpi-trend positive">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            -18% vs last week
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bulk Actions Bar -->
+                <div style="background: var(--meeple-purple); color: white; padding: 1rem 1.5rem; border-radius: var(--radius-lg); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <input type="checkbox" class="checkbox" style="border-color: white; background: transparent;">
+                        <span style="font-weight: 700;">3 items selected</span>
+                    </div>
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button class="btn btn-secondary" style="background: white; color: var(--meeple-purple);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Bulk Approve
+                        </button>
+                        <button class="btn btn-ghost" style="color: white; border: 1px solid rgba(255,255,255,0.3);">
+                            Clear Selection
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Approval List -->
+                <div class="approval-list">
+                    <div class="approval-item">
+                        <img src="https://placehold.co/100x100/8b5cf6/ffffff?text=🎲" class="approval-thumbnail" alt="Catan">
+                        <div class="approval-info">
+                            <h3 class="approval-title">Catan</h3>
+                            <div class="approval-meta">
+                                <span>Submitted by editor@example.com</span>
+                                <span>•</span>
+                                <span>2 days ago</span>
+                                <span>•</span>
+                                <span>BGG ID: 13</span>
+                            </div>
+                            <div class="approval-tags">
+                                <span class="tag">✅ 2 PDFs uploaded</span>
+                                <span class="tag">✅ Metadata complete</span>
+                                <span class="tag">✅ BGG verified</span>
+                            </div>
+                        </div>
+                        <div class="approval-actions">
+                            <button class="btn btn-ghost">Preview</button>
+                            <button class="btn btn-purple">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                Approve
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="approval-item">
+                        <img src="https://placehold.co/100x100/10b981/ffffff?text=⚔️" class="approval-thumbnail" alt="7 Wonders">
+                        <div class="approval-info">
+                            <h3 class="approval-title">7 Wonders</h3>
+                            <div class="approval-meta">
+                                <span>Submitted by editor2@example.com</span>
+                                <span>•</span>
+                                <span>4 days ago</span>
+                                <span>•</span>
+                                <span>BGG ID: 68448</span>
+                            </div>
+                            <div class="approval-tags">
+                                <span class="tag">⏳ 1 PDF processing</span>
+                                <span class="tag">✅ Metadata complete</span>
+                            </div>
+                        </div>
+                        <div class="approval-actions">
+                            <button class="btn btn-ghost">Preview</button>
+                            <button class="btn btn-purple">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                Approve
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="approval-item" style="background: rgba(239, 68, 68, 0.03);">
+                        <img src="https://placehold.co/100x100/f59e0b/ffffff?text=🦅" class="approval-thumbnail" alt="Wingspan">
+                        <div class="approval-info">
+                            <h3 class="approval-title">Wingspan</h3>
+                            <div class="approval-meta">
+                                <span>Submitted by editor@example.com</span>
+                                <span>•</span>
+                                <span style="color: var(--status-rejected); font-weight: 700;">8 days ago (URGENT)</span>
+                                <span>•</span>
+                                <span>BGG ID: 266192</span>
+                            </div>
+                            <div class="approval-tags">
+                                <span class="tag urgent">⚠️ Overdue review</span>
+                                <span class="tag">❌ No PDFs</span>
+                                <span class="tag">✅ Metadata complete</span>
+                            </div>
+                        </div>
+                        <div class="approval-actions">
+                            <button class="btn btn-ghost">Preview</button>
+                            <button class="btn btn-purple">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                Approve
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE 3: DOCUMENTS -->
+            <div id="page-documents" class="page-nav">
+                <header class="page-header">
+                    <h1 class="page-title">Documents Management</h1>
+                    <p class="page-subtitle">Manage rulebook PDFs and game documents across the catalog</p>
+                </header>
+
+                <!-- Document Stats -->
+                <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 2rem;">
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--status-approved);">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="kpi-title">Processed PDFs</div>
+                        <div class="kpi-value">1,892</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon" style="background: rgba(139, 92, 246, 0.15); color: var(--meeple-purple);">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="kpi-title">Awaiting Approval</div>
+                        <div class="kpi-value" style="color: var(--meeple-purple);">47</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon" style="background: rgba(59, 130, 246, 0.15); color: var(--status-processing);">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="kpi-title">Processing</div>
+                        <div class="kpi-value">8</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon" style="background: rgba(239, 68, 68, 0.15); color: var(--status-rejected);">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="kpi-title">Failed</div>
+                        <div class="kpi-value">3</div>
+                    </div>
+                </div>
+
+                <!-- Documents List -->
+                <div style="margin-bottom: 1.5rem;">
+                    <h2 style="font-family: var(--font-quicksand); font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Recent Documents</h2>
+
+                    <div class="doc-item">
+                        <div class="doc-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                        </div>
+                        <div class="doc-info">
+                            <div class="doc-title">Catan_Rulebook_EN_v4.pdf</div>
+                            <div class="doc-meta">2.4 MB • 16 pages • Uploaded by editor@example.com • For "Catan"</div>
+                        </div>
+                        <div class="doc-actions">
+                            <span class="status-badge approved">
+                                <span class="status-dot"></span>
+                                Processed
+                            </span>
+                            <button class="icon-btn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                </svg>
+                                Download
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="doc-item" style="border-color: var(--meeple-purple); border-width: 2px;">
+                        <div class="doc-icon" style="background: rgba(139, 92, 246, 0.15); color: var(--meeple-purple);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                        </div>
+                        <div class="doc-info">
+                            <div class="doc-title">7Wonders_Rulebook_v2.pdf</div>
+                            <div class="doc-meta">3.8 MB • 24 pages • Uploaded 1 hour ago • For "7 Wonders"</div>
+                        </div>
+                        <div class="doc-actions">
+                            <span class="status-badge pending">
+                                <span class="status-dot"></span>
+                                Awaiting Approval
+                            </span>
+                            <button class="icon-btn primary">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                Approve
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="doc-item">
+                        <div class="doc-icon" style="background: rgba(59, 130, 246, 0.15); color: var(--status-processing);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                        </div>
+                        <div class="doc-info">
+                            <div class="doc-title">Wingspan_QuickReference.pdf</div>
+                            <div class="doc-meta">1.2 MB • 4 pages • Processing embedding • For "Wingspan"</div>
+                        </div>
+                        <div class="doc-actions">
+                            <span class="status-badge processing">
+                                <span class="status-dot"></span>
+                                Processing
+                            </span>
+                            <div style="font-size: 0.8125rem; color: var(--text-tertiary);">ETA 2 min</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE 4: USERS & ROLES -->
+            <div id="page-users-roles" class="page-nav">
+                <header class="page-header">
+                    <h1 class="page-title">Users & Roles</h1>
+                    <p class="page-subtitle">Manage user accounts and role assignments</p>
+
+                    <div class="page-actions">
+                        <button class="btn btn-primary">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+                                <circle cx="8.5" cy="7" r="4"></circle>
+                                <line x1="20" y1="8" x2="20" y2="14"></line>
+                                <line x1="23" y1="11" x2="17" y2="11"></line>
+                            </svg>
+                            Invite User
+                        </button>
+                        <button class="btn btn-secondary">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            Export Users
+                        </button>
+                    </div>
+                </header>
+
+                <!-- User Stats -->
+                <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 2rem;">
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="kpi-title">Total Users</div>
+                        <div class="kpi-value">1,284</div>
+                        <div class="kpi-trend positive">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="18 15 12 9 6 15"></polyline>
+                            </svg>
+                            +42 this week
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon" style="background: rgba(139, 92, 246, 0.15); color: var(--meeple-purple);">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                                    <path d="M2 17l10 5 10-5"></path>
+                                    <path d="M2 12l10 5 10-5"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="kpi-title">Admins</div>
+                        <div class="kpi-value">5</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--status-approved);">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="kpi-title">Editors</div>
+                        <div class="kpi-value">23</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon" style="background: rgba(59, 130, 246, 0.15); color: var(--status-processing);">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="kpi-title">Active Today</div>
+                        <div class="kpi-value">187</div>
+                    </div>
+                </div>
+
+                <!-- Users Table -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">
+                                    <input type="checkbox" class="checkbox">
+                                </th>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Contributions</th>
+                                <th>Last Active</th>
+                                <th>Status</th>
+                                <th style="width: 140px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="checkbox">
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--meeple-purple), var(--meeple-purple-dark)); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.75rem;">JD</div>
+                                        <div>
+                                            <div style="font-weight: 700;">John Doe</div>
+                                            <div style="font-size: 0.8125rem; color: var(--text-tertiary);">john.doe@example.com</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="role-badge admin">Admin</span>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600;">142 games</div>
+                                    <div style="font-size: 0.8125rem; color: var(--text-tertiary);">87 PDFs uploaded</div>
+                                </td>
+                                <td style="color: var(--text-secondary); font-weight: 500;">2 hours ago</td>
+                                <td>
+                                    <span class="status-badge approved">
+                                        <span class="status-dot"></span>
+                                        Active
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button class="icon-btn">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="checkbox">
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--status-approved), hsl(142 76% 28%)); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.75rem;">MS</div>
+                                        <div>
+                                            <div style="font-weight: 700;">Maria Smith</div>
+                                            <div style="font-size: 0.8125rem; color: var(--text-tertiary);">maria.smith@example.com</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="role-badge editor">Editor</span>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600;">87 games</div>
+                                    <div style="font-size: 0.8125rem; color: var(--text-tertiary);">52 PDFs uploaded</div>
+                                </td>
+                                <td style="color: var(--text-secondary); font-weight: 500;">1 day ago</td>
+                                <td>
+                                    <span class="status-badge approved">
+                                        <span class="status-dot"></span>
+                                        Active
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button class="icon-btn">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="checkbox">
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); font-weight: 700; font-size: 0.75rem;">RJ</div>
+                                        <div>
+                                            <div style="font-weight: 700;">Robert Johnson</div>
+                                            <div style="font-size: 0.8125rem; color: var(--text-tertiary);">robert.j@example.com</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="role-badge user">User</span>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600;">0 games</div>
+                                    <div style="font-size: 0.8125rem; color: var(--text-tertiary);">Read-only access</div>
+                                </td>
+                                <td style="color: var(--text-secondary); font-weight: 500;">3 days ago</td>
+                                <td>
+                                    <span class="status-badge approved">
+                                        <span class="status-dot"></span>
+                                        Active
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button class="icon-btn">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL: Import from BGG -->
+    <div id="import-modal" class="modal-overlay hidden" onclick="if(event.target === this) hideModal('import-modal')">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 class="modal-title">Import Game from BoardGameGeek</h2>
+                <p class="modal-subtitle">Fetch metadata, images, and descriptions from BGG API</p>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">BGG Game ID or URL</label>
+                    <input type="text" class="form-input" placeholder="e.g., 13 or https://boardgamegeek.com/boardgame/13/catan" value="13">
+                    <div class="form-help">Find the ID in the BGG URL (e.g., boardgamegeek.com/boardgame/<strong>13</strong>/catan)</div>
+                </div>
+
+                <!-- Live Preview -->
+                <div style="background: var(--bg-secondary); padding: 1.25rem; border-radius: var(--radius-lg); margin-bottom: 1.25rem; border: 1px solid var(--border-primary);">
+                    <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 1rem;">Live Preview</div>
+                    <div style="display: grid; grid-template-columns: 100px 1fr; gap: 1.25rem; align-items: center;">
+                        <img src="https://placehold.co/100x100/d2691e/ffffff?text=🎲" style="border-radius: var(--radius-lg); box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                        <div>
+                            <div style="font-family: var(--font-quicksand); font-size: 1.25rem; font-weight: 700; margin-bottom: 0.375rem;">Catan</div>
+                            <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Klaus Teuber • 1995</div>
+                            <div style="display: flex; gap: 1rem; font-size: 0.8125rem; color: var(--text-tertiary);">
+                                <span>👥 3-4 players</span>
+                                <span>⏱️ 60-120 min</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" checked style="width: 18px; height: 18px; cursor: pointer;">
+                        <span class="form-label" style="margin-bottom: 0; cursor: pointer;">Auto-submit for approval after import</span>
+                    </label>
+                    <div class="form-help">Game will be created with "Pending Approval" status</div>
+                </div>
+
+                <div class="alert alert-warning">
+                    <div class="alert-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        BGG API Rate Limits
+                    </div>
+                    <div>BGG enforces strict rate limits. Bulk imports may take several minutes. Please be patient.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="hideModal('import-modal')">Cancel</button>
+                <button class="btn btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Import Game
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Game Detail with PDF Upload -->
+    <div id="game-detail-modal" class="modal-overlay hidden" onclick="if(event.target === this) hideModal('game-detail-modal')">
+        <div class="modal" style="max-width: 1000px;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="flex-between">
+                    <div>
+                        <h2 class="modal-title">Catan</h2>
+                        <p class="modal-subtitle">BGG ID: 13 • Imported 2 days ago by editor@example.com</p>
+                    </div>
+                    <span class="status-badge pending">
+                        <span class="status-dot"></span>
+                        Pending Approval
+                    </span>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs" style="padding: 0 2rem; margin-bottom: 0;">
+                <button class="tab active">Game Details</button>
+                <button class="tab">Documents (2)</button>
+                <button class="tab">Review History</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Game Info Grid -->
+                <div style="display: grid; grid-template-columns: 160px 1fr; gap: 2rem; margin-bottom: 2rem;">
+                    <img src="https://placehold.co/160x160/8b5cf6/ffffff?text=🎲" style="border-radius: var(--radius-xl); box-shadow: 0 8px 16px rgba(0,0,0,0.12);">
+                    <div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; margin-bottom: 1.25rem;">
+                            <div>
+                                <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 0.375rem;">Players</div>
+                                <div style="font-weight: 700; font-size: 1.125rem;">3-4 <span style="color: var(--text-tertiary); font-weight: 500; font-size: 0.875rem;">(Best: 3-4)</span></div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 0.375rem;">Playing Time</div>
+                                <div style="font-weight: 700; font-size: 1.125rem;">60-120 min</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 0.375rem;">Complexity</div>
+                                <div style="font-weight: 700; font-size: 1.125rem;">2.3 / 5.0</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 0.375rem;">Year</div>
+                                <div style="font-weight: 700; font-size: 1.125rem;">1995</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.9375rem; color: var(--text-secondary); line-height: 1.6;">
+                            In Catan, players try to be the dominant force on the island of Catan by building settlements, cities, and roads. On each turn dice are rolled to determine what resources the island produces...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PDF Section -->
+                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-primary);">
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="font-family: var(--font-quicksand); font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Game Documents</h3>
+                        <p style="font-size: 0.9375rem; color: var(--text-secondary);">Upload rulebooks, player aids, or expansion rules for RAG processing</p>
+                    </div>
+
+                    <!-- Existing Documents -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <div class="doc-item">
+                            <div class="doc-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                            </div>
+                            <div class="doc-info">
+                                <div class="doc-title">Catan_Rulebook_EN_v4.pdf</div>
+                                <div class="doc-meta">2.4 MB • 16 pages • Uploaded by editor@example.com</div>
+                            </div>
+                            <div class="doc-actions">
+                                <span class="status-badge approved">
+                                    <span class="status-dot"></span>
+                                    Processed
+                                </span>
+                                <button class="icon-btn">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="doc-item" style="border-color: var(--meeple-purple); border-width: 2px;">
+                            <div class="doc-icon" style="background: rgba(139, 92, 246, 0.15); color: var(--meeple-purple);">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                            </div>
+                            <div class="doc-info">
+                                <div class="doc-title">Catan_QuickReference.pdf</div>
+                                <div class="doc-meta">1.1 MB • 4 pages • Uploaded 1 day ago</div>
+                            </div>
+                            <div class="doc-actions">
+                                <span class="status-badge pending">
+                                    <span class="status-dot"></span>
+                                    Awaiting Approval
+                                </span>
+                                <button class="icon-btn primary">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    Approve
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upload Area -->
+                    <div class="upload-area">
+                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <div style="font-size: 0.9375rem; color: var(--text-secondary); font-weight: 500;">
+                            <strong style="color: var(--meeple-orange); font-weight: 700;">Click to upload</strong> or drag and drop
+                        </div>
+                        <div style="font-size: 0.8125rem; color: var(--text-tertiary); margin-top: 0.5rem;">
+                            PDF files only • Max 50 MB per file
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <div class="alert-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 16v-4"></path>
+                                <path d="M12 8h.01"></path>
+                            </svg>
+                            Editor Note
+                        </div>
+                        <div>Uploaded PDFs require <strong>Admin approval</strong> before RAG embedding processing begins.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="hideModal('game-detail-modal')">Close</button>
+                <button class="btn btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    Edit Metadata
+                </button>
+                <button class="btn btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Approve & Publish
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme Toggle -->
+    <div class="theme-toggle">
+        <button class="btn btn-secondary" onclick="document.documentElement.classList.toggle('dark')" style="border-radius: 50%; width: 48px; height: 48px; padding: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+            </svg>
+        </button>
+    </div>
+
+    <script>
+        // Page Navigation
+        function showPage(pageId) {
+            document.querySelectorAll('.page-nav').forEach(page => {
+                page.classList.remove('show');
+            });
+            document.getElementById(pageId).classList.add('show');
+
+            // Update sidebar active state
+            document.querySelectorAll('.sidebar-nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.closest('.sidebar-nav-link')?.classList.add('active');
+        }
+
+        // Modal Functions
+        function showModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Escape key closes modals
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay').forEach(modal => {
+                    modal.classList.add('hidden');
+                });
+                document.body.style.overflow = '';
+            }
+        });
+    </script>
+</body>
+</html>

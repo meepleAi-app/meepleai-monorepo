@@ -53,50 +53,79 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   ariaLabel: string;
+  /** Only show for admin users */
   adminOnly?: boolean;
+  /** Only show for authenticated users */
+  authOnly?: boolean;
+  /** Only show for anonymous (non-authenticated) users */
+  anonOnly?: boolean;
 }
 
 /**
  * Navigation items for the header
- * Order: Dashboard, Library, Catalog, Chat, Profile (Issue #2860)
- * Settings moved to user dropdown menu
+ *
+ * Visibility rules:
+ * - anonOnly: only visible when NOT logged in
+ * - authOnly: only visible when logged in
+ * - adminOnly: only visible for admin users
+ * - no flags: visible to everyone
+ *
+ * Anonymous users see: Home, Catalogo
+ * Authenticated users see: Dashboard, Library, Chat, Toolkit, Catalogo, Profilo
+ * Admin users see: + Admin
  */
 const NAV_ITEMS: NavItem[] = [
+  // Anonymous-only items
+  {
+    href: '/',
+    icon: LayoutDashboard,
+    label: 'Home',
+    ariaLabel: 'Navigate to home page',
+    anonOnly: true,
+  },
+  // Authenticated-only items
   {
     href: '/dashboard',
     icon: LayoutDashboard,
     label: 'Dashboard',
     ariaLabel: 'Navigate to dashboard',
+    authOnly: true,
   },
   {
     href: '/library',
     icon: BookOpen,
     label: 'I Miei Giochi',
     ariaLabel: 'Navigate to your game library',
-  },
-  {
-    href: '/games',
-    icon: Gamepad2,
-    label: 'Catalogo',
-    ariaLabel: 'Navigate to games catalog',
+    authOnly: true,
   },
   {
     href: '/chat',
     icon: MessageSquare,
     label: 'Chat',
     ariaLabel: 'Navigate to chat interface',
+    authOnly: true,
   },
   {
     href: '/toolkit',
     icon: Dice6,
     label: 'Toolkit',
     ariaLabel: 'Navigate to game session toolkit',
+    authOnly: true,
   },
+  // Visible to everyone
+  {
+    href: '/games',
+    icon: Gamepad2,
+    label: 'Catalogo',
+    ariaLabel: 'Navigate to games catalog',
+  },
+  // Authenticated-only items
   {
     href: '/profile',
     icon: User,
     label: 'Profilo',
     ariaLabel: 'Navigate to your profile',
+    authOnly: true,
   },
   {
     href: '/admin',
@@ -119,7 +148,8 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoggingOut, startTransition] = useTransition();
 
-  // Check if user is admin
+  // Check user authentication and role
+  const isAuthenticated = !!user;
   const isAdmin = user?.role?.toLowerCase() === 'admin';
 
   // Handle scroll for sticky header effect
@@ -160,8 +190,16 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
   const userInitial =
     user?.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U';
 
-  // Filter nav items based on admin status
-  const visibleNavItems = NAV_ITEMS.filter(item => !item.adminOnly || isAdmin);
+  // Filter nav items based on authentication and role
+  const visibleNavItems = NAV_ITEMS.filter(item => {
+    // Admin-only items: only for admins
+    if (item.adminOnly && !isAdmin) return false;
+    // Auth-only items: only for authenticated users
+    if (item.authOnly && !isAuthenticated) return false;
+    // Anon-only items: only for non-authenticated users
+    if (item.anonOnly && isAuthenticated) return false;
+    return true;
+  });
 
   // Desktop Navigation
   const DesktopNav = () => (
@@ -189,19 +227,6 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
         );
       })}
     </nav>
-  );
-
-  // Mobile Settings Button (shown in top bar on mobile)
-  const MobileSettingsButton = () => (
-    <Link
-      href="/settings"
-      className="md:hidden"
-      aria-label="Navigate to settings"
-    >
-      <Button variant="ghost" size="icon">
-        <Settings className="h-5 w-5" />
-      </Button>
-    </Link>
   );
 
   // User Menu
@@ -320,10 +345,21 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
         {/* Center: Desktop Navigation */}
         <DesktopNav />
 
-        {/* Right: Mobile Settings + Notifications + User Menu */}
+        {/* Right: Settings + Notifications + User Menu (Settings/Notifications only for authenticated) */}
         <div className="flex items-center gap-2">
-          <MobileSettingsButton />
-          <NotificationBell />
+          {isAuthenticated && (
+            <>
+              <Link
+                href="/settings"
+                aria-label="Navigate to settings"
+              >
+                <Button variant="ghost" size="icon">
+                  <Settings className="h-5 w-5" />
+                </Button>
+              </Link>
+              <NotificationBell />
+            </>
+          )}
           <UserMenu />
         </div>
       </div>

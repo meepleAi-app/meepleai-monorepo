@@ -135,4 +135,9 @@ public class UserLibraryEntryEntity
     /// Collection of setup checklist items.
     /// </summary>
     public ICollection<UserGameChecklistEntity> Checklist { get; set; } = new List<UserGameChecklistEntity>();
+
+    /// <summary>
+    /// Collection of labels assigned to this game.
+    /// </summary>
+    public ICollection<UserGameLabelEntity> Labels { get; set; } = new List<UserGameLabelEntity>();
 }

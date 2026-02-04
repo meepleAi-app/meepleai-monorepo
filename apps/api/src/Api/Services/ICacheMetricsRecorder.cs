@@ -29,4 +29,28 @@ internal interface ICacheMetricsRecorder
     /// </summary>
     /// <param name="reason">Eviction reason (e.g., "ttl_expired", "memory_pressure", "manual")</param>
     Task RecordCacheEvictionAsync(string reason);
+
+    /// <summary>
+    /// Records a cache promotion event (L2 → L1).
+    /// ISSUE-3494: Tracks cache tier promotions for hot data optimization.
+    /// </summary>
+    /// <param name="fromTier">Source tier (e.g., "l2_redis")</param>
+    /// <param name="toTier">Destination tier (e.g., "l1_memory")</param>
+    Task RecordCachePromotionAsync(string fromTier, string toTier);
+
+    /// <summary>
+    /// Records adaptive TTL calculation by frequency classification.
+    /// ISSUE-3494: Tracks TTL distribution (high/medium/low frequency).
+    /// </summary>
+    /// <param name="classification">Frequency classification (high/medium/low)</param>
+    /// <param name="ttlSeconds">Calculated TTL in seconds</param>
+    Task RecordAdaptiveTtlAsync(string classification, double ttlSeconds);
+
+    /// <summary>
+    /// Records cache operation latency for performance monitoring.
+    /// ISSUE-3494: Tracks get/set operation latency for P95 analysis.
+    /// </summary>
+    /// <param name="operation">Operation type (get/set)</param>
+    /// <param name="latencyMs">Latency in milliseconds</param>
+    Task RecordCacheLatencyAsync(string operation, double latencyMs);
 }

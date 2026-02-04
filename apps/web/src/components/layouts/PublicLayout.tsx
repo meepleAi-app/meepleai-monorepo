@@ -7,8 +7,8 @@
  *
  * @deprecated For authenticated pages - Issue #3479
  * For authenticated routes, use AuthenticatedLayout instead which provides:
- * - UnifiedActionBar (combined bottom nav + context actions)
- * - SmartFAB (context-aware floating action button)
+ * - UnifiedHeader (desktop nav + settings + notifications)
+ * - UnifiedActionBar (mobile bottom nav with integrated FAB)
  * - Better mobile-first experience
  *
  * This component should only be used for truly public pages (marketing, login, etc.)

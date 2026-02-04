@@ -1,8 +1,8 @@
 /**
  * Game Catalog Page (Issue #1838: PAGE-003)
  *
- * Server Component for browsing games with hybrid grid/list view.
- * Uses URL searchParams for all state (view, search, page).
+ * Public showcase for SharedGames catalog - browse all available board games.
+ * Server Component for SEO-friendly rendering with client components for interactivity.
  *
  * Route: /games
  * Features:
@@ -12,16 +12,19 @@
  * - Responsive grid (2→3→4 columns)
  * - Search with debounce (300ms)
  * - Pagination (20 games/page)
+ * - "Aggiungi Gioco" button visible only for Editor/Admin roles
+ *
+ * Data Source: SharedGameCatalog bounded context
  *
  * @see docs/wireframes page 3 "Catalogo Giochi (Hybrid View)"
  * @see Issue #1838 PAGE-003
  */
 
 import { Metadata } from 'next';
-import Link from 'next/link';
 
-import { Button } from '@/components/ui/primitives/button';
+import { type Game } from '@/lib/api';
 
+import { AddGameButton } from './components/AddGameButton';
 import { GameGrid } from './components/GameGrid';
 import { Pagination } from './components/Pagination';
 import { SearchBar } from './components/SearchBar';
@@ -41,20 +44,28 @@ interface SearchParams {
   page?: string;
 }
 
-interface Game {
+/** Raw API response from shared-games endpoint */
+interface SharedGamesApiItem {
   id: string;
   title: string;
-  publisher: string | null;
   yearPublished: number | null;
   minPlayers: number | null;
   maxPlayers: number | null;
-  minPlayTimeMinutes: number | null;
-  maxPlayTimeMinutes: number | null;
+  playingTimeMinutes: number | null;
   bggId: number | null;
   createdAt: string;
   imageUrl?: string | null;
-  faqCount?: number | null;
+  thumbnailUrl?: string | null;
   averageRating?: number | null;
+  description?: string | null;
+  status?: string;
+}
+
+interface SharedGamesApiResponse {
+  items: SharedGamesApiItem[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 interface PaginatedResponse {
@@ -85,6 +96,25 @@ export const metadata: Metadata = {
 // Server Actions / Data Fetching
 // ============================================================================
 
+/** Map API response item to Game type expected by GameGrid */
+function mapApiItemToGame(item: SharedGamesApiItem): Game {
+  return {
+    id: item.id,
+    title: item.title,
+    publisher: null, // Not provided by shared-games API
+    yearPublished: item.yearPublished,
+    minPlayers: item.minPlayers,
+    maxPlayers: item.maxPlayers,
+    minPlayTimeMinutes: item.playingTimeMinutes, // Map single field to min
+    maxPlayTimeMinutes: item.playingTimeMinutes, // Map single field to max
+    bggId: item.bggId,
+    createdAt: item.createdAt,
+    imageUrl: item.imageUrl,
+    description: item.description,
+    averageRating: item.averageRating,
+  };
+}
+
 async function fetchGames(
   search?: string,
   page: number = 1,
@@ -96,7 +126,8 @@ async function fetchGames(
     params.set('page', page.toString());
     params.set('pageSize', pageSize.toString());
 
-    const url = `${API_BASE}/api/v1/games?${params.toString()}`;
+    // Use shared-games endpoint for public catalog
+    const url = `${API_BASE}/api/v1/shared-games?${params.toString()}`;
     const response = await fetch(url, {
       next: { revalidate: 60 }, // Cache for 60 seconds
     });
@@ -105,7 +136,16 @@ async function fetchGames(
       throw new Error(`Failed to fetch games: ${response.status}`);
     }
 
-    return response.json();
+    const data: SharedGamesApiResponse = await response.json();
+
+    // Transform API response to expected format with proper type mapping
+    return {
+      games: data.items.map(mapApiItemToGame),
+      total: data.total,
+      page: data.page,
+      pageSize: data.pageSize,
+      totalPages: Math.ceil(data.total / data.pageSize),
+    };
   } catch (error) {
     console.error('Error fetching games:', error);
     return {
@@ -144,9 +184,8 @@ export default async function GamesPage({ searchParams }: { searchParams: Promis
             Esplora {total} giochi da tavolo. Cerca, filtra e scopri le regole.
           </p>
         </div>
-        <Link href="/games/add">
-          <Button>Aggiungi Gioco</Button>
-        </Link>
+        {/* Add Game button - visible only for Editor/Admin */}
+        <AddGameButton />
       </div>
 
       {/* Toolbar: Search + View Toggle */}

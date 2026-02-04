@@ -38,9 +38,9 @@ internal class StrategyPatternEntityConfiguration : IEntityTypeConfiguration<Str
         builder.Property(e => e.Source)
             .HasMaxLength(100);
 
-        // Vector embedding for pattern matching (ISSUE-3493: pgvector)
-        // Column type inferred by pgvector EF Core extension
-        builder.Property(e => e.Embedding);
+        // Vector embedding for pattern matching
+        builder.Property(e => e.Embedding)
+            .HasColumnType("vector(1536)");
 
         // Indexes for query performance
         builder.HasIndex(e => e.GameId);

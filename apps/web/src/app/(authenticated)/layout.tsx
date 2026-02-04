@@ -10,9 +10,8 @@
  * - /admin (all admin routes)
  *
  * Features:
- * - UnifiedHeader with desktop nav + mobile top bar
- * - UnifiedActionBar combining bottom nav + context actions
- * - SmartFAB with context-aware actions
+ * - UnifiedHeader with desktop nav + settings + notifications + user menu
+ * - UnifiedActionBar (mobile-only): bottom nav with integrated FAB + context actions
  * - Breadcrumb navigation (desktop)
  * - Dark mode support
  * - Mobile-first responsive design

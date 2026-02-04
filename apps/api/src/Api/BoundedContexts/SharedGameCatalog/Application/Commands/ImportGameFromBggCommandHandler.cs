@@ -24,7 +24,7 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
     private readonly ILogger<ImportGameFromBggCommandHandler> _logger;
 
 #pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback placeholder for games without BGG images
-    private const string DefaultPlaceholderImageUrl = "https://via.placeholder.com/300x300?text=No+Image";
+    private const string DefaultPlaceholderImageUrl = "https://placehold.co/300x300?text=No+Image";
 #pragma warning restore S1075
 
     public ImportGameFromBggCommandHandler(

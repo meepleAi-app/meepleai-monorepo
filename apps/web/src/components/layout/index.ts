@@ -80,9 +80,7 @@ export {
 } from './ActionBar';
 export type { UnifiedActionBarProps } from './ActionBar';
 
-// Phase 5: Smart FAB (#3291)
-export { SmartFAB, QuickMenu } from './SmartFAB';
-export type { SmartFABProps, QuickMenuProps } from './SmartFAB';
+// Phase 5: Smart FAB (#3291) - REMOVED: FAB functionality integrated into UnifiedActionBar
 
 // Phase 6: Breadcrumb & Polish (#3292)
 export { Breadcrumb, getContextConfig } from './Breadcrumb';

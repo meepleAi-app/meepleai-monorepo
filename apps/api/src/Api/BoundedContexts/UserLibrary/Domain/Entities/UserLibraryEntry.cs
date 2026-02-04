@@ -84,6 +84,13 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     /// </summary>
     public IReadOnlyCollection<GameChecklist> Checklist => _checklist.AsReadOnly();
 
+    private readonly List<UserGameLabel> _labels = new();
+
+    /// <summary>
+    /// Labels assigned to this game in the library.
+    /// </summary>
+    public IReadOnlyCollection<UserGameLabel> Labels => _labels.AsReadOnly();
+
     /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
@@ -451,4 +458,59 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     /// </summary>
     public IReadOnlyList<GameChecklist> GetOrderedChecklist()
         => _checklist.OrderBy(c => c.DisplayOrder).ToList().AsReadOnly();
+
+    // ========== LABEL MANAGEMENT ==========
+
+    /// <summary>
+    /// Adds a label to this game in the library.
+    /// </summary>
+    /// <param name="labelId">The ID of the label to add</param>
+    /// <returns>The created UserGameLabel assignment</returns>
+    /// <exception cref="ConflictException">Thrown when the label is already assigned</exception>
+    public UserGameLabel AddLabel(Guid labelId)
+    {
+        if (labelId == Guid.Empty)
+            throw new ArgumentException("LabelId cannot be empty", nameof(labelId));
+
+        // Check if label is already assigned
+        if (_labels.Any(l => l.LabelId == labelId))
+            throw new ConflictException($"Label {labelId} is already assigned to this game");
+
+        var assignment = UserGameLabel.Create(Id, labelId);
+        _labels.Add(assignment);
+
+        return assignment;
+    }
+
+    /// <summary>
+    /// Removes a label from this game in the library.
+    /// </summary>
+    /// <param name="labelId">The ID of the label to remove</param>
+    /// <exception cref="NotFoundException">Thrown when the label is not assigned</exception>
+    public void RemoveLabel(Guid labelId)
+    {
+        var assignment = _labels.FirstOrDefault(l => l.LabelId == labelId);
+        if (assignment is null)
+            throw new NotFoundException($"Label {labelId} is not assigned to this game");
+
+        _labels.Remove(assignment);
+    }
+
+    /// <summary>
+    /// Removes all labels from this game.
+    /// </summary>
+    public void ClearLabels()
+    {
+        _labels.Clear();
+    }
+
+    /// <summary>
+    /// Checks if a specific label is assigned to this game.
+    /// </summary>
+    public bool HasLabel(Guid labelId) => _labels.Any(l => l.LabelId == labelId);
+
+    /// <summary>
+    /// Gets the count of labels assigned to this game.
+    /// </summary>
+    public int GetLabelCount() => _labels.Count;
 }

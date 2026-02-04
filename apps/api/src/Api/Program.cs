@@ -219,6 +219,7 @@ builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSec
 builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSection("HybridCache")); // PERF-05: HybridCache configuration
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 builder.Services.Configure<WeeklyEvaluationConfiguration>(builder.Configuration.GetSection("QualityEvaluation")); // BGAI-042: Weekly evaluation configuration
+builder.Services.Configure<BggImportQueueConfiguration>(builder.Configuration.GetSection("BggImportQueue")); // ISSUE-3541: BGG import queue configuration
 builder.Services.Configure<Api.BoundedContexts.Administration.Infrastructure.External.PrometheusOptions>(builder.Configuration.GetSection("Prometheus")); // Issue #893: Prometheus HTTP client configuration
 builder.Services.Configure<IndexingSettings>(builder.Configuration.GetSection(IndexingSettings.SectionName)); // ISSUE-3197: Vector indexing batch configuration
 
@@ -515,6 +516,9 @@ v1Api.MapChatSessionEndpoints();
 
 // Issue #3379: Agent test results history & persistence
 v1Api.MapGroup("/admin/test-results").MapAdminTestResultEndpoints();
+
+// Issue #3541: BGG import queue management (admin-only)
+v1Api.MapBggImportQueueEndpoints();
 
 // Issue #1565: Telemetry test endpoints for HyperDX integration testing
 v1Api.MapTelemetryTestEndpoints();

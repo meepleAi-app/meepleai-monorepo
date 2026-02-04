@@ -188,3 +188,87 @@ export const SharedLibrarySchema = z.object({
 });
 
 export type SharedLibrary = z.infer<typeof SharedLibrarySchema>;
+
+// ========================================
+// Game Detail Schemas (Issue #3513)
+// ========================================
+
+// Library game session DTO for recent sessions (distinct from games.schemas GameSessionDto)
+export const LibraryGameSessionSchema = z.object({
+  id: z.string().uuid(),
+  playedAt: z.string().datetime(),
+  durationMinutes: z.number().int().nonnegative(),
+  durationFormatted: z.string(),
+  didWin: z.boolean().nullable(),
+  players: z.string().nullable(),
+  notes: z.string().nullable(),
+});
+
+export type LibraryGameSession = z.infer<typeof LibraryGameSessionSchema>;
+
+// Checklist item DTO
+export const LibraryChecklistItemSchema = z.object({
+  id: z.string().uuid(),
+  description: z.string(),
+  order: z.number().int(),
+  isCompleted: z.boolean(),
+  additionalInfo: z.string().nullable(),
+});
+
+export type LibraryChecklistItem = z.infer<typeof LibraryChecklistItemSchema>;
+
+// Custom PDF DTO
+export const LibraryCustomPdfSchema = z.object({
+  id: z.string().uuid(),
+  pdfUrl: z.string(),
+  originalFileName: z.string(),
+  fileSizeBytes: z.number(),
+  uploadedAt: z.string().datetime(),
+});
+
+export type LibraryCustomPdf = z.infer<typeof LibraryCustomPdfSchema>;
+
+// Comprehensive game detail DTO (GET /library/games/{gameId})
+export const GameDetailDtoSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  gameId: z.string().uuid(),
+
+  // Game metadata
+  gameTitle: z.string(),
+  gamePublisher: z.string().nullable(),
+  gameYearPublished: z.number().nullable(),
+  gameDescription: z.string().nullable(),
+  gameIconUrl: z.string().nullable(),
+  gameImageUrl: z.string().nullable(),
+  minPlayers: z.number().nullable(),
+  maxPlayers: z.number().nullable(),
+  playTimeMinutes: z.number().nullable(),
+  complexityRating: z.number().nullable(),
+  averageRating: z.number().nullable(),
+
+  // Library metadata
+  addedAt: z.string().datetime(),
+  notes: z.string().nullable(),
+  isFavorite: z.boolean(),
+
+  // Game state
+  currentState: GameStateTypeWithFallbackSchema,
+  stateChangedAt: z.string().datetime().nullable(),
+  stateNotes: z.string().nullable(),
+  isAvailableForPlay: z.boolean(),
+
+  // Statistics
+  timesPlayed: z.number().int().nonnegative(),
+  lastPlayed: z.string().datetime().nullable(),
+  winRate: z.string().nullable(),
+  avgDuration: z.string().nullable(),
+
+  // Optional extended data
+  recentSessions: z.array(LibraryGameSessionSchema).nullable().optional(),
+  checklist: z.array(LibraryChecklistItemSchema).nullable().optional(),
+  customAgentConfig: z.any().nullable().optional(), // AgentConfigDto
+  customPdf: LibraryCustomPdfSchema.nullable().optional(),
+});
+
+export type GameDetailDto = z.infer<typeof GameDetailDtoSchema>;

@@ -18,7 +18,7 @@
 
 **Backend** (.NET 9): ASP.NET Minimal APIs + MediatR | PostgreSQL 16 + EF Core | Qdrant + Redis | FluentValidation | xUnit + Testcontainers
 
-**Frontend** (Next.js 14): App Router + React 18 | Tailwind + shadcn/ui | Zustand + React Query | Vitest + Playwright
+**Frontend** (Next.js 16): App Router + React 19 | Tailwind 4 + shadcn/ui | Zustand + React Query | Vitest + Playwright
 
 **AI** (Python): sentence-transformers | cross-encoder | Unstructured | SmolDocling
 
@@ -39,7 +39,7 @@ app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IMediator m) =>
 app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IAuthService svc) => ...);
 ```
 
-### DDD Bounded Contexts (9)
+### DDD Bounded Contexts (11)
 
 | Context | Responsibility |
 |---------|---------------|
@@ -48,6 +48,7 @@ app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IAuthService sv
 | DocumentProcessing | PDF upload, extraction, chunking |
 | GameManagement | Catalog, sessions, FAQs, specs |
 | KnowledgeBase | RAG, AI agents, chat, vector search |
+| SessionTracking | User sessions, activity tracking |
 | SharedGameCatalog | Community DB w/ soft-delete |
 | SystemConfiguration | Runtime config, flags |
 | UserLibrary | Collections, wishlist, history |
@@ -293,5 +294,5 @@ tests/Api.Tests/          # Backend test suite
 
 ---
 
-**Last Updated**: 2026-02-02
+**Last Updated**: 2026-02-03
 **License**: Proprietary

@@ -5,8 +5,8 @@ PostgreSQL repository for storing dialogue state across sessions.
 
 import json
 import logging
-from datetime import datetime, UTC
-from typing import Any, Optional
+from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 import asyncpg
@@ -102,8 +102,8 @@ class ConversationRepository:
                     state.agent_response or "",
                     history_json,
                     metadata_json,
-                    datetime.now(UTC),
-                    datetime.now(UTC),
+                    datetime.utcnow(),
+                    datetime.utcnow(),
                 )
 
             logger.info(f"Saved conversation state for session {state.session_id}")

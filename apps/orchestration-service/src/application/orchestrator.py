@@ -4,7 +4,7 @@ Multi-agent workflow coordination for Tutor, Arbitro, Decisore.
 """
 
 import logging
-from datetime import datetime, UTC
+from datetime import datetime
 from typing import Any, Literal
 
 from langgraph.graph import StateGraph, END
@@ -222,7 +222,7 @@ class GameOrchestrator:
         logger.info(f"Formatting response from {state.current_agent} agent")
 
         return {
-            "updated_at": datetime.now(UTC),
+            "updated_at": datetime.utcnow(),
         }
 
     async def execute(self, state: GameAgentState) -> GameAgentState:
@@ -239,14 +239,10 @@ class GameOrchestrator:
             logger.info(f"Starting workflow for session {state.session_id}")
 
             # Run the compiled graph
-            result_dict = await self.graph.ainvoke(state)
-
-            # Update state with results (LangGraph returns dict)
-            for key, value in result_dict.items():
-                setattr(state, key, value)
+            result = await self.graph.ainvoke(state)
 
             logger.info(f"Workflow completed successfully for session {state.session_id}")
-            return state
+            return result
 
         except Exception as e:
             logger.error(f"Workflow execution failed: {e}", exc_info=True)

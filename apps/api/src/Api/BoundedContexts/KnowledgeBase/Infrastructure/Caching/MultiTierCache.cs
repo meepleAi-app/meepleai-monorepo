@@ -321,6 +321,9 @@ internal sealed class MultiTierCache : IMultiTierCache, IDisposable
                         _l1Cache.Set(key, l2Value, ttl);
                         warmed++;
                         Interlocked.Increment(ref _promotions);
+
+                        // Record warming as promotion
+                        await _metricsRecorder.RecordCachePromotionAsync("l2_redis", "l1_memory").ConfigureAwait(false);
                     }
                 }
                 catch (OperationCanceledException)
@@ -408,6 +411,9 @@ internal sealed class MultiTierCache : IMultiTierCache, IDisposable
 
             Interlocked.Increment(ref _adaptiveTtlAdjustments);
 
+            // Record metrics
+            await _metricsRecorder.RecordAdaptiveTtlAsync(classification, ttl.TotalSeconds).ConfigureAwait(false);
+
             _logger.LogDebug(
                 "Adaptive TTL for key {Key}: {Ttl} (frequency={Frequency}, classification={Classification})",
                 key, ttl, frequency, classification);
@@ -491,6 +497,9 @@ internal sealed class MultiTierCache : IMultiTierCache, IDisposable
 
             _l1Cache.Set(key, cachedItem, ttl);
             Interlocked.Increment(ref _promotions);
+
+            // Record promotion metrics
+            await _metricsRecorder.RecordCachePromotionAsync("l2_redis", "l1_memory").ConfigureAwait(false);
 
             _logger.LogDebug("Promoted key {Key} to L1 cache", key);
         }

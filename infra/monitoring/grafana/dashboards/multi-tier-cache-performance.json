@@ -78,7 +78,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "100 * sum(rate(cache_hits_total{tier=\"all\"}[5m])) / (sum(rate(cache_hits_total{tier=\"all\"}[5m])) + sum(rate(cache_misses_total{tier=\"all\"}[5m])))",
+          "expr": "100 * sum(rate(meepleai_cache_hits_total[5m])) / (sum(rate(meepleai_cache_hits_total[5m])) + sum(rate(meepleai_cache_misses_total[5m])))",
           "legendFormat": "Overall Hit Rate",
           "range": true,
           "refId": "A"
@@ -166,7 +166,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(cache_hits_total{tier=\"l1_memory\"}[1m])",
+          "expr": "rate(meepleai_cache_hits_total{cache_type=\"l1_memory\"}[1m])",
           "legendFormat": "L1 Hits/sec",
           "range": true,
           "refId": "A"
@@ -177,7 +177,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(cache_hits_total{tier=\"l2_redis\"}[1m])",
+          "expr": "rate(meepleai_cache_hits_total{cache_type=\"l2_redis\"}[1m])",
           "legendFormat": "L2 Hits/sec",
           "range": true,
           "refId": "B"
@@ -188,7 +188,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(cache_misses_total{tier=\"all_tiers\"}[1m])",
+          "expr": "rate(meepleai_cache_misses_total{cache_type=\"all_tiers\"}[1m])",
           "legendFormat": "Misses/sec",
           "range": true,
           "refId": "C"
@@ -284,7 +284,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, rate(cache_operation_latency_ms_bucket{operation=\"get\"}[5m]))",
+          "expr": "histogram_quantile(0.95, rate(meepleai_cache_operation_latency_bucket{operation=\"get\"}[5m]))",
           "legendFormat": "Get P95",
           "range": true,
           "refId": "A"
@@ -295,7 +295,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, rate(cache_operation_latency_ms_bucket{operation=\"set\"}[5m]))",
+          "expr": "histogram_quantile(0.95, rate(meepleai_cache_operation_latency_bucket{operation=\"set\"}[5m]))",
           "legendFormat": "Set P95",
           "range": true,
           "refId": "B"
@@ -306,7 +306,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, rate(cache_operation_latency_ms_bucket{operation=\"get\"}[5m]))",
+          "expr": "histogram_quantile(0.99, rate(meepleai_cache_operation_latency_bucket{operation=\"get\"}[5m]))",
           "legendFormat": "Get P99",
           "range": true,
           "refId": "C"
@@ -394,7 +394,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "cache_l1_entry_count",
+          "expr": "meepleai_cache_l1_entry_count",
           "legendFormat": "L1 In-Memory",
           "range": true,
           "refId": "A"
@@ -405,7 +405,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "cache_l2_entry_count",
+          "expr": "meepleai_cache_l2_entry_count",
           "legendFormat": "L2 Redis",
           "range": true,
           "refId": "B"
@@ -493,7 +493,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(cache_promotions_total[5m])",
+          "expr": "rate(meepleai_cache_promotions_total[5m])",
           "legendFormat": "Promotions/sec",
           "range": true,
           "refId": "A"
@@ -504,7 +504,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(cache_evictions_total{tier=\"l1_memory\"}[5m])",
+          "expr": "rate(meepleai_cache_evictions_total{reason=\"capacity\"}[5m])",
           "legendFormat": "L1 Evictions/sec",
           "range": true,
           "refId": "B"
@@ -592,7 +592,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "increase(cache_ttl_adjustments_total{classification=\"high\"}[1h])",
+          "expr": "increase(meepleai_cache_ttl_adjustments_total{classification=\"high\"}[1h])",
           "legendFormat": "High Freq (24h TTL)",
           "range": true,
           "refId": "A"
@@ -603,7 +603,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "increase(cache_ttl_adjustments_total{classification=\"medium\"}[1h])",
+          "expr": "increase(meepleai_cache_ttl_adjustments_total{classification=\"medium\"}[1h])",
           "legendFormat": "Medium Freq (1h TTL)",
           "range": true,
           "refId": "B"
@@ -614,7 +614,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "increase(cache_ttl_adjustments_total{classification=\"low\"}[1h])",
+          "expr": "increase(meepleai_cache_ttl_adjustments_total{classification=\"low\"}[1h])",
           "legendFormat": "Low Freq (5min TTL)",
           "range": true,
           "refId": "C"

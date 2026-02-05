@@ -1,8 +1,8 @@
 # Sequenza Implementazione Issue - MeepleAI
 
-**Last Updated**: 2026-02-04
-**Total Open Issues**: 108 (-8 completed today)
-**Active Epics**: 17
+**Last Updated**: 2026-02-05
+**Total Open Issues**: 91
+**Active Epics**: 18
 
 ---
 
@@ -11,15 +11,22 @@
 ### 📋 Lista Rapida - Issue Sequence
 
 ```
-FASE 1 - Critical Path (Parallel Streams)
-├─ Backend:  3479 → 3483
-├─ Frontend: 3376 → 3375 → 3378 → 3379
-└─ Tier:     3440 → 3441 → 3442
+🆕 FASE 0 - Frontend-Backend Gap Analysis (NEW - High Priority)
+├─ Epic:     #3594
+├─ Admin:    3595 → 3598
+├─ Editor:   3597
+├─ Cleanup:  3596 → 3599
+└─ Toolkit:  3600
 
-FASE 2 - Multi-Agent Foundation
-├─ Backend:  3493 → 3491 → 3492 → 3494 → 3495
-├─ Tutor:    3496 → 3497 → 3498 → 3499 → 3502 → 3501
-└─ Frontend: 3373 → 3374 → 3383
+FASE 1 - Critical Path (Parallel Streams) ✅ COMPLETED
+├─ Backend:  ✅ DONE (3479, 3483 closed)
+├─ Frontend: ✅ DONE (3376, 3375, 3378, 3379 closed via PR #3510)
+└─ Tier:     ✅ DONE (3440, 3441, 3442 closed)
+
+FASE 2 - Multi-Agent Foundation (1 remaining) ✅ NEAR COMPLETE
+├─ Backend:  ✅ DONE (3491, 3493, 3492, 3494, 3495 all closed)
+├─ Tutor:    3498 (remaining) | ✅ 3496, 3497, 3499, 3501, 3502 closed
+└─ Frontend: ✅ 3373, 3374, 3383 all closed
 
 FASE 3 - Security & Dashboard
 ├─ Security: 3330 → 3332 → 3339 → 3340 → 3335 → 3333 → 3338
@@ -29,7 +36,7 @@ FASE 3 - Security & Dashboard
 FASE 4 - RAG Enhancement
 ├─ Navigation: 3404 → 3405 → 3406 → 3407 → 3408 → 3409 → 3410
 ├─ Dashboard:  3300 → 3301 → 3302 → 3303 → 3304 → 3305
-└─ Docs:       3401 → 3399 → 3398 → 3449 → 3450 → 3451
+└─ Docs:       3401 → 3399 → 3398 | ✅ 3449, 3450, 3451 closed
 
 FASE 5 - Plugin Architecture
 ├─ Core:     3414 → 3415 → 3416 → 3417
@@ -40,7 +47,7 @@ FASE 6 - Visual Strategy Builder
 ├─ Setup:    3454 → 3456 → 3457
 ├─ Blocks:   3458 → 3459 → 3460 → 3461 → 3462
 ├─ Advanced: 3463 → 3464 → 3465 → 3466 → 3467 → 3468
-└─ Duplicates: 3469, 3470, 3471 (close as duplicates)
+└─ Duplicates: ✅ 3469, 3470, 3471 closed
 
 FASE 7 - Advanced Features
 ├─ Admin:    3349 → 3350 → 3380 → 3381 → 3382 → 3384 → 3385
@@ -55,83 +62,110 @@ FASE 8 - Infrastructure & Testing
 
 ---
 
-## 📊 SUMMARY TABLE - All 119 Open Issues
+## 📊 SUMMARY TABLE - All 93 Open Issues
 
-| Fase | Epic | Issues | SP Est. | Area | Parallelizzazione |
-|:----:|------|:------:|:-------:|:----:|:-----------------:|
-| **1** | Critical Path | 10 | 41 | BE+FE | 3 streams |
-| **2** | Multi-Agent AI | 14 | 56 | BE+PY | 2 streams |
-| **3** | Security + Dashboard | 20 | 70 | BE+FE | 3 streams |
-| **4** | RAG Enhancement | 20 | 55 | FE+BE | 3 streams |
-| **5** | Plugin Architecture | 18 | 85 | BE+FE | 2 streams |
-| **6** | Visual Strategy | 18 | 60 | FE | 1 stream |
-| **7** | Advanced Features | 19 | 75 | BE+FE | 3 streams |
-| **8** | Infrastructure | 11 | 40 | DevOps | 1 stream |
-| **TOTAL** | **17 Epics** | **116** | **~470** | - | - |
+| Fase | Epic | Issues | SP Est. | Area | Parallelizzazione | Status |
+|:----:|------|:------:|:-------:|:----:|:-----------------:|:------:|
+| **0** | FE-BE Gap Analysis | 7 | 21 | FE | 2 streams | 🔴 NEW |
+| **1** | Critical Path | 0 | 0 | BE+FE | - | ✅ 100% |
+| **2** | Multi-Agent AI | 1 | 5 | BE+PY | 1 stream | 🟢 92% |
+| **3** | Security + Dashboard | 20 | 70 | BE+FE | 3 streams | ⏸️ Ready |
+| **4** | RAG Enhancement | 17 | 49 | FE+BE | 3 streams | 🟡 15% |
+| **5** | Plugin Architecture | 18 | 85 | BE+FE | 2 streams | ⏸️ Blocked |
+| **6** | Visual Strategy | 15 | 54 | FE | 1 stream | ⏸️ Blocked |
+| **7** | Advanced Features | 19 | 75 | BE+FE | 3 streams | ⏸️ Future |
+| **8** | Infrastructure | 11 | 40 | DevOps | 1 stream | ⏸️ Future |
+| **TOTAL** | **18 Epics** | **91** | **~399** | - | - | **~22%** |
 
 ---
 
-## 🔴 FASE 1 - Critical Path (IMMEDIATE)
+## 🔴 FASE 0 - Frontend-Backend Gap Analysis (NEW - HIGH PRIORITY)
 
-**Timeline**: 2-3 settimane | **SP**: 41 | **Parallelizzazione**: 3 stream
+**Timeline**: 1 settimana | **SP**: ~21 | **Epic**: #3594
 
-### Stream A: Backend Foundation
-| Seq | Issue | Titolo | SP | Dipendenze |
-|:---:|:-----:|--------|:--:|:----------:|
-| 1 | #3479 | Private PDF Upload Endpoint | 3 | - |
-| 2 | #3483 | Chat Session Persistence Service | 5 | - |
+### Stream A: Admin Navigation
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 0.1 | #3595 | Create admin sidebar navigation | 5 | ⏳ Open |
+| 0.2 | #3598 | Integrate RAG dashboard into admin panel | 3 | ⏳ Open |
 
-### Stream B: Agent Creation Flow
-| Seq | Issue | Titolo | SP | Dipendenze |
-|:---:|:-----:|--------|:--:|:----------:|
-| 3 | #3376 | Agent Creation Wizard | 5 | - |
-| 4 | #3375 | Agent Session Launch | 3 | #3376 |
-| 5 | #3378 | Agent Test Execution UI | 5 | #3375 |
-| 6 | #3379 | Agent Test Results History | 5 | #3378 |
+### Stream B: Editor & Cleanup
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 0.3 | #3597 | Add editor navigation for editor role | 3 | ⏳ Open |
+| 0.4 | #3596 | Delete unused component folders | 2 | ⏳ Open |
+| 0.5 | #3599 | Consolidate duplicate chat components | 5 | ⏳ Open |
 
-### Stream C: Tier-Strategy Completion
-| Seq | Issue | Titolo | SP | Dipendenze |
-|:---:|:-----:|--------|:--:|:----------:|
-| 7 | #3440 | Admin UI for tier-strategy config | 3 | ✅ #3437 closed |
-| 8 | #3441 | Tests for tier-strategy-model | 5 | #3440 |
-| 9 | #3442 | Documentation tier-strategy | 2 | #3441 |
+### Stream C: Toolkit
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 0.6 | #3600 | Link sessions pages to toolkit | 3 | ⏳ Open |
+
+**Epic Reference**: #3594 Frontend-Backend Gap Analysis Cleanup
+
+---
+
+## ✅ FASE 1 - Critical Path (COMPLETED)
+
+**Timeline**: 2-3 settimane | **SP**: 0 remaining | **Status**: ✅ ALL DONE
+
+### ✅ Stream A: Backend Foundation - COMPLETED
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 1 | #3479 | Private PDF Upload Endpoint | 3 | ✅ CLOSED |
+| 2 | #3483 | Chat Session Persistence Service | 5 | ✅ CLOSED |
+
+### ✅ Stream B: Agent Creation Flow - COMPLETED (PR #3510)
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 3 | #3376 | Agent Creation Wizard | 5 | ✅ CLOSED |
+| 4 | #3375 | Agent Session Launch | 3 | ✅ CLOSED |
+| 5 | #3378 | Agent Test Execution UI | 5 | ✅ CLOSED |
+| 6 | #3379 | Agent Test Results History | 5 | ✅ CLOSED |
+
+### ✅ Stream C: Tier-Strategy Completion - COMPLETED
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 7 | #3440 | Admin UI for tier-strategy config | 3 | ✅ CLOSED |
+| 8 | #3441 | Tests for tier-strategy-model | 5 | ✅ CLOSED |
+| 9 | #3442 | Documentation tier-strategy | 2 | ✅ CLOSED |
 
 **Epic References**:
-- #3475 User Private Library (1 issue remaining)
-- #3386 Agent Creation & Testing Flow (4 issues)
-- #3434 Tier-Strategy-Model (3 issues remaining)
+- #3475 User Private Library ✅ DONE
+- #3386 Agent Creation & Testing Flow ✅ DONE (PR #3510)
+- #3434 Tier-Strategy-Model ✅ DONE
 
 ---
 
-## 🟠 FASE 2 - Multi-Agent AI System (NEW EPIC)
+## 🟠 FASE 2 - Multi-Agent AI System (1 remaining)
 
-**Timeline**: 3-4 settimane | **SP**: 56 | **Parallelizzazione**: 2 stream
+**Timeline**: 3-4 settimane | **SP**: 5 remaining | **Parallelizzazione**: 1 stream
 
-### Stream A: Context Engineering Foundation
-| Seq | Issue | Titolo | SP | Dipendenze |
-|:---:|:-----:|--------|:--:|:----------:|
-| 10 | #3493 | PostgreSQL Schema Extensions | 5 | - |
-| 11 | #3491 | Context Engineering Framework | 8 | #3493 |
-| 12 | #3492 | Hybrid Search - Keyword+Vector+Reranking | 8 | #3491 |
-| 13 | #3494 | Redis 3-Tier Cache Layer | 5 | #3492 |
-| 14 | #3495 | LangGraph Orchestrator Foundation | 8 | #3494 |
+### ✅ Stream A: Context Engineering Foundation - COMPLETED
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 10 | #3491 | Context Engineering Framework | 8 | ✅ CLOSED |
+| 11 | #3493 | PostgreSQL Schema Extensions | 5 | ✅ CLOSED |
+| 12 | #3492 | Hybrid Search - Keyword+Vector+Reranking | 8 | ✅ CLOSED |
+| 13 | #3494 | Redis 3-Tier Cache Layer | 5 | ✅ CLOSED |
+| 14 | #3495 | LangGraph Orchestrator Foundation | 8 | ✅ CLOSED |
 
-### Stream B: Tutor Agent Implementation
-| Seq | Issue | Titolo | SP | Dipendenze |
-|:---:|:-----:|--------|:--:|:----------:|
-| 15 | #3496 | Intent Classification System | 5 | #3495 |
-| 16 | #3497 | Multi-Turn Dialogue State Machine | 5 | #3496 |
-| 17 | #3498 | Conversation Memory - Temporal RAG | 5 | #3497 |
-| 18 | #3499 | REST API Endpoint /agents/tutor/query | 3 | #3498 |
-| 19 | #3502 | Hybrid Search Integration | 3 | #3499 |
-| 20 | #3501 | Beta Testing & User Feedback | 3 | #3502 |
+### Stream B: Tutor Agent Implementation (1 remaining)
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 15 | #3496 | Intent Classification System | 5 | ✅ CLOSED |
+| 16 | #3497 | Multi-Turn Dialogue State Machine | 5 | ✅ CLOSED |
+| 17 | #3498 | Conversation Memory - Temporal RAG | 5 | ⏳ Open |
+| 18 | #3499 | REST API Endpoint /agents/tutor/query | 3 | ✅ CLOSED |
+| 19 | #3502 | Hybrid Search Integration | 3 | ✅ CLOSED |
+| 20 | #3501 | Beta Testing & User Feedback | 3 | ✅ CLOSED |
 
-### Stream C: Frontend AI Integration
-| Seq | Issue | Titolo | SP | Status | PR |
-|:---:|:-----:|--------|:--:|:------:|:--:|
-| 21 | #3373 | Streaming SSE in Ask page | 3 | ✅ Done | #3542 |
-| 22 | #3374 | Cancel processing button UI | 2 | ✅ Done | #3433 |
-| 23 | #3383 | Cost Estimation Preview | 3 | ⏳ Ready | - |
+### ✅ Stream C: Frontend AI Integration - COMPLETED
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 21 | #3373 | Streaming SSE in Ask page | 3 | ✅ CLOSED |
+| 22 | #3374 | Cancel processing button UI | 2 | ✅ CLOSED |
+| 23 | #3383 | Cost Estimation Preview | 3 | ✅ CLOSED |
 
 **Epic Reference**: #3490 Multi-Agent Game AI System
 
@@ -207,19 +241,20 @@ FASE 8 - Infrastructure & Testing
 | 55 | #3304 | Backend API Metrics | 5 | #3303 |
 | 56 | #3305 | Test Suite | 3 | #3304 |
 
-### Stream C: Documentation & UX
-| Seq | Issue | Titolo | SP | Dipendenze |
-|:---:|:-----:|--------|:--:|:----------:|
-| 57 | #3401 | Documentation Consolidation | 5 | - |
-| 58 | #3399 | Data Consistency Audit | 3 | #3401 |
-| 59 | #3398 | Metrics Configuration Form | 3 | #3399 |
-| 60 | #3449 | Accordion system | 2 | - |
-| 61 | #3450 | Global search Cmd+K | 3 | - |
-| 62 | #3451 | Breadcrumbs & scroll | 2 | - |
+### Stream C: Documentation & UX (PARTIALLY DONE)
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 57 | #3401 | Documentation Consolidation | 5 | ⏳ Open |
+| 58 | #3399 | Data Consistency Audit | 3 | ⏳ Open |
+| 59 | #3398 | Metrics Configuration Form | 3 | ⏳ Open |
+| 60 | #3449 | Accordion system | 2 | ✅ CLOSED |
+| 61 | #3450 | Global search Cmd+K | 3 | ✅ CLOSED |
+| 62 | #3451 | Breadcrumbs & scroll | 2 | ✅ CLOSED |
 
 **Epic References**:
 - #3403 RAG Dashboard Navigation Redesign
 - #3299 RAG Dashboard Enhancement
+- #3448 RAG Dashboard Navigation V2 ✅ CLOSED
 
 ---
 
@@ -285,12 +320,8 @@ FASE 8 - Infrastructure & Testing
 | 93 | #3467 | Strategy templates | 3 | #3466 |
 | 94 | #3468 | E2E tests | 3 | #3467 |
 
-### ✅ DUPLICATI CHIUSI
-| Issue | Duplicate Of | Status |
-|:-----:|:------------:|:------:|
-| #3469 | #3465 | ✅ Closed |
-| #3470 | #3466 | ✅ Closed |
-| #3471 | #3467 | ✅ Closed |
+### ✅ DUPLICATES - ALL CLOSED
+All duplicate issues (#3469, #3470, #3471) have been closed.
 
 **Epic References**:
 - #3453 Visual RAG Strategy Builder
@@ -383,44 +414,49 @@ FASE 8 - Infrastructure & Testing
 ### Week-by-Week Execution Plan
 
 ```
-WEEK 1-2: FASE 1 (41 SP)
-├─ Backend Team:    #3479, #3483 ─────────────────────────┐
-├─ Frontend Team A: #3376, #3375 ─────────────────────────┤ PARALLEL
-├─ Frontend Team B: #3378, #3379 ─────────────────────────┤
-└─ DevOps Team:     #3440, #3441, #3442 ──────────────────┘
+🆕 WEEK 0: FASE 0 - FE-BE Gap Analysis (21 SP) ← NOW ACTIVE
+├─ Frontend Team A: #3595 → #3598 ────────────────────────┐
+├─ Frontend Team B: #3596 → #3599 ────────────────────────┤ PARALLEL
+└─ Frontend Team C: #3597 → #3600 ────────────────────────┘
 
-WEEK 3-5: FASE 2 (56 SP)
-├─ Python Team:     #3493 → #3491 → #3492 → #3494 → #3495 ┐
-├─ AI Team:         #3496 → #3497 → #3498 → #3499 ────────┤ PARALLEL
-└─ Frontend Team:   #3373, #3374, #3383 ──────────────────┘
+WEEK 1-2: FASE 1 ✅ COMPLETED
+├─ Backend Team:    ✅ #3479, #3483 DONE ─────────────────┐
+├─ Frontend Team A: ✅ #3376, #3375 DONE (PR #3510) ──────┤ ALL DONE
+├─ Frontend Team B: ✅ #3378, #3379 DONE (PR #3510) ──────┤
+└─ DevOps Team:     ✅ #3440, #3441, #3442 DONE ──────────┘
+
+WEEK 3-5: FASE 2 (18 SP remaining)
+├─ Python Team:     #3491 → #3493 | ✅ #3492, #3494, #3495┐
+├─ AI Team:         #3498 | ✅ #3496, #3497, #3499 ───────┤ IN PROGRESS
+└─ Frontend Team:   ✅ #3373, #3374, #3383 DONE ──────────┘
 
 WEEK 6-9: FASE 3 (70 SP)
 ├─ Security Team:   #3330 → #3332 → #3339 → #3340 ────────┐
-├─ Dashboard Team:  #3316 → #3319, #3317, #3318 ──────────┤ PARALLEL
+├─ Dashboard Team:  #3316 → #3319, #3317, #3318 ──────────┤ READY
 └─ UI Team:         #3326 → #3328 → #3329 → #3334 ────────┘
 
-WEEK 10-12: FASE 4 (55 SP)
+WEEK 10-12: FASE 4 (49 SP remaining)
 ├─ Navigation:      #3404 → #3405 → #3406 → #3407 ────────┐
-├─ RAG Dashboard:   #3300 → #3301 → #3302 → #3303 ────────┤ PARALLEL
-└─ Documentation:   #3401 → #3399 → #3398 ────────────────┘
+├─ RAG Dashboard:   #3300 → #3301 → #3302 → #3303 ────────┤ READY
+└─ Documentation:   #3401 → #3399 → #3398 | ✅ #3449-51 ──┘
 
 WEEK 13-17: FASE 5 (85 SP)
 ├─ Backend:         #3414 → #3415 → #3416 → #3417 ────────┐
-├─ Plugins:         #3418 → #3419 → #3420 → #3421... ─────┤ PARALLEL
+├─ Plugins:         #3418 → #3419 → #3420 → #3421... ─────┤ BLOCKED
 └─ Frontend:        #3425 → #3426 → #3427 → #3428 ────────┘
 
-WEEK 18-21: FASE 6 (60 SP)
-└─ Visual Builder:  #3454 → #3456 → #3457 → #3458... ─────→ SEQUENTIAL
+WEEK 18-21: FASE 6 (54 SP)
+└─ Visual Builder:  #3454 → #3456 → #3457 → #3458... ─────→ BLOCKED
 
 WEEK 22-26: FASE 7 (75 SP)
 ├─ Admin:           #3349 → #3350 → #3380 → #3381 ────────┐
-├─ AI:              #3351 → #3352 → #3353 ────────────────┤ PARALLEL
+├─ AI:              #3351 → #3352 → #3353 ────────────────┤ FUTURE
 ├─ Sessions:        #3342 → #3343 → #3344 → #3345 ────────┤
 └─ RAG Strategies:  #3357 → #3358 → #3359 → #3360 ────────┘
 
 WEEK 27-30: FASE 8 (40 SP)
 ├─ Infrastructure:  #3367 → #3368 → #2968 → #2969 ────────┐
-└─ Testing:         #3082 (E2E) ──────────────────────────┘ SEQUENTIAL
+└─ Testing:         #3082 (E2E) ──────────────────────────┘ FUTURE
 ```
 
 ---
@@ -429,10 +465,12 @@ WEEK 27-30: FASE 8 (40 SP)
 
 | Epic | Priorità | Status | Open | Closed | Progress |
 |------|:--------:|:------:|:----:|:------:|:--------:|
-| #3490 Multi-Agent AI | 🔴 Critical | 🆕 New | 12 | 0 | 0% |
-| #3475 User Private Library | 🔴 Critical | ✅ Near Done | 1 | 3 | 75% |
-| #3386 Agent Creation | 🔴 Critical | 🔄 Active | 4 | 2 | 33% |
-| #3434 Tier-Strategy-Model | 🔴 Critical | 🔄 Active | 3 | 5 | 62% |
+| #3594 FE-BE Gap Analysis | 🔴 Critical | 🆕 New | 7 | 0 | 0% |
+| #3490 Multi-Agent AI | 🔴 Critical | 🟢 Near Done | 3 | 11 | 80% |
+| #3475 User Private Library | 🔴 Critical | ✅ DONE | 0 | 4 | 100% |
+| #3386 Agent Creation | 🔴 Critical | ✅ DONE | 0 | 6 | 100% |
+| #3434 Tier-Strategy-Model | 🔴 Critical | ✅ DONE | 0 | 8 | 100% |
+| #3448 RAG Navigation V2 | 🔴 Critical | ✅ DONE | 0 | 4 | 100% |
 | #3327 Security & Quota | 🟡 High | ⏸️ Ready | 7 | 0 | 0% |
 | #3315 AI Insights | 🟡 High | ⏸️ Ready | 7 | 0 | 0% |
 | #3306 Dashboard Hub | 🟡 High | 🔄 Active | 7 | 18 | 72% |
@@ -453,31 +491,33 @@ WEEK 27-30: FASE 8 (40 SP)
 
 ### 🔴 PRIORITÀ MASSIMA - Start Now
 
-**Team Backend**:
+**🆕 FASE 0 - Frontend-Backend Gap Analysis** (HIGH PRIORITY):
+```bash
+git checkout frontend-dev && git pull
+git checkout -b feature/issue-3595-admin-sidebar
+# Implement Admin Sidebar Navigation
+# Then: #3598 → #3596 → #3599 → #3597 → #3600
+```
+
+**Team Backend** (FASE 2 remaining):
 ```bash
 git checkout main-dev && git pull
-git checkout -b feature/issue-3479-private-pdf-upload
-# Implement POST /api/v1/documents/private
+git checkout -b feature/issue-3491-context-engineering
+# Implement Context Engineering Framework
+# Then: #3493 → #3498
 ```
 
-**Team Frontend A**:
-```bash
-git checkout frontend-dev && git pull
-git checkout -b feature/issue-3376-agent-wizard
-# Implement Agent Creation Wizard
-```
-
-**Team Frontend B**:
-```bash
-git checkout frontend-dev && git pull
-git checkout -b feature/issue-3440-tier-admin-ui
-# Implement Admin UI for tier-strategy config
-```
-
-### ⚠️ ISSUE DA CHIUDERE (Duplicati)
-- #3469 → Duplicate of #3465
-- #3470 → Duplicate of #3466
-- #3471 → Duplicate of #3467
+### ✅ RECENTLY CLOSED (Last Update - 2026-02-05)
+- **#3491, #3493 - Context Engineering CLOSED (verified & closed today)**
+- **#3376, #3375, #3378, #3379 - Agent Creation Flow ✅ (PR #3510)**
+- **#3383 - Cost Estimation Preview ✅**
+- #3479, #3483 - Backend Foundation ✅
+- #3440, #3441, #3442 - Tier-Strategy ✅
+- #3492, #3494, #3495 - Context Engineering ✅
+- #3496, #3497, #3499, #3501, #3502 - Tutor Agent ✅
+- #3373, #3374 - Frontend AI Integration ✅
+- #3449, #3450, #3451 - RAG Dashboard Nav V2 ✅
+- #3469, #3470, #3471 - Duplicates ✅
 
 ### 📋 ALTRI ISSUE NON CATEGORIZZATI
 | Issue | Titolo | Action |
@@ -500,19 +540,20 @@ git checkout -b feature/issue-3440-tier-admin-ui
 - **Documentation**: Updated before close
 
 ### Timeline Summary
-| Fase | Timeline | SP | Issues |
-|:----:|:--------:|:--:|:------:|
-| 1 | Week 1-2 | 41 | 10 |
-| 2 | Week 3-5 | 56 | 14 |
-| 3 | Week 6-9 | 70 | 20 |
-| 4 | Week 10-12 | 55 | 20 |
-| 5 | Week 13-17 | 85 | 18 |
-| 6 | Week 18-21 | 60 | 18 |
-| 7 | Week 22-26 | 75 | 19 |
-| 8 | Week 27-30 | 40 | 11 |
-| **TOTAL** | **~30 weeks** | **~470** | **116** |
+| Fase | Timeline | SP | Issues | Status |
+|:----:|:--------:|:--:|:------:|:------:|
+| 0 | Week 0 | 21 | 7 | 🔴 NEW |
+| 1 | Week 1-2 | 0 | 0 | ✅ 100% |
+| 2 | Week 3-5 | 18 | 3 | 🟢 75% |
+| 3 | Week 6-9 | 70 | 20 | ⏸️ Ready |
+| 4 | Week 10-12 | 49 | 17 | 🟡 15% |
+| 5 | Week 13-17 | 85 | 18 | ⏸️ Blocked |
+| 6 | Week 18-21 | 54 | 15 | ⏸️ Blocked |
+| 7 | Week 22-26 | 75 | 19 | ⏸️ Future |
+| 8 | Week 27-30 | 40 | 11 | ⏸️ Future |
+| **TOTAL** | **~31 weeks** | **~412** | **93** | **~20% done** |
 
 ---
 
 **Maintainer**: PM Agent + Claude Code
-**Last Updated**: 2026-02-03
+**Last Updated**: 2026-02-05

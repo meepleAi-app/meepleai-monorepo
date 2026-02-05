@@ -3,16 +3,29 @@
 /**
  * RAG Pipeline Builder - Strategy Builder
  *
- * Main component combining BlockPalette and PipelineCanvas.
- * Provides the complete visual pipeline builder experience.
+ * Main component combining BlockPalette, PipelineCanvas, BlockConfigPanel, and ValidationPanel.
+ * Provides the complete visual pipeline builder experience with real-time validation.
  *
  * @see #3457 - Setup ReactFlow canvas infrastructure for strategy builder
+ * @see #3458 - Tier 1 blocks (7 essential RAG blocks)
+ * @see #3459 - Drag-drop mechanics
+ * @see #3460 - Block connection validation
+ * @see #3461 - Parameter configuration panel
+ * @see #3462 - Strategy validation engine
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 
-import { ReactFlowProvider } from '@xyflow/react';
-import { PanelLeftClose, PanelLeftOpen, Save, Play, RotateCcw } from 'lucide-react';
+import { ReactFlowProvider, type Node, type Edge } from '@xyflow/react';
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  Save,
+  Play,
+  RotateCcw,
+} from 'lucide-react';
 
 import {
   Tooltip,
@@ -23,8 +36,11 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
+import { BlockConfigPanel } from './BlockConfigPanel';
 import { BlockPalette } from './BlockPalette';
 import { PipelineCanvas } from './PipelineCanvas';
+import { validatePipeline } from './validation-engine';
+import { ValidationPanel } from './ValidationPanel';
 
 import type {
   RagNode,
@@ -32,7 +48,10 @@ import type {
   RagBlock,
   UserTier,
   PipelineDefinition,
+  RagNodeData,
+  NodeConfigChangeEvent,
 } from './types';
+import type { DetailedValidation } from './validation-engine';
 
 // =============================================================================
 // Types
@@ -51,6 +70,10 @@ export interface StrategyBuilderProps {
   readOnly?: boolean;
   /** Additional class names */
   className?: string;
+  /** Show validation panel */
+  showValidation?: boolean;
+  /** Show config panel */
+  showConfig?: boolean;
 }
 
 // =============================================================================
@@ -64,67 +87,150 @@ export function StrategyBuilder({
   onTest,
   readOnly = false,
   className,
+  showValidation = true,
+  showConfig = true,
 }: StrategyBuilderProps) {
+  // Panel states
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
-  const [currentNodes, setCurrentNodes] = useState<RagNode[]>(initialPipeline?.nodes || []);
-  const [currentEdges, setCurrentEdges] = useState<RagEdge[]>(initialPipeline?.edges || []);
+  const [configPanelOpen, setConfigPanelOpen] = useState(false);
+
+  // Pipeline state
+  const [currentNodes, setCurrentNodes] = useState<RagNode[]>(
+    initialPipeline?.nodes || []
+  );
+  const [currentEdges, setCurrentEdges] = useState<RagEdge[]>(
+    initialPipeline?.edges || []
+  );
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Selection state
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  // Validation state
+  const [validation, setValidation] = useState<DetailedValidation | null>(null);
+
+  // Get selected node and its block
+  const selectedNode = useMemo(() => {
+    if (!selectedNodeId) return null;
+    return currentNodes.find((n) => n.id === selectedNodeId) || null;
+  }, [selectedNodeId, currentNodes]);
+
+  const selectedBlock = useMemo(() => {
+    if (!selectedNode) return null;
+    const data = selectedNode.data as RagNodeData | undefined;
+    return data?.block || null;
+  }, [selectedNode]);
+
+  const selectedParams = useMemo(() => {
+    if (!selectedNode) return {};
+    const data = selectedNode.data as RagNodeData | undefined;
+    return data?.params || {};
+  }, [selectedNode]);
+
+  // Run validation when pipeline changes
+  useEffect(() => {
+    const result = validatePipeline({
+      nodes: currentNodes as Node<RagNodeData>[],
+      edges: currentEdges as Edge[],
+      userTier,
+    });
+    setValidation(result);
+  }, [currentNodes, currentEdges, userTier]);
+
   // Handle pipeline changes from canvas
-  const handlePipelineChange = useCallback((nodes: RagNode[], edges: RagEdge[]) => {
-    setCurrentNodes(nodes);
-    setCurrentEdges(edges);
-    setHasChanges(true);
+  const handlePipelineChange = useCallback(
+    (nodes: RagNode[], edges: RagEdge[]) => {
+      setCurrentNodes(nodes);
+      setCurrentEdges(edges);
+      setHasChanges(true);
+    },
+    []
+  );
+
+  // Handle node selection
+  const handleNodeSelect = useCallback((nodeId: string | null) => {
+    setSelectedNodeId(nodeId);
+    if (nodeId) {
+      setConfigPanelOpen(true);
+    }
   }, []);
 
+  // Handle parameter change
+  const handleParamChange = useCallback(
+    (event: NodeConfigChangeEvent) => {
+      setCurrentNodes((nodes) =>
+        nodes.map((node) => {
+          if (node.id !== event.nodeId) return node;
+          const data = node.data as RagNodeData;
+          return {
+            ...node,
+            data: {
+              ...data,
+              params: {
+                ...data.params,
+                [event.paramId]: event.value,
+              },
+            },
+          };
+        })
+      );
+      setHasChanges(true);
+    },
+    []
+  );
+
   // Handle block drag start
-  const handleBlockDragStart = useCallback((_block: RagBlock, _event: React.DragEvent) => {
-    // Visual feedback could be added here
-  }, []);
+  const handleBlockDragStart = useCallback(
+    (_block: RagBlock, _event: React.DragEvent) => {
+      // Visual feedback could be added here
+    },
+    []
+  );
+
+  // Build pipeline definition
+  const buildPipelineDefinition = useCallback((): PipelineDefinition => {
+    return {
+      id: initialPipeline?.id || `pipeline-${Date.now()}`,
+      name: initialPipeline?.name || 'New Pipeline',
+      description: initialPipeline?.description || '',
+      version: initialPipeline?.version || '1.0.0',
+      nodes: currentNodes,
+      edges: currentEdges,
+      createdAt: initialPipeline?.createdAt || new Date(),
+      updatedAt: new Date(),
+      createdBy: initialPipeline?.createdBy || 'unknown',
+      isActive: initialPipeline?.isActive ?? false,
+    };
+  }, [currentNodes, currentEdges, initialPipeline]);
 
   // Handle save
   const handleSave = useCallback(() => {
-    const pipeline: PipelineDefinition = {
-      id: initialPipeline?.id || `pipeline-${Date.now()}`,
-      name: initialPipeline?.name || 'New Pipeline',
-      description: initialPipeline?.description || '',
-      version: initialPipeline?.version || '1.0.0',
-      nodes: currentNodes,
-      edges: currentEdges,
-      createdAt: initialPipeline?.createdAt || new Date(),
-      updatedAt: new Date(),
-      createdBy: initialPipeline?.createdBy || 'unknown',
-      isActive: initialPipeline?.isActive ?? false,
-    };
-
-    onSave?.(pipeline);
+    if (!validation?.isValid) {
+      // Could show a confirmation dialog here
+      return;
+    }
+    onSave?.(buildPipelineDefinition());
     setHasChanges(false);
-  }, [currentNodes, currentEdges, initialPipeline, onSave]);
+  }, [buildPipelineDefinition, onSave, validation]);
 
   // Handle test
   const handleTest = useCallback(() => {
-    const pipeline: PipelineDefinition = {
-      id: initialPipeline?.id || `pipeline-${Date.now()}`,
-      name: initialPipeline?.name || 'New Pipeline',
-      description: initialPipeline?.description || '',
-      version: initialPipeline?.version || '1.0.0',
-      nodes: currentNodes,
-      edges: currentEdges,
-      createdAt: initialPipeline?.createdAt || new Date(),
-      updatedAt: new Date(),
-      createdBy: initialPipeline?.createdBy || 'unknown',
-      isActive: initialPipeline?.isActive ?? false,
-    };
-
-    onTest?.(pipeline);
-  }, [currentNodes, currentEdges, initialPipeline, onTest]);
+    onTest?.(buildPipelineDefinition());
+  }, [buildPipelineDefinition, onTest]);
 
   // Handle reset
   const handleReset = useCallback(() => {
     setCurrentNodes(initialPipeline?.nodes || []);
     setCurrentEdges(initialPipeline?.edges || []);
     setHasChanges(false);
+    setSelectedNodeId(null);
   }, [initialPipeline]);
+
+  // Handle config panel close
+  const handleConfigClose = useCallback(() => {
+    setConfigPanelOpen(false);
+    setSelectedNodeId(null);
+  }, []);
 
   return (
     <div className={cn('flex h-full', className)}>
@@ -137,7 +243,7 @@ export function StrategyBuilder({
       />
 
       {/* Main Canvas Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Toolbar */}
         <div className="h-12 bg-card border-b flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
@@ -169,11 +275,47 @@ export function StrategyBuilder({
               {initialPipeline?.name || 'New Strategy'}
             </span>
             {hasChanges && (
-              <span className="text-xs text-muted-foreground">(unsaved changes)</span>
+              <span className="text-xs text-muted-foreground">
+                (unsaved changes)
+              </span>
+            )}
+
+            {/* Validation status badge */}
+            {showValidation && validation && (
+              <>
+                <div className="h-6 w-px bg-border" />
+                <ValidationPanel validation={validation} compact />
+              </>
             )}
           </div>
 
           <div className="flex items-center gap-2">
+            {showConfig && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={configPanelOpen ? 'secondary' : 'ghost'}
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setConfigPanelOpen(!configPanelOpen)}
+                    >
+                      {configPanelOpen ? (
+                        <PanelRightClose className="h-4 w-4" />
+                      ) : (
+                        <PanelRightOpen className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {configPanelOpen ? 'Hide Config' : 'Show Config'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
+            <div className="h-6 w-px bg-border" />
+
             {!readOnly && (
               <>
                 <TooltipProvider>
@@ -200,13 +342,17 @@ export function StrategyBuilder({
                         variant="outline"
                         size="sm"
                         onClick={handleSave}
-                        disabled={!hasChanges}
+                        disabled={!hasChanges || !validation?.isValid}
                       >
                         <Save className="h-4 w-4 mr-1" />
                         Save
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Save pipeline</TooltipContent>
+                    <TooltipContent>
+                      {!validation?.isValid
+                        ? 'Fix validation errors before saving'
+                        : 'Save pipeline'}
+                    </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </>
@@ -231,16 +377,41 @@ export function StrategyBuilder({
           </div>
         </div>
 
-        {/* Canvas */}
-        <ReactFlowProvider>
-          <PipelineCanvas
-            initialPipeline={initialPipeline}
-            onPipelineChange={handlePipelineChange}
-            readOnly={readOnly}
-            className="flex-1"
-          />
-        </ReactFlowProvider>
+        {/* Canvas with optional validation panel */}
+        <div className="flex-1 flex min-h-0">
+          <ReactFlowProvider>
+            <PipelineCanvas
+              initialPipeline={initialPipeline}
+              onPipelineChange={handlePipelineChange}
+              onNodeSelect={handleNodeSelect}
+              selectedNodeId={selectedNodeId}
+              readOnly={readOnly}
+              className="flex-1"
+            />
+          </ReactFlowProvider>
+
+          {/* Validation Panel (inline) */}
+          {showValidation && !configPanelOpen && (
+            <div className="w-72 border-l bg-card">
+              <div className="p-3 border-b">
+                <h3 className="font-medium text-sm">Validation</h3>
+              </div>
+              <ValidationPanel validation={validation} />
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Config Panel (replaces validation when open) */}
+      {showConfig && configPanelOpen && (
+        <BlockConfigPanel
+          block={selectedBlock}
+          params={selectedParams}
+          nodeId={selectedNodeId}
+          onParamChange={handleParamChange}
+          onClose={handleConfigClose}
+        />
+      )}
     </div>
   );
 }

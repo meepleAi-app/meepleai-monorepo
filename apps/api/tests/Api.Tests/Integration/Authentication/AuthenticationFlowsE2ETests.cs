@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Npgsql;
+using Pgvector.EntityFrameworkCore; // Issue #3547: Enable pgvector type mapping
 using Xunit;
 
 namespace Api.Tests.Integration.Authentication;
@@ -79,7 +80,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
 
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(enforcedBuilder.ConnectionString);
+            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector type mapping
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });

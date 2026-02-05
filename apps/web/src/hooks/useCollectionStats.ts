@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react';
 import type { ActivityEvent } from '@/components/dashboard/ActivityFeed';
 import type {
   CollectionStats,
+  CollectionHeroStats,
   CollectionGame,
   CollectionQueryParams,
   SortOption,
@@ -190,6 +191,15 @@ const MOCK_STATS: CollectionStats = {
   recentActivity: MOCK_ACTIVITY,
 };
 
+// Hero stats for collection section - Issue #3649
+const MOCK_HERO_STATS: CollectionHeroStats = {
+  totalGames: 6,
+  privatePdfsCount: 4,
+  totalSessions: 106,
+  gamesPlayedThisMonth: 3,
+  totalPlayTime: 2450, // minutes
+};
+
 // ============================================================================
 // Sort Functions
 // ============================================================================
@@ -259,6 +269,7 @@ function filterGames(games: CollectionGame[], filters: ActiveFilters): Collectio
 
 export interface UseCollectionStatsResult {
   stats: CollectionStats | null;
+  heroStats: CollectionHeroStats | null;
   games: CollectionGame[];
   isLoading: boolean;
   error: Error | null;
@@ -267,6 +278,7 @@ export interface UseCollectionStatsResult {
 
 export function useCollectionStats(params?: CollectionQueryParams): UseCollectionStatsResult {
   const [stats, setStats] = useState<CollectionStats | null>(null);
+  const [heroStats, setHeroStats] = useState<CollectionHeroStats | null>(null);
   const [games, setGames] = useState<CollectionGame[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -276,6 +288,9 @@ export function useCollectionStats(params?: CollectionQueryParams): UseCollectio
     setError(null);
 
     // Simulate API call with timeout
+    // TODO: Replace with real API calls:
+    // GET /api/v1/users/{userId}/library → UserLibraryEntry[]
+    // GET /api/v1/users/{userId}/library/stats → CollectionHeroStats
     setTimeout(() => {
       try {
         // Apply filters
@@ -289,6 +304,7 @@ export function useCollectionStats(params?: CollectionQueryParams): UseCollectio
         }
 
         setStats(MOCK_STATS);
+        setHeroStats(MOCK_HERO_STATS);
         setGames(filteredGames);
         setIsLoading(false);
       } catch (err) {
@@ -305,6 +321,7 @@ export function useCollectionStats(params?: CollectionQueryParams): UseCollectio
 
   return {
     stats,
+    heroStats,
     games,
     isLoading,
     error,

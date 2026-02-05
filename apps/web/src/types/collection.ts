@@ -47,6 +47,30 @@ export interface CollectionStats {
   recentActivity: ActivityEvent[];
 }
 
+/**
+ * Hero stats for the collection section
+ * Issue #3649 - User Collection Dashboard Enhancement
+ */
+export interface CollectionHeroStats {
+  totalGames: number;
+  privatePdfsCount: number;
+  totalSessions: number;
+  gamesPlayedThisMonth?: number;
+  totalPlayTime?: number;
+}
+
+/**
+ * Inline filter configuration for collection
+ * Issue #3649 - User Collection Dashboard Enhancement
+ */
+export interface CollectionFilters {
+  hasPdf: boolean | null;
+  hasActiveChat: boolean | null;
+  category: string | null;
+  minPlayers?: number;
+  maxPlayers?: number;
+}
+
 export interface StatCard {
   label: string;
   value: number | string;

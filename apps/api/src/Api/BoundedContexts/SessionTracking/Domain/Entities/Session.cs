@@ -69,6 +69,17 @@ public class Session
     public DateTime? DeletedAt { get; private set; }
 
     /// <summary>
+    /// Unique invite token for session sharing.
+    /// </summary>
+    [MaxLength(64)]
+    public string? InviteToken { get; private set; }
+
+    /// <summary>
+    /// When the invite token expires (null = never expires).
+    /// </summary>
+    public DateTime? InviteExpiresAt { get; private set; }
+
+    /// <summary>
     /// Audit: Created timestamp.
     /// </summary>
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
@@ -242,6 +253,68 @@ public class Session
     {
         IsDeleted = true;
         DeletedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Generates an invite token for the session.
+    /// </summary>
+    /// <param name="expiresInHours">Optional expiration in hours (null = never expires).</param>
+    /// <returns>The generated invite token.</returns>
+    public string GenerateInviteToken(int? expiresInHours = null)
+    {
+        if (Status == SessionStatus.Finalized)
+            throw new ConflictException("Cannot generate invite for finalized session.");
+
+        InviteToken = GenerateSecureToken();
+        InviteExpiresAt = expiresInHours.HasValue
+            ? DateTime.UtcNow.AddHours(expiresInHours.Value)
+            : null;
+        UpdatedAt = DateTime.UtcNow;
+
+        return InviteToken;
+    }
+
+    /// <summary>
+    /// Validates if the invite token is valid and not expired.
+    /// </summary>
+    /// <param name="token">Token to validate.</param>
+    /// <returns>True if valid, false otherwise.</returns>
+    public bool IsInviteTokenValid(string token)
+    {
+        if (string.IsNullOrEmpty(InviteToken))
+            return false;
+
+        if (!string.Equals(InviteToken, token, StringComparison.Ordinal))
+            return false;
+
+        if (InviteExpiresAt.HasValue && InviteExpiresAt.Value < DateTime.UtcNow)
+            return false;
+
+        return true;
+    }
+
+    /// <summary>
+    /// Revokes the current invite token.
+    /// </summary>
+    public void RevokeInviteToken()
+    {
+        InviteToken = null;
+        InviteExpiresAt = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Generates a secure random token.
+    /// </summary>
+    private static string GenerateSecureToken()
+    {
+        var randomBytes = new byte[32];
+        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
+        rng.GetBytes(randomBytes);
+        return Convert.ToBase64String(randomBytes)
+            .Replace("+", "-")
+            .Replace("/", "_")
+            .Replace("=", "");
     }
 
     /// <summary>

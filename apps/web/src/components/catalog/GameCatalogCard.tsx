@@ -1,6 +1,10 @@
 /**
  * GameCatalogCard Component (Issue #2518)
  *
+ * @deprecated Use MeepleGameCard from '@/components/ui/data-display/meeple-game-card' instead.
+ * This component will be removed in a future version.
+ * Migration: Replace with MeepleGameCard + onAddToLibrary callback.
+ *
  * Displays a shared game card with:
  * - Cover image
  * - Title, BGG ID, complexity
@@ -9,6 +13,8 @@
  * - Categories/Mechanics tags
  * - Add to Library button
  * - "Already in Library" badge
+ *
+ * @see MeepleGameCard for the new frosted glass game card component
  */
 
 'use client';
@@ -26,6 +32,9 @@ import { Button } from '@/components/ui/primitives/button';
 import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
 import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
+/**
+ * @deprecated Use MeepleGameCardProps instead
+ */
 interface GameCatalogCardProps {
   game: SharedGame | SharedGameDetail;
 }

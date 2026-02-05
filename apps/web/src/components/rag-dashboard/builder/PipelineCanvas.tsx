@@ -48,6 +48,17 @@ import { cn } from '@/lib/utils';
 
 import { BLOCKS_BY_TYPE, isValidConnection as checkBlockConnection } from './block-definitions';
 import { validatePipelineConstraints, PIPELINE_CONSTRAINTS } from './block-metadata';
+import {
+  VectorSearchNode,
+  KeywordSearchNode,
+  HybridSearchNode,
+  RerankerNode,
+  CragEvaluatorNode,
+  ConfidenceScoringNode,
+  CitationVerificationNode,
+  hasSpecializedNode,
+  TIER1_NODE_TYPES,
+} from './nodes';
 import { RagBlockNode } from './RagBlockNode';
 
 import type {
@@ -71,14 +82,27 @@ export interface PipelineCanvasProps {
   readOnly?: boolean;
   /** Additional class names */
   className?: string;
+  /** Callback when a node is selected */
+  onNodeSelect?: (nodeId: string | null) => void;
+  /** Currently selected node ID */
+  selectedNodeId?: string | null;
 }
 
 // =============================================================================
-// Custom Node Types
+// Custom Node Types - Including Tier 1 Specialized Nodes
 // =============================================================================
 
 const nodeTypes: NodeTypes = {
+  // Default fallback
   ragBlock: RagBlockNode as unknown as NodeTypes[string],
+  // Tier 1 specialized nodes
+  vectorSearch: VectorSearchNode as unknown as NodeTypes[string],
+  keywordSearch: KeywordSearchNode as unknown as NodeTypes[string],
+  hybridSearch: HybridSearchNode as unknown as NodeTypes[string],
+  reranker: RerankerNode as unknown as NodeTypes[string],
+  cragEvaluator: CragEvaluatorNode as unknown as NodeTypes[string],
+  confidenceScoring: ConfidenceScoringNode as unknown as NodeTypes[string],
+  citationVerification: CitationVerificationNode as unknown as NodeTypes[string],
 };
 
 // =============================================================================
@@ -147,9 +171,14 @@ function createNodeFromBlock(
     status: 'idle',
   };
 
+  // Use specialized node type if available, otherwise fallback to ragBlock
+  const nodeType = hasSpecializedNode(blockType)
+    ? TIER1_NODE_TYPES[blockType as keyof typeof TIER1_NODE_TYPES]
+    : 'ragBlock';
+
   return {
     id: createNodeId(),
-    type: 'ragBlock',
+    type: nodeType,
     position,
     data,
   };
@@ -164,6 +193,8 @@ export function PipelineCanvas({
   onPipelineChange,
   readOnly = false,
   className,
+  onNodeSelect,
+  selectedNodeId: _selectedNodeId,
 }: PipelineCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
@@ -273,6 +304,31 @@ export function PipelineCanvas({
     }
   }, [nodes, edges, onPipelineChange]);
 
+  // Handle node selection
+  const handleSelectionChange = useCallback(
+    ({ nodes: selectedNodes }: { nodes: Node[] }) => {
+      if (selectedNodes.length === 1) {
+        onNodeSelect?.(selectedNodes[0].id);
+      } else if (selectedNodes.length === 0) {
+        onNodeSelect?.(null);
+      }
+    },
+    [onNodeSelect]
+  );
+
+  // Handle node click
+  const handleNodeClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      onNodeSelect?.(node.id);
+    },
+    [onNodeSelect]
+  );
+
+  // Handle pane click (deselect)
+  const handlePaneClick = useCallback(() => {
+    onNodeSelect?.(null);
+  }, [onNodeSelect]);
+
   // Toolbar actions
   const handleZoomIn = useCallback(() => {
     reactFlowInstance?.zoomIn();
@@ -300,6 +356,9 @@ export function PipelineCanvas({
         onInit={setReactFlowInstance}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onSelectionChange={handleSelectionChange}
+        onNodeClick={handleNodeClick}
+        onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}

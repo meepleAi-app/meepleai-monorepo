@@ -36,18 +36,22 @@ public class TierStrategyAccessServiceTests
     [InlineData(LlmUserTier.User, RagStrategy.Balanced, true)]
     [InlineData(LlmUserTier.User, RagStrategy.Precise, false)]
     [InlineData(LlmUserTier.User, RagStrategy.SentenceWindow, false)]
+    [InlineData(LlmUserTier.User, RagStrategy.Iterative, false)]
     [InlineData(LlmUserTier.Editor, RagStrategy.Fast, true)]
     [InlineData(LlmUserTier.Editor, RagStrategy.Balanced, true)]
     [InlineData(LlmUserTier.Editor, RagStrategy.Precise, true)]
     [InlineData(LlmUserTier.Editor, RagStrategy.SentenceWindow, true)]
     [InlineData(LlmUserTier.Editor, RagStrategy.Expert, false)]
+    [InlineData(LlmUserTier.Editor, RagStrategy.Iterative, false)]
     [InlineData(LlmUserTier.Premium, RagStrategy.Fast, true)]
     [InlineData(LlmUserTier.Premium, RagStrategy.Expert, true)]
     [InlineData(LlmUserTier.Premium, RagStrategy.Consensus, true)]
     [InlineData(LlmUserTier.Premium, RagStrategy.SentenceWindow, true)]
+    [InlineData(LlmUserTier.Premium, RagStrategy.Iterative, true)]
     [InlineData(LlmUserTier.Premium, RagStrategy.Custom, false)]
     [InlineData(LlmUserTier.Admin, RagStrategy.Fast, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.SentenceWindow, true)]
+    [InlineData(LlmUserTier.Admin, RagStrategy.Iterative, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.Custom, true)]
     public async Task HasAccessToStrategyAsync_DefaultMatrix_ReturnsExpectedResult(
         LlmUserTier tier, RagStrategy strategy, bool expectedAccess)
@@ -138,10 +142,11 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Premium, CancellationToken.None);
 
         // Assert
-        Assert.Equal(6, strategies.Count);
+        Assert.Equal(7, strategies.Count);
         Assert.DoesNotContain(RagStrategy.Custom, strategies);
         Assert.Contains(RagStrategy.Consensus, strategies);
         Assert.Contains(RagStrategy.SentenceWindow, strategies);
+        Assert.Contains(RagStrategy.Iterative, strategies);
     }
 
     #endregion

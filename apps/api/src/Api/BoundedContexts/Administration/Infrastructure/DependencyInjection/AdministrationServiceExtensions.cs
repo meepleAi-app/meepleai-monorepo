@@ -39,6 +39,9 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<IAdminReportRepository, AdminReportRepository>();
         services.AddScoped<IReportExecutionRepository, ReportExecutionRepository>();
 
+        // Issue #3464: RAG pipeline strategy repository
+        services.AddScoped<IRagPipelineStrategyRepository, RagPipelineStrategyRepository>();
+
         // ISSUE-2528: Orphaned task cleanup configuration and service
         services.Configure<OrphanedTaskCleanupOptions>(
             configuration.GetSection(OrphanedTaskCleanupOptions.SectionKey));

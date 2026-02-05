@@ -640,4 +640,417 @@ public class PdfUploadQuotaServiceTests
         result.WeeklyResetAt.Should().Be(expectedReset);
     }
     // FakeTimeProvider removed - now using TestTimeProvider from Api.Tests.Infrastructure
+
+    // ============================================================================
+    // Issue #3653: Per-Game Quota Tests for Private PDF Uploads
+    // ============================================================================
+
+    [Fact]
+    public async Task CheckPerGameQuotaAsync_AdminUser_BypassesQuotaCheck()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userTier = UserTier.Free;
+        var userRole = AuthRole.Admin;
+
+        // Act
+        var result = await _service.CheckPerGameQuotaAsync(userId, gameId, userTier, userRole);
+
+        // Assert
+        result.Allowed.Should().BeTrue();
+        result.PerGameUsed.Should().Be(0);
+        result.PerGameLimit.Should().Be(int.MaxValue);
+        result.PerGameRemaining.Should().Be(int.MaxValue);
+
+        // Verify Redis was never called
+        _databaseMock.Verify(
+            db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task CheckPerGameQuotaAsync_EditorUser_BypassesQuotaCheck()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userTier = UserTier.Normal;
+        var userRole = AuthRole.Editor;
+
+        // Act
+        var result = await _service.CheckPerGameQuotaAsync(userId, gameId, userTier, userRole);
+
+        // Assert
+        result.Allowed.Should().BeTrue();
+        result.PerGameLimit.Should().Be(int.MaxValue);
+    }
+
+    [Theory]
+    [InlineData("free", 1)]
+    [InlineData("normal", 3)]
+    [InlineData("premium", 10)]
+    public async Task CheckPerGameQuotaAsync_PerGameLimitReached_DeniesAccess(string tierValue, int expectedLimit)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userTier = UserTier.Parse(tierValue);
+        var userRole = AuthRole.User;
+
+        // Setup config to use defaults
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
+            .ReturnsAsync((int?)null);
+
+        // Setup Redis: per-game = limit reached
+        _databaseMock.Setup(db => db.StringGetAsync(
+                It.Is<RedisKey>(k => k.ToString().Contains("pdf:upload:game")),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(new RedisValue(expectedLimit.ToString(CultureInfo.InvariantCulture)));
+
+        // Act
+        var result = await _service.CheckPerGameQuotaAsync(userId, gameId, userTier, userRole);
+
+        // Assert
+        result.Allowed.Should().BeFalse();
+        result.ErrorMessage.Should().NotBeNull();
+        Assert.Contains("Per-game private PDF limit reached", result.ErrorMessage);
+        Assert.Contains($"{expectedLimit} PDF/game", result.ErrorMessage);
+        result.PerGameUsed.Should().Be(expectedLimit);
+        result.PerGameLimit.Should().Be(expectedLimit);
+        result.PerGameRemaining.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData("free", 1)]
+    [InlineData("normal", 3)]
+    [InlineData("premium", 10)]
+    public async Task CheckPerGameQuotaAsync_WithinLimits_AllowsAccess(string tierValue, int expectedLimit)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userTier = UserTier.Parse(tierValue);
+        var userRole = AuthRole.User;
+
+        // Setup config to use defaults
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
+            .ReturnsAsync((int?)null);
+
+        // Setup Redis: per-game = 0 (no uploads yet)
+        _databaseMock.Setup(db => db.StringGetAsync(
+                It.Is<RedisKey>(k => k.ToString().Contains("pdf:upload:game")),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(new RedisValue("0"));
+
+        // Act
+        var result = await _service.CheckPerGameQuotaAsync(userId, gameId, userTier, userRole);
+
+        // Assert
+        result.Allowed.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+        result.PerGameUsed.Should().Be(0);
+        result.PerGameLimit.Should().Be(expectedLimit);
+        result.PerGameRemaining.Should().Be(expectedLimit);
+    }
+
+    [Fact]
+    public async Task CheckPerGameQuotaAsync_RedisFailure_FailsOpen()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userTier = UserTier.Free;
+        var userRole = AuthRole.User;
+
+        // Setup Redis to throw exception
+        _databaseMock.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Connection failed"));
+
+        // Act
+        var result = await _service.CheckPerGameQuotaAsync(userId, gameId, userTier, userRole);
+
+        // Assert - Fail-open: allow access when Redis is down
+        result.Allowed.Should().BeTrue();
+        result.PerGameLimit.Should().Be(int.MaxValue);
+    }
+
+    [Fact]
+    public async Task CheckPerGameQuotaAsync_CustomConfiguredLimit_UsesConfigValue()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userTier = UserTier.Premium;
+        var userRole = AuthRole.User;
+
+        // Setup custom config: Premium = 50 per game
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>("UploadLimits:premium:PerGameLimit", It.IsAny<int?>(), It.IsAny<string?>()))
+            .ReturnsAsync(50);
+
+        // Setup Redis: per-game = 25
+        _databaseMock.Setup(db => db.StringGetAsync(
+                It.Is<RedisKey>(k => k.ToString().Contains("pdf:upload:game")),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(new RedisValue("25"));
+
+        // Act
+        var result = await _service.CheckPerGameQuotaAsync(userId, gameId, userTier, userRole);
+
+        // Assert
+        result.Allowed.Should().BeTrue();
+        result.PerGameUsed.Should().Be(25);
+        result.PerGameLimit.Should().Be(50);
+        result.PerGameRemaining.Should().Be(25);
+    }
+
+    [Fact]
+    public async Task IncrementPerGameCountAsync_ExecutesStringIncrement()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        _databaseMock.Setup(db => db.StringIncrementAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<long>(),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(1);
+
+        // Act
+        await _service.IncrementPerGameCountAsync(userId, gameId);
+
+        // Assert
+        _databaseMock.Verify(
+            db => db.StringIncrementAsync(
+                It.Is<RedisKey>(k => k.ToString().Contains($"pdf:upload:game:{userId}:{gameId}")),
+                1,
+                CommandFlags.None),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task IncrementPerGameCountAsync_RedisFailure_HandlesGracefully()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        _databaseMock.Setup(db => db.StringIncrementAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<long>(),
+                It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Connection failed"));
+
+        // Act - Should not throw
+        await _service.IncrementPerGameCountAsync(userId, gameId);
+
+        // Assert - Method completes without exception (logs warning internally)
+        _databaseMock.Verify(
+            db => db.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()),
+            Times.Once());
+    }
+
+    [Fact]
+    public async Task DecrementPerGameCountAsync_ExecutesLuaScript()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        _databaseMock.Setup(db => db.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(RedisResult.Create(new RedisValue("1")));
+
+        // Act
+        await _service.DecrementPerGameCountAsync(userId, gameId);
+
+        // Assert
+        _databaseMock.Verify(
+            db => db.ScriptEvaluateAsync(
+                It.Is<string>(s => s.Contains("DECR")),
+                It.Is<RedisKey[]>(keys => keys.Length == 1 && keys[0].ToString().Contains($"pdf:upload:game:{userId}:{gameId}")),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DecrementPerGameCountAsync_RedisFailure_HandlesGracefully()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        _databaseMock.Setup(db => db.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Connection failed"));
+
+        // Act - Should not throw
+        await _service.DecrementPerGameCountAsync(userId, gameId);
+
+        // Assert - Method completes without exception
+        _databaseMock.Verify(
+            db => db.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()),
+            Times.Once());
+    }
+
+    [Fact]
+    public async Task GetPerGameQuotaInfoAsync_AdminUser_ReturnsUnlimitedQuota()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userTier = UserTier.Free;
+        var userRole = AuthRole.Admin;
+
+        // Act
+        var info = await _service.GetPerGameQuotaInfoAsync(userId, gameId, userTier, userRole);
+
+        // Assert
+        info.IsUnlimited.Should().BeTrue();
+        info.GameId.Should().Be(gameId);
+        info.PerGameUsed.Should().Be(0);
+        info.PerGameLimit.Should().Be(int.MaxValue);
+        info.PerGameRemaining.Should().Be(int.MaxValue);
+
+        // Verify Redis was never called
+        _databaseMock.Verify(
+            db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetPerGameQuotaInfoAsync_EditorUser_ReturnsUnlimitedQuota()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userTier = UserTier.Normal;
+        var userRole = AuthRole.Editor;
+
+        // Act
+        var info = await _service.GetPerGameQuotaInfoAsync(userId, gameId, userTier, userRole);
+
+        // Assert
+        info.IsUnlimited.Should().BeTrue();
+        info.PerGameLimit.Should().Be(int.MaxValue);
+    }
+
+    [Theory]
+    [InlineData("free", 1)]
+    [InlineData("normal", 3)]
+    [InlineData("premium", 10)]
+    public async Task GetPerGameQuotaInfoAsync_RegularUser_ReturnsQuotaInfo(string tierValue, int expectedLimit)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userTier = UserTier.Parse(tierValue);
+        var userRole = AuthRole.User;
+
+        // Setup config to use defaults
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
+            .ReturnsAsync((int?)null);
+
+        // Setup Redis: per-game usage
+        var currentUsage = expectedLimit > 1 ? expectedLimit - 1 : 0;
+        _databaseMock.Setup(db => db.StringGetAsync(
+                It.Is<RedisKey>(k => k.ToString().Contains("pdf:upload:game")),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(new RedisValue(currentUsage.ToString(CultureInfo.InvariantCulture)));
+
+        // Act
+        var info = await _service.GetPerGameQuotaInfoAsync(userId, gameId, userTier, userRole);
+
+        // Assert
+        info.IsUnlimited.Should().BeFalse();
+        info.GameId.Should().Be(gameId);
+        info.PerGameUsed.Should().Be(currentUsage);
+        info.PerGameLimit.Should().Be(expectedLimit);
+        info.PerGameRemaining.Should().Be(expectedLimit - currentUsage);
+    }
+
+    [Fact]
+    public async Task GetPerGameQuotaInfoAsync_UsageExceedsLimit_RemainingIsZero()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userTier = UserTier.Free;
+        var userRole = AuthRole.User;
+
+        // Setup config to use defaults (Free = 1 per game)
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
+            .ReturnsAsync((int?)null);
+
+        // Setup Redis: per-game = 3 (exceeds Free tier limit of 1)
+        _databaseMock.Setup(db => db.StringGetAsync(
+                It.Is<RedisKey>(k => k.ToString().Contains("pdf:upload:game")),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(new RedisValue("3"));
+
+        // Act
+        var info = await _service.GetPerGameQuotaInfoAsync(userId, gameId, userTier, userRole);
+
+        // Assert
+        info.PerGameUsed.Should().Be(3);
+        info.PerGameLimit.Should().Be(1);
+        info.PerGameRemaining.Should().Be(0); // Math.Max(0, 1 - 3) = 0
+    }
+
+    [Fact]
+    public async Task GetPerGameQuotaInfoAsync_RedisFailure_Throws()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userTier = UserTier.Premium;
+        var userRole = AuthRole.User;
+
+        _databaseMock.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Connection failed"));
+
+        // Act & Assert - Should throw (unlike CheckPerGameQuotaAsync which fails open)
+        await Assert.ThrowsAsync<RedisConnectionException>(() =>
+            _service.GetPerGameQuotaInfoAsync(userId, gameId, userTier, userRole));
+    }
+
+    [Fact]
+    public async Task CheckPerGameQuotaAsync_VerifiesCorrectKeyFormat()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var userTier = UserTier.Free;
+        var userRole = AuthRole.User;
+
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>()))
+            .ReturnsAsync((int?)null);
+
+        RedisKey? capturedKey = null;
+        _databaseMock.Setup(db => db.StringGetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, CommandFlags>((key, flags) => capturedKey = key)
+            .ReturnsAsync(new RedisValue("0"));
+
+        // Act
+        await _service.CheckPerGameQuotaAsync(userId, gameId, userTier, userRole);
+
+        // Assert - Verify key format: pdf:upload:game:{userId}:{gameId}
+        capturedKey.Should().NotBeNull();
+        var keyString = capturedKey!.Value.ToString();
+        keyString.Should().Be($"pdf:upload:game:{userId}:{gameId}");
+    }
 }

@@ -21,14 +21,17 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         // Free Tier
         public const int FreeDailyLimit = 5;
         public const int FreeWeeklyLimit = 20;
+        public const int FreePerGameLimit = 1;
 
         // Normal Tier
         public const int NormalDailyLimit = 20;
         public const int NormalWeeklyLimit = 100;
+        public const int NormalPerGameLimit = 3;
 
         // Premium Tier
         public const int PremiumDailyLimit = 100;
         public const int PremiumWeeklyLimit = 500;
+        public const int PremiumPerGameLimit = 10;
     }
     private readonly IConnectionMultiplexer _redis;
     private readonly IConfigurationService _configService;
@@ -498,5 +501,175 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         }
         return now.Date.AddDays(daysUntilMonday);
     }
+
+    // ============================================================================
+    // Issue #3653: Per-Game Quota Methods for Private PDF Uploads
+    // ============================================================================
+
+    public async Task<PerGameQuotaResult> CheckPerGameQuotaAsync(
+        Guid userId,
+        Guid gameId,
+        UserTier userTier,
+        AuthRole userRole,
+        CancellationToken cancellationToken = default)
+    {
+        // Admin and Editor bypass quota checks (unlimited)
+        if (userRole.IsAdmin() || userRole.IsEditor())
+        {
+            return PerGameQuotaResult.Unlimited();
+        }
+
+        try
+        {
+            var perGameLimit = await GetPerGameLimitForTierAsync(userTier).ConfigureAwait(false);
+            var perGameUsed = await GetPerGameUsageAsync(userId, gameId).ConfigureAwait(false);
+
+            // Check per-game limit
+            if (perGameUsed >= perGameLimit)
+            {
+                return PerGameQuotaResult.Denied(
+                    $"Per-game private PDF limit reached ({perGameLimit} PDF/game for {userTier} tier). Delete existing PDFs to upload more.",
+                    perGameUsed,
+                    perGameLimit);
+            }
+
+            return PerGameQuotaResult.Success(perGameUsed, perGameLimit);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // FAIL-OPEN PATTERN: Infrastructure resilience for per-game quota enforcement
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking per-game PDF upload quota for user {UserId}, game {GameId}", userId, gameId);
+            // Fail-open: allow upload if quota check fails
+            return PerGameQuotaResult.Unlimited();
+        }
+#pragma warning restore CA1031
+    }
+
+    public async Task IncrementPerGameCountAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            var perGameKey = GetPerGameKey(userId, gameId);
+
+            // Per-game counts don't expire (permanent until game/PDF is deleted)
+            await db.StringIncrementAsync(perGameKey).ConfigureAwait(false);
+
+            _logger.LogDebug("Incremented per-game PDF count for user {UserId}, game {GameId}", userId, gameId);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to increment per-game count for user {UserId}, game {GameId}", userId, gameId);
+        }
+#pragma warning restore CA1031
+    }
+
+    public async Task DecrementPerGameCountAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var db = _redis.GetDatabase();
+            var perGameKey = GetPerGameKey(userId, gameId);
+
+            var script = @"
+                local key = KEYS[1]
+                local current = redis.call('GET', key)
+                if current and tonumber(current) > 0 then
+                    return redis.call('DECR', key)
+                else
+                    return 0
+                end
+            ";
+
+            var keys = new RedisKey[] { perGameKey };
+            await db.ScriptEvaluateAsync(script, keys).ConfigureAwait(false);
+
+            _logger.LogDebug("Decremented per-game PDF count for user {UserId}, game {GameId}", userId, gameId);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to decrement per-game count for user {UserId}, game {GameId}", userId, gameId);
+        }
+#pragma warning restore CA1031
+    }
+
+    public async Task<PerGameQuotaInfo> GetPerGameQuotaInfoAsync(
+        Guid userId,
+        Guid gameId,
+        UserTier userTier,
+        AuthRole userRole,
+        CancellationToken cancellationToken = default)
+    {
+        // Admin and Editor have unlimited quota
+        if (userRole.IsAdmin() || userRole.IsEditor())
+        {
+            return new PerGameQuotaInfo
+            {
+                GameId = gameId,
+                PerGameUsed = 0,
+                PerGameLimit = int.MaxValue,
+                PerGameRemaining = int.MaxValue,
+                IsUnlimited = true
+            };
+        }
+
+        try
+        {
+            var perGameLimit = await GetPerGameLimitForTierAsync(userTier).ConfigureAwait(false);
+            var perGameUsed = await GetPerGameUsageAsync(userId, gameId).ConfigureAwait(false);
+
+            return new PerGameQuotaInfo
+            {
+                GameId = gameId,
+                PerGameUsed = perGameUsed,
+                PerGameLimit = perGameLimit,
+                PerGameRemaining = Math.Max(0, perGameLimit - perGameUsed),
+                IsUnlimited = false
+            };
+        }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting per-game quota info for user {UserId}, game {GameId}", userId, gameId);
+            throw;
+        }
+#pragma warning restore S2139
+    }
+
+    private async Task<int> GetPerGameLimitForTierAsync(UserTier tier)
+    {
+        var tierValue = tier.Value;
+        var perGameKey = $"UploadLimits:{tierValue}:PerGameLimit";
+
+        // Get from configuration service (with fallback to defaults)
+        var perGameLimit = await _configService.GetValueAsync<int?>(perGameKey, defaultValue: null).ConfigureAwait(false);
+
+        return perGameLimit ?? GetDefaultPerGameLimit(tier);
+    }
+
+    private async Task<int> GetPerGameUsageAsync(Guid userId, Guid gameId)
+    {
+        var db = _redis.GetDatabase();
+        var perGameKey = GetPerGameKey(userId, gameId);
+
+        var value = await db.StringGetAsync(perGameKey).ConfigureAwait(false);
+        return value.HasValue ? (int)value : 0;
+    }
+
+    private static int GetDefaultPerGameLimit(UserTier tier)
+    {
+        return tier.Value switch
+        {
+            "free" => DefaultQuotas.FreePerGameLimit,
+            "normal" => DefaultQuotas.NormalPerGameLimit,
+            "premium" => DefaultQuotas.PremiumPerGameLimit,
+            _ => DefaultQuotas.FreePerGameLimit // Default to Free tier limits
+        };
+    }
+
+    private static string GetPerGameKey(Guid userId, Guid gameId) => $"pdf:upload:game:{userId}:{gameId}";
 }
 

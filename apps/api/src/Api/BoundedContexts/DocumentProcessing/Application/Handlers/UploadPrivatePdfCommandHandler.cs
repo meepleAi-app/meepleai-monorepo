@@ -1,6 +1,9 @@
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure.Security;
@@ -11,6 +14,7 @@ using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
+using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 
@@ -21,24 +25,30 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 internal sealed class UploadPrivatePdfCommandHandler : ICommandHandler<UploadPrivatePdfCommand, PrivatePdfUploadResult>
 {
     private readonly IUserLibraryRepository _libraryRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IPdfDocumentRepository _pdfRepository;
     private readonly IBlobStorageService _blobStorageService;
     private readonly IBackgroundTaskService _backgroundTaskService;
+    private readonly IPdfUploadQuotaService _quotaService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UploadPrivatePdfCommandHandler> _logger;
 
     public UploadPrivatePdfCommandHandler(
         IUserLibraryRepository libraryRepository,
+        IUserRepository userRepository,
         IPdfDocumentRepository pdfRepository,
         IBlobStorageService blobStorageService,
         IBackgroundTaskService backgroundTaskService,
+        IPdfUploadQuotaService quotaService,
         IUnitOfWork unitOfWork,
         ILogger<UploadPrivatePdfCommandHandler> logger)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _pdfRepository = pdfRepository ?? throw new ArgumentNullException(nameof(pdfRepository));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _backgroundTaskService = backgroundTaskService ?? throw new ArgumentNullException(nameof(backgroundTaskService));
+        _quotaService = quotaService ?? throw new ArgumentNullException(nameof(quotaService));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -63,7 +73,48 @@ internal sealed class UploadPrivatePdfCommandHandler : ICommandHandler<UploadPri
             throw new ForbiddenException("You do not have permission to upload PDFs to this library entry");
         }
 
-        // 2. Sanitize filename
+        // 2. Get user info for quota check (Issue #3653)
+        var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
+        if (user is null)
+        {
+            throw new NotFoundException($"User {command.UserId} not found");
+        }
+
+        var userTier = user.Tier;
+        var userRole = user.Role;
+
+        // 3. Check per-game quota (Issue #3653)
+        var perGameQuotaResult = await _quotaService.CheckPerGameQuotaAsync(
+            command.UserId,
+            libraryEntry.GameId,
+            userTier,
+            userRole,
+            cancellationToken).ConfigureAwait(false);
+
+        if (!perGameQuotaResult.Allowed)
+        {
+            _logger.LogWarning(
+                "Per-game quota exceeded for user {UserId}, game {GameId}: {Error}",
+                command.UserId, libraryEntry.GameId, perGameQuotaResult.ErrorMessage);
+            throw new QuotaExceededException("PerGamePdfQuota", perGameQuotaResult.ErrorMessage!);
+        }
+
+        // 4. Check daily/weekly quota
+        var quotaResult = await _quotaService.CheckQuotaAsync(
+            command.UserId,
+            userTier,
+            userRole,
+            cancellationToken).ConfigureAwait(false);
+
+        if (!quotaResult.Allowed)
+        {
+            _logger.LogWarning(
+                "Upload quota exceeded for user {UserId}: {Error}",
+                command.UserId, quotaResult.ErrorMessage);
+            throw new QuotaExceededException("PdfUploadQuota", quotaResult.ErrorMessage!);
+        }
+
+        // 5. Sanitize filename
         var originalFileName = Path.GetFileName(command.PdfFile.FileName);
         string sanitizedFileName;
         try
@@ -123,27 +174,39 @@ internal sealed class UploadPrivatePdfCommandHandler : ICommandHandler<UploadPri
         // 6. Associate PDF with library entry (triggers PrivatePdfAssociatedEvent)
         libraryEntry.AssociatePrivatePdf(pdfId);
 
-        // 7. Save all changes
+        // 11. Save all changes
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // 12. Increment quota counts (Issue #3653)
+        await _quotaService.IncrementUploadCountAsync(command.UserId, cancellationToken).ConfigureAwait(false);
+        await _quotaService.IncrementPerGameCountAsync(command.UserId, libraryEntry.GameId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Private PDF {PdfId} uploaded for library entry {EntryId} (Game: {GameId}, User: {UserId})",
             pdfId, command.UserLibraryEntryId, libraryEntry.GameId, command.UserId);
 
-        // 8. Start background processing (extract, chunk, embed, index)
+        // 13. Start background processing (extract, chunk, embed, index)
         _backgroundTaskService.ExecuteWithCancellation(
             storageResult.FileId,
             (ct) => TriggerPdfProcessingAsync(pdfId, storageResult.FilePath!, command.UserId, ct));
 
-        // 9. Return result with SSE stream URL for progress tracking
-        var sseStreamUrl = $"/api/v1/pdfs/{pdfId}/progress";
+        // 14. Return result with SSE stream URL and quota info (Issue #3653)
+        var sseStreamUrl = $"/api/v1/users/{command.UserId}/library/{command.UserLibraryEntryId}/pdf/progress";
+
+        // Calculate remaining quotas after this upload
+        var quotaRemaining = new QuotaRemainingInfo(
+            Daily: Math.Max(0, quotaResult.DailyLimit - quotaResult.DailyUploadsUsed - 1),
+            Weekly: Math.Max(0, quotaResult.WeeklyLimit - quotaResult.WeeklyUploadsUsed - 1),
+            PerGame: Math.Max(0, perGameQuotaResult.PerGameLimit - perGameQuotaResult.PerGameUsed - 1)
+        );
 
         return new PrivatePdfUploadResult(
             PdfId: pdfId,
             FileName: sanitizedFileName,
             FileSize: storageResult.FileSizeBytes,
-            Status: "pending",
-            SseStreamUrl: sseStreamUrl
+            Status: "processing",
+            SseStreamUrl: sseStreamUrl,
+            QuotaRemaining: quotaRemaining
         );
     }
 

@@ -96,6 +96,64 @@ internal interface IPdfUploadQuotaService
     /// <param name="pdfId">PDF document ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
     Task ReleaseQuotaAsync(Guid userId, string pdfId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks if a user can upload a private PDF for a specific game based on per-game limits.
+    /// Issue #3653: Per-game quota for private PDF uploads.
+    ///
+    /// <para><strong>Per-Game Limits (default values):</strong></para>
+    /// <list type="bullet">
+    /// <item><description>Free: 1 private PDF per game</description></item>
+    /// <item><description>Normal: 3 private PDFs per game</description></item>
+    /// <item><description>Premium: 10 private PDFs per game</description></item>
+    /// <item><description>Admin/Editor: Unlimited</description></item>
+    /// </list>
+    /// </summary>
+    /// <param name="userId">User ID to check quota for</param>
+    /// <param name="gameId">Game ID to check per-game limit</param>
+    /// <param name="userTier">User's subscription tier</param>
+    /// <param name="userRole">User's role (determines if quota bypass applies)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Result with allowed status and per-game quota information</returns>
+    Task<PerGameQuotaResult> CheckPerGameQuotaAsync(
+        Guid userId,
+        Guid gameId,
+        UserTier userTier,
+        Role userRole,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Increments the per-game upload count for a user.
+    /// Should be called after a successful private PDF upload.
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="gameId">Game ID the PDF was uploaded for</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task IncrementPerGameCountAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Decrements the per-game upload count for a user (for cleanup/deletion).
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="gameId">Game ID the PDF was deleted from</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task DecrementPerGameCountAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the current per-game quota information for a user.
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="gameId">Game ID</param>
+    /// <param name="userTier">User's subscription tier</param>
+    /// <param name="userRole">User's role</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Per-game quota information including used count and limit</returns>
+    Task<PerGameQuotaInfo> GetPerGameQuotaInfoAsync(
+        Guid userId,
+        Guid gameId,
+        UserTier userTier,
+        Role userRole,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -200,5 +258,67 @@ internal record QuotaReservationResult
             ExpiresAt = null
         };
     }
+}
+
+/// <summary>
+/// Result of per-game quota check operation.
+/// Issue #3653: Per-game quota for private PDF uploads.
+/// </summary>
+internal record PerGameQuotaResult
+{
+    public bool Allowed { get; init; }
+    public string? ErrorMessage { get; init; }
+    public int PerGameUsed { get; init; }
+    public int PerGameLimit { get; init; }
+    public int PerGameRemaining { get; init; }
+
+    public static PerGameQuotaResult Success(int used, int limit)
+    {
+        return new PerGameQuotaResult
+        {
+            Allowed = true,
+            ErrorMessage = null,
+            PerGameUsed = used,
+            PerGameLimit = limit,
+            PerGameRemaining = Math.Max(0, limit - used)
+        };
+    }
+
+    public static PerGameQuotaResult Denied(string errorMessage, int used, int limit)
+    {
+        return new PerGameQuotaResult
+        {
+            Allowed = false,
+            ErrorMessage = errorMessage,
+            PerGameUsed = used,
+            PerGameLimit = limit,
+            PerGameRemaining = 0
+        };
+    }
+
+    public static PerGameQuotaResult Unlimited()
+    {
+        return new PerGameQuotaResult
+        {
+            Allowed = true,
+            ErrorMessage = null,
+            PerGameUsed = 0,
+            PerGameLimit = int.MaxValue,
+            PerGameRemaining = int.MaxValue
+        };
+    }
+}
+
+/// <summary>
+/// Information about user's per-game quota status.
+/// Issue #3653: Per-game quota for private PDF uploads.
+/// </summary>
+internal record PerGameQuotaInfo
+{
+    public Guid GameId { get; init; }
+    public int PerGameUsed { get; init; }
+    public int PerGameLimit { get; init; }
+    public int PerGameRemaining { get; init; }
+    public bool IsUnlimited { get; init; }
 }
 

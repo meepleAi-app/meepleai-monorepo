@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * QuickActions Component (Issue #1834: UI-007)
  *

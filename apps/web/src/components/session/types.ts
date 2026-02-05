@@ -170,3 +170,34 @@ export const DEFAULT_WHEEL_COLORS = [
   '#ec4899', // pink
   '#06b6d4', // cyan
 ];
+
+// Session Invite Types (Issue #3354)
+export interface InviteTokenResponse {
+  inviteToken: string;
+  inviteUrl: string;
+  expiresAt: Date | null;
+  sessionCode: string;
+  qrCodeDataUrl: string;
+}
+
+export interface SessionInviteResponse {
+  sessionId: string;
+  sessionCode: string;
+  gameName: string | null;
+  gameImageUrl: string | null;
+  sessionDate: Date;
+  location: string | null;
+  status: string;
+  participantCount: number;
+  ownerDisplayName: string;
+  canJoin: boolean;
+  reasonCannotJoin: string | null;
+}
+
+export interface JoinSessionResponse {
+  sessionId: string;
+  sessionCode: string;
+  participantId: string;
+  displayName: string;
+  joinOrder: number;
+}

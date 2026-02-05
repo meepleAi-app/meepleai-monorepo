@@ -13,6 +13,7 @@ export { CoinFlip } from './CoinFlip';
 export { WheelSpinner } from './WheelSpinner';
 export { RandomTools } from './RandomTools';
 export { ExportSession } from './ExportSession';
+export { InviteSession } from './InviteSession';
 
 export type {
   Participant,
@@ -33,6 +34,9 @@ export type {
   CoinFlipResult,
   WheelOption,
   WheelSpinResult,
+  InviteTokenResponse,
+  SessionInviteResponse,
+  JoinSessionResponse,
 } from './types';
 
 export { DICE_TYPES, CARD_SUITS, DEFAULT_WHEEL_COLORS } from './types';

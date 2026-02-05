@@ -35,6 +35,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
     private readonly IPdfUploadQuotaService _quotaService;
     private readonly TimeProvider _timeProvider;
     private readonly long _maxFileSizeBytes;
+    private readonly Api.BoundedContexts.UserLibrary.Domain.Repositories.IPrivateGameRepository? _privateGameRepository;
 
     private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.Ordinal) { "application/pdf" };
     public UploadPdfCommandHandler(
@@ -48,6 +49,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         IBlobStorageService blobStorageService,
         IPdfUploadQuotaService quotaService,
         IOptions<PdfProcessingOptions> pdfOptions,
+        Api.BoundedContexts.UserLibrary.Domain.Repositories.IPrivateGameRepository? privateGameRepository = null,
         TimeProvider? timeProvider = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
@@ -61,6 +63,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         _quotaService = quotaService ?? throw new ArgumentNullException(nameof(quotaService));
         ArgumentNullException.ThrowIfNull(pdfOptions);
         _maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
+        _privateGameRepository = privateGameRepository;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
     public async Task<PdfUploadResult> Handle(UploadPdfCommand command, CancellationToken cancellationToken)
@@ -79,6 +82,13 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         var fileName = validationResult.SanitizedFileName!;
 
+        // Issue #3664: Handle private game PDF uploads
+        if (command.PrivateGameId.HasValue)
+        {
+            return await HandlePrivateGamePdfUploadAsync(
+                command.PrivateGameId.Value, userId, file, fileName, cancellationToken).ConfigureAwait(false);
+        }
+
         // Check user quota and permissions (also resolves/creates game)
         var (quotaAllowed, quotaError, _, resolvedGameId) = await CheckUserQuotaAsync(
             userId, command.GameId, command.Metadata, file, cancellationToken).ConfigureAwait(false);
@@ -92,7 +102,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
 
         // Store file and create database record
         var (storageSuccess, storageResult, pdfDoc) = await StoreFileAndCreateRecordAsync(
-            file, fileName, gameId, userId, cancellationToken).ConfigureAwait(false);
+            file, fileName, gameId, userId, null, cancellationToken).ConfigureAwait(false);
 
         if (!storageSuccess)
         {
@@ -369,6 +379,7 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         string fileName,
         string gameId,
         Guid userId,
+        Guid? privateGameId,
         CancellationToken cancellationToken)
     {
         try
@@ -399,7 +410,8 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
                 ContentType = file.ContentType,
                 UploadedByUserId = userId,
                 UploadedAt = _timeProvider.GetUtcNow().UtcDateTime,
-                ProcessingStatus = "pending"
+                ProcessingStatus = "pending",
+                PrivateGameId = privateGameId // Issue #3664
             };
 
             _db.PdfDocuments.Add(pdfDoc);
@@ -1317,6 +1329,76 @@ internal class UploadPdfCommandHandler : ICommandHandler<UploadPdfCommand, PdfUp
         return vector == null
             || vector.Length == 0
             || Array.Exists(vector, v => float.IsNaN(v) || float.IsInfinity(v));
+    }
+
+    /// <summary>
+    /// Handles PDF upload for private games (Issue #3664).
+    /// Validates ownership and stores PDF linked to PrivateGame.
+    /// </summary>
+    private async Task<PdfUploadResult> HandlePrivateGamePdfUploadAsync(
+        Guid privateGameId,
+        Guid userId,
+        IFormFile file,
+        string fileName,
+        CancellationToken cancellationToken)
+    {
+        // Validate private game exists and user is owner using repository pattern
+        if (_privateGameRepository == null)
+        {
+            _logger.LogError("PrivateGameRepository not injected for private game PDF upload");
+            return new PdfUploadResult(false, "Service configuration error", null);
+        }
+
+        var privateGame = await _privateGameRepository.GetByIdAsync(privateGameId, cancellationToken).ConfigureAwait(false);
+
+        if (privateGame == null)
+        {
+            _logger.LogWarning("Private game {PrivateGameId} not found for PDF upload", privateGameId);
+            return new PdfUploadResult(false, "Private game not found", null);
+        }
+
+        if (privateGame.OwnerId != userId)
+        {
+            _logger.LogWarning(
+                "User {UserId} attempted to upload PDF for private game {PrivateGameId} owned by {OwnerId}",
+                userId, privateGameId, privateGame.OwnerId);
+            return new PdfUploadResult(false, "You can only upload PDFs for your own private games", null);
+        }
+
+        // Use a placeholder gameId for storage (private games don't have GameEntity)
+        var storageGameId = privateGameId.ToString();
+
+        // Store file and create database record with PrivateGameId
+        var (storageSuccess, storageResult, pdfDoc) = await StoreFileAndCreateRecordAsync(
+            file, fileName, storageGameId, userId, privateGameId, cancellationToken).ConfigureAwait(false);
+
+        if (!storageSuccess)
+        {
+            return new PdfUploadResult(false, storageResult.ErrorMessage ?? "Failed to store file", null);
+        }
+
+        // Start background processing (no quota needed for private game PDFs)
+        _backgroundTaskService.ExecuteWithCancellation(
+            pdfDoc!.Id.ToString(),
+            ct => ProcessPdfAsync(pdfDoc.Id.ToString(), pdfDoc.FilePath, userId, ct));
+
+        _logger.LogInformation(
+            "PDF uploaded successfully for private game {PrivateGameId}: {FileName} ({FileSize} bytes)",
+            privateGameId, fileName, file.Length);
+
+        var documentDto = new PdfDocumentDto(
+            Id: pdfDoc.Id,
+            GameId: pdfDoc.GameId,
+            FileName: pdfDoc.FileName,
+            FilePath: pdfDoc.FilePath,
+            FileSizeBytes: pdfDoc.FileSizeBytes,
+            ProcessingStatus: pdfDoc.ProcessingStatus,
+            UploadedAt: pdfDoc.UploadedAt,
+            ProcessedAt: pdfDoc.ProcessedAt,
+            PageCount: pdfDoc.PageCount
+        );
+
+        return new PdfUploadResult(true, "PDF upload started successfully", documentDto);
     }
 
     /// <summary>

@@ -234,7 +234,7 @@ internal static class PdfEndpoints
         }
 
         var userId = session!.User!.Id;
-        var result = await mediator.Send(new UploadPdfCommand(gameId, metadata, userId, file!), ct).ConfigureAwait(false);
+        var result = await mediator.Send(new UploadPdfCommand(gameId, metadata, null, userId, file!), ct).ConfigureAwait(false);
 
         if (!result.Success)
         {

@@ -37,6 +37,9 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     public Guid? ContributorId { get; private set; }
     public Guid? SourceDocumentId { get; private set; }
 
+    // Issue #3664: Private game PDF support
+    public Guid? PrivateGameId { get; private set; }
+
 #pragma warning disable CS8618
     private PdfDocument() : base() { }
 #pragma warning restore CS8618
@@ -77,6 +80,7 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     /// Reconstitutes a PdfDocument from persistence.
     /// Issue #2140: Replaces reflection-based property mutation
     /// Issue #2732: Added SharedGameId, ContributorId, SourceDocumentId
+    /// Issue #3664: Added PrivateGameId
     /// </summary>
     public static PdfDocument Reconstitute(
         Guid id,
@@ -97,7 +101,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         bool isPublic = false,
         Guid? sharedGameId = null,
         Guid? contributorId = null,
-        Guid? sourceDocumentId = null)
+        Guid? sourceDocumentId = null,
+        Guid? privateGameId = null)
     {
         var document = new PdfDocument
         {
@@ -120,7 +125,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             IsPublic = isPublic,
             SharedGameId = sharedGameId,
             ContributorId = contributorId,
-            SourceDocumentId = sourceDocumentId
+            SourceDocumentId = sourceDocumentId,
+            PrivateGameId = privateGameId
         };
 
         return document;

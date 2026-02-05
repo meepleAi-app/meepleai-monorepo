@@ -368,7 +368,9 @@ describe('Breadcrumbs', () => {
     it('should use NAVIGATION_GROUPS when groups not provided', () => {
       // This test verifies the component can be used without explicit groups
       // The default is NAVIGATION_GROUPS from RagDashboard
-      render(<Breadcrumbs activeSection="query-sim" />);
+      // Note: After the tabbed redesign, NAVIGATION_GROUPS contains tab IDs
+      // like 'overview', 'architecture', 'agents', 'performance', 'walkthrough'
+      render(<Breadcrumbs activeSection="overview" />);
       // If it renders without error and finds the section, defaults work
       expect(screen.getByRole('navigation')).toBeInTheDocument();
     });

@@ -52,7 +52,11 @@ function New-SecurePassword {
     $lowercase = 'abcdefghijklmnopqrstuvwxyz'
     $uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     $digits = '0123456789'
-    $symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?'
+    # NOTE: Avoid characters that break connection strings or shell expansion:
+    # - ; = , [ ] { } ( ) < > ' " break connection strings
+    # - $ breaks shell variable expansion in env files
+    # Safe symbols for PostgreSQL/Redis passwords:
+    $symbols = '!@#%^&*_+-~'
 
     $chars = $lowercase.ToCharArray()
     if ($RequireUppercase) { $chars += $uppercase.ToCharArray() }
@@ -70,7 +74,7 @@ function New-SecurePassword {
     if ($RequireDigit -and $password -notmatch '\d') {
         $password = $password.Substring(0, $Length - 1) + ($digits.ToCharArray() | Get-Random)
     }
-    if ($RequireSymbol -and $password -notmatch '[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]') {
+    if ($RequireSymbol -and $password -notmatch '[!@#%^&*_+\-~]') {
         $password = $password.Substring(0, $Length - 1) + ($symbols.ToCharArray() | Get-Random)
     }
 

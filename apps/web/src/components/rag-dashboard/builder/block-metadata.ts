@@ -7,6 +7,8 @@
  * @see #3454 - Define block type system and metadata
  */
 
+import { ALL_BLOCKS, BLOCKS_BY_CATEGORY, BLOCKS_BY_TYPE } from './block-definitions';
+
 import type {
   BlockCategory,
   RagBlockType,
@@ -14,7 +16,6 @@ import type {
   PaletteGroup,
   PaletteItem,
 } from './types';
-import { ALL_BLOCKS, BLOCKS_BY_CATEGORY, BLOCKS_BY_TYPE } from './block-definitions';
 
 // =============================================================================
 // Category Metadata

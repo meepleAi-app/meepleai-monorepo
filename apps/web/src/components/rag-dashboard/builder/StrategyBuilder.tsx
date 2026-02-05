@@ -10,18 +10,22 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import { ReactFlowProvider } from '@xyflow/react';
 import { PanelLeftClose, PanelLeftOpen, Save, Play, RotateCcw } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/primitives/button';
+
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
+
 import { BlockPalette } from './BlockPalette';
 import { PipelineCanvas } from './PipelineCanvas';
+
 import type {
   RagNode,
   RagEdge,

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Game Edit Form Component (Issue #2515)
+ * Game Edit Form Component (Issue #2515, #3384)
  *
  * Form fields for game configuration.
  * Simplified version focusing on admin dashboard requirements.
@@ -12,7 +12,7 @@
  * - BGG URL (validation)
  * - Description (textarea, max 2000 chars)
  * - Upload PDF (max 100MB)
- * - Cover Image (file or URL, max 5MB)
+ * - Cover Image (drag-drop with preview, max 5MB) - Issue #3384
  * - Complexity (slider 1-5)
  * - Players Min/Max
  * - Average Duration (minutes)
@@ -23,6 +23,7 @@ import { useState } from 'react';
 
 import { X } from 'lucide-react';
 
+import { ImageUpload } from '@/components/admin/shared-games/ImageUpload';
 import { toast } from '@/components/layout/Toast';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Button } from '@/components/ui/primitives/button';
@@ -60,7 +61,7 @@ export function GameEditForm({ game, onChange, isSubmitting }: GameEditFormProps
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [complexity, setComplexity] = useState(3);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState<string>('');
 
   const handleTagToggle = (tag: string) => {
     const newTags = selectedTags.includes(tag)
@@ -83,17 +84,15 @@ export function GameEditForm({ game, onChange, isSubmitting }: GameEditFormProps
     onChange('pdfDocument', file);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image file must be less than 5MB');
-      return;
-    }
-
-    setImageFile(file);
+  // Issue #3384: Handle image file change from ImageUpload component
+  const handleImageFileChange = (file: File | null) => {
     onChange('coverImage', file);
+  };
+
+  // Issue #3384: Handle image URL change
+  const handleImageUrlChange = (url: string) => {
+    setImageUrl(url);
+    onChange('coverImageUrl', url);
   };
 
   return (
@@ -187,35 +186,16 @@ export function GameEditForm({ game, onChange, isSubmitting }: GameEditFormProps
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="image-upload">Cover Image (max 5MB)</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="image-upload"
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              disabled={isSubmitting}
-            />
-            {imageFile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setImageFile(null);
-                  onChange('coverImage', null);
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          {imageFile && (
-            <p className="text-xs text-muted-foreground">
-              {imageFile.name} ({(imageFile.size / 1024 / 1024).toFixed(2)} MB)
-            </p>
-          )}
-        </div>
+        {/* Issue #3384: Enhanced ImageUpload with drag-drop */}
+        <ImageUpload
+          label="Cover Image (max 5MB)"
+          currentImageUrl={game?.imageUrl}
+          onFileChange={handleImageFileChange}
+          onUrlChange={handleImageUrlChange}
+          urlValue={imageUrl}
+          disabled={isSubmitting}
+          imageTypeHint="cover"
+        />
       </div>
 
       {/* Complexity Slider */}

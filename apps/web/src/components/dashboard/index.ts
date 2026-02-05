@@ -37,3 +37,6 @@ export { MeepleGameWidget, MeepleGameWidgetSkeleton, type DashboardGame, type Me
 
 // Compact Dashboard (Issue #3306: MVP Refinement)
 export { UserDashboardCompact } from './UserDashboardCompact';
+
+// Unified Dashboard with Mode Toggle (Compact/Extended)
+export { UserDashboard, type UserDashboardProps, type DashboardMode } from './UserDashboard';

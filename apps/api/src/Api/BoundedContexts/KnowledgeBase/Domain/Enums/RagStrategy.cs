@@ -79,7 +79,15 @@ public enum RagStrategy
     /// Use case: Complex strategic queries requiring multi-perspective analysis.
     /// +20% accuracy, ~12,900 tokens per query (mixed models).
     /// </summary>
-    MultiAgent = 8
+    MultiAgent = 8,
+
+    /// <summary>
+    /// Step-Back Prompting strategy for higher-level abstraction.
+    /// Phases: AbstractQuestion, BroadRetrieval, ContextualSynthesis.
+    /// Use case: Complex questions benefiting from broader conceptual context.
+    /// +10% accuracy, ~2,800 tokens per query.
+    /// </summary>
+    StepBack = 9
 }
 
 /// <summary>
@@ -101,6 +109,7 @@ public static class RagStrategyExtensions
         RagStrategy.Iterative => "ITERATIVE",
         RagStrategy.Custom => "CUSTOM",
         RagStrategy.MultiAgent => "MULTI_AGENT",
+        RagStrategy.StepBack => "STEP_BACK",
         _ => strategy.ToString().ToUpperInvariant()
     };
 
@@ -116,7 +125,7 @@ public static class RagStrategyExtensions
             return strategy;
 
         throw new ArgumentException(
-            $"Invalid RAG strategy: '{value}'. Valid values are: FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, SENTENCE_WINDOW, ITERATIVE, CUSTOM, MULTI_AGENT",
+            $"Invalid RAG strategy: '{value}'. Valid values are: FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, SENTENCE_WINDOW, ITERATIVE, CUSTOM, MULTI_AGENT, STEP_BACK",
             nameof(value));
     }
 

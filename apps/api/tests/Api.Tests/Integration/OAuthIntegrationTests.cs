@@ -94,7 +94,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
         // Register DbContext with PostgreSQL
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(enforcedBuilder.ConnectionString);
+            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
             // Suppress pending model changes warning for integration tests
             // since we're using migrations to manage schema
             options.ConfigureWarnings(w =>

@@ -45,7 +45,7 @@ public sealed class GetFilteredSharedGamesQueryHandlerTests : IAsyncLifetime
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547
             .Options;
 
         var mediatorMock = new Mock<IMediator>();

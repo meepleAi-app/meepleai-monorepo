@@ -83,7 +83,7 @@ public sealed class RotateApiKeyCommandHandlerTests : IAsyncLifetime
 
         // DbContext with MediatR and DomainEventCollector
         services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(enforcedBuilder.ConnectionString)
+            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()) // Issue #3547
                 .ConfigureWarnings(warnings =>
                     warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 

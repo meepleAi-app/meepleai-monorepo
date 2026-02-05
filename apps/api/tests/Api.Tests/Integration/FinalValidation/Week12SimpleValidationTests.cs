@@ -43,7 +43,7 @@ public sealed class Week12SimpleValidationTests : IAsyncLifetime
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547
             .EnableSensitiveDataLogging()
             .Options;
 

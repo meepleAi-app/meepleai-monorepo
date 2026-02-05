@@ -43,7 +43,7 @@ public sealed class SessionFinalizedEventHandlerIntegrationTests : IAsyncLifetim
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync($"test_finalize_handler_{Guid.NewGuid():N}");
 
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547
             .Options;
 
         var mockMediator = new Mock<IMediator>();

@@ -87,7 +87,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(_isolatedDbConnectionString);
+            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -730,7 +730,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Real PostgreSQL from SharedTestcontainersFixture
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(_isolatedDbConnectionString);
+            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -797,7 +797,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(_isolatedDbConnectionString);
+            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -854,7 +854,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(connectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -904,7 +904,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         servicesA.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
         servicesA.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(_isolatedDbConnectionString);
+            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -917,7 +917,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         servicesB.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
         servicesB.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(_isolatedDbConnectionString);
+            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
@@ -1019,7 +1019,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(_isolatedDbConnectionString);
+            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });

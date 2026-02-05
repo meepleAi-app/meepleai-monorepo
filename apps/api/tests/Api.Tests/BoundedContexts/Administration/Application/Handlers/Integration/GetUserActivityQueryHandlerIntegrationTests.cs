@@ -41,7 +41,7 @@ public sealed class GetUserActivityQueryHandlerIntegrationTests : IAsyncLifetime
 
         // Setup DbContext with mocks
         var optionsBuilder = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547
             .EnableSensitiveDataLogging()
             .EnableDetailedErrors()
             .EnableThreadSafetyChecks(false); // Allow concurrent access if needed

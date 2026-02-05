@@ -65,7 +65,7 @@ public sealed class AgentTypologyEndpointsSmokeTests : IAsyncLifetime
                 {
                     services.RemoveAll(typeof(DbContextOptions<MeepleAiDbContext>));
                     services.AddDbContext<MeepleAiDbContext>(options =>
-                        options.UseNpgsql(connectionString));
+                        options.UseNpgsql(connectionString, o => o.UseVector())); // Issue #3547
 
                     services.RemoveAll(typeof(IConnectionMultiplexer));
                     var mockRedis = new Mock<IConnectionMultiplexer>();

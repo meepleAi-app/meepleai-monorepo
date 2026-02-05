@@ -44,7 +44,7 @@ public sealed class BadgeRepositoryIntegrationTests : IAsyncLifetime
 
         // Build DbContext with test database
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547
             .Options;
 
         // Mock dependencies

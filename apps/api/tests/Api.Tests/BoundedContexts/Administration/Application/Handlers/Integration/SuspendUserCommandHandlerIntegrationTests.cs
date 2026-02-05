@@ -46,7 +46,7 @@ public sealed class SuspendUserCommandHandlerIntegrationTests : IAsyncLifetime
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_dbName);
 
         var optionsBuilder = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547
             .EnableSensitiveDataLogging()
             .EnableDetailedErrors();
 

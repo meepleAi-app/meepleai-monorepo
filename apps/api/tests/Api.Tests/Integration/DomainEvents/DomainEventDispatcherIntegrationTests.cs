@@ -53,7 +53,7 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
         // Setup DbContext options
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547
             .EnableSensitiveDataLogging()
             .Options;
 

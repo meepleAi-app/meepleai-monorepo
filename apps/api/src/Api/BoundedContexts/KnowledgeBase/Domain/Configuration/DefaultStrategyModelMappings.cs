@@ -14,6 +14,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Configuration;
 /// - EXPERT: Advanced research capabilities
 /// - CONSENSUS: Multi-model validation
 /// - SENTENCE_WINDOW: Overlapping document windows for precise citations
+/// - ITERATIVE: Multiple retrieval rounds with query refinement
 /// - CUSTOM: Admin-configurable workflows
 /// </remarks>
 public static class DefaultStrategyModelMappings
@@ -64,6 +65,13 @@ public static class DefaultStrategyModelMappings
             FallbackModels: new[] { "openai/gpt-4o-mini" },
             IsCustomizable: false,
             EstimatedCostPer1KTokens: 0.08m), // ~3,250 tokens avg, +7% accuracy
+
+        [RagStrategy.Iterative] = new StrategyMappingConfig(
+            Provider: "Anthropic",
+            PrimaryModel: "anthropic/claude-sonnet-4.5",
+            FallbackModels: new[] { "openai/gpt-4o" },
+            IsCustomizable: false,
+            EstimatedCostPer1KTokens: 0.12m), // ~4,500 tokens avg (2-3 rounds), +14% accuracy
 
         [RagStrategy.Custom] = new StrategyMappingConfig(
             Provider: "Anthropic",

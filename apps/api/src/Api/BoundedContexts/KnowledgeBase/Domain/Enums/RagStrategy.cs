@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 /// </summary>
 /// <remarks>
 /// Strategy hierarchy (complexity/cost):
-/// FAST → BALANCED → PRECISE → EXPERT → CONSENSUS → CUSTOM
+/// FAST → BALANCED → PRECISE → EXPERT → CONSENSUS → SENTENCE_WINDOW → ITERATIVE → CUSTOM
 ///
 /// Each strategy defines:
 /// - Required processing phases
@@ -59,11 +59,19 @@ public enum RagStrategy
     SentenceWindow = 5,
 
     /// <summary>
+    /// Iterative retrieval strategy with multiple refinement rounds.
+    /// Phases: InitialRetrieval, QueryRefinement, SecondaryRetrieval, Synthesis.
+    /// Use case: Complex multi-hop questions, deep research queries.
+    /// +14% accuracy, ~4,500 tokens per query (2-3 rounds).
+    /// </summary>
+    Iterative = 6,
+
+    /// <summary>
     /// Admin-defined custom strategy.
     /// Phases: Configurable (minimum: Synthesis).
     /// Use case: Specialized workflows, testing.
     /// </summary>
-    Custom = 6
+    Custom = 7
 }
 
 /// <summary>
@@ -82,6 +90,7 @@ public static class RagStrategyExtensions
         RagStrategy.Expert => "EXPERT",
         RagStrategy.Consensus => "CONSENSUS",
         RagStrategy.SentenceWindow => "SENTENCE_WINDOW",
+        RagStrategy.Iterative => "ITERATIVE",
         RagStrategy.Custom => "CUSTOM",
         _ => strategy.ToString().ToUpperInvariant()
     };
@@ -98,7 +107,7 @@ public static class RagStrategyExtensions
             return strategy;
 
         throw new ArgumentException(
-            $"Invalid RAG strategy: '{value}'. Valid values are: FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, SENTENCE_WINDOW, CUSTOM",
+            $"Invalid RAG strategy: '{value}'. Valid values are: FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, SENTENCE_WINDOW, ITERATIVE, CUSTOM",
             nameof(value));
     }
 
@@ -121,7 +130,7 @@ public static class RagStrategyExtensions
     }
 
     /// <summary>
-    /// Gets the complexity level of a strategy (0-5).
+    /// Gets the complexity level of a strategy (0-7).
     /// Higher complexity = more processing, higher cost.
     /// </summary>
     public static int GetComplexityLevel(this RagStrategy strategy) => (int)strategy;

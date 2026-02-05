@@ -43,6 +43,19 @@ public class SessionRepository : ISessionRepository
         return entity == null ? null : SessionMapper.ToDomain(entity);
     }
 
+    public async Task<Session?> GetByInviteTokenAsync(string inviteToken, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(inviteToken))
+            return null;
+
+        var entity = await _context.SessionTrackingSessions
+            .Include(s => s.Participants)
+            .FirstOrDefaultAsync(s => s.InviteToken == inviteToken, ct)
+            .ConfigureAwait(false);
+
+        return entity == null ? null : SessionMapper.ToDomain(entity);
+    }
+
     public async Task<IEnumerable<Session>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct)
     {
         var entities = await _context.SessionTrackingSessions
@@ -94,6 +107,8 @@ public class SessionRepository : ISessionRepository
         existing.DeletedAt = session.DeletedAt;
         existing.UpdatedAt = session.UpdatedAt;
         existing.UpdatedBy = session.UpdatedBy;
+        existing.InviteToken = session.InviteToken;
+        existing.InviteExpiresAt = session.InviteExpiresAt;
 
         // Update participants (sync collection)
         existing.Participants.Clear();

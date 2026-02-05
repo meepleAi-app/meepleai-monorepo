@@ -67,6 +67,11 @@ internal static class SessionTrackingEndpoints
         MapGetShareableSessionEndpoint(group);
         MapGenerateShareLinkEndpoint(group);
 
+        // Session invite link endpoints (Issue #3354)
+        MapGenerateInviteTokenEndpoint(group);
+        MapGetSessionByInviteEndpoint(group);
+        MapJoinSessionByInviteEndpoint(group);
+
         return group;
     }
 
@@ -1063,4 +1068,97 @@ internal static class SessionTrackingEndpoints
         .Produces(403)
         .Produces(404);
     }
+
+    // ========================================================================
+    // Session Invite Link Endpoints (Issue #3354)
+    // ========================================================================
+
+    private static void MapGenerateInviteTokenEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/generate-invite", async (
+            Guid sessionId,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct,
+            int? expiresInHours = null) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new GenerateInviteTokenCommand(sessionId, userId, expiresInHours);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("GenerateInviteToken")
+        .WithTags("SessionTracking", "Invite")
+        .WithSummary("Generate invite link for session")
+        .WithDescription("Generates an invite token and URL with optional QR code for sharing the session.")
+        .Produces(200)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404);
+    }
+
+    private static void MapGetSessionByInviteEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/invite/{inviteToken}", async (
+            string inviteToken,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new GetSessionByInviteQuery(inviteToken);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .AllowAnonymous()
+        .WithName("GetSessionByInvite")
+        .WithTags("SessionTracking", "Invite")
+        .WithSummary("Get session information by invite token")
+        .WithDescription("Returns session preview information for the invite link. Does not require authentication.")
+        .Produces(200)
+        .Produces(404);
+    }
+
+    private static void MapJoinSessionByInviteEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/invite/{inviteToken}/join", async (
+            string inviteToken,
+            JoinSessionByInviteRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new JoinSessionByInviteCommand(
+                inviteToken,
+                userId,
+                request.DisplayName);
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("JoinSessionByInvite")
+        .WithTags("SessionTracking", "Invite")
+        .WithSummary("Join session using invite link")
+        .WithDescription("Adds the authenticated user as a participant to the session using the invite token.")
+        .Produces(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .Produces(409);
+    }
 }
+
+/// <summary>
+/// Request body for joining a session by invite token.
+/// </summary>
+public sealed record JoinSessionByInviteRequest(string DisplayName);

@@ -30,6 +30,8 @@ internal static class SessionMapper
             CreatedBy = domain.CreatedBy,
             UpdatedBy = domain.UpdatedBy,
             RowVersion = domain.RowVersion,
+            InviteToken = domain.InviteToken,
+            InviteExpiresAt = domain.InviteExpiresAt,
             Participants = domain.Participants.Select(ParticipantMapper.ToEntity).ToList()
         };
     }
@@ -57,6 +59,8 @@ internal static class SessionMapper
         typeof(Session).GetProperty(nameof(Session.CreatedBy))!.SetValue(session, entity.CreatedBy);
         typeof(Session).GetProperty(nameof(Session.UpdatedBy))!.SetValue(session, entity.UpdatedBy);
         typeof(Session).GetProperty(nameof(Session.RowVersion))!.SetValue(session, entity.RowVersion);
+        typeof(Session).GetProperty(nameof(Session.InviteToken))!.SetValue(session, entity.InviteToken);
+        typeof(Session).GetProperty(nameof(Session.InviteExpiresAt))!.SetValue(session, entity.InviteExpiresAt);
 
         // Map participants (need to access private _participants field)
         #pragma warning disable S3011 // Reflection is required for domain entity hydration from persistence

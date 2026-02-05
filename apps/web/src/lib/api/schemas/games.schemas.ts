@@ -390,3 +390,36 @@ export const RuleSpecWithETagSchema = RuleSpecSchema.extend({
 });
 
 export type RuleSpecWithETag = z.infer<typeof RuleSpecWithETagSchema>;
+
+// ========== Similar Games (Issue #3353) ==========
+
+/**
+ * Similar Game DTO Schema
+ * Game with similarity score and reason
+ */
+export const SimilarGameDtoSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  thumbnailUrl: z.string().nullable(),
+  minPlayers: z.number().int().nullable(),
+  maxPlayers: z.number().int().nullable(),
+  playingTimeMinutes: z.number().int().nullable(),
+  complexityRating: z.number().nullable(),
+  averageRating: z.number().nullable(),
+  similarityScore: z.number(),
+  similarityReason: z.string(),
+});
+
+export type SimilarGameDto = z.infer<typeof SimilarGameDtoSchema>;
+
+/**
+ * Similar Games Result Schema
+ * Response containing similar games for a source game
+ */
+export const GetSimilarGamesResultSchema = z.object({
+  games: z.array(SimilarGameDtoSchema),
+  sourceGameId: z.string().uuid(),
+  sourceGameTitle: z.string(),
+});
+
+export type GetSimilarGamesResult = z.infer<typeof GetSimilarGamesResultSchema>;

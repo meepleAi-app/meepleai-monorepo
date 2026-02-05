@@ -7,6 +7,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -23,6 +24,7 @@ public sealed class ApproveAgentTypologyCommandHandlerTests
 {
     private readonly Mock<IAgentTypologyRepository> _mockRepository;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
+    private readonly Mock<IPublisher> _mockPublisher;
     private readonly Mock<ILogger<ApproveAgentTypologyCommandHandler>> _mockLogger;
     private readonly ApproveAgentTypologyCommandHandler _handler;
 
@@ -30,10 +32,12 @@ public sealed class ApproveAgentTypologyCommandHandlerTests
     {
         _mockRepository = new Mock<IAgentTypologyRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
+        _mockPublisher = new Mock<IPublisher>();
         _mockLogger = new Mock<ILogger<ApproveAgentTypologyCommandHandler>>();
         _handler = new ApproveAgentTypologyCommandHandler(
             _mockRepository.Object,
             _mockUnitOfWork.Object,
+            _mockPublisher.Object,
             _mockLogger.Object);
     }
 

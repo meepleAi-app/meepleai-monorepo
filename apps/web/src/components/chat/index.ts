@@ -11,5 +11,6 @@ export { MessageActions } from './MessageActions';
 export { MessageEditForm } from './MessageEditForm';
 export { MessageInput } from './MessageInput';
 export { MessageList } from './MessageList';
+export { VoiceInputButton } from './VoiceInputButton';
 export { MobileSidebar } from './MobileSidebar';
 export { ThreadListItem } from './ThreadListItem';

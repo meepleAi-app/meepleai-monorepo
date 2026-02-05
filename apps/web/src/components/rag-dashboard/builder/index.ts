@@ -23,6 +23,7 @@ export { RagBlockNode, type RagBlockNodeProps } from './RagBlockNode';
 export { StrategyBuilder, type StrategyBuilderProps } from './StrategyBuilder';
 export { BlockConfigPanel, type BlockConfigPanelProps } from './BlockConfigPanel';
 export { ValidationPanel, type ValidationPanelProps } from './ValidationPanel';
+export { PipelineTestPanel, type PipelineTestPanelProps } from './PipelineTestPanel';
 
 // Specialized Tier 1 Nodes
 export {

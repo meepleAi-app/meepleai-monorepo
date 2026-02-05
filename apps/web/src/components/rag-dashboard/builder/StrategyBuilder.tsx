@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import { BlockConfigPanel } from './BlockConfigPanel';
 import { BlockPalette } from './BlockPalette';
 import { PipelineCanvas } from './PipelineCanvas';
+import { PipelineTestPanel } from './PipelineTestPanel';
 import { validatePipeline } from './validation-engine';
 import { ValidationPanel } from './ValidationPanel';
 
@@ -93,6 +94,7 @@ export function StrategyBuilder({
   // Panel states
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
   const [configPanelOpen, setConfigPanelOpen] = useState(false);
+  const [testPanelOpen, setTestPanelOpen] = useState(false);
 
   // Pipeline state
   const [currentNodes, setCurrentNodes] = useState<RagNode[]>(
@@ -213,8 +215,10 @@ export function StrategyBuilder({
     setHasChanges(false);
   }, [buildPipelineDefinition, onSave, validation]);
 
-  // Handle test
+  // Handle test - opens test panel
   const handleTest = useCallback(() => {
+    setTestPanelOpen(true);
+    setConfigPanelOpen(false);
     onTest?.(buildPipelineDefinition());
   }, [buildPipelineDefinition, onTest]);
 
@@ -230,6 +234,11 @@ export function StrategyBuilder({
   const handleConfigClose = useCallback(() => {
     setConfigPanelOpen(false);
     setSelectedNodeId(null);
+  }, []);
+
+  // Handle test panel close
+  const handleTestPanelClose = useCallback(() => {
+    setTestPanelOpen(false);
   }, []);
 
   return (
@@ -411,6 +420,28 @@ export function StrategyBuilder({
           onParamChange={handleParamChange}
           onClose={handleConfigClose}
         />
+      )}
+
+      {/* Test Panel (Issue #3463) */}
+      {testPanelOpen && (
+        <div className="w-80 border-l flex flex-col">
+          <div className="p-2 border-b flex items-center justify-between">
+            <span className="text-sm font-medium">Test Pipeline</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={handleTestPanelClose}
+            >
+              <PanelRightClose className="h-4 w-4" />
+            </Button>
+          </div>
+          <PipelineTestPanel
+            pipeline={buildPipelineDefinition()}
+            className="flex-1"
+            disabled={currentNodes.length === 0}
+          />
+        </div>
       )}
     </div>
   );

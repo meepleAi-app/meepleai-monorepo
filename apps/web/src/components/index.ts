@@ -9,9 +9,6 @@ export { default as SearchModeToggle, SearchMode } from './search/SearchModeTogg
 export { DocumentSourceSelector } from './chat/DocumentSourceSelector';
 export type { DocumentSource } from './chat/DocumentSourceSelector';
 
-// Issue #1002: BGAI-062 - Response components
-export { ResponseCard } from './response';
-
 // Issue #859: BGAI-074 - Citation components
 export { CitationCard } from './citations/CitationCard';
 export { CitationList } from './citations/CitationList';

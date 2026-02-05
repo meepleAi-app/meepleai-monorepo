@@ -22,7 +22,7 @@ export interface LabelBadgeProps {
 /**
  * Get contrasting text color based on background color brightness
  */
-function getContrastColor(hexColor: string): string {
+function _getContrastColor(hexColor: string): string {
   // Convert hex to RGB
   const hex = hexColor.replace('#', '');
   const r = parseInt(hex.substring(0, 2), 16);

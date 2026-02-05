@@ -94,7 +94,7 @@ export function LabelSelector({
       toast.success('Etichetta aggiunta', {
         description: `"${label.name}" aggiunta al gioco`,
       });
-    } catch (error) {
+    } catch (_error) {
       toast.error('Errore', {
         description: "Impossibile aggiungere l'etichetta",
       });
@@ -120,7 +120,7 @@ export function LabelSelector({
       toast.success('Etichetta creata', {
         description: `"${name}" creata e aggiunta al gioco`,
       });
-    } catch (error) {
+    } catch (_error) {
       toast.error('Errore', {
         description: "Impossibile creare l'etichetta",
       });

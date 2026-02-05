@@ -20,7 +20,7 @@ function getHitRateColor(hitRate: number): string {
   return 'text-red-500';
 }
 
-function getHitRateGradient(hitRate: number): string {
+function _getHitRateGradient(hitRate: number): string {
   if (hitRate >= 80) return 'from-green-500 to-green-400';
   if (hitRate >= 60) return 'from-blue-500 to-blue-400';
   if (hitRate >= 40) return 'from-amber-500 to-amber-400';

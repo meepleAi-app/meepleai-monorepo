@@ -133,7 +133,7 @@ export function UserActionSection({ gameDetail }: UserActionSectionProps) {
         labelId,
       });
       toast.success('Etichetta rimossa');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Errore', {
         description: "Impossibile rimuovere l'etichetta",
       });

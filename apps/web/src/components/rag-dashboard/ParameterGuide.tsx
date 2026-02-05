@@ -308,7 +308,7 @@ function StatusBadge({ status }: { status: ImplementationStatus }) {
   return <Badge className={cn('text-xs', className)}>{label}</Badge>;
 }
 
-function EffectIndicator({ effect }: { effect: 'positive' | 'negative' | 'neutral' }) {
+function _EffectIndicator({ effect }: { effect: 'positive' | 'negative' | 'neutral' }) {
   if (effect === 'positive') return <TrendingUp className="h-4 w-4 text-green-500" />;
   if (effect === 'negative') return <TrendingDown className="h-4 w-4 text-red-500" />;
   return <Minus className="h-4 w-4 text-gray-400" />;

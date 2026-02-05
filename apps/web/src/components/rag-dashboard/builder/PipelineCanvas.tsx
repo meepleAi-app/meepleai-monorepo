@@ -49,6 +49,7 @@ import { cn } from '@/lib/utils';
 import { BLOCKS_BY_TYPE, isValidConnection as checkBlockConnection } from './block-definitions';
 import { validatePipelineConstraints, PIPELINE_CONSTRAINTS } from './block-metadata';
 import {
+  // Tier 1 nodes
   VectorSearchNode,
   KeywordSearchNode,
   HybridSearchNode,
@@ -56,8 +57,15 @@ import {
   CragEvaluatorNode,
   ConfidenceScoringNode,
   CitationVerificationNode,
+  // Tier 2 nodes
+  MultiHopRetrievalNode,
+  QueryRewritingNode,
+  QueryDecompositionNode,
+  MetadataFilteringNode,
+  DocumentRepackingNode,
+  HallucinationDetectionNode,
   hasSpecializedNode,
-  TIER1_NODE_TYPES,
+  ALL_SPECIALIZED_NODE_TYPES,
 } from './nodes';
 import { RagBlockNode } from './RagBlockNode';
 
@@ -89,7 +97,7 @@ export interface PipelineCanvasProps {
 }
 
 // =============================================================================
-// Custom Node Types - Including Tier 1 Specialized Nodes
+// Custom Node Types - Including Tier 1 & 2 Specialized Nodes
 // =============================================================================
 
 const nodeTypes: NodeTypes = {
@@ -103,6 +111,13 @@ const nodeTypes: NodeTypes = {
   cragEvaluator: CragEvaluatorNode as unknown as NodeTypes[string],
   confidenceScoring: ConfidenceScoringNode as unknown as NodeTypes[string],
   citationVerification: CitationVerificationNode as unknown as NodeTypes[string],
+  // Tier 2 specialized nodes
+  multiHopRetrieval: MultiHopRetrievalNode as unknown as NodeTypes[string],
+  queryRewriting: QueryRewritingNode as unknown as NodeTypes[string],
+  queryDecomposition: QueryDecompositionNode as unknown as NodeTypes[string],
+  metadataFiltering: MetadataFilteringNode as unknown as NodeTypes[string],
+  documentRepacking: DocumentRepackingNode as unknown as NodeTypes[string],
+  hallucinationDetection: HallucinationDetectionNode as unknown as NodeTypes[string],
 };
 
 // =============================================================================
@@ -173,7 +188,7 @@ function createNodeFromBlock(
 
   // Use specialized node type if available, otherwise fallback to ragBlock
   const nodeType = hasSpecializedNode(blockType)
-    ? TIER1_NODE_TYPES[blockType as keyof typeof TIER1_NODE_TYPES]
+    ? ALL_SPECIALIZED_NODE_TYPES[blockType as keyof typeof ALL_SPECIALIZED_NODE_TYPES]
     : 'ragBlock';
 
   return {

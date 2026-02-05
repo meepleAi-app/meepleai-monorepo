@@ -119,3 +119,54 @@ export interface SessionNote {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Random Tools Types (Issue #3345)
+export type TimerStatus = 'idle' | 'running' | 'paused' | 'completed';
+
+export interface TimerState {
+  id: string;
+  sessionId: string;
+  durationSeconds: number;
+  remainingSeconds: number;
+  status: TimerStatus;
+  startedBy: string;
+  startedByName: string;
+  startedAt?: Date;
+  pausedAt?: Date;
+}
+
+export interface CoinFlipResult {
+  id: string;
+  sessionId: string;
+  participantId: string;
+  participantName: string;
+  result: 'heads' | 'tails';
+  timestamp: Date;
+}
+
+export interface WheelOption {
+  id: string;
+  label: string;
+  color: string;
+  weight: number;
+}
+
+export interface WheelSpinResult {
+  id: string;
+  sessionId: string;
+  participantId: string;
+  participantName: string;
+  selectedOption: WheelOption;
+  timestamp: Date;
+}
+
+export const DEFAULT_WHEEL_COLORS = [
+  '#ef4444', // red
+  '#f97316', // orange
+  '#eab308', // yellow
+  '#22c55e', // green
+  '#0ea5e9', // sky
+  '#8b5cf6', // violet
+  '#ec4899', // pink
+  '#06b6d4', // cyan
+];

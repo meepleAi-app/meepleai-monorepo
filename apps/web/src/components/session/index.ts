@@ -8,6 +8,10 @@ export { SessionDetailModal } from './SessionDetailModal';
 export { DiceRoller } from './DiceRoller';
 export { CardDeck } from './CardDeck';
 export { PrivateNotes } from './PrivateNotes';
+export { CountdownTimer } from './CountdownTimer';
+export { CoinFlip } from './CoinFlip';
+export { WheelSpinner } from './WheelSpinner';
+export { RandomTools } from './RandomTools';
 
 export type {
   Participant,
@@ -23,6 +27,11 @@ export type {
   DiscardPile,
   CardSuit,
   SessionNote,
+  TimerState,
+  TimerStatus,
+  CoinFlipResult,
+  WheelOption,
+  WheelSpinResult,
 } from './types';
 
-export { DICE_TYPES, CARD_SUITS } from './types';
+export { DICE_TYPES, CARD_SUITS, DEFAULT_WHEEL_COLORS } from './types';

@@ -147,3 +147,50 @@ internal static class ScoreEntryMapper
         return scoreEntry;
     }
 }
+
+/// <summary>
+/// Maps between DiceRoll domain entity and DiceRollEntity persistence entity.
+/// </summary>
+internal static class DiceRollMapper
+{
+    public static DiceRollEntity ToEntity(DiceRoll domain)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+
+        return new DiceRollEntity
+        {
+            Id = domain.Id,
+            SessionId = domain.SessionId,
+            ParticipantId = domain.ParticipantId,
+            Formula = domain.Formula,
+            Label = domain.Label,
+            Rolls = domain.Rolls,
+            Modifier = domain.Modifier,
+            Total = domain.Total,
+            Timestamp = domain.Timestamp,
+            IsDeleted = domain.IsDeleted,
+            DeletedAt = domain.DeletedAt
+        };
+    }
+
+    public static DiceRoll ToDomain(DiceRollEntity entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        var diceRoll = (DiceRoll)Activator.CreateInstance(typeof(DiceRoll), true)!;
+
+        typeof(DiceRoll).GetProperty(nameof(DiceRoll.Id))!.SetValue(diceRoll, entity.Id);
+        typeof(DiceRoll).GetProperty(nameof(DiceRoll.SessionId))!.SetValue(diceRoll, entity.SessionId);
+        typeof(DiceRoll).GetProperty(nameof(DiceRoll.ParticipantId))!.SetValue(diceRoll, entity.ParticipantId);
+        typeof(DiceRoll).GetProperty(nameof(DiceRoll.Formula))!.SetValue(diceRoll, entity.Formula);
+        typeof(DiceRoll).GetProperty(nameof(DiceRoll.Label))!.SetValue(diceRoll, entity.Label);
+        typeof(DiceRoll).GetProperty(nameof(DiceRoll.Rolls))!.SetValue(diceRoll, entity.Rolls);
+        typeof(DiceRoll).GetProperty(nameof(DiceRoll.Modifier))!.SetValue(diceRoll, entity.Modifier);
+        typeof(DiceRoll).GetProperty(nameof(DiceRoll.Total))!.SetValue(diceRoll, entity.Total);
+        typeof(DiceRoll).GetProperty(nameof(DiceRoll.Timestamp))!.SetValue(diceRoll, entity.Timestamp);
+        typeof(DiceRoll).GetProperty(nameof(DiceRoll.IsDeleted))!.SetValue(diceRoll, entity.IsDeleted);
+        typeof(DiceRoll).GetProperty(nameof(DiceRoll.DeletedAt))!.SetValue(diceRoll, entity.DeletedAt);
+
+        return diceRoll;
+    }
+}

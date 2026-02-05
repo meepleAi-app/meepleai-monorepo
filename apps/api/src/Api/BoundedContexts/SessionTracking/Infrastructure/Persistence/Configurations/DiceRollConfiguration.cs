@@ -5,7 +5,8 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence.Configurations;
 
 /// <summary>
-/// Entity configuration for DiceRollEntity (persistence, Phase 2 placeholder).
+/// Entity configuration for DiceRollEntity (persistence).
+/// Maps to session_tracking_dice_rolls table.
 /// </summary>
 public class DiceRollConfiguration : IEntityTypeConfiguration<DiceRollEntity>
 {
@@ -27,29 +28,48 @@ public class DiceRollConfiguration : IEntityTypeConfiguration<DiceRollEntity>
             .HasColumnName("participant_id")
             .IsRequired();
 
-        builder.Property(d => d.DiceType)
-            .HasColumnName("dice_type")
-            .HasMaxLength(10)
+        builder.Property(d => d.Formula)
+            .HasColumnName("formula")
+            .HasMaxLength(50)
             .IsRequired();
 
-        builder.Property(d => d.RollCount)
-            .HasColumnName("roll_count")
-            .IsRequired()
-            .HasDefaultValue(1);
+        builder.Property(d => d.Label)
+            .HasColumnName("label")
+            .HasMaxLength(100);
 
-        builder.Property(d => d.Results)
-            .HasColumnName("results")
+        builder.Property(d => d.Rolls)
+            .HasColumnName("rolls")
             .HasColumnType("jsonb")
+            .IsRequired();
+
+        builder.Property(d => d.Modifier)
+            .HasColumnName("modifier")
+            .IsRequired()
+            .HasDefaultValue(0);
+
+        builder.Property(d => d.Total)
+            .HasColumnName("total")
             .IsRequired();
 
         builder.Property(d => d.Timestamp)
             .HasColumnName("timestamp")
             .IsRequired();
 
-        // Index for session roll history
+        builder.Property(d => d.IsDeleted)
+            .HasColumnName("is_deleted")
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(d => d.DeletedAt)
+            .HasColumnName("deleted_at");
+
+        // Soft delete query filter
+        builder.HasQueryFilter(d => !d.IsDeleted);
+
+        // Index for session roll history (ordered by timestamp desc)
         builder.HasIndex(d => new { d.SessionId, d.Timestamp })
-            .HasDatabaseName("idx_dice_session")
-            .IsDescending(false, true); // DESC on Timestamp
+            .HasDatabaseName("idx_dice_session_timestamp")
+            .IsDescending(false, true);
 
         // Foreign key to session (cascade delete)
         builder.HasOne(d => d.Session)

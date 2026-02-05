@@ -81,15 +81,11 @@ dotnet run
 ```powershell
 cd D:\Repositories\meepleai-monorepo-dev\infra
 
-# Aggiungi a docker-compose.yml (opzionale, solo per test)
-# Oppure usa container standalone:
-docker run -d `
-  --name minio `
-  -p 9000:9000 `
-  -p 9001:9001 `
-  -e "MINIO_ROOT_USER=minioadmin" `
-  -e "MINIO_ROOT_PASSWORD=minioadmin" `
-  quay.io/minio/minio server /data --console-address ":9001"
+# Avvia MinIO con profilo storage-test
+docker compose -f docker-compose.yml -f docker-compose.test.yml --profile storage-test up -d minio
+
+# Verifica container attivo
+docker ps | Select-String minio
 ```
 
 ### Step 2: Crea Bucket

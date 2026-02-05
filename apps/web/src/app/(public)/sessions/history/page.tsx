@@ -17,6 +17,8 @@
 
 import { useState, useEffect } from 'react';
 
+import { Dice6 } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { ErrorDisplay } from '@/components/errors';
@@ -280,9 +282,17 @@ export default function SessionHistoryPage() {
       {!loading && sessions.length > 0 && <StatisticsCard sessions={sessions} />}
 
       <Card>
-        <CardHeader>
-          <CardTitle>Session History</CardTitle>
-          <CardDescription>View and analyze your past game sessions</CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between">
+          <div>
+            <CardTitle>Session History</CardTitle>
+            <CardDescription>View and analyze your past game sessions</CardDescription>
+          </div>
+          <Link href="/toolkit">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Dice6 className="w-4 h-4" />
+              Go to Toolkit
+            </Button>
+          </Link>
         </CardHeader>
         <CardContent>
           {/* Filters */}

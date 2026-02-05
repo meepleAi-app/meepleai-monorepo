@@ -39,6 +39,7 @@ internal static class UserLibraryEndpoints
         MapUploadCustomGamePdfEndpoint(group);
         MapResetGamePdfEndpoint(group);
         MapGetGamePdfsEndpoint(group); // Issue #3152
+        MapRemovePrivatePdfEndpoint(group); // Issue #3651
 
         // Library sharing endpoints
         MapCreateLibraryShareLinkEndpoint(group);
@@ -537,6 +538,61 @@ internal static class UserLibraryEndpoints
         .WithTags("Library", "PDF")
         .WithSummary("Get game PDFs")
         .WithDescription("Returns all PDFs associated with a game in user's library (custom uploads + shared catalog). Issue #3152.")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// Issue #3651: Remove private PDF from library entry.
+    /// Triggers PrivatePdfRemovedEvent to cleanup vectors from private_rules collection.
+    /// </summary>
+    private static void MapRemovePrivatePdfEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/library/entries/{entryId:guid}/private-pdf", async (
+            Guid entryId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new RemovePrivatePdfCommand(userId, entryId);
+
+            try
+            {
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (NotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message });
+            }
+            catch (ForbiddenException ex)
+            {
+                return Results.Problem(
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status403Forbidden,
+                    title: "Forbidden");
+            }
+            catch (ConflictException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<UserLibraryEntryDto>(200)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(409)
+        .WithTags("Library", "PDF")
+        .WithSummary("Remove private PDF")
+        .WithDescription("Removes a private PDF document from a library entry. Triggers cleanup of vectors from private_rules collection. Issue #3651.")
         .WithOpenApi();
     }
 

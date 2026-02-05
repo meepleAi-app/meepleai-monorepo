@@ -204,6 +204,15 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         return entities.Select(MapToDomain).ToList();
     }
 
+    /// <inheritdoc />
+    public async Task<int> GetPrivatePdfCountAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .CountAsync(e => e.UserId == userId && e.PrivatePdfId != null, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task AddAsync(UserLibraryEntry entry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);

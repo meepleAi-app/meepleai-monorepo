@@ -244,6 +244,27 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Removes the private PDF document from this library entry.
+    /// Raises a PrivatePdfRemovedEvent domain event to trigger vector cleanup.
+    /// Issue #3651: Enables cleanup of vectors from private_rules collection.
+    /// </summary>
+    /// <exception cref="ConflictException">Thrown when no private PDF is associated</exception>
+    public void RemovePrivatePdf()
+    {
+        if (!HasPrivatePdf)
+            throw new ConflictException("No private PDF is associated with this library entry");
+
+        var pdfId = PrivatePdfId!.Value;
+        PrivatePdfId = null;
+
+        AddDomainEvent(new PrivatePdfRemovedEvent(
+            libraryEntryId: Id,
+            userId: UserId,
+            gameId: GameId,
+            pdfDocumentId: pdfId));
+    }
+
+    /// <summary>
     /// Returns whether this entry uses a custom agent configuration.
     /// </summary>
     public bool HasCustomAgent() => CustomAgentConfig is not null;

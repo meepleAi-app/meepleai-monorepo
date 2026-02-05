@@ -24,6 +24,14 @@ public interface ISessionRepository
     Task<Session?> GetByCodeAsync(string code, CancellationToken ct);
 
     /// <summary>
+    /// Gets a session by its invite token (Issue #3354).
+    /// </summary>
+    /// <param name="inviteToken">Invite token.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Session if found, null otherwise.</returns>
+    Task<Session?> GetByInviteTokenAsync(string inviteToken, CancellationToken ct);
+
+    /// <summary>
     /// Gets all active sessions for a user.
     /// </summary>
     /// <param name="userId">User ID.</param>

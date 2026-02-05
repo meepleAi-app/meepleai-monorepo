@@ -37,6 +37,17 @@ public class SessionEntity
     [Timestamp]
     public byte[]? RowVersion { get; set; }
 
+    /// <summary>
+    /// Invite token for session sharing (Issue #3354).
+    /// </summary>
+    [MaxLength(64)]
+    public string? InviteToken { get; set; }
+
+    /// <summary>
+    /// When the invite token expires (null = never expires).
+    /// </summary>
+    public DateTime? InviteExpiresAt { get; set; }
+
     // Navigation properties
     public ICollection<ParticipantEntity> Participants { get; set; } = new List<ParticipantEntity>();
 }

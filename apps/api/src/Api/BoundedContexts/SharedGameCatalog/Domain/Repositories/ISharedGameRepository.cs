@@ -23,6 +23,15 @@ public interface ISharedGameRepository
     Task<SharedGame?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets multiple shared games by their IDs in a single batch query.
+    /// Issue #3663: Added to prevent N+1 queries in GetUserLibraryQueryHandler.
+    /// </summary>
+    /// <param name="ids">The game IDs to retrieve</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Dictionary mapping game ID to game (only includes found games)</returns>
+    Task<IReadOnlyDictionary<Guid, SharedGame>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a shared game by its BoardGameGeek ID.
     /// </summary>
     /// <param name="bggId">The BGG ID</param>

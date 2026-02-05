@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Application.Handlers;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
@@ -33,6 +34,9 @@ internal static class SessionTrackingServiceExtensions
 
         // GST-003: Register SSE synchronization service (singleton for shared state)
         services.AddSingleton<ISessionSyncService, SessionSyncService>();
+
+        // Issue #3345: Register timer state manager (singleton for in-memory timer state)
+        services.AddSingleton<TimerStateManager>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

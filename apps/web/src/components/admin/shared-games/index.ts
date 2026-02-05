@@ -44,3 +44,6 @@ export { TagInput } from './TagInput';
 export type { TagInputProps } from './TagInput';
 export { PdfDocumentList } from './PdfDocumentList';
 export type { PdfDocumentListProps } from './PdfDocumentList';
+
+// Image Upload (Issue #3384)
+export { ImageUpload } from './ImageUpload';

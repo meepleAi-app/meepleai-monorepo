@@ -62,6 +62,11 @@ internal static class SessionTrackingEndpoints
         // GST-003: Real-time SSE stream
         MapSessionStreamEndpoint(group);
 
+        // Session export and sharing endpoints (Issue #3347)
+        MapExportSessionPdfEndpoint(group);
+        MapGetShareableSessionEndpoint(group);
+        MapGenerateShareLinkEndpoint(group);
+
         return group;
     }
 
@@ -963,5 +968,99 @@ internal static class SessionTrackingEndpoints
         .Produces(200)
         .Produces(400)
         .Produces(401);
+    }
+
+    // ========================================================================
+    // Session Export and Sharing Endpoints (Issue #3347)
+    // ========================================================================
+
+    private static void MapExportSessionPdfEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/{sessionId:guid}/export/pdf", async (
+            Guid sessionId,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct,
+            bool includeScoreChart = true,
+            bool includeDiceHistory = false,
+            bool includeCardHistory = false) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new ExportSessionPdfQuery(
+                sessionId,
+                userId,
+                includeScoreChart,
+                includeDiceHistory,
+                includeCardHistory);
+
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.File(
+                result.PdfContent,
+                result.ContentType,
+                result.FileName);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("ExportSessionPdf")
+        .WithTags("SessionTracking", "Export")
+        .WithSummary("Export session as PDF")
+        .WithDescription("Generates a PDF report of the session with scores, rankings, and optional history.")
+        .Produces(200)
+        .Produces(401)
+        .Produces(404);
+    }
+
+    private static void MapGetShareableSessionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/{sessionId:guid}/share", async (
+            Guid sessionId,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var query = new GetShareableSessionQuery(sessionId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .AllowAnonymous()
+        .WithName("GetShareableSession")
+        .WithTags("SessionTracking", "Share")
+        .WithSummary("Get shareable session summary")
+        .WithDescription("Returns a public-facing session summary that can be shared without authentication.")
+        .Produces(200)
+        .Produces(404);
+    }
+
+    private static void MapGenerateShareLinkEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/share-link", async (
+            Guid sessionId,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GenerateSessionShareLinkQuery(sessionId, userId);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("GenerateShareLink")
+        .WithTags("SessionTracking", "Share")
+        .WithSummary("Generate shareable link with OG metadata")
+        .WithDescription("Creates a shareable URL with Open Graph metadata for social media sharing.")
+        .Produces(200)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404);
     }
 }

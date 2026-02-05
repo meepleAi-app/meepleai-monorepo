@@ -113,4 +113,13 @@ internal interface IEmailService
         string toEmail,
         string userName,
         CancellationToken ct = default);
+
+    // ISSUE-3676: Account lockout notification
+    Task SendAccountLockedEmailAsync(
+        string toEmail,
+        string userName,
+        int failedAttempts,
+        DateTime lockedUntil,
+        string? ipAddress,
+        CancellationToken ct = default);
 }

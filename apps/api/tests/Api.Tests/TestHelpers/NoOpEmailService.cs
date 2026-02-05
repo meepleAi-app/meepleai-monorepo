@@ -130,4 +130,14 @@ internal class NoOpEmailService : IEmailService
         string userName,
         CancellationToken ct = default)
         => Task.CompletedTask;
+
+    // ISSUE-3676: Account lockout notification
+    public Task SendAccountLockedEmailAsync(
+        string toEmail,
+        string userName,
+        int failedAttempts,
+        DateTime lockedUntil,
+        string? ipAddress,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
 }

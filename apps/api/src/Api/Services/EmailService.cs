@@ -1732,4 +1732,137 @@ internal class EmailService : IEmailService
 </html>
 ";
     }
+
+    // ISSUE-3676: Account lockout notification
+    public async Task SendAccountLockedEmailAsync(
+        string toEmail,
+        string userName,
+        int failedAttempts,
+        DateTime lockedUntil,
+        string? ipAddress,
+        CancellationToken ct = default)
+    {
+        // Ensure lockedUntil is UTC for consistent timezone display
+        if (lockedUntil.Kind != DateTimeKind.Utc)
+        {
+            _logger.LogWarning(
+                "lockedUntil provided with Kind={Kind}, converting to UTC",
+                lockedUntil.Kind);
+            lockedUntil = lockedUntil.ToUniversalTime();
+        }
+
+        try
+        {
+            var subject = "Security Alert: Your MeepleAI Account Has Been Locked";
+            var body = BuildAccountLockedEmailBody(userName, failedAttempts, lockedUntil, ipAddress);
+
+            using var message = new MailMessage();
+            message.From = new MailAddress(_fromAddress, _fromName);
+            message.To.Add(new MailAddress(toEmail, userName));
+            message.Subject = subject;
+            message.Body = body;
+            message.IsBodyHtml = true;
+
+            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
+            smtpClient.EnableSsl = _enableSsl;
+
+            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
+            {
+                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+            }
+
+            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Account locked email sent successfully to {Email}",
+                DataMasking.MaskEmail(toEmail));
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
+        // External service integration requires catching all SMTP exceptions to provide consistent error handling
+#pragma warning restore S125
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send account locked email to {Email}",
+                DataMasking.MaskEmail(toEmail));
+            throw new InvalidOperationException("Failed to send account locked email", ex);
+        }
+#pragma warning restore CA1031
+    }
+
+    private static string BuildAccountLockedEmailBody(string userName, int failedAttempts, DateTime lockedUntil, string? ipAddress)
+    {
+        var lockDurationMinutes = (int)Math.Ceiling((lockedUntil - DateTime.UtcNow).TotalMinutes);
+        var ipSection = !string.IsNullOrWhiteSpace(ipAddress)
+            ? $"<li>IP Address: {ipAddress}</li>"
+            : string.Empty;
+
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Account Locked</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
+        <h1 style=""color: #2c3e50; margin: 0;"">MeepleAI</h1>
+    </div>
+
+    <div style=""background-color: #fff3cd; padding: 20px; border-radius: 5px; border: 2px solid #ffc107; margin-bottom: 20px;"">
+        <h2 style=""color: #856404; margin-top: 0;"">🔒 Account Temporarily Locked</h2>
+        <p style=""margin: 0; color: #856404; font-weight: bold;"">Too many failed login attempts detected</p>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
+        <p>Hello {userName},</p>
+
+        <p>Your MeepleAI account has been temporarily locked due to <strong>{failedAttempts} consecutive failed login attempts</strong>.</p>
+
+        <div style=""margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #6c757d; border-radius: 3px;"">
+            <p style=""margin: 5px 0;""><strong>Details:</strong></p>
+            <ul style=""margin: 10px 0; padding-left: 20px;"">
+                <li>Failed attempts: {failedAttempts}</li>
+                <li>Account locked for: {lockDurationMinutes} minutes</li>
+                <li>Unlocks at: {lockedUntil:yyyy-MM-dd HH:mm} UTC</li>
+                {ipSection}
+            </ul>
+        </div>
+
+        <div style=""margin: 20px 0; padding: 15px; background-color: #d1ecf1; border-left: 4px solid #17a2b8; border-radius: 3px;"">
+            <p style=""margin: 0;""><strong>💡 What to do:</strong></p>
+            <ul style=""margin: 10px 0; padding-left: 20px;"">
+                <li>Wait for the lockout period to expire, then try again</li>
+                <li>Make sure you're using the correct password</li>
+                <li>If you've forgotten your password, use the ""Forgot Password"" link</li>
+            </ul>
+        </div>
+
+        <div style=""margin: 20px 0; padding: 15px; background-color: #f8d7da; border-left: 4px solid #dc3545; border-radius: 3px;"">
+            <p style=""margin: 0;""><strong>⚠️ Security Notice:</strong></p>
+            <p style=""margin: 10px 0;"">If you did not attempt these logins, someone may be trying to access your account. We recommend:</p>
+            <ul style=""margin: 10px 0; padding-left: 20px;"">
+                <li>Change your password immediately after regaining access</li>
+                <li>Enable two-factor authentication if available</li>
+                <li>Review your recent account activity</li>
+            </ul>
+        </div>
+
+        <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
+            If you need immediate assistance, please contact our support team.
+        </p>
+    </div>
+
+    <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
+        <p>This is an automated security notification, please do not reply to this email.</p>
+        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+    </div>
+</body>
+</html>
+";
+    }
 }

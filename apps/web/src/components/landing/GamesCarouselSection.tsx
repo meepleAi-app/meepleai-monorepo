@@ -14,7 +14,7 @@
 
 'use client';
 
-import { Suspense, lazy, useCallback, useRef, useEffect, useState } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
@@ -246,7 +246,7 @@ function UserLibrarySection() {
         <GameCarouselSkeleton />
       ) : (
         <GameCarousel
-          games={libraryData!.games}
+          games={libraryData?.games ?? []}
           onGameSelect={handleGameSelect}
           showDots
         />

@@ -13,6 +13,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 
 import type { CarouselSortValue } from '@/components/ui/data-display/game-carousel';

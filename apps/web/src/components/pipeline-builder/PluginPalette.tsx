@@ -228,6 +228,7 @@ function CategorySection({
   defaultOpen = true,
 }: CategorySectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  // eslint-disable-next-line security/detect-object-injection -- category is typed PluginCategory
   const categoryIcon = PLUGIN_CATEGORY_ICONS[category];
 
   return (
@@ -244,6 +245,7 @@ function CategorySection({
             <span className="text-base" role="img" aria-label={category}>
               {categoryIcon}
             </span>
+            {/* eslint-disable-next-line security/detect-object-injection -- category is typed */}
             <span className="font-medium text-sm">{CATEGORY_LABELS[category]}</span>
             <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
               {plugins.length}
@@ -396,6 +398,7 @@ export function PluginPalette({
               className="h-7 text-xs capitalize"
               onClick={() => setSelectedCategory(category)}
             >
+              {/* eslint-disable-next-line security/detect-object-injection -- category is typed */}
               {PLUGIN_CATEGORY_ICONS[category]} {category}
             </Button>
           ))}

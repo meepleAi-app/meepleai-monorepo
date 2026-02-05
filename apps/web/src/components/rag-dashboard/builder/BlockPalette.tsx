@@ -10,24 +10,29 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
+
 import { Search, ChevronDown, ChevronRight, Lock, Zap, Clock, Coins } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/primitives/input';
+
 import { Badge } from '@/components/ui/data-display/badge';
-import { ScrollArea } from '@/components/ui/primitives/scroll-area';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/data-display/collapsible';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/data-display/collapsible';
-import type { RagBlock, UserTier, PaletteGroup } from './types';
+import { Input } from '@/components/ui/primitives/input';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
+import { cn } from '@/lib/utils';
+
 import { generatePaletteGroups, filterPaletteGroups, CATEGORY_META, getPerformanceTier } from './block-metadata';
+
+import type { RagBlock, UserTier, PaletteGroup } from './types';
+
 
 // =============================================================================
 // Types

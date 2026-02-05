@@ -96,7 +96,7 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
     private async Task InitializeDatabaseAsync()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(_connectionString)
+            .UseNpgsql(_connectionString, o => o.UseVector()) // Issue #3547: Enable pgvector type mapping
             .Options;
 
         var mockMediator = new Mock<MediatR.IMediator>();

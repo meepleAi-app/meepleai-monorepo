@@ -21,7 +21,9 @@ import { type ReactNode } from 'react';
 import { UnifiedActionBar, UnifiedActionBarSpacer } from '@/components/layout/ActionBar';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { UnifiedHeader } from '@/components/layout/UnifiedHeader';
+import { ImpersonationBanner } from '@/components/ui/feedback/impersonation-banner';
 import { cn } from '@/lib/utils';
+import { useImpersonationStore } from '@/store/impersonation';
 
 export interface AuthenticatedLayoutProps {
   /** Page content */
@@ -51,8 +53,19 @@ export function AuthenticatedLayout({
   className,
   fullWidth = false,
 }: AuthenticatedLayoutProps) {
+  // Impersonation state (Issue #3349)
+  const { isImpersonating, impersonatedUser, isLoading, endImpersonation } = useImpersonationStore();
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      {/* Impersonation Banner - Shows when admin is impersonating a user */}
+      <ImpersonationBanner
+        isImpersonating={isImpersonating}
+        impersonatedUser={impersonatedUser}
+        onEndImpersonation={endImpersonation}
+        isLoading={isLoading}
+      />
+
       {/* Top Header - UnifiedHeader (Desktop nav, Mobile top bar) */}
       <UnifiedHeader />
 
@@ -61,6 +74,7 @@ export function AuthenticatedLayout({
         className={cn(
           'flex-1',
           'pt-16', // Header height offset
+          isImpersonating && 'pt-24', // Extra padding for impersonation banner
           !fullWidth && 'container mx-auto px-4 sm:px-6 lg:px-8',
           className
         )}

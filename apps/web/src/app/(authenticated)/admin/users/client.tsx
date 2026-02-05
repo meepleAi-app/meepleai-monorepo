@@ -11,6 +11,7 @@ import type { SortingState, RowSelectionState } from '@/components/ui/data-displ
 import { type UserRole } from '@/components/ui/data-display/user-role-badge';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useImpersonationStore } from '@/store/impersonation';
 
 import { UsersDataTable, type User as UsersTableUser, type UsersTableActions } from './_components';
 
@@ -56,6 +57,7 @@ type BulkRoleModalState = {
 
 export function AdminPageClient() {
   const { user, loading: authLoading } = useAuthUser();
+  const { startImpersonation } = useImpersonationStore();
 
   // State
   const [users, setUsers] = useState<User[]>([]);
@@ -249,6 +251,28 @@ export function AdminPageClient() {
     [addToast, fetchUsers]
   );
 
+  // Impersonate user (Issue #3349)
+  const handleImpersonate = useCallback(
+    async (targetUser: User) => {
+      setConfirmation({
+        isOpen: true,
+        title: 'Impersonate User',
+        message: `You are about to impersonate "${targetUser.displayName}" (${targetUser.email}). All actions will be logged with your admin ID. Continue?`,
+        onConfirm: async () => {
+          setConfirmation({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+          const success = await startImpersonation(targetUser.id, {
+            displayName: targetUser.displayName,
+            email: targetUser.email,
+          });
+          if (!success) {
+            addToast('error', 'Failed to start impersonation');
+          }
+        },
+      });
+    },
+    [addToast, startImpersonation]
+  );
+
   // Bulk delete
   const handleBulkDelete = useCallback(() => {
     if (selectedUsers.size === 0) return;
@@ -393,7 +417,8 @@ export function AdminPageClient() {
     onSuspend: (user) => handleSuspend(user.id, user.email),
     onUnsuspend: (user) => handleUnsuspend(user.id, user.email),
     onDelete: (user) => handleDelete(user.id, user.email),
-  }), [handleSuspend, handleUnsuspend, handleDelete]);
+    onImpersonate: (user) => handleImpersonate(user),
+  }), [handleSuspend, handleUnsuspend, handleDelete, handleImpersonate]);
 
   // Early return after all hooks
   if (!user) return null;

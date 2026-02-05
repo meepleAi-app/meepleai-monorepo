@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.GridSearch.Handlers;
@@ -20,10 +21,12 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.External.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Chunking;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Scheduling;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 using Api.Services;
 using Api.Services.LlmClients;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Quartz;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 
@@ -42,6 +45,7 @@ internal static class KnowledgeBaseServiceExtensions
         AddApplicationServices(services);
         AddChunkingAndRerankingServices(services, configuration);
         AddCachingServices(services, configuration);
+        AddBackgroundJobServices(services, configuration);
 
         return services;
     }
@@ -269,5 +273,40 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-3494: Multi-Tier Cache Service (Singleton for L1 in-memory cache consistency)
         services.AddSingleton<IMultiTierCache, MultiTierCache>();
+    }
+
+    private static void AddBackgroundJobServices(IServiceCollection services, IConfiguration? configuration)
+    {
+        // Issue #3498: Conversation Memory Cleanup Configuration
+        if (configuration != null)
+        {
+            services.Configure<ConversationMemoryCleanupOptions>(
+                configuration.GetSection(ConversationMemoryCleanupOptions.SectionKey));
+        }
+        else
+        {
+            // Fallback: configure with defaults via lambda (resolved at runtime)
+            services.AddOptions<ConversationMemoryCleanupOptions>()
+                .Configure<IConfiguration>((opts, cfg) =>
+                    cfg.GetSection(ConversationMemoryCleanupOptions.SectionKey).Bind(opts));
+        }
+
+        // Issue #3498: Quartz.NET job registration for GDPR-compliant conversation memory cleanup
+        // Note: Quartz scheduler is configured globally in Administration context.
+        // Only register job definition here - do NOT call AddQuartzHostedService (would duplicate).
+        services.AddQuartz(q =>
+        {
+            // Register conversation memory cleanup job
+            q.AddJob<ConversationMemoryCleanupJob>(opts => opts
+                .WithIdentity("conversation-memory-cleanup-job", "knowledge-base")
+                .StoreDurably(true));
+
+            // Trigger: Run daily at 3:00 AM UTC (low-traffic period)
+            q.AddTrigger(opts => opts
+                .ForJob("conversation-memory-cleanup-job", "knowledge-base")
+                .WithIdentity("conversation-memory-cleanup-trigger", "knowledge-base")
+                .WithCronSchedule("0 0 3 * * ?")
+                .WithDescription("Runs daily at 3 AM UTC to clean up conversation memories older than 90 days for GDPR compliance"));
+        });
     }
 }

@@ -4,7 +4,9 @@ namespace Api.Infrastructure.Entities.UserLibrary;
 
 /// <summary>
 /// UserLibraryEntry entity - persistence model for user's game library.
-/// Represents the junction between Users and SharedGames (from SharedGameCatalog) with library-specific metadata.
+/// Represents the junction between Users and Games (SharedGame or PrivateGame) with library-specific metadata.
+/// Issue #3662: Updated to support both SharedGame and PrivateGame references.
+/// XOR constraint: Either SharedGameId or PrivateGameId must be set, but not both.
 /// </summary>
 public class UserLibraryEntryEntity
 {
@@ -16,9 +18,27 @@ public class UserLibraryEntryEntity
     public Guid UserId { get; set; }
 
     /// <summary>
-    /// Reference to the game in the library.
+    /// Reference to the SharedGame in the library.
+    /// Issue #3662: Renamed from GameId to SharedGameId, made nullable to support private games.
+    /// For backwards compatibility, GameId is mapped to this column in the configuration.
     /// </summary>
-    public Guid GameId { get; set; }
+    public Guid? SharedGameId { get; set; }
+
+    /// <summary>
+    /// Reference to the PrivateGame in the library (nullable for shared games).
+    /// Issue #3662: Added to support private games.
+    /// </summary>
+    public Guid? PrivateGameId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the game reference (backwards compatible with existing code).
+    /// Maps to SharedGameId. Will be removed once migration is complete.
+    /// </summary>
+    public Guid GameId
+    {
+        get => SharedGameId ?? Guid.Empty;
+        set => SharedGameId = value == Guid.Empty ? null : value;
+    }
 
     /// <summary>
     /// When the game was added to the library.
@@ -123,8 +143,16 @@ public class UserLibraryEntryEntity
 
     /// <summary>
     /// Navigation property to SharedGameEntity (from SharedGameCatalog).
+    /// Null when using a PrivateGame.
     /// </summary>
     public SharedGameEntity? SharedGame { get; set; }
+
+    /// <summary>
+    /// Navigation property to PrivateGameEntity.
+    /// Null when using a SharedGame.
+    /// Issue #3662: Added to support private games.
+    /// </summary>
+    public PrivateGameEntity? PrivateGame { get; set; }
 
     /// <summary>
     /// Collection of recorded game sessions.

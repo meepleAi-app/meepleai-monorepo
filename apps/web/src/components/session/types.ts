@@ -106,3 +106,16 @@ export const CARD_SUITS: { suit: CardSuit; symbol: string; color: string }[] = [
   { suit: 'Spades', symbol: '♠', color: 'text-gray-900 dark:text-white' },
   { suit: 'Joker', symbol: '🃏', color: 'text-purple-500' },
 ];
+
+// Private Notes Types (Issue #3344)
+export interface SessionNote {
+  id: string;
+  sessionId: string;
+  participantId: string;
+  content?: string; // Null if not owner and not revealed
+  isOwner: boolean;
+  isRevealed: boolean;
+  obscuredText?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}

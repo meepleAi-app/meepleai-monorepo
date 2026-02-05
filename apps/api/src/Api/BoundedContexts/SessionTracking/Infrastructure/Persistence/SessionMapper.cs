@@ -294,3 +294,45 @@ internal static class CardMapper
         return card;
     }
 }
+
+/// <summary>
+/// Maps between SessionNote domain entity and SessionNoteEntity persistence entity.
+/// </summary>
+internal static class SessionNoteMapper
+{
+    public static SessionNoteEntity ToEntity(SessionNote domain)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+
+        return new SessionNoteEntity
+        {
+            Id = domain.Id,
+            SessionId = domain.SessionId,
+            ParticipantId = domain.ParticipantId,
+            EncryptedContent = domain.EncryptedContent,
+            IsRevealed = domain.IsRevealed,
+            ObscuredText = domain.ObscuredText,
+            CreatedAt = domain.CreatedAt,
+            UpdatedAt = domain.UpdatedAt,
+            IsDeleted = domain.IsDeleted,
+            DeletedAt = domain.DeletedAt
+        };
+    }
+
+    public static SessionNote ToDomain(SessionNoteEntity entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        return SessionNote.Reconstitute(
+            entity.Id,
+            entity.SessionId,
+            entity.ParticipantId,
+            entity.EncryptedContent,
+            entity.IsRevealed,
+            entity.ObscuredText,
+            entity.CreatedAt,
+            entity.UpdatedAt,
+            entity.IsDeleted,
+            entity.DeletedAt);
+    }
+}

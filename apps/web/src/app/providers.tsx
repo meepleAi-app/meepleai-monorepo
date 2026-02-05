@@ -17,6 +17,7 @@ import { AuthProvider } from '@/components/auth/AuthProvider';
 import { ErrorBoundary, RouteErrorBoundary } from '@/components/errors';
 import { KeyboardShortcutsHelp, LayoutProvider } from '@/components/layout';
 import { SessionWarningModal } from '@/components/modals';
+import { PWAProvider } from '@/components/pwa';
 import { IntlProvider } from '@/components/providers/IntlProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { Toaster } from '@/components/ui/feedback/sonner';
@@ -98,7 +99,7 @@ function AppContent({ children }: { children: ReactNode }) {
   };
 
   return (
-    <>
+    <PWAProvider>
       {/* Skip to main content link (UI-05 WCAG 2.1 AA requirement) */}
       <AccessibleSkipLink href="#main-content" />
       {children}
@@ -118,7 +119,7 @@ function AppContent({ children }: { children: ReactNode }) {
         isOpen={showShortcutsHelp}
         onClose={() => setShowShortcutsHelp(false)}
       />
-    </>
+    </PWAProvider>
   );
 }
 

@@ -16,3 +16,9 @@ export { MeepleCard } from './MeepleCard';
 
 // Stats
 export { CollectionStats } from './CollectionStats';
+
+// Hero Stats Bar - Issue #3649
+export { CollectionStatsBar, type CollectionStatsBarProps } from './CollectionStatsBar';
+
+// Filters - Issue #3649
+export { CollectionFilters, type CollectionFiltersProps } from './CollectionFilters';

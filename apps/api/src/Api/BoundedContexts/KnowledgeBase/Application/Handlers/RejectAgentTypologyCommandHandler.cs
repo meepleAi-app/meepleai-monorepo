@@ -10,23 +10,22 @@ using Microsoft.Extensions.Logging;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// Handler for ApproveAgentTypologyCommand.
-/// Transitions status from Pending to Approved.
-/// Issue #3176: AGT-002 Typology CRUD Commands.
-/// Issue #3381: Added event publishing for notifications.
+/// Handler for RejectAgentTypologyCommand.
+/// Transitions status from Pending to Rejected with reason.
+/// Issue #3381: Typology Approval Workflow Endpoint.
 /// </summary>
-internal sealed class ApproveAgentTypologyCommandHandler : IRequestHandler<ApproveAgentTypologyCommand, AgentTypologyDto>
+internal sealed class RejectAgentTypologyCommandHandler : IRequestHandler<RejectAgentTypologyCommand, AgentTypologyDto>
 {
     private readonly IAgentTypologyRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPublisher _publisher;
-    private readonly ILogger<ApproveAgentTypologyCommandHandler> _logger;
+    private readonly ILogger<RejectAgentTypologyCommandHandler> _logger;
 
-    public ApproveAgentTypologyCommandHandler(
+    public RejectAgentTypologyCommandHandler(
         IAgentTypologyRepository repository,
         IUnitOfWork unitOfWork,
         IPublisher publisher,
-        ILogger<ApproveAgentTypologyCommandHandler> logger)
+        ILogger<RejectAgentTypologyCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
@@ -35,7 +34,7 @@ internal sealed class ApproveAgentTypologyCommandHandler : IRequestHandler<Appro
     }
 
     public async Task<AgentTypologyDto> Handle(
-        ApproveAgentTypologyCommand request,
+        RejectAgentTypologyCommand request,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -50,8 +49,8 @@ internal sealed class ApproveAgentTypologyCommandHandler : IRequestHandler<Appro
                 throw new NotFoundException("AgentTypology", request.Id.ToString());
             }
 
-            // Apply domain logic (Approve method handles state transition)
-            typology.Approve(request.ApprovedBy);
+            // Apply domain logic (Reject method handles state transition)
+            typology.Reject(request.RejectedBy);
 
             // Persist
             await _repository.UpdateAsync(typology, cancellationToken).ConfigureAwait(false);
@@ -59,19 +58,20 @@ internal sealed class ApproveAgentTypologyCommandHandler : IRequestHandler<Appro
 
             // Publish domain event for notification
             await _publisher.Publish(
-                new TypologyApprovedEvent(
+                new TypologyRejectedEvent(
                     typology.Id,
                     typology.Name,
                     typology.CreatedBy,
-                    request.ApprovedBy,
-                    request.Notes),
+                    request.RejectedBy,
+                    request.Reason),
                 cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
-                "Approved agent typology '{Name}' with ID {TypologyId} by user {UserId}",
+                "Rejected agent typology '{Name}' with ID {TypologyId} by user {UserId}. Reason: {Reason}",
                 typology.Name,
                 typology.Id,
-                request.ApprovedBy);
+                request.RejectedBy,
+                request.Reason);
 
             // Map to DTO
             return new AgentTypologyDto(
@@ -95,12 +95,12 @@ internal sealed class ApproveAgentTypologyCommandHandler : IRequestHandler<Appro
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "Cannot approve agent typology {TypologyId}", request.Id);
+            _logger.LogWarning(ex, "Cannot reject agent typology {TypologyId}", request.Id);
             throw;
         }
         catch (ArgumentException ex)
         {
-            _logger.LogWarning(ex, "Invalid approver for agent typology {TypologyId}", request.Id);
+            _logger.LogWarning(ex, "Invalid rejector for agent typology {TypologyId}", request.Id);
             throw;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -113,7 +113,7 @@ internal sealed class ApproveAgentTypologyCommandHandler : IRequestHandler<Appro
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            _logger.LogError(ex, "Error approving agent typology {TypologyId}", request.Id);
+            _logger.LogError(ex, "Error rejecting agent typology {TypologyId}", request.Id);
             throw;
         }
     }

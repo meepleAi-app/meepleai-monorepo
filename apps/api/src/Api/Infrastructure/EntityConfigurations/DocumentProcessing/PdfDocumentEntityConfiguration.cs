@@ -50,5 +50,9 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
 
         builder.HasIndex(e => e.CollectionId);
         builder.HasIndex(e => new { e.CollectionId, e.SortOrder });
+
+        // Issue #3664: Private game PDF support
+        builder.Property(e => e.PrivateGameId).HasMaxLength(64).IsRequired(false);
+        builder.HasIndex(e => e.PrivateGameId);
     }
 }

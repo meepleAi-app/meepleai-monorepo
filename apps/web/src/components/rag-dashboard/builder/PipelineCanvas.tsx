@@ -64,6 +64,17 @@ import {
   MetadataFilteringNode,
   DocumentRepackingNode,
   HallucinationDetectionNode,
+  // Tier 3-4 nodes
+  SequentialAgentNode,
+  ParallelAgentNode,
+  SupervisorWorkerNode,
+  HydeNode,
+  RagFusionNode,
+  GraphRagNode,
+  WebSearchNode,
+  SentenceWindowNode,
+  SelfRagNode,
+  DeduplicationNode,
   hasSpecializedNode,
   ALL_SPECIALIZED_NODE_TYPES,
 } from './nodes';
@@ -97,7 +108,7 @@ export interface PipelineCanvasProps {
 }
 
 // =============================================================================
-// Custom Node Types - Including Tier 1 & 2 Specialized Nodes
+// Custom Node Types - Including Tier 1, 2, 3 & 4 Specialized Nodes
 // =============================================================================
 
 const nodeTypes: NodeTypes = {
@@ -118,6 +129,20 @@ const nodeTypes: NodeTypes = {
   metadataFiltering: MetadataFilteringNode as unknown as NodeTypes[string],
   documentRepacking: DocumentRepackingNode as unknown as NodeTypes[string],
   hallucinationDetection: HallucinationDetectionNode as unknown as NodeTypes[string],
+  // Tier 3-4 specialized nodes - Agents
+  sequentialAgent: SequentialAgentNode as unknown as NodeTypes[string],
+  parallelAgent: ParallelAgentNode as unknown as NodeTypes[string],
+  supervisorWorker: SupervisorWorkerNode as unknown as NodeTypes[string],
+  // Tier 3-4 specialized nodes - Optimization
+  hyde: HydeNode as unknown as NodeTypes[string],
+  ragFusion: RagFusionNode as unknown as NodeTypes[string],
+  // Tier 3-4 specialized nodes - Retrieval
+  graphRag: GraphRagNode as unknown as NodeTypes[string],
+  webSearch: WebSearchNode as unknown as NodeTypes[string],
+  sentenceWindow: SentenceWindowNode as unknown as NodeTypes[string],
+  // Tier 3-4 specialized nodes - Validation/Ranking
+  selfRag: SelfRagNode as unknown as NodeTypes[string],
+  deduplication: DeduplicationNode as unknown as NodeTypes[string],
 };
 
 // =============================================================================

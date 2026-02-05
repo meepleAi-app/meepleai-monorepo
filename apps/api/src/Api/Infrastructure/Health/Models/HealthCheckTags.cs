@@ -26,6 +26,11 @@ public static class HealthCheckTags
     /// </summary>
     public const string Monitoring = "monitoring";
 
+    /// <summary>
+    /// Storage services (S3, local filesystem, object storage).
+    /// </summary>
+    public const string Storage = "storage";
+
     // Criticality levels
     /// <summary>
     /// Critical service - application cannot function without it.

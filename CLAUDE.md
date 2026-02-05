@@ -106,6 +106,30 @@ cd ../../../web && pnpm dev           # Terminal 2: :3000
 
 **Rules**: ✅ Run setup script, gitignore `.secret`, rotate 90d | ❌ Commit secrets, use dev in prod
 
+### S3 Storage Configuration
+
+**Storage Providers**: Local filesystem (default) | S3-compatible (Cloudflare R2, AWS S3, Backblaze B2, MinIO)
+
+**Implementation**: Factory pattern selects provider via `STORAGE_PROVIDER` env var
+- `local` (default): Filesystem storage in `pdf_uploads/`
+- `s3`: S3-compatible object storage (requires `storage.secret`)
+
+**S3 Configuration** (`infra/secrets/storage.secret`):
+```bash
+STORAGE_PROVIDER=s3                  # Enable S3 storage
+S3_ENDPOINT=https://xxx.r2.cloudflarestorage.com
+S3_ACCESS_KEY=your_access_key
+S3_SECRET_KEY=your_secret_key
+S3_BUCKET_NAME=meepleai-uploads
+S3_REGION=auto                       # "auto" for R2, or AWS region
+S3_PRESIGNED_URL_EXPIRY=3600         # Download URL expiry (seconds)
+S3_FORCE_PATH_STYLE=false            # true for MinIO
+```
+
+**Features**: Server-side encryption (AES256) | Pre-signed URLs | Path traversal protection | Multi-provider support
+
+**Service**: `IBlobStorageService` → `BlobStorageServiceFactory` → `S3BlobStorageService` or `BlobStorageService`
+
 ### Git Workflow
 
 **Branches**: `main-dev` (dev) | `frontend-dev` (frontend) | `main` (prod) | `feature/issue-{n}-{desc}`

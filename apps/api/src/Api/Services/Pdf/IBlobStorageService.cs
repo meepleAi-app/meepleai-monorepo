@@ -26,6 +26,10 @@ internal interface IBlobStorageService
     /// <param name="gameId">Game ID for organization</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns>File stream or null if not found</returns>
+    /// <remarks>
+    /// IMPORTANT: Caller MUST dispose the returned stream to prevent resource leaks.
+    /// For S3 storage, this also disposes the underlying GetObjectResponse connection.
+    /// </remarks>
     Task<Stream?> RetrieveAsync(string fileId, string gameId, CancellationToken ct = default);
 
     /// <summary>

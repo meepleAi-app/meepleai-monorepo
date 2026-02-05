@@ -681,6 +681,102 @@ public sealed class UserLibraryEntryTests
 
     #endregion
 
+    #region Private PDF Tests
+
+    [Fact]
+    public void RemovePrivatePdf_WhenHasPrivatePdf_ClearsPdfIdAndRaisesEvent()
+    {
+        // Arrange
+        var entry = CreateEntry();
+        var pdfId = Guid.NewGuid();
+        entry.AssociatePrivatePdf(pdfId);
+        entry.ClearDomainEvents();
+
+        // Act
+        entry.RemovePrivatePdf();
+
+        // Assert
+        entry.HasPrivatePdf.Should().BeFalse();
+        entry.PrivatePdfId.Should().BeNull();
+        entry.DomainEvents.Should().ContainSingle();
+        entry.DomainEvents.First().Should().BeOfType<PrivatePdfRemovedEvent>();
+    }
+
+    [Fact]
+    public void RemovePrivatePdf_WhenNoPrivatePdf_ThrowsConflictException()
+    {
+        // Arrange
+        var entry = CreateEntry();
+
+        // Act
+        var action = () => entry.RemovePrivatePdf();
+
+        // Assert
+        action.Should().Throw<ConflictException>()
+            .WithMessage("*No private PDF is associated*");
+    }
+
+    [Fact]
+    public void RemovePrivatePdf_RaisesEventWithCorrectProperties()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var entry = new UserLibraryEntry(id, userId, gameId);
+        entry.AssociatePrivatePdf(pdfId);
+        entry.ClearDomainEvents();
+
+        // Act
+        entry.RemovePrivatePdf();
+
+        // Assert
+        var evt = entry.DomainEvents.First().Should().BeOfType<PrivatePdfRemovedEvent>().Subject;
+        evt.LibraryEntryId.Should().Be(id);
+        evt.UserId.Should().Be(userId);
+        evt.GameId.Should().Be(gameId);
+        evt.PdfDocumentId.Should().Be(pdfId);
+    }
+
+    [Fact]
+    public void AssociatePrivatePdf_SetsPrivatePdfId()
+    {
+        // Arrange
+        var entry = CreateEntry();
+        var pdfId = Guid.NewGuid();
+
+        // Act
+        entry.AssociatePrivatePdf(pdfId);
+
+        // Assert
+        entry.HasPrivatePdf.Should().BeTrue();
+        entry.PrivatePdfId.Should().Be(pdfId);
+    }
+
+    [Fact]
+    public void HasPrivatePdf_WhenPdfAssociated_ReturnsTrue()
+    {
+        // Arrange
+        var entry = CreateEntry();
+        entry.AssociatePrivatePdf(Guid.NewGuid());
+
+        // Assert
+        entry.HasPrivatePdf.Should().BeTrue();
+    }
+
+    [Fact]
+    public void HasPrivatePdf_WhenNoPdfAssociated_ReturnsFalse()
+    {
+        // Arrange
+        var entry = CreateEntry();
+
+        // Assert
+        entry.HasPrivatePdf.Should().BeFalse();
+    }
+
+    #endregion
+
     #region PrepareForRemoval Tests
 
     [Fact]

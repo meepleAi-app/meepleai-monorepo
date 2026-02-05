@@ -105,4 +105,13 @@ internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
         Guid userId,
         GameStateType? state = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the count of library entries with private PDFs for a user.
+    /// Issue #3651: Required for library statistics.
+    /// </summary>
+    /// <param name="userId">The user ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Count of entries with private PDFs</returns>
+    Task<int> GetPrivatePdfCountAsync(Guid userId, CancellationToken cancellationToken = default);
 }

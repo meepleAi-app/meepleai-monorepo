@@ -98,6 +98,9 @@ internal static class ApplicationServiceExtensions
         // Qdrant facade service (Scoped to match specialized services lifetime)
         services.AddScoped<IQdrantService, QdrantService>();
 
+        // Issue #3651: Private user-scoped vector storage for private PDFs
+        services.AddScoped<IPrivateQdrantService, PrivateQdrantService>();
+
         // ADR-016 Phase 2: Multi-provider embedding configuration
         services.Configure<EmbeddingConfiguration>(configuration.GetSection("Embedding"));
 

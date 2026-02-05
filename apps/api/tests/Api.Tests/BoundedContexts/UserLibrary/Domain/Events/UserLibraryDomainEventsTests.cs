@@ -206,4 +206,45 @@ public sealed class UserLibraryDomainEventsTests
     }
 
     #endregion
+
+    #region PrivatePdfRemovedEvent Tests
+
+    [Fact]
+    public void PrivatePdfRemovedEvent_SetsAllProperties()
+    {
+        // Arrange
+        var libraryEntryId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var pdfDocumentId = Guid.NewGuid();
+
+        // Act
+        var evt = new PrivatePdfRemovedEvent(
+            libraryEntryId,
+            userId,
+            gameId,
+            pdfDocumentId);
+
+        // Assert
+        evt.LibraryEntryId.Should().Be(libraryEntryId);
+        evt.UserId.Should().Be(userId);
+        evt.GameId.Should().Be(gameId);
+        evt.PdfDocumentId.Should().Be(pdfDocumentId);
+    }
+
+    [Fact]
+    public void PrivatePdfRemovedEvent_InheritsFromDomainEventBase()
+    {
+        // Arrange & Act
+        var evt = new PrivatePdfRemovedEvent(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid());
+
+        // Assert
+        evt.Should().BeAssignableTo<Api.SharedKernel.Domain.Events.DomainEventBase>();
+    }
+
+    #endregion
 }

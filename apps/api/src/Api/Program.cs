@@ -483,6 +483,7 @@ v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
 v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
 v1Api.MapUserLibraryEndpoints();       // User game library
+v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation

@@ -33,6 +33,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 
+import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
@@ -79,7 +80,7 @@ function GameStatusBadge({ status }: { status: string }) {
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }
 
-// Document list item
+// Document list item with indexing status
 function DocumentListItem({
   document,
   onDelete,
@@ -92,50 +93,57 @@ function DocumentListItem({
   isDeleting: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border p-4">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-          <FileText className="h-5 w-5 text-muted-foreground" />
+    <div className="rounded-lg border p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+            <FileText className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <DocumentTypeBadge documentType={document.documentType} />
+              <span className="text-sm text-muted-foreground">v{document.version}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+              <span>{new Date(document.createdAt).toLocaleDateString()}</span>
+              {document.isActive && (
+                <>
+                  <span>•</span>
+                  <Badge variant="outline" className="text-xs">Active</Badge>
+                </>
+              )}
+            </div>
+          </div>
         </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <DocumentTypeBadge documentType={document.documentType} />
-            <span className="text-sm text-muted-foreground">v{document.version}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-            <span>{new Date(document.createdAt).toLocaleDateString()}</span>
-            {document.isActive && (
-              <>
-                <span>•</span>
-                <Badge variant="outline" className="text-xs">Active</Badge>
-              </>
-            )}
-          </div>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" disabled={isDeleting}>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onDownload(document.id)}>
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => onDelete(document.id)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" disabled={isDeleting}>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onDownload(document.id)}>
-              <Download className="mr-2 h-4 w-4" />
-              Download
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => onDelete(document.id)}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      {/* PDF Indexing Status - shows RAG indexing progress for this document */}
+      <PdfIndexingStatus
+        pdfId={document.id}
+        compact={true}
+      />
     </div>
   );
 }

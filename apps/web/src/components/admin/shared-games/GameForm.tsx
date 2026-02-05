@@ -1,5 +1,5 @@
 /**
- * Game Form Component - Issue #2372
+ * Game Form Component - Issue #2372, #3642
  *
  * Reusable form for creating and editing shared games.
  * Features:
@@ -8,6 +8,7 @@
  * - Image URL preview
  * - Rules content editor
  * - BGG ID integration
+ * - PDF upload with indexing status (#3642)
  */
 
 'use client';
@@ -19,6 +20,9 @@ import { ImageIcon, X, Plus, ExternalLink } from 'lucide-react';
 import { useForm, Controller, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+
+import { PdfUploadSection, type UploadedPdf } from './PdfUploadSection';
+import { PdfIndexingStatus } from './PdfIndexingStatus';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -79,8 +83,12 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedMechanics, setSelectedMechanics] = useState<string[]>([]);
   const [showRulesEditor, setShowRulesEditor] = useState(!!game?.rules);
+  // PDF upload state (#3642)
+  const [uploadedPdf, setUploadedPdf] = useState<UploadedPdf | null>(null);
+  const [showPdfStatus, setShowPdfStatus] = useState(false);
 
   const isEditMode = !!game;
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
   const {
     register,
@@ -187,6 +195,24 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
         // create() returns the new game ID directly as a string
         gameId = await api.sharedGames.create(requestData);
         toast.success('Gioco creato con successo');
+      }
+
+      // Link uploaded PDF to the game if present (#3642)
+      if (uploadedPdf && !isEditMode) {
+        try {
+          const response = await fetch(`${API_BASE}/api/v1/admin/shared-games/${gameId}/documents`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ documentId: uploadedPdf.id, setAsActive: true }),
+          });
+          if (response.ok) {
+            toast.success('PDF collegato al gioco');
+            setShowPdfStatus(true);
+          }
+        } catch {
+          toast.error('Errore nel collegamento del PDF');
+        }
       }
 
       onSubmit(gameId);
@@ -624,6 +650,33 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
           </CardContent>
         )}
       </Card>
+
+      {/* PDF Upload Section (#3642) */}
+      <PdfUploadSection
+        gameId={isEditMode ? game.id : undefined}
+        onPdfUploaded={(pdf) => {
+          setUploadedPdf(pdf);
+          if (isEditMode) {
+            setShowPdfStatus(true);
+          }
+        }}
+        onPdfRemoved={() => {
+          setUploadedPdf(null);
+          setShowPdfStatus(false);
+        }}
+        disabled={isSubmitting || isLoading}
+        existingPdf={uploadedPdf}
+      />
+
+      {/* PDF Indexing Status (#3642) */}
+      {showPdfStatus && uploadedPdf && (
+        <PdfIndexingStatus
+          pdfId={uploadedPdf.id}
+          fileName={uploadedPdf.fileName}
+          onComplete={() => toast.success('PDF indicizzato - RAG pronto!')}
+          onError={(err) => toast.error(`Errore indicizzazione: ${err}`)}
+        />
+      )}
 
       {/* Form Actions */}
       <div className="flex justify-end gap-3 pt-4">

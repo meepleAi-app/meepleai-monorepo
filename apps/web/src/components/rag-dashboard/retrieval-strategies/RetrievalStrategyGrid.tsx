@@ -53,8 +53,8 @@ export function RetrievalStrategyGrid({
     }
     const allStrategies = getAllRetrievalStrategies();
     return RETRIEVAL_STRATEGY_ORDER.map(
-      (id) => allStrategies.find((s) => s.id === id)!
-    ).filter(Boolean);
+      (id) => allStrategies.find((s) => s.id === id)
+    ).filter((s): s is RetrievalStrategy => s !== undefined);
   }, [strategies]);
 
   const handleStrategySelect = useCallback(

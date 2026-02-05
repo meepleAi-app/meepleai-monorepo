@@ -48,8 +48,8 @@ import { TokenFlowVisualizer } from './TokenFlowVisualizer';
 import { DEFAULT_STATS } from './types';
 import { VariantComparisonTool } from './VariantComparisonTool';
 
-import type { ViewMode } from './types';
 import type { NavGroup } from './DashboardSidebar';
+import type { ViewMode } from './types';
 
 import './rag-dashboard.css';
 

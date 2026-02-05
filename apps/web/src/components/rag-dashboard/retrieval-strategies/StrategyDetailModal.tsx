@@ -6,21 +6,21 @@ import { motion } from 'framer-motion';
 import { X, CheckCircle, AlertCircle, Lightbulb, Settings } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { cn } from '@/lib/utils';
 
 import { RETRIEVAL_STRATEGIES } from './strategy-data';
 import { getStrategyDetails } from './strategy-details-data';
-import { StrategyFlowDiagram } from './StrategyFlowDiagram';
 import { StrategyExample } from './StrategyExample';
+import { StrategyFlowDiagram } from './StrategyFlowDiagram';
 
 import type { RetrievalStrategyType, RetrievalStrategy } from './types';
 

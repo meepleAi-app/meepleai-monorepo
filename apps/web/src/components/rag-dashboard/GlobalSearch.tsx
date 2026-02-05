@@ -27,8 +27,8 @@ import {
   getSectionsGrouped,
 } from './search-index';
 
-import type { ViewMode } from './types';
 import type { SearchableSection, SearchGroup } from './search-index';
+import type { ViewMode } from './types';
 
 // =============================================================================
 // Recent Searches Hook

@@ -94,7 +94,7 @@ function NumberParamRenderer({
   const numValue = (value as number) ?? param.default;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-testid={`param-${param.id}`}>
       <div className="flex items-center justify-between">
         <Label htmlFor={param.id} className="text-sm">
           {param.name}
@@ -124,7 +124,7 @@ function StringParamRenderer({
   const strValue = (value as string) ?? param.default;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-testid={`param-${param.id}`}>
       <Label htmlFor={param.id} className="text-sm">
         {param.name}
         {param.required && <span className="text-destructive ml-1">*</span>}
@@ -378,7 +378,7 @@ export function BlockConfigPanel({
   }
 
   return (
-    <div className={cn('w-80 bg-card border-l flex flex-col', className)}>
+    <div className={cn('w-80 bg-card border-l flex flex-col', className)} data-testid="block-config-panel">
       {/* Header */}
       <div className="p-3 border-b flex items-center gap-2">
         <div
@@ -388,10 +388,10 @@ export function BlockConfigPanel({
           {block.icon}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-sm truncate">{block.name}</h3>
+          <h3 className="font-medium text-sm truncate" data-testid="config-block-name">{block.name}</h3>
           <p className="text-xs text-muted-foreground">{block.category}</p>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} data-testid="config-close-button">
           <X className="h-4 w-4" />
         </Button>
       </div>

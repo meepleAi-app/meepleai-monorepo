@@ -386,6 +386,7 @@ export function PipelineCanvas({
     <div
       ref={reactFlowWrapper}
       className={cn('flex-1 h-full bg-background', className)}
+      data-testid="pipeline-canvas"
     >
       <ReactFlow
         nodes={nodes}

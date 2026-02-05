@@ -335,6 +335,7 @@ export function StrategyBuilder({
                         size="sm"
                         onClick={handleReset}
                         disabled={!hasChanges}
+                        data-testid="reset-button"
                       >
                         <RotateCcw className="h-4 w-4 mr-1" />
                         Reset
@@ -352,6 +353,7 @@ export function StrategyBuilder({
                         size="sm"
                         onClick={handleSave}
                         disabled={!hasChanges || !validation?.isValid}
+                        data-testid="save-button"
                       >
                         <Save className="h-4 w-4 mr-1" />
                         Save
@@ -375,6 +377,7 @@ export function StrategyBuilder({
                     size="sm"
                     onClick={handleTest}
                     disabled={currentNodes.length === 0}
+                    data-testid="test-button"
                   >
                     <Play className="h-4 w-4 mr-1" />
                     Test

@@ -26,6 +26,7 @@
 import { AuthRedirect } from '@/components/landing/AuthRedirect';
 import { CallToActionSection } from '@/components/landing/CallToActionSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
+import { GamesCarouselSection } from '@/components/landing/GamesCarouselSection';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
 
@@ -157,6 +158,9 @@ export default function LandingPage() {
       <>
         {/* Hero Section */}
         <HeroSection />
+
+        {/* Game Carousels Section (Issue #3588 - GC-003) */}
+        <GamesCarouselSection />
 
         {/* Features Section */}
         <FeaturesSection />

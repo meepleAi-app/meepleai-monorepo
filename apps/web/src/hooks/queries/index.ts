@@ -175,6 +175,26 @@ export {
   tierStrategyKeys,
 } from './useTierStrategy';
 
+// Game Carousel queries (Issue #3586, #3587 - Epic #3585)
+export {
+  useCarouselGames,
+  useFeaturedGames,
+  useTrendingGames,
+  useCategoryGames,
+  useUserLibraryGames,
+  carouselGamesKeys,
+  type CarouselSource,
+  type UseCarouselGamesOptions,
+  type CarouselGamesResult,
+} from './useCarouselGames';
+
+// Game Carousel sort types (Issue #3587)
+export type {
+  CarouselSortValue,
+  CarouselSortOption,
+} from '@/components/ui/data-display/game-carousel';
+export { CAROUSEL_SORT_OPTIONS } from '@/components/ui/data-display/game-carousel';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

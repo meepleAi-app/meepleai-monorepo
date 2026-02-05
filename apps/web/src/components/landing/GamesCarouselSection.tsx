@@ -246,7 +246,7 @@ function UserLibrarySection() {
         <GameCarouselSkeleton />
       ) : (
         <GameCarousel
-          games={libraryData!.games}
+          games={libraryData?.games ?? []}
           onGameSelect={handleGameSelect}
           showDots
         />

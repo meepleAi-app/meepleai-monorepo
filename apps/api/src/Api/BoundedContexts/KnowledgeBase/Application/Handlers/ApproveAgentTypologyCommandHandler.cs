@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -12,20 +13,24 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Handler for ApproveAgentTypologyCommand.
 /// Transitions status from Pending to Approved.
 /// Issue #3176: AGT-002 Typology CRUD Commands.
+/// Issue #3381: Added event publishing for notifications.
 /// </summary>
 internal sealed class ApproveAgentTypologyCommandHandler : IRequestHandler<ApproveAgentTypologyCommand, AgentTypologyDto>
 {
     private readonly IAgentTypologyRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPublisher _publisher;
     private readonly ILogger<ApproveAgentTypologyCommandHandler> _logger;
 
     public ApproveAgentTypologyCommandHandler(
         IAgentTypologyRepository repository,
         IUnitOfWork unitOfWork,
+        IPublisher publisher,
         ILogger<ApproveAgentTypologyCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -51,6 +56,16 @@ internal sealed class ApproveAgentTypologyCommandHandler : IRequestHandler<Appro
             // Persist
             await _repository.UpdateAsync(typology, cancellationToken).ConfigureAwait(false);
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            // Publish domain event for notification
+            await _publisher.Publish(
+                new TypologyApprovedEvent(
+                    typology.Id,
+                    typology.Name,
+                    typology.CreatedBy,
+                    request.ApprovedBy,
+                    request.Notes),
+                cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Approved agent typology '{Name}' with ID {TypologyId} by user {UserId}",

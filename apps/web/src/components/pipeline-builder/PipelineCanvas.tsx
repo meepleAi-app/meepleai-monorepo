@@ -243,6 +243,7 @@ function PipelineCanvasInner({ className }: PipelineCanvasInnerProps) {
   const enhancedEdges = useMemo(() => {
     if (!isExecuting || !executionTrace) return edges;
 
+    // eslint-disable-next-line security/detect-object-injection -- currentStepIndex is a numeric index
     const executingNodeId = executionTrace.steps[currentStepIndex]?.nodeId;
 
     return edges.map((edge) => ({
@@ -332,6 +333,7 @@ function PipelineCanvasInner({ className }: PipelineCanvasInnerProps) {
             <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg animate-pulse flex items-center gap-2">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-ping" />
               <span className="text-sm font-medium">
+                {/* eslint-disable-next-line security/detect-object-injection -- numeric index */}
                 Executing: {executionTrace?.steps[currentStepIndex]?.nodeName || 'Starting...'}
               </span>
             </div>

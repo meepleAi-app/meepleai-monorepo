@@ -54,6 +54,7 @@ interface PresetButtonProps {
 }
 
 function PresetButton({ preset, active, onClick }: PresetButtonProps) {
+  // eslint-disable-next-line security/detect-object-injection -- preset is a typed ConditionPreset enum
   const presetData = CONDITION_PRESETS[preset];
 
   return (
@@ -150,6 +151,7 @@ function ExpressionEditor({
             className="overflow-hidden"
           >
             <div className="p-2 bg-muted/50 rounded-md space-y-1">
+              {/* eslint-disable-next-line security/detect-object-injection -- syntax is typed enum */}
               {syntaxHelp[syntax].map((item) => (
                 <div key={item.example} className="flex items-start gap-2 text-xs">
                   <code className="px-1.5 py-0.5 bg-background rounded font-mono text-[10px]">
@@ -185,6 +187,7 @@ export function EdgeConfigPanel({ className }: EdgeConfigPanelProps) {
     (preset: ConditionPreset) => {
       if (!selectedEdge) return;
 
+      // eslint-disable-next-line security/detect-object-injection -- preset is typed ConditionPreset enum
       const presetData = CONDITION_PRESETS[preset];
       updateEdge(selectedEdge.id, {
         conditionPreset: preset,

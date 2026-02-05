@@ -14,8 +14,13 @@ export * from './stat-card';
 export * from './status-card';
 export * from './activity-list';
 
-// Issue #3326: MeepleCard - Universal card component system
+// Issue #3326: MeepleCard - Universal card component system (base component)
 export * from './meeple-card';
+
+// MeepleGameCard - PRIMARY game card component
+// Frosted glass design with 3D flip animation (chosen design)
+// Use this for all game card displays in the application
+export * from './meeple-game-card';
 
 // GameCarousel - Immersive 3D carousel for browsing games
 export * from './game-carousel';

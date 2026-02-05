@@ -1,6 +1,10 @@
 /**
  * UserGameCard Component (Issue #2518, #2613, #2618, #2866, #2867)
  *
+ * @deprecated Use MeepleGameCard from '@/components/ui/data-display/meeple-game-card' instead.
+ * This component will be migrated to use MeepleGameCard as the base.
+ * Migration: Replace with MeepleGameCard + action callbacks.
+ *
  * Enhanced library card with:
  * - Game cover image
  * - Title, BGG ID, publisher
@@ -11,6 +15,8 @@
  * - Selection mode with checkbox (Issue #2613)
  * - Framer Motion animations (Issue #2618)
  * - Grid/List view modes (Issue #2866, #2867)
+ *
+ * @see MeepleGameCard for the new frosted glass game card component
  */
 
 'use client';

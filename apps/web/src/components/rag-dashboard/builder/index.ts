@@ -106,3 +106,21 @@ export {
   type BlockCombination,
   type PipelineConstraintValidation,
 } from './block-metadata';
+
+// Strategy Templates (#3467)
+export { TemplateSelector, type TemplateSelectorProps } from './TemplateSelector';
+export {
+  ALL_TEMPLATES,
+  TEMPLATES_BY_ID,
+  TEMPLATES_BY_CATEGORY,
+  getTemplate,
+  getTemplatesForTier,
+  getRecommendedTemplate,
+  cloneTemplatePipeline,
+  SIMPLE_FAQ_BOT,
+  BALANCED_PLUS,
+  RESEARCH_ASSISTANT,
+  MAXIMUM_QUALITY,
+  type StrategyTemplate,
+  type TemplateCategory,
+} from './strategy-templates';

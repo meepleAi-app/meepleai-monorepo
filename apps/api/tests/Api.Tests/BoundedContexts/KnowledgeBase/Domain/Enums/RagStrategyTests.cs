@@ -25,6 +25,7 @@ public class RagStrategyTests
     [InlineData(RagStrategy.Custom, "CUSTOM")]
     [InlineData(RagStrategy.MultiAgent, "MULTI_AGENT")]
     [InlineData(RagStrategy.StepBack, "STEP_BACK")]
+    [InlineData(RagStrategy.QueryExpansion, "QUERY_EXPANSION")]
     public void GetDisplayName_AllStrategies_ReturnsUpperCaseName(RagStrategy strategy, string expectedName)
     {
         // Act
@@ -53,6 +54,8 @@ public class RagStrategyTests
     [InlineData("Iterative", RagStrategy.Iterative)]
     [InlineData("iterative", RagStrategy.Iterative)]
     [InlineData("CUSTOM", RagStrategy.Custom)]
+    [InlineData("QueryExpansion", RagStrategy.QueryExpansion)]
+    [InlineData("queryexpansion", RagStrategy.QueryExpansion)]
     public void Parse_ValidStrings_ReturnsCorrectStrategy(string input, RagStrategy expected)
     {
         // Act
@@ -97,6 +100,8 @@ public class RagStrategyTests
     [InlineData("multiagent", true, RagStrategy.MultiAgent)]
     [InlineData("StepBack", true, RagStrategy.StepBack)]
     [InlineData("stepback", true, RagStrategy.StepBack)]
+    [InlineData("QueryExpansion", true, RagStrategy.QueryExpansion)]
+    [InlineData("queryexpansion", true, RagStrategy.QueryExpansion)]
     [InlineData("INVALID", false, RagStrategy.Fast)]
     [InlineData("", false, RagStrategy.Fast)]
     [InlineData(null, false, RagStrategy.Fast)]
@@ -150,6 +155,7 @@ public class RagStrategyTests
     [InlineData(RagStrategy.Custom, 7)]
     [InlineData(RagStrategy.MultiAgent, 8)]
     [InlineData(RagStrategy.StepBack, 9)]
+    [InlineData(RagStrategy.QueryExpansion, 10)]
     public void GetComplexityLevel_AllStrategies_ReturnsCorrectLevel(RagStrategy strategy, int expectedLevel)
     {
         // Act
@@ -176,6 +182,7 @@ public class RagStrategyTests
         Assert.Equal(RagStrategy.Custom, strategies[7]);
         Assert.Equal(RagStrategy.MultiAgent, strategies[8]);
         Assert.Equal(RagStrategy.StepBack, strategies[9]);
+        Assert.Equal(RagStrategy.QueryExpansion, strategies[10]);
     }
 
     #endregion
@@ -193,6 +200,7 @@ public class RagStrategyTests
     [InlineData(RagStrategy.Custom, true)]
     [InlineData(RagStrategy.MultiAgent, false)]
     [InlineData(RagStrategy.StepBack, false)]
+    [InlineData(RagStrategy.QueryExpansion, false)]
     public void RequiresAdmin_AllStrategies_OnlyCustomRequiresAdmin(RagStrategy strategy, bool expectedRequiresAdmin)
     {
         // Act
@@ -211,7 +219,7 @@ public class RagStrategyTests
     {
         // Assert
         var values = Enum.GetValues<RagStrategy>();
-        Assert.Equal(10, values.Length);
+        Assert.Equal(11, values.Length);
     }
 
     [Fact]

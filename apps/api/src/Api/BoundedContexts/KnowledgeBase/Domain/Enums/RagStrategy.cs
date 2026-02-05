@@ -87,7 +87,15 @@ public enum RagStrategy
     /// Use case: Complex questions benefiting from broader conceptual context.
     /// +10% accuracy, ~2,800 tokens per query.
     /// </summary>
-    StepBack = 9
+    StepBack = 9,
+
+    /// <summary>
+    /// Query Expansion strategy with synonyms and related terms.
+    /// Phases: QueryAnalysis, TermExpansion, MultiRetrieval, Synthesis.
+    /// Use case: Broad searches, handling different terminology, improved recall.
+    /// +7% accuracy, ~2,400 tokens per query.
+    /// </summary>
+    QueryExpansion = 10
 }
 
 /// <summary>
@@ -110,6 +118,7 @@ public static class RagStrategyExtensions
         RagStrategy.Custom => "CUSTOM",
         RagStrategy.MultiAgent => "MULTI_AGENT",
         RagStrategy.StepBack => "STEP_BACK",
+        RagStrategy.QueryExpansion => "QUERY_EXPANSION",
         _ => strategy.ToString().ToUpperInvariant()
     };
 
@@ -125,7 +134,7 @@ public static class RagStrategyExtensions
             return strategy;
 
         throw new ArgumentException(
-            $"Invalid RAG strategy: '{value}'. Valid values are: FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, SENTENCE_WINDOW, ITERATIVE, CUSTOM, MULTI_AGENT, STEP_BACK",
+            $"Invalid RAG strategy: '{value}'. Valid values are: FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, SENTENCE_WINDOW, ITERATIVE, CUSTOM, MULTI_AGENT, STEP_BACK, QUERY_EXPANSION",
             nameof(value));
     }
 

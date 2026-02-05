@@ -28,9 +28,9 @@ internal sealed class TierStrategyAccessService : ITierStrategyAccessService
         {
             { LlmUserTier.Anonymous, Array.Empty<RagStrategy>() },
             { LlmUserTier.User, new[] { RagStrategy.Fast, RagStrategy.Balanced } },
-            { LlmUserTier.Editor, new[] { RagStrategy.Fast, RagStrategy.Balanced, RagStrategy.Precise, RagStrategy.SentenceWindow, RagStrategy.StepBack } },
+            { LlmUserTier.Editor, new[] { RagStrategy.Fast, RagStrategy.Balanced, RagStrategy.Precise, RagStrategy.SentenceWindow, RagStrategy.StepBack, RagStrategy.QueryExpansion } },
             { LlmUserTier.Admin, Enum.GetValues<RagStrategy>() }, // All strategies
-            { LlmUserTier.Premium, new[] { RagStrategy.Fast, RagStrategy.Balanced, RagStrategy.Precise, RagStrategy.Expert, RagStrategy.Consensus, RagStrategy.SentenceWindow, RagStrategy.Iterative, RagStrategy.MultiAgent, RagStrategy.StepBack } }
+            { LlmUserTier.Premium, new[] { RagStrategy.Fast, RagStrategy.Balanced, RagStrategy.Precise, RagStrategy.Expert, RagStrategy.Consensus, RagStrategy.SentenceWindow, RagStrategy.Iterative, RagStrategy.MultiAgent, RagStrategy.StepBack, RagStrategy.QueryExpansion } }
         };
 
     public TierStrategyAccessService(

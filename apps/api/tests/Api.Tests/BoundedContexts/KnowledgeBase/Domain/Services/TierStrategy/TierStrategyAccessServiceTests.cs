@@ -55,6 +55,10 @@ public class TierStrategyAccessServiceTests
     [InlineData(LlmUserTier.Editor, RagStrategy.StepBack, true)]
     [InlineData(LlmUserTier.Premium, RagStrategy.StepBack, true)]
     [InlineData(LlmUserTier.User, RagStrategy.StepBack, false)]
+    [InlineData(LlmUserTier.Editor, RagStrategy.QueryExpansion, true)]
+    [InlineData(LlmUserTier.Premium, RagStrategy.QueryExpansion, true)]
+    [InlineData(LlmUserTier.User, RagStrategy.QueryExpansion, false)]
+    [InlineData(LlmUserTier.Admin, RagStrategy.QueryExpansion, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.StepBack, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.Fast, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.MultiAgent, true)]
@@ -118,12 +122,13 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Editor, CancellationToken.None);
 
         // Assert
-        Assert.Equal(5, strategies.Count);
+        Assert.Equal(6, strategies.Count);
         Assert.Contains(RagStrategy.Fast, strategies);
         Assert.Contains(RagStrategy.Balanced, strategies);
         Assert.Contains(RagStrategy.Precise, strategies);
         Assert.Contains(RagStrategy.SentenceWindow, strategies);
         Assert.Contains(RagStrategy.StepBack, strategies);
+        Assert.Contains(RagStrategy.QueryExpansion, strategies);
         Assert.DoesNotContain(RagStrategy.Expert, strategies);
     }
 
@@ -151,13 +156,14 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Premium, CancellationToken.None);
 
         // Assert
-        Assert.Equal(9, strategies.Count);
+        Assert.Equal(10, strategies.Count);
         Assert.DoesNotContain(RagStrategy.Custom, strategies);
         Assert.Contains(RagStrategy.Consensus, strategies);
         Assert.Contains(RagStrategy.SentenceWindow, strategies);
         Assert.Contains(RagStrategy.Iterative, strategies);
         Assert.Contains(RagStrategy.MultiAgent, strategies);
         Assert.Contains(RagStrategy.StepBack, strategies);
+        Assert.Contains(RagStrategy.QueryExpansion, strategies);
     }
 
     #endregion

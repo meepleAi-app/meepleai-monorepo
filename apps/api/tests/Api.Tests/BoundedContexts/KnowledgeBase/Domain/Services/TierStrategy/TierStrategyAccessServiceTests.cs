@@ -48,8 +48,12 @@ public class TierStrategyAccessServiceTests
     [InlineData(LlmUserTier.Premium, RagStrategy.Consensus, true)]
     [InlineData(LlmUserTier.Premium, RagStrategy.SentenceWindow, true)]
     [InlineData(LlmUserTier.Premium, RagStrategy.Iterative, true)]
+    [InlineData(LlmUserTier.Premium, RagStrategy.MultiAgent, true)]
     [InlineData(LlmUserTier.Premium, RagStrategy.Custom, false)]
+    [InlineData(LlmUserTier.User, RagStrategy.MultiAgent, false)]
+    [InlineData(LlmUserTier.Editor, RagStrategy.MultiAgent, false)]
     [InlineData(LlmUserTier.Admin, RagStrategy.Fast, true)]
+    [InlineData(LlmUserTier.Admin, RagStrategy.MultiAgent, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.SentenceWindow, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.Iterative, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.Custom, true)]
@@ -142,11 +146,12 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Premium, CancellationToken.None);
 
         // Assert
-        Assert.Equal(7, strategies.Count);
+        Assert.Equal(8, strategies.Count);
         Assert.DoesNotContain(RagStrategy.Custom, strategies);
         Assert.Contains(RagStrategy.Consensus, strategies);
         Assert.Contains(RagStrategy.SentenceWindow, strategies);
         Assert.Contains(RagStrategy.Iterative, strategies);
+        Assert.Contains(RagStrategy.MultiAgent, strategies);
     }
 
     #endregion

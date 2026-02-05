@@ -71,7 +71,15 @@ public enum RagStrategy
     /// Phases: Configurable (minimum: Synthesis).
     /// Use case: Specialized workflows, testing.
     /// </summary>
-    Custom = 7
+    Custom = 7,
+
+    /// <summary>
+    /// Multi-Agent RAG strategy with specialized agents.
+    /// Phases: RetrievalAgent, AnalysisAgent, SynthesisAgent, ValidationAgent.
+    /// Use case: Complex strategic queries requiring multi-perspective analysis.
+    /// +20% accuracy, ~12,900 tokens per query (mixed models).
+    /// </summary>
+    MultiAgent = 8
 }
 
 /// <summary>
@@ -92,6 +100,7 @@ public static class RagStrategyExtensions
         RagStrategy.SentenceWindow => "SENTENCE_WINDOW",
         RagStrategy.Iterative => "ITERATIVE",
         RagStrategy.Custom => "CUSTOM",
+        RagStrategy.MultiAgent => "MULTI_AGENT",
         _ => strategy.ToString().ToUpperInvariant()
     };
 
@@ -107,7 +116,7 @@ public static class RagStrategyExtensions
             return strategy;
 
         throw new ArgumentException(
-            $"Invalid RAG strategy: '{value}'. Valid values are: FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, SENTENCE_WINDOW, ITERATIVE, CUSTOM",
+            $"Invalid RAG strategy: '{value}'. Valid values are: FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, SENTENCE_WINDOW, ITERATIVE, CUSTOM, MULTI_AGENT",
             nameof(value));
     }
 

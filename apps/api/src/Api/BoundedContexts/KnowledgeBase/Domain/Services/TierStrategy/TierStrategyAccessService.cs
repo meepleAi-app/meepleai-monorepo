@@ -14,7 +14,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// - User: [FAST, BALANCED]
 /// - Editor: [FAST, BALANCED, PRECISE, SENTENCE_WINDOW]
 /// - Admin: [ALL] (wildcard)
-/// - Premium: [FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, SENTENCE_WINDOW, ITERATIVE]
+/// - Premium: [FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, SENTENCE_WINDOW, ITERATIVE, MULTI_AGENT]
 /// </remarks>
 internal sealed class TierStrategyAccessService : ITierStrategyAccessService
 {
@@ -30,7 +30,7 @@ internal sealed class TierStrategyAccessService : ITierStrategyAccessService
             { LlmUserTier.User, new[] { RagStrategy.Fast, RagStrategy.Balanced } },
             { LlmUserTier.Editor, new[] { RagStrategy.Fast, RagStrategy.Balanced, RagStrategy.Precise, RagStrategy.SentenceWindow } },
             { LlmUserTier.Admin, Enum.GetValues<RagStrategy>() }, // All strategies
-            { LlmUserTier.Premium, new[] { RagStrategy.Fast, RagStrategy.Balanced, RagStrategy.Precise, RagStrategy.Expert, RagStrategy.Consensus, RagStrategy.SentenceWindow, RagStrategy.Iterative } }
+            { LlmUserTier.Premium, new[] { RagStrategy.Fast, RagStrategy.Balanced, RagStrategy.Precise, RagStrategy.Expert, RagStrategy.Consensus, RagStrategy.SentenceWindow, RagStrategy.Iterative, RagStrategy.MultiAgent } }
         };
 
     public TierStrategyAccessService(

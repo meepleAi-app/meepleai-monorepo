@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 
-import { Dice6, Users, CalendarDays } from 'lucide-react';
+import { Dice6, Users, CalendarDays, History, Globe } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -236,7 +237,7 @@ export default function ToolkitLandingPage() {
           </div>
         )}
 
-        {/* Recent Sessions (Placeholder) */}
+        {/* Recent Sessions & Navigation */}
         <Card>
           <CardHeader>
             <CardTitle>Recent Sessions</CardTitle>
@@ -245,6 +246,27 @@ export default function ToolkitLandingPage() {
             <p className="text-gray-500 dark:text-gray-400 text-center py-4">
               No recent sessions yet. Create your first session above!
             </p>
+
+            {/* Navigation Links */}
+            <div className="border-t pt-4 mt-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                Explore more:
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/toolkit/history">
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <History className="w-4 h-4" />
+                    My Session History
+                  </Button>
+                </Link>
+                <Link href="/sessions">
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Globe className="w-4 h-4" />
+                    Browse All Sessions
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

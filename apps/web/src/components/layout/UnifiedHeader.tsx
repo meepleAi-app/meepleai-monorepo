@@ -28,6 +28,7 @@ import {
   UserIcon,
   User,
   Dice6,
+  FileEdit,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -55,6 +56,8 @@ interface NavItem {
   ariaLabel: string;
   /** Only show for admin users */
   adminOnly?: boolean;
+  /** Only show for editor users (includes admin) */
+  editorOnly?: boolean;
   /** Only show for authenticated users */
   authOnly?: boolean;
   /** Only show for anonymous (non-authenticated) users */
@@ -67,12 +70,14 @@ interface NavItem {
  * Visibility rules:
  * - anonOnly: only visible when NOT logged in
  * - authOnly: only visible when logged in
+ * - editorOnly: only visible for editor users (includes admin)
  * - adminOnly: only visible for admin users
  * - no flags: visible to everyone
  *
  * Anonymous users see: Home, Catalogo
  * Authenticated users see: Dashboard, Library, Chat, Toolkit, Catalogo, Profilo
- * Admin users see: + Admin
+ * Editor users see: + Editor
+ * Admin users see: + Editor, Admin
  */
 const NAV_ITEMS: NavItem[] = [
   // Anonymous-only items
@@ -128,6 +133,13 @@ const NAV_ITEMS: NavItem[] = [
     authOnly: true,
   },
   {
+    href: '/editor',
+    icon: FileEdit,
+    label: 'Editor',
+    ariaLabel: 'Navigate to editor dashboard',
+    editorOnly: true,
+  },
+  {
     href: '/admin',
     icon: Shield,
     label: 'Admin',
@@ -151,6 +163,7 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
   // Check user authentication and role
   const isAuthenticated = !!user;
   const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const isEditor = user?.role?.toLowerCase() === 'editor' || isAdmin;
 
   // Handle scroll for sticky header effect
   useEffect(() => {
@@ -194,6 +207,8 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
   const visibleNavItems = NAV_ITEMS.filter(item => {
     // Admin-only items: only for admins
     if (item.adminOnly && !isAdmin) return false;
+    // Editor-only items: only for editors (includes admins)
+    if (item.editorOnly && !isEditor) return false;
     // Auth-only items: only for authenticated users
     if (item.authOnly && !isAuthenticated) return false;
     // Anon-only items: only for non-authenticated users
@@ -272,6 +287,19 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+
+          {/* Editor link in dropdown (for editors and admins) */}
+          {isEditor && (
+            <>
+              <DropdownMenuItem asChild data-testid="editor-panel-menu-item">
+                <Link href="/editor" className="flex items-center gap-2 cursor-pointer">
+                  <FileEdit className="h-4 w-4" />
+                  <span>Editor Panel</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
 
           {/* Admin link in dropdown (for both desktop and mobile) */}
           {isAdmin && (

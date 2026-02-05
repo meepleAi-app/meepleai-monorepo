@@ -14,6 +14,7 @@ import {
   ShareIcon,
   HelpCircleIcon,
   BotIcon,
+  BrainCircuitIcon,
   CpuIcon,
   BarChartIcon,
   FileTextIcon,
@@ -242,6 +243,11 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         label: 'Prompts',
         icon: FileTextIcon,
         activePattern: /^\/admin\/prompts$/,
+      },
+      {
+        href: '/rag',
+        label: 'RAG Dashboard',
+        icon: BrainCircuitIcon,
       },
       {
         href: '/admin/rag/tier-strategy-config',

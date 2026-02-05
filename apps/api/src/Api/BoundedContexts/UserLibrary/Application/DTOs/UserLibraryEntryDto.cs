@@ -2,11 +2,12 @@ namespace Api.BoundedContexts.UserLibrary.Application.DTOs;
 
 /// <summary>
 /// DTO for a single library entry with game information.
+/// Issue #3663: Updated to support both SharedGame and PrivateGame references.
 /// </summary>
 internal record UserLibraryEntryDto(
     Guid Id,
     Guid UserId,
-    Guid GameId,
+    Guid GameId, // Backwards compatible: SharedGameId or PrivateGameId
     string GameTitle,
     string? GamePublisher,
     int? GameYearPublished,
@@ -20,5 +21,8 @@ internal record UserLibraryEntryDto(
     string? StateNotes = null,
     AgentConfigDto? CustomAgentConfig = null,
     CustomPdfDto? CustomPdf = null,
-    bool HasPdfDocuments = false
+    bool HasPdfDocuments = false,
+    Guid? PrivateGameId = null, // Issue #3663: Private game reference
+    bool IsPrivateGame = false,  // Issue #3663: Computed flag
+    bool CanProposeToCatalog = false // Issue #3663: Can propose private game to catalog
 );

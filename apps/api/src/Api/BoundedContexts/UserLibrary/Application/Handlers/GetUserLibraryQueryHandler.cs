@@ -10,7 +10,8 @@ namespace Api.BoundedContexts.UserLibrary.Application.Handlers;
 
 /// <summary>
 /// Handler for getting paginated user library.
-/// Fetches game details from SharedGameCatalog.
+/// Fetches game details from SharedGameCatalog and PrivateGames.
+/// Issue #3663: Updated to support PrivateGame references.
 /// </summary>
 internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, PaginatedLibraryResponseDto>
 {

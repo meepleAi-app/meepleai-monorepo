@@ -210,13 +210,13 @@ export const useRagConfigStore = create<RagConfigStore>()(
         set({ isSaving: true, saveError: null });
 
         try {
-          const { config } = get();
+          const { config: _config } = get();
 
           // TODO: Replace with actual API call when backend is ready
           // const response = await fetch('/api/v1/rag/config', {
           //   method: 'PUT',
           //   headers: { 'Content-Type': 'application/json' },
-          //   body: JSON.stringify(config),
+          //   body: JSON.stringify(_config),
           // });
           // if (!response.ok) throw new Error('Failed to save configuration');
 

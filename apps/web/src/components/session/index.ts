@@ -7,6 +7,7 @@ export { Scoreboard } from './Scoreboard';
 export { SessionDetailModal } from './SessionDetailModal';
 export { DiceRoller } from './DiceRoller';
 export { CardDeck } from './CardDeck';
+export { PrivateNotes } from './PrivateNotes';
 
 export type {
   Participant,
@@ -21,6 +22,7 @@ export type {
   PlayerHand,
   DiscardPile,
   CardSuit,
+  SessionNote,
 } from './types';
 
 export { DICE_TYPES, CARD_SUITS } from './types';

@@ -128,6 +128,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<Api.Infrastructure.Entities.SessionTracking.CardDrawEntity> SessionTrackingCardDraws => Set<Api.Infrastructure.Entities.SessionTracking.CardDrawEntity>();
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionDeckEntity> SessionDecks => Set<Api.Infrastructure.Entities.SessionTracking.SessionDeckEntity>();
     public DbSet<Api.Infrastructure.Entities.SessionTracking.CardEntity> Cards => Set<Api.Infrastructure.Entities.SessionTracking.CardEntity>();
+    public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionNoteEntity> SessionNotes => Set<Api.Infrastructure.Entities.SessionTracking.SessionNoteEntity>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

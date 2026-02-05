@@ -49,6 +49,7 @@ import { DEFAULT_STATS } from './types';
 import { VariantComparisonTool } from './VariantComparisonTool';
 
 import type { ViewMode } from './types';
+import type { NavGroup } from './DashboardSidebar';
 
 import './rag-dashboard.css';
 
@@ -101,6 +102,22 @@ const TECHNICAL_TABS: TabConfig[] = [
     description: 'Decision Flow Visualization',
   },
 ];
+
+// =============================================================================
+// Navigation Groups (for Breadcrumbs and legacy sidebar compatibility)
+// =============================================================================
+
+/**
+ * Navigation groups derived from TECHNICAL_TABS for components that need
+ * the NavGroup[] structure (e.g., Breadcrumbs, DashboardNav).
+ */
+export const NAVIGATION_GROUPS: NavGroup[] = TECHNICAL_TABS.map(tab => ({
+  id: tab.id,
+  label: tab.label,
+  icon: tab.id, // Icon identifier string
+  description: tab.description,
+  sections: [{ id: tab.id, label: tab.label }], // Single section per tab in new design
+}));
 
 // =============================================================================
 // View Mode Toggle

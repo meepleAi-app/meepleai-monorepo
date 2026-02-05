@@ -170,6 +170,24 @@ internal static class SharedGameCatalogEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
+        // Batch approve publications - Issue #3350
+        group.MapPost("/admin/shared-games/batch-approve", HandleBatchApprovePublications)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("BatchApproveSharedGames")
+            .WithSummary("Batch approve multiple games (Admin only)")
+            .WithDescription("Approves multiple games for publication in a single transaction. Returns success/failure counts.")
+            .Produces<BatchApproveGamesResponse>()
+            .Produces(StatusCodes.Status400BadRequest);
+
+        // Batch reject publications - Issue #3350
+        group.MapPost("/admin/shared-games/batch-reject", HandleBatchRejectPublications)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .WithName("BatchRejectSharedGames")
+            .WithSummary("Batch reject multiple games (Admin only)")
+            .WithDescription("Rejects multiple games in a single transaction with a common reason. Returns success/failure counts.")
+            .Produces<BatchRejectGamesResponse>()
+            .Produces(StatusCodes.Status400BadRequest);
+
         // Get pending approval games - Issue #2514
         group.MapGet("/admin/shared-games/pending-approvals", HandleGetPendingApprovals)
             .RequireAuthorization("AdminOnlyPolicy")
@@ -820,6 +838,69 @@ internal static class SharedGameCatalogEndpoints
         var query = new GetPendingApprovalGamesQuery(pageNumber, pageSize);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
+    }
+
+    // ========================================
+    // BATCH APPROVAL HANDLERS (Issue #3350)
+    // ========================================
+
+    private static async Task<IResult> HandleBatchApprovePublications(
+        [FromBody] BatchApproveGamesRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        if (request.GameIds == null || request.GameIds.Count == 0)
+        {
+            return Results.BadRequest(new { error = "At least one game ID is required" });
+        }
+
+        var command = new BatchApproveGamesCommand(
+            request.GameIds,
+            session!.User!.Id,
+            request.Note);
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        return Results.Ok(new BatchApproveGamesResponse(
+            result.SuccessCount,
+            result.FailureCount,
+            result.Errors));
+    }
+
+    private static async Task<IResult> HandleBatchRejectPublications(
+        [FromBody] BatchRejectGamesRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        if (request.GameIds == null || request.GameIds.Count == 0)
+        {
+            return Results.BadRequest(new { error = "At least one game ID is required" });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Reason))
+        {
+            return Results.BadRequest(new { error = "Rejection reason is required" });
+        }
+
+        var command = new BatchRejectGamesCommand(
+            request.GameIds,
+            session!.User!.Id,
+            request.Reason);
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        return Results.Ok(new BatchRejectGamesResponse(
+            result.SuccessCount,
+            result.FailureCount,
+            result.Errors));
     }
 
     private static async Task<IResult> HandleArchiveGame(
@@ -2277,6 +2358,40 @@ internal record RejectDeleteRequest(string Reason);
 /// Issue #2514: Approval workflow implementation
 /// </summary>
 internal record RejectPublicationRequest(string Reason);
+
+/// <summary>
+/// Request DTO for batch approving multiple games.
+/// Issue #3350: Batch approval/rejection for games
+/// </summary>
+internal record BatchApproveGamesRequest(
+    IReadOnlyList<Guid> GameIds,
+    string? Note);
+
+/// <summary>
+/// Response DTO for batch approve operation.
+/// Issue #3350: Batch approval/rejection for games
+/// </summary>
+internal record BatchApproveGamesResponse(
+    int SuccessCount,
+    int FailureCount,
+    IReadOnlyList<string> Errors);
+
+/// <summary>
+/// Request DTO for batch rejecting multiple games.
+/// Issue #3350: Batch approval/rejection for games
+/// </summary>
+internal record BatchRejectGamesRequest(
+    IReadOnlyList<Guid> GameIds,
+    string Reason);
+
+/// <summary>
+/// Response DTO for batch reject operation.
+/// Issue #3350: Batch approval/rejection for games
+/// </summary>
+internal record BatchRejectGamesResponse(
+    int SuccessCount,
+    int FailureCount,
+    IReadOnlyList<string> Errors);
 
 /// <summary>
 /// Request DTO for approving a document for RAG processing.

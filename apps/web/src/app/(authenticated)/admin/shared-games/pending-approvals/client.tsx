@@ -1,20 +1,23 @@
 /**
- * Pending Approvals Client - Issue #2514
+ * Pending Approvals Client - Issue #2514, Issue #3350
  *
  * Admin interface for reviewing and approving games submitted for publication:
  * - List all games in PendingApproval status
  * - Approve games (PendingApproval → Published)
  * - Reject games with reason (PendingApproval → Draft)
+ * - Batch approve/reject multiple games at once (Issue #3350)
  *
  * Backend Integration:
  * - GET /api/v1/admin/shared-games/pending-approvals
  * - POST /api/v1/admin/shared-games/:id/approve-publication
  * - POST /api/v1/admin/shared-games/:id/reject-publication
+ * - POST /api/v1/admin/shared-games/batch-approve
+ * - POST /api/v1/admin/shared-games/batch-reject
  */
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 
 import {
   CheckCircle,
@@ -26,6 +29,9 @@ import {
   FileText,
   Clock,
   ArrowLeft,
+  CheckSquare,
+  Square,
+  MinusSquare,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -53,6 +59,7 @@ import {
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api, type SharedGame } from '@/lib/api';
@@ -70,6 +77,12 @@ type RejectModalState = {
   game: SharedGame | null;
 };
 
+type BatchRejectModalState = {
+  isOpen: boolean;
+  gameIds: string[];
+  gameTitles: string[];
+};
+
 // ========== Main Component ==========
 
 export function PendingApprovalsClient() {
@@ -85,9 +98,14 @@ export function PendingApprovalsClient() {
   const [pageSize] = useState(20);
   const [total, setTotal] = useState(0);
 
+  // Selection state (Issue #3350)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   // Action states
   const [approving, setApproving] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
+  const [batchApproving, setBatchApproving] = useState(false);
+  const [batchRejecting, setBatchRejecting] = useState(false);
 
   // Modal states
   const [rejectModal, setRejectModal] = useState<RejectModalState>({
@@ -95,6 +113,14 @@ export function PendingApprovalsClient() {
     game: null,
   });
   const [rejectReason, setRejectReason] = useState('');
+
+  // Batch reject modal state (Issue #3350)
+  const [batchRejectModal, setBatchRejectModal] = useState<BatchRejectModalState>({
+    isOpen: false,
+    gameIds: [],
+    gameTitles: [],
+  });
+  const [batchRejectReason, setBatchRejectReason] = useState('');
 
   // Toast management
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -105,6 +131,53 @@ export function PendingApprovalsClient() {
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 5000);
+  }, []);
+
+  // Selection helpers (Issue #3350)
+  const allSelected = useMemo(() => {
+    return games.length > 0 && games.every(game => selectedIds.has(game.id));
+  }, [games, selectedIds]);
+
+  const someSelected = useMemo(() => {
+    return games.some(game => selectedIds.has(game.id)) && !allSelected;
+  }, [games, selectedIds, allSelected]);
+
+  const selectedCount = useMemo(() => {
+    return games.filter(game => selectedIds.has(game.id)).length;
+  }, [games, selectedIds]);
+
+  const toggleSelectAll = useCallback(() => {
+    if (allSelected) {
+      // Deselect all on current page
+      setSelectedIds(prev => {
+        const newSet = new Set(prev);
+        games.forEach(game => newSet.delete(game.id));
+        return newSet;
+      });
+    } else {
+      // Select all on current page
+      setSelectedIds(prev => {
+        const newSet = new Set(prev);
+        games.forEach(game => newSet.add(game.id));
+        return newSet;
+      });
+    }
+  }, [games, allSelected]);
+
+  const toggleSelect = useCallback((gameId: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(gameId)) {
+        newSet.delete(gameId);
+      } else {
+        newSet.add(gameId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
   }, []);
 
   // Fetch pending approvals
@@ -136,6 +209,11 @@ export function PendingApprovalsClient() {
       setApproving(game.id);
       await api.sharedGames.approvePublication(game.id);
       addToast('success', `"${game.title}" approvato e pubblicato con successo`);
+      setSelectedIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(game.id);
+        return newSet;
+      });
       fetchPendingApprovals();
     } catch (err) {
       console.error('Failed to approve game:', err);
@@ -153,7 +231,8 @@ export function PendingApprovalsClient() {
 
   // Confirm reject
   const handleRejectConfirm = async () => {
-    if (!rejectModal.game) return;
+    const game = rejectModal.game;
+    if (!game) return;
 
     if (!rejectReason.trim()) {
       addToast('error', 'Devi fornire una motivazione per il rifiuto');
@@ -162,8 +241,13 @@ export function PendingApprovalsClient() {
 
     try {
       setRejecting(true);
-      await api.sharedGames.rejectPublication(rejectModal.game.id, rejectReason);
-      addToast('info', `"${rejectModal.game.title}" rifiutato e riportato in bozza`);
+      await api.sharedGames.rejectPublication(game.id, rejectReason);
+      addToast('info', `"${game.title}" rifiutato e riportato in bozza`);
+      setSelectedIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(game.id);
+        return newSet;
+      });
       setRejectModal({ isOpen: false, game: null });
       setRejectReason('');
       fetchPendingApprovals();
@@ -172,6 +256,111 @@ export function PendingApprovalsClient() {
       addToast('error', 'Errore nel rifiuto del gioco');
     } finally {
       setRejecting(false);
+    }
+  };
+
+  // ========== Batch Operations (Issue #3350) ==========
+
+  // Handle batch approve
+  const handleBatchApprove = async () => {
+    const selectedGameIds = Array.from(selectedIds).filter(id =>
+      games.some(g => g.id === id)
+    );
+
+    if (selectedGameIds.length === 0) {
+      addToast('error', 'Seleziona almeno un gioco da approvare');
+      return;
+    }
+
+    try {
+      setBatchApproving(true);
+      const result = await api.sharedGames.batchApprove(selectedGameIds);
+
+      if (result.successCount > 0) {
+        addToast(
+          'success',
+          `${result.successCount} ${result.successCount === 1 ? 'gioco approvato' : 'giochi approvati'} con successo`
+        );
+      }
+
+      if (result.failureCount > 0) {
+        addToast(
+          'error',
+          `${result.failureCount} ${result.failureCount === 1 ? 'gioco non approvato' : 'giochi non approvati'}: ${result.errors.join(', ')}`
+        );
+      }
+
+      clearSelection();
+      fetchPendingApprovals();
+    } catch (err) {
+      console.error('Failed to batch approve games:', err);
+      addToast('error', "Errore nell'approvazione batch dei giochi");
+    } finally {
+      setBatchApproving(false);
+    }
+  };
+
+  // Handle batch reject (opens modal)
+  const handleBatchRejectClick = () => {
+    const selectedGameIds = Array.from(selectedIds).filter(id =>
+      games.some(g => g.id === id)
+    );
+    const selectedTitles = games
+      .filter(g => selectedIds.has(g.id))
+      .map(g => g.title);
+
+    if (selectedGameIds.length === 0) {
+      addToast('error', 'Seleziona almeno un gioco da rifiutare');
+      return;
+    }
+
+    setBatchRejectModal({
+      isOpen: true,
+      gameIds: selectedGameIds,
+      gameTitles: selectedTitles,
+    });
+    setBatchRejectReason('');
+  };
+
+  // Confirm batch reject
+  const handleBatchRejectConfirm = async () => {
+    if (batchRejectModal.gameIds.length === 0) return;
+
+    if (!batchRejectReason.trim()) {
+      addToast('error', 'Devi fornire una motivazione per il rifiuto');
+      return;
+    }
+
+    try {
+      setBatchRejecting(true);
+      const result = await api.sharedGames.batchReject(
+        batchRejectModal.gameIds,
+        batchRejectReason
+      );
+
+      if (result.successCount > 0) {
+        addToast(
+          'info',
+          `${result.successCount} ${result.successCount === 1 ? 'gioco rifiutato' : 'giochi rifiutati'} e riportati in bozza`
+        );
+      }
+
+      if (result.failureCount > 0) {
+        addToast(
+          'error',
+          `${result.failureCount} ${result.failureCount === 1 ? 'gioco non rifiutato' : 'giochi non rifiutati'}: ${result.errors.join(', ')}`
+        );
+      }
+
+      clearSelection();
+      setBatchRejectModal({ isOpen: false, gameIds: [], gameTitles: [] });
+      setBatchRejectReason('');
+      fetchPendingApprovals();
+    } catch (err) {
+      console.error('Failed to batch reject games:', err);
+      addToast('error', 'Errore nel rifiuto batch dei giochi');
+    } finally {
+      setBatchRejecting(false);
     }
   };
 
@@ -215,6 +404,49 @@ export function PendingApprovalsClient() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Batch Action Bar (Issue #3350) */}
+            {selectedCount > 0 && (
+              <div className="flex items-center justify-between bg-muted/50 rounded-lg p-4 border">
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="px-3 py-1">
+                    {selectedCount} {selectedCount === 1 ? 'selezionato' : 'selezionati'}
+                  </Badge>
+                  <Button variant="ghost" size="sm" onClick={clearSelection}>
+                    Deseleziona tutto
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleBatchApprove}
+                    disabled={batchApproving || batchRejecting}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {batchApproving ? (
+                      <Spinner size="sm" className="mr-2" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Approva Selezionati
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBatchRejectClick}
+                    disabled={batchApproving || batchRejecting}
+                  >
+                    {batchRejecting ? (
+                      <Spinner size="sm" className="mr-2" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Rifiuta Selezionati
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Loading State */}
             {loading && (
               <div className="flex justify-center py-12">
@@ -239,6 +471,22 @@ export function PendingApprovalsClient() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        {/* Selection checkbox header (Issue #3350) */}
+                        <TableHead className="w-[50px]">
+                          <button
+                            onClick={toggleSelectAll}
+                            className="flex items-center justify-center p-1 hover:bg-muted rounded"
+                            title={allSelected ? 'Deseleziona tutto' : 'Seleziona tutto'}
+                          >
+                            {allSelected ? (
+                              <CheckSquare className="h-5 w-5 text-primary" />
+                            ) : someSelected ? (
+                              <MinusSquare className="h-5 w-5 text-primary" />
+                            ) : (
+                              <Square className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </button>
+                        </TableHead>
                         <TableHead className="w-[80px]">Immagine</TableHead>
                         <TableHead className="w-[25%]">Titolo</TableHead>
                         <TableHead className="w-[12%]">Giocatori</TableHead>
@@ -250,7 +498,19 @@ export function PendingApprovalsClient() {
                     </TableHeader>
                     <TableBody>
                       {games.map(game => (
-                        <TableRow key={game.id}>
+                        <TableRow
+                          key={game.id}
+                          className={selectedIds.has(game.id) ? 'bg-muted/50' : ''}
+                        >
+                          {/* Selection checkbox (Issue #3350) */}
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedIds.has(game.id)}
+                              onCheckedChange={() => toggleSelect(game.id)}
+                              aria-label={`Seleziona ${game.title}`}
+                            />
+                          </TableCell>
+
                           {/* Thumbnail */}
                           <TableCell>
                             {game.thumbnailUrl ? (
@@ -378,7 +638,7 @@ export function PendingApprovalsClient() {
           </CardContent>
         </Card>
 
-        {/* Reject Confirmation Modal */}
+        {/* Reject Confirmation Modal (Single) */}
         <Dialog
           open={rejectModal.isOpen}
           onOpenChange={isOpen => {
@@ -440,6 +700,94 @@ export function PendingApprovalsClient() {
                   <>
                     <XCircle className="h-4 w-4 mr-2" />
                     Rifiuta Pubblicazione
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Batch Reject Confirmation Modal (Issue #3350) */}
+        <Dialog
+          open={batchRejectModal.isOpen}
+          onOpenChange={isOpen => {
+            if (!isOpen) {
+              setBatchRejectModal({ isOpen: false, gameIds: [], gameTitles: [] });
+              setBatchRejectReason('');
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <XCircle className="h-5 w-5 text-destructive" />
+                Rifiuta {batchRejectModal.gameIds.length} Giochi
+              </DialogTitle>
+              <DialogDescription>
+                Stai per rifiutare la pubblicazione di {batchRejectModal.gameIds.length}{' '}
+                {batchRejectModal.gameIds.length === 1 ? 'gioco' : 'giochi'}. Tutti torneranno in
+                stato Bozza con la stessa motivazione.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 mt-4">
+              {/* Games list preview */}
+              <div className="max-h-32 overflow-y-auto bg-muted/50 rounded-md p-3">
+                <p className="text-sm font-medium mb-2">Giochi selezionati:</p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  {batchRejectModal.gameTitles.slice(0, 5).map((title, idx) => (
+                    <li key={idx} className="truncate">
+                      • {title}
+                    </li>
+                  ))}
+                  {batchRejectModal.gameTitles.length > 5 && (
+                    <li className="text-muted-foreground/70">
+                      ... e altri {batchRejectModal.gameTitles.length - 5}
+                    </li>
+                  )}
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="batch-reject-reason">Motivazione comune del rifiuto *</Label>
+                <Textarea
+                  id="batch-reject-reason"
+                  placeholder="Spiega perché questi giochi non possono essere pubblicati..."
+                  value={batchRejectReason}
+                  onChange={e => setBatchRejectReason(e.target.value)}
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Questa motivazione sarà applicata a tutti i giochi selezionati.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter className="mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setBatchRejectModal({ isOpen: false, gameIds: [], gameTitles: [] });
+                  setBatchRejectReason('');
+                }}
+                disabled={batchRejecting}
+              >
+                Annulla
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleBatchRejectConfirm}
+                disabled={batchRejecting || !batchRejectReason.trim()}
+              >
+                {batchRejecting ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Rifiutando...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Rifiuta {batchRejectModal.gameIds.length} Giochi
                   </>
                 )}
               </Button>

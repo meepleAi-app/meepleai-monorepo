@@ -10,7 +10,9 @@ import {
   ConfidenceBadge,
   ChatCitationLink,
   TypingIndicator,
+  FeedbackButtons,
   type Citation,
+  type FeedbackValue,
 } from '../meeple/chat-message';
 
 // ============================================================================
@@ -442,5 +444,294 @@ describe('TypingIndicator', () => {
     render(<TypingIndicator className="custom-indicator" />);
 
     expect(screen.getByLabelText('AI is typing')).toHaveClass('custom-indicator');
+  });
+});
+
+// ============================================================================
+// FeedbackButtons Component Tests (Issue #3352)
+// ============================================================================
+
+describe('FeedbackButtons', () => {
+  const mockOnFeedbackChange = vi.fn().mockResolvedValue(undefined);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('Basic Rendering', () => {
+    it('renders thumbs up and thumbs down buttons', () => {
+      render(<FeedbackButtons value={null} onFeedbackChange={mockOnFeedbackChange} />);
+
+      expect(screen.getByLabelText('Rate as helpful')).toBeInTheDocument();
+      expect(screen.getByLabelText('Rate as not helpful')).toBeInTheDocument();
+    });
+
+    it('applies custom className', () => {
+      const { container } = render(
+        <FeedbackButtons value={null} onFeedbackChange={mockOnFeedbackChange} className="custom-feedback" />
+      );
+
+      expect(container.firstChild).toHaveClass('custom-feedback');
+    });
+  });
+
+  describe('Feedback State', () => {
+    it('shows active state for positive feedback', () => {
+      render(<FeedbackButtons value="helpful" onFeedbackChange={mockOnFeedbackChange} />);
+
+      const thumbsUp = screen.getByLabelText('Remove helpful rating');
+      expect(thumbsUp).toHaveClass('bg-green-100');
+    });
+
+    it('shows active state for negative feedback', () => {
+      render(<FeedbackButtons value="not-helpful" onFeedbackChange={mockOnFeedbackChange} />);
+
+      const thumbsDown = screen.getByLabelText('Remove not helpful rating');
+      expect(thumbsDown).toHaveClass('bg-red-100');
+    });
+
+    it('shows neutral state when no feedback', () => {
+      render(<FeedbackButtons value={null} onFeedbackChange={mockOnFeedbackChange} />);
+
+      const thumbsUp = screen.getByLabelText('Rate as helpful');
+      const thumbsDown = screen.getByLabelText('Rate as not helpful');
+      expect(thumbsUp).not.toHaveClass('bg-green-100');
+      expect(thumbsDown).not.toHaveClass('bg-red-100');
+    });
+  });
+
+  describe('Interaction', () => {
+    it('calls onFeedbackChange with helpful when thumbs up clicked', async () => {
+      const user = userEvent.setup();
+      render(<FeedbackButtons value={null} onFeedbackChange={mockOnFeedbackChange} />);
+
+      await user.click(screen.getByLabelText('Rate as helpful'));
+
+      expect(mockOnFeedbackChange).toHaveBeenCalledWith('helpful');
+    });
+
+    it('calls onFeedbackChange with null when positive feedback toggled off', async () => {
+      const user = userEvent.setup();
+      render(<FeedbackButtons value="helpful" onFeedbackChange={mockOnFeedbackChange} />);
+
+      await user.click(screen.getByLabelText('Remove helpful rating'));
+
+      expect(mockOnFeedbackChange).toHaveBeenCalledWith(null);
+    });
+
+    it('shows comment input when thumbs down clicked with showCommentOnNegative', async () => {
+      const user = userEvent.setup();
+      render(<FeedbackButtons value={null} onFeedbackChange={mockOnFeedbackChange} showCommentOnNegative />);
+
+      await user.click(screen.getByLabelText('Rate as not helpful'));
+
+      expect(screen.getByPlaceholderText(/What could be improved/i)).toBeInTheDocument();
+    });
+
+    it('submits negative feedback with comment', async () => {
+      const user = userEvent.setup();
+      render(<FeedbackButtons value={null} onFeedbackChange={mockOnFeedbackChange} showCommentOnNegative />);
+
+      // Click thumbs down to show comment input
+      await user.click(screen.getByLabelText('Rate as not helpful'));
+
+      // Type comment
+      const textarea = screen.getByPlaceholderText(/What could be improved/i);
+      await user.type(textarea, 'Response was incorrect');
+
+      // Submit
+      await user.click(screen.getByRole('button', { name: 'Submit' }));
+
+      expect(mockOnFeedbackChange).toHaveBeenCalledWith('not-helpful', 'Response was incorrect');
+    });
+
+    it('cancels comment input on Cancel click', async () => {
+      const user = userEvent.setup();
+      render(<FeedbackButtons value={null} onFeedbackChange={mockOnFeedbackChange} showCommentOnNegative />);
+
+      // Show comment input
+      await user.click(screen.getByLabelText('Rate as not helpful'));
+      expect(screen.getByPlaceholderText(/What could be improved/i)).toBeInTheDocument();
+
+      // Click Cancel
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(screen.queryByPlaceholderText(/What could be improved/i)).not.toBeInTheDocument();
+      expect(mockOnFeedbackChange).not.toHaveBeenCalled();
+    });
+
+    it('cancels comment input on Escape key', async () => {
+      const user = userEvent.setup();
+      render(<FeedbackButtons value={null} onFeedbackChange={mockOnFeedbackChange} showCommentOnNegative />);
+
+      // Show comment input
+      await user.click(screen.getByLabelText('Rate as not helpful'));
+
+      // Press Escape
+      const textarea = screen.getByPlaceholderText(/What could be improved/i);
+      textarea.focus();
+      await user.keyboard('{Escape}');
+
+      expect(screen.queryByPlaceholderText(/What could be improved/i)).not.toBeInTheDocument();
+    });
+
+    it('submits on Enter key in comment input', async () => {
+      const user = userEvent.setup();
+      render(<FeedbackButtons value={null} onFeedbackChange={mockOnFeedbackChange} showCommentOnNegative />);
+
+      // Show comment input
+      await user.click(screen.getByLabelText('Rate as not helpful'));
+
+      // Type and press Enter
+      const textarea = screen.getByPlaceholderText(/What could be improved/i);
+      await user.type(textarea, 'Test comment');
+      await user.keyboard('{Enter}');
+
+      expect(mockOnFeedbackChange).toHaveBeenCalledWith('not-helpful', 'Test comment');
+    });
+  });
+
+  describe('Loading State', () => {
+    it('disables buttons when loading', () => {
+      render(<FeedbackButtons value={null} onFeedbackChange={mockOnFeedbackChange} isLoading />);
+
+      expect(screen.getByLabelText('Rate as helpful')).toBeDisabled();
+      expect(screen.getByLabelText('Rate as not helpful')).toBeDisabled();
+    });
+  });
+
+  describe('Disabled State', () => {
+    it('disables buttons when disabled prop is true', () => {
+      render(<FeedbackButtons value={null} onFeedbackChange={mockOnFeedbackChange} disabled />);
+
+      expect(screen.getByLabelText('Rate as helpful')).toBeDisabled();
+      expect(screen.getByLabelText('Rate as not helpful')).toBeDisabled();
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('has correct aria-pressed for active feedback', () => {
+      render(<FeedbackButtons value="helpful" onFeedbackChange={mockOnFeedbackChange} />);
+
+      const thumbsUp = screen.getByLabelText('Remove helpful rating');
+      expect(thumbsUp).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('has correct aria-pressed for inactive feedback', () => {
+      render(<FeedbackButtons value={null} onFeedbackChange={mockOnFeedbackChange} />);
+
+      const thumbsUp = screen.getByLabelText('Rate as helpful');
+      expect(thumbsUp).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('comment textarea has aria-label', async () => {
+      const user = userEvent.setup();
+      render(<FeedbackButtons value={null} onFeedbackChange={mockOnFeedbackChange} showCommentOnNegative />);
+
+      await user.click(screen.getByLabelText('Rate as not helpful'));
+
+      expect(screen.getByLabelText('Feedback comment')).toBeInTheDocument();
+    });
+  });
+});
+
+// ============================================================================
+// ChatMessage with Feedback Integration Tests (Issue #3352)
+// ============================================================================
+
+describe('ChatMessage with Feedback', () => {
+  const mockOnFeedbackChange = vi.fn().mockResolvedValue(undefined);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders feedback buttons for assistant messages when handler provided', () => {
+    render(
+      <ChatMessage
+        role="assistant"
+        content="Test AI message"
+        onFeedbackChange={mockOnFeedbackChange}
+      />
+    );
+
+    expect(screen.getByLabelText('Rate as helpful')).toBeInTheDocument();
+    expect(screen.getByLabelText('Rate as not helpful')).toBeInTheDocument();
+  });
+
+  it('does not render feedback buttons for user messages', () => {
+    render(
+      <ChatMessage
+        role="user"
+        content="Test user message"
+        avatar={{ fallback: 'U' }}
+        onFeedbackChange={mockOnFeedbackChange}
+      />
+    );
+
+    expect(screen.queryByLabelText('Rate as helpful')).not.toBeInTheDocument();
+  });
+
+  it('does not render feedback buttons when typing', () => {
+    render(
+      <ChatMessage
+        role="assistant"
+        content=""
+        isTyping
+        onFeedbackChange={mockOnFeedbackChange}
+      />
+    );
+
+    expect(screen.queryByLabelText('Rate as helpful')).not.toBeInTheDocument();
+  });
+
+  it('does not render feedback buttons when showFeedback is false', () => {
+    render(
+      <ChatMessage
+        role="assistant"
+        content="Test AI message"
+        onFeedbackChange={mockOnFeedbackChange}
+        showFeedback={false}
+      />
+    );
+
+    expect(screen.queryByLabelText('Rate as helpful')).not.toBeInTheDocument();
+  });
+
+  it('does not render feedback buttons when no handler provided', () => {
+    render(
+      <ChatMessage
+        role="assistant"
+        content="Test AI message"
+      />
+    );
+
+    expect(screen.queryByLabelText('Rate as helpful')).not.toBeInTheDocument();
+  });
+
+  it('passes feedback value to FeedbackButtons', () => {
+    render(
+      <ChatMessage
+        role="assistant"
+        content="Test AI message"
+        feedback="helpful"
+        onFeedbackChange={mockOnFeedbackChange}
+      />
+    );
+
+    expect(screen.getByLabelText('Remove helpful rating')).toBeInTheDocument();
+  });
+
+  it('shows loading state in feedback buttons', () => {
+    render(
+      <ChatMessage
+        role="assistant"
+        content="Test AI message"
+        onFeedbackChange={mockOnFeedbackChange}
+        isFeedbackLoading
+      />
+    );
+
+    expect(screen.getByLabelText('Rate as helpful')).toBeDisabled();
   });
 });

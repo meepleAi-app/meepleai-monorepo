@@ -29,7 +29,10 @@ internal record Snippet(string text, string source, int page, int line, float sc
 
 internal record IngestPdfResponse(string jobId);
 internal record SeedRequest(string gameId);
-internal record AgentFeedbackRequest(string messageId, string endpoint, string? outcome, string userId, string? gameId);
+/// <summary>
+/// Issue #3352: AI Response Feedback System - includes optional comment for detailed feedback
+/// </summary>
+internal record AgentFeedbackRequest(string messageId, string endpoint, string? outcome, string userId, string? gameId, string? comment = null);
 
 // AI-02: RAG Explain models
 internal record ExplainRequest(string gameId, string topic, Guid? chatId = null);

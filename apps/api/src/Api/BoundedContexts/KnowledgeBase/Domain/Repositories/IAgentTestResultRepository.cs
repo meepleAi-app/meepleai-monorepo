@@ -74,4 +74,25 @@ internal interface IAgentTestResultRepository
     /// Checks if a test result exists.
     /// </summary>
     Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all test results for metrics aggregation with optional filters.
+    /// Issue #3382: Agent Metrics Dashboard.
+    /// </summary>
+    Task<List<AgentTestResult>> GetForMetricsAsync(
+        DateTime? from = null,
+        DateTime? to = null,
+        Guid? typologyId = null,
+        string? strategy = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets aggregate metrics counts efficiently.
+    /// Issue #3382: Agent Metrics Dashboard.
+    /// </summary>
+    Task<(int TotalCount, int TotalTokens, decimal TotalCost, double AvgLatency, double AvgConfidence)> GetAggregateMetricsAsync(
+        DateTime? from = null,
+        DateTime? to = null,
+        Guid? typologyId = null,
+        CancellationToken cancellationToken = default);
 }

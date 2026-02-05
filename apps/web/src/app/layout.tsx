@@ -45,6 +45,16 @@ export const metadata: Metadata = {
     "Never argue about rules again. Get instant, accurate answers from any game's rulebook with AI-powered semantic search.",
   keywords: ['board games', 'rules', 'AI', 'assistant', 'semantic search'],
   authors: [{ name: 'MeepleAI Team' }],
+  // PWA manifest (Issue #3346)
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'MeepleAI',
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {

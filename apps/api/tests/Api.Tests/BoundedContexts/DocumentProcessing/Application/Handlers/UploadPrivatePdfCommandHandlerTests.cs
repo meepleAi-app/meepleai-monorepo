@@ -1,6 +1,10 @@
+using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Handlers;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -14,6 +18,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 
@@ -26,9 +31,11 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 public class UploadPrivatePdfCommandHandlerTests
 {
     private readonly Mock<IUserLibraryRepository> _mockLibraryRepository;
+    private readonly Mock<IUserRepository> _mockUserRepository;
     private readonly Mock<IPdfDocumentRepository> _mockPdfRepository;
     private readonly Mock<IBlobStorageService> _mockBlobStorageService;
     private readonly Mock<IBackgroundTaskService> _mockBackgroundTaskService;
+    private readonly Mock<IPdfUploadQuotaService> _mockQuotaService;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<ILogger<UploadPrivatePdfCommandHandler>> _mockLogger;
     private readonly UploadPrivatePdfCommandHandler _handler;
@@ -36,19 +43,62 @@ public class UploadPrivatePdfCommandHandlerTests
     public UploadPrivatePdfCommandHandlerTests()
     {
         _mockLibraryRepository = new Mock<IUserLibraryRepository>();
+        _mockUserRepository = new Mock<IUserRepository>();
         _mockPdfRepository = new Mock<IPdfDocumentRepository>();
         _mockBlobStorageService = new Mock<IBlobStorageService>();
         _mockBackgroundTaskService = new Mock<IBackgroundTaskService>();
+        _mockQuotaService = new Mock<IPdfUploadQuotaService>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockLogger = new Mock<ILogger<UploadPrivatePdfCommandHandler>>();
 
+        // Setup default quota mock to allow uploads
+        SetupDefaultQuotaMocks();
+
         _handler = new UploadPrivatePdfCommandHandler(
             _mockLibraryRepository.Object,
+            _mockUserRepository.Object,
             _mockPdfRepository.Object,
             _mockBlobStorageService.Object,
             _mockBackgroundTaskService.Object,
+            _mockQuotaService.Object,
             _mockUnitOfWork.Object,
             _mockLogger.Object);
+    }
+
+    private void SetupDefaultQuotaMocks()
+    {
+        // Default: allow all quota checks
+        _mockQuotaService
+            .Setup(s => s.CheckPerGameQuotaAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Guid>(),
+                It.IsAny<UserTier>(),
+                It.IsAny<AuthRole>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PerGameQuotaResult.Success(0, 10));
+
+        _mockQuotaService
+            .Setup(s => s.CheckQuotaAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<UserTier>(),
+                It.IsAny<AuthRole>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PdfUploadQuotaResult.Success(0, 20, 0, 100, DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(7)));
+
+        // Setup default user mock
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid userId, CancellationToken _) =>
+            {
+                var user = new User(
+                    userId,
+                    new Email("test@example.com"),
+                    "TestUser",
+                    PasswordHash.Create("TestPassword123!"),
+                    AuthRole.User,
+                    UserTier.Normal);
+                return user;
+            });
     }
 
     #region Constructor Tests
@@ -59,9 +109,26 @@ public class UploadPrivatePdfCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new UploadPrivatePdfCommandHandler(
             null!,
+            _mockUserRepository.Object,
             _mockPdfRepository.Object,
             _mockBlobStorageService.Object,
             _mockBackgroundTaskService.Object,
+            _mockQuotaService.Object,
+            _mockUnitOfWork.Object,
+            _mockLogger.Object));
+    }
+
+    [Fact]
+    public void Constructor_WithNullUserRepository_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => new UploadPrivatePdfCommandHandler(
+            _mockLibraryRepository.Object,
+            null!,
+            _mockPdfRepository.Object,
+            _mockBlobStorageService.Object,
+            _mockBackgroundTaskService.Object,
+            _mockQuotaService.Object,
             _mockUnitOfWork.Object,
             _mockLogger.Object));
     }
@@ -72,9 +139,11 @@ public class UploadPrivatePdfCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new UploadPrivatePdfCommandHandler(
             _mockLibraryRepository.Object,
+            _mockUserRepository.Object,
             null!,
             _mockBlobStorageService.Object,
             _mockBackgroundTaskService.Object,
+            _mockQuotaService.Object,
             _mockUnitOfWork.Object,
             _mockLogger.Object));
     }
@@ -85,9 +154,11 @@ public class UploadPrivatePdfCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new UploadPrivatePdfCommandHandler(
             _mockLibraryRepository.Object,
+            _mockUserRepository.Object,
             _mockPdfRepository.Object,
             null!,
             _mockBackgroundTaskService.Object,
+            _mockQuotaService.Object,
             _mockUnitOfWork.Object,
             _mockLogger.Object));
     }
@@ -98,8 +169,25 @@ public class UploadPrivatePdfCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new UploadPrivatePdfCommandHandler(
             _mockLibraryRepository.Object,
+            _mockUserRepository.Object,
             _mockPdfRepository.Object,
             _mockBlobStorageService.Object,
+            null!,
+            _mockQuotaService.Object,
+            _mockUnitOfWork.Object,
+            _mockLogger.Object));
+    }
+
+    [Fact]
+    public void Constructor_WithNullQuotaService_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => new UploadPrivatePdfCommandHandler(
+            _mockLibraryRepository.Object,
+            _mockUserRepository.Object,
+            _mockPdfRepository.Object,
+            _mockBlobStorageService.Object,
+            _mockBackgroundTaskService.Object,
             null!,
             _mockUnitOfWork.Object,
             _mockLogger.Object));
@@ -111,9 +199,11 @@ public class UploadPrivatePdfCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new UploadPrivatePdfCommandHandler(
             _mockLibraryRepository.Object,
+            _mockUserRepository.Object,
             _mockPdfRepository.Object,
             _mockBlobStorageService.Object,
             _mockBackgroundTaskService.Object,
+            _mockQuotaService.Object,
             null!,
             _mockLogger.Object));
     }
@@ -124,9 +214,11 @@ public class UploadPrivatePdfCommandHandlerTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new UploadPrivatePdfCommandHandler(
             _mockLibraryRepository.Object,
+            _mockUserRepository.Object,
             _mockPdfRepository.Object,
             _mockBlobStorageService.Object,
             _mockBackgroundTaskService.Object,
+            _mockQuotaService.Object,
             _mockUnitOfWork.Object,
             null!));
     }
@@ -321,8 +413,9 @@ public class UploadPrivatePdfCommandHandlerTests
         result.PdfId.Should().Be(pdfId);
         result.FileName.Should().Be("rulebook.pdf");
         result.FileSize.Should().Be(1024);
-        result.Status.Should().Be("pending");
-        result.SseStreamUrl.Should().Contain(pdfId.ToString());
+        result.Status.Should().Be("processing");
+        result.SseStreamUrl.Should().Contain(entryId.ToString());
+        result.SseStreamUrl.Should().Contain(userId.ToString());
 
         // Verify repository interactions
         _mockPdfRepository.Verify(

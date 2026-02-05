@@ -51,6 +51,9 @@ internal static class DocumentProcessingServiceExtensions
         services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>(); // User tier-based upload quotas
         services.AddScoped<CitationPriorityService>(); // ISSUE-2051: Citation priority and deduplication
 
+        // Issue #3653: Private PDF progress streaming service (singleton for in-memory subscriber management)
+        services.AddSingleton<IPrivatePdfProgressStreamService, PrivatePdfProgressStreamService>();
+
         // Issue #2732: Share request document services
         services.AddScoped<IShareRequestDocumentService, ShareRequestDocumentService>();
         services.AddScoped<IStorageQuotaService, StorageQuotaService>();

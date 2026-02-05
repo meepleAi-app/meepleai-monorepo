@@ -1,12 +1,16 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Commands.Labels;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Application.Queries.Labels;
+using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Extensions;
 using Api.Middleware.Exceptions;
+using Api.Models;
 using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -39,6 +43,7 @@ internal static class UserLibraryEndpoints
         MapUploadCustomGamePdfEndpoint(group);
         MapResetGamePdfEndpoint(group);
         MapGetGamePdfsEndpoint(group); // Issue #3152
+        MapPrivatePdfProgressStreamEndpoint(group); // Issue #3653
         MapRemovePrivatePdfEndpoint(group); // Issue #3651
 
         // Library sharing endpoints
@@ -538,6 +543,84 @@ internal static class UserLibraryEndpoints
         .WithTags("Library", "PDF")
         .WithSummary("Get game PDFs")
         .WithDescription("Returns all PDFs associated with a game in user's library (custom uploads + shared catalog). Issue #3152.")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// Issue #3653: SSE endpoint for streaming private PDF processing progress.
+    /// </summary>
+    private static void MapPrivatePdfProgressStreamEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/{entryId:guid}/pdf/progress", async (
+            Guid entryId,
+            IPrivatePdfProgressStreamService progressService,
+            IUserLibraryRepository libraryRepository,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Verify user owns the library entry
+            var libraryEntry = await libraryRepository.GetByIdAsync(entryId, ct).ConfigureAwait(false);
+            if (libraryEntry is null)
+            {
+                return Results.NotFound(new { error = "Library entry not found" });
+            }
+
+            if (libraryEntry.UserId != userId)
+            {
+                return Results.Forbid();
+            }
+
+            // Set up SSE response
+            context.Response.Headers.ContentType = "text/event-stream";
+            context.Response.Headers.CacheControl = "no-cache";
+            context.Response.Headers.Connection = "keep-alive";
+
+            try
+            {
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+
+                await foreach (var progress in progressService.SubscribeToProgress(userId, entryId, ct).ConfigureAwait(false))
+                {
+                    // Skip heartbeat messages (special percent value of -1)
+                    if (progress.Percent == -1)
+                    {
+                        await context.Response.WriteAsync($": heartbeat\n\n", ct).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        var json = JsonSerializer.Serialize(progress, jsonOptions);
+                        await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+                    }
+
+                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Client disconnected - this is expected
+            }
+
+            return Results.Empty;
+        })
+        .RequireAuthenticatedUser()
+        .Produces<ProcessingProgressJson>(200, contentType: "text/event-stream")
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .WithTags("Library", "PDF", "SSE")
+        .WithSummary("Stream PDF processing progress (SSE)")
+        .WithDescription("Server-Sent Events endpoint for real-time progress updates during private PDF processing. Issue #3653. Heartbeat every 30s.")
         .WithOpenApi();
     }
 

@@ -150,3 +150,181 @@ public enum ProcessingStep
     /// </summary>
     Failed = 6
 }
+
+/// <summary>
+/// JSON-serializable progress model for SSE streaming.
+/// Issue #3653 - Private PDF Upload Endpoint Full Integration.
+/// </summary>
+public class ProcessingProgressJson
+{
+    /// <summary>
+    /// Current processing step (uploading, extracting, chunking, embedding, indexing, completed, failed).
+    /// </summary>
+    public ProcessingStep Step { get; set; }
+
+    /// <summary>
+    /// Overall completion percentage (0-100, or -1 for heartbeat).
+    /// </summary>
+    public int Percent { get; set; }
+
+    /// <summary>
+    /// Human-readable status message.
+    /// </summary>
+    public string? Message { get; set; }
+
+    /// <summary>
+    /// Number of pages processed (for extracting step).
+    /// </summary>
+    public int? Pages { get; set; }
+
+    /// <summary>
+    /// Total number of pages in the PDF.
+    /// </summary>
+    public int? TotalPages { get; set; }
+
+    /// <summary>
+    /// Number of chunks created (for chunking step).
+    /// </summary>
+    public int? Chunks { get; set; }
+
+    /// <summary>
+    /// Number of embeddings generated (for embedding step).
+    /// </summary>
+    public int? Embeddings { get; set; }
+
+    /// <summary>
+    /// Number of vectors indexed (for indexing step).
+    /// </summary>
+    public int? Indexed { get; set; }
+
+    /// <summary>
+    /// Error message if processing failed.
+    /// </summary>
+    public string? Error { get; set; }
+
+    /// <summary>
+    /// Creates a progress update from the internal ProcessingProgress model.
+    /// </summary>
+    public static ProcessingProgressJson FromProgress(ProcessingProgress progress)
+    {
+        return new ProcessingProgressJson
+        {
+            Step = progress.CurrentStep,
+            Percent = progress.PercentComplete,
+            Message = GetMessageForStep(progress.CurrentStep),
+            Pages = progress.CurrentStep == ProcessingStep.Extracting ? progress.PagesProcessed : null,
+            TotalPages = progress.TotalPages > 0 ? progress.TotalPages : null,
+            Error = progress.ErrorMessage
+        };
+    }
+
+    /// <summary>
+    /// Creates a simple progress update for a specific step.
+    /// </summary>
+    public static ProcessingProgressJson ForStep(ProcessingStep step, int percent, string? message = null)
+    {
+        return new ProcessingProgressJson
+        {
+            Step = step,
+            Percent = percent,
+            Message = message ?? GetMessageForStep(step)
+        };
+    }
+
+    /// <summary>
+    /// Creates an extracting progress update with page information.
+    /// </summary>
+    public static ProcessingProgressJson ForExtracting(int pages, int totalPages)
+    {
+        var percent = ProcessingProgress.CalculatePercentComplete(ProcessingStep.Extracting, pages, totalPages);
+        return new ProcessingProgressJson
+        {
+            Step = ProcessingStep.Extracting,
+            Percent = percent,
+            Message = $"Extracting page {pages} of {totalPages}...",
+            Pages = pages,
+            TotalPages = totalPages
+        };
+    }
+
+    /// <summary>
+    /// Creates a chunking progress update with chunk count.
+    /// </summary>
+    public static ProcessingProgressJson ForChunking(int chunks)
+    {
+        return new ProcessingProgressJson
+        {
+            Step = ProcessingStep.Chunking,
+            Percent = 50,
+            Message = $"Created {chunks} text chunks",
+            Chunks = chunks
+        };
+    }
+
+    /// <summary>
+    /// Creates an embedding progress update with embedding count.
+    /// </summary>
+    public static ProcessingProgressJson ForEmbedding(int embeddings)
+    {
+        return new ProcessingProgressJson
+        {
+            Step = ProcessingStep.Embedding,
+            Percent = 70,
+            Message = $"Generated {embeddings} embeddings",
+            Embeddings = embeddings
+        };
+    }
+
+    /// <summary>
+    /// Creates an indexing progress update with indexed count.
+    /// </summary>
+    public static ProcessingProgressJson ForIndexing(int indexed)
+    {
+        return new ProcessingProgressJson
+        {
+            Step = ProcessingStep.Indexing,
+            Percent = 90,
+            Message = $"Indexed {indexed} vectors",
+            Indexed = indexed
+        };
+    }
+
+    /// <summary>
+    /// Creates a completed progress update.
+    /// </summary>
+    public static ProcessingProgressJson Completed()
+    {
+        return new ProcessingProgressJson
+        {
+            Step = ProcessingStep.Completed,
+            Percent = 100,
+            Message = "Ready to chat!"
+        };
+    }
+
+    /// <summary>
+    /// Creates a failed progress update with error message.
+    /// </summary>
+    public static ProcessingProgressJson Failed(string error)
+    {
+        return new ProcessingProgressJson
+        {
+            Step = ProcessingStep.Failed,
+            Percent = 0,
+            Message = "Processing failed",
+            Error = error
+        };
+    }
+
+    private static string GetMessageForStep(ProcessingStep step) => step switch
+    {
+        ProcessingStep.Uploading => "Uploading file...",
+        ProcessingStep.Extracting => "Extracting text from PDF...",
+        ProcessingStep.Chunking => "Creating text chunks...",
+        ProcessingStep.Embedding => "Generating AI embeddings...",
+        ProcessingStep.Indexing => "Indexing vectors...",
+        ProcessingStep.Completed => "Ready to chat!",
+        ProcessingStep.Failed => "Processing failed",
+        _ => "Processing..."
+    };
+}

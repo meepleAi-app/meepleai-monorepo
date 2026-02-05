@@ -5,21 +5,21 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw, Loader2, AlertCircle, Download } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
-import { LatencyChart } from './LatencyChart';
-import { TokenDistribution } from './TokenDistribution';
-import { CacheHitGauge } from './CacheHitGauge';
 import { AccuracyScore } from './AccuracyScore';
+import { CacheHitGauge } from './CacheHitGauge';
 import { CostBreakdown } from './CostBreakdown';
+import { LatencyChart } from './LatencyChart';
 import { MOCK_RAG_METRICS, generateMockMetrics } from './mock-data';
+import { TokenDistribution } from './TokenDistribution';
 
 import type { PerformanceMetricsProps } from './types';
 

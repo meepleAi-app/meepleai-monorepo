@@ -34,6 +34,7 @@ import { EditNotesModal } from '@/components/library/EditNotesModal';
 import { FavoriteToggle } from '@/components/library/FavoriteToggle';
 import { LabelBadge, LabelSelector } from '@/components/library/labels';
 import { RemoveGameDialog } from '@/components/library/RemoveGameDialog';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,10 +42,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/navigation/dropdown-menu';
 import { Button } from '@/components/ui/primitives/button';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { useGameLabels, useRemoveLabelFromGame } from '@/hooks/queries/useLabels';
 import type { LibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useUpdateGameState } from '@/hooks/queries/useLibrary';
-import { useGameLabels, useRemoveLabelFromGame } from '@/hooks/queries/useLabels';
 import type { GameStateType } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';
 

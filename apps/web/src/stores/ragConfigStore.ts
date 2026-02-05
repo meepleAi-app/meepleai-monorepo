@@ -183,6 +183,9 @@ export const useRagConfigStore = create<RagConfigStore>()(
       },
 
       applyPreset: (strategy) => {
+        // Validate strategy key before accessing preset
+        if (!Object.hasOwn(STRATEGY_PRESETS, strategy)) return;
+        // eslint-disable-next-line security/detect-object-injection -- key validated above
         const preset = STRATEGY_PRESETS[strategy];
         if (!preset) return;
 

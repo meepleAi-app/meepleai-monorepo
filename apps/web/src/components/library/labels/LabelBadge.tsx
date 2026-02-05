@@ -9,8 +9,8 @@
 
 import { X } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import type { LabelDto } from '@/lib/api/schemas/library.schemas';
+import { cn } from '@/lib/utils';
 
 export interface LabelBadgeProps {
   label: LabelDto;

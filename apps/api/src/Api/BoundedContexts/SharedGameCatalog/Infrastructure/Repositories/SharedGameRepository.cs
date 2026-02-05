@@ -62,6 +62,25 @@ internal sealed class SharedGameRepository : ISharedGameRepository
             .ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, SharedGame>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
+        var idList = ids.ToList();
+        if (idList.Count == 0)
+            return new Dictionary<Guid, SharedGame>();
+
+        var entities = await _context.Set<SharedGameEntity>()
+            .AsNoTracking()
+            .Where(g => idList.Contains(g.Id) && !g.IsDeleted)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entities.ToDictionary(
+            e => e.Id,
+            e => MapToDomain(e));
+    }
+
     // Mapping methods
 
     private static SharedGame MapToDomain(SharedGameEntity entity)

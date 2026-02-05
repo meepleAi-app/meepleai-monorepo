@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260205162921_AddFeedbackCommentField")]
+    partial class AddFeedbackCommentField
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3480,13 +3483,6 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid?>("GameId")
                         .HasColumnType("uuid")
                         .HasColumnName("game_id");
-
-                    b.Property<DateTime?>("InviteExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("InviteToken")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()

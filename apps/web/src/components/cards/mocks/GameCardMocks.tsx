@@ -3,7 +3,11 @@
 /**
  * Game Card Mock Designs - 5 Distinct Styles with 3 Variants Each
  *
- * Design Directions:
+ * @deprecated This file contains design exploration mocks only.
+ * For production use, use MeepleGameCard from '@/components/ui/data-display/meeple-game-card'.
+ * The chosen design (Frosted Glass) has been implemented as MeepleGameCard.
+ *
+ * Design Directions (for reference):
  * 1. Classic TCG - Ornate borders, gold accents, fantasy aesthetic
  * 2. Modern Minimalist - Clean lines, subtle card game elements
  * 3. Illustrated Playful - Hand-drawn, Exploding Kittens vibe
@@ -11,6 +15,8 @@
  * 5. Premium Holographic - Foil effects, collector's edition feel
  *
  * Each has variants: A (Owned), B (Wishlist), C (New)
+ *
+ * @see MeepleGameCard - The production frosted glass game card
  */
 
 import React, { useState } from 'react';

@@ -18,6 +18,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 
+import { Dice6 } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -311,9 +313,17 @@ export default function ActiveSessionsPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <Card>
-        <CardHeader>
-          <CardTitle>Active Game Sessions</CardTitle>
-          <CardDescription>Manage your currently active and paused game sessions</CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between">
+          <div>
+            <CardTitle>Active Game Sessions</CardTitle>
+            <CardDescription>Manage your currently active and paused game sessions</CardDescription>
+          </div>
+          <Link href="/toolkit">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Dice6 className="w-4 h-4" />
+              Go to Toolkit
+            </Button>
+          </Link>
         </CardHeader>
         <CardContent>
           {/* Session Quota Bar (Issue #3075) */}

@@ -12,9 +12,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// Default access matrix (when database is empty):
 /// - Anonymous: [] (no strategies)
 /// - User: [FAST, BALANCED]
-/// - Editor: [FAST, BALANCED, PRECISE]
+/// - Editor: [FAST, BALANCED, PRECISE, SENTENCE_WINDOW]
 /// - Admin: [ALL] (wildcard)
-/// - Premium: [FAST, BALANCED, PRECISE, EXPERT, CONSENSUS]
+/// - Premium: [FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, SENTENCE_WINDOW]
 /// </remarks>
 internal sealed class TierStrategyAccessService : ITierStrategyAccessService
 {
@@ -28,9 +28,9 @@ internal sealed class TierStrategyAccessService : ITierStrategyAccessService
         {
             { LlmUserTier.Anonymous, Array.Empty<RagStrategy>() },
             { LlmUserTier.User, new[] { RagStrategy.Fast, RagStrategy.Balanced } },
-            { LlmUserTier.Editor, new[] { RagStrategy.Fast, RagStrategy.Balanced, RagStrategy.Precise } },
+            { LlmUserTier.Editor, new[] { RagStrategy.Fast, RagStrategy.Balanced, RagStrategy.Precise, RagStrategy.SentenceWindow } },
             { LlmUserTier.Admin, Enum.GetValues<RagStrategy>() }, // All strategies
-            { LlmUserTier.Premium, new[] { RagStrategy.Fast, RagStrategy.Balanced, RagStrategy.Precise, RagStrategy.Expert, RagStrategy.Consensus } }
+            { LlmUserTier.Premium, new[] { RagStrategy.Fast, RagStrategy.Balanced, RagStrategy.Precise, RagStrategy.Expert, RagStrategy.Consensus, RagStrategy.SentenceWindow } }
         };
 
     public TierStrategyAccessService(

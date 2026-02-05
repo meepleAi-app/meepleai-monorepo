@@ -13,6 +13,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Configuration;
 /// - PRECISE: High-quality reasoning
 /// - EXPERT: Advanced research capabilities
 /// - CONSENSUS: Multi-model validation
+/// - SENTENCE_WINDOW: Overlapping document windows for precise citations
 /// - CUSTOM: Admin-configurable workflows
 /// </remarks>
 public static class DefaultStrategyModelMappings
@@ -56,6 +57,13 @@ public static class DefaultStrategyModelMappings
             FallbackModels: new[] { "openai/gpt-4o", "google/gemini-pro" },
             IsCustomizable: false,
             EstimatedCostPer1KTokens: 0.09m),
+
+        [RagStrategy.SentenceWindow] = new StrategyMappingConfig(
+            Provider: "Anthropic",
+            PrimaryModel: "anthropic/claude-sonnet-4.5",
+            FallbackModels: new[] { "openai/gpt-4o-mini" },
+            IsCustomizable: false,
+            EstimatedCostPer1KTokens: 0.08m), // ~3,250 tokens avg, +7% accuracy
 
         [RagStrategy.Custom] = new StrategyMappingConfig(
             Provider: "Anthropic",

@@ -51,11 +51,19 @@ public enum RagStrategy
     Consensus = 4,
 
     /// <summary>
+    /// Sentence Window strategy with overlapping document windows.
+    /// Phases: WindowSplitting, Retrieval, WindowExpansion, Synthesis.
+    /// Use case: Precise rule citations, context-aware answers.
+    /// +7% accuracy, ~3,250 tokens per query.
+    /// </summary>
+    SentenceWindow = 5,
+
+    /// <summary>
     /// Admin-defined custom strategy.
     /// Phases: Configurable (minimum: Synthesis).
     /// Use case: Specialized workflows, testing.
     /// </summary>
-    Custom = 5
+    Custom = 6
 }
 
 /// <summary>
@@ -73,6 +81,7 @@ public static class RagStrategyExtensions
         RagStrategy.Precise => "PRECISE",
         RagStrategy.Expert => "EXPERT",
         RagStrategy.Consensus => "CONSENSUS",
+        RagStrategy.SentenceWindow => "SENTENCE_WINDOW",
         RagStrategy.Custom => "CUSTOM",
         _ => strategy.ToString().ToUpperInvariant()
     };
@@ -89,7 +98,7 @@ public static class RagStrategyExtensions
             return strategy;
 
         throw new ArgumentException(
-            $"Invalid RAG strategy: '{value}'. Valid values are: FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, CUSTOM",
+            $"Invalid RAG strategy: '{value}'. Valid values are: FAST, BALANCED, PRECISE, EXPERT, CONSENSUS, SENTENCE_WINDOW, CUSTOM",
             nameof(value));
     }
 

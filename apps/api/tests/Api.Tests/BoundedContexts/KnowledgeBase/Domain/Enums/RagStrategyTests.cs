@@ -20,6 +20,7 @@ public class RagStrategyTests
     [InlineData(RagStrategy.Precise, "PRECISE")]
     [InlineData(RagStrategy.Expert, "EXPERT")]
     [InlineData(RagStrategy.Consensus, "CONSENSUS")]
+    [InlineData(RagStrategy.SentenceWindow, "SENTENCE_WINDOW")]
     [InlineData(RagStrategy.Custom, "CUSTOM")]
     public void GetDisplayName_AllStrategies_ReturnsUpperCaseName(RagStrategy strategy, string expectedName)
     {
@@ -44,6 +45,8 @@ public class RagStrategyTests
     [InlineData("precise", RagStrategy.Precise)]
     [InlineData("EXPERT", RagStrategy.Expert)]
     [InlineData("CONSENSUS", RagStrategy.Consensus)]
+    [InlineData("SentenceWindow", RagStrategy.SentenceWindow)]
+    [InlineData("sentencewindow", RagStrategy.SentenceWindow)]
     [InlineData("CUSTOM", RagStrategy.Custom)]
     public void Parse_ValidStrings_ReturnsCorrectStrategy(string input, RagStrategy expected)
     {
@@ -80,6 +83,8 @@ public class RagStrategyTests
     [InlineData("precise", true, RagStrategy.Precise)]
     [InlineData("EXPERT", true, RagStrategy.Expert)]
     [InlineData("CONSENSUS", true, RagStrategy.Consensus)]
+    [InlineData("SentenceWindow", true, RagStrategy.SentenceWindow)]
+    [InlineData("sentencewindow", true, RagStrategy.SentenceWindow)]
     [InlineData("CUSTOM", true, RagStrategy.Custom)]
     [InlineData("INVALID", false, RagStrategy.Fast)]
     [InlineData("", false, RagStrategy.Fast)]
@@ -129,7 +134,8 @@ public class RagStrategyTests
     [InlineData(RagStrategy.Precise, 2)]
     [InlineData(RagStrategy.Expert, 3)]
     [InlineData(RagStrategy.Consensus, 4)]
-    [InlineData(RagStrategy.Custom, 5)]
+    [InlineData(RagStrategy.SentenceWindow, 5)]
+    [InlineData(RagStrategy.Custom, 6)]
     public void GetComplexityLevel_AllStrategies_ReturnsCorrectLevel(RagStrategy strategy, int expectedLevel)
     {
         // Act
@@ -151,7 +157,8 @@ public class RagStrategyTests
         Assert.Equal(RagStrategy.Precise, strategies[2]);
         Assert.Equal(RagStrategy.Expert, strategies[3]);
         Assert.Equal(RagStrategy.Consensus, strategies[4]);
-        Assert.Equal(RagStrategy.Custom, strategies[5]);
+        Assert.Equal(RagStrategy.SentenceWindow, strategies[5]);
+        Assert.Equal(RagStrategy.Custom, strategies[6]);
     }
 
     #endregion
@@ -164,6 +171,7 @@ public class RagStrategyTests
     [InlineData(RagStrategy.Precise, false)]
     [InlineData(RagStrategy.Expert, false)]
     [InlineData(RagStrategy.Consensus, false)]
+    [InlineData(RagStrategy.SentenceWindow, false)]
     [InlineData(RagStrategy.Custom, true)]
     public void RequiresAdmin_AllStrategies_OnlyCustomRequiresAdmin(RagStrategy strategy, bool expectedRequiresAdmin)
     {
@@ -183,7 +191,7 @@ public class RagStrategyTests
     {
         // Assert
         var values = Enum.GetValues<RagStrategy>();
-        Assert.Equal(6, values.Length);
+        Assert.Equal(7, values.Length);
     }
 
     [Fact]

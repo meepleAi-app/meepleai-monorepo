@@ -1120,6 +1120,27 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       return result;
     },
 
+    /**
+     * End an impersonation session (admin only)
+     * POST /api/v1/admin/impersonation/end
+     * Issue #3349
+     */
+    async endImpersonation(sessionId: string): Promise<EndImpersonationResponse> {
+      const EndImpersonationResponseSchema = z.object({
+        success: z.boolean(),
+        message: z.string(),
+      });
+      const result = await httpClient.post(
+        '/api/v1/admin/impersonation/end',
+        { sessionId },
+        EndImpersonationResponseSchema
+      );
+      if (!result) {
+        throw new Error('Failed to end impersonation');
+      }
+      return result;
+    },
+
     // ========== Agent Typologies Management (Issue #3179) ==========
 
     /**
@@ -1253,4 +1274,9 @@ export type ImpersonateUserResponse = {
   sessionToken: string;
   impersonatedUserId: string;
   expiresAt: string;
+};
+
+export type EndImpersonationResponse = {
+  success: boolean;
+  message: string;
 };

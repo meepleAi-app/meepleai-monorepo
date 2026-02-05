@@ -46,6 +46,7 @@ internal static class AdminUserEndpoints
         MapUserRoleHistoryEndpoint(group);
         MapUserQuickActionsEndpoints(group);
         MapUserImpersonateEndpoint(group);
+        MapEndImpersonationEndpoint(group);
 
         return group;
     }
@@ -1060,7 +1061,69 @@ internal static class AdminUserEndpoints
             return Results.BadRequest(new { error = "domain_error", message = ex.Message });
         }
     }
+
+    private static void MapEndImpersonationEndpoint(RouteGroupBuilder group)
+    {
+        // End impersonation session (admin only) - Issue #3349
+        group.MapPost("/admin/impersonation/end", HandleEndImpersonation)
+            .RequireAdminSession()
+            .WithName("EndImpersonation")
+            .WithTags("Admin", "Users", "Debug")
+            .WithSummary("End an impersonation session (admin only)")
+            .WithDescription(@"Terminates an active impersonation session.
+
+**Authorization**: Admin session required
+
+**Security**:
+- Revokes the impersonation session
+- Logs end of impersonation in audit trail
+- Admin returns to their original session
+
+**Issue**: #3349 - User Impersonation for Support/Debug")
+            .Produces<EndImpersonationResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> HandleEndImpersonation(
+        EndImpersonationRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogWarning("⚠️ Admin {AdminId} ending impersonation session {SessionId}",
+            session!.User!.Id, request.SessionId);
+
+        var command = new EndImpersonationCommand(
+            request.SessionId,
+            session.User.Id);
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        if (result)
+        {
+            logger.LogWarning("⚠️ Impersonation ended successfully by Admin {AdminId}",
+                session.User.Id);
+            return Results.Ok(new EndImpersonationResponse(true, "Impersonation ended successfully"));
+        }
+
+        return Results.BadRequest(new EndImpersonationResponse(false, "Failed to end impersonation"));
+    }
 }
+
+/// <summary>
+/// Request payload for ending impersonation (Issue #3349).
+/// </summary>
+internal record EndImpersonationRequest(Guid SessionId);
+
+/// <summary>
+/// Response for end impersonation action (Issue #3349).
+/// </summary>
+internal record EndImpersonationResponse(bool Success, string Message);
 
 /// <summary>
 /// Request payload for updating user tier.

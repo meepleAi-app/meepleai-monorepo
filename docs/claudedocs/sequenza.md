@@ -1,8 +1,8 @@
 # Sequenza Implementazione Issue - MeepleAI
 
 **Last Updated**: 2026-02-05
-**Total Open Issues**: 28
-**Active Epics**: 2 (FASE 7 + FASE 8)
+**Total Open Issues**: 29
+**Active Epics**: 3 (FASE 7.5 🔴 + FASE 7 + FASE 8)
 **Completed Epics**: 15
 
 ---
@@ -12,6 +12,9 @@
 ### 📋 Lista Rapida - Issue Sequence
 
 ```
+🔴 FASE 7.5 - Admin SharedGame PDF Workflow (CRITICAL - START NOW)
+└─ #3642: Add PDF Upload to SharedGame Wizard + Indexing Status Display
+
 FASE 0 - Frontend-Backend Gap Analysis ✅ COMPLETED
 ├─ Epic:     #3594 ✅ CLOSED
 ├─ Admin:    ✅ DONE (3595, 3598 closed)
@@ -67,6 +70,7 @@ FASE 8 - Infrastructure & Testing
 
 | Fase | Epic | Issues | SP Est. | Area | Parallelizzazione | Status |
 |:----:|------|:------:|:-------:|:----:|:-----------------:|:------:|
+| **7.5** | 🔴 Admin PDF Workflow | 1 | 5 | FE | - | 🔴 **CRITICAL** |
 | **0** | FE-BE Gap Analysis | 0 | 0 | FE | - | ✅ 100% |
 | **1** | Critical Path | 0 | 0 | BE+FE | - | ✅ 100% |
 | **2** | Multi-Agent AI | 0 | 0 | BE+PY | - | ✅ 100% |
@@ -77,6 +81,44 @@ FASE 8 - Infrastructure & Testing
 | **7** | Advanced Features | 17 | 60 | BE+FE | 3 streams | 🟢 Active |
 | **8** | Infrastructure | 11 | 40 | DevOps | 1 stream | ⏸️ Future |
 | **TOTAL** | **2 Active** | **28** | **~100** | - | - | **~80%** |
+
+---
+
+## 🔴 FASE 7.5 - Admin SharedGame PDF Workflow (CRITICAL - START NOW)
+
+**Timeline**: 1-2 giorni | **SP**: 5 | **Issue**: #3642
+**Goal**: Admin crea SharedGame → Carica PDF durante wizard → Conferma embedding disponibile
+
+### Gap Analysis
+
+| Component | Status | Notes |
+|-----------|:------:|-------|
+| SharedGame Creation API | ✅ | `POST /api/v1/admin/shared-games` |
+| GameForm Frontend | ✅ | `GameForm.tsx` esiste |
+| PDF → SharedGame Link API | ✅ | `POST /api/v1/admin/shared-games/{id}/documents` |
+| Qdrant Indexing Pipeline | ✅ | `IndexPdfCommandHandler.cs` |
+| **PDF Upload in Admin Wizard** | ❌ | **MANCA!** |
+| **Embedding Status Display** | ❌ | **MANCA!** |
+
+### Implementation
+
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 7.5.1 | #3642 | Add PDF Upload Step to SharedGame Wizard | 5 | 🔴 START |
+
+**Files da creare/modificare**:
+```
+CREATE: apps/web/src/components/admin/shared-games/PdfUploadSection.tsx
+MODIFY: apps/web/src/components/admin/shared-games/GameForm.tsx
+CREATE: apps/web/src/components/admin/shared-games/PdfIndexingStatus.tsx
+```
+
+**Branch**:
+```bash
+git checkout main && git pull
+git checkout -b feature/issue-3642-admin-pdf-upload-wizard
+git config branch.feature/issue-3642-admin-pdf-upload-wizard.parent main
+```
 
 ---
 
@@ -463,7 +505,8 @@ WEEK 27-30: FASE 8 (40 SP)
 
 | Epic | Priorità | Status | Open | Closed | Progress |
 |------|:--------:|:------:|:----:|:------:|:--------:|
-| #3594 FE-BE Gap Analysis | 🔴 Critical | 🆕 New | 7 | 0 | 0% |
+| **#3642 Admin PDF Workflow** | 🔴🔴 **HIGHEST** | 🔴 **START NOW** | 1 | 0 | 0% |
+| #3594 FE-BE Gap Analysis | 🔴 Critical | ✅ DONE | 0 | 6 | 100% |
 | #3490 Multi-Agent AI | 🔴 Critical | ✅ DONE | 0 | 14 | 100% |
 | #3475 User Private Library | 🔴 Critical | ✅ DONE | 0 | 4 | 100% |
 | #3386 Agent Creation | 🔴 Critical | ✅ DONE | 0 | 6 | 100% |
@@ -487,7 +530,21 @@ WEEK 27-30: FASE 8 (40 SP)
 
 ## 🎯 IMMEDIATE ACTIONS (This Week)
 
-### 🔴 PRIORITÀ MASSIMA - Start Now
+### 🔴🔴🔴 PRIORITÀ CRITICA - FASE 7.5 - Start IMMEDIATELY
+
+**#3642 - Add PDF Upload to SharedGame Wizard** (CRITICAL):
+```bash
+git checkout main && git pull
+git checkout -b feature/issue-3642-admin-pdf-upload-wizard
+git config branch.feature/issue-3642-admin-pdf-upload-wizard.parent main
+# Implement PdfUploadSection.tsx + PdfIndexingStatus.tsx
+```
+
+**Obiettivo**: Admin può creare SharedGame + caricare PDF + vedere status embedding RAG-ready
+
+---
+
+### 🟡 PRIORITÀ MEDIA - FASE 7 (dopo #3642)
 
 **🟢 FASE 7 - AI Stream** (3 issues remaining):
 ```bash
@@ -629,6 +686,7 @@ git checkout -b feature/issue-3357-sentence-window-rag
 ### Timeline Summary
 | Fase | Timeline | SP | Issues | Status |
 |:----:|:--------:|:--:|:------:|:------:|
+| **7.5** | **1-2 days** | **5** | **1** | 🔴 **CRITICAL** |
 | 0 | Completed | 0 | 0 | ✅ 100% |
 | 1 | Completed | 0 | 0 | ✅ 100% |
 | 2 | Completed | 0 | 0 | ✅ 100% |
@@ -638,7 +696,7 @@ git checkout -b feature/issue-3357-sentence-window-rag
 | 6 | Completed | 0 | 0 | ✅ 100% |
 | 7 | Week 1-4 | 60 | 17 | 🟢 Active |
 | 8 | Week 5-8 | 40 | 11 | ⏸️ Future |
-| **TOTAL** | **~8 weeks** | **~100** | **28** | **~80% done** |
+| **TOTAL** | **~8 weeks** | **~105** | **29** | **~78% done** |
 
 ---
 

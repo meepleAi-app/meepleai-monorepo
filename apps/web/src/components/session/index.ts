@@ -12,6 +12,7 @@ export { CountdownTimer } from './CountdownTimer';
 export { CoinFlip } from './CoinFlip';
 export { WheelSpinner } from './WheelSpinner';
 export { RandomTools } from './RandomTools';
+export { ExportSession } from './ExportSession';
 
 export type {
   Participant,

@@ -5,11 +5,16 @@ export { ParticipantCard } from './ParticipantCard';
 export { ScoreInput } from './ScoreInput';
 export { Scoreboard } from './Scoreboard';
 export { SessionDetailModal } from './SessionDetailModal';
+export { DiceRoller } from './DiceRoller';
 
 export type {
   Participant,
   ScoreEntry,
   Session,
   ScoreboardData,
-  SyncStatus
+  SyncStatus,
+  DiceRoll,
+  DiceType,
 } from './types';
+
+export { DICE_TYPES } from './types';

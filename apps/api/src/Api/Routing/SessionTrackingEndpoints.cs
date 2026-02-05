@@ -3,9 +3,6 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.Extensions;
 using MediatR;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 
 namespace Api.Routing;
 
@@ -27,6 +24,7 @@ internal static class SessionTrackingEndpoints
         MapAddParticipantEndpoint(group);
         MapAddNoteEndpoint(group);
         MapFinalizeSessionEndpoint(group);
+        MapRollDiceEndpoint(group);
 
         // Query endpoints
         MapGetActiveSessionEndpoint(group);
@@ -34,6 +32,7 @@ internal static class SessionTrackingEndpoints
         MapGetScoreboardEndpoint(group);
         MapGetSessionDetailsEndpoint(group);
         MapGetSessionHistoryEndpoint(group);
+        MapGetDiceRollHistoryEndpoint(group);
 
         // GST-003: Real-time SSE stream
         MapSessionStreamEndpoint(group);
@@ -161,6 +160,56 @@ internal static class SessionTrackingEndpoints
         .WithSummary("Finalize session with final rankings")
         .Produces(200)
         .Produces(400)
+        .Produces(401)
+        .Produces(404);
+    }
+
+    private static void MapRollDiceEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/game-sessions/{sessionId:guid}/dice", async (
+            Guid sessionId,
+            RollDiceCommand command,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            if (sessionId != command.SessionId)
+            {
+                return Results.BadRequest(new { error = "Session ID mismatch" });
+            }
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Created($"/api/v1/game-sessions/{sessionId}/dice/{result.DiceRollId}", result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("RollDice")
+        .WithTags("SessionTracking", "Dice")
+        .WithSummary("Roll dice in a session")
+        .WithDescription("Rolls dice using standard formulas (e.g., 2d6+3, 1d20-2). Broadcasts result via SSE.")
+        .Produces(201)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .Produces(409);
+    }
+
+    private static void MapGetDiceRollHistoryEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/game-sessions/{sessionId:guid}/dice", async (
+            Guid sessionId,
+            IMediator mediator,
+            int limit = 20,
+            CancellationToken ct = default) =>
+        {
+            var query = new GetDiceRollHistoryQuery(sessionId, limit);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .WithName("GetDiceRollHistory")
+        .WithTags("SessionTracking", "Dice")
+        .WithSummary("Get recent dice rolls for a session")
+        .WithDescription("Returns the most recent dice rolls for the session (default: 20).")
+        .Produces(200)
         .Produces(401)
         .Produces(404);
     }

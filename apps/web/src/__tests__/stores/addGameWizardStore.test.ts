@@ -1,21 +1,34 @@
 /**
  * Add Game Wizard Store Tests
- * Issue #3477: Unit tests for wizard state management
+ * Issue #3477, #3650: Unit tests for wizard state management
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { toast } from '@/components/layout';
+import { api } from '@/lib/api';
 import {
   useAddGameWizardStore,
   type CustomGameData,
 } from '@/stores/addGameWizardStore';
 import type { Game } from '@/types/domain';
 
+// Mock toast
 vi.mock('@/components/layout', () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+  },
+}));
+
+// Mock API client
+vi.mock('@/lib/api', () => ({
+  api: {
+    library: {
+      addGame: vi.fn(),
+    },
   },
 }));
 
@@ -273,9 +286,34 @@ describe('addGameWizardStore', () => {
       delete (window as { location?: unknown }).location;
       window.location = { href: '' } as Location;
 
+      // Mock successful API call
+      vi.mocked(api.library.addGame).mockResolvedValueOnce({
+        id: 'entry-uuid',
+        userId: 'user-uuid',
+        gameId: '1',
+        gameTitle: 'Catan',
+        gamePublisher: null,
+        gameYearPublished: null,
+        gameIconUrl: null,
+        gameImageUrl: null,
+        addedAt: '2024-01-01T00:00:00Z',
+        notes: null,
+        isFavorite: false,
+        currentState: 'Owned',
+        stateChangedAt: null,
+        stateNotes: null,
+        hasPdfDocuments: false,
+      });
+
       selectSharedGame(mockGame);
       setStep(4);
       await submitWizard();
+
+      // Should call API
+      expect(api.library.addGame).toHaveBeenCalledWith('1', {
+        notes: null,
+        isFavorite: false,
+      });
 
       // Should show success toast
       expect(toast.success).toHaveBeenCalledWith('"Catan" added to your collection!');
@@ -289,7 +327,7 @@ describe('addGameWizardStore', () => {
       expect(window.location.href).toBe('/dashboard/collection');
     });
 
-    it('submitWizard succeeds with custom game', async () => {
+    it('submitWizard shows info message for custom games (backend not implemented)', async () => {
       const customData: CustomGameData = { name: 'My Custom Game' };
       const {
         selectCustomGame,
@@ -298,25 +336,37 @@ describe('addGameWizardStore', () => {
         submitWizard,
       } = useAddGameWizardStore.getState();
 
-      // Mock window.location.href
-      delete (window as { location?: unknown }).location;
-      window.location = { href: '' } as Location;
-
       selectCustomGame();
       setCustomGameData(customData);
       setStep(4);
       await submitWizard();
 
-      // Should show success toast
-      expect(toast.success).toHaveBeenCalledWith('"My Custom Game" added to your collection!');
+      // Should show info toast (custom games not yet supported by backend)
+      expect(toast.info).toHaveBeenCalledWith('Custom game support coming soon! For now, search for games in the catalog.');
 
-      // Should reset store
-      const { step, isCustomGame } = useAddGameWizardStore.getState();
-      expect(step).toBe(1);
-      expect(isCustomGame).toBe(false);
+      // Should NOT reset store (operation didn't complete)
+      const { isCustomGame } = useAddGameWizardStore.getState();
+      expect(isCustomGame).toBe(true);
+    });
 
-      // Should redirect
-      expect(window.location.href).toBe('/dashboard/collection');
+    it('submitWizard handles API errors gracefully', async () => {
+      const mockGame: Game = { id: '1', title: 'Catan', createdAt: '2024-01-01' };
+      const { selectSharedGame, setStep, submitWizard } = useAddGameWizardStore.getState();
+
+      // Mock API failure
+      vi.mocked(api.library.addGame).mockRejectedValueOnce(new Error('Network error'));
+
+      selectSharedGame(mockGame);
+      setStep(4);
+      await submitWizard();
+
+      // Should show error toast
+      expect(toast.error).toHaveBeenCalledWith('Network error');
+
+      // Should set error state
+      const { error, isProcessing } = useAddGameWizardStore.getState();
+      expect(error).toBe('Network error');
+      expect(isProcessing).toBe(false);
     });
 
     it('submitWizard handles PDF association when uploaded', async () => {
@@ -332,12 +382,37 @@ describe('addGameWizardStore', () => {
       delete (window as { location?: unknown }).location;
       window.location = { href: '' } as Location;
 
+      // Mock successful API calls
+      vi.mocked(api.library.addGame).mockResolvedValueOnce({
+        id: 'entry-uuid',
+        userId: 'user-uuid',
+        gameId: '1',
+        gameTitle: 'Catan',
+        gamePublisher: null,
+        gameYearPublished: null,
+        gameIconUrl: null,
+        gameImageUrl: null,
+        addedAt: '2024-01-01T00:00:00Z',
+        notes: null,
+        isFavorite: false,
+        currentState: 'Owned',
+        stateChangedAt: null,
+        stateNotes: null,
+        hasPdfDocuments: false,
+      });
+
+      // Mock fetch for PDF association
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      });
+
       selectSharedGame(mockGame);
       setUploadedPdf('pdf-123', 'rulebook.pdf');
       setStep(4);
       await submitWizard();
 
-      // Should succeed (PDF association happens in backend)
+      // Should succeed (PDF association attempted)
       expect(toast.success).toHaveBeenCalledWith('"Catan" added to your collection!');
     });
   });

@@ -1,6 +1,6 @@
 /**
  * Add Game to Collection Wizard Store
- * Issue #3477: Multi-step wizard for adding games to user's personal collection
+ * Issue #3477, #3650: Multi-step wizard for adding games to user's personal collection
  *
  * Zustand store for wizard state management with devtools support.
  * Follows pattern from game-state-store.ts for consistency.
@@ -10,6 +10,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import { toast } from '@/components/layout';
+import { api } from '@/lib/api';
 import type { Game } from '@/types/domain';
 
 /**
@@ -197,7 +198,7 @@ export const useAddGameWizardStore = create<AddGameWizardState>()(
         set({ isProcessing: true, error: null });
 
         try {
-          const { selectedGame, isCustomGame, customGameData, uploadedPdfId } = get();
+          const { selectedGame, isCustomGame, customGameData, uploadedPdfId, uploadedPdfName } = get();
 
           // Validate final state
           if (!selectedGame && !isCustomGame) {
@@ -208,27 +209,69 @@ export const useAddGameWizardStore = create<AddGameWizardState>()(
             throw new Error('Custom game requires a name');
           }
 
-          // TODO (Backend TBD): POST /api/v1/user-library/entries
-          // For now, simulate API call with delay
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          let entryGameId: string;
 
-          // If PDF uploaded, associate it
-          if (uploadedPdfId) {
-            // TODO (Backend TBD): POST /api/v1/user-library/entries/{entryId}/pdf
-            await new Promise(resolve => setTimeout(resolve, 500));
+          if (isCustomGame) {
+            // Custom games: Backend endpoint not yet implemented
+            // For now, show informative message - this will work once backend is ready
+            // TODO: Replace with actual API call when backend supports custom games
+            // Expected endpoint: POST /api/v1/library/custom-games
+            toast.info('Custom game support coming soon! For now, search for games in the catalog.');
+            set({ isProcessing: false });
+            return;
+          } else {
+            // Shared game: Use existing library API
+            if (!selectedGame?.id) {
+              throw new Error('Invalid game selection');
+            }
+
+            entryGameId = selectedGame.id;
+
+            // Add game to library
+            await api.library.addGame(entryGameId, {
+              notes: null,
+              isFavorite: false,
+            });
+
+            // If PDF uploaded, associate it with the library entry
+            if (uploadedPdfId && uploadedPdfName) {
+              try {
+                // The PDF was already uploaded to /api/v1/ingest/upload
+                // Now we need to associate it with the library entry
+                // Using the upload custom PDF endpoint
+                const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+
+                // Fetch PDF metadata from the upload response
+                // The uploadedPdfId is the document ID from the ingest service
+                await fetch(`${API_BASE}/api/v1/library/games/${entryGameId}/pdf`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    pdfUrl: `${API_BASE}/api/v1/documents/${uploadedPdfId}/download`,
+                    fileSizeBytes: 0, // Size not tracked in wizard state, will be validated server-side
+                    originalFileName: uploadedPdfName,
+                  }),
+                });
+              } catch (pdfError) {
+                // PDF association failed but game was added - log but don't fail
+                console.warn('Failed to associate PDF with library entry:', pdfError);
+                toast.warning('Game added, but PDF association failed. You can add it later.');
+              }
+            }
           }
 
-          toast.success(
-            isCustomGame
-              ? `"${customGameData?.name}" added to your collection!`
-              : `"${selectedGame?.title}" added to your collection!`
-          );
+          toast.success(`"${selectedGame?.title}" added to your collection!`);
 
           // Reset wizard on success
           get().reset();
 
-          // Navigate to collection dashboard
-          window.location.href = '/dashboard/collection';
+          // Navigate to collection dashboard using client-side navigation
+          // Note: Components should use useRouter for navigation, but store can't use hooks
+          // The page component should handle navigation after successful submission
+          if (typeof window !== 'undefined') {
+            window.location.href = '/dashboard/collection';
+          }
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Failed to add game';
           set({ error: message, isProcessing: false });

@@ -34,3 +34,6 @@ export { ActiveSessionsPanel, type ActiveSessionsPanelProps } from './ActiveSess
 
 // MeepleCard-based dashboard components (Issue #3334)
 export { MeepleGameWidget, MeepleGameWidgetSkeleton, type DashboardGame, type MeepleGameWidgetProps } from './MeepleGameWidget';
+
+// Compact Dashboard (Issue #3306: MVP Refinement)
+export { UserDashboardCompact } from './UserDashboardCompact';

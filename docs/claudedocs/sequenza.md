@@ -1,8 +1,8 @@
 # Sequenza Implementazione Issue - MeepleAI
 
 **Last Updated**: 2026-02-05
-**Total Open Issues**: 89
-**Active Epics**: 17
+**Total Open Issues**: 93
+**Active Epics**: 18
 
 ---
 
@@ -11,15 +11,22 @@
 ### 📋 Lista Rapida - Issue Sequence
 
 ```
+🆕 FASE 0 - Frontend-Backend Gap Analysis (NEW - High Priority)
+├─ Epic:     #3594
+├─ Admin:    3595 → 3598
+├─ Editor:   3597
+├─ Cleanup:  3596 → 3599
+└─ Toolkit:  3600
+
 FASE 1 - Critical Path (Parallel Streams) ✅ COMPLETED
 ├─ Backend:  ✅ DONE (3479, 3483 closed)
 ├─ Frontend: ✅ DONE (3376, 3375, 3378, 3379 closed via PR #3510)
 └─ Tier:     ✅ DONE (3440, 3441, 3442 closed)
 
-FASE 2 - Multi-Agent Foundation ✅ MOSTLY DONE
-├─ Backend:  3493 (remaining) | ✅ 3491, 3492, 3494, 3495 closed
+FASE 2 - Multi-Agent Foundation (3 remaining)
+├─ Backend:  3491 → 3493 | ✅ 3492, 3494, 3495 closed
 ├─ Tutor:    3498 (remaining) | ✅ 3496, 3497, 3499, 3501, 3502 closed
-└─ Frontend: 3383 (remaining) | ✅ 3373, 3374 done
+└─ Frontend: ✅ 3373, 3374, 3383 all closed
 
 FASE 3 - Security & Dashboard
 ├─ Security: 3330 → 3332 → 3339 → 3340 → 3335 → 3333 → 3338
@@ -55,10 +62,11 @@ FASE 8 - Infrastructure & Testing
 
 ---
 
-## 📊 SUMMARY TABLE - All 89 Open Issues
+## 📊 SUMMARY TABLE - All 93 Open Issues
 
 | Fase | Epic | Issues | SP Est. | Area | Parallelizzazione | Status |
 |:----:|------|:------:|:-------:|:----:|:-----------------:|:------:|
+| **0** | FE-BE Gap Analysis | 7 | 21 | FE | 2 streams | 🔴 NEW |
 | **1** | Critical Path | 0 | 0 | BE+FE | - | ✅ 100% |
 | **2** | Multi-Agent AI | 3 | 14 | BE+PY | 1 stream | 🟢 80% |
 | **3** | Security + Dashboard | 20 | 70 | BE+FE | 3 streams | ⏸️ Ready |
@@ -67,7 +75,33 @@ FASE 8 - Infrastructure & Testing
 | **6** | Visual Strategy | 15 | 54 | FE | 1 stream | ⏸️ Blocked |
 | **7** | Advanced Features | 19 | 75 | BE+FE | 3 streams | ⏸️ Future |
 | **8** | Infrastructure | 11 | 40 | DevOps | 1 stream | ⏸️ Future |
-| **TOTAL** | **17 Epics** | **89** | **~387** | - | - | **~25%** |
+| **TOTAL** | **18 Epics** | **93** | **~412** | - | - | **~20%** |
+
+---
+
+## 🔴 FASE 0 - Frontend-Backend Gap Analysis (NEW - HIGH PRIORITY)
+
+**Timeline**: 1 settimana | **SP**: ~21 | **Epic**: #3594
+
+### Stream A: Admin Navigation
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 0.1 | #3595 | Create admin sidebar navigation | 5 | ⏳ Open |
+| 0.2 | #3598 | Integrate RAG dashboard into admin panel | 3 | ⏳ Open |
+
+### Stream B: Editor & Cleanup
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 0.3 | #3597 | Add editor navigation for editor role | 3 | ⏳ Open |
+| 0.4 | #3596 | Delete unused component folders | 2 | ⏳ Open |
+| 0.5 | #3599 | Consolidate duplicate chat components | 5 | ⏳ Open |
+
+### Stream C: Toolkit
+| Seq | Issue | Titolo | SP | Status |
+|:---:|:-----:|--------|:--:|:------:|
+| 0.6 | #3600 | Link sessions pages to toolkit | 3 | ⏳ Open |
+
+**Epic Reference**: #3594 Frontend-Backend Gap Analysis Cleanup
 
 ---
 
@@ -103,20 +137,20 @@ FASE 8 - Infrastructure & Testing
 
 ---
 
-## 🟠 FASE 2 - Multi-Agent AI System (80% COMPLETE)
+## 🟠 FASE 2 - Multi-Agent AI System (3 remaining)
 
-**Timeline**: 3-4 settimane | **SP**: 14 remaining | **Parallelizzazione**: 1 stream
+**Timeline**: 3-4 settimane | **SP**: 18 remaining | **Parallelizzazione**: 1 stream
 
-### Stream A: Context Engineering Foundation (MOSTLY DONE)
+### Stream A: Context Engineering Foundation
 | Seq | Issue | Titolo | SP | Status |
 |:---:|:-----:|--------|:--:|:------:|
-| 10 | #3493 | PostgreSQL Schema Extensions | 5 | ⏳ Open |
-| 11 | #3491 | Context Engineering Framework | 8 | ✅ CLOSED |
+| 10 | #3491 | Context Engineering Framework | 8 | ⏳ Open |
+| 11 | #3493 | PostgreSQL Schema Extensions | 5 | ⏳ Open |
 | 12 | #3492 | Hybrid Search - Keyword+Vector+Reranking | 8 | ✅ CLOSED |
 | 13 | #3494 | Redis 3-Tier Cache Layer | 5 | ✅ CLOSED |
 | 14 | #3495 | LangGraph Orchestrator Foundation | 8 | ✅ CLOSED |
 
-### Stream B: Tutor Agent Implementation (MOSTLY DONE)
+### Stream B: Tutor Agent Implementation (1 remaining)
 | Seq | Issue | Titolo | SP | Status |
 |:---:|:-----:|--------|:--:|:------:|
 | 15 | #3496 | Intent Classification System | 5 | ✅ CLOSED |
@@ -126,14 +160,14 @@ FASE 8 - Infrastructure & Testing
 | 19 | #3502 | Hybrid Search Integration | 3 | ✅ CLOSED |
 | 20 | #3501 | Beta Testing & User Feedback | 3 | ✅ CLOSED |
 
-### Stream C: Frontend AI Integration (MOSTLY DONE)
+### ✅ Stream C: Frontend AI Integration - COMPLETED
 | Seq | Issue | Titolo | SP | Status |
 |:---:|:-----:|--------|:--:|:------:|
 | 21 | #3373 | Streaming SSE in Ask page | 3 | ✅ CLOSED |
 | 22 | #3374 | Cancel processing button UI | 2 | ✅ CLOSED |
-| 23 | #3383 | Cost Estimation Preview | 3 | ⏳ Open |
+| 23 | #3383 | Cost Estimation Preview | 3 | ✅ CLOSED |
 
-**Epic Reference**: #3490 Multi-Agent Game AI System (near completion)
+**Epic Reference**: #3490 Multi-Agent Game AI System
 
 ---
 
@@ -380,16 +414,21 @@ All duplicate issues (#3469, #3470, #3471) have been closed.
 ### Week-by-Week Execution Plan
 
 ```
+🆕 WEEK 0: FASE 0 - FE-BE Gap Analysis (21 SP) ← NOW ACTIVE
+├─ Frontend Team A: #3595 → #3598 ────────────────────────┐
+├─ Frontend Team B: #3596 → #3599 ────────────────────────┤ PARALLEL
+└─ Frontend Team C: #3597 → #3600 ────────────────────────┘
+
 WEEK 1-2: FASE 1 ✅ COMPLETED
 ├─ Backend Team:    ✅ #3479, #3483 DONE ─────────────────┐
 ├─ Frontend Team A: ✅ #3376, #3375 DONE (PR #3510) ──────┤ ALL DONE
 ├─ Frontend Team B: ✅ #3378, #3379 DONE (PR #3510) ──────┤
 └─ DevOps Team:     ✅ #3440, #3441, #3442 DONE ──────────┘
 
-WEEK 3-5: FASE 2 (14 SP remaining)
-├─ Python Team:     #3493 | ✅ #3491, #3492, #3494, #3495 ┐
-├─ AI Team:         #3498 | ✅ #3496, #3497, #3499 ───────┤ MOSTLY DONE
-└─ Frontend Team:   #3383 | ✅ #3373, #3374 ──────────────┘
+WEEK 3-5: FASE 2 (18 SP remaining)
+├─ Python Team:     #3491 → #3493 | ✅ #3492, #3494, #3495┐
+├─ AI Team:         #3498 | ✅ #3496, #3497, #3499 ───────┤ IN PROGRESS
+└─ Frontend Team:   ✅ #3373, #3374, #3383 DONE ──────────┘
 
 WEEK 6-9: FASE 3 (70 SP)
 ├─ Security Team:   #3330 → #3332 → #3339 → #3340 ────────┐
@@ -426,6 +465,7 @@ WEEK 27-30: FASE 8 (40 SP)
 
 | Epic | Priorità | Status | Open | Closed | Progress |
 |------|:--------:|:------:|:----:|:------:|:--------:|
+| #3594 FE-BE Gap Analysis | 🔴 Critical | 🆕 New | 7 | 0 | 0% |
 | #3490 Multi-Agent AI | 🔴 Critical | 🟢 Near Done | 3 | 11 | 80% |
 | #3475 User Private Library | 🔴 Critical | ✅ DONE | 0 | 4 | 100% |
 | #3386 Agent Creation | 🔴 Critical | ✅ DONE | 0 | 6 | 100% |
@@ -451,28 +491,28 @@ WEEK 27-30: FASE 8 (40 SP)
 
 ### 🔴 PRIORITÀ MASSIMA - Start Now
 
-**✅ FASE 1 COMPLETED** - All Agent Creation issues done via PR #3510
-
-**Team Backend** (remaining FASE 2 items):
-```bash
-git checkout main-dev && git pull
-git checkout -b feature/issue-3493-postgres-schema
-# Implement PostgreSQL Schema Extensions
-# Then: #3498 (Conversation Memory)
-```
-
-**Team Frontend** (remaining FASE 2 items):
+**🆕 FASE 0 - Frontend-Backend Gap Analysis** (HIGH PRIORITY):
 ```bash
 git checkout frontend-dev && git pull
-git checkout -b feature/issue-3383-cost-preview
-# Implement Cost Estimation Preview
+git checkout -b feature/issue-3595-admin-sidebar
+# Implement Admin Sidebar Navigation
+# Then: #3598 → #3596 → #3599 → #3597 → #3600
+```
+
+**Team Backend** (FASE 2 remaining):
+```bash
+git checkout main-dev && git pull
+git checkout -b feature/issue-3491-context-engineering
+# Implement Context Engineering Framework
+# Then: #3493 → #3498
 ```
 
 ### ✅ RECENTLY CLOSED (Last Update - 2026-02-05)
 - **#3376, #3375, #3378, #3379 - Agent Creation Flow ✅ (PR #3510)**
+- **#3383 - Cost Estimation Preview ✅**
 - #3479, #3483 - Backend Foundation ✅
 - #3440, #3441, #3442 - Tier-Strategy ✅
-- #3491, #3492, #3494, #3495 - Context Engineering ✅
+- #3492, #3494, #3495 - Context Engineering (partial) ✅
 - #3496, #3497, #3499, #3501, #3502 - Tutor Agent ✅
 - #3373, #3374 - Frontend AI Integration ✅
 - #3449, #3450, #3451 - RAG Dashboard Nav V2 ✅
@@ -501,15 +541,16 @@ git checkout -b feature/issue-3383-cost-preview
 ### Timeline Summary
 | Fase | Timeline | SP | Issues | Status |
 |:----:|:--------:|:--:|:------:|:------:|
+| 0 | Week 0 | 21 | 7 | 🔴 NEW |
 | 1 | Week 1-2 | 0 | 0 | ✅ 100% |
-| 2 | Week 3-5 | 14 | 3 | 🟢 80% |
+| 2 | Week 3-5 | 18 | 3 | 🟢 75% |
 | 3 | Week 6-9 | 70 | 20 | ⏸️ Ready |
 | 4 | Week 10-12 | 49 | 17 | 🟡 15% |
 | 5 | Week 13-17 | 85 | 18 | ⏸️ Blocked |
 | 6 | Week 18-21 | 54 | 15 | ⏸️ Blocked |
 | 7 | Week 22-26 | 75 | 19 | ⏸️ Future |
 | 8 | Week 27-30 | 40 | 11 | ⏸️ Future |
-| **TOTAL** | **~30 weeks** | **~387** | **89** | **~25% done** |
+| **TOTAL** | **~31 weeks** | **~412** | **93** | **~20% done** |
 
 ---
 

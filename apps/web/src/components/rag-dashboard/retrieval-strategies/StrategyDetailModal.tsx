@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef } from 'react';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, CheckCircle, AlertCircle, Lightbulb, Settings } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';

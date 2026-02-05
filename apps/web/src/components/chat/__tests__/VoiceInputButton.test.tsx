@@ -291,9 +291,10 @@ describe('VoiceInputButton', () => {
       await userEvent.hover(button);
 
       // Tooltip should be shown (via TooltipProvider)
-      await waitFor(() => {
-        expect(screen.getByText('Clicca per parlare')).toBeInTheDocument();
-      });
+      // Radix UI renders tooltip text in both visible content and hidden a11y span
+      // Use findAllByText and check that at least one element exists
+      const tooltipElements = await screen.findAllByText('Clicca per parlare', {}, { timeout: 3000 });
+      expect(tooltipElements.length).toBeGreaterThan(0);
     });
   });
 });

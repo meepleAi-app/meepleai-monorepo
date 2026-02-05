@@ -2,16 +2,22 @@
 
 /**
  * Add Game to Collection Wizard
- * Issue #3477: Multi-step wizard for adding games to user's personal collection
+ * Issue #3477, #3650: Multi-step wizard for adding games to user's personal collection
  *
  * 4-step wizard (Step 2 conditional):
  * 1. Search/Select Game → SharedGameCatalog OR create custom
  * 2. Game Details → Only if custom game
  * 3. Upload Private PDF → Optional
  * 4. Review & Confirm → Submit to UserLibrary
+ *
+ * UX Features:
+ * - Animated step transitions
+ * - Progress indicator with visual feedback
+ * - Keyboard navigation support
+ * - Screen reader announcements
  */
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 
 import Link from 'next/link';
 
@@ -35,6 +41,36 @@ export function AddGameWizard() {
     reset,
   } = useAddGameWizard();
 
+  // Animation state
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
+  const prevStepRef = useRef(step);
+  const stepContentRef = useRef<HTMLDivElement>(null);
+
+  // Track step changes for animation direction
+  useEffect(() => {
+    if (step !== prevStepRef.current) {
+      setDirection(step > prevStepRef.current ? 'forward' : 'backward');
+      setIsTransitioning(true);
+
+      // Reset transition state after animation
+      const timer = setTimeout(() => {
+        setIsTransitioning(false);
+      }, 300);
+
+      prevStepRef.current = step;
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
+  // Focus management for accessibility
+  useEffect(() => {
+    if (stepContentRef.current && !isTransitioning) {
+      // Focus the step content for screen readers
+      stepContentRef.current.focus();
+    }
+  }, [step, isTransitioning]);
+
   // Calculate visual step index (skip Step 2 in UI if not custom game)
   const getVisualStepIndex = useCallback(() => {
     if (!shouldShowStep2) {
@@ -52,6 +88,14 @@ export function AddGameWizard() {
     : allSteps.filter(s => s.number !== 2); // Hide Step 2 from UI
 
   const visualStepIndex = getVisualStepIndex();
+
+  // Animation classes for step transitions
+  const getStepAnimationClass = () => {
+    if (!isTransitioning) return 'opacity-100 translate-x-0';
+    return direction === 'forward'
+      ? 'opacity-0 -translate-x-4'
+      : 'opacity-0 translate-x-4';
+  };
 
   return (
     <div className="min-h-dvh bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -138,15 +182,28 @@ export function AddGameWizard() {
           </Card>
         )}
 
-        {/* Step Content */}
-        <Card className="p-6 bg-white dark:bg-slate-800 shadow-lg">
-          {step === 1 && <SearchSelectGame />}
+        {/* Step Content with Animation */}
+        <Card className="p-6 bg-white dark:bg-slate-800 shadow-lg overflow-hidden">
+          <div
+            ref={stepContentRef}
+            tabIndex={-1}
+            aria-live="polite"
+            aria-atomic="true"
+            className={`transition-all duration-300 ease-out ${getStepAnimationClass()}`}
+          >
+            {/* Screen reader announcement */}
+            <span className="sr-only">
+              Step {visualStepIndex + 1} of {visualSteps.length}: {visualSteps[visualStepIndex]?.description}
+            </span>
 
-          {step === 2 && shouldShowStep2 && <GameDetailsForm />}
+            {step === 1 && <SearchSelectGame />}
 
-          {step === 3 && <UploadPrivatePDF />}
+            {step === 2 && shouldShowStep2 && <GameDetailsForm />}
 
-          {step === 4 && <ReviewConfirm />}
+            {step === 3 && <UploadPrivatePDF />}
+
+            {step === 4 && <ReviewConfirm />}
+          </div>
         </Card>
 
         {/* Summary Card */}

@@ -2,8 +2,15 @@
 
 /**
  * Step 4: Review & Confirm
- * Issue #3477: Final review before adding game to collection
+ * Issue #3477, #3650: Final review before adding game to collection
+ *
+ * UX Features:
+ * - Clear game summary display
+ * - Loading animation during submission
+ * - Accessible button states
  */
+
+import { CheckCircle2 } from 'lucide-react';
 
 import { Spinner } from '@/components/loading';
 import { Card } from '@/components/ui/data-display/card';
@@ -25,10 +32,15 @@ export function ReviewConfirm() {
       </div>
 
       {/* Game Summary Card */}
-      <Card className="p-6 bg-slate-50 dark:bg-slate-800/50">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-          Game Information
-        </h3>
+      <Card className="p-6 bg-slate-50 dark:bg-slate-800/50 transition-all duration-300 hover:shadow-md">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+            <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+            Game Information
+          </h3>
+        </div>
 
         <div className="space-y-3">
           {/* Game Name */}
@@ -114,14 +126,21 @@ export function ReviewConfirm() {
           ← Back
         </Button>
 
-        <Button onClick={submitWizard} disabled={isProcessing} className="min-w-40">
+        <Button
+          onClick={submitWizard}
+          disabled={isProcessing}
+          className="min-w-40 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+        >
           {isProcessing ? (
             <>
               <Spinner size="sm" className="mr-2" />
               Adding to Collection...
             </>
           ) : (
-            'Add to Collection'
+            <>
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Add to Collection
+            </>
           )}
         </Button>
       </div>

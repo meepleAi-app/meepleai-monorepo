@@ -254,6 +254,13 @@ function SharedGamesClientInner() {
               <Upload className="h-4 w-4 mr-2" />
               Import from BGG
             </Button>
+            {/* Issue #3385: Bulk Import Button */}
+            <Link href="/admin/shared-games/bulk-import">
+              <Button variant="outline">
+                <Upload className="h-4 w-4 mr-2" />
+                Bulk Import
+              </Button>
+            </Link>
             <Button onClick={handleCreate}>
               <Plus className="h-4 w-4 mr-2" />
               New Game

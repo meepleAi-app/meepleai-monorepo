@@ -16,3 +16,6 @@ export * from './activity-list';
 
 // Issue #3326: MeepleCard - Universal card component system
 export * from './meeple-card';
+
+// GameCarousel - Immersive 3D carousel for browsing games
+export * from './game-carousel';

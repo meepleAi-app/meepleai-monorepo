@@ -61,6 +61,14 @@ internal sealed class ImpersonateUserCommandHandler
             throw new ConflictException($"Cannot impersonate suspended user '{command.TargetUserId}'");
         }
 
+        // Prevent impersonation of other admins (Issue #3349)
+        if (string.Equals(targetUser.Role.Value, "admin", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("⚠️ SECURITY: Admin {AdminId} attempted to impersonate another admin {TargetUserId}",
+                command.AdminUserId, command.TargetUserId);
+            throw new ConflictException("Cannot impersonate other administrators");
+        }
+
         // Verify admin exists and has admin role
         var adminUser = await _userRepository.GetByIdAsync(command.AdminUserId, cancellationToken)
             .ConfigureAwait(false);

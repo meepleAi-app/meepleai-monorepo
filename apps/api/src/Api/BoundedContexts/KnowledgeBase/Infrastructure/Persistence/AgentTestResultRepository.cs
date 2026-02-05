@@ -150,6 +150,71 @@ internal class AgentTestResultRepository : RepositoryBase, IAgentTestResultRepos
             .AnyAsync(r => r.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<List<AgentTestResult>> GetForMetricsAsync(
+        DateTime? from = null,
+        DateTime? to = null,
+        Guid? typologyId = null,
+        string? strategy = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = DbContext.Set<AgentTestResultEntity>().AsNoTracking();
+
+        if (from.HasValue)
+            query = query.Where(r => r.ExecutedAt >= from.Value);
+
+        if (to.HasValue)
+            query = query.Where(r => r.ExecutedAt <= to.Value);
+
+        if (typologyId.HasValue)
+            query = query.Where(r => r.TypologyId == typologyId.Value);
+
+        if (!string.IsNullOrWhiteSpace(strategy))
+            query = query.Where(r => r.StrategyOverride == strategy);
+
+        var entities = await query
+            .OrderByDescending(r => r.ExecutedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<(int TotalCount, int TotalTokens, decimal TotalCost, double AvgLatency, double AvgConfidence)> GetAggregateMetricsAsync(
+        DateTime? from = null,
+        DateTime? to = null,
+        Guid? typologyId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = DbContext.Set<AgentTestResultEntity>().AsNoTracking();
+
+        if (from.HasValue)
+            query = query.Where(r => r.ExecutedAt >= from.Value);
+
+        if (to.HasValue)
+            query = query.Where(r => r.ExecutedAt <= to.Value);
+
+        if (typologyId.HasValue)
+            query = query.Where(r => r.TypologyId == typologyId.Value);
+
+        var results = await query.Select(r => new
+        {
+            r.TokensUsed,
+            r.CostEstimate,
+            r.LatencyMs,
+            r.ConfidenceScore
+        }).ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        if (results.Count == 0)
+            return (0, 0, 0m, 0d, 0d);
+
+        return (
+            TotalCount: results.Count,
+            TotalTokens: results.Sum(r => r.TokensUsed),
+            TotalCost: results.Sum(r => r.CostEstimate),
+            AvgLatency: results.Average(r => r.LatencyMs),
+            AvgConfidence: results.Average(r => r.ConfidenceScore)
+        );
+    }
+
     // ========== Mapping Methods ==========
 
     private static AgentTestResult MapToDomain(AgentTestResultEntity entity)

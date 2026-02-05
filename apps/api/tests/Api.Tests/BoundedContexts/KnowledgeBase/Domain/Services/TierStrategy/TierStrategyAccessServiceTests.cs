@@ -59,6 +59,10 @@ public class TierStrategyAccessServiceTests
     [InlineData(LlmUserTier.Premium, RagStrategy.QueryExpansion, true)]
     [InlineData(LlmUserTier.User, RagStrategy.QueryExpansion, false)]
     [InlineData(LlmUserTier.Admin, RagStrategy.QueryExpansion, true)]
+    [InlineData(LlmUserTier.Premium, RagStrategy.RagFusion, true)]
+    [InlineData(LlmUserTier.User, RagStrategy.RagFusion, false)]
+    [InlineData(LlmUserTier.Editor, RagStrategy.RagFusion, false)]
+    [InlineData(LlmUserTier.Admin, RagStrategy.RagFusion, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.StepBack, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.Fast, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.MultiAgent, true)]
@@ -156,7 +160,7 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Premium, CancellationToken.None);
 
         // Assert
-        Assert.Equal(10, strategies.Count);
+        Assert.Equal(11, strategies.Count);
         Assert.DoesNotContain(RagStrategy.Custom, strategies);
         Assert.Contains(RagStrategy.Consensus, strategies);
         Assert.Contains(RagStrategy.SentenceWindow, strategies);
@@ -164,6 +168,7 @@ public class TierStrategyAccessServiceTests
         Assert.Contains(RagStrategy.MultiAgent, strategies);
         Assert.Contains(RagStrategy.StepBack, strategies);
         Assert.Contains(RagStrategy.QueryExpansion, strategies);
+        Assert.Contains(RagStrategy.RagFusion, strategies);
     }
 
     #endregion

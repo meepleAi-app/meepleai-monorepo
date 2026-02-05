@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useState } from 'react';
+
 import { WifiOff, RefreshCw, Home, Gamepad2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -14,7 +15,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { usePWA } from '@/lib/hooks/usePWA';
 
 export default function OfflinePage() {
-  const { isOnline, storageStats, actions } = usePWA();
+  const { isOnline, storageStats, actions: _actions } = usePWA();
   const [retrying, setRetrying] = useState(false);
 
   // Auto-redirect when back online

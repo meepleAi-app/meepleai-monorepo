@@ -49,7 +49,7 @@ export interface SyncState {
 // ============================================================================
 
 const MAX_RETRIES = 3;
-const RETRY_DELAYS = [1000, 5000, 15000]; // Exponential backoff
+const _RETRY_DELAYS = [1000, 5000, 15000]; // Exponential backoff (for future use)
 const SYNC_TIMEOUT = 30000; // 30 seconds per action
 
 // ============================================================================

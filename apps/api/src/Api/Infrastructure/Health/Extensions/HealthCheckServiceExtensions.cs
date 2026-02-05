@@ -89,6 +89,13 @@ public static class HealthCheckServiceExtensions
             tags: new[] { HealthCheckTags.Monitoring, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
+        // Storage Services
+        builder.AddCheck<S3StorageHealthCheck>(
+            "s3storage",
+            HealthStatus.Degraded,
+            tags: new[] { HealthCheckTags.Storage, HealthCheckTags.NonCritical },
+            timeout: TimeSpan.FromSeconds(5));
+
         return builder;
     }
 }

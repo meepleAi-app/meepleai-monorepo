@@ -192,7 +192,8 @@ internal static class ApplicationServiceExtensions
         services.AddScoped<ITableCellParser, TableCellParser>();
         services.AddScoped<ITableStructureAnalyzer, TableStructureAnalyzer>();
         services.AddScoped<IPdfMetadataExtractor, PdfMetadataExtractor>();
-        services.AddScoped<IBlobStorageService, BlobStorageService>();
+        // Issue #2703: Factory pattern for storage provider selection (local or S3)
+        services.AddScoped<IBlobStorageService>(sp => BlobStorageServiceFactory.Create(sp));
 
         // PDF main services
         // DDD-COMPLETE: PDF services fully migrated to CQRS in DocumentProcessing bounded context

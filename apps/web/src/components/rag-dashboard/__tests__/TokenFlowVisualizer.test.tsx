@@ -324,9 +324,10 @@ describe('TokenFlowVisualizer', () => {
       await user.click(preciseButton);
 
       // Token distribution should update for PRECISE strategy
-      // The component shows tokens in K format (22.120 means 22,120 tokens)
+      // Format varies by locale: "22.120" (K format) or "22,120" (full format)
       const totalText = screen.getByText('Total Tokens:').parentElement?.textContent;
-      expect(totalText).toContain('22.');
+      // Check for the numeric value regardless of format (K format or comma-separated)
+      expect(totalText).toMatch(/22[.,]?120|22[.,]12/);
     });
 
     it('should calculate layer token percentages correctly', async () => {

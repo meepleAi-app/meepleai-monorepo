@@ -54,6 +54,11 @@ import { QuickActionCard } from './QuickActionCard';
 import { QuickActionsGrid } from './QuickActionsGrid';
 import { WishlistCard, type WishlistItemData } from './WishlistCard';
 
+// Collection Components - Issue #3649
+import { CollectionStatsBar } from '@/components/collection/CollectionStatsBar';
+import { CollectionFilters } from '@/components/collection/CollectionFilters';
+import type { CollectionHeroStats, CollectionFilters as CollectionFiltersType } from '@/types/collection';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -158,6 +163,8 @@ const MOCK_GAMES: GameData[] = [
     lastPlayedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
     isFavorite: true,
     ownershipStatus: 'OWNED',
+    hasPdf: true,
+    hasActiveChat: true,
   },
   {
     id: 'g2',
@@ -168,6 +175,8 @@ const MOCK_GAMES: GameData[] = [
     lastPlayedAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
     isFavorite: false,
     ownershipStatus: 'OWNED',
+    hasPdf: false,
+    hasActiveChat: true,
   },
   {
     id: 'g3',
@@ -179,6 +188,8 @@ const MOCK_GAMES: GameData[] = [
     isFavorite: true,
     ownershipStatus: 'OWNED',
     location: 'Scaffale B',
+    hasPdf: true,
+    hasActiveChat: false,
   },
   {
     id: 'g4',
@@ -189,6 +200,8 @@ const MOCK_GAMES: GameData[] = [
     isFavorite: false,
     ownershipStatus: 'LENT_OUT',
     location: 'Da Mario',
+    hasPdf: true,
+    hasActiveChat: true,
   },
   {
     id: 'g5',
@@ -199,6 +212,8 @@ const MOCK_GAMES: GameData[] = [
     lastPlayedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
     isFavorite: false,
     ownershipStatus: 'OWNED',
+    hasPdf: false,
+    hasActiveChat: false,
   },
   {
     id: 'g6',
@@ -208,8 +223,18 @@ const MOCK_GAMES: GameData[] = [
     playCount: 6,
     isFavorite: true,
     ownershipStatus: 'OWNED',
+    hasPdf: true,
+    hasActiveChat: false,
   },
 ];
+
+// Mock Hero Stats for Collection Section - Issue #3649
+const MOCK_COLLECTION_HERO_STATS: CollectionHeroStats = {
+  totalGames: 6,
+  privatePdfsCount: 4,
+  totalSessions: 106,
+  gamesPlayedThisMonth: 3,
+};
 
 const MOCK_SHARED_GAMES = {
   sharedByMe: MOCK_GAMES.slice(0, 2),
@@ -324,6 +349,13 @@ export function Dashboard() {
   // Collection filter state
   const [collectionFilter, setCollectionFilter] = useState<'all' | 'mine' | 'accessible' | 'lent'>('all');
 
+  // Collection inline filters state - Issue #3649
+  const [collectionInlineFilters, setCollectionInlineFilters] = useState<CollectionFiltersType>({
+    hasPdf: null,
+    hasActiveChat: null,
+    category: null,
+  });
+
   // Shared games tab state
   const [sharedTab, setSharedTab] = useState<'byMe' | 'withMe' | 'pending'>('byMe');
 
@@ -386,19 +418,34 @@ export function Dashboard() {
     return () => clearActions();
   }, [activeSectionId, sections, registerActions, clearActions]);
 
-  // Get filtered games based on collection filter
+  // Get filtered games based on collection filter and inline filters - Issue #3649
   const filteredGames = useMemo(() => {
+    let games = MOCK_GAMES;
+
+    // Apply ownership filter
     switch (collectionFilter) {
       case 'mine':
-        return MOCK_GAMES.filter((g) => g.ownershipStatus === 'OWNED');
+        games = games.filter((g) => g.ownershipStatus === 'OWNED');
+        break;
       case 'accessible':
-        return MOCK_GAMES; // Would filter by shared access
+        // Would filter by shared access
+        break;
       case 'lent':
-        return MOCK_GAMES.filter((g) => g.ownershipStatus === 'LENT_OUT');
-      default:
-        return MOCK_GAMES;
+        games = games.filter((g) => g.ownershipStatus === 'LENT_OUT');
+        break;
     }
-  }, [collectionFilter]);
+
+    // Apply inline filters - Issue #3649
+    if (collectionInlineFilters.hasPdf !== null) {
+      games = games.filter((g) => g.hasPdf === collectionInlineFilters.hasPdf);
+    }
+    if (collectionInlineFilters.hasActiveChat !== null) {
+      games = games.filter((g) => g.hasActiveChat === collectionInlineFilters.hasActiveChat);
+    }
+    // Category filter would be applied here when games have category field
+
+    return games;
+  }, [collectionFilter, collectionInlineFilters]);
 
   // Get shared games based on tab
   const sharedGames = useMemo(() => {
@@ -455,7 +502,20 @@ export function Dashboard() {
         case 'collection':
           return (
             <>
-              {/* Filter tabs */}
+              {/* Hero Stats Bar - Issue #3649 */}
+              <CollectionStatsBar
+                stats={MOCK_COLLECTION_HERO_STATS}
+                className="mb-4"
+              />
+
+              {/* Inline Filters - Issue #3649 */}
+              <CollectionFilters
+                filters={collectionInlineFilters}
+                onFilterChange={setCollectionInlineFilters}
+                className="mb-4"
+              />
+
+              {/* Ownership Filter tabs */}
               <div className="mb-4 flex gap-2 overflow-x-auto pb-2">
                 {(['all', 'mine', 'accessible', 'lent'] as const).map((filter) => (
                   <Button

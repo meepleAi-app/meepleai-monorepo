@@ -836,13 +836,15 @@ internal static class AiEndpoints
         }
 
         // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
+        // Issue #3352: Added comment support for detailed feedback
         await mediator.Send(new ProvideAgentFeedbackCommand
         {
             MessageId = req.messageId,
             Endpoint = req.endpoint,
             UserId = session.User!.Id.ToString(),
             Outcome = string.IsNullOrWhiteSpace(req.outcome) ? null : req.outcome,
-            GameId = req.gameId
+            GameId = req.gameId,
+            Comment = req.comment
         }, ct).ConfigureAwait(false);
 
         logger.LogInformation(

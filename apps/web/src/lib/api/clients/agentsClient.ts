@@ -267,6 +267,42 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
 
       return response;
     },
+
+    // ========== Agent Feedback (Issue #3352) ==========
+
+    /**
+     * Submit feedback for an AI response (thumbs up/down)
+     * Implements ProvideAgentFeedbackCommand from backend
+     * Issue #3352: AI Response Feedback System
+     * @param request Feedback request with messageId, endpoint, outcome, and optional comment
+     */
+    async submitFeedback(request: {
+      messageId: string;
+      endpoint: string;
+      userId: string;
+      outcome: 'helpful' | 'not-helpful' | 'incorrect' | null;
+      gameId?: string;
+      comment?: string;
+    }): Promise<{ ok: boolean }> {
+      const response = await httpClient.post<{ ok: boolean }>(
+        '/api/v1/ai/agents/feedback',
+        {
+          messageId: request.messageId,
+          endpoint: request.endpoint,
+          userId: request.userId,
+          outcome: request.outcome,
+          gameId: request.gameId,
+          comment: request.comment,
+        },
+        z.object({ ok: z.boolean() })
+      );
+
+      if (!response) {
+        throw new Error('Failed to submit feedback: no response from server');
+      }
+
+      return response;
+    },
   };
 }
 

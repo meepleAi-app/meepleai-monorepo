@@ -11,6 +11,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Plugins.Pipeline.Models;
 public sealed record PipelineDefinition
 {
     /// <summary>
+    /// Schema version for this pipeline definition format.
+    /// Used for forward compatibility with schema changes.
+    /// </summary>
+    public string SchemaVersion { get; init; } = "1.0";
+
+    /// <summary>
     /// Unique identifier for this pipeline.
     /// </summary>
     public required string Id { get; init; }

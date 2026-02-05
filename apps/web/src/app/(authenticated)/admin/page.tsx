@@ -1,28 +1,24 @@
-/**
- * Admin Dashboard - Server Component Wrapper
- *
- * Issue #874: Enhanced centralized dashboard with metrics + activity feed
- *
- * Features (FASE 1):
- * - 16 real-time metrics (polling 30s)
- * - Activity feed (last 10 events)
- * - AdminLayout with navigation
- * - Performance optimized (<1s load, <2s TTI)
- *
- * Security Layers:
- * 1. middleware.ts: Redirects if no session cookie
- * 2. RequireRole: Validates role via getCurrentUser() action
- * 3. Backend API: Final authorization check (403 if role insufficient)
- */
+import { Suspense } from 'react';
+import { Metadata } from 'next';
+import AdminDashboardClient from './dashboard-client';
 
-import { RequireRole } from '@/components/auth/RequireRole';
+export const metadata: Metadata = {
+  title: 'Admin Dashboard | MeepleAI',
+  description: 'Dashboard amministrativa MeepleAI con panoramica sistema e azioni rapide',
+};
 
-import { DashboardClient } from './dashboard-client';
-
-export default function AdminPage() {
+export default function AdminDashboardPage() {
   return (
-    <RequireRole allowedRoles={['Admin']}>
-      <DashboardClient />
-    </RequireRole>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-pulse text-muted-foreground">
+            Caricamento dashboard...
+          </div>
+        </div>
+      }
+    >
+      <AdminDashboardClient />
+    </Suspense>
   );
 }

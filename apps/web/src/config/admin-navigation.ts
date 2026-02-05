@@ -99,23 +99,9 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         icon: LayoutDashboardIcon,
       },
       {
-        href: '/admin/dashboard-v2',
-        label: 'Dashboard v2',
-        icon: GaugeIcon,
-        badge: {
-          key: 'new',
-          variant: 'secondary',
-        },
-      },
-      {
         href: '/admin/command-center',
         label: 'Command Center',
         icon: TerminalIcon,
-      },
-      {
-        href: '/admin/redesign',
-        label: 'Redesign Preview',
-        icon: WandIcon,
       },
     ],
   },

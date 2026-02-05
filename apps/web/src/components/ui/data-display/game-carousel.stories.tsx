@@ -17,7 +17,6 @@ import {
   GameCarouselSkeleton,
   type CarouselGame,
   type CarouselSortValue,
-  CAROUSEL_SORT_OPTIONS,
 } from './game-carousel';
 
 import type { Meta, StoryObj } from '@storybook/react';

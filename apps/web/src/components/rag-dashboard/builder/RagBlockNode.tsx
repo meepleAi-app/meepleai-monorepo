@@ -9,17 +9,20 @@
  */
 
 import { memo, useCallback } from 'react';
+
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import { Settings, Trash2, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
+
 import type { RagNodeData, ConnectionPort, NodeStatus, RagBlock, NodeMetrics } from './types';
 
 // =============================================================================

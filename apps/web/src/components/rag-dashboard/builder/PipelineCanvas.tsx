@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import {
   ReactFlow,
   Controls,
@@ -33,8 +34,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { ZoomIn, ZoomOut, Maximize, Grid3X3, Map } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/primitives/button';
+
 import { Badge } from '@/components/ui/data-display/badge';
 import {
   Tooltip,
@@ -42,7 +42,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/overlays/tooltip';
+import { Button } from '@/components/ui/primitives/button';
+import { cn } from '@/lib/utils';
+
+
+import { BLOCKS_BY_TYPE, isValidConnection as checkBlockConnection } from './block-definitions';
+import { validatePipelineConstraints, PIPELINE_CONSTRAINTS } from './block-metadata';
 import { RagBlockNode } from './RagBlockNode';
+
 import type {
   RagNode,
   RagEdge,
@@ -50,8 +57,6 @@ import type {
   RagBlockType,
   PipelineDefinition,
 } from './types';
-import { BLOCKS_BY_TYPE, isValidConnection as checkBlockConnection } from './block-definitions';
-import { validatePipelineConstraints, PIPELINE_CONSTRAINTS } from './block-metadata';
 
 // =============================================================================
 // Types
@@ -202,7 +207,7 @@ export function PipelineCanvas({
           width: 15,
           height: 15,
         },
-      } as Edge;
+      };
 
       setEdges((eds) => addEdge(newEdge, eds));
     },

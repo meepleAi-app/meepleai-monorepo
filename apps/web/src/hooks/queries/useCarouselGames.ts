@@ -18,14 +18,14 @@
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { Clock, Users } from 'lucide-react';
 
+import type { CarouselGame, CarouselSortValue } from '@/components/ui/data-display/game-carousel';
 import { api } from '@/lib/api';
+import type { PaginatedLibraryResponse, UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 import type {
   PagedSharedGames,
   SharedGame,
   SearchSharedGamesParams,
 } from '@/lib/api/schemas/shared-games.schemas';
-import type { PaginatedLibraryResponse, UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
-import type { CarouselGame, CarouselSortValue } from '@/components/ui/data-display/game-carousel';
 
 // ============================================================================
 // Types & Interfaces

@@ -257,16 +257,20 @@ function ObjectField({ name, schema, value, onChange, path = '' }: FieldProps) {
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="pl-3 border-l-2 border-muted mt-2 space-y-3">
-          {Object.entries(schema.properties).map(([fieldName, fieldSchema]) => (
-            <FormField
-              key={fieldName}
-              name={fieldName}
-              schema={fieldSchema}
-              value={(objValue as Record<string, unknown>)[fieldName]}
-              onChange={handleFieldChange}
-              path={path ? `${path}.${fieldName}` : fieldName}
-            />
-          ))}
+          {Object.entries(schema.properties).map(([fieldName, fieldSchema]) => {
+            // eslint-disable-next-line security/detect-object-injection -- fieldName from Object.entries
+            const fieldValue = (objValue as Record<string, unknown>)[fieldName];
+            return (
+              <FormField
+                key={fieldName}
+                name={fieldName}
+                schema={fieldSchema}
+                value={fieldValue}
+                onChange={handleFieldChange}
+                path={path ? `${path}.${fieldName}` : fieldName}
+              />
+            );
+          })}
         </div>
       </CollapsibleContent>
     </Collapsible>
@@ -362,6 +366,7 @@ export function NodeConfigPanel({ className }: NodeConfigPanelProps) {
     if (properties) {
       Object.entries(properties).forEach(([key, prop]) => {
         if ('default' in prop && prop.default !== undefined) {
+          // eslint-disable-next-line security/detect-object-injection -- key from Object.entries
           defaultConfig[key] = prop.default;
         }
       });
@@ -440,23 +445,28 @@ export function NodeConfigPanel({ className }: NodeConfigPanelProps) {
               exit={{ opacity: 0 }}
               className="p-3 space-y-4"
             >
-              {Object.entries(properties).map(([name, schema]) => (
-                <FormField
-                  key={name}
-                  name={name}
-                  schema={schema}
-                  value={data.config[name]}
-                  onChange={handleConfigChange}
-                  error={
-                    required.has(name) &&
-                    (data.config[name] === undefined ||
-                      data.config[name] === null ||
-                      data.config[name] === '')
-                      ? 'This field is required'
-                      : undefined
-                  }
-                />
-              ))}
+              {/* eslint-disable security/detect-object-injection -- name from Object.entries */}
+              {Object.entries(properties).map(([name, schema]) => {
+                const configValue = data.config[name];
+                return (
+                  <FormField
+                    key={name}
+                    name={name}
+                    schema={schema}
+                    value={configValue}
+                    onChange={handleConfigChange}
+                    error={
+                      required.has(name) &&
+                      (configValue === undefined ||
+                        configValue === null ||
+                        configValue === '')
+                        ? 'This field is required'
+                        : undefined
+                    }
+                  />
+                );
+              })}
+              {/* eslint-enable security/detect-object-injection */}
               {Object.keys(properties).length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   This plugin has no configurable options

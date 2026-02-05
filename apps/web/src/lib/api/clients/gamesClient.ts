@@ -15,6 +15,7 @@ import {
   GameSchema,
   GameSessionDtoSchema,
   GetGameFAQsResultSchema,
+  GetSimilarGamesResultSchema,
   PaginatedGamesResponseSchema,
   QuickQuestionSchema,
   RuleSpecDiffSchema,
@@ -28,6 +29,7 @@ import {
   type GameFAQ,
   type GameSessionDto,
   type GetGameFAQsResult,
+  type GetSimilarGamesResult,
   type PaginatedGamesResponse,
   type PdfDocumentDto,
   type QuickQuestion,
@@ -588,6 +590,35 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
       );
       return response ?? [];
     },
+
+    // ========== Similar Games (Issue #3353) ==========
+
+    /**
+     * Get similar games based on content-based filtering
+     * GET /api/v1/games/{gameId}/similar
+     * Issue #3353: Similar Games Discovery with RAG
+     *
+     * Returns games similar to the specified game based on:
+     * - Categories and mechanics (content-based filtering)
+     * - Player count, complexity, and duration similarity
+     *
+     * @param gameId Game ID to find similar games for
+     * @param options Optional parameters for filtering
+     * @param options.limit Maximum number of similar games (default: 10)
+     * @param options.minSimilarity Minimum similarity score 0-1 (default: 0.3)
+     */
+    async getSimilarGames(
+      gameId: string,
+      options?: { limit?: number; minSimilarity?: number }
+    ): Promise<GetSimilarGamesResult> {
+      const params = new URLSearchParams();
+      if (options?.limit) params.append('limit', options.limit.toString());
+      if (options?.minSimilarity) params.append('minSimilarity', options.minSimilarity.toString());
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const url = `/api/v1/games/${encodeURIComponent(gameId)}/similar${queryString}`;
+      const result = await httpClient.get(url, GetSimilarGamesResultSchema);
+      return result ?? { games: [], sourceGameId: gameId, sourceGameTitle: '' };
+    },
   };
 }
 
@@ -595,3 +626,6 @@ export type GamesClient = ReturnType<typeof createGamesClient>;
 
 // Re-export QuickQuestion type for convenience
 export type { QuickQuestion } from '../schemas';
+
+// Re-export Similar Games types for convenience
+export type { SimilarGameDto, GetSimilarGamesResult } from '../schemas';

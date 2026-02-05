@@ -17,6 +17,7 @@ import { useDocumentsByGame } from '@/hooks/queries/useDocumentsByGame';
 import { useChatWithStreaming } from '@/hooks/useChatWithStreaming';
 import { useChatStore } from '@/store/chat/store';
 
+import { VoiceInputButton } from './VoiceInputButton';
 import { LoadingButton } from '../loading/LoadingButton';
 
 export function MessageInput() {
@@ -105,6 +106,13 @@ export function MessageInput() {
           disabled={isDisabled}
           aria-label="Message input"
           className="flex-1"
+        />
+        {/* Voice input button (Issue #3351) */}
+        <VoiceInputButton
+          onTranscript={(transcript) => {
+            setInputValue(inputValue ? `${inputValue} ${transcript}` : transcript);
+          }}
+          disabled={isDisabled}
         />
         {isStreaming ? (
           <LoadingButton

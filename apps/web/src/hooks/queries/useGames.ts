@@ -110,3 +110,27 @@ export function useGameDocuments(gameId: string, enabled: boolean = true) {
     staleTime: 5 * 60 * 1000, // Documents don't change often (5min)
   });
 }
+
+/**
+ * Hook to fetch similar games
+ * Issue #3353: Similar Games Discovery with RAG
+ *
+ * @param gameId Game ID to find similar games for
+ * @param options Query options (limit, minSimilarity)
+ * @param enabled Whether to run the query (default: true)
+ * @returns UseQueryResult with similar games
+ */
+export function useSimilarGames(
+  gameId: string,
+  options?: { limit?: number; minSimilarity?: number },
+  enabled: boolean = true
+) {
+  return useQuery({
+    queryKey: [...gamesKeys.detail(gameId), 'similar', options] as const,
+    queryFn: async () => {
+      return api.games.getSimilarGames(gameId, options);
+    },
+    enabled: enabled && !!gameId,
+    staleTime: 10 * 60 * 1000, // Similar games don't change often (10min)
+  });
+}

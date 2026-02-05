@@ -15,6 +15,7 @@ import React, { useState, useRef, useEffect, useCallback, KeyboardEvent } from '
 
 import { Send, Paperclip, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
+import { VoiceInputButton } from '@/components/chat/VoiceInputButton';
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { cn } from '@/lib/utils';
@@ -168,6 +169,19 @@ export function ChatInput({
             {charCount}/{MAX_CHARS}
           </div>
         </div>
+
+        {/* Voice input button (Issue #3351) */}
+        <VoiceInputButton
+          onTranscript={(transcript) => {
+            // Append transcript to current input
+            setInput(prev => prev ? `${prev} ${transcript}` : transcript);
+          }}
+          onInterimTranscript={(interim) => {
+            // Show interim results in placeholder or status
+            // For now, we just append final results
+          }}
+          disabled={isStreaming}
+        />
 
         {/* Attachment button (disabled for MVP) */}
         <Button

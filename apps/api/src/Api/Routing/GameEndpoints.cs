@@ -95,6 +95,16 @@ internal static class GameEndpoints
         .WithTags("Games", "Agents")
         .WithSummary("Get AI agents for a game")
         .WithDescription("Returns all active AI agents available for the game. Agents are currently game-agnostic. Requires authentication.");
+
+        // Get similar games based on content-based filtering
+        // Issue #3353: Similar Games Discovery with RAG
+        group.MapGet("/games/{id}/similar", HandleGetSimilarGames)
+        .AllowAnonymous() // Public endpoint for game discovery
+        .Produces<GetSimilarGamesResult>(200)
+        .Produces(404)
+        .WithTags("Games", "Discovery")
+        .WithSummary("Get similar games")
+        .WithDescription("Returns games similar to the specified game based on categories, mechanics, player count, complexity, and duration. Optionally filters out games already owned by the authenticated user.");
     }
 
     private static void MapGameManagementEndpoints(RouteGroupBuilder group)
@@ -1013,6 +1023,35 @@ internal static class GameEndpoints
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    // Issue #3353: Similar Games Discovery handler
+    private static async Task<IResult> HandleGetSimilarGames(
+        Guid id,
+        HttpContext context,
+        IMediator mediator,
+        [FromQuery] int? limit,
+        [FromQuery] double? minSimilarity,
+        CancellationToken ct)
+    {
+        // Try to get user ID if authenticated (for filtering owned games)
+        Guid? userId = null;
+        if (context.Items.TryGetValue(nameof(SessionStatusDto), out var sessionObj) &&
+            sessionObj is SessionStatusDto session &&
+            session.User != null)
+        {
+            userId = session.User.Id;
+        }
+
+        var query = new GetSimilarGamesQuery(
+            GameId: id,
+            UserId: userId,
+            TopK: limit ?? 10,
+            MinSimilarity: minSimilarity ?? 0.3
+        );
+
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 }

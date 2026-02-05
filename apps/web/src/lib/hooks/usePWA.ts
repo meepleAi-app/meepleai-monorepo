@@ -11,8 +11,9 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { syncManager, type SyncState, type SyncResult } from '@/lib/pwa/sync-manager';
+
 import { initOfflineStorage, getStorageStats, clearAllData } from '@/lib/pwa/offline-storage';
+import { syncManager, type SyncState, type SyncResult } from '@/lib/pwa/sync-manager';
 
 // ============================================================================
 // Types
@@ -262,7 +263,8 @@ export function usePWA(): UsePWAReturn {
 
   const clearOfflineData = useCallback(async (): Promise<void> => {
     await clearAllData();
-    await refreshStats();
+    const stats = await getStorageStats();
+    setStorageStats(stats);
   }, []);
 
   const refreshStats = useCallback(async (): Promise<void> => {

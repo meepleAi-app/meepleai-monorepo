@@ -12,17 +12,10 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+
 import { motion } from 'framer-motion';
 import { Plus, X, RotateCw, Volume2, VolumeX, History, Settings } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
-import { ScrollArea } from '@/components/ui/primitives/scroll-area';
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from '@/components/ui/overlays/hover-card';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +23,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/overlays/dialog';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/overlays/hover-card';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { cn } from '@/lib/utils';
 
 import type { WheelOption, WheelSpinResult } from './types';
@@ -105,9 +106,9 @@ function getNextColor(currentOptions: WheelOption[]): string {
 // ============================================================================
 
 export function WheelSpinner({
-  sessionId,
-  participantId,
-  participantName,
+  sessionId: _sessionId,
+  participantId: _participantId,
+  participantName: _participantName,
   options: initialOptions,
   onSpin,
   spinHistory = [],
@@ -257,7 +258,7 @@ export function WheelSpinner({
             onClick={!isSpinning ? handleSpin : undefined}
           >
             {/* Wheel segments */}
-            {segments.map((segment, index) => {
+            {segments.map((segment, _index) => {
               const startRad = (segment.startAngle - 90) * (Math.PI / 180);
               const endRad = (segment.endAngle - 90) * (Math.PI / 180);
 

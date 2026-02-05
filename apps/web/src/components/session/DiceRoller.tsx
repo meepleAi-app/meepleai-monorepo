@@ -2,18 +2,18 @@
 
 import React, { useState, useCallback } from 'react';
 
-import { Dices, Plus, Minus, History, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Dices, Plus, Minus, History, X, Loader2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/overlays/hover-card';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 
 import { DiceRoll, DiceType, DICE_TYPES } from './types';
@@ -101,9 +101,9 @@ function getDiceColor(sides: number): string {
 }
 
 export function DiceRoller({
-  sessionId,
-  participantId,
-  participantName,
+  sessionId: _sessionId,
+  participantId: _participantId,
+  participantName: _participantName,
   onRoll,
   rollHistory,
   disabled = false,

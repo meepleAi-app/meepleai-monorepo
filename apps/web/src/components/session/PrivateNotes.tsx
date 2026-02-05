@@ -12,6 +12,7 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { Button } from '@/components/ui/primitives/button';
@@ -278,7 +279,7 @@ function NoteEditor({
 
 export function PrivateNotes({
   notes,
-  participantId,
+  participantId: _participantId,
   isLoading = false,
   onSave,
   onReveal,

@@ -93,7 +93,7 @@ export interface MeepleGameCardProps {
 // ============================================================================
 
 export function MeepleGameCard({
-  id,
+  id: _id,
   title,
   publisher,
   year,
@@ -111,7 +111,7 @@ export function MeepleGameCard({
   isOwned,
   isWishlist,
   isFavorite,
-  onCardClick,
+  onCardClick: _onCardClick,
   onAddToLibrary,
   onViewDetails,
   className,

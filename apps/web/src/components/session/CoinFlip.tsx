@@ -11,16 +11,17 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { History, Volume2, VolumeX, Coins } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
-import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/overlays/hover-card';
+import { Button } from '@/components/ui/primitives/button';
+import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { cn } from '@/lib/utils';
 
 import type { CoinFlipResult } from './types';
@@ -57,9 +58,9 @@ export interface CoinFlipProps {
 // ============================================================================
 
 export function CoinFlip({
-  sessionId,
-  participantId,
-  participantName,
+  sessionId: _sessionId,
+  participantId: _participantId,
+  participantName: _participantName,
   onFlip,
   flipHistory = [],
   isLoading = false,

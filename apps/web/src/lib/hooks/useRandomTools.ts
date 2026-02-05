@@ -18,7 +18,7 @@
  * ```
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 import type {
   TimerState,
@@ -92,13 +92,13 @@ interface TimerResumedEventData {
   resumedAt: string;
 }
 
-interface TimerCompletedEventData {
+interface _TimerCompletedEventData {
   sessionId: string;
   timerId: string;
   completedAt: string;
 }
 
-interface TimerResetEventData {
+interface _TimerResetEventData {
   sessionId: string;
   timerId: string;
   resetAt: string;

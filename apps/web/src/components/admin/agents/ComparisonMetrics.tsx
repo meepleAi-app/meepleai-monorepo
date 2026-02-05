@@ -51,7 +51,7 @@ export interface ComparisonMetricsProps {
   models: readonly Model[];
 }
 
-interface MetricWinner {
+interface _MetricWinner {
   configId: string;
   value: number;
   label: string;

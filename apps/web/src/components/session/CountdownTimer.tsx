@@ -12,14 +12,15 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, RotateCcw, Clock, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { cn } from '@/lib/utils';
 
-import type { TimerState, TimerStatus } from './types';
+import type { TimerState } from './types';
 
 // ============================================================================
 // Types
@@ -61,7 +62,7 @@ function formatTime(seconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-function parseTimeInput(value: string): number {
+function _parseTimeInput(value: string): number {
   const parts = value.split(':');
   if (parts.length === 2) {
     const mins = parseInt(parts[0], 10) || 0;
@@ -116,7 +117,7 @@ export function CountdownTimer({
     if (timerState) {
       setLocalRemaining(timerState.remainingSeconds);
     }
-  }, [timerState?.remainingSeconds]);
+  }, [timerState, timerState?.remainingSeconds]);
 
   // Local countdown when running
   useEffect(() => {
@@ -145,6 +146,7 @@ export function CountdownTimer({
         intervalRef.current = null;
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- localRemaining updated by interval, not a dependency
   }, [isRunning, soundEnabled]);
 
   // Play sound on completion

@@ -176,7 +176,7 @@ export function ChatInput({
             // Append transcript to current input
             setInput(prev => prev ? `${prev} ${transcript}` : transcript);
           }}
-          onInterimTranscript={(interim) => {
+          onInterimTranscript={(_interim) => {
             // Show interim results in placeholder or status
             // For now, we just append final results
           }}

@@ -128,6 +128,7 @@ function PortHandle({ port, isConnectable }: PortHandleProps) {
               '!w-3 !h-3 !border-2 !border-background',
               dataTypeColors[port.dataType] || 'bg-gray-500'
             )}
+            data-testid={port.type === 'input' ? 'target-handle' : 'source-handle'}
           />
         </TooltipTrigger>
         <TooltipContent side={port.position === 'left' ? 'left' : 'right'} className="text-xs">
@@ -164,6 +165,7 @@ function RagBlockNodeComponent({ id, data, selected }: RagBlockNodeProps) {
         borderTopColor: block.color,
         borderTopWidth: '4px',
       }}
+      data-testid={`canvas-node-${block.type}`}
     >
       {/* Status Indicator */}
       <StatusIndicator status={status} />

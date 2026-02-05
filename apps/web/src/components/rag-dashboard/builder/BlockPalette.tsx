@@ -125,6 +125,7 @@ function BlockItem({
             role="button"
             aria-disabled={disabled}
             tabIndex={disabled ? -1 : 0}
+            data-testid={`palette-block-${block.type}`}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 handleClick();
@@ -187,8 +188,8 @@ function CategoryGroup({ group, onBlockDragStart, onBlockClick }: CategoryGroupP
   const enabledCount = group.items.filter((item) => !item.disabled).length;
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 hover:bg-accent/50 rounded-md transition-colors">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} data-testid={`palette-category-${group.category}`}>
+      <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 hover:bg-accent/50 rounded-md transition-colors" data-testid={`palette-category-${group.category}-toggle`}>
         {isOpen ? (
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         ) : (
@@ -293,6 +294,7 @@ export function BlockPalette({
         'w-72 bg-card border-r flex flex-col',
         className
       )}
+      data-testid="block-palette"
     >
       {/* Header */}
       <div className="p-3 border-b space-y-3">
@@ -311,6 +313,7 @@ export function BlockPalette({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8 h-9"
+            data-testid="palette-search"
           />
         </div>
       </div>

@@ -241,7 +241,7 @@ export function PipelineTestPanel({
   const canRunTest = !disabled && !isRunning && testQuery.trim().length > 0;
 
   return (
-    <div className={cn('flex flex-col h-full bg-card', className)}>
+    <div className={cn('flex flex-col h-full bg-card', className)} data-testid="test-panel">
       {/* Header */}
       <div className="p-3 border-b space-y-3">
         <h3 className="font-semibold text-sm">Pipeline Test</h3>
@@ -254,6 +254,7 @@ export function PipelineTestPanel({
             onChange={(e) => setTestQuery(e.target.value)}
             disabled={isRunning || disabled}
             className="h-8 text-sm"
+            data-testid="test-query-input"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && canRunTest) {
                 handleStartTest();
@@ -272,6 +273,7 @@ export function PipelineTestPanel({
                       onClick={handleStartTest}
                       disabled={!canRunTest}
                       className="flex-1"
+                      data-testid="run-test-button"
                     >
                       <Play className="h-3 w-3 mr-1" />
                       Run Test

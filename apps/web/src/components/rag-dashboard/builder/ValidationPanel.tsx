@@ -252,7 +252,7 @@ export function ValidationPanel({
   }
 
   return (
-    <ScrollArea className={cn('h-full', className)}>
+    <ScrollArea className={cn('h-full', className)} data-testid="validation-panel">
       <div className="p-4 space-y-4">
         {/* Status Header */}
         <div className="flex items-center gap-3">

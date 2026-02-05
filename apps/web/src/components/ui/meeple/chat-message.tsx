@@ -2,10 +2,11 @@
  * ChatMessage Component - User/AI Message Display
  *
  * Displays chat messages with role-based layout, confidence badges,
- * citations, and typing indicators following Playful Boardroom design.
+ * citations, typing indicators, and feedback buttons following Playful Boardroom design.
  *
  * @see docs/04-frontend/wireframes-playful-boardroom.md (Page 4 - Chat AI)
  * @issue #1831 (UI-004)
+ * @issue #3352 (AI Response Feedback System)
  */
 
 import React from 'react';
@@ -13,6 +14,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 import { MeepleAvatar, type MeepleAvatarState } from './meeple-avatar';
+import { FeedbackButtons, type FeedbackValue } from './feedback-buttons';
 import { Avatar, AvatarImage, AvatarFallback } from '../data-display/avatar';
 import { ConfidenceBadge as StandaloneConfidenceBadge } from '../data-display/confidence-badge';
 
@@ -49,6 +51,14 @@ export interface ChatMessageProps {
   className?: string;
   /** Citation click handler */
   onCitationClick?: (documentId: string, pageNumber: number) => void;
+  /** Issue #3352: Current feedback value for this message */
+  feedback?: FeedbackValue;
+  /** Issue #3352: Callback when feedback changes */
+  onFeedbackChange?: (feedback: FeedbackValue, comment?: string) => Promise<void>;
+  /** Issue #3352: Whether feedback is being submitted */
+  isFeedbackLoading?: boolean;
+  /** Issue #3352: Show feedback buttons (default: true for assistant messages) */
+  showFeedback?: boolean;
 }
 
 // ============================================================================
@@ -190,11 +200,16 @@ export const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
       isTyping = false,
       className,
       onCitationClick,
+      feedback,
+      onFeedbackChange,
+      isFeedbackLoading = false,
+      showFeedback = true,
     },
     ref
   ) => {
     const isAssistant = role === 'assistant';
     const avatarState = isAssistant ? getAvatarState(confidence, isTyping) : undefined;
+    const shouldShowFeedback = isAssistant && showFeedback && !isTyping && onFeedbackChange;
 
     return (
       <div
@@ -252,6 +267,19 @@ export const ChatMessage = React.forwardRef<HTMLDivElement, ChatMessageProps>(
                 ))}
               </div>
             )}
+
+            {/* Issue #3352: Feedback Buttons (AI only) */}
+            {shouldShowFeedback && (
+              <div className="mt-3 pt-3 border-t border-border/50">
+                <FeedbackButtons
+                  value={feedback ?? null}
+                  onFeedbackChange={onFeedbackChange}
+                  isLoading={isFeedbackLoading}
+                  showCommentOnNegative
+                  size="sm"
+                />
+              </div>
+            )}
           </div>
 
           {/* Timestamp */}
@@ -282,3 +310,7 @@ export { StandaloneConfidenceBadge as ConfidenceBadge };
 export type { ConfidenceBadgeProps } from '../data-display/confidence-badge';
 export { ChatCitationLink, TypingIndicator };
 export type { ChatCitationLinkProps, TypingIndicatorProps };
+
+// Issue #3352: Re-export FeedbackButtons for use in other components
+export { FeedbackButtons };
+export type { FeedbackValue, FeedbackButtonsProps } from './feedback-buttons';

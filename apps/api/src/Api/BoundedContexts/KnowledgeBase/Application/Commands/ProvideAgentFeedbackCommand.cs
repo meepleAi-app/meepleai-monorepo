@@ -33,4 +33,10 @@ internal sealed record ProvideAgentFeedbackCommand : IRequest
     /// Optional game ID context.
     /// </summary>
     public string? GameId { get; init; }
+
+    /// <summary>
+    /// Optional feedback comment from user.
+    /// Issue #3352: AI Response Feedback System
+    /// </summary>
+    public string? Comment { get; init; }
 }

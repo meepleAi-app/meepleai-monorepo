@@ -15,6 +15,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// <summary>
 /// Tests for ProvideAgentFeedbackCommandHandler.
 /// Tests feedback submission validation and storage.
+/// Issue #3352: Added tests for Comment field support.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class ProvideAgentFeedbackCommandHandlerTests
@@ -325,6 +326,174 @@ public class ProvideAgentFeedbackCommandHandlerTests
         Assert.NotNull(feedback);
         Assert.Equal("not-helpful", feedback.Outcome);
         Assert.Equal("/api/v1/search", feedback.Endpoint);
+    }
+
+    // Issue #3352: Tests for Comment field support
+
+    [Fact]
+    public async Task Handle_WithComment_StoresComment()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
+        var command = new ProvideAgentFeedbackCommand
+        {
+            MessageId = Guid.NewGuid().ToString(),
+            Endpoint = "/api/v1/chat",
+            UserId = Guid.NewGuid().ToString(),
+            Outcome = "not-helpful",
+            GameId = Guid.NewGuid().ToString(),
+            Comment = "The response was unclear about game setup rules"
+        };
+
+        // Act
+        await handler.Handle(command, TestCancellationToken);
+
+        // Assert
+        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
+        Assert.NotNull(feedback);
+        Assert.Equal("not-helpful", feedback.Outcome);
+        Assert.Equal("The response was unclear about game setup rules", feedback.Comment);
+    }
+
+    [Fact]
+    public async Task Handle_WithNullComment_StoresNullComment()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
+        var command = new ProvideAgentFeedbackCommand
+        {
+            MessageId = Guid.NewGuid().ToString(),
+            Endpoint = "/api/v1/chat",
+            UserId = Guid.NewGuid().ToString(),
+            Outcome = "helpful",
+            GameId = Guid.NewGuid().ToString(),
+            Comment = null
+        };
+
+        // Act
+        await handler.Handle(command, TestCancellationToken);
+
+        // Assert
+        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
+        Assert.NotNull(feedback);
+        Assert.Equal("helpful", feedback.Outcome);
+        Assert.Null(feedback.Comment);
+    }
+
+    [Fact]
+    public async Task Handle_WithEmptyComment_StoresNullComment()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
+        var command = new ProvideAgentFeedbackCommand
+        {
+            MessageId = Guid.NewGuid().ToString(),
+            Endpoint = "/api/v1/chat",
+            UserId = Guid.NewGuid().ToString(),
+            Outcome = "not-helpful",
+            Comment = "   "  // Whitespace only should be trimmed to null
+        };
+
+        // Act
+        await handler.Handle(command, TestCancellationToken);
+
+        // Assert
+        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
+        Assert.NotNull(feedback);
+        Assert.Null(feedback.Comment);
+    }
+
+    [Fact]
+    public async Task Handle_WithCommentUpdate_UpdatesComment()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var userId = Guid.NewGuid();
+        var messageId = Guid.NewGuid();
+
+        // Add existing feedback without comment
+        context.AgentFeedbacks.Add(new AgentFeedbackEntity
+        {
+            Id = Guid.NewGuid(),
+            MessageId = messageId,
+            Endpoint = "/api/v1/chat",
+            UserId = userId,
+            Outcome = "not-helpful",
+            Comment = null,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        await context.SaveChangesAsync(TestCancellationToken);
+
+        var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
+        var command = new ProvideAgentFeedbackCommand
+        {
+            MessageId = messageId.ToString(),
+            Endpoint = "/api/v1/chat",
+            UserId = userId.ToString(),
+            Outcome = "not-helpful",
+            Comment = "Adding a comment to existing feedback"
+        };
+
+        // Act
+        await handler.Handle(command, TestCancellationToken);
+
+        // Assert
+        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
+        Assert.NotNull(feedback);
+        Assert.Equal("Adding a comment to existing feedback", feedback.Comment);
+    }
+
+    [Fact]
+    public async Task Handle_WithCommentOnPositiveFeedback_StoresComment()
+    {
+        // Arrange - Comments should work for any outcome type
+        using var context = CreateFreshDbContext();
+        var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
+        var command = new ProvideAgentFeedbackCommand
+        {
+            MessageId = Guid.NewGuid().ToString(),
+            Endpoint = "/api/v1/chat",
+            UserId = Guid.NewGuid().ToString(),
+            Outcome = "helpful",
+            Comment = "Great explanation of the rules!"
+        };
+
+        // Act
+        await handler.Handle(command, TestCancellationToken);
+
+        // Assert
+        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
+        Assert.NotNull(feedback);
+        Assert.Equal("helpful", feedback.Outcome);
+        Assert.Equal("Great explanation of the rules!", feedback.Comment);
+    }
+
+    [Fact]
+    public async Task Handle_WithCommentTrim_TrimsWhitespace()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var handler = new ProvideAgentFeedbackCommandHandler(context, _mockLogger.Object);
+        var command = new ProvideAgentFeedbackCommand
+        {
+            MessageId = Guid.NewGuid().ToString(),
+            Endpoint = "/api/v1/chat",
+            UserId = Guid.NewGuid().ToString(),
+            Outcome = "not-helpful",
+            Comment = "  Comment with extra spaces  "
+        };
+
+        // Act
+        await handler.Handle(command, TestCancellationToken);
+
+        // Assert
+        var feedback = await context.AgentFeedbacks.FirstOrDefaultAsync(TestCancellationToken);
+        Assert.NotNull(feedback);
+        Assert.Equal("Comment with extra spaces", feedback.Comment);
     }
 }
 

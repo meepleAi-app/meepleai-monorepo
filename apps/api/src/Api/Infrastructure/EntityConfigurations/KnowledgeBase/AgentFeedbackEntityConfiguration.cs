@@ -16,6 +16,8 @@ internal class AgentFeedbackEntityConfiguration : IEntityTypeConfiguration<Agent
         builder.Property(e => e.GameId).HasMaxLength(64);
         builder.Property(e => e.UserId).IsRequired().HasMaxLength(64);
         builder.Property(e => e.Outcome).IsRequired().HasMaxLength(32);
+        // Issue #3352: Optional feedback comment for detailed user feedback
+        builder.Property(e => e.Comment).HasMaxLength(1000);
         builder.Property(e => e.CreatedAt).IsRequired();
         builder.Property(e => e.UpdatedAt).IsRequired();
         builder.HasIndex(e => new { e.MessageId, e.UserId }).IsUnique();

@@ -10,16 +10,17 @@
  * - SSE event integration
  */
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Coins, RotateCw } from 'lucide-react';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { cn } from '@/lib/utils';
 
-import { CountdownTimer } from './CountdownTimer';
 import { CoinFlip } from './CoinFlip';
+import { CountdownTimer } from './CountdownTimer';
 import { WheelSpinner } from './WheelSpinner';
 
 import type {

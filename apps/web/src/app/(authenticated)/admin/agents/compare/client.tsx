@@ -10,7 +10,7 @@
 import { useState, useCallback } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { Play, Loader2, Plus, Trash2, ArrowLeft, Save } from 'lucide-react';
+import { Play, Loader2, Plus, ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 

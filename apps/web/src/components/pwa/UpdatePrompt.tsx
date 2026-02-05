@@ -7,11 +7,11 @@
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, X, Sparkles } from 'lucide-react';
+import { RefreshCw, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
-import { cn } from '@/lib/utils';
 import { usePWA } from '@/lib/hooks/usePWA';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types

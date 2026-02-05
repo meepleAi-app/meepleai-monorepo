@@ -13,11 +13,11 @@
 
 import { Activity, Clock, DollarSign, Target } from 'lucide-react';
 
+import type { AgentMetrics } from '@/app/(authenticated)/admin/agents/metrics/client';
 import { Card, CardContent } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { cn } from '@/lib/utils';
 
-import type { AgentMetrics } from '@/app/(authenticated)/admin/agents/metrics/client';
 
 // ============================================================================
 // Types

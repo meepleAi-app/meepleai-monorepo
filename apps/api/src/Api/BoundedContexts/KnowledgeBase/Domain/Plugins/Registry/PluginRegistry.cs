@@ -144,7 +144,9 @@ public sealed class PluginRegistry : IPluginRegistry, IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load plugin {PluginId}", pluginId);
-            throw new PluginRegistrationException(pluginId, $"Failed to instantiate plugin: {ex.Message}");
+            throw new PluginRegistrationException(
+                $"Failed to load plugin '{pluginId}': {ex.Message}",
+                ex);
         }
     }
 

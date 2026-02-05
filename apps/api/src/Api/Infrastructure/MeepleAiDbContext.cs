@@ -165,6 +165,15 @@ public class MeepleAiDbContext : DbContext
         // Apply all entity configurations from assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MeepleAiDbContext).Assembly);
 
+        // Issue #3578: Explicitly ignore Vector properties for InMemory database (unit tests)
+        // Must be done AFTER ApplyConfigurationsFromAssembly to override the property configs
+        if (_isInMemoryDatabase)
+        {
+            modelBuilder.Entity<AgentGameStateSnapshotEntity>().Ignore(e => e.Embedding);
+            modelBuilder.Entity<ConversationMemoryEntity>().Ignore(e => e.Embedding);
+            modelBuilder.Entity<StrategyPatternEntity>().Ignore(e => e.Embedding);
+        }
+
         // Ignore domain aggregate roots - EF Core should only map persistence entities
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.OAuthAccount>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.User>();

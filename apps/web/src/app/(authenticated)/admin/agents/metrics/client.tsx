@@ -9,22 +9,23 @@
 
 import { useState, useMemo } from 'react';
 
+import { useQuery } from '@tanstack/react-query';
 import { format, subDays } from 'date-fns';
 import {
   Activity,
-  DollarSign,
-  Clock,
   Target,
   BarChart3,
   TrendingUp,
   RefreshCw,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 
-import { Button } from '@/components/ui/primitives/button';
+import { CostBreakdownChart } from '@/components/admin/agents/CostBreakdownChart';
+import { MetricsKpiCards } from '@/components/admin/agents/MetricsKpiCards';
+import { TopAgentsTable } from '@/components/admin/agents/TopAgentsTable';
+import { UsageChart } from '@/components/admin/agents/UsageChart';
+import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { Badge } from '@/components/ui/data-display/badge';
 import {
   Select,
   SelectContent,
@@ -32,11 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-
-import { MetricsKpiCards } from '@/components/admin/agents/MetricsKpiCards';
-import { UsageChart } from '@/components/admin/agents/UsageChart';
-import { CostBreakdownChart } from '@/components/admin/agents/CostBreakdownChart';
-import { TopAgentsTable } from '@/components/admin/agents/TopAgentsTable';
+import { Button } from '@/components/ui/primitives/button';
 
 // ============================================================================
 // Types

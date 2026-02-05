@@ -7,10 +7,10 @@
  */
 
 import { useState, useEffect } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, Smartphone, Monitor, Sparkles } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
 import {
   Dialog,
   DialogContent,
@@ -18,8 +18,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/primitives/button';
 import { usePWA } from '@/lib/hooks/usePWA';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types

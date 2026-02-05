@@ -21,8 +21,6 @@ import { useForm, Controller, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
-import { PdfUploadSection, type UploadedPdf } from './PdfUploadSection';
-import { PdfIndexingStatus } from './PdfIndexingStatus';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -39,6 +37,9 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api, type GameCategory, type GameMechanic, type SharedGameDetail } from '@/lib/api';
+
+import { PdfIndexingStatus } from './PdfIndexingStatus';
+import { PdfUploadSection, type UploadedPdf } from './PdfUploadSection';
 
 // ========== Form Schema ==========
 

@@ -5,9 +5,10 @@
  * Frosted glass design with 3D flip animation.
  */
 
+import { MeepleGameCard, MeepleGameCardSkeleton } from './meeple-game-card';
+
 import type { Meta, StoryObj } from '@storybook/react';
 
-import { MeepleGameCard, MeepleGameCardSkeleton } from './meeple-game-card';
 
 const meta: Meta<typeof MeepleGameCard> = {
   title: 'Data Display/MeepleGameCard',

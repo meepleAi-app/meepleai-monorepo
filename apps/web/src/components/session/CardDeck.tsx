@@ -13,12 +13,13 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 
-import type { Card, SessionDeck, CARD_SUITS } from './types';
+import type { Card, SessionDeck } from './types';
 
 // ============================================================================
 // Types

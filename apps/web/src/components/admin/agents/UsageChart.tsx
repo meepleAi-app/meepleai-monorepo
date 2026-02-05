@@ -7,8 +7,9 @@
  * Displays agent usage over time as a bar chart.
  */
 
-import { motion } from 'framer-motion';
 import { useMemo } from 'react';
+
+import { motion } from 'framer-motion';
 
 import { cn } from '@/lib/utils';
 

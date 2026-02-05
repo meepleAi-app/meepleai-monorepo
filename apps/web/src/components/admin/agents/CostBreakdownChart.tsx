@@ -7,8 +7,9 @@
  * Displays cost breakdown by model as horizontal bars.
  */
 
-import { motion } from 'framer-motion';
 import { useMemo } from 'react';
+
+import { motion } from 'framer-motion';
 
 import { cn } from '@/lib/utils';
 

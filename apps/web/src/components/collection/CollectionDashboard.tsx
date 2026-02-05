@@ -41,6 +41,7 @@ import {
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/data-display/badge';
+import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   Select,
   SelectContent,
@@ -50,7 +51,6 @@ import {
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   useLibrary,
   useLibraryStats,

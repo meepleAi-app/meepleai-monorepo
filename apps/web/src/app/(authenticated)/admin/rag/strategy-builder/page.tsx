@@ -16,9 +16,10 @@
  * @see #3468 - E2E tests for visual strategy builder
  */
 
+import { StrategyBuilderClient } from './client';
+
 import type { Metadata } from 'next';
 
-import { StrategyBuilderClient } from './client';
 
 export const metadata: Metadata = {
   title: 'RAG Strategy Builder | Admin | MeepleAI',

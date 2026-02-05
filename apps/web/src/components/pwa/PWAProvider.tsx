@@ -9,8 +9,8 @@
  * - Update prompt
  */
 
-import { OfflineIndicator } from './OfflineIndicator';
 import { InstallPrompt } from './InstallPrompt';
+import { OfflineIndicator } from './OfflineIndicator';
 import { UpdatePrompt } from './UpdatePrompt';
 
 // ============================================================================

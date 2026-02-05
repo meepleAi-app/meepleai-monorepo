@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import {
   Check,
   ChevronDown,
@@ -20,9 +21,13 @@ import {
   Twitter,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/primitives/button';
-import { Checkbox } from '@/components/ui/primitives/checkbox';
-import { Label } from '@/components/ui/primitives/label';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/navigation/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -31,13 +36,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/overlays/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/navigation/dropdown-menu';
+import { Button } from '@/components/ui/primitives/button';
+import { Checkbox } from '@/components/ui/primitives/checkbox';
+import { Label } from '@/components/ui/primitives/label';
 import { cn } from '@/lib/utils';
 
 // ============================================================================

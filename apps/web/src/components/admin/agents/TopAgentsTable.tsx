@@ -7,10 +7,10 @@
  * Displays top agents in a table format with key metrics.
  */
 
+import type { TopAgent } from '@/app/(authenticated)/admin/agents/metrics/client';
 import { Badge } from '@/components/ui/data-display/badge';
 import { cn } from '@/lib/utils';
 
-import type { TopAgent } from '@/app/(authenticated)/admin/agents/metrics/client';
 
 // ============================================================================
 // Types

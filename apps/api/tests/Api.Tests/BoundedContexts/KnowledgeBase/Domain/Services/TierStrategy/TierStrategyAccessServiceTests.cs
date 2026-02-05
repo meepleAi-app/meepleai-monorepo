@@ -52,6 +52,10 @@ public class TierStrategyAccessServiceTests
     [InlineData(LlmUserTier.Premium, RagStrategy.Custom, false)]
     [InlineData(LlmUserTier.User, RagStrategy.MultiAgent, false)]
     [InlineData(LlmUserTier.Editor, RagStrategy.MultiAgent, false)]
+    [InlineData(LlmUserTier.Editor, RagStrategy.StepBack, true)]
+    [InlineData(LlmUserTier.Premium, RagStrategy.StepBack, true)]
+    [InlineData(LlmUserTier.User, RagStrategy.StepBack, false)]
+    [InlineData(LlmUserTier.Admin, RagStrategy.StepBack, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.Fast, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.MultiAgent, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.SentenceWindow, true)]
@@ -114,11 +118,12 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Editor, CancellationToken.None);
 
         // Assert
-        Assert.Equal(4, strategies.Count);
+        Assert.Equal(5, strategies.Count);
         Assert.Contains(RagStrategy.Fast, strategies);
         Assert.Contains(RagStrategy.Balanced, strategies);
         Assert.Contains(RagStrategy.Precise, strategies);
         Assert.Contains(RagStrategy.SentenceWindow, strategies);
+        Assert.Contains(RagStrategy.StepBack, strategies);
         Assert.DoesNotContain(RagStrategy.Expert, strategies);
     }
 
@@ -146,12 +151,13 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Premium, CancellationToken.None);
 
         // Assert
-        Assert.Equal(8, strategies.Count);
+        Assert.Equal(9, strategies.Count);
         Assert.DoesNotContain(RagStrategy.Custom, strategies);
         Assert.Contains(RagStrategy.Consensus, strategies);
         Assert.Contains(RagStrategy.SentenceWindow, strategies);
         Assert.Contains(RagStrategy.Iterative, strategies);
         Assert.Contains(RagStrategy.MultiAgent, strategies);
+        Assert.Contains(RagStrategy.StepBack, strategies);
     }
 
     #endregion

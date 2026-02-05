@@ -24,6 +24,7 @@ public class RagStrategyTests
     [InlineData(RagStrategy.Iterative, "ITERATIVE")]
     [InlineData(RagStrategy.Custom, "CUSTOM")]
     [InlineData(RagStrategy.MultiAgent, "MULTI_AGENT")]
+    [InlineData(RagStrategy.StepBack, "STEP_BACK")]
     public void GetDisplayName_AllStrategies_ReturnsUpperCaseName(RagStrategy strategy, string expectedName)
     {
         // Act
@@ -94,6 +95,8 @@ public class RagStrategyTests
     [InlineData("CUSTOM", true, RagStrategy.Custom)]
     [InlineData("MultiAgent", true, RagStrategy.MultiAgent)]
     [InlineData("multiagent", true, RagStrategy.MultiAgent)]
+    [InlineData("StepBack", true, RagStrategy.StepBack)]
+    [InlineData("stepback", true, RagStrategy.StepBack)]
     [InlineData("INVALID", false, RagStrategy.Fast)]
     [InlineData("", false, RagStrategy.Fast)]
     [InlineData(null, false, RagStrategy.Fast)]
@@ -146,6 +149,7 @@ public class RagStrategyTests
     [InlineData(RagStrategy.Iterative, 6)]
     [InlineData(RagStrategy.Custom, 7)]
     [InlineData(RagStrategy.MultiAgent, 8)]
+    [InlineData(RagStrategy.StepBack, 9)]
     public void GetComplexityLevel_AllStrategies_ReturnsCorrectLevel(RagStrategy strategy, int expectedLevel)
     {
         // Act
@@ -171,6 +175,7 @@ public class RagStrategyTests
         Assert.Equal(RagStrategy.Iterative, strategies[6]);
         Assert.Equal(RagStrategy.Custom, strategies[7]);
         Assert.Equal(RagStrategy.MultiAgent, strategies[8]);
+        Assert.Equal(RagStrategy.StepBack, strategies[9]);
     }
 
     #endregion
@@ -187,6 +192,7 @@ public class RagStrategyTests
     [InlineData(RagStrategy.Iterative, false)]
     [InlineData(RagStrategy.Custom, true)]
     [InlineData(RagStrategy.MultiAgent, false)]
+    [InlineData(RagStrategy.StepBack, false)]
     public void RequiresAdmin_AllStrategies_OnlyCustomRequiresAdmin(RagStrategy strategy, bool expectedRequiresAdmin)
     {
         // Act
@@ -205,7 +211,7 @@ public class RagStrategyTests
     {
         // Assert
         var values = Enum.GetValues<RagStrategy>();
-        Assert.Equal(9, values.Length);
+        Assert.Equal(10, values.Length);
     }
 
     [Fact]

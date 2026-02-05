@@ -27,7 +27,7 @@
 import { memo } from 'react';
 
 import { motion } from 'framer-motion';
-import { Heart, Bot, MapPin, Calendar, Gamepad2, Share2 } from 'lucide-react';
+import { Heart, Bot, MapPin, Calendar, Gamepad2, Share2, Lock, MessageSquare } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
@@ -48,6 +48,10 @@ export interface GameData {
   isFavorite?: boolean;
   ownershipStatus?: 'OWNED' | 'LENT_OUT';
   location?: string;
+  /** Has private PDF uploaded - Issue #3649 */
+  hasPdf?: boolean;
+  /** Has active chat conversation - Issue #3649 */
+  hasActiveChat?: boolean;
 }
 
 export interface GameCardProps {
@@ -94,7 +98,7 @@ export const GameCard = memo(function GameCard({
   onClick,
   className,
 }: GameCardProps) {
-  const { name, imageUrl, rating, playCount, lastPlayedAt, isFavorite, ownershipStatus, location } = data;
+  const { name, imageUrl, rating, playCount, lastPlayedAt, isFavorite, ownershipStatus, location, hasPdf, hasActiveChat } = data;
 
   // Grid View (Compact)
   if (viewMode === 'grid') {
@@ -152,6 +156,29 @@ export const GameCard = memo(function GameCard({
             <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-md bg-background/90 px-2 py-0.5 text-xs font-medium text-muted-foreground backdrop-blur-sm">
               <Share2 className="h-3 w-3" />
               Prestato
+            </div>
+          )}
+
+          {/* Private PDF Badge - Issue #3649 */}
+          {hasPdf && (
+            <div
+              className="absolute left-2 top-9 flex items-center justify-center rounded-md bg-purple-500/90 p-1.5 shadow-md backdrop-blur-sm"
+              title="PDF Privato"
+              aria-label="Ha PDF privato"
+            >
+              <Lock className="h-3.5 w-3.5 text-white" />
+            </div>
+          )}
+
+          {/* Active Chat Badge - Issue #3649 */}
+          {hasActiveChat && (
+            <div
+              className="absolute left-2 flex items-center justify-center rounded-md bg-emerald-500/90 p-1.5 shadow-md backdrop-blur-sm"
+              style={{ top: hasPdf ? '4.5rem' : '2.25rem' }}
+              title="Chat Attiva"
+              aria-label="Ha chat attiva"
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-white" />
             </div>
           )}
 
@@ -246,6 +273,26 @@ export const GameCard = memo(function GameCard({
             <span className="shrink-0 flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
               <Share2 className="h-3 w-3" />
               Prestato
+            </span>
+          )}
+          {/* Private PDF Badge - Issue #3649 */}
+          {hasPdf && (
+            <span
+              className="shrink-0 flex items-center gap-1 rounded-md bg-purple-500/20 px-1.5 py-0.5 text-xs text-purple-600 dark:text-purple-400"
+              title="PDF Privato"
+            >
+              <Lock className="h-3 w-3" />
+              PDF
+            </span>
+          )}
+          {/* Active Chat Badge - Issue #3649 */}
+          {hasActiveChat && (
+            <span
+              className="shrink-0 flex items-center gap-1 rounded-md bg-emerald-500/20 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400"
+              title="Chat Attiva"
+            >
+              <MessageSquare className="h-3 w-3" />
+              Chat
             </span>
           )}
         </div>

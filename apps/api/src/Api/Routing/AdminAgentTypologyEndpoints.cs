@@ -4,6 +4,8 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
 using MediatR;
 
+// Issue #3381: Typology Approval Workflow Request DTOs
+
 namespace Api.Routing;
 
 /// <summary>
@@ -189,6 +191,105 @@ Admin endpoint to create an AgentTypology with explicit LLM model configuration 
         .WithSummary("Get cost estimate for AgentTypology (Admin)")
         .WithDescription("Calculate estimated costs per query based on configured models.");
 
+        // ========================================
+        // ADMIN: TYPOLOGY APPROVAL WORKFLOW
+        // Issue #3381
+        // ========================================
+
+        // PUT /api/v1/admin/agent-typologies/{id}/approve
+        // Approve a pending typology
+        group.MapPut("/{id:guid}/approve", async (
+            Guid id,
+            ApproveTypologyRequest? request,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            logger.LogInformation(
+                "Admin {UserId} approving AgentTypology: {TypologyId}",
+                session.User!.Id,
+                id);
+
+            var command = new ApproveAgentTypologyCommand(
+                Id: id,
+                ApprovedBy: session.User.Id,
+                Notes: request?.Notes);
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "AgentTypology approved: {Id}, Status: {Status}",
+                result.Id,
+                result.Status);
+
+            return Results.Ok(result);
+        })
+        .WithName("AdminApproveTypology")
+        .WithTags("AgentTypology", "Admin", "Approval")
+        .WithSummary("Approve a pending AgentTypology (Admin)")
+        .WithDescription("Approve a typology for production use. Publishes TypologyApprovedEvent for notifications.");
+
+        // PUT /api/v1/admin/agent-typologies/{id}/reject
+        // Reject a pending typology with reason
+        group.MapPut("/{id:guid}/reject", async (
+            Guid id,
+            RejectTypologyRequest request,
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            logger.LogInformation(
+                "Admin {UserId} rejecting AgentTypology: {TypologyId}, Reason: {Reason}",
+                session.User!.Id,
+                id,
+                request.Reason);
+
+            var command = new RejectAgentTypologyCommand(
+                Id: id,
+                RejectedBy: session.User.Id,
+                Reason: request.Reason);
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "AgentTypology rejected: {Id}, Status: {Status}",
+                result.Id,
+                result.Status);
+
+            return Results.Ok(result);
+        })
+        .WithName("AdminRejectTypology")
+        .WithTags("AgentTypology", "Admin", "Approval")
+        .WithSummary("Reject a pending AgentTypology (Admin)")
+        .WithDescription("Reject a typology with a reason. Publishes TypologyRejectedEvent for notifications.");
+
+        // GET /api/v1/admin/agent-typologies/pending/count
+        // Get count of pending typologies (for admin dashboard badge)
+        group.MapGet("/pending/count", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authorized, _, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
+
+            var count = await mediator.Send(new GetPendingTypologiesCountQuery(), ct).ConfigureAwait(false);
+
+            return Results.Ok(new { count });
+        })
+        .WithName("AdminGetPendingTypologiesCount")
+        .WithTags("AgentTypology", "Admin", "Approval")
+        .WithSummary("Get count of pending AgentTypologies (Admin)")
+        .WithDescription("Returns the count of typologies awaiting approval for admin dashboard badge.");
+
         return group;
     }
 
@@ -278,4 +379,22 @@ public record UpdatePhaseModelsRequest(
     string? Name = null,
     string? Description = null,
     string? BasePrompt = null
+);
+
+/// <summary>
+/// Request model for approving an AgentTypology.
+/// Issue #3381: Typology Approval Workflow.
+/// </summary>
+/// <param name="Notes">Optional notes for the approval.</param>
+public record ApproveTypologyRequest(
+    string? Notes = null
+);
+
+/// <summary>
+/// Request model for rejecting an AgentTypology.
+/// Issue #3381: Typology Approval Workflow.
+/// </summary>
+/// <param name="Reason">Required reason for rejection.</param>
+public record RejectTypologyRequest(
+    string Reason
 );

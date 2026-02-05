@@ -62,7 +62,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
                     // Replace DbContext with test database
                     services.RemoveAll(typeof(DbContextOptions<MeepleAiDbContext>));
                     services.AddDbContext<MeepleAiDbContext>(options =>
-                        options.UseNpgsql(connectionString));
+                        options.UseNpgsql(connectionString, o => o.UseVector())); // Issue #3547
 
                     // Mock Redis for HybridCache
                     services.RemoveAll(typeof(IConnectionMultiplexer));

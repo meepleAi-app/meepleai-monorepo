@@ -44,7 +44,7 @@ public sealed class FeatureFlagCacheIntegrationTests : IAsyncLifetime
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547
             .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 

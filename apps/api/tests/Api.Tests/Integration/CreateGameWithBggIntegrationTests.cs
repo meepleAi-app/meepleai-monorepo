@@ -53,7 +53,7 @@ public sealed class CreateGameWithBggIntegrationTests : IAsyncLifetime
         services.AddSingleton<IDomainEventCollector>(TestDbContextFactory.CreateMockEventCollector().Object);
 
         services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(_isolatedDbConnectionString));
+            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector())); // Issue #3547
 
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IUserRepository, UserRepository>();

@@ -92,7 +92,7 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
             // Create DbContext with EF Core migrations
             var services = new ServiceCollection();
             services.AddDbContext<MeepleAiDbContext>(options =>
-                options.UseNpgsql(_isolatedDbConnectionString)
+                options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()) // Issue #3547
                     .ConfigureWarnings(warnings =>
                         warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 

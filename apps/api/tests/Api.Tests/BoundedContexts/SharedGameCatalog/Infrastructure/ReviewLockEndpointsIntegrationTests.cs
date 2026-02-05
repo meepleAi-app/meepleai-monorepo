@@ -138,7 +138,7 @@ public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime
                         var connStr = configuration.GetConnectionString("DefaultConnection")
                             ?? throw new InvalidOperationException("DefaultConnection not configured");
 
-                        options.UseNpgsql(connStr);
+                        options.UseNpgsql(connStr, o => o.UseVector()); // Issue #3547: Enable pgvector
                         options.EnableSensitiveDataLogging();
                         options.ConfigureWarnings(warnings =>
                             warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));

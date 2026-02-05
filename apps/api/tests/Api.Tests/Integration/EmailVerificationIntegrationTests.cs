@@ -63,7 +63,7 @@ public class EmailVerificationIntegrationTests : IAsyncLifetime
         // Register DbContext with PostgreSQL
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(enforcedBuilder.ConnectionString);
+            options.UseNpgsql(enforcedBuilder.ConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });

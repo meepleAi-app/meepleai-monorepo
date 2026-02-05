@@ -55,7 +55,7 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
 
         // Register DbContext first
         services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(connectionString));
+            options.UseNpgsql(connectionString, o => o.UseVector())); // Issue #3547
 
         // Register domain event collector (required by repository)
         services.AddScoped<IDomainEventCollector, DomainEventCollector>();

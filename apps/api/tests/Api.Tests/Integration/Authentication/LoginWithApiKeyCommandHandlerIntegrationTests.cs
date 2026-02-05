@@ -51,7 +51,7 @@ public sealed class LoginWithApiKeyCommandHandlerIntegrationTests : IAsyncLifeti
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
         services.AddDbContext<MeepleAiDbContext>(options =>
         {
-            options.UseNpgsql(_isolatedDbConnectionString);
+            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector()); // Issue #3547: Enable pgvector
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });

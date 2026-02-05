@@ -95,7 +95,7 @@ public class BulkImportStressTests : IAsyncLifetime
         var services = new ServiceCollection();
 
         services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(connectionString)
+            options.UseNpgsql(connectionString, o => o.UseVector()) // Issue #3547
                 .ConfigureWarnings(warnings =>
                     warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 

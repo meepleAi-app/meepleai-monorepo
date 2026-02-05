@@ -6,6 +6,7 @@ export { ScoreInput } from './ScoreInput';
 export { Scoreboard } from './Scoreboard';
 export { SessionDetailModal } from './SessionDetailModal';
 export { DiceRoller } from './DiceRoller';
+export { CardDeck } from './CardDeck';
 
 export type {
   Participant,
@@ -15,6 +16,11 @@ export type {
   SyncStatus,
   DiceRoll,
   DiceType,
+  Card,
+  SessionDeck,
+  PlayerHand,
+  DiscardPile,
+  CardSuit,
 } from './types';
 
-export { DICE_TYPES } from './types';
+export { DICE_TYPES, CARD_SUITS } from './types';

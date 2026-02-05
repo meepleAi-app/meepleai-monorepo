@@ -22,6 +22,7 @@ internal static class SessionTrackingServiceExtensions
         services.AddScoped<ISessionRepository, SessionRepository>();
         services.AddScoped<IScoreEntryRepository, ScoreEntryRepository>();
         services.AddScoped<IDiceRollRepository, DiceRollRepository>();
+        services.AddScoped<ISessionDeckRepository, SessionDeckRepository>();
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

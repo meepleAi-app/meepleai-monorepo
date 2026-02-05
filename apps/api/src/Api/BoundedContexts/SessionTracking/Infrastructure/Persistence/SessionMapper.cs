@@ -194,3 +194,103 @@ internal static class DiceRollMapper
         return diceRoll;
     }
 }
+
+/// <summary>
+/// Maps between SessionDeck domain entity and SessionDeckEntity persistence entity.
+/// </summary>
+internal static class SessionDeckMapper
+{
+    public static SessionDeckEntity ToEntity(SessionDeck domain)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+
+        return new SessionDeckEntity
+        {
+            Id = domain.Id,
+            SessionId = domain.SessionId,
+            Name = domain.Name,
+            DeckType = domain.DeckType,
+            CreatedAt = domain.CreatedAt,
+            LastShuffledAt = domain.LastShuffledAt,
+            IsDeleted = domain.IsDeleted,
+            DeletedAt = domain.DeletedAt,
+            DrawPileJson = System.Text.Json.JsonSerializer.Serialize(domain.DrawPile),
+            DiscardPileJson = System.Text.Json.JsonSerializer.Serialize(domain.DiscardPile),
+            HandsJson = System.Text.Json.JsonSerializer.Serialize(domain.Hands.ToDictionary(
+                kvp => kvp.Key.ToString(),
+                kvp => kvp.Value.ToList(),
+                StringComparer.Ordinal)),
+            Cards = domain.Cards.Select(CardMapper.ToEntity).ToList()
+        };
+    }
+
+    public static SessionDeck ToDomain(SessionDeckEntity entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        var deck = (SessionDeck)Activator.CreateInstance(typeof(SessionDeck), true)!;
+
+        typeof(SessionDeck).GetProperty(nameof(SessionDeck.Id))!.SetValue(deck, entity.Id);
+        typeof(SessionDeck).GetProperty(nameof(SessionDeck.SessionId))!.SetValue(deck, entity.SessionId);
+        typeof(SessionDeck).GetProperty(nameof(SessionDeck.Name))!.SetValue(deck, entity.Name);
+        typeof(SessionDeck).GetProperty(nameof(SessionDeck.DeckType))!.SetValue(deck, entity.DeckType);
+        typeof(SessionDeck).GetProperty(nameof(SessionDeck.CreatedAt))!.SetValue(deck, entity.CreatedAt);
+        typeof(SessionDeck).GetProperty(nameof(SessionDeck.LastShuffledAt))!.SetValue(deck, entity.LastShuffledAt);
+        typeof(SessionDeck).GetProperty(nameof(SessionDeck.IsDeleted))!.SetValue(deck, entity.IsDeleted);
+        typeof(SessionDeck).GetProperty(nameof(SessionDeck.DeletedAt))!.SetValue(deck, entity.DeletedAt);
+
+        // Parse JSON fields
+        var drawPile = System.Text.Json.JsonSerializer.Deserialize<List<Guid>>(entity.DrawPileJson) ?? [];
+        var discardPile = System.Text.Json.JsonSerializer.Deserialize<List<Guid>>(entity.DiscardPileJson) ?? [];
+        var handsDict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, List<Guid>>>(entity.HandsJson) ?? [];
+        var hands = handsDict.ToDictionary(kvp => Guid.Parse(kvp.Key), kvp => kvp.Value);
+
+        // Map cards
+        var cards = entity.Cards.Select(CardMapper.ToDomain).ToList();
+
+        // Set internal lists via internal methods
+        deck.SetDrawPile(drawPile);
+        deck.SetDiscardPile(discardPile);
+        deck.SetHands(hands);
+        deck.SetCards(cards);
+
+        return deck;
+    }
+}
+
+/// <summary>
+/// Maps between Card domain entity and CardEntity persistence entity.
+/// </summary>
+internal static class CardMapper
+{
+    public static CardEntity ToEntity(Card domain)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+
+        return new CardEntity
+        {
+            Id = domain.Id,
+            Name = domain.Name,
+            ImageUrl = domain.ImageUrl,
+            Suit = domain.Suit,
+            Value = domain.Value,
+            SortOrder = domain.SortOrder
+        };
+    }
+
+    public static Card ToDomain(CardEntity entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        var card = (Card)Activator.CreateInstance(typeof(Card), true)!;
+
+        typeof(Card).GetProperty(nameof(Card.Id))!.SetValue(card, entity.Id);
+        typeof(Card).GetProperty(nameof(Card.Name))!.SetValue(card, entity.Name);
+        typeof(Card).GetProperty(nameof(Card.ImageUrl))!.SetValue(card, entity.ImageUrl);
+        typeof(Card).GetProperty(nameof(Card.Suit))!.SetValue(card, entity.Suit);
+        typeof(Card).GetProperty(nameof(Card.Value))!.SetValue(card, entity.Value);
+        typeof(Card).GetProperty(nameof(Card.SortOrder))!.SetValue(card, entity.SortOrder);
+
+        return card;
+    }
+}

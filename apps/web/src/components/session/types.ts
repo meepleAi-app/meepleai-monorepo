@@ -64,3 +64,45 @@ export const DICE_TYPES: { type: DiceType; sides: number; label: string }[] = [
   { type: 'd20', sides: 20, label: 'D20' },
   { type: 'd100', sides: 100, label: 'D100' },
 ];
+
+// Card Deck Types (Issue #3343)
+export interface Card {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  suit?: string;
+  value?: string;
+}
+
+export interface SessionDeck {
+  id: string;
+  name: string;
+  deckType: 'Standard52' | 'Standard54' | 'Custom';
+  totalCards: number;
+  cardsInDrawPile: number;
+  cardsInDiscardPile: number;
+  createdAt: Date;
+  lastShuffledAt?: Date;
+}
+
+export interface PlayerHand {
+  deckId: string;
+  participantId: string;
+  cards: Card[];
+}
+
+export interface DiscardPile {
+  deckId: string;
+  cards: Card[];
+  totalCount: number;
+}
+
+export type CardSuit = 'Hearts' | 'Diamonds' | 'Clubs' | 'Spades' | 'Joker';
+
+export const CARD_SUITS: { suit: CardSuit; symbol: string; color: string }[] = [
+  { suit: 'Hearts', symbol: '♥', color: 'text-red-500' },
+  { suit: 'Diamonds', symbol: '♦', color: 'text-red-500' },
+  { suit: 'Clubs', symbol: '♣', color: 'text-gray-900 dark:text-white' },
+  { suit: 'Spades', symbol: '♠', color: 'text-gray-900 dark:text-white' },
+  { suit: 'Joker', symbol: '🃏', color: 'text-purple-500' },
+];

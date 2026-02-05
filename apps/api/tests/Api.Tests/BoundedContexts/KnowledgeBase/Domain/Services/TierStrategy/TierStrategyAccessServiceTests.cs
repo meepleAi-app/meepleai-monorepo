@@ -35,15 +35,19 @@ public class TierStrategyAccessServiceTests
     [InlineData(LlmUserTier.User, RagStrategy.Fast, true)]
     [InlineData(LlmUserTier.User, RagStrategy.Balanced, true)]
     [InlineData(LlmUserTier.User, RagStrategy.Precise, false)]
+    [InlineData(LlmUserTier.User, RagStrategy.SentenceWindow, false)]
     [InlineData(LlmUserTier.Editor, RagStrategy.Fast, true)]
     [InlineData(LlmUserTier.Editor, RagStrategy.Balanced, true)]
     [InlineData(LlmUserTier.Editor, RagStrategy.Precise, true)]
+    [InlineData(LlmUserTier.Editor, RagStrategy.SentenceWindow, true)]
     [InlineData(LlmUserTier.Editor, RagStrategy.Expert, false)]
     [InlineData(LlmUserTier.Premium, RagStrategy.Fast, true)]
     [InlineData(LlmUserTier.Premium, RagStrategy.Expert, true)]
     [InlineData(LlmUserTier.Premium, RagStrategy.Consensus, true)]
+    [InlineData(LlmUserTier.Premium, RagStrategy.SentenceWindow, true)]
     [InlineData(LlmUserTier.Premium, RagStrategy.Custom, false)]
     [InlineData(LlmUserTier.Admin, RagStrategy.Fast, true)]
+    [InlineData(LlmUserTier.Admin, RagStrategy.SentenceWindow, true)]
     [InlineData(LlmUserTier.Admin, RagStrategy.Custom, true)]
     public async Task HasAccessToStrategyAsync_DefaultMatrix_ReturnsExpectedResult(
         LlmUserTier tier, RagStrategy strategy, bool expectedAccess)
@@ -93,7 +97,7 @@ public class TierStrategyAccessServiceTests
     }
 
     [Fact]
-    public async Task GetAvailableStrategiesAsync_Editor_ReturnsFastBalancedPrecise()
+    public async Task GetAvailableStrategiesAsync_Editor_ReturnsFastBalancedPreciseSentenceWindow()
     {
         // Arrange
         SetupNoDbEntries(LlmUserTier.Editor);
@@ -102,10 +106,11 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Editor, CancellationToken.None);
 
         // Assert
-        Assert.Equal(3, strategies.Count);
+        Assert.Equal(4, strategies.Count);
         Assert.Contains(RagStrategy.Fast, strategies);
         Assert.Contains(RagStrategy.Balanced, strategies);
         Assert.Contains(RagStrategy.Precise, strategies);
+        Assert.Contains(RagStrategy.SentenceWindow, strategies);
         Assert.DoesNotContain(RagStrategy.Expert, strategies);
     }
 
@@ -133,9 +138,10 @@ public class TierStrategyAccessServiceTests
         var strategies = await _service.GetAvailableStrategiesAsync(LlmUserTier.Premium, CancellationToken.None);
 
         // Assert
-        Assert.Equal(5, strategies.Count);
+        Assert.Equal(6, strategies.Count);
         Assert.DoesNotContain(RagStrategy.Custom, strategies);
         Assert.Contains(RagStrategy.Consensus, strategies);
+        Assert.Contains(RagStrategy.SentenceWindow, strategies);
     }
 
     #endregion

@@ -493,6 +493,19 @@ export const BulkImportResultSchema = z.object({
 
 export type BulkImportResult = z.infer<typeof BulkImportResultSchema>;
 
+/**
+ * Batch approval result schema
+ * Issue #3350: Batch Approval/Rejection for Games
+ * Returns summary of batch operation
+ */
+export const BatchApprovalResultSchema = z.object({
+  successCount: z.number().int().nonnegative(),
+  failureCount: z.number().int().nonnegative(),
+  errors: z.array(z.string()),
+});
+
+export type BatchApprovalResult = z.infer<typeof BatchApprovalResultSchema>;
+
 // ========== BGG Import/Update Flow (Admin Add from BGG) ==========
 
 // Note: BggSearchResultSchema, BggSearchResult, BggGameDetailsSchema, and BggGameDetails

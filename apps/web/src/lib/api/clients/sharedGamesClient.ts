@@ -45,6 +45,7 @@ import {
   type BggSearchResult,
   type BggDuplicateCheckResult,
   type UpdateFromBggRequest,
+  type BatchApprovalResult,
 } from '../schemas/shared-games.schemas';
 
 export interface CreateSharedGamesClientParams {
@@ -276,6 +277,46 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      */
     async rejectPublication(id: string, reason: string): Promise<void> {
       await httpClient.post(`/api/v1/admin/shared-games/${id}/reject-publication`, { reason });
+    },
+
+    /**
+     * Batch approve multiple games (ADMIN ONLY)
+     * Issue #3350: Batch Approval/Rejection for Games
+     *
+     * Approves multiple games in a single transaction.
+     *
+     * @param gameIds - Array of game UUIDs to approve
+     * @param note - Optional approval note
+     * @returns Result with success/failure counts and errors
+     */
+    async batchApprove(
+      gameIds: string[],
+      note?: string
+    ): Promise<BatchApprovalResult> {
+      return httpClient.post(`/api/v1/admin/shared-games/batch-approve`, {
+        gameIds,
+        note,
+      });
+    },
+
+    /**
+     * Batch reject multiple games (ADMIN ONLY)
+     * Issue #3350: Batch Approval/Rejection for Games
+     *
+     * Rejects multiple games in a single transaction with a common reason.
+     *
+     * @param gameIds - Array of game UUIDs to reject
+     * @param reason - Reason for rejection (required)
+     * @returns Result with success/failure counts and errors
+     */
+    async batchReject(
+      gameIds: string[],
+      reason: string
+    ): Promise<BatchApprovalResult> {
+      return httpClient.post(`/api/v1/admin/shared-games/batch-reject`, {
+        gameIds,
+        reason,
+      });
     },
 
     /**

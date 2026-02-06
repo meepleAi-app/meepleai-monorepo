@@ -15,6 +15,7 @@ namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
 /// <summary>
 /// Handles ShareRequestApprovedEvent to send celebratory notifications when a share request is approved.
 /// Creates both in-app notifications and email notifications for the user.
+/// Issue #3668: Phase 7 - Distinguishes MergeKnowledgeBase from ApproveAsNew/Variant.
 /// </summary>
 internal sealed class ShareRequestApprovedNotificationHandler
     : DomainEventHandlerBase<ShareRequestApprovedEvent>
@@ -87,41 +88,62 @@ internal sealed class ShareRequestApprovedNotificationHandler
 
         var gameTitle = sourceGame.Title;
 
-        // Create in-app notification (celebratory!)
-        var notification = new Notification(
-            id: Guid.NewGuid(),
-            userId: shareRequest.UserId,
-            type: NotificationType.ShareRequestApproved,
-            severity: NotificationSeverity.Success,
-            title: "Contribution Approved! 🎉",
-            message: $"Great news! Your contribution for \"{gameTitle}\" has been approved and is now available in the shared catalog.",
-            link: $"/shared-games/{domainEvent.TargetSharedGameId.Value}",
-            metadata: JsonSerializer.Serialize(new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["shareRequestId"] = domainEvent.ShareRequestId,
-                ["sharedGameId"] = domainEvent.TargetSharedGameId.Value,
-                ["gameTitle"] = gameTitle
-            }));
+        // ISSUE-3668: Determine if this is a MergeKnowledgeBase approval
+        // MergeKB = target game created by someone else (pre-existing game)
+        // ApproveAsNew/Variant = target game created by proposal user (just created by approval)
+        var targetGame = await _sharedGameRepository.GetByIdAsync(
+            domainEvent.TargetSharedGameId.Value, cancellationToken).ConfigureAwait(false);
+        if (targetGame == null)
+        {
+            Logger.LogWarning(
+                "Target game {TargetSharedGameId} not found for share request notification",
+                domainEvent.TargetSharedGameId.Value);
+            return;
+        }
+
+        // If target game was created by a different user, it's a KB merge
+        // If created by the proposal user, it's a new game (ApproveAsNew/Variant)
+        var isKbMerge = targetGame.CreatedBy != shareRequest.UserId;
+
+        // Create in-app notification (different type for KB merge vs new game)
+        var targetSharedGameId = domainEvent.TargetSharedGameId.Value;
+        var notification = isKbMerge
+            ? CreateKbMergedNotification(shareRequest, domainEvent, gameTitle, targetSharedGameId)
+            : CreateNewGameNotification(shareRequest, domainEvent, gameTitle, targetSharedGameId);
 
         await _notificationRepository.AddAsync(notification, cancellationToken).ConfigureAwait(false);
 
         Logger.LogInformation(
-            "Created in-app notification for approved share request {ShareRequestId}",
-            domainEvent.ShareRequestId);
+            "Created in-app notification for approved share request {ShareRequestId} (type: {NotificationType})",
+            domainEvent.ShareRequestId,
+            isKbMerge ? "KbMerged" : "NewGame");
 
-        // Send email notification (best-effort, don't fail handler)
+        // Send appropriate email notification (best-effort, don't fail handler)
         try
         {
-            await _emailService.SendShareRequestApprovedEmailAsync(
-                user.Email,
-                user.DisplayName,
-                gameTitle,
-                domainEvent.TargetSharedGameId.Value,
-                shareRequest.UserId,
-                cancellationToken).ConfigureAwait(false);
+            if (isKbMerge)
+            {
+                await _emailService.SendShareRequestKbMergedEmailAsync(
+                    user.Email,
+                    user.DisplayName,
+                    gameTitle,
+                    domainEvent.TargetSharedGameId.Value,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                await _emailService.SendShareRequestApprovedEmailAsync(
+                    user.Email,
+                    user.DisplayName,
+                    gameTitle,
+                    domainEvent.TargetSharedGameId.Value,
+                    shareRequest.UserId,
+                    cancellationToken).ConfigureAwait(false);
+            }
 
             Logger.LogInformation(
-                "Sent share request approved email to user {UserId} for game {GameTitle}",
+                "Sent share request {EmailType} email to user {UserId} for game {GameTitle}",
+                isKbMerge ? "KB merged" : "approved",
                 shareRequest.UserId,
                 gameTitle);
         }
@@ -135,6 +157,52 @@ internal sealed class ShareRequestApprovedNotificationHandler
                 shareRequest.UserId);
         }
 #pragma warning restore CA1031
+    }
+
+    private Notification CreateKbMergedNotification(
+        SharedGameCatalog.Domain.Entities.ShareRequest shareRequest,
+        ShareRequestApprovedEvent domainEvent,
+        string gameTitle,
+        Guid targetSharedGameId)
+    {
+        return new Notification(
+            id: Guid.NewGuid(),
+            userId: shareRequest.UserId,
+            type: NotificationType.GameProposalKbMerged,
+            severity: NotificationSeverity.Success,
+            title: "Game Proposal Merged! 🎉",
+            message: $"Your knowledge base for \"{gameTitle}\" has been merged into the existing game in the catalog.",
+            link: $"/shared-games/{targetSharedGameId}",
+            metadata: JsonSerializer.Serialize(new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["shareRequestId"] = domainEvent.ShareRequestId,
+                ["sharedGameId"] = targetSharedGameId,
+                ["gameTitle"] = gameTitle,
+                ["approvalType"] = "KbMerge"
+            }));
+    }
+
+    private Notification CreateNewGameNotification(
+        SharedGameCatalog.Domain.Entities.ShareRequest shareRequest,
+        ShareRequestApprovedEvent domainEvent,
+        string gameTitle,
+        Guid targetSharedGameId)
+    {
+        return new Notification(
+            id: Guid.NewGuid(),
+            userId: shareRequest.UserId,
+            type: NotificationType.ShareRequestApproved,
+            severity: NotificationSeverity.Success,
+            title: "Contribution Approved! 🎉",
+            message: $"Great news! Your contribution for \"{gameTitle}\" has been approved and is now available in the shared catalog.",
+            link: $"/shared-games/{targetSharedGameId}",
+            metadata: JsonSerializer.Serialize(new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["shareRequestId"] = domainEvent.ShareRequestId,
+                ["sharedGameId"] = targetSharedGameId,
+                ["gameTitle"] = gameTitle,
+                ["approvalType"] = "NewGame"
+            }));
     }
 
     protected override Guid? GetUserId(ShareRequestApprovedEvent domainEvent)

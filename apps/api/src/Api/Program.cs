@@ -500,6 +500,8 @@ v1Api.MapCacheEndpoints();             // Cache management
 v1Api.MapAdminUserEndpoints();         // User management
 v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
 v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
+v1Api.MapBatchJobEndpoints();          // Batch job system & operations (Issue #3693)
+v1Api.MapBatchJobLogsEndpoints();      // Batch job real-time logs SSE (Issue #3693 Task 3)
 v1Api.MapTierStrategyAdminEndpoints(); // Tier-strategy configuration (Issue #3440)
 v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
 v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations

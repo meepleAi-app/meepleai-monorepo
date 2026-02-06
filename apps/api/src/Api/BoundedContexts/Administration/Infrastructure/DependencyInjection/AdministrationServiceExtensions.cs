@@ -46,6 +46,9 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<ITokenTierRepository, TokenTierRepository>();
         services.AddScoped<IUserTokenUsageRepository, UserTokenUsageRepository>();
 
+        // Issue #3693: Batch Job System repositories
+        services.AddScoped<IBatchJobRepository, BatchJobRepository>();
+
         // ISSUE-2528: Orphaned task cleanup configuration and service
         services.Configure<OrphanedTaskCleanupOptions>(
             configuration.GetSection(OrphanedTaskCleanupOptions.SectionKey));
@@ -116,6 +119,17 @@ internal static class AdministrationServiceExtensions
                 .WithIdentity("audit-log-retention-trigger", "maintenance")
                 .WithCronSchedule("0 0 3 * * ?")  // Daily at 3:00 AM UTC
                 .WithDescription("Runs daily to clean up audit logs older than 90 days"));
+
+            // Issue #3693 Task 2: Batch job processor (every 30 seconds)
+            q.AddJob<BatchJobProcessorJob>(opts => opts
+                .WithIdentity("batch-job-processor", "background")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("batch-job-processor", "background")
+                .WithIdentity("batch-job-processor-trigger", "background")
+                .WithSimpleSchedule(x => x.WithIntervalInSeconds(30).RepeatForever())
+                .WithDescription("Processes queued batch jobs every 30 seconds"));
         });
 
         services.AddQuartzHostedService(options =>

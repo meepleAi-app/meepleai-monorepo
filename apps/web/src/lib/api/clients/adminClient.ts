@@ -97,6 +97,12 @@ import {
   type TopConsumersList,
   type AddCreditsRequest,
   type UpdateTierLimitsRequest,
+  BatchJobDtoSchema,
+  BatchJobListSchema,
+  CreateBatchJobResponseSchema,
+  type BatchJobDto,
+  type BatchJobList,
+  type CreateBatchJobRequest,
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -1256,7 +1262,11 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       if (params?.endDate) searchParams.set('endDate', params.endDate);
       const qs = searchParams.toString();
       const url = `/api/v1/admin/audit-log${qs ? `?${qs}` : ''}`;
-      return httpClient.get<AuditLogListResult>(url, AuditLogListResultSchema);
+      const result = await httpClient.get<AuditLogListResult>(url, AuditLogListResultSchema);
+      if (!result) {
+        return { entries: [], totalCount: 0, limit: params?.limit ?? 50, offset: params?.offset ?? 0 };
+      }
+      return result;
     },
 
     /**
@@ -1355,6 +1365,79 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         request,
         z.any()
       );
+    },
+
+    // ========== Batch Jobs (Issue #3693) ==========
+
+    /**
+     * Get all batch jobs with optional filters
+     * GET /api/v1/admin/batch-jobs
+     */
+    async getAllBatchJobs(params?: {
+      status?: string;
+      page?: number;
+      pageSize?: number;
+    }): Promise<BatchJobList> {
+      const queryParams = new URLSearchParams();
+      if (params?.status && params.status !== 'all') queryParams.set('status', params.status);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get<BatchJobList>(
+        `/api/v1/admin/batch-jobs${query ? `?${query}` : ''}`,
+        BatchJobListSchema
+      );
+      return result ?? { jobs: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Get batch job by ID
+     * GET /api/v1/admin/batch-jobs/{id}
+     */
+    async getBatchJob(id: string): Promise<BatchJobDto> {
+      const result = await httpClient.get<BatchJobDto>(
+        `/api/v1/admin/batch-jobs/${id}`,
+        BatchJobDtoSchema
+      );
+      if (!result) throw new Error(`Batch job ${id} not found`);
+      return result;
+    },
+
+    /**
+     * Create new batch job
+     * POST /api/v1/admin/batch-jobs
+     */
+    async createBatchJob(request: CreateBatchJobRequest): Promise<{ id: string }> {
+      return httpClient.post(
+        '/api/v1/admin/batch-jobs',
+        request,
+        CreateBatchJobResponseSchema
+      );
+    },
+
+    /**
+     * Cancel batch job
+     * POST /api/v1/admin/batch-jobs/{id}/cancel
+     */
+    async cancelBatchJob(id: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/batch-jobs/${id}/cancel`, {});
+    },
+
+    /**
+     * Retry failed batch job
+     * POST /api/v1/admin/batch-jobs/{id}/retry
+     */
+    async retryBatchJob(id: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/batch-jobs/${id}/retry`, {});
+    },
+
+    /**
+     * Delete batch job
+     * DELETE /api/v1/admin/batch-jobs/{id}
+     */
+    async deleteBatchJob(id: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/batch-jobs/${id}`);
     },
   };
 }

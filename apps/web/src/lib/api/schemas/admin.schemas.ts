@@ -633,4 +633,52 @@ export const UpdateTierLimitsRequestSchema = z.object({
 });
 export type UpdateTierLimitsRequest = z.infer<typeof UpdateTierLimitsRequestSchema>;
 
+// ========== Batch Jobs (Issue #3693) ==========
+
+export const BatchJobTypeSchema = z.enum([
+  'ResourceForecast',
+  'CostAnalysis',
+  'DataCleanup',
+  'BggSync',
+  'AgentBenchmark',
+]);
+export type BatchJobType = z.infer<typeof BatchJobTypeSchema>;
+
+export const BatchJobStatusSchema = z.enum(['Queued', 'Running', 'Completed', 'Failed', 'Cancelled']);
+export type BatchJobStatus = z.infer<typeof BatchJobStatusSchema>;
+
+export const BatchJobDtoSchema = z.object({
+  id: z.string().uuid(),
+  type: BatchJobTypeSchema,
+  status: BatchJobStatusSchema,
+  parameters: z.record(z.string(), z.any()).nullable(),
+  results: z.record(z.string(), z.any()).nullable(),
+  errorMessage: z.string().nullable(),
+  progress: z.number().min(0).max(100),
+  createdAt: z.string().datetime(),
+  startedAt: z.string().datetime().nullable(),
+  completedAt: z.string().datetime().nullable(),
+  duration: z.number().nullable(),
+});
+export type BatchJobDto = z.infer<typeof BatchJobDtoSchema>;
+
+export const BatchJobListSchema = z.object({
+  jobs: z.array(BatchJobDtoSchema),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+});
+export type BatchJobList = z.infer<typeof BatchJobListSchema>;
+
+export const CreateBatchJobRequestSchema = z.object({
+  type: BatchJobTypeSchema,
+  parameters: z.record(z.string(), z.any()).optional(),
+});
+export type CreateBatchJobRequest = z.infer<typeof CreateBatchJobRequestSchema>;
+
+export const CreateBatchJobResponseSchema = z.object({
+  id: z.string().uuid(),
+});
+export type CreateBatchJobResponse = z.infer<typeof CreateBatchJobResponseSchema>;
+
 // Note: PagedResult is defined in config.schemas.ts and re-exported via index.ts

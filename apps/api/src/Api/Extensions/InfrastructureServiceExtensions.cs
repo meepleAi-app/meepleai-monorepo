@@ -334,6 +334,31 @@ internal static class InfrastructureServiceExtensions
         {
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
             PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+            MaxConnectionsPerServer = 10,
+            EnableMultipleHttp2Connections = true
+        });
+
+        // Issue #3120: BoardGameGeek API client
+        services.AddHttpClient<Infrastructure.ExternalServices.BoardGameGeek.IBggApiClient,
+            Infrastructure.ExternalServices.BoardGameGeek.BggApiClient>(client =>
+        {
+#pragma warning disable S1075 // URIs should not be hardcoded - Official BGG API endpoint
+            client.BaseAddress = new Uri("https://boardgamegeek.com/xmlapi2/");
+#pragma warning restore S1075
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI/1.0");
+        })
+        .AddTransientHttpErrorPolicy(policy =>
+            policy.WaitAndRetryAsync(3, retryAttempt =>
+                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))))
+        .AddTransientHttpErrorPolicy(policy =>
+            policy.CircuitBreakerAsync(
+                handledEventsAllowedBeforeBreaking: 5,
+                durationOfBreak: TimeSpan.FromSeconds(30)))
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
             MaxConnectionsPerServer = 20,
             EnableMultipleHttp2Connections = true
         });

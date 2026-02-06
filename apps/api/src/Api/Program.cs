@@ -458,6 +458,7 @@ v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
+v1Api.MapBggEndpoints(); // ISSUE-3120: BoardGameGeek integration
 v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
 v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
 v1Api.MapAiEndpoints();

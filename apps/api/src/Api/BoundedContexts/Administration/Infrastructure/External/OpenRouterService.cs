@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Interfaces;
+using Api.Infrastructure;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -9,6 +10,10 @@ public sealed class OpenRouterService : IOpenRouterService
     private readonly HttpClient _httpClient;
     private readonly ILogger<OpenRouterService> _logger;
 
+#pragma warning disable S1075 // URIs should not be hardcoded - OpenRouter base URL is a legitimate external service constant
+    private const string DefaultBaseUrl = "https://openrouter.ai/api/v1/";
+#pragma warning restore S1075
+
     public OpenRouterService(HttpClient httpClient, IConfiguration configuration, ILogger<OpenRouterService> logger)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
@@ -16,12 +21,12 @@ public sealed class OpenRouterService : IOpenRouterService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         _httpClient = httpClient;
-        var apiKey = configuration["OpenRouter:ApiKey"] ?? throw new InvalidOperationException("OpenRouter:ApiKey not configured");
-        var baseUrl = configuration["OpenRouter:BaseUrl"];
-        if (string.IsNullOrWhiteSpace(baseUrl))
-            throw new InvalidOperationException("OpenRouter:BaseUrl not configured");
 
-        _httpClient.BaseAddress = new Uri(baseUrl);
+        // Use SecretsHelper to read from environment variable (loaded from openrouter.secret)
+        var apiKey = SecretsHelper.GetSecretOrValue(configuration, "OPENROUTER_API_KEY", logger, required: true)
+            ?? throw new InvalidOperationException("OPENROUTER_API_KEY not configured");
+
+        _httpClient.BaseAddress = new Uri(DefaultBaseUrl);
         _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
     }
 

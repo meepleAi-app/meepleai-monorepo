@@ -560,4 +560,77 @@ export const AuditLogListResultSchema = z.object({
 });
 export type AuditLogListResult = z.infer<typeof AuditLogListResultSchema>;
 
+// ========== Token Management (Issue #3692) ==========
+
+export const TokenTierSchema = z.enum(['Free', 'Basic', 'Pro', 'Enterprise']);
+export type TokenTier = z.infer<typeof TokenTierSchema>;
+
+export const TokenBalanceSchema = z.object({
+  currentBalance: z.number(),
+  totalBudget: z.number(),
+  currency: z.string().default('EUR'),
+  usagePercent: z.number().min(0).max(100),
+  projectedDaysUntilDepletion: z.number().nullable(),
+  lastUpdated: z.string().datetime(),
+});
+export type TokenBalance = z.infer<typeof TokenBalanceSchema>;
+
+export const TokenConsumptionPointSchema = z.object({
+  date: z.string(),
+  tokens: z.number().nonnegative(),
+  cost: z.number().nonnegative(),
+});
+export type TokenConsumptionPoint = z.infer<typeof TokenConsumptionPointSchema>;
+
+export const TokenConsumptionDataSchema = z.object({
+  points: z.array(TokenConsumptionPointSchema),
+  totalTokens: z.number().nonnegative(),
+  totalCost: z.number().nonnegative(),
+  avgDailyTokens: z.number().nonnegative(),
+  avgDailyCost: z.number().nonnegative(),
+});
+export type TokenConsumptionData = z.infer<typeof TokenConsumptionDataSchema>;
+
+export const TierUsageSchema = z.object({
+  tier: TokenTierSchema,
+  limitPerMonth: z.number().nonnegative(),
+  currentUsage: z.number().nonnegative(),
+  userCount: z.number().int().nonnegative(),
+  usagePercent: z.number().min(0).max(100),
+});
+export type TierUsage = z.infer<typeof TierUsageSchema>;
+
+export const TierUsageListSchema = z.object({
+  tiers: z.array(TierUsageSchema),
+});
+export type TierUsageList = z.infer<typeof TierUsageListSchema>;
+
+export const TopConsumerSchema = z.object({
+  userId: z.string().uuid(),
+  displayName: z.string(),
+  email: z.string(),
+  tier: TokenTierSchema,
+  tokensUsed: z.number().nonnegative(),
+  percentOfTierLimit: z.number().min(0),
+});
+export type TopConsumer = z.infer<typeof TopConsumerSchema>;
+
+export const TopConsumersListSchema = z.object({
+  consumers: z.array(TopConsumerSchema),
+});
+export type TopConsumersList = z.infer<typeof TopConsumersListSchema>;
+
+export const AddCreditsRequestSchema = z.object({
+  amount: z.number().positive(),
+  currency: z.string().default('EUR'),
+  note: z.string().optional(),
+});
+export type AddCreditsRequest = z.infer<typeof AddCreditsRequestSchema>;
+
+export const UpdateTierLimitsRequestSchema = z.object({
+  tier: TokenTierSchema,
+  tokensPerMonth: z.number().nonnegative(),
+});
+export type UpdateTierLimitsRequest = z.infer<typeof UpdateTierLimitsRequestSchema>;
+
 // Note: PagedResult is defined in config.schemas.ts and re-exported via index.ts

@@ -55,4 +55,21 @@ public sealed class TokenTierRepository : ITokenTierRepository
         return await _context.Set<TokenTier>()
             .AnyAsync(t => t.Name == name, cancellationToken).ConfigureAwait(false);
     }
+
+    public async Task<IReadOnlyList<TokenTier>> GetAllTiersAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Set<TokenTier>()
+            .OrderBy(t => t.Name)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var tier = await GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
+        if (tier == null)
+            throw new InvalidOperationException($"TokenTier {id} not found");
+
+        tier.Deactivate();
+        await UpdateAsync(tier, cancellationToken).ConfigureAwait(false);
+    }
 }

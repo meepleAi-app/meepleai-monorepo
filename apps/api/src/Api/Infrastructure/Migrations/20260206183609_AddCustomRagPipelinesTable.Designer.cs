@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260206183609_AddCustomRagPipelinesTable")]
+    partial class AddCustomRagPipelinesTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -184,7 +187,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("admin_reports", (string)null);
+                    b.ToTable("admin_reports");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.Administration.AlertConfigurationEntity", b =>
@@ -1008,7 +1011,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("BggImportQueue", (string)null);
+                    b.ToTable("BggImportQueue");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.CacheStatEntity", b =>
@@ -1228,7 +1231,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ChatThreads", (string)null);
+                    b.ToTable("ChatThreads");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChunkedUploadSessionEntity", b =>
@@ -3005,7 +3008,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("ReportId");
 
-                    b.ToTable("admin_report_executions", (string)null);
+                    b.ToTable("admin_report_executions");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.RuleAtomEntity", b =>

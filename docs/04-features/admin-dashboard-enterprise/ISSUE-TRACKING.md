@@ -17,10 +17,10 @@
 | 1.2 | [#3690](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3690) | Admin Role & Security | 3-4 | #3689 | ⏳ Blocked |
 | 1.3 | [#3691](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3691) | Audit Log System | 4-5 | #3689,#3690 | ⏳ Blocked |
 | 1.4 | [#3694](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3694) | Overview Extended KPIs | 2-3 | #3689 | ⏳ Blocked |
-| 1.5 | [#3692](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3692) | Token Management | 3-4 | #3689 | ⏳ Blocked |
+| 1.5 | [#3692](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3692) | Token Management | 3-4 | #3689 | ✅ Complete (PR #3781) |
 | 1.6 | [#3695](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3695) | DB/Cache/Vectors | 3-4 | #3689 | ⏳ Blocked |
 | 1.7 | [#3696](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3696) | Service Control | 3-4 | #3689,#3690 | ⏳ Blocked |
-| 1.8 | [#3693](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3693) | Batch Job System | 4-5 | #3689,#3691 | ⏳ Blocked |
+| 1.8 | [#3693](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3693) | Batch Job System | 4-5 | #3689,#3691 | ✅ Complete (PR #3783) |
 | 1.9 | [#3697](https://github.com/DegrassiAaron/meepleai-monorepo/issues/3697) | Testing & Integration | 3-4 | All E1 | ⏳ Blocked |
 
 **Total**: ~28-35 giorni (sequenziale) | **~3 settimane** (parallelizzato)

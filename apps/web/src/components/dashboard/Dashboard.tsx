@@ -36,9 +36,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import { CollectionFilters } from '@/components/collection/CollectionFilters';
+import { CollectionStatsBar } from '@/components/collection/CollectionStatsBar';
 import { useLayout } from '@/components/layout/LayoutProvider';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
+import type { CollectionHeroStats, CollectionFilters as CollectionFiltersType } from '@/types/collection';
 
 import { ActiveSessionsWidget } from './ActiveSessionsWidget';
 import { ActivityFeed } from './ActivityFeed';
@@ -55,9 +58,6 @@ import { QuickActionsGrid } from './QuickActionsGrid';
 import { WishlistCard, type WishlistItemData } from './WishlistCard';
 
 // Collection Components - Issue #3649
-import { CollectionStatsBar } from '@/components/collection/CollectionStatsBar';
-import { CollectionFilters } from '@/components/collection/CollectionFilters';
-import type { CollectionHeroStats, CollectionFilters as CollectionFiltersType } from '@/types/collection';
 
 // ============================================================================
 // Types

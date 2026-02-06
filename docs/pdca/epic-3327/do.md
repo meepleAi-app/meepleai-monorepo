@@ -82,8 +82,8 @@ _This section will be populated as we execute_
 ## Stage Completion Tracker
 
 - [ ] **Stage 1**: Critical Middleware (#3671 + #3672) - 10 SP
-  - [ ] #3671 Complete
-  - [ ] #3672 Complete
+  - [x] #3671 Complete ✅ (PR #3731 merged 2026-02-06)
+  - [ ] #3672 In Progress
   - [ ] Integration test passed
   - [ ] Middleware stack verified
 

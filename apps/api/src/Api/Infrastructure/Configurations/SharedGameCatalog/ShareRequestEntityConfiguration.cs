@@ -80,6 +80,10 @@ internal sealed class ShareRequestEntityConfiguration : IEntityTypeConfiguration
             .HasColumnName("row_version")
             .IsRowVersion();
 
+        // Issue #3665: Added for Phase 4 - Proposal System
+        builder.Property(e => e.SourcePrivateGameId)
+            .HasColumnName("source_private_game_id");
+
         // Indexes
         builder.HasIndex(e => e.UserId)
             .HasDatabaseName("ix_share_requests_user_id");
@@ -101,6 +105,11 @@ internal sealed class ShareRequestEntityConfiguration : IEntityTypeConfiguration
             .HasDatabaseName("ix_share_requests_review_lock_expires_at")
             .HasFilter("review_lock_expires_at IS NOT NULL");
 
+        // Issue #3665: Index for SourcePrivateGameId
+        builder.HasIndex(e => e.SourcePrivateGameId)
+            .HasDatabaseName("ix_share_requests_source_private_game_id")
+            .HasFilter("source_private_game_id IS NOT NULL");
+
         // Relationships
         builder.HasOne(e => e.SourceGame)
             .WithMany()
@@ -110,6 +119,12 @@ internal sealed class ShareRequestEntityConfiguration : IEntityTypeConfiguration
         builder.HasOne(e => e.TargetSharedGame)
             .WithMany()
             .HasForeignKey(e => e.TargetSharedGameId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // Issue #3665: Relationship with PrivateGame for NewGameProposal contributions
+        builder.HasOne(e => e.PrivateGame)
+            .WithMany()
+            .HasForeignKey(e => e.SourcePrivateGameId)
             .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasMany(e => e.AttachedDocuments)

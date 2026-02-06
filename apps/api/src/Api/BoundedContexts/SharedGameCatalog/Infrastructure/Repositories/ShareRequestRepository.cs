@@ -210,6 +210,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
             entity.UserId,
             entity.SourceGameId,
             entity.TargetSharedGameId,
+            entity.SourcePrivateGameId,
             (ShareRequestStatus)entity.Status,
             entity.StatusBeforeReview.HasValue ? (ShareRequestStatus)entity.StatusBeforeReview.Value : null,
             (ContributionType)entity.ContributionType,
@@ -235,6 +236,7 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
             UserId = request.UserId,
             SourceGameId = request.SourceGameId,
             TargetSharedGameId = request.TargetSharedGameId,
+            SourcePrivateGameId = request.SourcePrivateGameId,
             Status = (int)request.Status,
             StatusBeforeReview = request.StatusBeforeReview.HasValue ? (int)request.StatusBeforeReview.Value : null,
             ContributionType = (int)request.ContributionType,
@@ -398,6 +400,28 @@ internal sealed class ShareRequestRepository : IShareRequestRepository
             OldestPendingAge = oldestPendingAge,
             ByType = byType
         };
+    }
+
+    /// <summary>
+    /// Gets a pending game proposal for a private game.
+    /// Issue #3665: Phase 4 - Proposal System.
+    /// </summary>
+    public async Task<ShareRequest?> GetPendingProposalForPrivateGameAsync(
+        Guid privateGameId,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _context.Set<ShareRequestEntity>()
+            .AsNoTracking()
+            .Include(e => e.AttachedDocuments)
+            .Where(r => r.SourcePrivateGameId == privateGameId &&
+                       r.ContributionType == (int)ContributionType.NewGameProposal &&
+                       (r.Status == (int)ShareRequestStatus.Pending ||
+                        r.Status == (int)ShareRequestStatus.InReview ||
+                        r.Status == (int)ShareRequestStatus.ChangesRequested))
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity != null ? MapToDomain(entity) : null;
     }
 
     #endregion

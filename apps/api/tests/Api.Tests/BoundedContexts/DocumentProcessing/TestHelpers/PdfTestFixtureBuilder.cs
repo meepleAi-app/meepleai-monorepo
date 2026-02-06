@@ -402,7 +402,8 @@ internal sealed class PdfTestFixture : IDisposable
             BlobStorageServiceMock.Object,
             QuotaServiceMock.Object,
             PdfOptions,
-            TimeProvider);
+            privateGameRepository: null,  // Issue #3664: New parameter
+            timeProvider: TimeProvider);   // Moved to last parameter
     }
 
     /// <summary>

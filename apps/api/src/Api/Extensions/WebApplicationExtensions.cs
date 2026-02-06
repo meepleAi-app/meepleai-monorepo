@@ -144,6 +144,9 @@ internal static class WebApplicationExtensions
 
         // ISSUE #3671: Session quota enforcement middleware (must be after rate limiting)
         app.UseSessionQuotaEnforcement();
+
+        // ISSUE #3672: Email verification enforcement middleware (must be after session quota)
+        app.UseEmailVerificationEnforcement();
     }
 
     public static IServiceCollection AddCorsServices(

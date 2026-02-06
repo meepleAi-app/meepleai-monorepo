@@ -182,6 +182,7 @@ internal class EmailVerificationService : IEmailVerificationService
 
         user.EmailVerified = true;
         user.EmailVerifiedAt = now;
+        user.VerificationGracePeriodEndsAt = null; // Issue #3672: Clear grace period on verification
 
         await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 

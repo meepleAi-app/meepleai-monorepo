@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Infrastructure.Services;
 using Api.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -21,6 +22,7 @@ public sealed class SessionQuotaServiceEnsureQuotaTests : IDisposable
 {
     private readonly Mock<IGameSessionRepository> _mockRepository;
     private readonly Mock<IConfigurationService> _mockConfigService;
+    private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<ILogger<SessionQuotaService>> _mockLogger;
     private readonly SessionQuotaService _sut;
 
@@ -28,11 +30,13 @@ public sealed class SessionQuotaServiceEnsureQuotaTests : IDisposable
     {
         _mockRepository = new Mock<IGameSessionRepository>();
         _mockConfigService = new Mock<IConfigurationService>();
+        _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockLogger = new Mock<ILogger<SessionQuotaService>>();
 
         _sut = new SessionQuotaService(
             _mockRepository.Object,
             _mockConfigService.Object,
+            _mockUnitOfWork.Object,
             _mockLogger.Object);
     }
 
@@ -40,6 +44,7 @@ public sealed class SessionQuotaServiceEnsureQuotaTests : IDisposable
     {
         _mockRepository.Reset();
         _mockConfigService.Reset();
+        _mockUnitOfWork.Reset();
     }
 
     [Fact]

@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260206071644_AddEmailVerificationGracePeriod")]
+    partial class AddEmailVerificationGracePeriod
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -5534,54 +5537,6 @@ namespace Api.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.ProposalMigrationEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Choice")
-                        .HasColumnType("integer")
-                        .HasComment("0 = Pending, 1 = LinkToCatalog, 2 = KeepPrivate");
-
-                    b.Property<DateTime?>("ChoiceAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<Guid>("PrivateGameId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ShareRequestId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("SharedGameId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PrivateGameId")
-                        .HasDatabaseName("IX_ProposalMigrations_PrivateGameId");
-
-                    b.HasIndex("ShareRequestId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_ProposalMigrations_ShareRequestId");
-
-                    b.HasIndex("SharedGameId")
-                        .HasDatabaseName("IX_ProposalMigrations_SharedGameId");
-
-                    b.HasIndex("UserId", "Choice")
-                        .HasDatabaseName("IX_ProposalMigrations_UserId_Choice");
-
-                    b.ToTable("ProposalMigrations", (string)null);
-                });
-
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserGameChecklistEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7230,17 +7185,6 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.ProposalMigrationEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity", "PrivateGame")
-                        .WithMany()
-                        .HasForeignKey("PrivateGameId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("PrivateGame");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.UserGameChecklistEntity", b =>

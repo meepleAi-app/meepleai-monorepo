@@ -120,6 +120,24 @@ internal class GameSessionRepository : RepositoryBase, IGameSessionRepository
             .CountAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Finds oldest active sessions for a specific user, ordered by StartedAt ascending (oldest first).
+    /// Issue #3671: Required for automatic session termination when quota exceeded.
+    /// NOTE: Entities are TRACKED (not AsNoTracking) because they will be updated.
+    /// </summary>
+    public async Task<IReadOnlyList<GameSession>> FindOldestActiveByUserIdAsync(Guid userId, int limit, CancellationToken cancellationToken = default)
+    {
+        var sessionEntities = await DbContext.GameSessions
+            // NOT AsNoTracking() - entities will be updated (terminated)
+            .Where(s => s.CreatedByUserId == userId &&
+                       (s.Status == "Setup" || s.Status == "InProgress" || s.Status == "Paused"))
+            .OrderBy(s => s.StartedAt)  // Ascending - oldest first
+            .Take(limit)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return sessionEntities.Select(MapToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<GameSession>> FindHistoryAsync(
         Guid? gameId = null,
         DateTime? startDate = null,

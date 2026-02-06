@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
 using AuthRole = Api.BoundedContexts.Authentication.Domain.ValueObjects.Role;
 
 namespace Api.BoundedContexts.GameManagement.Infrastructure.Services;
@@ -25,17 +26,21 @@ internal sealed class SessionQuotaService : ISessionQuotaService
 
     private readonly IGameSessionRepository _sessionRepository;
     private readonly IConfigurationService _configService;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<SessionQuotaService> _logger;
 
     public SessionQuotaService(
         IGameSessionRepository sessionRepository,
         IConfigurationService configService,
+        IUnitOfWork unitOfWork,
         ILogger<SessionQuotaService> logger)
     {
         ArgumentNullException.ThrowIfNull(sessionRepository);
         _sessionRepository = sessionRepository;
         ArgumentNullException.ThrowIfNull(configService);
         _configService = configService;
+        ArgumentNullException.ThrowIfNull(unitOfWork);
+        _unitOfWork = unitOfWork;
         ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
     }
@@ -114,6 +119,69 @@ internal sealed class SessionQuotaService : ISessionQuotaService
             RemainingSlots = remaining,
             IsUnlimited = false
         };
+    }
+
+    /// <summary>
+    /// Ensures user can create a new session by checking quota and auto-terminating oldest sessions if needed.
+    /// Issue #3671: Session limits enforcement with automatic termination.
+    /// </summary>
+    public async Task<SessionQuotaEnsureResult> EnsureQuotaAsync(
+        Guid userId,
+        UserTier userTier,
+        AuthRole userRole,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(userTier);
+        ArgumentNullException.ThrowIfNull(userRole);
+
+        // Check quota first
+        var quotaResult = await CheckQuotaAsync(userId, userTier, userRole, cancellationToken).ConfigureAwait(false);
+
+        // If allowed (quota available or unlimited), return success immediately
+        if (quotaResult.IsAllowed)
+        {
+            return SessionQuotaEnsureResult.Success();
+        }
+
+        // Quota exceeded - calculate how many sessions to terminate
+        var sessionsToTerminate = quotaResult.CurrentCount - quotaResult.MaxAllowed + 1;
+
+        _logger.LogInformation(
+            "User {UserId} quota exceeded ({CurrentCount}/{MaxAllowed}). Terminating {Count} oldest session(s)",
+            userId, quotaResult.CurrentCount, quotaResult.MaxAllowed, sessionsToTerminate);
+
+        // Find oldest active sessions for this user
+        var oldestSessions = await _sessionRepository.FindOldestActiveByUserIdAsync(
+            userId,
+            sessionsToTerminate,
+            cancellationToken).ConfigureAwait(false);
+
+        // Terminate each session (raises domain events)
+        var terminatedIds = new List<Guid>();
+        foreach (var session in oldestSessions)
+        {
+            session.TerminateForQuota("QuotaExceeded");
+            terminatedIds.Add(session.Id);
+        }
+
+        // Persist changes (domain events will be dispatched by SaveChanges interceptor)
+        foreach (var session in oldestSessions)
+        {
+            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        }
+
+        // CRITICAL: Save changes to persist terminated sessions and dispatch domain events
+        // Pattern: All command handlers call SaveChangesAsync after UpdateAsync (e.g., CompleteGameSessionCommandHandler)
+        // Without this, terminated sessions remain active and notifications are never sent
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Terminated {Count} session(s) for user {UserId}: {SessionIds}",
+            terminatedIds.Count, userId, string.Join(", ", terminatedIds));
+
+        return SessionQuotaEnsureResult.SuccessWithTerminations(
+            terminatedIds,
+            $"Terminated {terminatedIds.Count} oldest session(s) to enforce {userTier.Value} tier limit of {quotaResult.MaxAllowed}");
     }
 
     private async Task<int> GetLimitForTierAsync(UserTier tier)

@@ -60,6 +60,28 @@ internal interface ISessionQuotaService
         UserTier userTier,
         Role userRole,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Ensures user can create a new session by checking quota and auto-terminating oldest sessions if needed.
+    /// Issue #3671: Session limits enforcement with automatic termination.
+    ///
+    /// <para><strong>Behavior:</strong></para>
+    /// <list type="bullet">
+    /// <item><description>If quota available: Returns success immediately</description></item>
+    /// <item><description>If quota exceeded: Terminates oldest session(s) to make room, then returns success</description></item>
+    /// <item><description>Admin/Editor roles: Always returns success (unlimited)</description></item>
+    /// </list>
+    /// </summary>
+    /// <param name="userId">User ID to ensure quota for</param>
+    /// <param name="userTier">User's subscription tier</param>
+    /// <param name="userRole">User's role</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Result with quota availability and list of terminated session IDs (if any)</returns>
+    Task<SessionQuotaEnsureResult> EnsureQuotaAsync(
+        Guid userId,
+        UserTier userTier,
+        Role userRole,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -169,6 +191,56 @@ internal record SessionQuotaInfo
             MaxSessions = -1,
             RemainingSlots = -1,
             IsUnlimited = true
+        };
+    }
+}
+
+/// <summary>
+/// Result of ensuring session quota with automatic termination if needed.
+/// Issue #3671: Session limits enforcement.
+/// </summary>
+internal record SessionQuotaEnsureResult
+{
+    /// <summary>
+    /// Whether quota is available for new session (always true after EnsureQuotaAsync completes successfully).
+    /// </summary>
+    public bool QuotaAvailable { get; init; }
+
+    /// <summary>
+    /// List of session IDs that were automatically terminated to make room.
+    /// Empty list if no terminations were needed.
+    /// </summary>
+    public IReadOnlyList<Guid> TerminatedSessionIds { get; init; } = Array.Empty<Guid>();
+
+    /// <summary>
+    /// Optional message explaining the result (e.g., "Terminated 2 oldest sessions to make room").
+    /// </summary>
+    public string? Message { get; init; }
+
+    /// <summary>
+    /// Creates a success result without any terminations (quota was available).
+    /// </summary>
+    public static SessionQuotaEnsureResult Success()
+    {
+        return new SessionQuotaEnsureResult
+        {
+            QuotaAvailable = true,
+            TerminatedSessionIds = Array.Empty<Guid>(),
+            Message = null
+        };
+    }
+
+    /// <summary>
+    /// Creates a success result with terminated sessions.
+    /// </summary>
+    public static SessionQuotaEnsureResult SuccessWithTerminations(IEnumerable<Guid> terminatedSessionIds, string? message = null)
+    {
+        var terminatedList = terminatedSessionIds.ToList();
+        return new SessionQuotaEnsureResult
+        {
+            QuotaAvailable = true,
+            TerminatedSessionIds = terminatedList,
+            Message = message ?? $"Terminated {terminatedList.Count} oldest session(s) to make room"
         };
     }
 }

@@ -122,8 +122,8 @@ public class ApproveGameProposalCommandHandlerTests
             .Setup(r => r.GetByIdForUpdateAsync(command.ShareRequestId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(shareRequest);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        // Act & Assert - Handler throws ConflictException (409) for non-proposal requests
+        await Assert.ThrowsAsync<ConflictException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
     }
 
@@ -178,8 +178,8 @@ public class ApproveGameProposalCommandHandlerTests
             .Setup(r => r.GetByIdForUpdateAsync(command.ShareRequestId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(shareRequest);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        // Act & Assert - Handler throws ConflictException (409) for missing PrivateGameId
+        await Assert.ThrowsAsync<ConflictException>(
             () => _handler.Handle(command, TestContext.Current.CancellationToken));
     }
 
@@ -284,7 +284,7 @@ public class ApproveGameProposalCommandHandlerTests
         // Arrange
         var shareRequest = CreateShareRequestInReview();
         var privateGame = CreatePrivateGame();
-        var existingGame = SharedGame.Create("Existing Game", 2020, null, 2, 4, 60, 10, 2.5m, null, null, null, null, TestUserId, null);
+        var existingGame = SharedGame.Create("Existing Game", 2020, "An existing game", 2, 4, 60, 10, 2.5m, null, "https://example.com/image.jpg", "https://example.com/thumb.jpg", null, TestUserId, null);
 
         await SeedLibraryEntryAsync(shareRequest.SourceGameId);
 
@@ -367,7 +367,7 @@ public class ApproveGameProposalCommandHandlerTests
         // Arrange
         var shareRequest = CreateShareRequestInReview();
         var privateGame = CreatePrivateGame();
-        var baseGame = SharedGame.Create("Base Game", 2020, null, 2, 4, 60, 10, 2.5m, null, null, null, null, TestUserId, null);
+        var baseGame = SharedGame.Create("Base Game", 2020, "A base game", 2, 4, 60, 10, 2.5m, null, "https://example.com/image.jpg", "https://example.com/thumb.jpg", null, TestUserId, null);
 
         await SeedLibraryEntryAsync(shareRequest.SourceGameId);
 

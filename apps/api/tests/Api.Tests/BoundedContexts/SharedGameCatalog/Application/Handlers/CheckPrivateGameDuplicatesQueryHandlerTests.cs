@@ -139,8 +139,8 @@ public class CheckPrivateGameDuplicatesQueryHandlerTests
             minAge: 10,
             complexityRating: 2.5m,
             averageRating: 7.5m,
-            imageUrl: null,
-            thumbnailUrl: null,
+            imageUrl: "https://example.com/image.jpg",
+            thumbnailUrl: "https://example.com/thumb.jpg",
             rules: null,
             createdBy: TestUserId,
             bggId: TestBggId); // Same BggId as private game

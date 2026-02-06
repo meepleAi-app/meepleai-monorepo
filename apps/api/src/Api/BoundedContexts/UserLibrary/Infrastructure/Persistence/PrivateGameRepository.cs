@@ -128,7 +128,20 @@ internal class PrivateGameRepository : RepositoryBase, IPrivateGameRepository
         CollectDomainEvents(entity);
 
         var persistenceEntity = MapToPersistence(entity);
-        DbContext.PrivateGames.Update(persistenceEntity);
+
+        // Issue #3531: Check if entity is already tracked to avoid InvalidOperationException
+        var existingEntry = DbContext.ChangeTracker.Entries<PrivateGameEntity>()
+            .FirstOrDefault(e => e.Entity.Id == persistenceEntity.Id);
+
+        if (existingEntry != null)
+        {
+            existingEntry.CurrentValues.SetValues(persistenceEntity);
+        }
+        else
+        {
+            DbContext.PrivateGames.Update(persistenceEntity);
+        }
+
         return Task.CompletedTask;
     }
 

@@ -29,7 +29,9 @@ internal class ApproveGameProposalCommandValidator : AbstractValidator<ApproveGa
                   x.ApprovalAction == ProposalApprovalAction.ApproveAsVariant, () =>
         {
             RuleFor(x => x.TargetSharedGameId)
-                .NotEmpty()
+                .NotNull()
+                .WithMessage("TargetSharedGameId is required for MergeKnowledgeBase and ApproveAsVariant actions")
+                .Must(id => id.HasValue && id.Value != Guid.Empty)
                 .WithMessage("TargetSharedGameId is required for MergeKnowledgeBase and ApproveAsVariant actions");
         });
 

@@ -30,16 +30,16 @@ public sealed class ContributionTypeTests
     #region Enum Completeness Tests
 
     [Fact]
-    public void ContributionType_HasTwoValues()
+    public void ContributionType_HasThreeValues()
     {
         var values = Enum.GetValues<ContributionType>();
-        values.Should().HaveCount(2);
+        values.Should().HaveCount(3);
     }
 
     [Fact]
     public void ContributionType_AllValuesCanBeParsed()
     {
-        var names = new[] { "NewGame", "AdditionalContent" };
+        var names = new[] { "NewGame", "AdditionalContent", "NewGameProposal" };
 
         foreach (var name in names)
         {
@@ -76,7 +76,7 @@ public sealed class ContributionTypeTests
     [Fact]
     public void ContributionType_IsDefined_ReturnsFalseForInvalidValues()
     {
-        Enum.IsDefined(typeof(ContributionType), 2).Should().BeFalse();
+        Enum.IsDefined(typeof(ContributionType), 3).Should().BeFalse();
         Enum.IsDefined(typeof(ContributionType), -1).Should().BeFalse();
         Enum.IsDefined(typeof(ContributionType), 100).Should().BeFalse();
     }

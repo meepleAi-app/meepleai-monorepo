@@ -522,21 +522,15 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
         };
 
         // Issue #3435: Create mocks for strategy-based routing dependencies
+        // Issue #3531: Use Ollama/OpenRouter providers to match test client setup
+        // (DefaultStrategyModelMappings now uses DeepSeek/Anthropic which aren't available in tests)
         var mockStrategyMappingService = new Mock<IStrategyModelMappingService>();
         mockStrategyMappingService
             .Setup(s => s.GetModelForStrategyAsync(It.IsAny<RagStrategy>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((RagStrategy strategy, CancellationToken _) =>
-            {
-                var mapping = StrategyModelMapping.Default(strategy);
-                return (mapping.Provider, mapping.PrimaryModel);
-            });
+            .ReturnsAsync(("Ollama", "llama3:8b"));
         mockStrategyMappingService
             .Setup(s => s.GetFallbackModelsAsync(It.IsAny<RagStrategy>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((RagStrategy strategy, CancellationToken _) =>
-            {
-                var mapping = StrategyModelMapping.Default(strategy);
-                return mapping.FallbackModels;
-            });
+            .ReturnsAsync(new[] { "openai/gpt-4o-mini" });
 
         // Setup IServiceScopeFactory to provide ITierStrategyAccessService
         var mockTierAccessService = new Mock<ITierStrategyAccessService>();

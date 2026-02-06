@@ -31,6 +31,12 @@ public class LoginCommandHandlerTests
         _tempSessionServiceMock = new Mock<ITempSessionService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
 
+        // Issue #3531: EnforceDeviceLimitAsync (Issue #3677) calls GetActiveSessionsByUserIdAsync
+        // which returns null by default from Moq, causing ArgumentNullException on .Where()
+        _sessionRepositoryMock
+            .Setup(x => x.GetActiveSessionsByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Session>());
+
         _handler = new LoginCommandHandler(
             _userRepositoryMock.Object,
             _sessionRepositoryMock.Object,

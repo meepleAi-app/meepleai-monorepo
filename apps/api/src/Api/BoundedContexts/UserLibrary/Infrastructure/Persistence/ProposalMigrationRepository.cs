@@ -59,7 +59,20 @@ public sealed class ProposalMigrationRepository : IProposalMigrationRepository
     public Task UpdateAsync(ProposalMigration migration, CancellationToken cancellationToken = default)
     {
         var entity = MapToEntity(migration);
-        _context.Set<ProposalMigrationEntity>().Update(entity);
+
+        // Issue #3531: Check if entity is already tracked to avoid InvalidOperationException
+        var existingEntry = _context.ChangeTracker.Entries<ProposalMigrationEntity>()
+            .FirstOrDefault(e => e.Entity.Id == entity.Id);
+
+        if (existingEntry != null)
+        {
+            existingEntry.CurrentValues.SetValues(entity);
+        }
+        else
+        {
+            _context.Set<ProposalMigrationEntity>().Update(entity);
+        }
+
         return Task.CompletedTask;
     }
 

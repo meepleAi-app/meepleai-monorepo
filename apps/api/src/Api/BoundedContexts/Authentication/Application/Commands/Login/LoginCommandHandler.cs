@@ -110,6 +110,9 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
         await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        // Issue #3677: Enforce device limit (max 5 unique devices)
+        await EnforceDeviceLimitAsync(user.Id, session.DeviceFingerprint, cancellationToken).ConfigureAwait(false);
+
         // Map to DTO
         var userDto = MapToUserDto(user);
 
@@ -119,6 +122,53 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
             User: userDto,
             SessionToken: sessionToken.Value
         );
+    }
+
+    /// <summary>
+    /// Enforces device limit (max 5 unique devices per user).
+    /// Issue #3677: Auto-revokes oldest device if limit exceeded.
+    /// </summary>
+    private async Task EnforceDeviceLimitAsync(Guid userId, string? currentDeviceFingerprint, CancellationToken cancellationToken)
+    {
+        const int MaxDevices = 5;
+
+        // Skip if no fingerprint (shouldn't happen, but defensive)
+        if (string.IsNullOrWhiteSpace(currentDeviceFingerprint))
+            return;
+
+        // Get all active sessions for user
+        var activeSessions = await _sessionRepository.GetActiveSessionsByUserIdAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        // Group by device fingerprint and count unique devices
+        var deviceGroups = activeSessions
+            .Where(s => !string.IsNullOrWhiteSpace(s.DeviceFingerprint))
+            .GroupBy(s => s.DeviceFingerprint, StringComparer.Ordinal)
+            .Select(g => new
+            {
+                Fingerprint = g.Key!,
+                Sessions = g.ToList(),
+                OldestSession = g.OrderBy(s => s.CreatedAt).First()
+            })
+            .ToList();
+
+        // Check if device limit exceeded (allow exactly MaxDevices, revoke at MaxDevices+1)
+        if (deviceGroups.Count <= MaxDevices)
+            return; // At or under limit, no action needed
+
+        // Find oldest device (by first session creation time)
+        var oldestDevice = deviceGroups
+            .OrderBy(d => d.OldestSession.CreatedAt)
+            .ThenBy(d => d.Fingerprint, StringComparer.Ordinal) // Tie-breaker for deterministic ordering
+            .First();
+
+        // Revoke all sessions for the oldest device
+        foreach (var session in oldestDevice.Sessions)
+        {
+            session.Revoke(reason: "DeviceLimitExceeded");
+            await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static UserDto MapToUserDto(User user)

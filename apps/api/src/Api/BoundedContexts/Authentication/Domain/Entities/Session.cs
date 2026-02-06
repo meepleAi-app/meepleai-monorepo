@@ -20,6 +20,7 @@ public sealed class Session : AggregateRoot<Guid>
     public DateTime? RevokedAt { get; private set; }
     public string? IpAddress { get; private set; }
     public string? UserAgent { get; private set; }
+    public string? DeviceFingerprint { get; private set; } // Issue #3677: Device tracking
 
     // Navigation property for EF Core
     public User? User { get; }
@@ -60,6 +61,29 @@ public sealed class Session : AggregateRoot<Guid>
         UserAgent = userAgent != null && userAgent.Length > 256
             ? userAgent.Substring(0, 256)
             : userAgent;
+
+        // Issue #3677: Generate device fingerprint from UserAgent
+        DeviceFingerprint = GenerateDeviceFingerprint(userAgent);
+    }
+
+    /// <summary>
+    /// Generates a device fingerprint from UserAgent string.
+    /// Issue #3677: Used for device tracking and limiting.
+    /// Note: Fingerprint is UserAgent-based only (same browser = same fingerprint across users).
+    /// This is intentional for tracking device types, not identifying individual devices.
+    /// </summary>
+    private static string? GenerateDeviceFingerprint(string? userAgent)
+    {
+        if (string.IsNullOrWhiteSpace(userAgent))
+            return null;
+
+        // Normalize and hash UserAgent for consistent fingerprint
+        // Note: Same UserAgent across users = same fingerprint (by design)
+        // Alternative: Include UserId for per-user device uniqueness
+        var normalized = userAgent.Trim().ToLowerInvariant();
+        var bytes = System.Text.Encoding.UTF8.GetBytes(normalized);
+        var hash = System.Security.Cryptography.SHA256.HashData(bytes);
+        return Convert.ToBase64String(hash);
     }
 
     /// <summary>

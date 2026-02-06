@@ -50,9 +50,9 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
-            var searchTerm = query.Search.Trim();
-            dbQuery = dbQuery.Where(g => g.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                                         g.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+            var searchTerm = $"%{query.Search.Trim()}%";
+            dbQuery = dbQuery.Where(g => EF.Functions.ILike(g.Title, searchTerm) ||
+                                         EF.Functions.ILike(g.Description, searchTerm));
         }
 
         if (query.SubmittedBy.HasValue)

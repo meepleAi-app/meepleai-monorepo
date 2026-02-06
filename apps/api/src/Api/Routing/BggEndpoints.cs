@@ -24,7 +24,7 @@ internal static class BggEndpoints
             return Results.Ok(results);
         })
         .RequireRateLimiting("BggSearch")
-        .WithName("SearchBggGames")
+        .WithName("BggPublicSearch")
         .WithOpenApi(operation =>
         {
             operation.Summary = "Search BoardGameGeek catalog";

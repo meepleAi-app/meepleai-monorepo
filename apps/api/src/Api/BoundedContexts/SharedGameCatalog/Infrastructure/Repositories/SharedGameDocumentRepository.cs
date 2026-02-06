@@ -117,7 +117,11 @@ internal sealed class SharedGameDocumentRepository : ISharedGameDocumentReposito
                 is_active,
                 tags_json,
                 created_at,
-                created_by
+                created_by,
+                approval_status,
+                approved_by,
+                approved_at,
+                approval_notes
             FROM shared_game_documents
             WHERE document_type = @documentType
               AND tags_json IS NOT NULL

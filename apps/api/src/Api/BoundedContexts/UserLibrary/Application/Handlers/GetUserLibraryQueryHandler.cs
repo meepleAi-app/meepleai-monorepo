@@ -10,7 +10,8 @@ namespace Api.BoundedContexts.UserLibrary.Application.Handlers;
 
 /// <summary>
 /// Handler for getting paginated user library.
-/// Fetches game details from SharedGameCatalog.
+/// Fetches game details from SharedGameCatalog and PrivateGames.
+/// Issue #3663: Updated to support PrivateGame references.
 /// </summary>
 internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, PaginatedLibraryResponseDto>
 {
@@ -54,12 +55,24 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
             .ConfigureAwait(false);
         var pdfGameSet = gameIdsWithPdfs.ToHashSet();
 
-        // Get shared game details for each entry
+        // Batch load: Get all SharedGames in a single query (prevents N+1)
+        var sharedGames = await _sharedGameRepository.GetByIdsAsync(gameIds, cancellationToken).ConfigureAwait(false);
+
+        // Batch load: Get all PrivateGame library entries in a single query
+        var entryIds = entries.Select(e => e.Id).ToList();
+        var privateGameEntries = await _dbContext.UserLibraryEntries
+            .AsNoTracking()
+            .Include(e => e.PrivateGame)
+            .Where(e => entryIds.Contains(e.Id) && e.PrivateGameId.HasValue)
+            .ToDictionaryAsync(e => e.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Build DTOs from batch-loaded data
         var entryDtos = new List<UserLibraryEntryDto>();
         foreach (var entry in entries)
         {
-            var sharedGame = await _sharedGameRepository.GetByIdAsync(entry.GameId, cancellationToken).ConfigureAwait(false);
-            if (sharedGame != null)
+            // Try SharedGame first (most common)
+            if (sharedGames.TryGetValue(entry.GameId, out var sharedGame))
             {
                 entryDtos.Add(new UserLibraryEntryDto(
                     Id: entry.Id,
@@ -77,6 +90,29 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     StateChangedAt: entry.CurrentState.ChangedAt,
                     StateNotes: entry.CurrentState.StateNotes,
                     HasPdfDocuments: pdfGameSet.Contains(entry.GameId)
+                ));
+            }
+            // Check PrivateGame entries (batch-loaded above)
+            else if (privateGameEntries.TryGetValue(entry.Id, out var libraryEntity) &&
+                     libraryEntity.PrivateGame != null)
+            {
+                var privateGame = libraryEntity.PrivateGame;
+                entryDtos.Add(new UserLibraryEntryDto(
+                    Id: entry.Id,
+                    UserId: entry.UserId,
+                    GameId: libraryEntity.PrivateGameId!.Value,
+                    GameTitle: privateGame.Title,
+                    GamePublisher: null, // Private games don't have publishers
+                    GameYearPublished: privateGame.YearPublished,
+                    GameIconUrl: privateGame.ThumbnailUrl,
+                    GameImageUrl: privateGame.ImageUrl,
+                    AddedAt: entry.AddedAt,
+                    Notes: entry.Notes?.Value,
+                    IsFavorite: entry.IsFavorite,
+                    CurrentState: entry.CurrentState.Value.ToString(),
+                    StateChangedAt: entry.CurrentState.ChangedAt,
+                    StateNotes: entry.CurrentState.StateNotes,
+                    HasPdfDocuments: pdfGameSet.Contains(libraryEntity.PrivateGameId!.Value)
                 ));
             }
         }

@@ -6,6 +6,7 @@ namespace Api.Infrastructure.EntityConfigurations.UserLibrary;
 
 /// <summary>
 /// EF Core configuration for UserLibraryEntryEntity.
+/// Issue #3662: Updated to support both SharedGame and PrivateGame references.
 /// </summary>
 internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<UserLibraryEntryEntity>
 {
@@ -15,10 +16,22 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
 
         builder.HasKey(e => e.Id);
 
-        // Unique constraint: user can only have one entry per game
-        builder.HasIndex(e => new { e.UserId, e.GameId })
+        // Ignore the obsolete GameId property - use SharedGameId instead
+        builder.Ignore(e => e.GameId);
+
+        // Issue #3662: Unique constraint for SharedGame entries
+        // User can only have one entry per shared game
+        builder.HasIndex(e => new { e.UserId, e.SharedGameId })
             .IsUnique()
-            .HasDatabaseName("IX_UserLibraryEntries_UserId_GameId");
+            .HasDatabaseName("IX_UserLibraryEntries_UserId_SharedGameId")
+            .HasFilter("shared_game_id IS NOT NULL");
+
+        // Issue #3662: Unique constraint for PrivateGame entries
+        // User can only have one entry per private game
+        builder.HasIndex(e => new { e.UserId, e.PrivateGameId })
+            .IsUnique()
+            .HasDatabaseName("IX_UserLibraryEntries_UserId_PrivateGameId")
+            .HasFilter("private_game_id IS NOT NULL");
 
         // Index for querying user's library
         builder.HasIndex(e => e.UserId)
@@ -31,6 +44,15 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
         // Index for private PDF association
         builder.HasIndex(e => e.PrivatePdfId)
             .HasDatabaseName("IX_UserLibraryEntries_PrivatePdfId");
+
+        // Issue #3662: SharedGameId and PrivateGameId column properties
+        builder.Property(e => e.SharedGameId)
+            .HasColumnName("shared_game_id")
+            .IsRequired(false);
+
+        builder.Property(e => e.PrivateGameId)
+            .HasColumnName("private_game_id")
+            .IsRequired(false);
 
         // Properties
         builder.Property(e => e.AddedAt)
@@ -109,11 +131,17 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
             .HasForeignKey(e => e.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Relationship to SharedGameCatalog (not legacy games table)
+        // Issue #3662: Relationship to SharedGameCatalog (now nullable)
         builder.HasOne(e => e.SharedGame)
             .WithMany()
-            .HasForeignKey(e => e.GameId)
+            .HasForeignKey(e => e.SharedGameId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Issue #3662: Relationship to PrivateGame
+        builder.HasOne(e => e.PrivateGame)
+            .WithMany(pg => pg.LibraryEntries)
+            .HasForeignKey(e => e.PrivateGameId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         // Relationship to PdfDocument (private PDF association)
         builder.HasOne(e => e.PdfDocument)
@@ -146,5 +174,13 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
 
         builder.HasIndex(e => e.LastPlayed)
             .HasDatabaseName("IX_UserLibraryEntries_LastPlayed");
+
+        // Issue #3662: XOR constraint - Either SharedGameId OR PrivateGameId must be set, but not both
+        builder.ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_UserLibraryEntry_GameSource",
+                "(shared_game_id IS NOT NULL AND private_game_id IS NULL) OR " +
+                "(shared_game_id IS NULL AND private_game_id IS NOT NULL)");
+        });
     }
 }

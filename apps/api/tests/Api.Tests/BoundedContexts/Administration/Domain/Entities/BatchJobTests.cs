@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Enums;
+using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain.Entities;
 

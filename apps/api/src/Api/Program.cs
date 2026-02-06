@@ -473,7 +473,8 @@ v1Api.MapRateLimitAdminEndpoints();    // Issue #2738: Rate limit admin manageme
 v1Api.MapGameLibraryConfigEndpoints(); // Issue #2444: Game library tier limits config
 v1Api.MapSessionLimitsConfigEndpoints(); // Issue #3070: Session limits config
 v1Api.MapPdfUploadLimitsConfigEndpoints(); // Issue #3072: PDF upload limits config
-v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload limits config
+v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload limits config (bulk)
+v1Api.MapAdminConfigEndpoints();       // Issue #3673: PDF limits admin UI (per-tier)
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapDashboardEndpoints();         // Issue #3314: User dashboard aggregated API
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics

@@ -17,7 +17,7 @@ internal class AuditService
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public async Task LogAsync(
+    public virtual async Task LogAsync(
         string? userId,
         string action,
         string resource,
@@ -61,7 +61,7 @@ internal class AuditService
         }
     }
 
-    public async Task LogAccessDeniedAsync(
+    public virtual async Task LogAccessDeniedAsync(
         string userScope,
         string requiredScope,
         string userId,

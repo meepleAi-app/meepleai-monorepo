@@ -250,6 +250,7 @@ builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
     cfg.AddOpenBehavior(typeof(Api.SharedKernel.Application.Behaviors.ValidationBehavior<,>));
+    cfg.AddOpenBehavior(typeof(Api.BoundedContexts.Administration.Application.Behaviors.AuditLoggingBehavior<,>)); // Issue #3691: Audit logging
 });
 
 // Application services (Domain, AI, Admin)
@@ -488,6 +489,7 @@ v1Api.MapUserLibraryEndpoints();       // User game library
 v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)
 v1Api.MapProposalMigrationEndpoints(); // Proposal migrations (Issue #3666)
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
+v1Api.MapAdminAuditLogEndpoints();     // Issue #3691: Admin audit log system
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 v1Api.MapWorkflowEndpoints();          // n8n workflow integration

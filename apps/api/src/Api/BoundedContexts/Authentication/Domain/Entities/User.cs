@@ -38,6 +38,11 @@ public sealed class User : AggregateRoot<Guid>
     public int FailedLoginAttempts { get; private set; }
     public DateTime? LockedUntil { get; private set; }
 
+    // Email verification properties (Issue #3672)
+    public bool EmailVerified { get; private set; }
+    public DateTime? EmailVerifiedAt { get; private set; }
+    public DateTime? VerificationGracePeriodEndsAt { get; private set; }
+
     // 2FA properties (DDD Value Objects)
     public TotpSecret? TotpSecret { get; private set; }
     public bool IsTwoFactorEnabled { get; private set; }
@@ -670,6 +675,67 @@ public sealed class User : AggregateRoot<Guid>
     {
         FailedLoginAttempts = failedLoginAttempts;
         LockedUntil = lockedUntil;
+    }
+
+    /// <summary>
+    /// Verifies the user's email address.
+    /// Issue #3672: Email verification flow.
+    /// </summary>
+    public void VerifyEmail()
+    {
+        if (EmailVerified)
+            return; // Already verified, idempotent
+
+        EmailVerified = true;
+        EmailVerifiedAt = DateTime.UtcNow;
+        VerificationGracePeriodEndsAt = null; // Clear grace period
+
+        AddDomainEvent(new EmailVerifiedEvent(Id, EmailVerifiedAt.Value));
+    }
+
+    /// <summary>
+    /// Checks if user is currently in the email verification grace period.
+    /// Issue #3672: 7-day grace period for existing users.
+    /// </summary>
+    /// <param name="timeProvider">Optional time provider for testability (matches IsLockedOut pattern)</param>
+    public bool IsInGracePeriod(TimeProvider? timeProvider = null)
+    {
+        if (VerificationGracePeriodEndsAt == null) return false;
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        return now < VerificationGracePeriodEndsAt;
+    }
+
+    /// <summary>
+    /// Checks if user requires email verification (not verified and past grace period).
+    /// Issue #3672: Used by EmailVerificationMiddleware for enforcement.
+    /// </summary>
+    /// <param name="timeProvider">Optional time provider for testability</param>
+    public bool RequiresVerification(TimeProvider? timeProvider = null) =>
+        !EmailVerified && !IsInGracePeriod(timeProvider);
+
+    /// <summary>
+    /// Sets the email verification grace period.
+    /// Issue #3672: Called during migration for existing users.
+    /// </summary>
+    /// <param name="gracePeriodEndsAt">When the grace period ends (UTC)</param>
+    public void SetVerificationGracePeriod(DateTime gracePeriodEndsAt)
+    {
+        if (EmailVerified)
+            return; // Already verified, no grace period needed
+
+        VerificationGracePeriodEndsAt = gracePeriodEndsAt;
+    }
+
+    /// <summary>
+    /// Restores email verification state from persistence layer.
+    /// Issue #3672: Internal method to avoid reflection in repository (S3011 compliance).
+    /// Should only be called by UserRepository during entity materialization.
+    /// </summary>
+    internal void RestoreEmailVerificationState(bool emailVerified, DateTime? emailVerifiedAt, DateTime? verificationGracePeriodEndsAt)
+    {
+        EmailVerified = emailVerified;
+        EmailVerifiedAt = emailVerifiedAt;
+        VerificationGracePeriodEndsAt = verificationGracePeriodEndsAt;
     }
 
     #endregion

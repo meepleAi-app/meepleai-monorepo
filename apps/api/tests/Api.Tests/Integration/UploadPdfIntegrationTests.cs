@@ -399,6 +399,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -430,6 +431,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -461,6 +463,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -493,6 +496,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -525,6 +529,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -560,6 +565,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -593,6 +599,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -633,6 +640,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             var command = new UploadPdfCommand(
                 GameId: testGame.Id.ToString(),
                 Metadata: null,
+            PrivateGameId: null,
                 UserId: testUser.Id,
                 File: formFile);
 
@@ -686,6 +694,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
                 var command = new UploadPdfCommand(
                     GameId: testGame.Id.ToString(),
                     Metadata: null,
+            PrivateGameId: null,
                     UserId: testUser.Id,
                     File: formFile);
 
@@ -766,6 +775,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -824,6 +834,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: nonExistentGameId.ToString(), // Non-existent game will trigger FK constraint
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -886,6 +897,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -989,6 +1001,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1051,6 +1064,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1081,6 +1095,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1130,6 +1145,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1200,6 +1216,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1255,6 +1272,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1283,6 +1301,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            PrivateGameId: null,
             UserId: testUser.Id,
             File: formFile);
 
@@ -1326,7 +1345,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         var pdfBytes = CreateValidPdfBytes(1024 * 20);
         var formFile = CreateMockFormFile("idempotency_test.pdf", pdfBytes);
-        var command = new UploadPdfCommand(testGame.Id.ToString(), null, testUser.Id, formFile);
+        var command = new UploadPdfCommand(testGame.Id.ToString(), null, null, testUser.Id, formFile);
 
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var firstResult = await handler.Handle(command, TestCancellationToken);
@@ -1373,7 +1392,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Act: Upload PDF (triggers quota reservation)
         var pdfBytes = CreateValidPdfBytes(1024 * 25);
         var formFile = CreateMockFormFile("quota_success_test.pdf", pdfBytes);
-        var command = new UploadPdfCommand(testGame.Id.ToString(), null, testUser.Id, formFile);
+        var command = new UploadPdfCommand(testGame.Id.ToString(), null, null, testUser.Id, formFile);
 
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var result = await handler.Handle(command, TestCancellationToken);

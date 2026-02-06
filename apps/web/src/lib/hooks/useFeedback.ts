@@ -8,8 +8,9 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import { api } from '@/lib/api';
+
 import type { FeedbackValue } from '@/components/ui/meeple/feedback-buttons';
+import { api } from '@/lib/api';
 
 // ============================================================================
 // Types

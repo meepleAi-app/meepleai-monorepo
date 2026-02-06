@@ -124,5 +124,13 @@ internal sealed class AutoConfigurationService : IAutoConfigurationService
             _dbContext,
             _logger,
             cancellationToken).ConfigureAwait(false);
+
+        // Seed default feature flag configurations (Issue #3674)
+        _logger.LogInformation("Seeding feature flag configurations...");
+        await FeatureFlagSeeder.SeedFeatureFlagsAsync(
+            _dbContext,
+            adminUser.Id,
+            _logger,
+            cancellationToken).ConfigureAwait(false);
     }
 }

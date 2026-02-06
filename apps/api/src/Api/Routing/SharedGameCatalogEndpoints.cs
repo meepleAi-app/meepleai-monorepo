@@ -12,8 +12,11 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetAllBadges;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetUserBadges;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetBadgeLeaderboard;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetMyActiveReviews;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.CheckPrivateGameDuplicates;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ToggleBadgeDisplay;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ApproveGameProposal;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Extensions;
@@ -551,6 +554,30 @@ internal static class SharedGameCatalogEndpoints
             .Produces<BulkOperationResult>()
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound);
+
+        // Issue #3667: Approve game proposal with enhanced actions
+        group.MapPost("/admin/share-requests/{id:guid}/approve-game-proposal", HandleApproveGameProposal)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("ApproveGameProposal")
+            .WithSummary("Approve game proposal with enhanced actions (Admin only)")
+            .WithDescription("Approves a NewGameProposal share request with three possible actions: ApproveAsNew (create new game), MergeKnowledgeBase (add PDFs to existing game), or ApproveAsVariant (create variant game). Admin must have active review lock on the request.")
+            .Produces<ApproveShareRequestResponse>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        // Issue #3667: Check private game for duplicates
+        group.MapGet("/admin/private-games/{id:guid}/check-duplicates", HandleCheckPrivateGameDuplicates)
+            .RequireAuthorization("AdminOnlyPolicy")
+            .RequireRateLimiting("ShareRequestAdmin")
+            .WithName("CheckPrivateGameDuplicates")
+            .WithSummary("Check private game for duplicates (Admin only)")
+            .WithDescription("Checks if a private game has duplicates in the shared catalog using exact matching (BggId) and fuzzy matching (title similarity). Returns recommended approval action.")
+            .Produces<DuplicateCheckResultDto>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
     }
 
     // ========================================
@@ -1825,6 +1852,61 @@ internal static class SharedGameCatalogEndpoints
         }
     }
 
+    private static async Task<IResult> HandleApproveGameProposal(
+        Guid id,
+        ApproveGameProposalRequest request,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        // Extract admin ID from claims
+        var userIdClaim = context.User.FindFirst("user_id")?.Value
+            ?? context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!Guid.TryParse(userIdClaim, out var adminId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new ApproveGameProposalCommand(
+            id,
+            adminId,
+            request.ApprovalAction,
+            request.TargetSharedGameId,
+            request.AdminNotes);
+
+        try
+        {
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (ShareRequestReviewerMismatchException ex)
+        {
+            // Another admin has the lock
+            throw new ConflictException(ex.Message);
+        }
+        catch (ShareRequestLockExpiredException ex)
+        {
+            // Lock expired
+            throw new ConflictException(ex.Message);
+        }
+        catch (InvalidShareRequestStateException ex)
+        {
+            // Invalid state transition
+            throw new ConflictException(ex.Message);
+        }
+    }
+
+    private static async Task<IResult> HandleCheckPrivateGameDuplicates(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new CheckPrivateGameDuplicatesQuery(id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     private static async Task<IResult> HandleRejectShareRequest(
         Guid id,
         RejectShareRequestRequest request,
@@ -2517,3 +2599,12 @@ internal record RequestShareRequestChangesRequest(
 /// </summary>
 internal record ToggleBadgeDisplayRequest(
     bool IsDisplayed);
+
+/// <summary>
+/// Request DTO for approving a game proposal with enhanced actions.
+/// Issue #3667: Phase 6 - Admin Review Enhancements.
+/// </summary>
+internal record ApproveGameProposalRequest(
+    ProposalApprovalAction ApprovalAction,
+    Guid? TargetSharedGameId,
+    string? AdminNotes);

@@ -28,25 +28,25 @@ export const mockUser: AuthUser = {
   role: 'User',
 };
 
-export const mockViewer: AuthUser = {
-  id: 'test-viewer-id',
-  email: 'viewer@meepleai.dev',
-  displayName: 'Test Viewer',
-  role: 'Viewer',
+export const mockSuperAdmin: AuthUser = {
+  id: 'test-superadmin-id',
+  email: 'superadmin@meepleai.dev',
+  displayName: 'Test SuperAdmin',
+  role: 'SuperAdmin',
 };
 
 /**
  * Get mock user by role
  */
-export function getMockUserByRole(role: 'Admin' | 'Editor' | 'User' | 'Viewer'): AuthUser {
+export function getMockUserByRole(role: 'SuperAdmin' | 'Admin' | 'Editor' | 'User'): AuthUser {
   switch (role) {
+    case 'SuperAdmin':
+      return mockSuperAdmin;
     case 'Admin':
       return mockAdmin;
     case 'Editor':
       return mockEditor;
     case 'User':
       return mockUser;
-    case 'Viewer':
-      return mockViewer;
   }
 }

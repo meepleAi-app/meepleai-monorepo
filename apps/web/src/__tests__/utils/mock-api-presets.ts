@@ -17,7 +17,7 @@ import { MockApiRouter, createJsonResponse, createErrorResponse } from './mock-a
 export interface AuthPresetOptions {
   userId?: string;
   email?: string;
-  role?: 'Admin' | 'Editor' | 'Viewer';
+  role?: 'SuperAdmin' | 'Admin' | 'Editor' | 'User';
   displayName?: string;
   expiresAt?: string;
   unauthorized?: boolean;

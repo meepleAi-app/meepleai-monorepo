@@ -22,11 +22,11 @@ describe('Auth Types', () => {
       role: 'Editor',
     };
 
-    const viewerUser: AuthUser = {
+    const superAdminUser: AuthUser = {
       id: '3',
-      email: 'viewer@test.com',
-      displayName: 'Viewer',
-      role: 'Viewer',
+      email: 'superadmin@test.com',
+      displayName: 'SuperAdmin',
+      role: 'SuperAdmin',
     };
 
     const regularUser: AuthUser = {
@@ -40,7 +40,7 @@ describe('Auth Types', () => {
       it('should return true for admin user with any role', () => {
         expect(hasRole(adminUser, 'Admin')).toBe(true);
         expect(hasRole(adminUser, 'Editor')).toBe(true);
-        expect(hasRole(adminUser, 'Viewer')).toBe(true);
+        expect(hasRole(adminUser, 'SuperAdmin')).toBe(false);
         expect(hasRole(adminUser, 'User')).toBe(true);
       });
 
@@ -64,12 +64,14 @@ describe('Auth Types', () => {
         expect(hasRole(editorUser, 'Admin')).toBe(false);
       });
 
-      it('should return true for viewer with viewer role', () => {
-        expect(hasRole(viewerUser, 'Viewer')).toBe(true);
+      it('should return true for superadmin with superadmin role', () => {
+        expect(hasRole(superAdminUser, 'SuperAdmin')).toBe(true);
       });
 
-      it('should return false for viewer with editor role', () => {
-        expect(hasRole(viewerUser, 'Editor')).toBe(false);
+      it('should return true for superadmin with any role', () => {
+        expect(hasRole(superAdminUser, 'Admin')).toBe(true);
+        expect(hasRole(superAdminUser, 'Editor')).toBe(true);
+        expect(hasRole(superAdminUser, 'User')).toBe(true);
       });
 
       it('should return true for user with user role', () => {
@@ -93,11 +95,11 @@ describe('Auth Types', () => {
 
       it('should handle uppercase user roles', () => {
         const uppercaseUser: AuthUser = {
-          ...viewerUser,
-          role: 'VIEWER',
+          ...superAdminUser,
+          role: 'SUPERADMIN' as UserRole,
         };
 
-        expect(hasRole(uppercaseUser, 'Viewer')).toBe(true);
+        expect(hasRole(uppercaseUser, 'SuperAdmin')).toBe(true);
       });
 
       it('should handle mixed case required roles', () => {
@@ -110,7 +112,7 @@ describe('Auth Types', () => {
       it('should return false for null user', () => {
         expect(hasRole(null, 'Admin')).toBe(false);
         expect(hasRole(null, 'Editor')).toBe(false);
-        expect(hasRole(null, 'Viewer')).toBe(false);
+        expect(hasRole(null, 'SuperAdmin')).toBe(false);
         expect(hasRole(null, 'User')).toBe(false);
       });
     });
@@ -154,11 +156,11 @@ describe('Auth Types', () => {
       role: 'Editor',
     };
 
-    const viewerUser: AuthUser = {
+    const superAdminUser: AuthUser = {
       id: '3',
-      email: 'viewer@test.com',
-      displayName: 'Viewer',
-      role: 'Viewer',
+      email: 'superadmin@test.com',
+      displayName: 'SuperAdmin',
+      role: 'SuperAdmin',
     };
 
     const regularUser: AuthUser = {
@@ -169,6 +171,10 @@ describe('Auth Types', () => {
     };
 
     describe('Allowed Roles', () => {
+      it('should return true for superadmin user', () => {
+        expect(canEdit(superAdminUser)).toBe(true);
+      });
+
       it('should return true for admin user', () => {
         expect(canEdit(adminUser)).toBe(true);
       });
@@ -179,9 +185,6 @@ describe('Auth Types', () => {
     });
 
     describe('Disallowed Roles', () => {
-      it('should return false for viewer user', () => {
-        expect(canEdit(viewerUser)).toBe(false);
-      });
 
       it('should return false for regular user', () => {
         expect(canEdit(regularUser)).toBe(false);

@@ -50,33 +50,16 @@
         .epic-infra { background: linear-gradient(90deg, #6b7280, #374151); color: white; }
         .epic-game { background: linear-gradient(90deg, #06b6d4, #0891b2); color: white; }
         .epic-bugs { background: linear-gradient(90deg, #dc2626, #b91c1c); color: white; }
+        .epic-done { background: linear-gradient(90deg, #22c55e, #16a34a); color: white; }
         .closed-incomplete { background: linear-gradient(90deg, #fbbf24, #f59e0b); color: #78350f; }
 
-        .donut-chart {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            position: relative;
-        }
-        .donut-hole {
-            position: absolute;
-            width: 70px;
-            height: 70px;
-            background: white;
-            border-radius: 50%;
-            top: 25px;
-            left: 25px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 18px;
-        }
         .tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
         .tag-open { background: #dcfce7; color: #166534; }
         .tag-closed { background: #e0e7ff; color: #3730a3; }
         .tag-bug { background: #fee2e2; color: #991b1b; }
         .tag-epic { background: #fef3c7; color: #92400e; }
+        .tag-done { background: #dcfce7; color: #166534; }
+        .tag-progress { background: #dbeafe; color: #1e40af; }
         .tag-incomplete { background: #fff7ed; color: #c2410c; }
 
         .milestone-line {
@@ -103,13 +86,19 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-in { animation: fadeIn 0.4s ease-out; }
 
-        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(28px, 1fr)); gap: 2px; }
-        .cb { width: 14px; height: 14px; border-radius: 3px; }
-        .cb-done { background: #22c55e; }
-        .cb-todo { background: #e5e7eb; }
+        .dep-arrow { stroke: #94a3b8; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+        .dep-arrow-critical { stroke: #ef4444; stroke-width: 2.5; fill: none; marker-end: url(#arrowhead-red); }
     </style>
 </head>
 <body class="bg-gradient-to-br from-amber-50/50 via-white to-orange-50/30 min-h-screen">
+
+    <!-- SVG Defs for arrows -->
+    <svg style="position:absolute;width:0;height:0">
+        <defs>
+            <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#94a3b8"/></marker>
+            <marker id="arrowhead-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#ef4444"/></marker>
+        </defs>
+    </svg>
 
     <div class="max-w-[1800px] mx-auto p-8">
 
@@ -123,7 +112,7 @@
                 </div>
                 <div>
                     <h1 class="text-4xl font-quicksand font-bold text-zinc-900">MeepleAI Monorepo</h1>
-                    <p class="text-zinc-500">Project Status & Roadmap Analysis &bull; Generato: 6 Febbraio 2026 &bull; 79 Issue Aperte &bull; 17 Closed Incomplete</p>
+                    <p class="text-zinc-500">Project Status & Roadmap &bull; Aggiornato: 6 Febbraio 2026, 17:50 &bull; 67 Issue Aperte &bull; 0 Bug &bull; 12 Chiuse Oggi</p>
                 </div>
             </div>
         </div>
@@ -131,31 +120,103 @@
         <!-- ============================================ -->
         <!-- HIGH-LEVEL STATS -->
         <!-- ============================================ -->
-        <div class="grid grid-cols-5 gap-4 mb-8 animate-in">
+        <div class="grid grid-cols-6 gap-4 mb-8 animate-in">
             <div class="p-5 rounded-2xl glass border border-emerald-200/50">
                 <div class="text-sm text-zinc-500 mb-1">Issue Aperte</div>
-                <div class="text-3xl font-quicksand font-bold text-emerald-600">79</div>
-                <div class="text-xs text-zinc-400 mt-1">14 Epics + 61 Tasks + 4 Bug</div>
+                <div class="text-3xl font-quicksand font-bold text-emerald-600">67</div>
+                <div class="text-xs text-zinc-400 mt-1">12 Epics + 50 Features + 5 Tests</div>
             </div>
             <div class="p-5 rounded-2xl glass border border-blue-200/50">
-                <div class="text-sm text-zinc-500 mb-1">Chiuse (7gg)</div>
-                <div class="text-3xl font-quicksand font-bold text-blue-600">95+</div>
-                <div class="text-xs text-zinc-400 mt-1">Grande velocity ultima settimana</div>
+                <div class="text-sm text-zinc-500 mb-1">Chiuse Oggi</div>
+                <div class="text-3xl font-quicksand font-bold text-blue-600">12</div>
+                <div class="text-xs text-zinc-400 mt-1">4 bug + 3 admin + 2 feature + 3 epic</div>
+            </div>
+            <div class="p-5 rounded-2xl glass border border-emerald-200/50">
+                <div class="text-sm text-zinc-500 mb-1">Bug Aperti</div>
+                <div class="text-3xl font-quicksand font-bold text-emerald-600">0</div>
+                <div class="text-xs text-emerald-500 mt-1">Tutti risolti! (PR #3751)</div>
             </div>
             <div class="p-5 rounded-2xl glass border border-amber-200/50">
-                <div class="text-sm text-zinc-500 mb-1">Closed Incomplete</div>
-                <div class="text-3xl font-quicksand font-bold text-amber-600">17</div>
-                <div class="text-xs text-zinc-400 mt-1">Checkbox DOD non completate</div>
-            </div>
-            <div class="p-5 rounded-2xl glass border border-red-200/50">
-                <div class="text-sm text-zinc-500 mb-1">Bug Aperti</div>
-                <div class="text-3xl font-quicksand font-bold text-red-600">4</div>
-                <div class="text-xs text-zinc-400 mt-1">#3742 #3743 #3744 #3745</div>
+                <div class="text-sm text-zinc-500 mb-1">Admin Enterprise</div>
+                <div class="text-3xl font-quicksand font-bold text-amber-600">37</div>
+                <div class="text-xs text-zinc-400 mt-1">3/40 completate (Epic 1: 33%)</div>
             </div>
             <div class="p-5 rounded-2xl glass border border-purple-200/50">
-                <div class="text-sm text-zinc-500 mb-1">Epic Priority Critical</div>
-                <div class="text-3xl font-quicksand font-bold text-purple-600">2</div>
-                <div class="text-xs text-zinc-400 mt-1">#3475 Library &bull; #3386 Agent</div>
+                <div class="text-sm text-zinc-500 mb-1">Closed Incomplete</div>
+                <div class="text-3xl font-quicksand font-bold text-purple-600">17</div>
+                <div class="text-xs text-zinc-400 mt-1">Checkbox DOD non completate</div>
+            </div>
+            <div class="p-5 rounded-2xl glass border border-sky-200/50">
+                <div class="text-sm text-zinc-500 mb-1">PR Mergiati Oggi</div>
+                <div class="text-3xl font-quicksand font-bold text-sky-600">4</div>
+                <div class="text-xs text-zinc-400 mt-1">#3749 #3750 #3751 #3754</div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- RECENTLY COMPLETED (NEW SECTION) -->
+        <!-- ============================================ -->
+        <div class="mb-8 p-6 rounded-2xl bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-300 animate-in">
+            <h2 class="font-quicksand font-bold text-2xl mb-4 text-emerald-900">Completati Oggi (6 Feb 2026)</h2>
+            <div class="grid grid-cols-4 gap-4">
+                <div class="p-4 rounded-xl bg-white/80 border border-emerald-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="tag tag-done">DONE</span>
+                        <span class="font-mono text-sm">#3742-#3745</span>
+                    </div>
+                    <p class="text-sm font-semibold">4 Backend Bug Fix</p>
+                    <p class="text-xs text-zinc-500 mt-1">SQL, DI, Routing, Column &bull; PR #3751</p>
+                </div>
+                <div class="p-4 rounded-xl bg-white/80 border border-emerald-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="tag tag-done">DONE</span>
+                        <span class="font-mono text-sm">#3689</span>
+                    </div>
+                    <p class="text-sm font-semibold">Admin Layout Base & Navigation</p>
+                    <p class="text-xs text-zinc-500 mt-1">PR #3750 &bull; Sblocca tutto Epic 1</p>
+                </div>
+                <div class="p-4 rounded-xl bg-white/80 border border-emerald-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="tag tag-done">DONE</span>
+                        <span class="font-mono text-sm">#3690</span>
+                    </div>
+                    <p class="text-sm font-semibold">Admin Role System & Security</p>
+                    <p class="text-xs text-zinc-500 mt-1">PR #3749 &bull; Confirmation modals</p>
+                </div>
+                <div class="p-4 rounded-xl bg-white/80 border border-emerald-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="tag tag-done">DONE</span>
+                        <span class="font-mono text-sm">#3674</span>
+                    </div>
+                    <p class="text-sm font-semibold">Feature Flag Tier Verification</p>
+                    <p class="text-xs text-zinc-500 mt-1">PR #3754 &bull; 42 test, seed data, docs</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-3 mt-3">
+                <div class="p-3 rounded-lg bg-white/60 border border-emerald-100">
+                    <span class="tag tag-done text-xs">DONE</span>
+                    <span class="text-xs ml-1">#3691 Audit Log System</span>
+                </div>
+                <div class="p-3 rounded-lg bg-white/60 border border-emerald-100">
+                    <span class="tag tag-done text-xs">DONE</span>
+                    <span class="text-xs ml-1">#3531 Fix 115 Test Failures (PR #3752)</span>
+                </div>
+                <div class="p-3 rounded-lg bg-white/60 border border-emerald-100">
+                    <span class="tag tag-done text-xs">DONE</span>
+                    <span class="text-xs ml-1">#3475 User Private Library Epic</span>
+                </div>
+                <div class="p-3 rounded-lg bg-white/60 border border-emerald-100">
+                    <span class="tag tag-done text-xs">DONE</span>
+                    <span class="text-xs ml-1">#3386 Agent Creation Flow (7/7 DoD)</span>
+                </div>
+                <div class="p-3 rounded-lg bg-white/60 border border-emerald-100">
+                    <span class="tag tag-done text-xs">DONE</span>
+                    <span class="text-xs ml-1">#3120 Private Games (9/9 phases)</span>
+                </div>
+                <div class="p-3 rounded-lg bg-white/60 border border-emerald-100">
+                    <span class="tag tag-done text-xs">DONE</span>
+                    <span class="text-xs ml-1">#3327 Security & Quota (8/8 DoD)</span>
+                </div>
             </div>
         </div>
 
@@ -163,7 +224,7 @@
         <!-- OPEN EPICS OVERVIEW -->
         <!-- ============================================ -->
         <div class="mb-8 p-6 rounded-2xl glass border border-zinc-200/50 animate-in">
-            <h2 class="font-quicksand font-bold text-2xl mb-6">Open Epics - Stato Avanzamento</h2>
+            <h2 class="font-quicksand font-bold text-2xl mb-6">Open Epics - Stato Avanzamento (12 aperti, 3 chiusi oggi)</h2>
 
             <div class="space-y-4">
                 <!-- Epic: Admin Enterprise (4 sub-epics) -->
@@ -171,83 +232,76 @@
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-3">
                             <span class="tag tag-epic">EPIC CLUSTER</span>
+                            <span class="tag tag-progress">IN PROGRESS</span>
                             <h3 class="font-quicksand font-bold text-lg">Admin Enterprise Dashboard</h3>
                         </div>
-                        <div class="text-sm text-zinc-500">40 issue &bull; 0% completato</div>
+                        <div class="text-sm text-zinc-500">37/40 aperte &bull; 3 chiuse &bull; 8% completato</div>
                     </div>
                     <div class="grid grid-cols-4 gap-3">
-                        <div class="p-3 rounded-lg bg-white/80">
+                        <div class="p-3 rounded-lg bg-white/80 border-l-4 border-amber-500">
                             <div class="flex items-center gap-2 mb-1">
                                 <div class="w-3 h-3 rounded-full bg-amber-500"></div>
                                 <span class="text-xs font-semibold">#3685 Core Dashboard</span>
+                                <span class="tag tag-progress text-[10px]">3/9</span>
                             </div>
-                            <div class="text-xs text-zinc-500">9 issue &bull; 0/9 checkbox</div>
-                            <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-2"><div class="bg-amber-500 h-1.5 rounded-full progress-bar" style="width: 0%"></div></div>
+                            <div class="text-xs text-zinc-500">0/9 checkbox &bull; 3 sub chiuse</div>
+                            <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-2"><div class="bg-amber-500 h-1.5 rounded-full progress-bar" style="width: 33%"></div></div>
+                            <div class="text-[10px] text-emerald-600 mt-1">#3689 #3690 #3691 done</div>
                         </div>
                         <div class="p-3 rounded-lg bg-white/80">
                             <div class="flex items-center gap-2 mb-1">
                                 <div class="w-3 h-3 rounded-full bg-purple-500"></div>
                                 <span class="text-xs font-semibold">#3686 User Mgmt</span>
                             </div>
-                            <div class="text-xs text-zinc-500">10 issue &bull; 0/7 checkbox</div>
+                            <div class="text-xs text-zinc-500">0/7 checkbox &bull; 0/10 sub chiuse</div>
                             <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-2"><div class="bg-purple-500 h-1.5 rounded-full progress-bar" style="width: 0%"></div></div>
+                            <div class="text-[10px] text-zinc-400 mt-1">Blocked by Epic 1 completion</div>
                         </div>
                         <div class="p-3 rounded-lg bg-white/80">
                             <div class="flex items-center gap-2 mb-1">
                                 <div class="w-3 h-3 rounded-full bg-blue-500"></div>
                                 <span class="text-xs font-semibold">#3687 AI Platform</span>
                             </div>
-                            <div class="text-xs text-zinc-500">11 issue &bull; 0/9 checkbox</div>
+                            <div class="text-xs text-zinc-500">0/9 checkbox &bull; 0/11 sub chiuse</div>
                             <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-2"><div class="bg-blue-500 h-1.5 rounded-full progress-bar" style="width: 0%"></div></div>
+                            <div class="text-[10px] text-zinc-400 mt-1">Parallel con Epic 2</div>
                         </div>
                         <div class="p-3 rounded-lg bg-white/80">
                             <div class="flex items-center gap-2 mb-1">
                                 <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
                                 <span class="text-xs font-semibold">#3688 Business</span>
                             </div>
-                            <div class="text-xs text-zinc-500">10 issue &bull; 0/8 checkbox</div>
+                            <div class="text-xs text-zinc-500">0/8 checkbox &bull; 0/10 sub chiuse</div>
                             <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-2"><div class="bg-emerald-500 h-1.5 rounded-full progress-bar" style="width: 0%"></div></div>
+                            <div class="text-[10px] text-zinc-400 mt-1">Dopo Epic 2+3</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Epic: User Private Library -->
-                <div class="p-4 rounded-xl bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-200">
+                <!-- Epic: Security & Quota - CLOSED -->
+                <div class="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-300">
                     <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center gap-3">
-                            <span class="tag tag-epic">CRITICAL</span>
-                            <h3 class="font-quicksand font-bold">#3475 User Private Library & Collections</h3>
-                        </div>
-                        <div class="text-sm text-zinc-500">2/17 checkbox &bull; 12%</div>
-                    </div>
-                    <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-purple-500 h-2 rounded-full progress-bar" style="width: 12%"></div></div>
-                    <div class="text-xs text-zinc-400 mt-2">Sub-issues #3120 (Private Games) in progress &bull; 9 phases chiuse ma molte con checkbox incomplete</div>
-                </div>
-
-                <!-- Epic: Private Games Feature #3120 -->
-                <div class="p-4 rounded-xl bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-3">
-                            <span class="tag tag-epic">FEATURE</span>
-                            <h3 class="font-quicksand font-bold">#3120 Private Games & Catalog Proposal System</h3>
-                        </div>
-                        <div class="text-sm text-zinc-500">0/20 checkbox &bull; 0%</div>
-                    </div>
-                    <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-violet-500 h-2 rounded-full progress-bar" style="width: 0%"></div></div>
-                    <div class="text-xs text-zinc-400 mt-2">9 phases create e chiuse (#3662-#3670) ma issue padre ancora aperta con 0 checkbox</div>
-                </div>
-
-                <!-- Epic: Security & Quota -->
-                <div class="p-4 rounded-xl bg-gradient-to-r from-red-50 to-orange-50 border border-red-200">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-3">
-                            <span class="tag tag-epic">HIGH</span>
+                            <span class="tag tag-done">CLOSED</span>
                             <h3 class="font-quicksand font-bold">#3327 User Flow Gaps - Security & Quota</h3>
                         </div>
-                        <div class="text-sm text-zinc-500">0/15 checkbox &bull; 0%</div>
+                        <div class="text-sm text-emerald-600">8/8 DoD &bull; 7/7 sub-issues CHIUSE</div>
                     </div>
-                    <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full progress-bar" style="width: 0%"></div></div>
-                    <div class="text-xs text-zinc-400 mt-2">Sub-issues (#3671-#3677) tutte chiuse ma checkbox del padre non aggiornate &bull; Solo #3674 ancora aperta</div>
+                    <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-emerald-500 h-2 rounded-full progress-bar" style="width: 100%"></div></div>
+                    <div class="text-xs text-emerald-600 mt-2 font-semibold">Feature completa: quotas, email verify, admin UI, feature flags, AI usage, lockout, device tracking.</div>
+                </div>
+
+                <!-- Epic: Private Games Feature #3120 - CLOSED -->
+                <div class="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-300">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-3">
+                            <span class="tag tag-done">CLOSED</span>
+                            <h3 class="font-quicksand font-bold">#3120 Private Games & Catalog Proposal System</h3>
+                        </div>
+                        <div class="text-sm text-emerald-600">20/20 DoD &bull; 9/9 phases CHIUSE</div>
+                    </div>
+                    <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-emerald-500 h-2 rounded-full progress-bar" style="width: 100%"></div></div>
+                    <div class="text-xs text-emerald-600 mt-2 font-semibold">Feature completa: data model, CRUD, PDF, AI chat, proposal, migration, admin review, notifications, frontend, testing.</div>
                 </div>
 
                 <!-- Epic: Multi-Agent AI -->
@@ -255,12 +309,13 @@
                     <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center gap-3">
                             <span class="tag tag-epic">HIGH</span>
+                            <span class="tag tag-incomplete">CHECKBOX 0%</span>
                             <h3 class="font-quicksand font-bold">#3490 Multi-Agent Game AI System</h3>
                         </div>
-                        <div class="text-sm text-zinc-500">0/4 checkbox &bull; 0%</div>
+                        <div class="text-sm text-zinc-500">0/4 checkbox &bull; Sub-issues tutte chiuse</div>
                     </div>
-                    <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full progress-bar" style="width: 0%"></div></div>
-                    <div class="text-xs text-zinc-400 mt-2">Tutor Agent completato (#3491-#3502 chiuse) ma checkbox padre non aggiornate</div>
+                    <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-amber-500 h-2 rounded-full progress-bar" style="width: 0%"></div></div>
+                    <div class="text-xs text-amber-600 mt-2 font-semibold">Tutor Agent completato (#3491-#3502 chiuse). Azione: aggiornare e chiudere.</div>
                 </div>
 
                 <!-- Epic: Plugin RAG -->
@@ -273,35 +328,39 @@
                         <div class="text-sm text-zinc-500">8/14 checkbox &bull; 57%</div>
                     </div>
                     <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-emerald-500 h-2 rounded-full progress-bar" style="width: 57%"></div></div>
-                    <div class="text-xs text-zinc-400 mt-2">18 sub-issues (#3414-#3431) tutte chiuse &bull; Mancano checkbox Testing/Docs/Monitoring</div>
+                    <div class="text-xs text-zinc-400 mt-2">18 sub-issues (#3414-#3431) tutte chiuse. Mancano checkbox Testing/Docs/Monitoring</div>
                 </div>
 
                 <!-- Other Epics compact row -->
                 <div class="grid grid-cols-3 gap-3">
-                    <div class="p-3 rounded-lg bg-zinc-50 border border-zinc-200">
-                        <div class="text-xs font-semibold mb-1">#3386 Agent Creation Flow</div>
-                        <div class="text-xs text-zinc-500">0/7 cb &bull; Sub-issues tutte chiuse</div>
-                        <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-1"><div class="bg-zinc-400 h-1.5 rounded-full progress-bar" style="width: 0%"></div></div>
+                    <div class="p-3 rounded-lg bg-emerald-50 border border-emerald-300">
+                        <div class="text-xs font-semibold mb-1 text-emerald-700">#3386 Agent Creation Flow</div>
+                        <div class="text-xs text-emerald-600">7/7 DoD ✅ CLOSED</div>
+                        <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-1"><div class="bg-emerald-500 h-1.5 rounded-full progress-bar" style="width: 100%"></div></div>
+                        <div class="text-[10px] text-emerald-600 mt-1">UI, backend, test e metriche completi</div>
                     </div>
-                    <div class="p-3 rounded-lg bg-zinc-50 border border-zinc-200">
+                    <div class="p-3 rounded-lg bg-blue-50 border border-blue-200">
                         <div class="text-xs font-semibold mb-1">#3403 RAG Dashboard Navigation</div>
-                        <div class="text-xs text-zinc-500">0/14 cb &bull; Sub-issues chiuse</div>
-                        <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-1"><div class="bg-zinc-400 h-1.5 rounded-full progress-bar" style="width: 0%"></div></div>
+                        <div class="text-xs text-blue-600">7/14 DoD (navigation done)</div>
+                        <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-1"><div class="bg-blue-400 h-1.5 rounded-full progress-bar" style="width: 50%"></div></div>
+                        <div class="text-[10px] text-zinc-500 mt-1">Builder (#3412) ancora aperto</div>
                     </div>
                     <div class="p-3 rounded-lg bg-zinc-50 border border-zinc-200">
                         <div class="text-xs font-semibold mb-1">#3453 Visual RAG Strategy Builder</div>
                         <div class="text-xs text-zinc-500">0/15 cb &bull; Sub-issues chiuse</div>
-                        <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-1"><div class="bg-zinc-400 h-1.5 rounded-full progress-bar" style="width: 0%"></div></div>
+                        <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-1"><div class="bg-amber-400 h-1.5 rounded-full progress-bar" style="width: 0%"></div></div>
+                        <div class="text-[10px] text-amber-600 mt-1">Azione: aggiornare e chiudere</div>
                     </div>
                     <div class="p-3 rounded-lg bg-zinc-50 border border-zinc-200">
                         <div class="text-xs font-semibold mb-1">#3434 Tier-Strategy-Model Arch</div>
                         <div class="text-xs text-zinc-500">2/11 cb &bull; Sub-issues chiuse</div>
                         <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-1"><div class="bg-zinc-400 h-1.5 rounded-full progress-bar" style="width: 18%"></div></div>
                     </div>
-                    <div class="p-3 rounded-lg bg-zinc-50 border border-zinc-200">
+                    <div class="p-3 rounded-lg bg-sky-50 border border-sky-200">
                         <div class="text-xs font-semibold mb-1">#3511 Game Detail Page</div>
-                        <div class="text-xs text-zinc-500">0/7 cb &bull; 5 phases chiuse</div>
-                        <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-1"><div class="bg-zinc-400 h-1.5 rounded-full progress-bar" style="width: 0%"></div></div>
+                        <div class="text-xs text-sky-600">4/7 DoD (feature done)</div>
+                        <div class="w-full bg-zinc-200 rounded-full h-1.5 mt-1"><div class="bg-sky-400 h-1.5 rounded-full progress-bar" style="width: 57%"></div></div>
+                        <div class="text-[10px] text-zinc-500 mt-1">Mancano test</div>
                     </div>
                     <div class="p-3 rounded-lg bg-zinc-50 border border-zinc-200">
                         <div class="text-xs font-semibold mb-1">#3082 E2E Test Flows</div>
@@ -312,7 +371,7 @@
 
                 <!-- Future/Low Priority Epics -->
                 <details class="mt-2">
-                    <summary class="cursor-pointer text-sm text-zinc-500 hover:text-zinc-700 font-semibold">Epics a Bassa Priorit&agrave; / Futuri (7)</summary>
+                    <summary class="cursor-pointer text-sm text-zinc-500 hover:text-zinc-700 font-semibold">Epics a Bassa Priorit&agrave; / Futuri (6)</summary>
                     <div class="grid grid-cols-4 gap-2 mt-3">
                         <div class="p-2 rounded bg-zinc-50 text-xs">
                             <div class="font-semibold">#3348 Advanced Features</div>
@@ -336,15 +395,7 @@
                         </div>
                         <div class="p-2 rounded bg-zinc-50 text-xs">
                             <div class="font-semibold">#3412 Custom Strategy Builder</div>
-                            <div class="text-zinc-400">0 cb &bull; UI epic</div>
-                        </div>
-                        <div class="p-2 rounded bg-zinc-50 text-xs">
-                            <div class="font-semibold">#2967 Zero-Cost CI/CD</div>
-                            <div class="text-zinc-400">infra &bull; Oracle Cloud</div>
-                        </div>
-                        <div class="p-2 rounded bg-zinc-50 text-xs">
-                            <div class="font-semibold">#3531 Fix 115 Test Failures</div>
-                            <div class="text-zinc-400">0/7 cb &bull; tech debt</div>
+                            <div class="text-zinc-400">0/20 cb &bull; UI epic</div>
                         </div>
                     </div>
                 </details>
@@ -352,191 +403,88 @@
         </div>
 
         <!-- ============================================ -->
-        <!-- CLOSED BUT INCOMPLETE ISSUES -->
+        <!-- ALL OPEN ISSUES DETAIL TABLE -->
         <!-- ============================================ -->
-        <div class="mb-8 p-6 rounded-2xl glass border border-amber-300/50 animate-in">
-            <h2 class="font-quicksand font-bold text-2xl mb-2 text-amber-900">Closed Issues con Checkbox Incomplete</h2>
-            <p class="text-sm text-zinc-500 mb-4">Issue chiuse negli ultimi 7 giorni con Definition of Done non completata &mdash; richiedono attenzione</p>
+        <div class="mb-8 p-6 rounded-2xl glass border border-zinc-200/50 animate-in">
+            <h2 class="font-quicksand font-bold text-2xl mb-4">Tutte le 70 Issue Aperte - Dettaglio Completo</h2>
 
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="text-left text-zinc-500 border-b border-zinc-200">
-                            <th class="pb-2 pr-4">Issue</th>
-                            <th class="pb-2 pr-4">Titolo</th>
-                            <th class="pb-2 pr-4 text-center">Checkbox</th>
-                            <th class="pb-2 pr-4 text-center">Completamento</th>
-                            <th class="pb-2 text-center">Severit&agrave;</th>
+                        <tr class="text-left text-zinc-500 border-b-2 border-zinc-300">
+                            <th class="pb-2 pr-3 w-16">#</th>
+                            <th class="pb-2 pr-3">Titolo</th>
+                            <th class="pb-2 pr-3 text-center w-20">Tipo</th>
+                            <th class="pb-2 pr-3 text-center w-24">Area</th>
+                            <th class="pb-2 pr-3 text-center w-24">Dipende da</th>
+                            <th class="pb-2 text-center w-20">Priorit&agrave;</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-zinc-100">
-                        <tr class="hover:bg-amber-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3669" class="text-blue-600 hover:underline font-mono">#3669</a></td>
-                            <td class="py-2 pr-4">Phase 8: Frontend Integration [#3120]</td>
-                            <td class="py-2 pr-4 text-center font-mono">0/31</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: 0%"></div></div><div class="text-xs text-center mt-1">0%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#fee2e2;color:#991b1b">CRITICA</span></td>
-                        </tr>
-                        <tr class="hover:bg-amber-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3663" class="text-blue-600 hover:underline font-mono">#3663</a></td>
-                            <td class="py-2 pr-4">Phase 2: Private Game CRUD [#3120]</td>
-                            <td class="py-2 pr-4 text-center font-mono">0/28</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: 0%"></div></div><div class="text-xs text-center mt-1">0%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#fee2e2;color:#991b1b">CRITICA</span></td>
-                        </tr>
-                        <tr class="hover:bg-amber-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3650" class="text-blue-600 hover:underline font-mono">#3650</a></td>
-                            <td class="py-2 pr-4">Add Game to Collection Wizard - Full Completion</td>
-                            <td class="py-2 pr-4 text-center font-mono">0/23</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: 0%"></div></div><div class="text-xs text-center mt-1">0%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#fee2e2;color:#991b1b">CRITICA</span></td>
-                        </tr>
-                        <tr class="hover:bg-amber-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3670" class="text-blue-600 hover:underline font-mono">#3670</a></td>
-                            <td class="py-2 pr-4">Phase 9: Testing & Polish [#3120]</td>
-                            <td class="py-2 pr-4 text-center font-mono">10/31</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-amber-500 h-2 rounded-full" style="width: 32%"></div></div><div class="text-xs text-center mt-1">32%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#fef3c7;color:#92400e">ALTA</span></td>
-                        </tr>
-                        <tr class="hover:bg-amber-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3664" class="text-blue-600 hover:underline font-mono">#3664</a></td>
-                            <td class="py-2 pr-4">Phase 3: PDF & AI Chat for Private Games [#3120]</td>
-                            <td class="py-2 pr-4 text-center font-mono">0/20</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: 0%"></div></div><div class="text-xs text-center mt-1">0%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#fee2e2;color:#991b1b">CRITICA</span></td>
-                        </tr>
-                        <tr class="hover:bg-amber-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3662" class="text-blue-600 hover:underline font-mono">#3662</a></td>
-                            <td class="py-2 pr-4">Phase 1: Data Model & Core Infrastructure [#3120]</td>
-                            <td class="py-2 pr-4 text-center font-mono">0/18</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: 0%"></div></div><div class="text-xs text-center mt-1">0%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#fee2e2;color:#991b1b">CRITICA</span></td>
-                        </tr>
-                        <tr class="hover:bg-amber-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3665" class="text-blue-600 hover:underline font-mono">#3665</a></td>
-                            <td class="py-2 pr-4">Phase 4: Proposal System [#3120]</td>
-                            <td class="py-2 pr-4 text-center font-mono">0/18</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: 0%"></div></div><div class="text-xs text-center mt-1">0%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#fee2e2;color:#991b1b">CRITICA</span></td>
-                        </tr>
-                        <tr class="hover:bg-amber-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3666" class="text-blue-600 hover:underline font-mono">#3666</a></td>
-                            <td class="py-2 pr-4">Phase 5: Migration Choice Flow [#3120]</td>
-                            <td class="py-2 pr-4 text-center font-mono">0/15</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: 0%"></div></div><div class="text-xs text-center mt-1">0%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#fee2e2;color:#991b1b">CRITICA</span></td>
-                        </tr>
-                        <tr class="hover:bg-amber-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3667" class="text-blue-600 hover:underline font-mono">#3667</a></td>
-                            <td class="py-2 pr-4">Phase 6: Admin Review Enhancements [#3120]</td>
-                            <td class="py-2 pr-4 text-center font-mono">0/14</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: 0%"></div></div><div class="text-xs text-center mt-1">0%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#fee2e2;color:#991b1b">CRITICA</span></td>
-                        </tr>
-                        <tr class="hover:bg-amber-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3677" class="text-blue-600 hover:underline font-mono">#3677</a></td>
-                            <td class="py-2 pr-4">Login Device Management</td>
-                            <td class="py-2 pr-4 text-center font-mono">0/11</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: 0%"></div></div><div class="text-xs text-center mt-1">0%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#fef3c7;color:#92400e">ALTA</span></td>
-                        </tr>
-                        <tr class="hover:bg-amber-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3675" class="text-blue-600 hover:underline font-mono">#3675</a></td>
-                            <td class="py-2 pr-4">AI Token Usage Tracking Dashboard</td>
-                            <td class="py-2 pr-4 text-center font-mono">0/9</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: 0%"></div></div><div class="text-xs text-center mt-1">0%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#fef3c7;color:#92400e">ALTA</span></td>
-                        </tr>
-                        <tr class="hover:bg-amber-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3653" class="text-blue-600 hover:underline font-mono">#3653</a></td>
-                            <td class="py-2 pr-4">Private PDF Upload Endpoint - Full Integration</td>
-                            <td class="py-2 pr-4 text-center font-mono">4/22</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-amber-500 h-2 rounded-full" style="width: 18%"></div></div><div class="text-xs text-center mt-1">18%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#fef3c7;color:#92400e">ALTA</span></td>
-                        </tr>
-                        <tr class="hover:bg-amber-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3642" class="text-blue-600 hover:underline font-mono">#3642</a></td>
-                            <td class="py-2 pr-4">Add PDF Upload Step to SharedGame Creation Wizard</td>
-                            <td class="py-2 pr-4 text-center font-mono">0/6</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: 0%"></div></div><div class="text-xs text-center mt-1">0%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#fef3c7;color:#92400e">MEDIA</span></td>
-                        </tr>
-                        <tr class="hover:bg-emerald-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3632" class="text-blue-600 hover:underline font-mono">#3632</a></td>
-                            <td class="py-2 pr-4">User Collection Dashboard</td>
-                            <td class="py-2 pr-4 text-center font-mono">21/22</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-emerald-500 h-2 rounded-full" style="width: 95%"></div></div><div class="text-xs text-center mt-1">95%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#dcfce7;color:#166534">BASSA</span></td>
-                        </tr>
-                        <tr class="hover:bg-emerald-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3672" class="text-blue-600 hover:underline font-mono">#3672</a></td>
-                            <td class="py-2 pr-4">Email Verification Flow</td>
-                            <td class="py-2 pr-4 text-center font-mono">8/9</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-emerald-500 h-2 rounded-full" style="width: 89%"></div></div><div class="text-xs text-center mt-1">89%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#dcfce7;color:#166534">BASSA</span></td>
-                        </tr>
-                        <tr class="hover:bg-emerald-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3671" class="text-blue-600 hover:underline font-mono">#3671</a></td>
-                            <td class="py-2 pr-4">Session Limits Enforcement</td>
-                            <td class="py-2 pr-4 text-center font-mono">6/7</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-emerald-500 h-2 rounded-full" style="width: 86%"></div></div><div class="text-xs text-center mt-1">86%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#dcfce7;color:#166534">BASSA</span></td>
-                        </tr>
-                        <tr class="hover:bg-emerald-50/50">
-                            <td class="py-2 pr-4"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3651" class="text-blue-600 hover:underline font-mono">#3651</a></td>
-                            <td class="py-2 pr-4">UserLibraryEntry PDF Association - Full Polish</td>
-                            <td class="py-2 pr-4 text-center font-mono">17/20</td>
-                            <td class="py-2 pr-4"><div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-emerald-500 h-2 rounded-full" style="width: 85%"></div></div><div class="text-xs text-center mt-1">85%</div></td>
-                            <td class="py-2 text-center"><span class="tag" style="background:#dcfce7;color:#166534">BASSA</span></td>
-                        </tr>
+                        <!-- Admin Enterprise - Epic 1 Core (6 open) -->
+                        <tr class="bg-amber-50/50"><td colspan="6" class="py-2 px-3 font-bold text-amber-800 text-xs">ADMIN ENTERPRISE - Epic 1: Core Dashboard (#3685) &mdash; 6 aperte, 3 chiuse</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3692" class="text-blue-600 hover:underline">3692</a></td><td class="py-1.5 pr-3 text-xs">Token Management System</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono text-emerald-600">#3689 #3690</td><td class="py-1.5 text-center text-xs">high</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3693" class="text-blue-600 hover:underline">3693</a></td><td class="py-1.5 pr-3 text-xs">Batch Job System</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono text-emerald-600">#3689 #3690</td><td class="py-1.5 text-center text-xs">high</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3694" class="text-blue-600 hover:underline">3694</a></td><td class="py-1.5 pr-3 text-xs">Overview Tab - Extended KPIs</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono text-emerald-600">#3689</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3695" class="text-blue-600 hover:underline">3695</a></td><td class="py-1.5 pr-3 text-xs">Resources - DB/Cache/Vectors Monitoring</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, DB</td><td class="py-1.5 pr-3 text-center text-xs font-mono text-emerald-600">#3689</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3696" class="text-blue-600 hover:underline">3696</a></td><td class="py-1.5 pr-3 text-xs">Operations - Service Control Panel</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, ops</td><td class="py-1.5 pr-3 text-center text-xs font-mono text-emerald-600">#3689 #3691</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3697" class="text-blue-600 hover:underline">3697</a></td><td class="py-1.5 pr-3 text-xs">Testing & Integration</td><td class="py-1.5 pr-3 text-center"><span class="tag" style="background:#e0f2fe;color:#0369a1">test</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, test</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3692-#3696</td><td class="py-1.5 text-center text-xs">med</td></tr>
+
+                        <!-- Admin Enterprise - Epic 2 User Mgmt (10 open) -->
+                        <tr class="bg-purple-50/50"><td colspan="6" class="py-2 px-3 font-bold text-purple-800 text-xs">ADMIN ENTERPRISE - Epic 2: User Management (#3686) &mdash; 10 aperte</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3698" class="text-blue-600 hover:underline">3698</a></td><td class="py-1.5 pr-3 text-xs">User Management Table & Search</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">Epic 1</td><td class="py-1.5 text-center text-xs">high</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3699" class="text-blue-600 hover:underline">3699</a></td><td class="py-1.5 pr-3 text-xs">User Tier Management</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3698</td><td class="py-1.5 text-center text-xs">high</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3700" class="text-blue-600 hover:underline">3700</a></td><td class="py-1.5 pr-3 text-xs">Impersonate Mode</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, security</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3698 #3690</td><td class="py-1.5 text-center text-xs">high</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3701" class="text-blue-600 hover:underline">3701</a></td><td class="py-1.5 pr-3 text-xs">Feature Flags System (Admin UI)</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono text-emerald-600">#3674</td><td class="py-1.5 text-center text-xs">high</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3702" class="text-blue-600 hover:underline">3702</a></td><td class="py-1.5 pr-3 text-xs">User Limits Configuration (Per Tier)</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3699</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3703" class="text-blue-600 hover:underline">3703</a></td><td class="py-1.5 pr-3 text-xs">Block/Unblock Users</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3698</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3704" class="text-blue-600 hover:underline">3704</a></td><td class="py-1.5 pr-3 text-xs">Token Usage Per User View</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3692 #3698</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3705" class="text-blue-600 hover:underline">3705</a></td><td class="py-1.5 pr-3 text-xs">Shared Library Bulk Operations</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3693</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3706" class="text-blue-600 hover:underline">3706</a></td><td class="py-1.5 pr-3 text-xs">Frontend Integration & Polish</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3698-#3705</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3707" class="text-blue-600 hover:underline">3707</a></td><td class="py-1.5 pr-3 text-xs">Testing - User Management</td><td class="py-1.5 pr-3 text-center"><span class="tag" style="background:#e0f2fe;color:#0369a1">test</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, test</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3706</td><td class="py-1.5 text-center text-xs">med</td></tr>
+
+                        <!-- Admin Enterprise - Epic 3 AI Platform (11 open) -->
+                        <tr class="bg-blue-50/50"><td colspan="6" class="py-2 px-3 font-bold text-blue-800 text-xs">ADMIN ENTERPRISE - Epic 3: AI Platform (#3687) &mdash; 11 aperte</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3708" class="text-blue-600 hover:underline">3708</a></td><td class="py-1.5 pr-3 text-xs">AgentDefinition Data Model</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">AI, DB, BE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">Epic 1</td><td class="py-1.5 text-center text-xs">high</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3709" class="text-blue-600 hover:underline">3709</a></td><td class="py-1.5 pr-3 text-xs">Agent Builder UI</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">AI, FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3708</td><td class="py-1.5 text-center text-xs">high</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3710" class="text-blue-600 hover:underline">3710</a></td><td class="py-1.5 pr-3 text-xs">Agent Playground</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">AI, FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3709</td><td class="py-1.5 text-center text-xs">high</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3711" class="text-blue-600 hover:underline">3711</a></td><td class="py-1.5 pr-3 text-xs">Strategy Editor</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">AI, FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3708</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3712" class="text-blue-600 hover:underline">3712</a></td><td class="py-1.5 pr-3 text-xs">Visual Pipeline Builder</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">AI, FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3711</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3713" class="text-blue-600 hover:underline">3713</a></td><td class="py-1.5 pr-3 text-xs">Agent Catalog & Usage Stats</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">AI, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3708</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3714" class="text-blue-600 hover:underline">3714</a></td><td class="py-1.5 pr-3 text-xs">Chat Analytics</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">AI, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3692</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3715" class="text-blue-600 hover:underline">3715</a></td><td class="py-1.5 pr-3 text-xs">PDF Analytics</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">PDF, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3692</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3716" class="text-blue-600 hover:underline">3716</a></td><td class="py-1.5 pr-3 text-xs">Model Performance Tracking</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">AI, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3713</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3717" class="text-blue-600 hover:underline">3717</a></td><td class="py-1.5 pr-3 text-xs">A/B Testing Framework</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">AI, FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3716</td><td class="py-1.5 text-center text-xs">low</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3718" class="text-blue-600 hover:underline">3718</a></td><td class="py-1.5 pr-3 text-xs">Testing - AI Platform</td><td class="py-1.5 pr-3 text-center"><span class="tag" style="background:#e0f2fe;color:#0369a1">test</span></td><td class="py-1.5 pr-3 text-center text-xs">AI, test</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3708-#3717</td><td class="py-1.5 text-center text-xs">med</td></tr>
+
+                        <!-- Admin Enterprise - Epic 4 Business (10 open) -->
+                        <tr class="bg-emerald-50/50"><td colspan="6" class="py-2 px-3 font-bold text-emerald-800 text-xs">ADMIN ENTERPRISE - Epic 4: Business & Simulations (#3688) &mdash; 10 aperte</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3719" class="text-blue-600 hover:underline">3719</a></td><td class="py-1.5 pr-3 text-xs">App Usage Stats</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">Epic 1</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3720" class="text-blue-600 hover:underline">3720</a></td><td class="py-1.5 pr-3 text-xs">Financial Ledger Data Model</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">DB, BE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">Epic 1</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3721" class="text-blue-600 hover:underline">3721</a></td><td class="py-1.5 pr-3 text-xs">Automatic Ledger Tracking</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3720</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3722" class="text-blue-600 hover:underline">3722</a></td><td class="py-1.5 pr-3 text-xs">Manual Ledger CRUD</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3720</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3723" class="text-blue-600 hover:underline">3723</a></td><td class="py-1.5 pr-3 text-xs">Ledger Dashboard & Visualization</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3722</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3724" class="text-blue-600 hover:underline">3724</a></td><td class="py-1.5 pr-3 text-xs">Export Ledger (PDF/CSV/Excel)</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3722</td><td class="py-1.5 text-center text-xs">low</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3725" class="text-blue-600 hover:underline">3725</a></td><td class="py-1.5 pr-3 text-xs">Agent Cost Calculator</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3692 #3713</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3726" class="text-blue-600 hover:underline">3726</a></td><td class="py-1.5 pr-3 text-xs">Resource Forecasting Simulator</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, BE+FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3725</td><td class="py-1.5 text-center text-xs">low</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3727" class="text-blue-600 hover:underline">3727</a></td><td class="py-1.5 pr-3 text-xs">Testing - Business & Simulations</td><td class="py-1.5 pr-3 text-center"><span class="tag" style="background:#e0f2fe;color:#0369a1">test</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, test</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3719-#3726</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3728" class="text-blue-600 hover:underline">3728</a></td><td class="py-1.5 pr-3 text-xs">App Usage Dashboard Frontend</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">admin, FE</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#3719</td><td class="py-1.5 text-center text-xs">med</td></tr>
+
+                        <!-- Other Features -->
+                        <tr class="bg-pink-50/50"><td colspan="6" class="py-2 px-3 font-bold text-pink-800 text-xs">STANDALONE &mdash; Features, AI, Infra</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3355" class="text-blue-600 hover:underline">3355</a></td><td class="py-1.5 pr-3 text-xs">Game/Document Version History UI</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">UI, FE</td><td class="py-1.5 pr-3 text-center text-xs">-</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3358" class="text-blue-600 hover:underline">3358</a></td><td class="py-1.5 pr-3 text-xs">Implement Iterative RAG Strategy</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">AI, BE</td><td class="py-1.5 pr-3 text-center text-xs">-</td><td class="py-1.5 text-center text-xs">low</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3367" class="text-blue-600 hover:underline">3367</a></td><td class="py-1.5 pr-3 text-xs">Log Aggregation System</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">feature</span></td><td class="py-1.5 pr-3 text-center text-xs">infra, ops</td><td class="py-1.5 pr-3 text-center text-xs">-</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3368" class="text-blue-600 hover:underline">3368</a></td><td class="py-1.5 pr-3 text-xs">k6 Load Testing Infrastructure</td><td class="py-1.5 pr-3 text-center"><span class="tag" style="background:#e0f2fe;color:#0369a1">test</span></td><td class="py-1.5 pr-3 text-center text-xs">infra</td><td class="py-1.5 pr-3 text-center text-xs">-</td><td class="py-1.5 text-center text-xs">med</td></tr>
+
+                        <!-- CI/CD Infra -->
+                        <tr class="bg-zinc-100/50"><td colspan="6" class="py-2 px-3 font-bold text-zinc-700 text-xs">INFRA - CI/CD (#2967) &mdash; 8 aperte (1/10 cb)</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2968" class="text-blue-600 hover:underline">2968</a></td><td class="py-1.5 pr-3 text-xs">Oracle Cloud Setup & VM Provisioning</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">infra</span></td><td class="py-1.5 pr-3 text-center text-xs">infra</td><td class="py-1.5 pr-3 text-center text-xs">-</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2969" class="text-blue-600 hover:underline">2969</a></td><td class="py-1.5 pr-3 text-xs">GitHub Actions Runner Install</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">infra</span></td><td class="py-1.5 pr-3 text-center text-xs">infra, CI</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#2968</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2970" class="text-blue-600 hover:underline">2970</a></td><td class="py-1.5 pr-3 text-xs">Workflow Migration to Self-Hosted</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">infra</span></td><td class="py-1.5 pr-3 text-center text-xs">infra, CI</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#2969</td><td class="py-1.5 text-center text-xs">med</td></tr>
+                        <tr class="hover:bg-zinc-50"><td class="py-1.5 pr-3 font-mono text-xs">2972-2976</td><td class="py-1.5 pr-3 text-xs">Monitoring, Cost Validation, Docs, Maintenance (5 issue)</td><td class="py-1.5 pr-3 text-center"><span class="tag tag-open">infra</span></td><td class="py-1.5 pr-3 text-center text-xs">infra, ops</td><td class="py-1.5 pr-3 text-center text-xs font-mono">#2970</td><td class="py-1.5 text-center text-xs">low</td></tr>
                     </tbody>
                 </table>
-            </div>
-
-            <div class="mt-4 p-3 rounded-lg bg-amber-100/50 border border-amber-200 text-sm">
-                <strong>Pattern identificato:</strong> Le fasi del feature #3120 (Private Games) sono state chiuse senza aggiornare le checkbox DOD.
-                Si raccomanda un pass di aggiornamento per allineare lo stato reale con il tracking su GitHub.
-            </div>
-        </div>
-
-        <!-- ============================================ -->
-        <!-- BUGS -->
-        <!-- ============================================ -->
-        <div class="mb-8 p-6 rounded-2xl glass border border-red-200/50 animate-in">
-            <h2 class="font-quicksand font-bold text-2xl mb-4 text-red-900">Bug Aperti (4)</h2>
-            <div class="grid grid-cols-2 gap-4">
-                <div class="p-4 rounded-xl bg-red-50 border border-red-200">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="tag tag-bug">BUG</span>
-                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3745" class="font-mono text-sm hover:underline">#3745</a>
-                    </div>
-                    <p class="text-sm font-semibold">SharedGameCatalog: string.Contains cannot translate to SQL</p>
-                    <p class="text-xs text-zinc-500 mt-1">High severity &bull; Search rotto &bull; 4 test failing</p>
-                </div>
-                <div class="p-4 rounded-xl bg-red-50 border border-red-200">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="tag tag-bug">BUG</span>
-                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3744" class="font-mono text-sm hover:underline">#3744</a>
-                    </div>
-                    <p class="text-sm font-semibold">DocumentProcessing: Missing IPdfDocumentRepository DI</p>
-                    <p class="text-xs text-zinc-500 mt-1">High severity &bull; DI registration mancante</p>
-                </div>
-                <div class="p-4 rounded-xl bg-red-50 border border-red-200">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="tag tag-bug">BUG</span>
-                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3743" class="font-mono text-sm hover:underline">#3743</a>
-                    </div>
-                    <p class="text-sm font-semibold">GameManagement: Duplicate endpoint name routing conflict</p>
-                    <p class="text-xs text-zinc-500 mt-1">Medium severity &bull; SearchBggGames duplicato</p>
-                </div>
-                <div class="p-4 rounded-xl bg-red-50 border border-red-200">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="tag tag-bug">BUG</span>
-                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3742" class="font-mono text-sm hover:underline">#3742</a>
-                    </div>
-                    <p class="text-sm font-semibold">SharedGameCatalog: Missing approval_notes column in SQL</p>
-                    <p class="text-xs text-zinc-500 mt-1">Medium severity &bull; Repository query rotta</p>
-                </div>
             </div>
         </div>
 
@@ -544,20 +492,24 @@
         <!-- GANTT-STYLE TIMELINE -->
         <!-- ============================================ -->
         <div class="mb-8 p-6 rounded-2xl glass border border-zinc-200/50 overflow-x-auto animate-in">
-            <h2 class="font-quicksand font-bold text-2xl mb-6">Timeline &amp; Dipendenze</h2>
+            <h2 class="font-quicksand font-bold text-2xl mb-6">Timeline & Dipendenze</h2>
 
             <div class="min-w-[1600px]">
                 <!-- Week Headers -->
                 <div class="flex mb-6 sticky top-0 bg-white/90 backdrop-blur-sm z-10 pb-4">
                     <div class="w-56 flex-shrink-0"></div>
                     <div class="flex flex-1">
+                        <div class="timeline-week text-center py-2 px-2 bg-emerald-50 font-semibold text-sm text-emerald-800">
+                            Completato
+                            <div class="text-xs font-normal text-emerald-500">6 Feb (oggi)</div>
+                        </div>
                         <div class="timeline-week text-center py-2 px-2 bg-amber-50 font-semibold text-sm text-amber-800">
-                            Immediato
-                            <div class="text-xs font-normal text-zinc-400">Bug Fix</div>
+                            Sprint 1A
+                            <div class="text-xs font-normal text-zinc-400">Week 1</div>
                         </div>
                         <div class="timeline-week text-center py-2 px-2 font-semibold text-sm">
-                            Sprint 1
-                            <div class="text-xs font-normal text-zinc-400">Week 1-2</div>
+                            Sprint 1B
+                            <div class="text-xs font-normal text-zinc-400">Week 2</div>
                         </div>
                         <div class="timeline-week text-center py-2 px-2 bg-zinc-50 font-semibold text-sm">
                             Sprint 2
@@ -572,97 +524,88 @@
                             <div class="text-xs font-normal text-zinc-400">Week 7-8</div>
                         </div>
                         <div class="timeline-week text-center py-2 px-2 font-semibold text-sm">
-                            Sprint 5
-                            <div class="text-xs font-normal text-zinc-400">Week 9-10</div>
-                        </div>
-                        <div class="timeline-week text-center py-2 px-2 bg-zinc-50 font-semibold text-sm">
-                            Sprint 6
-                            <div class="text-xs font-normal text-zinc-400">Week 11+</div>
+                            Sprint 5+
+                            <div class="text-xs font-normal text-zinc-400">Week 9+</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Bug Fixes (Immediato) -->
+                <!-- Completed Today -->
                 <div class="mb-6">
-                    <h3 class="font-quicksand font-bold text-sm mb-2 px-3 py-1 bg-red-100 rounded-lg inline-block text-red-800">Bug Fix (P0)</h3>
+                    <h3 class="font-quicksand font-bold text-sm mb-2 px-3 py-1 bg-emerald-100 rounded-lg inline-block text-emerald-800">Completati Oggi</h3>
                     <div class="flex items-center mb-1">
-                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3742-#3745 Bugs</div>
-                        <div class="flex flex-1">
-                            <div style="margin-left: 0%; width: 10%;">
-                                <div class="task-bar epic-bugs" title="4 bug critici: SQL, DI, Routing, Column">
-                                    <span class="text-xs">4 Bug Fix</span>
-                                </div>
-                            </div>
-                        </div>
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3742-#3745 Bug Fix</div>
+                        <div class="flex flex-1"><div style="margin-left: 0%; width: 10%;"><div class="task-bar epic-done"><span class="text-xs">4 Bug Fix (PR #3751)</span></div></div></div>
                     </div>
                     <div class="flex items-center mb-1">
-                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3674 Feature Flag Verify</div>
-                        <div class="flex flex-1">
-                            <div style="margin-left: 0%; width: 10%;">
-                                <div class="task-bar epic-security" title="Feature Flag Tier-Based Access">
-                                    <span class="text-xs">P-high</span>
-                                </div>
-                            </div>
-                        </div>
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3689 Layout + #3690 Security</div>
+                        <div class="flex flex-1"><div style="margin-left: 0%; width: 10%;"><div class="task-bar epic-done"><span class="text-xs">Admin Core (PR #3749 #3750)</span></div></div></div>
                     </div>
                     <div class="flex items-center mb-1">
-                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">DOD Checkbox Update</div>
-                        <div class="flex flex-1">
-                            <div style="margin-left: 0%; width: 10%;">
-                                <div class="task-bar closed-incomplete" title="Aggiornamento checkbox su 17 issue chiuse">
-                                    <span class="text-xs">17 Issue DOD</span>
-                                </div>
-                            </div>
-                        </div>
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3691 Audit + #3674 Flags</div>
+                        <div class="flex flex-1"><div style="margin-left: 0%; width: 10%;"><div class="task-bar epic-done"><span class="text-xs">Audit + Flags (PR #3754)</span></div></div></div>
                     </div>
                 </div>
 
-                <!-- Admin Enterprise Epic 1 -->
+                <!-- Admin Enterprise Epic 1 (remaining) -->
                 <div class="mb-6">
-                    <h3 class="font-quicksand font-bold text-sm mb-2 px-3 py-1 bg-amber-100 rounded-lg inline-block">Epic 1: Core Dashboard (#3685)</h3>
-
+                    <h3 class="font-quicksand font-bold text-sm mb-2 px-3 py-1 bg-amber-100 rounded-lg inline-block">Epic 1: Core Dashboard Rimanente (#3685) &mdash; 6 issue</h3>
                     <div class="flex items-center mb-1">
-                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3689 Layout Base</div>
-                        <div class="flex flex-1"><div style="margin-left: 14%; width: 8%;"><div class="task-bar epic-admin" title="#3689 Layout Base & Navigation - P0 blocca tutto"><span class="text-xs">P0 Layout</span></div></div></div>
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3692 Tokens + #3693 Batch</div>
+                        <div class="flex flex-1"><div style="margin-left: 14%; width: 14%;"><div class="task-bar epic-admin" title="#3692 Token Mgmt + #3693 Batch Jobs - parallel"><span class="text-xs">Parallel: Token + Batch</span></div></div></div>
                     </div>
                     <div class="flex items-center mb-1">
-                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3690 Security + #3692 Tokens</div>
-                        <div class="flex flex-1"><div style="margin-left: 22%; width: 8%;"><div class="task-bar epic-admin" style="border: 2px dashed rgba(255,255,255,0.7)" title="Parallel: #3690 Security + #3692 Tokens"><span class="text-xs">Parallel</span></div></div></div>
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3694 KPIs + #3695 Resources + #3696 Ops</div>
+                        <div class="flex flex-1 relative"><div style="margin-left: 28%; width: 14%;"><div class="task-bar epic-admin" title="#3694 KPIs + #3695 Monitoring + #3696 Operations"><span class="text-xs">KPIs + Monitor + Ops</span></div></div></div>
                     </div>
                     <div class="flex items-center mb-1">
-                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3691 Audit + #3693-#3697</div>
-                        <div class="flex flex-1 relative"><div style="margin-left: 30%; width: 14%;"><div class="task-bar epic-admin" title="Audit, Batch, KPIs, Resources, Ops, Testing"><span class="text-xs">Audit&bull;Batch&bull;KPI&bull;Ops&bull;Test</span></div></div>
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3697 Testing & Integration</div>
+                        <div class="flex flex-1 relative"><div style="margin-left: 42%; width: 7%;"><div class="task-bar epic-admin" style="border: 2px dashed rgba(255,255,255,0.7)" title="Testing after all Epic 1 features"><span class="text-xs">Test</span></div></div>
                         <div class="relative" style="margin-left: 1%;"><div class="milestone-line"></div><div class="milestone-label">MVP 1</div></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Admin Enterprise Epic 2 + 3 (parallel) -->
+                <!-- Admin Enterprise Epic 2 -->
                 <div class="mb-6">
-                    <h3 class="font-quicksand font-bold text-sm mb-2 px-3 py-1 bg-purple-100 rounded-lg inline-block">Epic 2: User Management (#3686)</h3>
+                    <h3 class="font-quicksand font-bold text-sm mb-2 px-3 py-1 bg-purple-100 rounded-lg inline-block">Epic 2: User Management (#3686) &mdash; 10 issue</h3>
                     <div class="flex items-center mb-1">
-                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3698-#3707 (10 issue)</div>
-                        <div class="flex flex-1 relative"><div style="margin-left: 44%; width: 14%;"><div class="task-bar epic-library" title="Users, Tiers, Flags, Impersonate, Limits, Block"><span class="text-xs">Users&bull;Tiers&bull;Flags&bull;Limits</span></div></div>
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3698 User Table (blocca tutto E2)</div>
+                        <div class="flex flex-1"><div style="margin-left: 50%; width: 7%;"><div class="task-bar epic-library" title="#3698 User Table - blocks all E2"><span class="text-xs">User Table</span></div></div></div>
+                    </div>
+                    <div class="flex items-center mb-1">
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3699-#3705 (7 features parallel)</div>
+                        <div class="flex flex-1"><div style="margin-left: 57%; width: 14%;"><div class="task-bar epic-library" title="Tiers, Impersonate, Flags UI, Limits, Block, Tokens, Bulk"><span class="text-xs">Tiers+Flags+Limits+Block+Bulk</span></div></div></div>
+                    </div>
+                    <div class="flex items-center mb-1">
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3706 Polish + #3707 Test</div>
+                        <div class="flex flex-1 relative"><div style="margin-left: 71%; width: 7%;"><div class="task-bar epic-library" style="border: 2px dashed rgba(255,255,255,0.7)" title="Polish + Testing"><span class="text-xs">Polish+Test</span></div></div>
                         <div class="relative" style="margin-left: 1%;"><div class="milestone-line"></div><div class="milestone-label">MVP 2</div></div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Admin Enterprise Epic 3 -->
                 <div class="mb-6">
-                    <h3 class="font-quicksand font-bold text-sm mb-2 px-3 py-1 bg-blue-100 rounded-lg inline-block">Epic 3: AI Platform (#3687)</h3>
+                    <h3 class="font-quicksand font-bold text-sm mb-2 px-3 py-1 bg-blue-100 rounded-lg inline-block">Epic 3: AI Platform (#3687) &mdash; 11 issue (parallel con E2)</h3>
                     <div class="flex items-center mb-1">
-                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3708-#3718 (11 issue)</div>
-                        <div class="flex flex-1 relative"><div style="margin-left: 44%; width: 28%;"><div class="task-bar epic-ai" title="Agent Model, Builder, Playground, Strategy, Pipeline, Analytics, Testing"><span class="text-xs">Agent&bull;Builder&bull;Playground&bull;Pipeline&bull;Analytics&bull;A/B&bull;Test</span></div></div>
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3708 Data Model (blocca tutto E3)</div>
+                        <div class="flex flex-1"><div style="margin-left: 50%; width: 7%;"><div class="task-bar epic-ai" title="#3708 Agent Data Model - blocks all E3"><span class="text-xs">Agent Model</span></div></div></div>
+                    </div>
+                    <div class="flex items-center mb-1">
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3709-#3717 (9 features)</div>
+                        <div class="flex flex-1 relative"><div style="margin-left: 57%; width: 28%;"><div class="task-bar epic-ai" title="Builder, Playground, Strategy, Pipeline, Catalog, Chat, PDF, Model, A/B"><span class="text-xs">Builder+Play+Strategy+Pipeline+Catalog+Analytics+A/B</span></div></div>
                         <div class="relative" style="margin-left: 1%;"><div class="milestone-line"></div><div class="milestone-label">MVP 3</div></div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Admin Enterprise Epic 4 -->
                 <div class="mb-6">
-                    <h3 class="font-quicksand font-bold text-sm mb-2 px-3 py-1 bg-emerald-100 rounded-lg inline-block">Epic 4: Business & Simulations (#3688)</h3>
+                    <h3 class="font-quicksand font-bold text-sm mb-2 px-3 py-1 bg-emerald-100 rounded-lg inline-block">Epic 4: Business & Simulations (#3688) &mdash; 10 issue</h3>
                     <div class="flex items-center mb-1">
                         <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3719-#3728 (10 issue)</div>
-                        <div class="flex flex-1 relative"><div style="margin-left: 72%; width: 20%;"><div class="task-bar epic-rag" title="Stats, Ledger, Calculator, Simulator, Dashboard"><span class="text-xs">Stats&bull;Ledger&bull;Calculator&bull;Sim&bull;Dashboard</span></div></div>
+                        <div class="flex flex-1 relative"><div style="margin-left: 78%; width: 20%;"><div class="task-bar epic-rag" title="Stats, Ledger, Calculator, Simulator, Dashboard"><span class="text-xs">Stats+Ledger+Calculator+Sim+Dashboard</span></div></div>
                         <div class="relative" style="margin-left: 1%;"><div class="milestone-line"></div><div class="milestone-label">Complete</div></div>
                         </div>
                     </div>
@@ -670,20 +613,138 @@
 
                 <!-- Other streams -->
                 <div class="mb-6">
-                    <h3 class="font-quicksand font-bold text-sm mb-2 px-3 py-1 bg-zinc-100 rounded-lg inline-block text-zinc-700">Altre Stream Attive</h3>
+                    <h3 class="font-quicksand font-bold text-sm mb-2 px-3 py-1 bg-zinc-100 rounded-lg inline-block text-zinc-700">Altre Stream</h3>
                     <div class="flex items-center mb-1">
-                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3475 Private Library Epic</div>
-                        <div class="flex flex-1"><div style="margin-left: 14%; width: 14%;"><div class="task-bar epic-library" title="Completamento DOD + Frontend integration"><span class="text-xs">DOD Update + Frontend</span></div></div></div>
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">Checkbox DOD Update (17 issue)</div>
+                        <div class="flex flex-1"><div style="margin-left: 14%; width: 7%;"><div class="task-bar closed-incomplete" title="Aggiornare checkbox e chiudere epic completati"><span class="text-xs">DOD Cleanup</span></div></div></div>
                     </div>
                     <div class="flex items-center mb-1">
-                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#3531 Fix 115 Test Failures</div>
-                        <div class="flex flex-1"><div style="margin-left: 14%; width: 20%;"><div class="task-bar epic-infra" title="Tech debt: 115 test pre-esistenti"><span class="text-xs">Tech Debt: Test Fix</span></div></div></div>
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#2967 Zero-Cost CI/CD (8 issue)</div>
+                        <div class="flex flex-1"><div style="margin-left: 50%; width: 28%;"><div class="task-bar epic-infra" style="opacity: 0.5" title="Oracle Cloud + Self-hosted runner - deferred"><span class="text-xs">CI/CD Infrastructure (deferred)</span></div></div></div>
                     </div>
                     <div class="flex items-center mb-1">
-                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">#2967 Zero-Cost CI/CD</div>
-                        <div class="flex flex-1"><div style="margin-left: 44%; width: 28%;"><div class="task-bar epic-infra" style="opacity: 0.5" title="Oracle Cloud + Self-hosted runner - Lower priority"><span class="text-xs">CI/CD Infrastructure (deferred)</span></div></div></div>
+                        <div class="w-56 flex-shrink-0 text-xs text-zinc-600 pr-4 text-right">Low Priority Epics (6)</div>
+                        <div class="flex flex-1"><div style="margin-left: 78%; width: 20%;"><div class="task-bar epic-infra" style="opacity: 0.3" title="Gamification, Game Session, Advanced Features, etc"><span class="text-xs">Future: Gamification + Sessions + RAG Variants</span></div></div></div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DEPENDENCY GRAPH -->
+        <!-- ============================================ -->
+        <div class="mb-8 p-6 rounded-2xl glass border border-zinc-200/50 animate-in">
+            <h2 class="font-quicksand font-bold text-2xl mb-4">Grafo Dipendenze - Admin Enterprise</h2>
+            <p class="text-sm text-zinc-500 mb-4">Le frecce mostrano le dipendenze critiche. Nodi verdi = completati.</p>
+
+            <div class="overflow-x-auto">
+                <svg viewBox="0 0 1100 420" class="w-full" style="max-width: 1100px">
+                    <!-- Completed nodes (green) -->
+                    <rect x="20" y="30" width="140" height="40" rx="8" fill="#22c55e" opacity="0.9"/>
+                    <text x="90" y="55" text-anchor="middle" fill="white" font-size="11" font-weight="600">#3689 Layout</text>
+
+                    <rect x="20" y="90" width="140" height="40" rx="8" fill="#22c55e" opacity="0.9"/>
+                    <text x="90" y="115" text-anchor="middle" fill="white" font-size="11" font-weight="600">#3690 Security</text>
+
+                    <rect x="20" y="150" width="140" height="40" rx="8" fill="#22c55e" opacity="0.9"/>
+                    <text x="90" y="175" text-anchor="middle" fill="white" font-size="11" font-weight="600">#3691 Audit</text>
+
+                    <rect x="20" y="210" width="140" height="40" rx="8" fill="#22c55e" opacity="0.9"/>
+                    <text x="90" y="235" text-anchor="middle" fill="white" font-size="11" font-weight="600">#3674 Flags</text>
+
+                    <!-- Epic 1 remaining (amber) -->
+                    <rect x="220" y="30" width="140" height="40" rx="8" fill="#f59e0b"/>
+                    <text x="290" y="55" text-anchor="middle" fill="white" font-size="11" font-weight="600">#3692 Tokens</text>
+
+                    <rect x="220" y="90" width="140" height="40" rx="8" fill="#f59e0b"/>
+                    <text x="290" y="115" text-anchor="middle" fill="white" font-size="11" font-weight="600">#3693 Batch</text>
+
+                    <rect x="220" y="150" width="140" height="40" rx="8" fill="#f59e0b"/>
+                    <text x="290" y="175" text-anchor="middle" fill="white" font-size="11" font-weight="600">#3694 KPIs</text>
+
+                    <rect x="220" y="210" width="140" height="40" rx="8" fill="#f59e0b"/>
+                    <text x="290" y="235" text-anchor="middle" fill="white" font-size="11" font-weight="600">#3695 Resources</text>
+
+                    <rect x="220" y="270" width="140" height="40" rx="8" fill="#f59e0b"/>
+                    <text x="290" y="295" text-anchor="middle" fill="white" font-size="11" font-weight="600">#3696 Ops</text>
+
+                    <rect x="420" y="150" width="140" height="40" rx="8" fill="#f59e0b" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6,3"/>
+                    <text x="490" y="175" text-anchor="middle" fill="white" font-size="11" font-weight="600">#3697 Testing</text>
+
+                    <!-- Epic 2 (purple) -->
+                    <rect x="620" y="30" width="140" height="40" rx="8" fill="#8b5cf6"/>
+                    <text x="690" y="55" text-anchor="middle" fill="white" font-size="11" font-weight="600">#3698 User Table</text>
+
+                    <rect x="820" y="10" width="140" height="35" rx="6" fill="#a855f7"/>
+                    <text x="890" y="32" text-anchor="middle" fill="white" font-size="10" font-weight="500">#3699-#3705 (7)</text>
+
+                    <rect x="820" y="55" width="140" height="35" rx="6" fill="#a855f7" stroke="#a855f7" stroke-width="2" stroke-dasharray="6,3"/>
+                    <text x="890" y="77" text-anchor="middle" fill="white" font-size="10" font-weight="500">#3706-#3707 Test</text>
+
+                    <!-- Epic 3 (blue) -->
+                    <rect x="620" y="120" width="140" height="40" rx="8" fill="#3b82f6"/>
+                    <text x="690" y="145" text-anchor="middle" fill="white" font-size="11" font-weight="600">#3708 Agent Model</text>
+
+                    <rect x="820" y="110" width="140" height="35" rx="6" fill="#6366f1"/>
+                    <text x="890" y="132" text-anchor="middle" fill="white" font-size="10" font-weight="500">#3709-#3717 (9)</text>
+
+                    <rect x="820" y="155" width="140" height="35" rx="6" fill="#6366f1" stroke="#6366f1" stroke-width="2" stroke-dasharray="6,3"/>
+                    <text x="890" y="177" text-anchor="middle" fill="white" font-size="10" font-weight="500">#3718 Testing</text>
+
+                    <!-- Epic 4 (teal) -->
+                    <rect x="620" y="220" width="140" height="40" rx="8" fill="#10b981"/>
+                    <text x="690" y="245" text-anchor="middle" fill="white" font-size="11" font-weight="600">#3719-#3728 (10)</text>
+
+                    <!-- Dependency arrows -->
+                    <!-- Layout → Tokens, Batch, KPIs, Resources -->
+                    <line x1="160" y1="50" x2="220" y2="50" class="dep-arrow"/>
+                    <line x1="160" y1="50" x2="220" y2="110" class="dep-arrow"/>
+                    <line x1="160" y1="50" x2="220" y2="170" class="dep-arrow"/>
+                    <line x1="160" y1="50" x2="220" y2="230" class="dep-arrow"/>
+
+                    <!-- Security → Tokens, Batch -->
+                    <line x1="160" y1="110" x2="220" y2="50" class="dep-arrow"/>
+                    <line x1="160" y1="110" x2="220" y2="110" class="dep-arrow"/>
+
+                    <!-- Audit → Ops -->
+                    <line x1="160" y1="170" x2="220" y2="290" class="dep-arrow"/>
+
+                    <!-- Epic 1 → Testing -->
+                    <line x1="360" y1="50" x2="420" y2="170" class="dep-arrow" stroke-dasharray="4,3"/>
+                    <line x1="360" y1="170" x2="420" y2="170" class="dep-arrow" stroke-dasharray="4,3"/>
+                    <line x1="360" y1="290" x2="420" y2="170" class="dep-arrow" stroke-dasharray="4,3"/>
+
+                    <!-- Epic 1 → Epic 2, 3, 4 (critical) -->
+                    <line x1="560" y1="170" x2="620" y2="50" class="dep-arrow-critical"/>
+                    <line x1="560" y1="170" x2="620" y2="140" class="dep-arrow-critical"/>
+                    <line x1="560" y1="170" x2="620" y2="240" class="dep-arrow-critical"/>
+
+                    <!-- Epic 2 internal -->
+                    <line x1="760" y1="50" x2="820" y2="27" class="dep-arrow"/>
+                    <line x1="960" y1="27" x2="960" y2="55" class="dep-arrow" stroke-dasharray="4,3"/>
+
+                    <!-- Epic 3 internal -->
+                    <line x1="760" y1="140" x2="820" y2="127" class="dep-arrow"/>
+                    <line x1="960" y1="127" x2="960" y2="155" class="dep-arrow" stroke-dasharray="4,3"/>
+
+                    <!-- Flags → Feature Flags UI -->
+                    <line x1="160" y1="230" x2="620" y2="50" class="dep-arrow" stroke="#22c55e" stroke-dasharray="8,4"/>
+
+                    <!-- Cross-epic: Tokens → Chat/PDF Analytics, Cost Calculator -->
+                    <line x1="360" y1="50" x2="620" y2="140" class="dep-arrow" stroke="#94a3b8" stroke-dasharray="6,3" opacity="0.5"/>
+
+                    <!-- Legend -->
+                    <rect x="20" y="340" width="1060" height="70" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+                    <text x="40" y="362" font-size="12" font-weight="700" fill="#374151">Legenda:</text>
+                    <rect x="40" y="372" width="20" height="12" rx="3" fill="#22c55e"/><text x="65" y="383" font-size="10" fill="#374151">Completato</text>
+                    <rect x="150" y="372" width="20" height="12" rx="3" fill="#f59e0b"/><text x="175" y="383" font-size="10" fill="#374151">Epic 1 (sbloccato)</text>
+                    <rect x="310" y="372" width="20" height="12" rx="3" fill="#8b5cf6"/><text x="335" y="383" font-size="10" fill="#374151">Epic 2</text>
+                    <rect x="400" y="372" width="20" height="12" rx="3" fill="#3b82f6"/><text x="425" y="383" font-size="10" fill="#374151">Epic 3</text>
+                    <rect x="490" y="372" width="20" height="12" rx="3" fill="#10b981"/><text x="515" y="383" font-size="10" fill="#374151">Epic 4</text>
+                    <line x1="600" y1="378" x2="640" y2="378" stroke="#ef4444" stroke-width="2.5"/><text x="645" y="383" font-size="10" fill="#374151">Critica</text>
+                    <line x1="710" y1="378" x2="750" y2="378" stroke="#94a3b8" stroke-width="2"/><text x="755" y="383" font-size="10" fill="#374151">Standard</text>
+                    <line x1="830" y1="378" x2="870" y2="378" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,3"/><text x="875" y="383" font-size="10" fill="#374151">Testing gate</text>
+                </svg>
             </div>
         </div>
 
@@ -693,35 +754,31 @@
         <div class="mb-8 grid grid-cols-3 gap-6 animate-in">
             <!-- By Domain -->
             <div class="p-6 rounded-2xl glass border border-zinc-200/50">
-                <h3 class="font-quicksand font-bold text-lg mb-4">Per Dominio</h3>
+                <h3 class="font-quicksand font-bold text-lg mb-4">Per Dominio (70 aperte)</h3>
                 <div class="space-y-3">
                     <div>
-                        <div class="flex justify-between text-sm mb-1"><span>Admin Enterprise</span><span class="font-mono">40</span></div>
+                        <div class="flex justify-between text-sm mb-1"><span>Admin Enterprise</span><span class="font-mono">37</span></div>
                         <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-amber-500 h-2 rounded-full" style="width: 100%"></div></div>
                     </div>
                     <div>
                         <div class="flex justify-between text-sm mb-1"><span>AI / RAG</span><span class="font-mono">15</span></div>
-                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: 37%"></div></div>
+                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: 40%"></div></div>
                     </div>
                     <div>
-                        <div class="flex justify-between text-sm mb-1"><span>User Library</span><span class="font-mono">3</span></div>
-                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-purple-500 h-2 rounded-full" style="width: 7%"></div></div>
+                        <div class="flex justify-between text-sm mb-1"><span>Infra / CI</span><span class="font-mono">11</span></div>
+                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-zinc-500 h-2 rounded-full" style="width: 30%"></div></div>
                     </div>
                     <div>
-                        <div class="flex justify-between text-sm mb-1"><span>Infra / CI</span><span class="font-mono">9</span></div>
-                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-zinc-500 h-2 rounded-full" style="width: 22%"></div></div>
+                        <div class="flex justify-between text-sm mb-1"><span>Frontend / UI</span><span class="font-mono">4</span></div>
+                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-pink-500 h-2 rounded-full" style="width: 11%"></div></div>
                     </div>
                     <div>
-                        <div class="flex justify-between text-sm mb-1"><span>Frontend / UI</span><span class="font-mono">5</span></div>
-                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-pink-500 h-2 rounded-full" style="width: 12%"></div></div>
+                        <div class="flex justify-between text-sm mb-1"><span>Security</span><span class="font-mono">2</span></div>
+                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: 5%"></div></div>
                     </div>
                     <div>
-                        <div class="flex justify-between text-sm mb-1"><span>Bug / Fix</span><span class="font-mono">4</span></div>
-                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: 10%"></div></div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-sm mb-1"><span>Other / Future</span><span class="font-mono">3</span></div>
-                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-zinc-300 h-2 rounded-full" style="width: 7%"></div></div>
+                        <div class="flex justify-between text-sm mb-1"><span class="text-emerald-600 font-semibold">Bug</span><span class="font-mono text-emerald-600 font-bold">0</span></div>
+                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-emerald-500 h-2 rounded-full" style="width: 0%"></div></div>
                     </div>
                 </div>
             </div>
@@ -731,31 +788,22 @@
                 <h3 class="font-quicksand font-bold text-lg mb-4">Per Priorit&agrave;</h3>
                 <div class="space-y-3">
                     <div>
-                        <div class="flex justify-between text-sm mb-1"><span>Critical</span><span class="font-mono text-red-600 font-bold">2</span></div>
-                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-red-600 h-2 rounded-full" style="width: 5%"></div></div>
+                        <div class="flex justify-between text-sm mb-1"><span>High</span><span class="font-mono text-amber-600 font-bold">12</span></div>
+                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-amber-500 h-2 rounded-full" style="width: 17%"></div></div>
                     </div>
                     <div>
-                        <div class="flex justify-between text-sm mb-1"><span>High</span><span class="font-mono text-amber-600 font-bold">28</span></div>
-                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-amber-500 h-2 rounded-full" style="width: 35%"></div></div>
+                        <div class="flex justify-between text-sm mb-1"><span>Medium</span><span class="font-mono text-blue-600 font-bold">18</span></div>
+                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: 26%"></div></div>
                     </div>
                     <div>
-                        <div class="flex justify-between text-sm mb-1"><span>Medium</span><span class="font-mono text-blue-600 font-bold">16</span></div>
-                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: 20%"></div></div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-sm mb-1"><span>Low / Unset</span><span class="font-mono text-zinc-600 font-bold">33</span></div>
-                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-zinc-400 h-2 rounded-full" style="width: 42%"></div></div>
+                        <div class="flex justify-between text-sm mb-1"><span>Low / Unset</span><span class="font-mono text-zinc-600 font-bold">40</span></div>
+                        <div class="w-full bg-zinc-200 rounded-full h-2"><div class="bg-zinc-400 h-2 rounded-full" style="width: 57%"></div></div>
                     </div>
                 </div>
 
-                <div class="mt-6 p-3 rounded-lg bg-red-50 border border-red-200">
-                    <h4 class="text-xs font-semibold text-red-800 mb-1">Bug da risolvere subito</h4>
-                    <div class="text-xs text-zinc-600 space-y-1">
-                        <div>#3745 SQL translation</div>
-                        <div>#3744 DI registration</div>
-                        <div>#3743 Routing conflict</div>
-                        <div>#3742 Missing column</div>
-                    </div>
+                <div class="mt-6 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                    <h4 class="text-xs font-semibold text-emerald-800 mb-1">Zero Bug Policy raggiunto!</h4>
+                    <div class="text-xs text-zinc-600">Tutti i 4 bug (#3742-#3745) risolti con PR #3751. Nessun bug aperto.</div>
                 </div>
             </div>
 
@@ -766,25 +814,19 @@
                 <div class="flex justify-center mb-6">
                     <div class="relative">
                         <svg width="160" height="160" viewBox="0 0 160 160">
-                            <!-- Epics: 14/79 = 17.7% -->
+                            <!-- Epics: 15/70 = 21.4% -->
                             <circle cx="80" cy="80" r="60" fill="none" stroke="#f59e0b" stroke-width="20"
-                                stroke-dasharray="66.6 310" stroke-dashoffset="0" transform="rotate(-90 80 80)"/>
-                            <!-- Features: 51/79 = 64.5% -->
+                                stroke-dasharray="80.8 310" stroke-dashoffset="0" transform="rotate(-90 80 80)"/>
+                            <!-- Features: 50/70 = 71.4% -->
                             <circle cx="80" cy="80" r="60" fill="none" stroke="#3b82f6" stroke-width="20"
-                                stroke-dasharray="243 310" stroke-dashoffset="-66.6" transform="rotate(-90 80 80)"/>
-                            <!-- Tests: 4/79 -->
+                                stroke-dasharray="269 310" stroke-dashoffset="-80.8" transform="rotate(-90 80 80)"/>
+                            <!-- Tests: 5/70 = 7.1% -->
                             <circle cx="80" cy="80" r="60" fill="none" stroke="#10b981" stroke-width="20"
-                                stroke-dasharray="19 310" stroke-dashoffset="-309.6" transform="rotate(-90 80 80)"/>
-                            <!-- Bugs: 4/79 -->
-                            <circle cx="80" cy="80" r="60" fill="none" stroke="#ef4444" stroke-width="20"
-                                stroke-dasharray="19 310" stroke-dashoffset="-328.6" transform="rotate(-90 80 80)"/>
-                            <!-- Other -->
-                            <circle cx="80" cy="80" r="60" fill="none" stroke="#6b7280" stroke-width="20"
-                                stroke-dasharray="24 310" stroke-dashoffset="-347.6" transform="rotate(-90 80 80)"/>
+                                stroke-dasharray="27 310" stroke-dashoffset="-349.8" transform="rotate(-90 80 80)"/>
                         </svg>
                         <div class="absolute inset-0 flex items-center justify-center">
                             <div class="text-center">
-                                <div class="text-2xl font-quicksand font-bold">79</div>
+                                <div class="text-2xl font-quicksand font-bold">70</div>
                                 <div class="text-xs text-zinc-400">issue</div>
                             </div>
                         </div>
@@ -792,11 +834,10 @@
                 </div>
 
                 <div class="space-y-2 text-sm">
-                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-amber-500"></div><span>Epic (14)</span></div>
-                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-blue-500"></div><span>Feature (51)</span></div>
-                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-emerald-500"></div><span>Test (4)</span></div>
-                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-500"></div><span>Bug (4)</span></div>
-                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-zinc-500"></div><span>Other (6)</span></div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-amber-500"></div><span>Epic (15)</span></div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-blue-500"></div><span>Feature (50)</span></div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-emerald-500"></div><span>Test (5)</span></div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-red-200"></div><span class="text-zinc-400 line-through">Bug (0)</span></div>
                 </div>
             </div>
         </div>
@@ -805,38 +846,31 @@
         <!-- RISK ANALYSIS -->
         <!-- ============================================ -->
         <div class="mb-8 p-6 rounded-2xl bg-gradient-to-br from-rose-500/10 to-pink-500/10 border border-rose-300 animate-in">
-            <h2 class="font-quicksand font-bold text-2xl mb-4 text-rose-900">Analisi Rischi &amp; Raccomandazioni</h2>
+            <h2 class="font-quicksand font-bold text-2xl mb-4 text-rose-900">Analisi Rischi & Raccomandazioni</h2>
 
             <div class="grid grid-cols-2 gap-6">
                 <div>
                     <h3 class="font-semibold text-sm text-rose-800 mb-3">Rischi Identificati</h3>
                     <div class="space-y-3">
                         <div class="flex items-start gap-3">
-                            <div class="w-6 h-6 rounded bg-red-500 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">!</div>
+                            <div class="w-6 h-6 rounded bg-amber-500 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">!</div>
                             <div>
-                                <p class="text-sm font-medium">Checkbox DOD non aggiornate (17 issue)</p>
-                                <p class="text-xs text-zinc-600">Pattern sistematico: issue chiuse senza verificare i criteri di completamento. Rischio di regressioni non rilevate.</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="w-6 h-6 rounded bg-red-500 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">!</div>
-                            <div>
-                                <p class="text-sm font-medium">4 Bug aperti bloccano SharedGameCatalog e DocumentProcessing</p>
-                                <p class="text-xs text-zinc-600">Search, DI, routing e SQL rotti in produzione. Fix immediato necessario.</p>
+                                <p class="text-sm font-medium">Epic parzialmente completati (5 rimanenti)</p>
+                                <p class="text-xs text-zinc-600">Aggiornati: #3327 (7/8), #3403 (7/14), #3511 (4/7). Non aggiornati: #3490 (solo 1/3 agenti), #3453 (blocked da #3434).</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-3">
                             <div class="w-6 h-6 rounded bg-amber-500 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">!</div>
                             <div>
-                                <p class="text-sm font-medium">Epic padri con 0% checkbox ma sub-issue chiuse</p>
-                                <p class="text-xs text-zinc-600">#3327, #3386, #3490, #3403, #3453 &mdash; Tracking non allineato con lo stato reale.</p>
+                                <p class="text-sm font-medium">Admin Enterprise (37 issue) &mdash; dipendenza seriale</p>
+                                <p class="text-xs text-zinc-600">Epic 2/3/4 dipendono da Epic 1 completion. #3697 Testing blocca avanzamento. Stima 8-10 settimane.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-3">
                             <div class="w-6 h-6 rounded bg-amber-400 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">!</div>
                             <div>
-                                <p class="text-sm font-medium">Admin Enterprise Dashboard (40 issue) non ancora iniziato</p>
-                                <p class="text-xs text-zinc-600">Grande scope. #3689 Layout blocca tutto il resto. Stimare 10-11 settimane.</p>
+                                <p class="text-sm font-medium">Epic padre aperti con lavoro completato</p>
+                                <p class="text-xs text-zinc-600">#3327, #3386, #3490, #3403, #3453 hanno tutte le sub-issues chiuse ma l'epic resta aperto. Crea confusione nel tracking.</p>
                             </div>
                         </div>
                     </div>
@@ -848,36 +882,29 @@
                         <div class="flex items-start gap-3">
                             <div class="w-6 h-6 rounded bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</div>
                             <div>
-                                <p class="text-sm font-medium">Fix immediato dei 4 bug (#3742-#3745)</p>
-                                <p class="text-xs text-zinc-600">Bloccano funzionalit&agrave; core. Stimata 1-2h per tutti.</p>
+                                <p class="text-sm font-medium">Completare test per epic quasi pronti</p>
+                                <p class="text-xs text-zinc-600">#3327 (coverage >85%), #3511 (unit+E2E tests), #3403 (builder #3412). Poi chiudere.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-3">
                             <div class="w-6 h-6 rounded bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</div>
                             <div>
-                                <p class="text-sm font-medium">Sessione di aggiornamento DOD</p>
-                                <p class="text-xs text-zinc-600">Aggiornare checkbox su 17 issue chiuse + 5 epic padre. Allineare tracking.</p>
+                                <p class="text-sm font-medium">Completare Epic 1 rimanente (6 issue)</p>
+                                <p class="text-xs text-zinc-600">#3692 Tokens + #3693 Batch (parallelo) → #3694-#3696 → #3697 Test. Sblocca Epic 2+3+4.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-3">
                             <div class="w-6 h-6 rounded bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</div>
                             <div>
-                                <p class="text-sm font-medium">Chiudere epic completati (#3386, #3403, #3453, #3511)</p>
-                                <p class="text-xs text-zinc-600">Sub-issues tutte chiuse. Aggiornare checkbox e chiudere epic padre.</p>
+                                <p class="text-sm font-medium">Epic 2 (#3698) e Epic 3 (#3708) in parallelo</p>
+                                <p class="text-xs text-zinc-600">User Table e Agent Data Model possono partire appena Epic 1 &egrave; pronto. Massimizzare parallelismo.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-3">
                             <div class="w-6 h-6 rounded bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">4</div>
                             <div>
-                                <p class="text-sm font-medium">Avviare Admin Enterprise con #3689 Layout</p>
-                                <p class="text-xs text-zinc-600">Blocca tutto il cluster. Priorit&agrave; massima dopo bug fix e DOD update.</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="w-6 h-6 rounded bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">5</div>
-                            <div>
-                                <p class="text-sm font-medium">Implementare process gate per DOD</p>
-                                <p class="text-xs text-zinc-600">PR template o GitHub Action che verifica checkbox prima di chiudere issue.</p>
+                                <p class="text-sm font-medium">Posticipare CI/CD e epics a bassa priorit&agrave;</p>
+                                <p class="text-xs text-zinc-600">#2967 CI/CD (8 issue) e 6 epics futuri possono attendere il completamento Admin Enterprise.</p>
                             </div>
                         </div>
                     </div>
@@ -894,34 +921,39 @@
                 <div class="p-4 rounded-xl bg-white/10 backdrop-blur">
                     <div class="flex items-center gap-2 mb-2">
                         <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center font-bold">1</div>
-                        <span class="font-semibold">Oggi</span>
+                        <span class="font-semibold">Prossimo (Subito)</span>
                     </div>
                     <ul class="text-sm space-y-1 text-amber-100">
-                        <li>Fix #3742-#3745 (4 bug)</li>
-                        <li>Fix #3674 Feature Flag</li>
-                        <li>Update DOD 17 issue chiuse</li>
+                        <li class="line-through opacity-60">Fix #3742-#3745 (4 bug)</li>
+                        <li class="line-through opacity-60">Fix #3674 Feature Flag</li>
+                        <li>DOD cleanup: aggiornare 7 epic + chiudere</li>
+                        <li>#3692 Token Management System</li>
+                        <li>#3693 Batch Job System</li>
                     </ul>
                 </div>
                 <div class="p-4 rounded-xl bg-white/10 backdrop-blur">
                     <div class="flex items-center gap-2 mb-2">
                         <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center font-bold">2</div>
-                        <span class="font-semibold">Questa Settimana</span>
+                        <span class="font-semibold">Sprint 1 (2 settimane)</span>
                     </div>
                     <ul class="text-sm space-y-1 text-amber-100">
-                        <li>Chiudere epic #3386, #3403, #3453, #3511</li>
-                        <li>Aggiornare #3327, #3490 checkbox</li>
-                        <li>Start #3689 Admin Layout</li>
+                        <li>#3694 Overview KPIs</li>
+                        <li>#3695 Resources Monitoring</li>
+                        <li>#3696 Operations Panel</li>
+                        <li>#3697 Epic 1 Testing</li>
+                        <li class="font-semibold">Milestone: MVP 1 Admin</li>
                     </ul>
                 </div>
                 <div class="p-4 rounded-xl bg-white/10 backdrop-blur">
                     <div class="flex items-center gap-2 mb-2">
                         <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center font-bold">3</div>
-                        <span class="font-semibold">Sprint 1 (2 settimane)</span>
+                        <span class="font-semibold">Sprint 2-3 (4 settimane)</span>
                     </div>
                     <ul class="text-sm space-y-1 text-amber-100">
-                        <li>#3689 Layout + #3690 Security</li>
-                        <li>#3692 Tokens + #3691 Audit</li>
-                        <li>#3531 Fix test failures (parallel)</li>
+                        <li>#3698 User Table (sblocca E2)</li>
+                        <li>#3708 Agent Data Model (sblocca E3)</li>
+                        <li>Epic 2 + Epic 3 in parallelo</li>
+                        <li class="font-semibold">Milestone: MVP 2 + MVP 3</li>
                     </ul>
                 </div>
             </div>
@@ -929,8 +961,8 @@
 
         <!-- Footer -->
         <div class="mt-8 text-center text-xs text-zinc-400">
-            <p>MeepleAI Project Status &bull; Auto-generated analysis &bull; 6 Feb 2026</p>
-            <p class="mt-1">79 Open Issues &bull; 95+ Closed (7d) &bull; 17 Closed Incomplete &bull; 4 Bugs &bull; 14 Epics</p>
+            <p>MeepleAI Project Status &bull; Auto-generated analysis &bull; 6 Feb 2026, 17:40</p>
+            <p class="mt-1">67 Open Issues &bull; 0 Bugs &bull; 12 Epics &bull; 37 Admin Enterprise &bull; 12 Chiuse Oggi</p>
         </div>
     </div>
 

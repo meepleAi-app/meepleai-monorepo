@@ -502,7 +502,7 @@ public class RegisterCommandHandlerTests
             Email: "test@example.com",
             Password: "SecurePassword123!",
             DisplayName: "Test User",
-            Role: "superadmin",
+            Role: "moderator",
             IpAddress: "127.0.0.1",
             UserAgent: "TestAgent"
         );

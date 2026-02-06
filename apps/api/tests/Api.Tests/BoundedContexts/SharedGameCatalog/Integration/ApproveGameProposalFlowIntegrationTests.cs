@@ -441,8 +441,8 @@ public sealed class ApproveGameProposalFlowIntegrationTests : IAsyncLifetime
             minAge: 10,
             complexityRating: 2.0m,
             averageRating: 7.5m,
-            imageUrl: null,
-            thumbnailUrl: null,
+            imageUrl: "https://example.com/existing-image.jpg",
+            thumbnailUrl: "https://example.com/existing-thumb.jpg",
             rules: null,
             createdBy: _userId,
             bggId: useSameBggId ? _bggId : 99999); // Use same BggId or different

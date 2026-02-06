@@ -127,6 +127,7 @@ public sealed class ProposalMigrationFlowIntegrationTests : IAsyncLifetime
         // Arrange: Create a pending migration
         var migration = ProposalMigration.Create(_shareRequestId, _privateGameId, _sharedGameId, _userId);
         await _migrationRepo.AddAsync(migration);
+        await _dbContext.SaveChangesAsync(); // Issue #3531: Save before querying with AsNoTracking
 
         // Act
         var pending = await _migrationRepo.GetPendingByUserIdAsync(_userId);
@@ -143,6 +144,7 @@ public sealed class ProposalMigrationFlowIntegrationTests : IAsyncLifetime
         // Arrange: Create migration
         var migration = ProposalMigration.Create(_shareRequestId, _privateGameId, _sharedGameId, _userId);
         await _migrationRepo.AddAsync(migration);
+        await _dbContext.SaveChangesAsync(); // Issue #3531: Save before update to avoid tracking conflict
 
         // Act: Choose LinkToCatalog
         migration.ChooseLinkToCatalog();
@@ -170,8 +172,10 @@ public sealed class ProposalMigrationFlowIntegrationTests : IAsyncLifetime
         updatedEntry.SharedGameId.Should().Be(_sharedGameId);
         updatedEntry.PrivateGameId.Should().BeNull();
 
-        // Assert: Verify private game deleted
-        var deletedGame = await _dbContext.PrivateGames.FirstAsync(g => g.Id == _privateGameId);
+        // Assert: Verify private game deleted (use IgnoreQueryFilters since IsDeleted filter applies)
+        var deletedGame = await _dbContext.PrivateGames
+            .IgnoreQueryFilters()
+            .FirstAsync(g => g.Id == _privateGameId);
         deletedGame.IsDeleted.Should().BeTrue();
         deletedGame.DeletedAt.Should().NotBeNull();
     }
@@ -182,6 +186,7 @@ public sealed class ProposalMigrationFlowIntegrationTests : IAsyncLifetime
         // Arrange: Create migration
         var migration = ProposalMigration.Create(_shareRequestId, _privateGameId, _sharedGameId, _userId);
         await _migrationRepo.AddAsync(migration);
+        await _dbContext.SaveChangesAsync(); // Issue #3531: Save before update to avoid tracking conflict
 
         // Act: Choose KeepPrivate
         migration.ChooseKeepPrivate();
@@ -211,9 +216,11 @@ public sealed class ProposalMigrationFlowIntegrationTests : IAsyncLifetime
         // Arrange: Create migration and choose
         var migration = ProposalMigration.Create(_shareRequestId, _privateGameId, _sharedGameId, _userId);
         await _migrationRepo.AddAsync(migration);
+        await _dbContext.SaveChangesAsync(); // Issue #3531: Save before update to avoid tracking conflict
 
         migration.ChooseLinkToCatalog();
         await _migrationRepo.UpdateAsync(migration);
+        await _dbContext.SaveChangesAsync(); // Issue #3531: Save before AsNoTracking query
 
         // Act
         var pending = await _migrationRepo.GetPendingByUserIdAsync(_userId);
@@ -228,6 +235,7 @@ public sealed class ProposalMigrationFlowIntegrationTests : IAsyncLifetime
         // Arrange
         var migration = ProposalMigration.Create(_shareRequestId, _privateGameId, _sharedGameId, _userId);
         await _migrationRepo.AddAsync(migration);
+        await _dbContext.SaveChangesAsync(); // Issue #3531: Save before querying with AsNoTracking
 
         // Act
         var result = await _migrationRepo.GetByShareRequestIdAsync(_shareRequestId);

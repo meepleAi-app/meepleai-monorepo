@@ -53,7 +53,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     {
         var entity = await DbContext.UserLibraryEntries
             .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.UserId == userId && e.GameId == gameId, cancellationToken)
+            .FirstOrDefaultAsync(e => e.UserId == userId && (e.SharedGameId == gameId || e.PrivateGameId == gameId), cancellationToken)
             .ConfigureAwait(false);
 
         return entity != null ? MapToDomain(entity) : null;
@@ -144,7 +144,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     {
         return await DbContext.UserLibraryEntries
             .AsNoTracking()
-            .AnyAsync(e => e.UserId == userId && e.GameId == gameId, cancellationToken)
+            .AnyAsync(e => e.UserId == userId && (e.SharedGameId == gameId || e.PrivateGameId == gameId), cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -175,7 +175,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             .Include(e => e.Sessions.OrderByDescending(s => s.PlayedAt))
             .Include(e => e.Checklist.OrderBy(c => c.DisplayOrder))
             .Include(e => e.PdfDocument)
-            .FirstOrDefaultAsync(e => e.UserId == userId && e.GameId == gameId, cancellationToken)
+            .FirstOrDefaultAsync(e => e.UserId == userId && (e.SharedGameId == gameId || e.PrivateGameId == gameId), cancellationToken)
             .ConfigureAwait(false);
 
         return entity != null ? MapToDomainWithNavigations(entity) : null;

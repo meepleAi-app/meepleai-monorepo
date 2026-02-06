@@ -42,9 +42,12 @@ internal static class AdministrationServiceExtensions
         // Issue #3464: RAG pipeline strategy repository
         services.AddScoped<IRagPipelineStrategyRepository, RagPipelineStrategyRepository>();
 
-        // Issue #3692: Token Management repositories
+        // Issue #3692: Token Management repositories + OpenRouter API
         services.AddScoped<ITokenTierRepository, TokenTierRepository>();
         services.AddScoped<IUserTokenUsageRepository, UserTokenUsageRepository>();
+        services.AddHttpClient<IOpenRouterService, OpenRouterService>()
+            .AddPolicyHandler(GetRetryPolicy())
+            .AddPolicyHandler(GetCircuitBreakerPolicy());
 
         // Issue #3693: Batch Job System repositories
         services.AddScoped<IBatchJobRepository, BatchJobRepository>();

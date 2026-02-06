@@ -119,6 +119,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<StrategyPatternEntity> StrategyPatterns => Set<StrategyPatternEntity>(); // ISSUE-3493: Cached evaluations
     public DbSet<BggImportQueueEntity> BggImportQueue => Set<BggImportQueueEntity>(); // ISSUE-3541: BGG import queue service
     public DbSet<PrivateGameEntity> PrivateGames => Set<PrivateGameEntity>(); // ISSUE-3662: Private games for user library
+    public DbSet<ProposalMigrationEntity> ProposalMigrations => Set<ProposalMigrationEntity>(); // ISSUE-3666: Migration choice flow
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();
@@ -208,6 +209,8 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.TypologyPromptTemplate>(); // ISSUE-3175
         modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.AgentSession>(); // ISSUE-3183
         modelBuilder.Ignore<BoundedContexts.KnowledgeBase.Domain.Entities.ChatSession>(); // ISSUE-3483
+        modelBuilder.Ignore<BoundedContexts.UserLibrary.Domain.Entities.ProposalMigration>(); // ISSUE-3666
+        modelBuilder.Ignore<BoundedContexts.UserLibrary.Domain.Entities.PrivateGame>(); // ISSUE-3662
 
         // GST-001: SessionTracking domain entities
         modelBuilder.Ignore<BoundedContexts.SessionTracking.Domain.Entities.Session>(); // ISSUE-3160

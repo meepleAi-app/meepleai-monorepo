@@ -17,12 +17,13 @@ import React, { useState, useCallback, useEffect } from 'react';
 
 import {
   MenuIcon,
-  ShieldCheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+
+import { AuditLogWidget } from './AuditLogWidget';
 
 import {
   Sheet,
@@ -162,7 +163,7 @@ export function EnterpriseAdminSidebar({ className }: EnterpriseAdminSidebarProp
         ))}
       </div>
 
-      {/* Footer - Admin Info + Audit Log */}
+      {/* Footer - Admin Info + Audit Log Widget */}
       <div className={cn(
         'border-t border-zinc-200/50 dark:border-zinc-700/50 shrink-0',
         collapsed ? 'p-2' : 'p-4'
@@ -178,19 +179,7 @@ export function EnterpriseAdminSidebar({ className }: EnterpriseAdminSidebarProp
             </div>
           </div>
         )}
-        <Link
-          href="/admin/audit-log"
-          className={cn(
-            'flex items-center gap-2 text-sm rounded-lg transition-colors',
-            collapsed
-              ? 'justify-center p-2 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
-              : 'w-full px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300'
-          )}
-          data-testid="enterprise-audit-log-btn"
-        >
-          <ShieldCheckIcon className="w-4 h-4" />
-          {!collapsed && 'Audit Log'}
-        </Link>
+        <AuditLogWidget collapsed={isMobile ? false : collapsed} />
       </div>
     </nav>
   );

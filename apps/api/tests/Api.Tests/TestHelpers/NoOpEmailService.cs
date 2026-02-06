@@ -140,4 +140,21 @@ internal class NoOpEmailService : IEmailService
         string? ipAddress,
         CancellationToken ct = default)
         => Task.CompletedTask;
+
+    // ISSUE-3668: Game proposal lifecycle notification emails
+    public Task SendShareRequestReviewStartedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        Guid shareRequestId,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task SendShareRequestKbMergedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        Guid sharedGameId,
+        CancellationToken ct = default)
+        => Task.CompletedTask;
 }

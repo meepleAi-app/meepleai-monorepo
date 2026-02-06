@@ -1865,4 +1865,206 @@ internal class EmailService : IEmailService
 </html>
 ";
     }
+
+    // ISSUE-3668: Game proposal lifecycle notification emails
+    public async Task SendShareRequestReviewStartedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        Guid shareRequestId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var subject = "Your Game Proposal Is Now Under Review";
+            var body = BuildShareRequestReviewStartedEmailBody(userName, gameTitle, shareRequestId);
+
+            using var message = new MailMessage();
+            message.From = new MailAddress(_fromAddress, _fromName);
+            message.To.Add(new MailAddress(toEmail, userName));
+            message.Subject = subject;
+            message.Body = body;
+            message.IsBodyHtml = true;
+
+            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
+            smtpClient.EnableSsl = _enableSsl;
+
+            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
+            {
+                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+            }
+
+            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "Review started email sent to {Email} for game {GameTitle}",
+                DataMasking.MaskEmail(toEmail),
+                gameTitle);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send review started email to {Email}",
+                DataMasking.MaskEmail(toEmail));
+            throw new InvalidOperationException("Failed to send review started email", ex);
+        }
+#pragma warning restore CA1031
+    }
+
+    public async Task SendShareRequestKbMergedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        Guid sharedGameId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var subject = "Your Game Proposal Has Been Merged";
+            var body = BuildShareRequestKbMergedEmailBody(userName, gameTitle, sharedGameId);
+
+            using var message = new MailMessage();
+            message.From = new MailAddress(_fromAddress, _fromName);
+            message.To.Add(new MailAddress(toEmail, userName));
+            message.Subject = subject;
+            message.Body = body;
+            message.IsBodyHtml = true;
+
+            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
+            smtpClient.EnableSsl = _enableSsl;
+
+            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
+            {
+                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+            }
+
+            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+
+            _logger.LogInformation(
+                "KB merged email sent to {Email} for game {GameTitle}",
+                DataMasking.MaskEmail(toEmail),
+                gameTitle);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to send KB merged email to {Email}",
+                DataMasking.MaskEmail(toEmail));
+            throw new InvalidOperationException("Failed to send KB merged email", ex);
+        }
+#pragma warning restore CA1031
+    }
+
+    private string BuildShareRequestReviewStartedEmailBody(
+        string userName,
+        string gameTitle,
+        Guid shareRequestId)
+    {
+        var requestUrl = $"{_frontendBaseUrl}/contributions/requests/{shareRequestId}";
+
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Game Proposal Under Review</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
+        <h1 style=""color: #2c3e50; margin: 0;"">MeepleAI</h1>
+    </div>
+
+    <div style=""background-color: #fff3cd; padding: 20px; border-radius: 5px; border: 2px solid #ffc107; margin-bottom: 20px;"">
+        <h2 style=""color: #856404; margin-top: 0;"">🔍 Game Proposal Under Review</h2>
+        <p style=""margin: 0; color: #856404; font-weight: bold;"">{gameTitle}</p>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
+        <p>Hello {userName},</p>
+
+        <p>Good news! An admin has started reviewing your game proposal for <strong>{gameTitle}</strong>.</p>
+
+        <div style=""margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 3px;"">
+            <p style=""margin: 5px 0;""><strong>Game:</strong> {gameTitle}</p>
+            <p style=""margin: 5px 0;""><strong>Status:</strong> Under Admin Review</p>
+        </div>
+
+        <p>Our review team is carefully evaluating your contribution. You'll receive another notification once the review is complete.</p>
+
+        <div style=""text-align: center; margin: 30px 0;"">
+            <a href=""{requestUrl}"" style=""background-color: #ffc107; color: #212529; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">Track Review Progress</a>
+        </div>
+
+        <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
+            Thank you for your patience!
+        </p>
+    </div>
+
+    <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
+        <p>This is an automated message, please do not reply to this email.</p>
+        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+    </div>
+</body>
+</html>
+";
+    }
+
+    private string BuildShareRequestKbMergedEmailBody(
+        string userName,
+        string gameTitle,
+        Guid sharedGameId)
+    {
+        var sharedGameUrl = $"{_frontendBaseUrl}/shared-games/{sharedGameId}";
+
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Game Proposal Merged</title>
+</head>
+<body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
+    <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
+        <h1 style=""color: #2c3e50; margin: 0;"">MeepleAI</h1>
+    </div>
+
+    <div style=""background-color: #d4edda; padding: 20px; border-radius: 5px; border: 2px solid #28a745; margin-bottom: 20px;"">
+        <h2 style=""color: #155724; margin-top: 0;"">🎉 Game Proposal Merged!</h2>
+        <p style=""margin: 0; color: #155724; font-weight: bold;"">{gameTitle}</p>
+    </div>
+
+    <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
+        <p>Hello {userName},</p>
+
+        <p>Great news! Your game proposal for <strong>{gameTitle}</strong> has been approved and merged into the existing game in our catalog.</p>
+
+        <div style=""margin: 20px 0; padding: 15px; background-color: #d4edda; border-left: 4px solid #28a745;"">
+            <p style=""margin: 0; color: #155724;""><strong>✓ Your knowledge base (PDFs and documents) has been added to the existing game.</strong></p>
+        </div>
+
+        <p>Your contribution enhances the existing game's knowledge base and will help the entire MeepleAI community. Since the game already existed in our catalog, no migration action is needed on your part.</p>
+
+        <div style=""text-align: center; margin: 30px 0;"">
+            <a href=""{sharedGameUrl}"" style=""background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">View Updated Game</a>
+        </div>
+
+        <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
+            Thank you for enriching the MeepleAI knowledge base!
+        </p>
+    </div>
+
+    <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
+        <p>This is an automated message, please do not reply to this email.</p>
+        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+    </div>
+</body>
+</html>
+";
+    }
 }

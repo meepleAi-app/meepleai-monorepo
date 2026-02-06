@@ -120,6 +120,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BggImportQueueEntity> BggImportQueue => Set<BggImportQueueEntity>(); // ISSUE-3541: BGG import queue service
     public DbSet<PrivateGameEntity> PrivateGames => Set<PrivateGameEntity>(); // ISSUE-3662: Private games for user library
     public DbSet<ProposalMigrationEntity> ProposalMigrations => Set<ProposalMigrationEntity>(); // ISSUE-3666: Migration choice flow
+    public DbSet<BoundedContexts.Administration.Domain.Entities.TokenTier> TokenTiers => Set<BoundedContexts.Administration.Domain.Entities.TokenTier>(); // ISSUE-3692: Token Management
+    public DbSet<BoundedContexts.Administration.Domain.Entities.UserTokenUsage> UserTokenUsages => Set<BoundedContexts.Administration.Domain.Entities.UserTokenUsage>(); // ISSUE-3692: Token Management
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();

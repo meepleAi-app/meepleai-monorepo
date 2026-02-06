@@ -42,6 +42,10 @@ internal static class AdministrationServiceExtensions
         // Issue #3464: RAG pipeline strategy repository
         services.AddScoped<IRagPipelineStrategyRepository, RagPipelineStrategyRepository>();
 
+        // Issue #3692: Token Management repositories
+        services.AddScoped<ITokenTierRepository, TokenTierRepository>();
+        services.AddScoped<IUserTokenUsageRepository, UserTokenUsageRepository>();
+
         // ISSUE-2528: Orphaned task cleanup configuration and service
         services.Configure<OrphanedTaskCleanupOptions>(
             configuration.GetSection(OrphanedTaskCleanupOptions.SectionKey));

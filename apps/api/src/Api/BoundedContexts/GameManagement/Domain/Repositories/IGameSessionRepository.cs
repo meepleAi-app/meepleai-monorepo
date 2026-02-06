@@ -53,4 +53,14 @@ internal interface IGameSessionRepository : IRepository<GameSession, Guid>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Number of active sessions for the user</returns>
     Task<int> CountActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds oldest active sessions for a specific user, ordered by StartedAt ascending.
+    /// Issue #3671: Required for automatic session termination when quota exceeded.
+    /// </summary>
+    /// <param name="userId">The user ID to find sessions for</param>
+    /// <param name="limit">Maximum number of sessions to return</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of oldest active sessions (tracked for updates, not AsNoTracking)</returns>
+    Task<IReadOnlyList<GameSession>> FindOldestActiveByUserIdAsync(Guid userId, int limit, CancellationToken cancellationToken = default);
 }

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Section 1: Overview & Monitoring - MeepleAI Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        quicksand: ['Quicksand', 'sans-serif'],
+                        nunito: ['Nunito', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Nunito', sans-serif; }
+        .tab-active { border-bottom: 2px solid #f97316; color: #f97316; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-amber-50/50 via-white to-orange-50/30 min-h-screen">
+
+    <div class="flex h-screen">
+        <!-- Vertical Sidebar -->
+        <aside class="w-56 bg-white/70 backdrop-blur-md border-r border-zinc-200/50 flex-shrink-0">
+            <div class="p-4">
+                <div class="flex items-center gap-2 mb-8">
+                    <div class="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg"></div>
+                    <span class="font-quicksand font-bold text-lg">MeepleAI</span>
+                </div>
+
+                <nav class="space-y-1">
+                    <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg bg-amber-100 text-amber-900 font-medium">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                        Overview
+                    </a>
+                    <a href="02-resources.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+                        Resources
+                    </a>
+                    <a href="03-operations.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                        Operations
+                    </a>
+                    <a href="04-ai-platform.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+                        AI Platform
+                    </a>
+                    <a href="05-users.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        Users & Content
+                    </a>
+                    <a href="06-business.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        Business
+                    </a>
+                    <a href="07-simulations.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-zinc-600 hover:bg-zinc-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
+                        Simulations
+                    </a>
+                </nav>
+            </div>
+
+            <div class="absolute bottom-4 left-4 right-4">
+                <div class="text-xs text-zinc-400 mb-2">Admin: Laura M.</div>
+                <div class="flex gap-2">
+                    <button class="flex-1 p-2 text-xs bg-zinc-100 hover:bg-zinc-200 rounded-lg">Audit Log</button>
+                    <button class="p-2 bg-zinc-100 hover:bg-zinc-200 rounded-lg">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto">
+            <!-- Header -->
+            <header class="bg-white/50 backdrop-blur-sm border-b border-zinc-200/50 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+                <div>
+                    <h1 class="text-2xl font-quicksand font-bold text-zinc-900">Overview & Monitoring</h1>
+                    <p class="text-sm text-zinc-500">Sistema panoramica e alert real-time</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button class="p-2 rounded-lg hover:bg-zinc-100">
+                        <svg class="w-5 h-5 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                    </button>
+                    <button class="relative p-2 rounded-lg hover:bg-zinc-100">
+                        <svg class="w-5 h-5 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                        <span class="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">3</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Horizontal Tabs -->
+            <div class="border-b border-zinc-200/50 px-8 bg-white/30 backdrop-blur-sm sticky top-[73px] z-10">
+                <nav class="flex gap-6">
+                    <button class="px-4 py-3 font-medium text-sm tab-active">Dashboard</button>
+                    <button class="px-4 py-3 font-medium text-sm text-zinc-600 hover:text-zinc-900">Alerts</button>
+                    <button class="px-4 py-3 font-medium text-sm text-zinc-600 hover:text-zinc-900">Quick Actions</button>
+                    <button class="px-4 py-3 font-medium text-sm text-zinc-600 hover:text-zinc-900">Audit Log</button>
+                </nav>
+            </div>
+
+            <!-- Content -->
+            <div class="p-8">
+                <!-- Extended KPI Cards (8 metrics) -->
+                <div class="grid grid-cols-4 gap-4 mb-8">
+                    <!-- Existing 4 + New 4 -->
+                    <div class="group p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-200/50 hover:-translate-y-1 hover:shadow-xl transition-all relative">
+                        <div class="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 opacity-20 group-hover:scale-150 transition-transform"></div>
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="p-2 rounded-lg bg-amber-500/10">
+                                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            </div>
+                            <div class="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">+12%</div>
+                        </div>
+                        <p class="text-3xl font-quicksand font-bold text-zinc-900">2,847</p>
+                        <p class="text-sm text-zinc-500 mt-1">Utenti Totali</p>
+                        <p class="text-xs text-zinc-400 mt-1">+156 questo mese</p>
+                    </div>
+
+                    <div class="group p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-emerald-200/50 hover:-translate-y-1 hover:shadow-xl transition-all relative">
+                        <div class="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 opacity-20 group-hover:scale-150 transition-transform"></div>
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="p-2 rounded-lg bg-emerald-500/10">
+                                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="6" x2="10" y1="12" y2="12"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="15" x2="15.01" y1="13" y2="13"/><line x1="18" x2="18.01" y1="11" y2="11"/><rect width="20" height="12" x="2" y="6" rx="2"/></svg>
+                            </div>
+                            <div class="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">+8%</div>
+                        </div>
+                        <p class="text-3xl font-quicksand font-bold text-zinc-900">1,234</p>
+                        <p class="text-sm text-zinc-500 mt-1">Giochi Catalogo</p>
+                        <p class="text-xs text-zinc-400 mt-1">+42 questa settimana</p>
+                    </div>
+
+                    <div class="group p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-purple-200/50 hover:-translate-y-1 hover:shadow-xl transition-all relative">
+                        <div class="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-violet-500 opacity-20 group-hover:scale-150 transition-transform"></div>
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="p-2 rounded-lg bg-purple-500/10">
+                                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            </div>
+                            <div class="text-xs font-medium px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">3 urgenti</div>
+                        </div>
+                        <p class="text-3xl font-quicksand font-bold text-zinc-900">18</p>
+                        <p class="text-sm text-zinc-500 mt-1">Proposte Pending</p>
+                        <p class="text-xs text-zinc-400 mt-1">Game + Content</p>
+                    </div>
+
+                    <div class="group p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-blue-200/50 hover:-translate-y-1 hover:shadow-xl transition-all relative">
+                        <div class="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 opacity-20 group-hover:scale-150 transition-transform"></div>
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="p-2 rounded-lg bg-blue-500/10">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            </div>
+                            <div class="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">+23%</div>
+                        </div>
+                        <p class="text-3xl font-quicksand font-bold text-zinc-900">892</p>
+                        <p class="text-sm text-zinc-500 mt-1">Chat AI Oggi</p>
+                        <p class="text-xs text-zinc-400 mt-1">+180 vs ieri</p>
+                    </div>
+
+                    <!-- NEW METRICS -->
+                    <div class="group p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-cyan-200/50 hover:-translate-y-1 hover:shadow-xl transition-all relative">
+                        <div class="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-teal-500 opacity-20 group-hover:scale-150 transition-transform"></div>
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="p-2 rounded-lg bg-cyan-500/10">
+                                <svg class="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            </div>
+                            <div class="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">45%</div>
+                        </div>
+                        <p class="text-3xl font-quicksand font-bold text-zinc-900">€450</p>
+                        <p class="text-sm text-zinc-500 mt-1">Token Balance</p>
+                        <p class="text-xs text-zinc-400 mt-1">di €1,000 (12gg left)</p>
+                    </div>
+
+                    <div class="group p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-indigo-200/50 hover:-translate-y-1 hover:shadow-xl transition-all relative">
+                        <div class="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 opacity-20 group-hover:scale-150 transition-transform"></div>
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="p-2 rounded-lg bg-indigo-500/10">
+                                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
+                            </div>
+                            <div class="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">23%</div>
+                        </div>
+                        <p class="text-3xl font-quicksand font-bold text-zinc-900">2.3 GB</p>
+                        <p class="text-sm text-zinc-500 mt-1">Database Storage</p>
+                        <p class="text-xs text-zinc-400 mt-1">di 10GB (+50MB/day)</p>
+                    </div>
+
+                    <div class="group p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-rose-200/50 hover:-translate-y-1 hover:shadow-xl transition-all relative">
+                        <div class="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-gradient-to-br from-rose-400 to-pink-500 opacity-20 group-hover:scale-150 transition-transform"></div>
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="p-2 rounded-lg bg-rose-500/10">
+                                <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m13 2-2 2.5-2 2.5"/><path d="M13 22l-2-2.5-2-2.5"/><path d="M6 8l2 2 2 2"/><path d="M18 16l-2-2-2-2"/></svg>
+                            </div>
+                            <div class="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">94.2%</div>
+                        </div>
+                        <p class="text-3xl font-quicksand font-bold text-zinc-900">450 MB</p>
+                        <p class="text-sm text-zinc-500 mt-1">Cache Hit Rate</p>
+                        <p class="text-xs text-zinc-400 mt-1">Redis performance</p>
+                    </div>
+
+                    <div class="group p-5 rounded-2xl bg-white/70 backdrop-blur-md border border-amber-200/50 hover:-translate-y-1 hover:shadow-xl transition-all relative">
+                        <div class="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 opacity-20 group-hover:scale-150 transition-transform"></div>
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="p-2 rounded-lg bg-amber-500/10">
+                                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                            </div>
+                            <div class="text-xs font-medium px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">3 active</div>
+                        </div>
+                        <p class="text-3xl font-quicksand font-bold text-zinc-900">3</p>
+                        <p class="text-sm text-zinc-500 mt-1">Active Alerts</p>
+                        <p class="text-xs text-zinc-400 mt-1">0 critical, 3 warning</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                    <!-- System Health -->
+                    <div class="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-zinc-200/50">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-emerald-100 rounded-lg">
+                                    <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-quicksand font-semibold text-zinc-900">System Health</h3>
+                                    <p class="text-xs text-zinc-500">5/6 servizi operativi</p>
+                                </div>
+                            </div>
+                            <a href="#" class="text-sm text-amber-600 hover:underline">Dettagli →</a>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="flex items-center gap-2 p-2 rounded-lg bg-white/50 border border-zinc-200/30">
+                                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                <span class="text-sm">API Backend</span>
+                                <span class="ml-auto text-xs text-zinc-400">45ms</span>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 rounded-lg bg-white/50 border border-zinc-200/30">
+                                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                <span class="text-sm">Database</span>
+                                <span class="ml-auto text-xs text-zinc-400">12ms</span>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 rounded-lg bg-white/50 border border-zinc-200/30">
+                                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                <span class="text-sm">Redis</span>
+                                <span class="ml-auto text-xs text-zinc-400">2ms</span>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 rounded-lg bg-white/50 border border-zinc-200/30">
+                                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                <span class="text-sm">Qdrant</span>
+                                <span class="ml-auto text-xs text-zinc-400">28ms</span>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 rounded-lg bg-white/50 border border-amber-200/50">
+                                <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                                <span class="text-sm">AI Service</span>
+                                <span class="ml-auto text-xs text-zinc-400">230ms</span>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 rounded-lg bg-white/50 border border-zinc-200/30">
+                                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                <span class="text-sm">BGG Sync</span>
+                                <span class="ml-auto text-xs text-zinc-400">180ms</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Audit Log -->
+                    <div class="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-zinc-200/50">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-blue-100 rounded-lg">
+                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2"/><path d="M10 6V4a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2v2"/></svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-quicksand font-semibold text-zinc-900">Recent Audit Log</h3>
+                                    <p class="text-xs text-zinc-500">Ultime 20 azioni admin</p>
+                                </div>
+                            </div>
+                            <a href="#" class="text-sm text-amber-600 hover:underline">Tutti →</a>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200/50">
+                                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm text-zinc-700 truncate"><span class="font-medium">Laura M.</span> approved game proposal</p>
+                                    <p class="text-xs text-zinc-400">10 min fa</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-200/50">
+                                <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm text-zinc-700 truncate"><span class="font-medium">Marco R.</span> restarted Redis cache</p>
+                                    <p class="text-xs text-zinc-400">2 ore fa</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 rounded-lg bg-blue-50 border border-blue-200/50">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm text-zinc-700 truncate"><span class="font-medium">Sistema</span> blocked user (quota exceeded)</p>
+                                    <p class="text-xs text-zinc-400">5 ore fa</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pending Approvals -->
+                <div class="p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-zinc-200/50">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-purple-100 rounded-lg">
+                                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-quicksand font-semibold text-lg text-zinc-900">In Attesa di Revisione</h3>
+                                <p class="text-sm text-zinc-500">18 elementi richiedono attenzione</p>
+                            </div>
+                        </div>
+                        <a href="#" class="text-sm text-amber-600 hover:underline flex items-center gap-1">
+                            Vedi tutti
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                        </a>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex items-center gap-3 p-4 rounded-xl bg-white/50 border-l-4 border-l-rose-500 hover:bg-white cursor-pointer transition-colors">
+                            <div class="p-2 rounded-lg bg-amber-100">
+                                <svg class="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="6" x2="10" y1="12" y2="12"/><line x1="8" x2="8" y1="10" y2="14"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-zinc-900 truncate text-sm">Everdell - Collector's Edition</p>
+                                <p class="text-xs text-zinc-500 truncate">Proposta da Marco R.</p>
+                            </div>
+                            <span class="text-xs text-zinc-400 shrink-0">2h fa</span>
+                        </div>
+
+                        <div class="flex items-center gap-3 p-4 rounded-xl bg-white/50 border-l-4 border-l-amber-500 hover:bg-white cursor-pointer transition-colors">
+                            <div class="p-2 rounded-lg bg-blue-100">
+                                <svg class="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-zinc-900 truncate text-sm">Wingspan Rulebook ITA</p>
+                                <p class="text-xs text-zinc-500 truncate">PDF da verificare</p>
+                            </div>
+                            <span class="text-xs text-zinc-400 shrink-0">5h fa</span>
+                        </div>
+
+                        <div class="flex items-center gap-3 p-4 rounded-xl bg-white/50 border-l-4 border-l-zinc-300 hover:bg-white cursor-pointer transition-colors">
+                            <div class="p-2 rounded-lg bg-purple-100">
+                                <svg class="w-4 h-4 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-zinc-900 truncate text-sm">Editor Role Request</p>
+                                <p class="text-xs text-zinc-500 truncate">Luca B. - richiesta ruolo</p>
+                            </div>
+                            <span class="text-xs text-zinc-400 shrink-0">Ieri</span>
+                        </div>
+
+                        <div class="flex items-center gap-3 p-4 rounded-xl bg-white/50 border-l-4 border-l-amber-500 hover:bg-white cursor-pointer transition-colors">
+                            <div class="p-2 rounded-lg bg-blue-100">
+                                <svg class="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-zinc-900 truncate text-sm">Gloomhaven FAQ Update</p>
+                                <p class="text-xs text-zinc-500 truncate">Contenuto segnalato</p>
+                            </div>
+                            <span class="text-xs text-zinc-400 shrink-0">Ieri</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Note -->
+                <div class="mt-8 p-4 rounded-xl bg-purple-50 border border-purple-200">
+                    <p class="text-sm text-purple-900 font-medium">📐 Mockup: Section 1 - Overview & Monitoring</p>
+                    <p class="text-xs text-purple-700 mt-1">Design: Glassmorphic cards, MeepleAI colors (amber/emerald/purple/blue), Quicksand headings + Nunito body</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+</body>
+</html>

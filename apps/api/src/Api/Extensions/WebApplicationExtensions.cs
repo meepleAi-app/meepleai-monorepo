@@ -141,6 +141,9 @@ internal static class WebApplicationExtensions
 
         // ISSUE #2424: Rate limiting middleware (must be after authorization)
         app.UseRateLimiter();
+
+        // ISSUE #3671: Session quota enforcement middleware (must be after rate limiting)
+        app.UseSessionQuotaEnforcement();
     }
 
     public static IServiceCollection AddCorsServices(

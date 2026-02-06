@@ -104,10 +104,10 @@ public class HybridAdaptiveRoutingStrategyTests
 
     [Theory]
     [InlineData(RagStrategy.Fast, "OpenRouter", "meta-llama/llama-3.3-70b-instruct:free")]
-    [InlineData(RagStrategy.Balanced, "OpenRouter", "openai/gpt-4o-mini")]
-    [InlineData(RagStrategy.Precise, "OpenRouter", "anthropic/claude-sonnet-4")]
-    [InlineData(RagStrategy.Expert, "OpenRouter", "anthropic/claude-sonnet-4")]
-    [InlineData(RagStrategy.Consensus, "OpenRouter", "anthropic/claude-sonnet-4")]
+    [InlineData(RagStrategy.Balanced, "DeepSeek", "deepseek-chat")]
+    [InlineData(RagStrategy.Precise, "Anthropic", "anthropic/claude-sonnet-4.5")]
+    [InlineData(RagStrategy.Expert, "Anthropic", "anthropic/claude-sonnet-4.5")]
+    [InlineData(RagStrategy.Consensus, "Mixed", "anthropic/claude-sonnet-4.5")]
     public void SelectProvider_WithStrategy_ReturnsCorrectModelForStrategy(
         RagStrategy strategy,
         string expectedProvider,
@@ -136,8 +136,8 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user: null, RagStrategy.Balanced);
 
         // Assert
-        Assert.Equal("OpenRouter", decision.ProviderName);
-        Assert.Equal("openai/gpt-4o-mini", decision.ModelId);
+        Assert.Equal("DeepSeek", decision.ProviderName);
+        Assert.Equal("deepseek-chat", decision.ModelId);
         Assert.Contains("Tier: Anonymous", decision.Reason);
     }
 
@@ -305,23 +305,24 @@ public class HybridAdaptiveRoutingStrategyTests
     public void SelectProvider_PrimaryProviderDisabled_FallsBackToAlternative()
     {
         // Arrange
-        var disabledOpenRouterSettings = Options.Create(new AiProviderSettings
+        var disabledDeepSeekSettings = Options.Create(new AiProviderSettings
         {
             Providers = new Dictionary<string, ProviderConfig>
             {
+                ["DeepSeek"] = new() { Enabled = false, BaseUrl = "https://api.deepseek.com" },
                 ["OpenRouter"] = new() { Enabled = false, BaseUrl = "https://openrouter.ai/api/v1" },
-                ["Ollama"] = new() { Enabled = true, BaseUrl = "http://localhost:11434", Models = ["llama3:8b"] }
+                ["Ollama"] = new() { Enabled = true, BaseUrl = "http://localhost:11434", Models = ["meta-llama/llama-3.3-70b-instruct:free"] }
             }
         });
 
         _mockStrategyMappingService
             .Setup(s => s.GetFallbackModelsAsync(RagStrategy.Balanced, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { "llama3:8b" });
+            .ReturnsAsync(new[] { "meta-llama/llama-3.3-70b-instruct:free" });
 
         var sut = new HybridAdaptiveRoutingStrategy(
             _mockStrategyMappingService.Object,
             _mockScopeFactory.Object,
-            disabledOpenRouterSettings,
+            disabledDeepSeekSettings,
             _logger);
 
         var user = CreateUser(Role.User);
@@ -329,9 +330,9 @@ public class HybridAdaptiveRoutingStrategyTests
         // Act
         var decision = sut.SelectProvider(user, RagStrategy.Balanced);
 
-        // Assert - Should fallback to Ollama
+        // Assert - Should fallback to Ollama (hardcoded fallback behavior)
         Assert.Equal("Ollama", decision.ProviderName);
-        Assert.Contains("Fallback from OpenRouter", decision.Reason);
+        Assert.Contains("Fallback from DeepSeek", decision.Reason);
     }
 
     [Fact]
@@ -343,7 +344,9 @@ public class HybridAdaptiveRoutingStrategyTests
             Providers = new Dictionary<string, ProviderConfig>
             {
                 ["Ollama"] = new() { Enabled = false, BaseUrl = "http://localhost:11434" },
-                ["OpenRouter"] = new() { Enabled = false, BaseUrl = "https://openrouter.ai/api/v1" }
+                ["OpenRouter"] = new() { Enabled = false, BaseUrl = "https://openrouter.ai/api/v1" },
+                ["DeepSeek"] = new() { Enabled = false, BaseUrl = "https://api.deepseek.com" },
+                ["Anthropic"] = new() { Enabled = false, BaseUrl = "https://api.anthropic.com" }
             }
         });
 
@@ -359,7 +362,7 @@ public class HybridAdaptiveRoutingStrategyTests
         var exception = Assert.Throws<InvalidOperationException>(
             () => sut.SelectProvider(user, RagStrategy.Balanced));
 
-        Assert.Contains("Both AI providers are disabled", exception.Message);
+        Assert.Contains("AI providers are disabled", exception.Message);
     }
 
     #endregion
@@ -372,7 +375,7 @@ public class HybridAdaptiveRoutingStrategyTests
         // Arrange
         var mockOverride = new Mock<ILlmModelOverrideService>();
         mockOverride.Setup(s => s.IsInBudgetMode()).Returns(true);
-        mockOverride.Setup(s => s.GetOverrideModel("anthropic/claude-sonnet-4"))
+        mockOverride.Setup(s => s.GetOverrideModel("anthropic/claude-sonnet-4.5"))
             .Returns("meta-llama/llama-3.3-70b-instruct:free");
 
         var sut = CreateStrategy(mockOverride.Object);
@@ -385,7 +388,7 @@ public class HybridAdaptiveRoutingStrategyTests
         Assert.Equal("meta-llama/llama-3.3-70b-instruct:free", decision.ModelId);
         Assert.Contains("Budget mode", decision.Reason);
         mockOverride.Verify(s => s.IsInBudgetMode(), Times.Once);
-        mockOverride.Verify(s => s.GetOverrideModel("anthropic/claude-sonnet-4"), Times.Once);
+        mockOverride.Verify(s => s.GetOverrideModel("anthropic/claude-sonnet-4.5"), Times.Once);
     }
 
     [Fact]
@@ -402,7 +405,7 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Expert);
 
         // Assert
-        Assert.Equal("anthropic/claude-sonnet-4", decision.ModelId);
+        Assert.Equal("anthropic/claude-sonnet-4.5", decision.ModelId);
         Assert.DoesNotContain("Budget mode", decision.Reason);
         mockOverride.Verify(s => s.GetOverrideModel(It.IsAny<string>()), Times.Never);
     }
@@ -465,8 +468,8 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(user, RagStrategy.Balanced);
 
         // Assert - Should fall back to default
-        Assert.Equal("OpenRouter", decision.ProviderName);
-        Assert.Equal("openai/gpt-4o-mini", decision.ModelId);
+        Assert.Equal("DeepSeek", decision.ProviderName);
+        Assert.Equal("deepseek-chat", decision.ModelId);
     }
 
     #endregion

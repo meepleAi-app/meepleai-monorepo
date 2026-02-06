@@ -106,8 +106,11 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
             .ReturnsAsync((new[] { libraryEntry }, 1));
 
         _mockSharedGameRepo
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(sharedGame);
+            .Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame>
+            {
+                [gameId] = sharedGame
+            });
 
         var query = new GetUserLibraryQuery(userId);
 
@@ -162,8 +165,11 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
             .ReturnsAsync((new[] { libraryEntry }, 1));
 
         _mockSharedGameRepo
-            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(sharedGame);
+            .Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame>
+            {
+                [gameId] = sharedGame
+            });
 
         var query = new GetUserLibraryQuery(userId);
 

@@ -118,6 +118,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AgentGameStateSnapshotEntity> AgentGameStateSnapshots => Set<AgentGameStateSnapshotEntity>(); // ISSUE-3493: Position similarity
     public DbSet<StrategyPatternEntity> StrategyPatterns => Set<StrategyPatternEntity>(); // ISSUE-3493: Cached evaluations
     public DbSet<BggImportQueueEntity> BggImportQueue => Set<BggImportQueueEntity>(); // ISSUE-3541: BGG import queue service
+    public DbSet<PrivateGameEntity> PrivateGames => Set<PrivateGameEntity>(); // ISSUE-3662: Private games for user library
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();

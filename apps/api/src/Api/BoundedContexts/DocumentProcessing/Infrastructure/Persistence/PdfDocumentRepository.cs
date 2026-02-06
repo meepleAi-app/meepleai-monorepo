@@ -45,6 +45,17 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         return entities.Select(MapToDomain).ToList();
     }
 
+    public async Task<IReadOnlyList<PdfDocument>> FindByPrivateGameIdAsync(Guid privateGameId, CancellationToken cancellationToken = default)
+    {
+        var entities = await DbContext.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.PrivateGameId == privateGameId)
+            .OrderByDescending(p => p.UploadedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<PdfDocument>> FindByStatusAsync(string status, CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.PdfDocuments
@@ -133,6 +144,7 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
 
         // Issue #2140: Use Reconstitute factory method instead of reflection
         // Issue #2732: Added SharedGameId, ContributorId, SourceDocumentId
+        // Issue #3664: Added PrivateGameId
         return PdfDocument.Reconstitute(
             id: entity.Id,
             gameId: entity.GameId,
@@ -152,7 +164,8 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             isPublic: entity.IsPublic,
             sharedGameId: entity.SharedGameId,
             contributorId: entity.ContributorId,
-            sourceDocumentId: entity.SourceDocumentId
+            sourceDocumentId: entity.SourceDocumentId,
+            privateGameId: entity.PrivateGameId
         );
     }
 
@@ -179,7 +192,8 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             IsPublic = domain.IsPublic,
             SharedGameId = domain.SharedGameId, // Issue #2732
             ContributorId = domain.ContributorId, // Issue #2732
-            SourceDocumentId = domain.SourceDocumentId // Issue #2732
+            SourceDocumentId = domain.SourceDocumentId, // Issue #2732
+            PrivateGameId = domain.PrivateGameId // Issue #3664
         };
     }
 }

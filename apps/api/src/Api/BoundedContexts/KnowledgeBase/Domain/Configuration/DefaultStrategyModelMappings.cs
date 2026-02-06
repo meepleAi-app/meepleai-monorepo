@@ -16,6 +16,10 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Configuration;
 /// - SENTENCE_WINDOW: Overlapping document windows for precise citations
 /// - ITERATIVE: Multiple retrieval rounds with query refinement
 /// - CUSTOM: Admin-configurable workflows
+/// - MULTI_AGENT: Specialized agents with multi-perspective analysis
+/// - STEP_BACK: Higher-level abstraction for complex questions
+/// - QUERY_EXPANSION: Synonym and term expansion for broad searches
+/// - RAG_FUSION: Multiple query variations with reciprocal rank fusion
 /// </remarks>
 public static class DefaultStrategyModelMappings
 {
@@ -78,7 +82,35 @@ public static class DefaultStrategyModelMappings
             PrimaryModel: "anthropic/claude-haiku-4.5",
             FallbackModels: Array.Empty<string>(),
             IsCustomizable: true,
-            EstimatedCostPer1KTokens: null) // Variable cost
+            EstimatedCostPer1KTokens: null), // Variable cost
+
+        [RagStrategy.MultiAgent] = new StrategyMappingConfig(
+            Provider: "Mixed",
+            PrimaryModel: "anthropic/claude-sonnet-4.5",
+            FallbackModels: new[] { "openai/gpt-4o", "anthropic/claude-haiku-4.5" },
+            IsCustomizable: false,
+            EstimatedCostPer1KTokens: 0.15m), // ~12,900 tokens avg (mixed models), +20% accuracy
+
+        [RagStrategy.StepBack] = new StrategyMappingConfig(
+            Provider: "Anthropic",
+            PrimaryModel: "anthropic/claude-sonnet-4.5",
+            FallbackModels: new[] { "openai/gpt-4o-mini" },
+            IsCustomizable: false,
+            EstimatedCostPer1KTokens: 0.07m), // ~2,800 tokens avg, +10% accuracy
+
+        [RagStrategy.QueryExpansion] = new StrategyMappingConfig(
+            Provider: "Anthropic",
+            PrimaryModel: "anthropic/claude-sonnet-4.5",
+            FallbackModels: new[] { "openai/gpt-4o-mini" },
+            IsCustomizable: false,
+            EstimatedCostPer1KTokens: 0.06m), // ~2,400 tokens avg, +7% accuracy
+
+        [RagStrategy.RagFusion] = new StrategyMappingConfig(
+            Provider: "Anthropic",
+            PrimaryModel: "anthropic/claude-sonnet-4.5",
+            FallbackModels: new[] { "openai/gpt-4o", "openai/gpt-4o-mini" },
+            IsCustomizable: false,
+            EstimatedCostPer1KTokens: 0.14m) // ~11,550 tokens avg, +11% accuracy
     };
 
     /// <summary>

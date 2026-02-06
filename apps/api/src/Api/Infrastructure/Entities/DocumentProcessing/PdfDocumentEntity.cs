@@ -59,6 +59,9 @@ public class PdfDocumentEntity
     public Guid? ContributorId { get; set; }
     public Guid? SourceDocumentId { get; set; }
 
+    // Issue #3664: Private game PDF support
+    public Guid? PrivateGameId { get; set; }
+
     [NotMapped]
     public ProcessingProgress? ProcessingProgress
     {

@@ -537,4 +537,27 @@ export const BulkImportApiKeysResultSchema = z.object({
 
 export type BulkImportApiKeysResult = z.infer<typeof BulkImportApiKeysResultSchema>;
 
+// ========== Audit Log (Issue #3691) ==========
+
+export const AuditLogEntrySchema = z.object({
+  id: z.string().uuid(),
+  adminUserId: z.string().uuid().nullable(),
+  action: z.string(),
+  resource: z.string(),
+  resourceId: z.string().nullable().optional(),
+  result: z.string(),
+  details: z.string().nullable().optional(),
+  ipAddress: z.string().nullable().optional(),
+  createdAt: z.string().datetime(),
+});
+export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>;
+
+export const AuditLogListResultSchema = z.object({
+  entries: z.array(AuditLogEntrySchema),
+  totalCount: z.number().int().nonnegative(),
+  limit: z.number().int().positive(),
+  offset: z.number().int().nonnegative(),
+});
+export type AuditLogListResult = z.infer<typeof AuditLogListResultSchema>;
+
 // Note: PagedResult is defined in config.schemas.ts and re-exported via index.ts

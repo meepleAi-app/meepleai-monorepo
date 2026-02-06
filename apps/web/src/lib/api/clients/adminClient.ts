@@ -10,6 +10,8 @@ import { z } from 'zod';
 import { getApiBase } from '../core/httpClient';
 import {
   PublishGameResponseSchema,
+  AuditLogListResultSchema,
+  type AuditLogListResult,
   type ApprovalStatus,
   type PublishGameResponse,
   AdminUserSchema,
@@ -1215,6 +1217,62 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         { status },
         PublishGameResponseSchema
       );
+    },
+
+    // ========== Audit Log (Issue #3691) ==========
+
+    /**
+     * Get paginated audit log entries with optional filters
+     * GET /api/v1/admin/audit-log
+     */
+    async getAuditLogs(params?: {
+      limit?: number;
+      offset?: number;
+      adminUserId?: string;
+      action?: string;
+      resource?: string;
+      result?: string;
+      startDate?: string;
+      endDate?: string;
+    }): Promise<AuditLogListResult> {
+      const searchParams = new URLSearchParams();
+      if (params?.limit) searchParams.set('limit', String(params.limit));
+      if (params?.offset) searchParams.set('offset', String(params.offset));
+      if (params?.adminUserId) searchParams.set('adminUserId', params.adminUserId);
+      if (params?.action) searchParams.set('action', params.action);
+      if (params?.resource) searchParams.set('resource', params.resource);
+      if (params?.result) searchParams.set('result', params.result);
+      if (params?.startDate) searchParams.set('startDate', params.startDate);
+      if (params?.endDate) searchParams.set('endDate', params.endDate);
+      const qs = searchParams.toString();
+      const url = `/api/v1/admin/audit-log${qs ? `?${qs}` : ''}`;
+      return httpClient.get<AuditLogListResult>(url, AuditLogListResultSchema);
+    },
+
+    /**
+     * Export audit log entries as CSV
+     * GET /api/v1/admin/audit-log/export
+     */
+    async exportAuditLogs(params?: {
+      adminUserId?: string;
+      action?: string;
+      resource?: string;
+      result?: string;
+      startDate?: string;
+      endDate?: string;
+    }): Promise<Blob> {
+      const searchParams = new URLSearchParams();
+      if (params?.adminUserId) searchParams.set('adminUserId', params.adminUserId);
+      if (params?.action) searchParams.set('action', params.action);
+      if (params?.resource) searchParams.set('resource', params.resource);
+      if (params?.result) searchParams.set('result', params.result);
+      if (params?.startDate) searchParams.set('startDate', params.startDate);
+      if (params?.endDate) searchParams.set('endDate', params.endDate);
+      const qs = searchParams.toString();
+      const url = `${getApiBase()}/api/v1/admin/audit-log/export${qs ? `?${qs}` : ''}`;
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error(`Export failed: ${response.statusText}`);
+      return response.blob();
     },
   };
 }

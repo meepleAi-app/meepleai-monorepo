@@ -101,6 +101,17 @@ internal static class AdministrationServiceExtensions
                 .WithIdentity("orphaned-task-cleanup-trigger", "maintenance")
                 .WithCronSchedule("0 0 * * * ?")  // Every hour at minute 0
                 .WithDescription("Runs hourly to clean up orphaned analysis tasks older than retention period"));
+
+            // Issue #3691: Audit log retention cleanup job (daily at 3 AM UTC)
+            q.AddJob<AuditLogRetentionJob>(opts => opts
+                .WithIdentity("audit-log-retention-job", "maintenance")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("audit-log-retention-job", "maintenance")
+                .WithIdentity("audit-log-retention-trigger", "maintenance")
+                .WithCronSchedule("0 0 3 * * ?")  // Daily at 3:00 AM UTC
+                .WithDescription("Runs daily to clean up audit logs older than 90 days"));
         });
 
         services.AddQuartzHostedService(options =>

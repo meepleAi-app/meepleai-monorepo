@@ -1,6 +1,7 @@
 /**
  * Enterprise Resources Section Page
  * Issue #3689 - Layout Base & Navigation System
+ * Issue #3692 - Token Management System
  *
  * Section 2: Resources & Infrastructure
  * Tabs: Tokens | Database | Cache | Vectors | Services
@@ -11,6 +12,7 @@
 import React from 'react';
 
 import { EnterpriseSectionPage } from '@/components/admin/enterprise/EnterpriseSectionPage';
+import { TokensTab } from '@/components/admin/enterprise/tokens';
 import { ENTERPRISE_SECTIONS } from '@/config/enterprise-navigation';
 
 const section = ENTERPRISE_SECTIONS.find((s) => s.id === 'resources')!;
@@ -19,7 +21,9 @@ export default function ResourcesPage() {
   return (
     <EnterpriseSectionPage
       section={section}
-      tabContent={{}}
+      tabContent={{
+        tokens: <TokensTab />,
+      }}
       fallback={
         <PlaceholderContent sectionName="Resources & Infrastructure" />
       }

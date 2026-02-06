@@ -87,6 +87,16 @@ import {
   type TestModelRequest,
   type TestModelResponse,
   type ExportUsageReportParams,
+  TokenBalanceSchema,
+  TokenConsumptionDataSchema,
+  TierUsageListSchema,
+  TopConsumersListSchema,
+  type TokenBalance,
+  type TokenConsumptionData,
+  type TierUsageList,
+  type TopConsumersList,
+  type AddCreditsRequest,
+  type UpdateTierLimitsRequest,
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -1273,6 +1283,78 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const response = await fetch(url, { credentials: 'include' });
       if (!response.ok) throw new Error(`Export failed: ${response.statusText}`);
       return response.blob();
+    },
+
+    // ========== Token Management (Issue #3692) ==========
+
+    /**
+     * Get current token balance and usage summary
+     * GET /api/v1/admin/resources/tokens
+     */
+    async getTokenBalance(): Promise<TokenBalance> {
+      const result = await httpClient.get<TokenBalance>('/api/v1/admin/resources/tokens', TokenBalanceSchema);
+      if (!result) throw new Error('No token balance data returned');
+      return result;
+    },
+
+    /**
+     * Get token consumption trend data
+     * GET /api/v1/admin/resources/tokens/consumption
+     */
+    async getTokenConsumption(days: number = 30): Promise<TokenConsumptionData> {
+      const result = await httpClient.get<TokenConsumptionData>(
+        `/api/v1/admin/resources/tokens/consumption?days=${days}`,
+        TokenConsumptionDataSchema
+      );
+      if (!result) throw new Error('No consumption data returned');
+      return result;
+    },
+
+    /**
+     * Get token usage breakdown per tier
+     * GET /api/v1/admin/resources/tokens/tiers
+     */
+    async getTokenTierUsage(): Promise<TierUsageList> {
+      const result = await httpClient.get<TierUsageList>('/api/v1/admin/resources/tokens/tiers', TierUsageListSchema);
+      if (!result) throw new Error('No tier usage data returned');
+      return result;
+    },
+
+    /**
+     * Get top token consumers
+     * GET /api/v1/admin/resources/tokens/top-consumers
+     */
+    async getTopConsumers(limit: number = 10): Promise<TopConsumersList> {
+      const result = await httpClient.get<TopConsumersList>(
+        `/api/v1/admin/resources/tokens/top-consumers?limit=${limit}`,
+        TopConsumersListSchema
+      );
+      if (!result) throw new Error('No consumer data returned');
+      return result;
+    },
+
+    /**
+     * Update tier token limits
+     * PUT /api/v1/admin/resources/tokens/tiers/{tier}
+     */
+    async updateTierLimits(request: UpdateTierLimitsRequest): Promise<void> {
+      await httpClient.put(
+        `/api/v1/admin/resources/tokens/tiers/${request.tier}`,
+        request,
+        z.any()
+      );
+    },
+
+    /**
+     * Add credits to token balance
+     * POST /api/v1/admin/resources/tokens/add-credits
+     */
+    async addTokenCredits(request: AddCreditsRequest): Promise<void> {
+      await httpClient.post(
+        '/api/v1/admin/resources/tokens/add-credits',
+        request,
+        z.any()
+      );
     },
   };
 }

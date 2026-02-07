@@ -77,6 +77,70 @@ internal class AuditLogRepository : RepositoryBase, IAuditLogRepository
         return await DbContext.AuditLogs.AnyAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<AuditLog>> GetEmailSentLogsAsync(
+        int limit,
+        int offset,
+        DateTime? startDate,
+        DateTime? endDate,
+        string? status,
+        CancellationToken cancellationToken = default)
+    {
+        var query = DbContext.AuditLogs
+            .AsNoTracking()
+            .Where(a => a.Action == "email_sent");
+
+        if (startDate.HasValue)
+        {
+            query = query.Where(a => a.CreatedAt >= startDate.Value);
+        }
+
+        if (endDate.HasValue)
+        {
+            query = query.Where(a => a.CreatedAt <= endDate.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(a => a.Result == status);
+        }
+
+        var entities = await query
+            .OrderByDescending(a => a.CreatedAt)
+            .Skip(offset)
+            .Take(limit)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<int> CountEmailSentLogsAsync(
+        DateTime? startDate,
+        DateTime? endDate,
+        string? status,
+        CancellationToken cancellationToken = default)
+    {
+        var query = DbContext.AuditLogs
+            .AsNoTracking()
+            .Where(a => a.Action == "email_sent");
+
+        if (startDate.HasValue)
+        {
+            query = query.Where(a => a.CreatedAt >= startDate.Value);
+        }
+
+        if (endDate.HasValue)
+        {
+            query = query.Where(a => a.CreatedAt <= endDate.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(a => a.Result == status);
+        }
+
+        return await query.CountAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     private static AuditLog MapToDomain(Api.Infrastructure.Entities.AuditLogEntity entity)
     {
         return new AuditLog(

@@ -148,6 +148,19 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     },
 
     /**
+     * Update user tier (admin only) - Issue #3699
+     * PUT /api/v1/admin/users/{id}/tier
+     */
+    async updateUserTier(userId: string, tier: string): Promise<AdminUser> {
+      const result = await httpClient.put<AdminUser>(
+        `/api/v1/admin/users/${userId}/tier`,
+        { tier },
+        AdminUserSchema
+      );
+      return result!;
+    },
+
+    /**
      * Get all users (admin only) - Issue #903
      * GET /api/v1/admin/users
      */
@@ -446,6 +459,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     /**
      * Get all users with pagination and filtering (admin only)
      * GET /api/v1/admin/users
+     * Issue #3698: Added tier filter parameter
      */
     async getUsers(params?: {
       page?: number;
@@ -453,6 +467,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       search?: string;
       role?: string;
       status?: string;
+      tier?: string;              // Issue #3698: Filter by tier
     }): Promise<PagedResult<AdminUser>> {
       const queryParams = new URLSearchParams();
       if (params?.page) queryParams.set('page', params.page.toString());
@@ -460,6 +475,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       if (params?.search) queryParams.set('search', params.search);
       if (params?.role && params.role !== 'all') queryParams.set('role', params.role);
       if (params?.status && params.status !== 'all') queryParams.set('status', params.status);
+      if (params?.tier && params.tier !== 'all') queryParams.set('tier', params.tier); // Issue #3698
 
       const query = queryParams.toString();
       const result = await httpClient.get<PagedResult<AdminUser>>(

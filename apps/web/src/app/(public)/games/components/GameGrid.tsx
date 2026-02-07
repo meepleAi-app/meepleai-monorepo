@@ -18,7 +18,7 @@ import React from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { GameCard } from '@/components/games/GameCard';
+import { MeepleGameCatalogCard } from '@/components/catalog/MeepleGameCatalogCard';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Game } from '@/lib/api';
 
@@ -75,7 +75,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {games.map(game => (
-          <GameCard
+          <MeepleGameCatalogCard
             key={game.id}
             game={game}
             variant="grid"
@@ -90,7 +90,7 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
   return (
     <div className="flex flex-col gap-4">
       {games.map(game => (
-        <GameCard
+        <MeepleGameCatalogCard
           key={game.id}
           game={game}
           variant="list"

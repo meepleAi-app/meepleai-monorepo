@@ -114,7 +114,7 @@ internal static class FeatureFlagSeeder
         return true;
     }
 
-    private record FeatureFlagSeedData(
+    private sealed record FeatureFlagSeedData(
         string FeatureName,
         string Description,
         bool GlobalEnabled,

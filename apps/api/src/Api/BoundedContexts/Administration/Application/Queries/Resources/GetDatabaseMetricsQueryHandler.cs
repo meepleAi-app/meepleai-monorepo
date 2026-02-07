@@ -92,13 +92,13 @@ internal class GetDatabaseMetricsQueryHandler : IQueryHandler<GetDatabaseMetrics
     }
 
     // Helper record for raw SQL query results
-    private record DatabaseStatsResult(
+    private sealed record DatabaseStatsResult(
         int ActiveConnections,
         long TransactionsCommitted,
         long TransactionsRolledBack
     );
 
-    private record MaxConnectionsResult(
+    private sealed record MaxConnectionsResult(
         string MaxConnections
     );
 }

@@ -493,6 +493,7 @@ v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)
 v1Api.MapProposalMigrationEndpoints(); // Proposal migrations (Issue #3666)
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
 v1Api.MapAdminAuditLogEndpoints();     // Issue #3691: Admin audit log system
+v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 v1Api.MapWorkflowEndpoints();          // n8n workflow integration
@@ -505,6 +506,7 @@ v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
 v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
 v1Api.MapBatchJobEndpoints();          // Batch job system & operations (Issue #3693)
 v1Api.MapBatchJobLogsEndpoints();      // Batch job real-time logs SSE (Issue #3693 Task 3)
+v1Api.MapAdminResourcesEndpoints();    // Resources monitoring (Issue #3695)
 v1Api.MapTierStrategyAdminEndpoints(); // Tier-strategy configuration (Issue #3440)
 v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
 v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations

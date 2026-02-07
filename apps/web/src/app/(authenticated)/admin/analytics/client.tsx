@@ -21,34 +21,11 @@ import { LoadingButton } from '@/components/loading/LoadingButton';
 import { api } from '@/lib/api';
 import { categorizeError } from '@/lib/errorUtils';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
-
-// Types
-type DashboardMetrics = {
-  totalUsers: number;
-  activeSessions: number;
-  apiRequestsToday: number;
-  totalPdfDocuments: number;
-  totalChatMessages: number;
-  averageConfidenceScore: number;
-  totalRagRequests: number;
-  totalTokensUsed: number;
-};
-
-type TimeSeriesDataPoint = {
-  date: string;
-  count: number;
-  averageValue?: number | null;
-};
-
-type DashboardStatsDto = {
-  metrics: DashboardMetrics;
-  userTrend: TimeSeriesDataPoint[];
-  sessionTrend: TimeSeriesDataPoint[];
-  apiRequestTrend: TimeSeriesDataPoint[];
-  pdfUploadTrend: TimeSeriesDataPoint[];
-  chatMessageTrend: TimeSeriesDataPoint[];
-  generatedAt: string;
-};
+import type {
+  DashboardStats,
+  DashboardMetrics,
+  TimeSeriesDataPoint,
+} from '@/lib/api/schemas/admin.schemas';
 
 type ToastMessage = {
   id: string;
@@ -60,7 +37,7 @@ export function AdminPageClient() {
   const { user, loading: authLoading } = useAuthUser();
 
   // State
-  const [stats, setStats] = useState<DashboardStatsDto | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -386,6 +363,33 @@ export function AdminPageClient() {
                   bgColor="bg-teal-50"
                   textColor="text-teal-700"
                 />
+                {/* Issue #3694: Extended KPIs */}
+                <MetricCard
+                  title="Token € Balance"
+                  value={`€${stats.metrics.tokenBalanceEur.toFixed(0)} / €${stats.metrics.tokenLimitEur.toFixed(0)}`}
+                  icon="💰"
+                  bgColor="bg-emerald-50"
+                  textColor="text-emerald-700"
+                  subtitle={`${((stats.metrics.tokenBalanceEur / stats.metrics.tokenLimitEur) * 100).toFixed(0)}% used`}
+                />
+                <MetricCard
+                  title="DB Storage"
+                  value={`${stats.metrics.dbStorageGb.toFixed(2)}GB / ${stats.metrics.dbStorageLimitGb.toFixed(0)}GB`}
+                  icon="💾"
+                  bgColor="bg-cyan-50"
+                  textColor="text-cyan-700"
+                  subtitle={`+${stats.metrics.dbGrowthMbPerDay.toFixed(0)}MB/day`}
+                />
+                <MetricCard
+                  title="Cache Hit Rate"
+                  value={`${stats.metrics.cacheHitRatePercent.toFixed(1)}%`}
+                  icon="⚡"
+                  bgColor="bg-lime-50"
+                  textColor="text-lime-700"
+                  subtitle={stats.metrics.cacheHitRateTrendPercent >= 0
+                    ? `+${stats.metrics.cacheHitRateTrendPercent.toFixed(1)}%`
+                    : `${stats.metrics.cacheHitRateTrendPercent.toFixed(1)}%`}
+                />
               </div>
 
               {/* Charts */}
@@ -443,12 +447,14 @@ function MetricCard({
   icon,
   bgColor,
   textColor,
+  subtitle,
 }: {
   title: string;
   value: string;
   icon: string;
   bgColor: string;
   textColor: string;
+  subtitle?: string;
 }) {
   return (
     <div className={`${bgColor} rounded-lg shadow p-6`}>
@@ -456,6 +462,7 @@ function MetricCard({
         <div>
           <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
           <p className={`text-3xl font-bold ${textColor}`}>{value}</p>
+          {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
         </div>
         <div className="text-4xl">{icon}</div>
       </div>

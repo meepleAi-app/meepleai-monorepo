@@ -13,7 +13,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useImpersonationStore } from '@/store/impersonation';
 
-import { UsersDataTable, type User as UsersTableUser, type UsersTableActions } from './_components';
+import { UsersDataTable, type User as UsersTableUser, type UsersTableActions, ChangeTierModal, type Tier } from './_components';
 
 // Types - use User from users-columns
 type User = UsersTableUser;
@@ -88,6 +88,9 @@ export function AdminPageClient() {
     newRole: 'User',
   });
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [tierModal, setTierModal] = useState<{ isOpen: boolean; user?: User }>({
+    isOpen: false,
+  }); // Issue #3699
 
   // Row selection conversion helpers
   const rowSelection = useMemo<RowSelectionState>(() =>
@@ -275,6 +278,21 @@ export function AdminPageClient() {
     [addToast, startImpersonation]
   );
 
+  // Change tier - Issue #3699
+  const handleChangeTier = useCallback(
+    async (userId: string, newTier: Tier) => {
+      try {
+        await api.admin.updateUserTier(userId, newTier);
+        addToast('success', 'User tier updated successfully');
+        fetchUsers(); // Refresh list
+      } catch (err) {
+        addToast('error', 'Failed to update user tier');
+        throw err; // Re-throw for modal to handle loading state
+      }
+    },
+    [addToast, fetchUsers]
+  );
+
   // Bulk delete
   const handleBulkDelete = useCallback(() => {
     if (selectedUsers.size === 0) return;
@@ -416,6 +434,7 @@ export function AdminPageClient() {
   // Table actions for UsersDataTable
   const tableActions: UsersTableActions = useMemo(() => ({
     onEdit: (user) => setModal({ isOpen: true, mode: 'edit', user }),
+    onChangeTier: (user) => setTierModal({ isOpen: true, user }), // Issue #3699
     onSuspend: (user) => handleSuspend(user.id, user.email),
     onUnsuspend: (user) => handleUnsuspend(user.id, user.email),
     onDelete: (user) => handleDelete(user.id, user.email),
@@ -641,6 +660,16 @@ export function AdminPageClient() {
             onClose={() => setModal({ isOpen: false, mode: 'create' })}
             onCreate={handleCreate}
             onUpdate={handleUpdate}
+          />
+        )}
+
+        {/* Change Tier Modal - Issue #3699 */}
+        {tierModal.isOpen && tierModal.user && (
+          <ChangeTierModal
+            isOpen={tierModal.isOpen}
+            user={tierModal.user}
+            onClose={() => setTierModal({ isOpen: false })}
+            onConfirm={handleChangeTier}
           />
         )}
 

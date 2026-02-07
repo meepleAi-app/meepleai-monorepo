@@ -1,7 +1,7 @@
 'use client';
 
 import { type ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, Eye, Edit, Ban, UserCheck, Trash2, UserCog } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Ban, UserCheck, Trash2, UserCog, Shield } from 'lucide-react';
 import Link from 'next/link';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/data-display/avatar';
@@ -47,6 +47,7 @@ export interface UsersTableActions {
   onUnsuspend?: (user: User) => void;
   onDelete?: (user: User) => void;
   onImpersonate?: (user: User) => void;
+  onChangeTier?: (user: User) => void; // Issue #3699
 }
 
 function getInitials(name: string): string {
@@ -257,6 +258,12 @@ export function createUsersColumns(actions?: UsersTableActions): ColumnDef<User>
                 <DropdownMenuItem onClick={() => actions.onEdit?.(user)}>
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
+                </DropdownMenuItem>
+              )}
+              {actions?.onChangeTier && (
+                <DropdownMenuItem onClick={() => actions.onChangeTier?.(user)}>
+                  <Shield className="mr-2 h-4 w-4" />
+                  Change Tier
                 </DropdownMenuItem>
               )}
               {actions?.onImpersonate && user.role !== 'Admin' && !user.isSuspended && (

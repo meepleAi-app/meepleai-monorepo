@@ -56,4 +56,12 @@ internal interface IQdrantClientAdapter
         string collectionName,
         Filter filter,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets detailed information about a specific collection.
+    /// Issue #3695: Resources Monitoring - Vector store metrics
+    /// </summary>
+    Task<CollectionInfo> GetCollectionInfoAsync(
+        string collectionName,
+        CancellationToken cancellationToken = default);
 }

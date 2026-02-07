@@ -116,24 +116,46 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
     // Use first API origin (server-side Docker network URL)
     const apiOrigins = getApiOrigins();
     const apiUrl = `${apiOrigins[0]}/api/v1/auth/me`;
+
+    // Issue #3797: Add AbortController with 5s timeout to prevent indefinite hangs
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     // eslint-disable-next-line no-console
     console.log(`[middleware] Validating session at ${apiUrl} with cookie: ${cookieHeader.substring(0, 50)}...`);
 
-    const response = await fetch(apiUrl, {
-      headers: {
-        cookie: cookieHeader,
-      },
-      credentials: 'include',
-      cache: 'no-store',
-    });
+    try {
+      const response = await fetch(apiUrl, {
+        headers: {
+          cookie: cookieHeader,
+        },
+        credentials: 'include',
+        cache: 'no-store',
+        signal: controller.signal, // Add abort signal for timeout
+      });
 
-    // eslint-disable-next-line no-console
-    console.log(`[middleware] Session validation response: ${response.status} ok=${response.ok}`);
-    cacheSessionValidation(cookieValue, response.ok);
-    return response.ok;
+      clearTimeout(timeoutId); // Clear timeout on success
+
+      // eslint-disable-next-line no-console
+      console.log(`[middleware] Session validation response: ${response.status} ok=${response.ok}`);
+      cacheSessionValidation(cookieValue, response.ok);
+      return response.ok;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+
+      // Specific handling for timeout vs other errors
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        console.error('[middleware] Session validation TIMEOUT after 5s');
+      } else {
+        console.error('[middleware] Session validation fetch error:', fetchError);
+      }
+
+      cacheSessionValidation(cookieValue, false);
+      return false;
+    }
   } catch (error) {
-    cacheSessionValidation(cookieValue, false);
     console.error('[middleware] Failed to validate session cookie:', error);
+    cacheSessionValidation(cookieValue, false);
     return false;
   }
 }

@@ -64,9 +64,9 @@ public class CacheMetricsQueryTests : IAsyncLifetime
         result.Should().NotBeNull();
         result.UsedMemoryBytes.Should().BeGreaterThan(0, "memory usage should be positive");
         result.UsedMemoryFormatted.Should().NotBeNullOrWhiteSpace();
-        result.TotalKeys.Should().BeGreaterOrEqualTo(3, "should have at least our test keys");
+        result.TotalKeys.Should().BeGreaterThanOrEqualTo(3, "should have at least our test keys");
         result.HitRate.Should().BeInRange(0, 1, "hit rate should be between 0 and 1");
-        result.MemoryUsagePercent.Should().BeGreaterOrEqualTo(0);
+        result.MemoryUsagePercent.Should().BeGreaterThanOrEqualTo(0);
         result.MeasuredAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
@@ -102,8 +102,8 @@ public class CacheMetricsQueryTests : IAsyncLifetime
         var result = await handler.Handle(query, CancellationToken.None).ConfigureAwait(false);
 
         // Assert
-        result.KeyspaceHits.Should().BeGreaterOrEqualTo(2, "should have at least our test hits");
-        result.KeyspaceMisses.Should().BeGreaterOrEqualTo(1, "should have at least our test miss");
+        result.KeyspaceHits.Should().BeGreaterThanOrEqualTo(2, "should have at least our test hits");
+        result.KeyspaceMisses.Should().BeGreaterThanOrEqualTo(1, "should have at least our test miss");
     }
 
     [Fact]

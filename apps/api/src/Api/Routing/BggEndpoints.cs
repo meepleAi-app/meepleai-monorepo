@@ -12,7 +12,7 @@ internal static class BggEndpoints
     public static RouteGroupBuilder MapBggEndpoints(this RouteGroupBuilder group)
     {
         // GET /api/v1/bgg/search?query={term}
-        group.MapGet("/search", async (
+        group.MapGet("/bgg/search", async (
             string query,
             IBggApiClient bggClient,
             CancellationToken cancellationToken) =>
@@ -33,7 +33,7 @@ internal static class BggEndpoints
         });
 
         // GET /api/v1/bgg/games/{bggId}
-        group.MapGet("/games/{bggId:int}", async (
+        group.MapGet("/bgg/games/{bggId:int}", async (
             int bggId,
             IBggApiClient bggClient,
             CancellationToken cancellationToken) =>

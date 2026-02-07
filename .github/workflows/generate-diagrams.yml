@@ -1,0 +1,126 @@
+name: Generate Diagram SVGs
+
+on:
+  push:
+    paths:
+      - 'docs/09-bounded-contexts/diagrams/**/*.mmd'
+  pull_request:
+    paths:
+      - 'docs/09-bounded-contexts/diagrams/**/*.mmd'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  generate-svgs:
+    name: Generate SVG Diagrams
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Mermaid CLI
+        run: npm install -g @mermaid-js/mermaid-cli
+
+      - name: Generate SVG files
+        id: generate
+        run: |
+          cd docs/09-bounded-contexts/diagrams
+          
+          echo "🎨 Generating SVG diagrams..."
+          generated=0; failed=0
+          
+          for file in $(find . -name "*.mmd" -type f); do
+            dir=$(dirname "$file")
+            base=$(basename "$file" .mmd)
+            output="$dir/$base.svg"
+            
+            if mmdc -i "$file" -o "$output" -b transparent >/dev/null 2>&1; then
+              echo "✓ $output"
+              generated=$((generated+1))
+            else
+              echo "✗ $file FAILED"
+              failed=$((failed+1))
+            fi
+          done
+          
+          echo "generated=$generated" >> $GITHUB_OUTPUT
+          echo "failed=$failed" >> $GITHUB_OUTPUT
+          
+          if [ $failed -gt 0 ]; then
+            echo "::error::Failed to generate $failed SVG files"
+            exit 1
+          fi
+
+      - name: Validate SVG files
+        id: validate
+        run: |
+          cd docs/09-bounded-contexts/diagrams
+          
+          total=$(find . -name "*.svg" -type f | wc -l)
+          oversized=0
+          
+          for file in $(find . -name "*.svg" -type f); do
+            size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null)
+            size_kb=$((size / 1024))
+            
+            if [ $size_kb -gt 500 ]; then
+              echo "⚠️  $file: ${size_kb}KB"
+              oversized=$((oversized+1))
+            fi
+          done
+          
+          echo "oversized=$oversized" >> $GITHUB_OUTPUT
+          
+          expected=43
+          if [ $total -ne $expected ]; then
+            echo "::error::Expected $expected but found $total"
+            exit 1
+          fi
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet docs/09-bounded-contexts/diagrams/; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            git diff --stat docs/09-bounded-contexts/diagrams/
+          fi
+
+      - name: Commit and push changes
+        if: steps.changes.outputs.changed == 'true' && github.event_name == 'push'
+        env:
+          GENERATED: ${{ steps.generate.outputs.generated }}
+          FAILED: ${{ steps.generate.outputs.failed }}
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          
+          git add docs/09-bounded-contexts/diagrams/**/*.svg
+          git commit -m "chore(diagrams): auto-generate $GENERATED SVG files [skip ci]"
+          git push
+
+      - name: Summary
+        if: always()
+        env:
+          GENERATED: ${{ steps.generate.outputs.generated }}
+          FAILED: ${{ steps.generate.outputs.failed }}
+          OVERSIZED: ${{ steps.validate.outputs.oversized }}
+          CHANGED: ${{ steps.changes.outputs.changed }}
+        run: |
+          {
+            echo "## 📊 Diagram Generation"
+            echo ""
+            echo "- ✅ Generated: $GENERATED SVG"
+            echo "- ❌ Failed: $FAILED files"
+            echo "- ⚠️  Oversized: $OVERSIZED (>500KB)"
+            echo "- 🔄 Changed: $CHANGED"
+          } >> $GITHUB_STEP_SUMMARY

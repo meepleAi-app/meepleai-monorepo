@@ -1,0 +1,99 @@
+erDiagram
+    Game ||--o{ GameSession : "has sessions"
+    Game ||--o{ RuleSpec : "has versions"
+    Game ||--o{ GameFaq : "has faqs"
+    GameSession ||--o{ SessionPlayer : "has players"
+    GameSession ||--o| GameSessionState : "has state"
+    GameSessionState ||--o{ GameStateSnapshot : "has snapshots"
+    RuleSpec ||--o{ RuleComment : "has comments"
+    RuleComment ||--o{ RuleComment : "has replies (self-ref)"
+    Game ||--o| EditorLock : "has lock"
+
+    Game {
+        Guid Id PK
+        string Title
+        string Publisher
+        int YearPublished
+        int MinPlayers
+        int MaxPlayers
+        int PlayingTimeMinutes
+        int BggId UK
+        Guid SharedGameId FK
+        bool IsPublished
+        string ApprovalStatus
+        DateTime PublishedAt
+    }
+
+    GameSession {
+        Guid Id PK
+        Guid GameId FK
+        Guid CreatedByUserId FK
+        string Status
+        DateTime StartedAt
+        DateTime CompletedAt
+        string WinnerName
+    }
+
+    SessionPlayer {
+        Guid Id PK
+        Guid GameSessionId FK
+        string PlayerName
+        int PlayerOrder
+        string Color
+    }
+
+    GameSessionState {
+        Guid Id PK
+        Guid GameSessionId FK
+        int CurrentTurn
+        string CurrentPhase
+        string StateData
+        DateTime LastUpdatedAt
+    }
+
+    GameStateSnapshot {
+        Guid Id PK
+        Guid GameSessionStateId FK
+        int TurnNumber
+        string Description
+        string StateData
+        DateTime CreatedAt
+    }
+
+    RuleSpec {
+        Guid Id PK
+        Guid GameId FK
+        int Version
+        string Content
+        Guid CreatedBy FK
+        bool IsCurrent
+        DateTime CreatedAt
+    }
+
+    RuleComment {
+        Guid Id PK
+        Guid RuleSpecId FK
+        Guid ParentCommentId FK
+        int LineNumber
+        string CommentText
+        Guid CreatedBy FK
+        bool IsResolved
+        DateTime CreatedAt
+    }
+
+    GameFaq {
+        Guid Id PK
+        Guid GameId FK
+        string Question
+        string Answer
+        int ViewCount
+        DateTime CreatedAt
+    }
+
+    EditorLock {
+        Guid Id PK
+        Guid GameId FK
+        Guid LockedBy FK
+        DateTime LockedAt
+        DateTime ExpiresAt
+    }

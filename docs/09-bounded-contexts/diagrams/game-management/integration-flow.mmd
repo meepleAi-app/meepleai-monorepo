@@ -1,0 +1,64 @@
+graph TB
+    subgraph GM["🎮 GameManagement Context"]
+        Game[Game Aggregate]
+        Session[GameSession Aggregate]
+        RuleSpec[RuleSpec Aggregate]
+    end
+
+    subgraph KB["🤖 KnowledgeBase Context"]
+        RAG[RAG System]
+        Agent[Agent Invocation]
+    end
+
+    subgraph UL["📚 UserLibrary Context"]
+        Collection[User Collections]
+    end
+
+    subgraph SGC["🌍 SharedGameCatalog Context"]
+        SharedGame[Shared Games]
+    end
+
+    subgraph DP["📄 DocumentProcessing Context"]
+        PDF[PDF Documents]
+    end
+
+    subgraph ST["📈 SessionTracking Context"]
+        Analytics[Session Analytics]
+    end
+
+    subgraph Admin["📊 Administration Context"]
+        Audit[Audit Logging]
+    end
+
+    %% Inbound - Others query GameManagement
+    KB -.->|Query Game Metadata| Game
+    UL -.->|Reference Games| Game
+    RAG -.->|Game Context| Game
+
+    %% Outbound - GameManagement uses others
+    Game -->|PublishGameEvent| SGC
+    Session -->|SessionCompletedEvent| UL
+    Session -->|StateUpdatedEvent| ST
+    RuleSpec -->|RuleSpecUpdatedEvent| KB
+    Session -.->|SuggestMove Query| Agent
+
+    %% Audit
+    Game -->|GameCreatedEvent| Audit
+    Session -->|SessionStartedEvent| Audit
+
+    %% Styling
+    classDef gmStyle fill:#fff4e6,stroke:#ff9800,stroke-width:2px
+    classDef kbStyle fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    classDef ulStyle fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef sgcStyle fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    classDef dpStyle fill:#fce4ec,stroke:#e91e63,stroke-width:2px
+    classDef stStyle fill:#f1f8e9,stroke:#8bc34a,stroke-width:2px
+    classDef adminStyle fill:#ede7f6,stroke:#673ab7,stroke-width:2px
+
+    class Game,Session,RuleSpec gmStyle
+    class RAG,Agent kbStyle
+    class Collection ulStyle
+    class SharedGame sgcStyle
+    class PDF dpStyle
+    class Analytics stStyle
+    class Audit adminStyle

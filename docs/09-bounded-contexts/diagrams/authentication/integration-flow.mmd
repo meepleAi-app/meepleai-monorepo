@@ -1,0 +1,53 @@
+graph TB
+    subgraph Auth["🔐 Authentication Context"]
+        User[User Aggregate]
+        Session[Session Entity]
+        ApiKey[ApiKey Entity]
+    end
+
+    subgraph Admin["📊 Administration Context"]
+        AuditLog[Audit Logging]
+        UserMgmt[User Management]
+        TokenTrack[Token Tracking]
+    end
+
+    subgraph UL["📚 UserLibrary Context"]
+        Library[User Collections]
+    end
+
+    subgraph ST["📈 SessionTracking Context"]
+        Activity[Session Analytics]
+    end
+
+    subgraph UN["🔔 UserNotifications Context"]
+        Notifications[Email Notifications]
+    end
+
+    %% Event-Driven Communication
+    User -->|UserCreatedEvent| AuditLog
+    User -->|UserLoggedInEvent| AuditLog
+    Session -->|SessionCreatedEvent| Activity
+    Session -->|SessionCreatedEvent| AuditLog
+    ApiKey -->|ApiKeyCreatedEvent| AuditLog
+    ApiKey -->|ApiKeyCreatedEvent| TokenTrack
+    User -->|PasswordChangedEvent| Notifications
+    User -->|AccountLockedEvent| Notifications
+    User -->|UserSuspendedEvent| Notifications
+
+    %% Direct Dependencies
+    Admin -.->|Query User Role| User
+    UL -.->|Require Auth| Session
+    ST -.->|Track Sessions| Session
+
+    %% Styling
+    classDef authStyle fill:#e1f5ff,stroke:#0066cc,stroke-width:2px
+    classDef adminStyle fill:#fff4e6,stroke:#ff9800,stroke-width:2px
+    classDef userStyle fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef trackStyle fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    classDef notifStyle fill:#fce4ec,stroke:#e91e63,stroke-width:2px
+
+    class User,Session,ApiKey authStyle
+    class AuditLog,UserMgmt,TokenTrack adminStyle
+    class Library userStyle
+    class Activity trackStyle
+    class Notifications notifStyle

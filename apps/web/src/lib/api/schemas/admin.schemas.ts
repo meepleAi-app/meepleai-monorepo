@@ -372,6 +372,14 @@ export const DashboardMetricsSchema = z.object({
   errorRate24h: z.number().min(0).max(1),
   activeAlerts: z.number().int().nonnegative(),
   resolvedAlerts: z.number().int().nonnegative(),
+  // Issue #3694: Extended KPIs for Enterprise Admin Dashboard
+  tokenBalanceEur: z.number().nonnegative(),
+  tokenLimitEur: z.number().nonnegative(),
+  dbStorageGb: z.number().nonnegative(),
+  dbStorageLimitGb: z.number().nonnegative(),
+  dbGrowthMbPerDay: z.number().nonnegative(),
+  cacheHitRatePercent: z.number().min(0).max(100),
+  cacheHitRateTrendPercent: z.number(),
 });
 
 export type DashboardMetrics = z.infer<typeof DashboardMetricsSchema>;

@@ -615,7 +615,15 @@ internal record DashboardMetrics(
     double AverageLatency7d,
     double ErrorRate24h,
     int ActiveAlerts,
-    int ResolvedAlerts
+    int ResolvedAlerts,
+    // Issue #3694: Extended KPIs for Enterprise Admin Dashboard
+    decimal TokenBalanceEur,
+    decimal TokenLimitEur,
+    decimal DbStorageGb,
+    decimal DbStorageLimitGb,
+    decimal DbGrowthMbPerDay,
+    double CacheHitRatePercent,
+    double CacheHitRateTrendPercent
 );
 
 internal record TimeSeriesDataPoint(

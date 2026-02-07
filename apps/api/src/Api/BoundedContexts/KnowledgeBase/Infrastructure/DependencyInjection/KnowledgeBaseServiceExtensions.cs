@@ -179,6 +179,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IAgentTestResultRepository, AgentTestResultRepository>(); // Issue #3379: Agent test results
         services.AddScoped<ITierStrategyAccessRepository, TierStrategyAccessRepository>(); // Issue #3436: Tier-Strategy access
         services.AddScoped<IStrategyModelMappingRepository, StrategyModelMappingRepository>(); // Issue #3435: Strategy-Model mapping
+        services.AddScoped<ICustomRagPipelineRepository, CustomRagPipelineRepository>(); // Issue #3120: Custom RAG pipeline management
         // Issue #3493: PostgreSQL Schema Extensions for Multi-Agent System
         services.AddScoped<IConversationMemoryRepository, ConversationMemoryRepository>();
         services.AddScoped<IAgentGameStateSnapshotRepository, AgentGameStateSnapshotRepository>();

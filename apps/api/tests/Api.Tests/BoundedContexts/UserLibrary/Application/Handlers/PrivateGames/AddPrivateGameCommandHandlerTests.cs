@@ -26,6 +26,7 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers.PrivateGame
 public sealed class AddPrivateGameCommandHandlerTests
 {
     private readonly Mock<IPrivateGameRepository> _privateGameRepositoryMock;
+    private readonly Mock<IUserLibraryRepository> _userLibraryRepositoryMock;
     private readonly Mock<ISharedGameRepository> _sharedGameRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<AddPrivateGameCommandHandler>> _loggerMock;
@@ -34,12 +35,14 @@ public sealed class AddPrivateGameCommandHandlerTests
     public AddPrivateGameCommandHandlerTests()
     {
         _privateGameRepositoryMock = new Mock<IPrivateGameRepository>();
+        _userLibraryRepositoryMock = new Mock<IUserLibraryRepository>();
         _sharedGameRepositoryMock = new Mock<ISharedGameRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<AddPrivateGameCommandHandler>>();
 
         _handler = new AddPrivateGameCommandHandler(
             _privateGameRepositoryMock.Object,
+            _userLibraryRepositoryMock.Object,
             _sharedGameRepositoryMock.Object,
             _unitOfWorkMock.Object,
             _loggerMock.Object);
@@ -54,11 +57,27 @@ public sealed class AddPrivateGameCommandHandlerTests
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new AddPrivateGameCommandHandler(
                 null!,
+                _userLibraryRepositoryMock.Object,
                 _sharedGameRepositoryMock.Object,
                 _unitOfWorkMock.Object,
                 _loggerMock.Object));
 
         exception.ParamName.Should().Be("privateGameRepository");
+    }
+
+    [Fact]
+    public void Constructor_NullUserLibraryRepository_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            new AddPrivateGameCommandHandler(
+                _privateGameRepositoryMock.Object,
+                null!,
+                _sharedGameRepositoryMock.Object,
+                _unitOfWorkMock.Object,
+                _loggerMock.Object));
+
+        exception.ParamName.Should().Be("userLibraryRepository");
     }
 
     [Fact]
@@ -68,6 +87,7 @@ public sealed class AddPrivateGameCommandHandlerTests
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new AddPrivateGameCommandHandler(
                 _privateGameRepositoryMock.Object,
+                _userLibraryRepositoryMock.Object,
                 null!,
                 _unitOfWorkMock.Object,
                 _loggerMock.Object));
@@ -82,6 +102,7 @@ public sealed class AddPrivateGameCommandHandlerTests
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new AddPrivateGameCommandHandler(
                 _privateGameRepositoryMock.Object,
+                _userLibraryRepositoryMock.Object,
                 _sharedGameRepositoryMock.Object,
                 null!,
                 _loggerMock.Object));
@@ -96,6 +117,7 @@ public sealed class AddPrivateGameCommandHandlerTests
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new AddPrivateGameCommandHandler(
                 _privateGameRepositoryMock.Object,
+                _userLibraryRepositoryMock.Object,
                 _sharedGameRepositoryMock.Object,
                 _unitOfWorkMock.Object,
                 null!));

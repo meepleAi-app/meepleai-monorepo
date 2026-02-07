@@ -25,6 +25,7 @@ internal class GameLabelEntityConfiguration : IEntityTypeConfiguration<GameLabel
             .HasMaxLength(7);
 
         builder.Property(e => e.IsPredefined)
+            .HasColumnName("is_predefined")
             .IsRequired()
             .HasDefaultValue(false);
 

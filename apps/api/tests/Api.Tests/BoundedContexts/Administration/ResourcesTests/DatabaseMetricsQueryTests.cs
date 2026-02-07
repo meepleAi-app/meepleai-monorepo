@@ -2,8 +2,10 @@ using Api.BoundedContexts.Administration.Application.Queries.Resources;
 using Api.Infrastructure;
 using Api.Models;
 using FluentAssertions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -25,7 +27,7 @@ public class DatabaseMetricsQueryTests : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         _postgres = new PostgreSqlBuilder()
-            .WithImage("postgres:16")
+            .WithImage("pgvector/pgvector:pg16")
             .WithDatabase("test_db")
             .WithUsername("test_user")
             .WithPassword("test_pass")
@@ -35,7 +37,11 @@ public class DatabaseMetricsQueryTests : IAsyncLifetime
 
         var services = new ServiceCollection();
         services.AddDbContext<MeepleAiDbContext>(options =>
-            options.UseNpgsql(_postgres.GetConnectionString()));
+            options.UseNpgsql(_postgres.GetConnectionString(), o => o.UseVector()));
+
+        // Mock dependencies required by MeepleAiDbContext
+        services.AddScoped<IMediator>(_ => Mock.Of<IMediator>());
+        services.AddScoped<Api.SharedKernel.Application.Services.IDomainEventCollector>(_ => Mock.Of<Api.SharedKernel.Application.Services.IDomainEventCollector>());
 
         _serviceProvider = services.BuildServiceProvider();
 

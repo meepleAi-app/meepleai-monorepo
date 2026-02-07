@@ -7,6 +7,7 @@ using Api.Infrastructure;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
@@ -33,6 +34,10 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
     public async ValueTask InitializeAsync()
     {
         _connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+
+        // Create schema from model (EnsureCreatedAsync works for isolated test databases)
+        using var dbContext = _fixture.CreateDbContext(_connectionString);
+        await dbContext.Database.EnsureCreatedAsync();
     }
 
     public async ValueTask DisposeAsync()

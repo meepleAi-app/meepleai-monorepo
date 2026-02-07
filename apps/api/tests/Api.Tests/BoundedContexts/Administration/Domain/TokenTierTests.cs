@@ -64,16 +64,17 @@ public sealed class TokenTierTests
     {
         // Arrange
         var tier = TokenTier.CreateFreeTier();
-        var originalUpdatedAt = tier.UpdatedAt;
+        tier.UpdatedAt.Should().BeNull("new tier should not have UpdatedAt set");
         var newLimits = TierLimits.BasicTier();
 
         // Act
+        var beforeUpdate = DateTime.UtcNow;
         Thread.Sleep(10); // Ensure timestamp difference
         tier.UpdateLimits(newLimits);
 
         // Assert
         tier.Limits.Should().Be(newLimits);
-        tier.UpdatedAt.Should().NotBeNull().And.BeAfter(originalUpdatedAt!.Value);
+        tier.UpdatedAt.Should().NotBeNull().And.BeOnOrAfter(beforeUpdate);
     }
 
     [Fact]
@@ -81,16 +82,17 @@ public sealed class TokenTierTests
     {
         // Arrange
         var tier = TokenTier.CreateFreeTier();
-        var originalUpdatedAt = tier.UpdatedAt;
+        tier.UpdatedAt.Should().BeNull("new tier should not have UpdatedAt set");
         var newPricing = TierPricing.BasicTier();
 
         // Act
+        var beforeUpdate = DateTime.UtcNow;
         Thread.Sleep(10); // Ensure timestamp difference
         tier.UpdatePricing(newPricing);
 
         // Assert
         tier.Pricing.Should().Be(newPricing);
-        tier.UpdatedAt.Should().NotBeNull().And.BeAfter(originalUpdatedAt!.Value);
+        tier.UpdatedAt.Should().NotBeNull().And.BeOnOrAfter(beforeUpdate);
     }
 
     [Fact]
@@ -98,15 +100,16 @@ public sealed class TokenTierTests
     {
         // Arrange
         var tier = TokenTier.CreateFreeTier();
-        var originalUpdatedAt = tier.UpdatedAt;
+        tier.UpdatedAt.Should().BeNull("new tier should not have UpdatedAt set");
 
         // Act
+        var beforeUpdate = DateTime.UtcNow;
         Thread.Sleep(10);
         tier.Deactivate();
 
         // Assert
         tier.IsActive.Should().BeFalse();
-        tier.UpdatedAt.Should().NotBeNull().And.BeAfter(originalUpdatedAt!.Value);
+        tier.UpdatedAt.Should().NotBeNull().And.BeOnOrAfter(beforeUpdate);
     }
 
     [Theory]

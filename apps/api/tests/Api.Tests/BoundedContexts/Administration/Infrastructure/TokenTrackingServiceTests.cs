@@ -39,6 +39,10 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     public async ValueTask InitializeAsync()
     {
         _connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+
+        // Create schema from model (EnsureCreatedAsync works for isolated test databases)
+        using var dbContext = _fixture.CreateDbContext(_connectionString);
+        await dbContext.Database.EnsureCreatedAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -144,17 +148,27 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
         var usageRepo = new UserTokenUsageRepository(dbContext);
         var mockCache = new Mock<IHybridCacheService>();
         var mockLogger = new Mock<ILogger<TokenTrackingService>>();
+
+        // Setup cache mock to bypass caching and execute the factory function
+        mockCache
+            .Setup(c => c.GetOrCreateAsync(
+                It.IsAny<string>(),
+                It.IsAny<Func<CancellationToken, Task<TokenLimitsCacheDto>>>(),
+                It.IsAny<string[]>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<string, Func<CancellationToken, Task<TokenLimitsCacheDto>>, string[]?, TimeSpan?, CancellationToken>(
+                async (key, factory, tags, expiration, ct) => await factory(ct));
+
         var service = new TokenTrackingService(usageRepo, tierRepo, mockLogger.Object, mockCache.Object);
 
         var freeTier = TokenTier.CreateFreeTier();
         await tierRepo.AddAsync(freeTier);
-        await dbContext.SaveChangesAsync();
 
         var userId = Guid.NewGuid();
         var usage = UserTokenUsage.Create(userId, freeTier.Id);
         usage.RecordUsage(5000, 2.5m);
         await usageRepo.AddAsync(usage);
-        await dbContext.SaveChangesAsync();
 
         // Act
         var (exceeded, remaining, isBlocked) = await service.CheckLimitsAsync(userId);

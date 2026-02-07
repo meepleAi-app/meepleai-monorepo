@@ -2,13 +2,17 @@ using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Enums;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Domain.Services;
+using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
+using Api.Infrastructure;
 using Api.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
@@ -20,26 +24,46 @@ namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]
-public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontainersFixture>
+public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontainersFixture>, IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
+    private readonly string _databaseName;
+    private string? _connectionString;
 
     public TokenTrackingServiceTests(SharedTestcontainersFixture fixture)
     {
         _fixture = fixture;
+        _databaseName = $"test_token_tracking_{Guid.NewGuid():N}";
+    }
+
+    public async ValueTask InitializeAsync()
+    {
+        _connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!string.IsNullOrEmpty(_databaseName))
+        {
+            await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+        }
     }
 
     [Fact]
     public async Task TrackUsageAsync_ForNewUser_ShouldCreateUsageRecord()
     {
         // Arrange
-        await using var scope = _fixture.CreateScope();
-        var service = scope.ServiceProvider.GetRequiredService<ITokenTrackingService>();
-        var tierRepo = scope.ServiceProvider.GetRequiredService<ITokenTierRepository>();
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
+        var tierRepo = new TokenTierRepository(dbContext);
+        var usageRepo = new UserTokenUsageRepository(dbContext);
+        var mockCache = new Mock<IHybridCacheService>();
+        var mockLogger = new Mock<ILogger<TokenTrackingService>>();
+        var service = new TokenTrackingService(usageRepo, tierRepo, mockLogger.Object, mockCache.Object);
 
         // Ensure Free tier exists
         var freeTier = TokenTier.CreateFreeTier();
         await tierRepo.AddAsync(freeTier);
+        await dbContext.SaveChangesAsync();
 
         var userId = Guid.NewGuid();
 
@@ -55,17 +79,21 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     public async Task TrackUsageAsync_At80Percent_ShouldLogWarning()
     {
         // Arrange
-        await using var scope = _fixture.CreateScope();
-        var service = scope.ServiceProvider.GetRequiredService<ITokenTrackingService>();
-        var usageRepo = scope.ServiceProvider.GetRequiredService<IUserTokenUsageRepository>();
-        var tierRepo = scope.ServiceProvider.GetRequiredService<ITokenTierRepository>();
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
+        var tierRepo = new TokenTierRepository(dbContext);
+        var usageRepo = new UserTokenUsageRepository(dbContext);
+        var mockCache = new Mock<IHybridCacheService>();
+        var mockLogger = new Mock<ILogger<TokenTrackingService>>();
+        var service = new TokenTrackingService(usageRepo, tierRepo, mockLogger.Object, mockCache.Object);
 
         var freeTier = TokenTier.CreateFreeTier();
         await tierRepo.AddAsync(freeTier);
+        await dbContext.SaveChangesAsync();
 
         var userId = Guid.NewGuid();
         var usage = UserTokenUsage.Create(userId, freeTier.Id);
         await usageRepo.AddAsync(usage);
+        await dbContext.SaveChangesAsync();
 
         // Act - Reach 80% (8000/10000)
         await service.TrackUsageAsync(userId, 8000, 4m);
@@ -80,17 +108,21 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     public async Task TrackUsageAsync_At100Percent_ShouldBlockUser()
     {
         // Arrange
-        await using var scope = _fixture.CreateScope();
-        var service = scope.ServiceProvider.GetRequiredService<ITokenTrackingService>();
-        var usageRepo = scope.ServiceProvider.GetRequiredService<IUserTokenUsageRepository>();
-        var tierRepo = scope.ServiceProvider.GetRequiredService<ITokenTierRepository>();
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
+        var tierRepo = new TokenTierRepository(dbContext);
+        var usageRepo = new UserTokenUsageRepository(dbContext);
+        var mockCache = new Mock<IHybridCacheService>();
+        var mockLogger = new Mock<ILogger<TokenTrackingService>>();
+        var service = new TokenTrackingService(usageRepo, tierRepo, mockLogger.Object, mockCache.Object);
 
         var freeTier = TokenTier.CreateFreeTier();
         await tierRepo.AddAsync(freeTier);
+        await dbContext.SaveChangesAsync();
 
         var userId = Guid.NewGuid();
         var usage = UserTokenUsage.Create(userId, freeTier.Id);
         await usageRepo.AddAsync(usage);
+        await dbContext.SaveChangesAsync();
 
         // Act - Reach 100% (10000/10000)
         var (exceeded, remaining) = await service.TrackUsageAsync(userId, 10000, 5m);
@@ -107,18 +139,22 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     public async Task CheckLimitsAsync_ForUserBelowLimit_ShouldReturnNotExceeded()
     {
         // Arrange
-        await using var scope = _fixture.CreateScope();
-        var service = scope.ServiceProvider.GetRequiredService<ITokenTrackingService>();
-        var usageRepo = scope.ServiceProvider.GetRequiredService<IUserTokenUsageRepository>();
-        var tierRepo = scope.ServiceProvider.GetRequiredService<ITokenTierRepository>();
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
+        var tierRepo = new TokenTierRepository(dbContext);
+        var usageRepo = new UserTokenUsageRepository(dbContext);
+        var mockCache = new Mock<IHybridCacheService>();
+        var mockLogger = new Mock<ILogger<TokenTrackingService>>();
+        var service = new TokenTrackingService(usageRepo, tierRepo, mockLogger.Object, mockCache.Object);
 
         var freeTier = TokenTier.CreateFreeTier();
         await tierRepo.AddAsync(freeTier);
+        await dbContext.SaveChangesAsync();
 
         var userId = Guid.NewGuid();
         var usage = UserTokenUsage.Create(userId, freeTier.Id);
         usage.RecordUsage(5000, 2.5m);
         await usageRepo.AddAsync(usage);
+        await dbContext.SaveChangesAsync();
 
         // Act
         var (exceeded, remaining, isBlocked) = await service.CheckLimitsAsync(userId);
@@ -133,18 +169,22 @@ public sealed class TokenTrackingServiceTests : IClassFixture<SharedTestcontaine
     public async Task ResetMonthlyUsageAsync_ShouldClearUsageCounters()
     {
         // Arrange
-        await using var scope = _fixture.CreateScope();
-        var service = scope.ServiceProvider.GetRequiredService<ITokenTrackingService>();
-        var usageRepo = scope.ServiceProvider.GetRequiredService<IUserTokenUsageRepository>();
-        var tierRepo = scope.ServiceProvider.GetRequiredService<ITokenTierRepository>();
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
+        var tierRepo = new TokenTierRepository(dbContext);
+        var usageRepo = new UserTokenUsageRepository(dbContext);
+        var mockCache = new Mock<IHybridCacheService>();
+        var mockLogger = new Mock<ILogger<TokenTrackingService>>();
+        var service = new TokenTrackingService(usageRepo, tierRepo, mockLogger.Object, mockCache.Object);
 
         var freeTier = TokenTier.CreateFreeTier();
         await tierRepo.AddAsync(freeTier);
+        await dbContext.SaveChangesAsync();
 
         var userId = Guid.NewGuid();
         var usage = UserTokenUsage.Create(userId, freeTier.Id);
         usage.RecordUsage(8000, 4m);
         await usageRepo.AddAsync(usage);
+        await dbContext.SaveChangesAsync();
 
         // Act
         await service.ResetMonthlyUsageAsync(userId);

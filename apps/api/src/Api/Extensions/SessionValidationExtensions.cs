@@ -252,4 +252,15 @@ internal static class SessionValidationExtensions
 
         return (true, session, null);
     }
+
+    /// <summary>
+    /// Combined validation: Gets active session and validates SuperAdmin role in one call.
+    /// Issue #3696: Operations - Service Control Panel.
+    /// Used for critical operations (restart service, impersonate user).
+    /// </summary>
+    public static (bool IsAuthorized, SessionStatusDto Session, IResult? ErrorResult)
+        RequireSuperAdminSession(this HttpContext context)
+    {
+        return context.RequireSessionWithRole(UserRole.SuperAdmin);
+    }
 }

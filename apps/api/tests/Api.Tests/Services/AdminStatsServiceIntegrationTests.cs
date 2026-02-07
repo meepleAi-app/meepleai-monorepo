@@ -149,6 +149,7 @@ public sealed class AdminStatsServiceIntegrationTests : IDisposable
     private readonly MeepleAiDbContext _dbContext;
     private readonly FakeHybridCache _cache;
     private readonly Mock<ILogger<AdminStatsService>> _mockLogger;
+    private readonly Mock<IResourceMetricsService> _mockResourceMetrics;
     private readonly AdminStatsService _service;
     private readonly TimeProvider _timeProvider;
 
@@ -164,10 +165,20 @@ public sealed class AdminStatsServiceIntegrationTests : IDisposable
         // Use System TimeProvider (consider FakeTimeProvider for deterministic time-based tests)
         _timeProvider = TimeProvider.System;
 
+        // Issue #3694: Mock IResourceMetricsService for extended KPIs
+        _mockResourceMetrics = new Mock<IResourceMetricsService>();
+        _mockResourceMetrics.Setup(m => m.GetTokenBalanceAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((450m, 1000m));
+        _mockResourceMetrics.Setup(m => m.GetDatabaseMetricsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((2.3m, 10m, 50m));
+        _mockResourceMetrics.Setup(m => m.GetCacheHitRateAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((94.2, 2.1));
+
         _service = new AdminStatsService(
             _dbContext,
             _cache,
             _mockLogger.Object,
+            _mockResourceMetrics.Object,
             _timeProvider);
     }
 

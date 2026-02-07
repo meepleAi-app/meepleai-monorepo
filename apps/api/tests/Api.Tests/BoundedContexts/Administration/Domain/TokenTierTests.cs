@@ -73,7 +73,7 @@ public sealed class TokenTierTests
 
         // Assert
         tier.Limits.Should().Be(newLimits);
-        tier.UpdatedAt.Should().BeAfter(originalUpdatedAt);
+        tier.UpdatedAt.Should().NotBeNull().And.BeAfter(originalUpdatedAt!.Value);
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public sealed class TokenTierTests
 
         // Assert
         tier.Pricing.Should().Be(newPricing);
-        tier.UpdatedAt.Should().BeAfter(originalUpdatedAt);
+        tier.UpdatedAt.Should().NotBeNull().And.BeAfter(originalUpdatedAt!.Value);
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public sealed class TokenTierTests
 
         // Assert
         tier.IsActive.Should().BeFalse();
-        tier.UpdatedAt.Should().BeAfter(originalUpdatedAt);
+        tier.UpdatedAt.Should().NotBeNull().And.BeAfter(originalUpdatedAt!.Value);
     }
 
     [Theory]

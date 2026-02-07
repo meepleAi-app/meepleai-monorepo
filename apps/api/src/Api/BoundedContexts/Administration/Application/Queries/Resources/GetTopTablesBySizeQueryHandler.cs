@@ -69,7 +69,7 @@ internal class GetTopTablesBySizeQueryHandler : IQueryHandler<GetTopTablesBySize
     }
 
     // Helper record for raw SQL query results
-    private record TableSizeResult(
+    private sealed record TableSizeResult(
         string TableName,
         long TotalSizeBytes,
         long SizeBytes,

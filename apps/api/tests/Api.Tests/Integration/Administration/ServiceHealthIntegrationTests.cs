@@ -102,7 +102,7 @@ public sealed class ServiceHealthIntegrationTests : IAsyncLifetime
         result.Should().NotBeNull();
         result.OverallStatus.Should().Be("Healthy");
         result.Services.Should().NotBeNull();
-        result.Services.Should().HaveCountGreaterOrEqualTo(2);
+        result.Services.Should().HaveCountGreaterThanOrEqualTo(2);
         result.Services.Should().Contain(s => s.ServiceName == "PostgreSQL" && s.Status == "Healthy");
         result.Services.Should().Contain(s => s.ServiceName == "Redis" && s.Status == "Healthy");
     }

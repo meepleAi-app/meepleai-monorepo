@@ -121,7 +121,7 @@ public sealed class BatchJobProcessorIntegrationTests : IAsyncLifetime
         runningJob.StartedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
 
         // Act - Complete
-        runningJob.Complete("Job finished successfully");
+        runningJob.Complete(resultData: null, resultSummary: "Job finished successfully", outputFileUrl: null);
         await _repository.UpdateAsync(runningJob, TestCancellationToken);
         await _unitOfWork.SaveChangesAsync(TestCancellationToken);
 
@@ -206,7 +206,7 @@ public sealed class BatchJobProcessorIntegrationTests : IAsyncLifetime
         runningJob.Start();
         var completedJob = BatchJob.Create(JobType.CostAnalysis, "{}", TestCreatedBy);
         completedJob.Start();
-        completedJob.Complete("Done");
+        completedJob.Complete(resultData: null, resultSummary: "Done", outputFileUrl: null);
 
         await _repository!.AddAsync(pendingJob1, TestCancellationToken);
         await _repository.AddAsync(pendingJob2, TestCancellationToken);

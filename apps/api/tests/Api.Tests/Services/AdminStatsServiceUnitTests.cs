@@ -31,6 +31,7 @@ public class AdminStatsServiceUnitTests : IDisposable
     private readonly FakeHybridCache _cache;
     private readonly Mock<ILogger<AdminStatsService>> _mockLogger;
     private readonly FakeTimeProvider _timeProvider;
+    private readonly Mock<IResourceMetricsService> _mockResourceMetrics;
     private readonly AdminStatsService _service;
 
     public AdminStatsServiceUnitTests()
@@ -51,10 +52,20 @@ public class AdminStatsServiceUnitTests : IDisposable
         _timeProvider = new FakeTimeProvider();
         _timeProvider.SetUtcNow(new DateTimeOffset(2024, 6, 15, 12, 0, 0, TimeSpan.Zero));
 
+        // Issue #3694: Mock IResourceMetricsService for extended KPIs
+        _mockResourceMetrics = new Mock<IResourceMetricsService>();
+        _mockResourceMetrics.Setup(m => m.GetTokenBalanceAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((450m, 1000m));
+        _mockResourceMetrics.Setup(m => m.GetDatabaseMetricsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((2.3m, 10m, 50m));
+        _mockResourceMetrics.Setup(m => m.GetCacheHitRateAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((94.2, 2.1));
+
         _service = new AdminStatsService(
             _dbContext,
             _cache,
             _mockLogger.Object,
+            _mockResourceMetrics.Object,
             _timeProvider);
     }
 

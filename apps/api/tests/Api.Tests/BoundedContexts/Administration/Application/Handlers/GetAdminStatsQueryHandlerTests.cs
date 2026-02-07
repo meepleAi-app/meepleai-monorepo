@@ -50,7 +50,15 @@ public class GetAdminStatsQueryHandlerTests
                 AverageLatency7d: 215.0,
                 ErrorRate24h: 0.05,
                 ActiveAlerts: 2,
-                ResolvedAlerts: 15
+                ResolvedAlerts: 15,
+                // Issue #3694: Extended KPIs
+                TokenBalanceEur: 450m,
+                TokenLimitEur: 1000m,
+                DbStorageGb: 2.3m,
+                DbStorageLimitGb: 10m,
+                DbGrowthMbPerDay: 50m,
+                CacheHitRatePercent: 94.2,
+                CacheHitRateTrendPercent: 2.1
             ),
             UserTrend: new List<TimeSeriesDataPoint>(),
             SessionTrend: new List<TimeSeriesDataPoint>(),
@@ -107,7 +115,15 @@ public class GetAdminStatsQueryHandlerTests
                 AverageLatency7d: 0.0,
                 ErrorRate24h: 0.0,
                 ActiveAlerts: 0,
-                ResolvedAlerts: 0
+                ResolvedAlerts: 0,
+                // Issue #3694: Extended KPIs
+                TokenBalanceEur: 450m,
+                TokenLimitEur: 1000m,
+                DbStorageGb: 2.3m,
+                DbStorageLimitGb: 10m,
+                DbGrowthMbPerDay: 50m,
+                CacheHitRatePercent: 94.2,
+                CacheHitRateTrendPercent: 2.1
             ),
             UserTrend: new List<TimeSeriesDataPoint>(),
             SessionTrend: new List<TimeSeriesDataPoint>(),
@@ -159,7 +175,15 @@ public class GetAdminStatsQueryHandlerTests
                 AverageLatency7d: 190.0,
                 ErrorRate24h: 0.02,
                 ActiveAlerts: 0,
-                ResolvedAlerts: 5
+                ResolvedAlerts: 5,
+                // Issue #3694: Extended KPIs
+                TokenBalanceEur: 450m,
+                TokenLimitEur: 1000m,
+                DbStorageGb: 2.3m,
+                DbStorageLimitGb: 10m,
+                DbGrowthMbPerDay: 50m,
+                CacheHitRatePercent: 94.2,
+                CacheHitRateTrendPercent: 2.1
             ),
             UserTrend: new List<TimeSeriesDataPoint>(),
             SessionTrend: new List<TimeSeriesDataPoint>(),
@@ -212,7 +236,15 @@ public class GetAdminStatsQueryHandlerTests
                 AverageLatency7d: 0.0,
                 ErrorRate24h: 0.0,
                 ActiveAlerts: 0,
-                ResolvedAlerts: 0
+                ResolvedAlerts: 0,
+                // Issue #3694: Extended KPIs
+                TokenBalanceEur: 450m,
+                TokenLimitEur: 1000m,
+                DbStorageGb: 2.3m,
+                DbStorageLimitGb: 10m,
+                DbGrowthMbPerDay: 50m,
+                CacheHitRatePercent: 94.2,
+                CacheHitRateTrendPercent: 2.1
             ),
             UserTrend: new List<TimeSeriesDataPoint>(),
             SessionTrend: new List<TimeSeriesDataPoint>(),
@@ -269,7 +301,15 @@ public class GetAdminStatsQueryHandlerTests
                 AverageLatency7d: 0.0,
                 ErrorRate24h: 0.0,
                 ActiveAlerts: 0,
-                ResolvedAlerts: 0
+                ResolvedAlerts: 0,
+                // Issue #3694: Extended KPIs
+                TokenBalanceEur: 450m,
+                TokenLimitEur: 1000m,
+                DbStorageGb: 2.3m,
+                DbStorageLimitGb: 10m,
+                DbGrowthMbPerDay: 50m,
+                CacheHitRatePercent: 94.2,
+                CacheHitRateTrendPercent: 2.1
             ),
             UserTrend: new List<TimeSeriesDataPoint>(),
             SessionTrend: new List<TimeSeriesDataPoint>(),
@@ -332,7 +372,15 @@ public class GetAdminStatsQueryHandlerTests
                 AverageLatency7d: 0.0,
                 ErrorRate24h: 0.0,
                 ActiveAlerts: 0,
-                ResolvedAlerts: 0
+                ResolvedAlerts: 0,
+                // Issue #3694: Extended KPIs
+                TokenBalanceEur: 450m,
+                TokenLimitEur: 1000m,
+                DbStorageGb: 2.3m,
+                DbStorageLimitGb: 10m,
+                DbGrowthMbPerDay: 50m,
+                CacheHitRatePercent: 94.2,
+                CacheHitRateTrendPercent: 2.1
             ),
             UserTrend: new List<TimeSeriesDataPoint>(),
             SessionTrend: new List<TimeSeriesDataPoint>(),
@@ -478,7 +526,15 @@ public class GetAdminStatsQueryHandlerTests
                 AverageLatency7d: 195.7,
                 ErrorRate24h: 0.015,
                 ActiveAlerts: 3,
-                ResolvedAlerts: 25
+                ResolvedAlerts: 25,
+                // Issue #3694: Extended KPIs
+                TokenBalanceEur: 450m,
+                TokenLimitEur: 1000m,
+                DbStorageGb: 2.3m,
+                DbStorageLimitGb: 10m,
+                DbGrowthMbPerDay: 50m,
+                CacheHitRatePercent: 94.2,
+                CacheHitRateTrendPercent: 2.1
             ),
             UserTrend: timeSeriesData,
             SessionTrend: timeSeriesData,
@@ -547,7 +603,15 @@ public class GetAdminStatsQueryHandlerTests
                 AverageLatency7d: 0.0,
                 ErrorRate24h: 0.0,
                 ActiveAlerts: 0,
-                ResolvedAlerts: 0
+                ResolvedAlerts: 0,
+                // Issue #3694: Extended KPIs
+                TokenBalanceEur: 450m,
+                TokenLimitEur: 1000m,
+                DbStorageGb: 2.3m,
+                DbStorageLimitGb: 10m,
+                DbGrowthMbPerDay: 50m,
+                CacheHitRatePercent: 94.2,
+                CacheHitRateTrendPercent: 2.1
             ),
             UserTrend: new List<TimeSeriesDataPoint>(),
             SessionTrend: new List<TimeSeriesDataPoint>(),

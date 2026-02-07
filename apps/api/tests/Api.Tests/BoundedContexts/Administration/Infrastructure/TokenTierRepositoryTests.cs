@@ -7,7 +7,6 @@ using Api.Infrastructure;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
@@ -19,25 +18,42 @@ namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]
-public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainersFixture>
+public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainersFixture>, IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
+    private readonly string _databaseName;
+    private string? _connectionString;
 
     public TokenTierRepositoryTests(SharedTestcontainersFixture fixture)
     {
         _fixture = fixture;
+        _databaseName = $"test_token_tier_{Guid.NewGuid():N}";
+    }
+
+    public async ValueTask InitializeAsync()
+    {
+        _connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!string.IsNullOrEmpty(_databaseName))
+        {
+            await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+        }
     }
 
     [Fact]
     public async Task AddAsync_WithValidTier_ShouldPersistToDatabase()
     {
         // Arrange
-        await using var scope = _fixture.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<ITokenTierRepository>();
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
+        var repository = new TokenTierRepository(dbContext);
         var tier = TokenTier.CreateFreeTier();
 
         // Act
         await repository.AddAsync(tier);
+        await dbContext.SaveChangesAsync();
 
         // Assert
         var retrieved = await repository.GetByIdAsync(tier.Id);
@@ -49,30 +65,32 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
     public async Task GetAllTiersAsync_WithMultipleTiers_ShouldReturnAll()
     {
         // Arrange
-        await using var scope = _fixture.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<ITokenTierRepository>();
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
+        var repository = new TokenTierRepository(dbContext);
         await repository.AddAsync(TokenTier.CreateFreeTier());
         await repository.AddAsync(TokenTier.CreateBasicTier());
+        await dbContext.SaveChangesAsync();
 
         // Act
         var tiers = await repository.GetAllTiersAsync();
 
         // Assert
-        tiers.Should().HaveCountGreaterOrEqualTo(2);
+        tiers.Should().HaveCountGreaterThanOrEqualTo(2);
     }
 
     [Fact]
     public async Task GetActiveTiersAsync_WithInactiveTier_ShouldReturnOnlyActive()
     {
         // Arrange
-        await using var scope = _fixture.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<ITokenTierRepository>();
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
+        var repository = new TokenTierRepository(dbContext);
         var activeTier = TokenTier.CreateFreeTier();
         var inactiveTier = TokenTier.CreateBasicTier();
         inactiveTier.Deactivate();
 
         await repository.AddAsync(activeTier);
         await repository.AddAsync(inactiveTier);
+        await dbContext.SaveChangesAsync();
 
         // Act
         var activeTiers = await repository.GetAllActiveAsync();
@@ -86,16 +104,18 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
     public async Task UpdateAsync_WithModifiedLimits_ShouldPersistChanges()
     {
         // Arrange
-        await using var scope = _fixture.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<ITokenTierRepository>();
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
+        var repository = new TokenTierRepository(dbContext);
         var tier = TokenTier.CreateFreeTier();
         await repository.AddAsync(tier);
+        await dbContext.SaveChangesAsync();
 
         var newLimits = TierLimits.Create(15000, 750, 50, 30, 10, 2);
         tier.UpdateLimits(newLimits);
 
         // Act
         await repository.UpdateAsync(tier);
+        await dbContext.SaveChangesAsync();
 
         // Assert
         var updated = await repository.GetByIdAsync(tier.Id);
@@ -106,13 +126,15 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
     public async Task DeleteAsync_ShouldSoftDeleteTier()
     {
         // Arrange
-        await using var scope = _fixture.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<ITokenTierRepository>();
+        using var dbContext = _fixture.CreateDbContext(_connectionString!);
+        var repository = new TokenTierRepository(dbContext);
         var tier = TokenTier.CreateFreeTier();
         await repository.AddAsync(tier);
+        await dbContext.SaveChangesAsync();
 
         // Act
         await repository.DeleteAsync(tier.Id);
+        await dbContext.SaveChangesAsync();
 
         // Assert
         var allTiers = await repository.GetAllTiersAsync();

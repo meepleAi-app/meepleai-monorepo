@@ -19,17 +19,20 @@ namespace Api.BoundedContexts.UserLibrary.Application.Handlers.PrivateGames;
 internal sealed class AddPrivateGameCommandHandler : ICommandHandler<AddPrivateGameCommand, PrivateGameDto>
 {
     private readonly IPrivateGameRepository _privateGameRepository;
+    private readonly IUserLibraryRepository _userLibraryRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AddPrivateGameCommandHandler> _logger;
 
     public AddPrivateGameCommandHandler(
         IPrivateGameRepository privateGameRepository,
+        IUserLibraryRepository userLibraryRepository,
         ISharedGameRepository sharedGameRepository,
         IUnitOfWork unitOfWork,
         ILogger<AddPrivateGameCommandHandler> logger)
     {
         _privateGameRepository = privateGameRepository ?? throw new ArgumentNullException(nameof(privateGameRepository));
+        _userLibraryRepository = userLibraryRepository ?? throw new ArgumentNullException(nameof(userLibraryRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -127,7 +130,17 @@ internal sealed class AddPrivateGameCommandHandler : ICommandHandler<AddPrivateG
         }
 
         await _privateGameRepository.AddAsync(privateGame, cancellationToken).ConfigureAwait(false);
+
+        // Create UserLibraryEntry to link the private game to user's library
+        var libraryEntry = new UserLibraryEntry(Guid.NewGuid(), command.UserId, privateGame.Id);
+        await _userLibraryRepository.AddAsync(libraryEntry, cancellationToken).ConfigureAwait(false);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Added private game {PrivateGameId} to library for user {UserId}",
+            privateGame.Id,
+            command.UserId);
 
         return MapToDto(privateGame);
     }

@@ -28,13 +28,9 @@
 import { NextResponse } from 'next/server';
 
 import type { NextRequest } from 'next/server';
-import {
-  recordCacheHit,
-  recordCacheMiss,
-  recordValidationFailure,
-  recordValidationSuccess,
-  recordValidationTimeout,
-} from './src/lib/metrics/session-cache-metrics';
+
+// Issue #3797: Import metrics manager (works in Edge Runtime)
+import * as metrics from '@/lib/metrics/session-cache-metrics';
 
 // ============================================================================
 // Configuration
@@ -106,7 +102,7 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
   const cached = sessionValidationCache.get(cookieValue);
   if (cached && cached.expiresAt > Date.now()) {
     // Metrics: Cache hit
-    recordCacheHit();
+    metrics.recordCacheHit();
 
     // Debug logging for session validation (use warn which is allowed by ESLint)
     // eslint-disable-next-line no-console
@@ -115,7 +111,7 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
   }
 
   // Metrics: Cache miss
-  recordCacheMiss();
+  metrics.recordCacheMiss();
 
   const cookieHeader = request.headers.get('cookie');
   if (!cookieHeader) {
@@ -151,9 +147,9 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
 
       // Metrics: Validation success or failure
       if (response.ok) {
-        recordValidationSuccess();
+        metrics.recordValidationSuccess();
       } else {
-        recordValidationFailure();
+        metrics.recordValidationFailure();
       }
 
       // eslint-disable-next-line no-console
@@ -165,10 +161,10 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
 
       // Metrics: Track timeout vs other errors
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        recordValidationTimeout();
+        metrics.recordValidationTimeout();
         console.error('[middleware] Session validation TIMEOUT after 5s');
       } else {
-        recordValidationFailure();
+        metrics.recordValidationFailure();
         console.error('[middleware] Session validation fetch error:', fetchError);
       }
 

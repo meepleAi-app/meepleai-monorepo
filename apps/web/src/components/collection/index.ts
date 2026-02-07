@@ -12,7 +12,7 @@ export { CollectionDashboard, type CollectionDashboardProps, type ViewMode, type
 export { CollectionGrid } from './CollectionGrid';
 
 // Cards
-export { MeepleCard } from './MeepleCard';
+// MeepleCard removed - use @/components/ui/data-display/meeple-card instead
 
 // Stats
 export { CollectionStats } from './CollectionStats';

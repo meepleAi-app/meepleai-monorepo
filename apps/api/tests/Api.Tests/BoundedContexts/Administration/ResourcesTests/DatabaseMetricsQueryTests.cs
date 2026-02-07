@@ -75,9 +75,9 @@ public class DatabaseMetricsQueryTests : IAsyncLifetime
         result.SizeBytes.Should().BeGreaterThan(0, "database size should be positive");
         result.SizeFormatted.Should().NotBeNullOrWhiteSpace();
         result.MaxConnections.Should().BeGreaterThan(0);
-        result.ActiveConnections.Should().BeGreaterOrEqualTo(0);
-        result.TransactionsCommitted.Should().BeGreaterOrEqualTo(0);
-        result.TransactionsRolledBack.Should().BeGreaterOrEqualTo(0);
+        result.ActiveConnections.Should().BeGreaterThanOrEqualTo(0);
+        result.TransactionsCommitted.Should().BeGreaterThanOrEqualTo(0);
+        result.TransactionsRolledBack.Should().BeGreaterThanOrEqualTo(0);
         result.MeasuredAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 

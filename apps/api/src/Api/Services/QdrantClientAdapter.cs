@@ -184,4 +184,11 @@ internal class QdrantClientAdapter : IQdrantClientAdapter
     {
         return _client.DeleteAsync(collectionName, filter, cancellationToken: cancellationToken);
     }
+
+    public Task<CollectionInfo> GetCollectionInfoAsync(
+        string collectionName,
+        CancellationToken cancellationToken = default)
+    {
+        return _client.GetCollectionInfoAsync(collectionName, cancellationToken: cancellationToken);
+    }
 }

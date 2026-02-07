@@ -148,6 +148,19 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     },
 
     /**
+     * Update user tier (admin only) - Issue #3699
+     * PUT /api/v1/admin/users/{id}/tier
+     */
+    async updateUserTier(userId: string, tier: string): Promise<AdminUser> {
+      const result = await httpClient.put<AdminUser>(
+        `/api/v1/admin/users/${userId}/tier`,
+        { tier },
+        AdminUserSchema
+      );
+      return result!;
+    },
+
+    /**
      * Get all users (admin only) - Issue #903
      * GET /api/v1/admin/users
      */

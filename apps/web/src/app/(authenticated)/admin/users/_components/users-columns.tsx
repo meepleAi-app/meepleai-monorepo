@@ -31,6 +31,9 @@ export type User = {
   displayName: string;
   avatarUrl?: string | null;
   role: UserRole;
+  tier?: string;              // Issue #3698: User tier (Free, Basic, Pro, Enterprise)
+  tokenUsage?: number;        // Issue #3698: Tokens used this month
+  tokenLimit?: number;        // Issue #3698: Monthly token limit
   createdAt: string;
   lastSeenAt: string | null;
   isSuspended?: boolean;
@@ -140,6 +143,51 @@ export function createUsersColumns(actions?: UsersTableActions): ColumnDef<User>
       header: ({ column }) => <SortableHeader column={column}>Role</SortableHeader>,
       cell: ({ row }) => <UserRoleBadge role={row.getValue('role')} />,
       filterFn: (row, id, value: string[]) => value.includes(row.getValue(id)),
+    },
+
+    // Tier column - Issue #3698
+    {
+      accessorKey: 'tier',
+      header: ({ column }) => <SortableHeader column={column}>Tier</SortableHeader>,
+      cell: ({ row }) => {
+        const tier = row.getValue('tier') as string | undefined;
+        const tierColors = {
+          free: 'bg-gray-100 text-gray-800',
+          basic: 'bg-blue-100 text-blue-800',
+          pro: 'bg-purple-100 text-purple-800',
+          enterprise: 'bg-orange-100 text-orange-800',
+        };
+        const colorClass = tierColors[tier?.toLowerCase() as keyof typeof tierColors] || 'bg-gray-100 text-gray-800';
+        return (
+          <div className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${colorClass}`}>
+            {tier || 'Free'}
+          </div>
+        );
+      },
+    },
+
+    // Token Usage column - Issue #3698
+    {
+      accessorKey: 'tokenUsage',
+      header: ({ column }) => <SortableHeader column={column}>Token Usage</SortableHeader>,
+      cell: ({ row }) => {
+        const usage = row.getValue('tokenUsage') as number | undefined;
+        const limit = row.original.tokenLimit || 10_000;
+        const percentage = usage && limit ? Math.round((usage / limit) * 100) : 0;
+
+        const colorClass = percentage >= 100 ? 'text-red-600' : percentage >= 80 ? 'text-orange-600' : 'text-green-600';
+
+        return (
+          <div className="text-sm">
+            <div className={`font-medium ${colorClass}`}>
+              {usage?.toLocaleString() || '0'} / {limit.toLocaleString()}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {percentage}%
+            </div>
+          </div>
+        );
+      },
     },
 
     // Status column

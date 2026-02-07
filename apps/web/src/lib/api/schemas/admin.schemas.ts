@@ -46,6 +46,9 @@ export const AdminUserSchema = z.object({
   email: z.string().email(),
   displayName: z.string().min(1),
   role: z.string().min(1),
+  tier: z.string().optional().default('Free'),              // Issue #3698: User tier
+  tokenUsage: z.number().int().optional().default(0),       // Issue #3698: Tokens used
+  tokenLimit: z.number().int().optional().default(10_000),  // Issue #3698: Monthly limit
   createdAt: z.string().datetime(),
   lastSeenAt: z.string().datetime().nullable().optional(),
   isTwoFactorEnabled: z.boolean().optional(),

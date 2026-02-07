@@ -498,6 +498,57 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                 </CardContent>
               </Card>
 
+              {/* Token Usage Card (Issue #3704) */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Token Usage (This Month)</CardTitle>
+                  <CardDescription>Subscription: {userProfile?.tier || 'Free'}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Used</span>
+                      <span className="font-mono font-medium">
+                        {(userProfile as any)?.tokenUsage?.toLocaleString() || '0'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Limit</span>
+                      <span className="font-mono font-medium">
+                        {(userProfile as any)?.tokenLimit?.toLocaleString() || '10,000'}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full ${
+                          ((userProfile as any)?.tokenUsage || 0) >= ((userProfile as any)?.tokenLimit || 10000)
+                            ? 'bg-red-600'
+                            : ((userProfile as any)?.tokenUsage || 0) >= ((userProfile as any)?.tokenLimit || 10000) * 0.8
+                            ? 'bg-orange-500'
+                            : 'bg-green-500'
+                        }`}
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            (((userProfile as any)?.tokenUsage || 0) /
+                              ((userProfile as any)?.tokenLimit || 10000)) *
+                              100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="text-xs text-center text-muted-foreground">
+                      {Math.round(
+                        (((userProfile as any)?.tokenUsage || 0) /
+                          ((userProfile as any)?.tokenLimit || 10000)) *
+                          100
+                      )}
+                      % used
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Badges Card (Issue #2890) */}
               {badges.length > 0 && (
                 <Card>

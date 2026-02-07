@@ -339,6 +339,14 @@ internal static class InfrastructureServiceExtensions
         });
 
         // Issue #3120: BoardGameGeek API client
+        // Load BGG token first (needed for client configuration)
+        var bggTokenForClient = SecretsHelper.GetSecretOrValue(
+            configuration,
+            "BGG_API_TOKEN",
+            logger: null,
+            required: false
+        ) ?? Environment.GetEnvironmentVariable("BGG_API_TOKEN");
+
         services.AddHttpClient<Infrastructure.ExternalServices.BoardGameGeek.IBggApiClient,
             Infrastructure.ExternalServices.BoardGameGeek.BggApiClient>(client =>
         {
@@ -347,6 +355,12 @@ internal static class InfrastructureServiceExtensions
 #pragma warning restore S1075
             client.Timeout = TimeSpan.FromSeconds(30);
             client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI/1.0");
+
+            // Add Bearer token if configured (REQUIRED as of Jan 2026)
+            if (!string.IsNullOrWhiteSpace(bggTokenForClient))
+            {
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {bggTokenForClient}");
+            }
         })
         .AddTransientHttpErrorPolicy(policy =>
             policy.WaitAndRetryAsync(3, retryAttempt =>
@@ -363,58 +377,8 @@ internal static class InfrastructureServiceExtensions
             EnableMultipleHttp2Connections = true
         });
 
-        // AI-13: BoardGameGeek API client with retry logic and connection pooling
+        // Configure BGG settings from appsettings.json
         services.Configure<BggConfiguration>(configuration.GetSection("Bgg"));
-
-        // Load BGG API token from secret file (required as of Jan 2026)
-        // Register at: https://boardgamegeek.com/using_the_xml_api
-        // Issue #2570: Fallback to Environment.GetEnvironmentVariable for values
-        // set by SecretLoader after IConfiguration was built
-        var bggToken = SecretsHelper.GetSecretOrValue(
-            configuration,
-            "BGG_API_TOKEN",
-            logger: null,
-            required: false
-        ) ?? Environment.GetEnvironmentVariable("BGG_API_TOKEN");
-
-        services.AddHttpClient("BggApi", (serviceProvider, client) =>
-        {
-            var config = serviceProvider.GetRequiredService<IOptions<BggConfiguration>>().Value;
-            client.BaseAddress = new Uri(config.BaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds);
-            client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI/1.0 (https://meepleai.dev)");
-
-            // Add Authorization header if BGG API token is configured
-            // REQUIRED as of Jan 2026 - BGG now enforces authentication for XML API
-            var token = bggToken ?? config.ApiToken;
-            if (!string.IsNullOrWhiteSpace(token))
-            {
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
-            }
-        })
-        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-        {
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
-            MaxConnectionsPerServer = 5, // BGG rate limit: max 2 req/s
-            EnableMultipleHttp2Connections = false // BGG doesn't support HTTP/2
-        })
-        .AddPolicyHandler((serviceProvider, request) =>
-        {
-            var config = serviceProvider.GetRequiredService<IOptions<BggConfiguration>>().Value;
-            return HttpPolicyExtensions
-                .HandleTransientHttpError()
-                .Or<TaskCanceledException>()
-                .WaitAndRetryAsync(
-                    config.RetryCount,
-                    retryAttempt => TimeSpan.FromSeconds(Math.Pow(config.RetryDelaySeconds, retryAttempt)),
-                    onRetry: (outcome, timespan, retryCount, context) =>
-                    {
-                        var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-                        logger.LogWarning("BGG API retry {RetryCount}/{MaxRetries}. Waiting {Delay}ms before next attempt",
-                            retryCount, config.RetryCount, timespan.TotalMilliseconds);
-                    });
-        });
 
         return services;
     }

@@ -45,7 +45,7 @@ internal static class AiEndpoints
 
         MapPlayerModeSuggestionEndpoint(group);
 
-        MapBggEndpoints(group);
+        // REMOVED: MapBggEndpoints(group); - Now handled by dedicated BggEndpoints.cs (Issue #3120)
 
         MapChessKnowledgeEndpoints(group);
 
@@ -72,17 +72,7 @@ internal static class AiEndpoints
         .RequireSession(); // Issue #1446: Automatic session validation
     }
 
-    private static void MapBggEndpoints(RouteGroupBuilder group)
-    {
-        group.MapGet("/bgg/search", HandleBggSearch)
-        .RequireSession(); // Issue #1446: Automatic session validation
-
-        group.MapGet("/bgg/games/{bggId:int}", HandleGetBggGameDetails)
-        .RequireSession(); // Issue #1446: Automatic session validation
-
-        group.MapPost("/bgg/thumbnails", HandleBatchThumbnails)
-        .RequireSession(); // Batch thumbnail loading for search results
-    }
+    // REMOVED: MapBggEndpoints - Now handled by dedicated BggEndpoints.cs (Issue #3120)
 
     private static void MapChessKnowledgeEndpoints(RouteGroupBuilder group)
     {
@@ -522,129 +512,8 @@ internal static class AiEndpoints
         return Results.Json(resp);
     }
 
-    private static async Task<IResult> HandleBggSearch(
-        [FromQuery] string? q,
-        IMediator mediator,
-        ILogger<Program> logger,
-        CancellationToken ct,
-        [FromQuery] bool exact = false,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
-    {
-        // Session validated by RequireSessionFilter
-
-        // Issue #1445: Use centralized query validation
-        var queryError = QueryValidator.ValidateQuery(q);
-        if (queryError != null)
-        {
-            return Results.BadRequest(new { error = queryError });
-        }
-
-        // After validation, q is guaranteed to be non-null
-        var validatedQuery = q!;
-
-        // Validate pagination parameters
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 20;
-        if (pageSize > 100) pageSize = 100; // Max 100 per page
-
-        // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
-        var query = new Api.BoundedContexts.GameManagement.Application.Queries.BggApi.SearchBggGamesQuery
-        {
-            Query = validatedQuery,
-            Exact = exact
-        };
-        var allResults = await mediator.Send(query, ct).ConfigureAwait(false);
-
-        // Apply pagination
-        var total = allResults.Count;
-        var totalPages = (int)Math.Ceiling((double)total / pageSize);
-        var paginatedResults = allResults
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        logger.LogInformation("BGG search returned {Total} results (page {Page}/{TotalPages}) for query: {Query}",
-            total, page, totalPages, validatedQuery);
-
-        return Results.Json(new
-        {
-            results = paginatedResults,
-            total,
-            page,
-            pageSize,
-            totalPages
-        });
-    }
-
-    private static async Task<IResult> HandleGetBggGameDetails(
-        int bggId,
-                IMediator mediator,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        // Session validated by RequireSessionFilter
-
-        // Validate BGG ID
-        if (bggId <= 0)
-        {
-            return Results.BadRequest(new { error = "Invalid BGG ID. Must be a positive integer." });
-        }
-
-        // ISSUE-1194: Error handling centralized in middleware + pipeline behavior
-        var query = new Api.BoundedContexts.GameManagement.Application.Queries.BggApi.GetBggGameDetailsQuery
-        {
-            BggId = bggId
-        };
-        var details = await mediator.Send(query, ct).ConfigureAwait(false);
-
-        if (details == null)
-        {
-            logger.LogWarning("BGG game not found: {BggId}", bggId);
-            return Results.NotFound(new { error = $"Game with BGG ID {bggId} not found" });
-        }
-
-        logger.LogInformation("BGG game details retrieved: {BggId}, {Name}", bggId, details.Name);
-        return Results.Json(details);
-    }
-
-    private static async Task<IResult> HandleBatchThumbnails(
-        [FromBody] int[] bggIds,
-        [FromServices] IBggApiService bggService,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        // Session validated by RequireSessionFilter
-
-        if (bggIds == null || bggIds.Length == 0)
-        {
-            return Results.BadRequest(new { error = "bggIds array is required and cannot be empty" });
-        }
-
-        if (bggIds.Length > 20)
-        {
-            return Results.BadRequest(new { error = "Maximum 20 IDs per batch request" });
-        }
-
-        try
-        {
-            // Fetch thumbnails for each ID (already cached, so fast)
-            var thumbnails = new Dictionary<int, string?>();
-            foreach (var id in bggIds)
-            {
-                var details = await bggService.GetGameDetailsAsync(id, ct).ConfigureAwait(false);
-                thumbnails[id] = details?.ThumbnailUrl;
-            }
-
-            logger.LogInformation("Loaded {Count} thumbnails for BGG IDs", thumbnails.Count);
-            return Results.Json(thumbnails);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to load batch thumbnails");
-            return Results.Problem("Failed to load thumbnails");
-        }
-    }
+    // REMOVED: HandleBggSearch, HandleGetBggGameDetails, HandleBatchThumbnails
+    // Now handled by dedicated BggEndpoints.cs (Issue #3120)
 
     private static async Task<IResult> HandleIndexChessKnowledge(HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
     {

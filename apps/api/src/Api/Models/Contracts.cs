@@ -431,7 +431,10 @@ internal record UserDto(
     bool IsSuspended = false,
     string? SuspendReason = null,
     int Level = 1,
-    int ExperiencePoints = 0
+    int ExperiencePoints = 0,
+    string Tier = "Free",           // Issue #3698: User tier (Free, Basic, Pro, Enterprise)
+    int TokenUsage = 0,             // Issue #3698: Tokens used this month
+    int TokenLimit = 10_000         // Issue #3698: Monthly token limit for tier
 );
 
 /// <summary>

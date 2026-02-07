@@ -104,6 +104,13 @@ const mockAnalyticsData = {
     averageConfidenceScore: 0.942,
     totalRagRequests: 18547,
     totalTokensUsed: 15700000,
+    tokenBalanceEur: 157.50,
+    tokenLimitEur: 200.00,
+    dbStorageGb: 2.45,
+    dbStorageLimitGb: 10.00,
+    dbGrowthMbPerDay: 15.3,
+    cacheHitRatePercent: 87.5,
+    cacheHitRateTrendPercent: 2.3,
   },
   userTrend: [
     { date: '2025-12-01', count: 100, averageValue: null },

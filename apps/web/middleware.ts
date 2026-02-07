@@ -28,6 +28,13 @@
 import { NextResponse } from 'next/server';
 
 import type { NextRequest } from 'next/server';
+import {
+  recordCacheHit,
+  recordCacheMiss,
+  recordValidationFailure,
+  recordValidationSuccess,
+  recordValidationTimeout,
+} from './src/lib/metrics/session-cache-metrics';
 
 // ============================================================================
 // Configuration
@@ -98,11 +105,17 @@ function cacheSessionValidation(cookieValue: string, valid: boolean) {
 async function isSessionCookieValid(request: NextRequest, cookieValue: string): Promise<boolean> {
   const cached = sessionValidationCache.get(cookieValue);
   if (cached && cached.expiresAt > Date.now()) {
+    // Metrics: Cache hit
+    recordCacheHit();
+
     // Debug logging for session validation (use warn which is allowed by ESLint)
     // eslint-disable-next-line no-console
     console.log(`[middleware] Session validation CACHE HIT for ${cookieValue.substring(0, 10)}... valid=${cached.valid}`);
     return cached.valid;
   }
+
+  // Metrics: Cache miss
+  recordCacheMiss();
 
   const cookieHeader = request.headers.get('cookie');
   if (!cookieHeader) {
@@ -136,6 +149,13 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
 
       clearTimeout(timeoutId); // Clear timeout on success
 
+      // Metrics: Validation success or failure
+      if (response.ok) {
+        recordValidationSuccess();
+      } else {
+        recordValidationFailure();
+      }
+
       // eslint-disable-next-line no-console
       console.log(`[middleware] Session validation response: ${response.status} ok=${response.ok}`);
       cacheSessionValidation(cookieValue, response.ok);
@@ -143,10 +163,12 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
     } catch (fetchError) {
       clearTimeout(timeoutId);
 
-      // Specific handling for timeout vs other errors
+      // Metrics: Track timeout vs other errors
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        recordValidationTimeout();
         console.error('[middleware] Session validation TIMEOUT after 5s');
       } else {
+        recordValidationFailure();
         console.error('[middleware] Session validation fetch error:', fetchError);
       }
 

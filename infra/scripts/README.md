@@ -2,9 +2,77 @@
 
 ## Contenuto
 
-Script di utilità per gestione dell'infrastruttura Docker e secrets management.
+Script di utilità per gestione dell'infrastruttura Docker, secrets management, e orchestrazione startup.
 
 ## Scripts
+
+### 🚀 start-dev.ps1 (NEW - Issue #3797)
+
+**Scopo**: Orchestrazione startup ambiente sviluppo con validazione e monitoring
+
+**Caratteristiche**:
+- Port conflict detection automatico (usa cleanup-dev-ports.ps1)
+- Startup orchestrato: infrastruttura → applicazione
+- Health validation con timeout configurabili
+- Display automatico URLs servizi
+- Supporto profili Docker Compose
+
+**Utilizzo**:
+```powershell
+# Startup standard (profilo dev)
+.\infra\scripts\start-dev.ps1
+
+# Startup con profilo specifico
+.\infra\scripts\start-dev.ps1 -Profile full
+
+# Skip port check (se sai che le porte sono libere)
+.\infra\scripts\start-dev.ps1 -SkipPortCheck
+
+# Start senza attendere health status
+.\infra\scripts\start-dev.ps1 -WaitForHealthy:$false
+```
+
+**Output Esempio**:
+```
+🚀 MeepleAI Development Environment Startup
+==================================================
+
+>>> Checking for port conflicts...
+✓ No port conflicts detected
+
+🏗️  Starting Infrastructure Services
+>>> Starting PostgreSQL, Redis, Qdrant...
+✓ Infrastructure services started
+✓ All infrastructure services healthy
+
+🚀 Starting Application Services
+>>> Starting API backend...
+✓ API service healthy
+
+>>> Starting Web frontend...
+✓ Web service healthy
+
+🌐 Service URLs
+  Web Frontend              http://localhost:3000      Ready
+  API Backend               http://localhost:8080      Ready
+  API Docs (Scalar)         http://localhost:8080/scalar/v1      Ready
+
+✓ Development environment started successfully!
+```
+
+**Sequenza Startup**:
+1. Port conflict check & cleanup
+2. postgres → redis → qdrant (wait healthy)
+3. api (wait healthy)
+4. web (wait healthy)
+5. Display service URLs
+
+**Chi lo usa**: Tutti gli sviluppatori Windows/WSL2
+**Quando**: Ogni volta che avvii l'ambiente dev (sostituisce `docker compose up -d`)
+**Requisiti**: PowerShell 5.1+, Docker Desktop
+**Related**: Issue #3797, tools/cleanup/cleanup-dev-ports.ps1
+
+---
 
 ### load-secrets-env.sh
 

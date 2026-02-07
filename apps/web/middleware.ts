@@ -75,7 +75,7 @@ type SessionValidationEntry = {
   expiresAt: number;
 };
 
-const SESSION_CACHE_TTL_MS = 30 * 1000; // 30 seconds
+const SESSION_CACHE_TTL_MS = 120 * 1000; // 2 minutes (optimized for performance)
 const SESSION_CACHE_LIMIT = 200;
 const sessionValidationCache = new Map<string, SessionValidationEntry>();
 

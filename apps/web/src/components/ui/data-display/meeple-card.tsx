@@ -62,6 +62,14 @@ import { cn } from '@/lib/utils';
 
 import type { LucideIcon } from 'lucide-react';
 
+// Feature components (Issue #3820)
+import { WishlistButton } from './meeple-card-features/WishlistButton';
+import { QuickActionsMenu } from './meeple-card-features/QuickActionsMenu';
+import { StatusBadge } from './meeple-card-features/StatusBadge';
+// import { HoverPreview } from './meeple-card-features/HoverPreview'; // TODO: Add Popover component
+import { DragHandle } from './meeple-card-features/DragHandle';
+import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
+
 // ============================================================================
 // Types & Interfaces
 // ============================================================================
@@ -138,6 +146,54 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   className?: string;
   /** Test ID for testing */
   'data-testid'?: string;
+
+  // ========== FEATURE EXTENSIONS (Issue #3820) ==========
+  // All features opt-in (default disabled)
+
+  /** Feature: Wishlist Button (#3824) */
+  showWishlist?: boolean;
+  isWishlisted?: boolean;
+  onWishlistToggle?: (id: string, isWishlisted: boolean) => void;
+
+  /** Feature: Quick Actions Menu (#3825) */
+  quickActions?: Array<{
+    icon: any;
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+    hidden?: boolean;
+    adminOnly?: boolean;
+    destructive?: boolean;
+    separator?: boolean;
+  }>;
+  userRole?: 'user' | 'editor' | 'admin';
+
+  /** Feature: Status Badge (#3826) */
+  status?: 'owned' | 'wishlisted' | 'played' | 'borrowed' | 'for-trade' | Array<'owned' | 'wishlisted' | 'played' | 'borrowed' | 'for-trade'>;
+  showStatusIcon?: boolean;
+
+  /** Feature: Hover Preview (#3827) */
+  showPreview?: boolean;
+  previewData?: {
+    description?: string;
+    designer?: string;
+    complexity?: number;
+    weight?: 'Light' | 'Medium' | 'Heavy';
+    categories?: string[];
+    mechanics?: string[];
+  };
+  onFetchPreview?: (id: string) => Promise<any>;
+
+  /** Feature: Drag & Drop (#3828) */
+  draggable?: boolean;
+  dragData?: { id: string; type: string; index: number };
+  onDragStart?: (data: any) => void;
+  onDragEnd?: (data: any) => void;
+
+  /** Feature: Bulk Selection (#3829) */
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: (id: string, selected: boolean) => void;
 }
 
 // ============================================================================
@@ -540,6 +596,24 @@ export const MeepleCard = React.memo(function MeepleCard({
   loading = false,
   className,
   'data-testid': testId,
+  // Feature props (Issue #3820)
+  showWishlist,
+  isWishlisted,
+  onWishlistToggle,
+  quickActions,
+  userRole,
+  status,
+  showStatusIcon,
+  showPreview,
+  previewData,
+  onFetchPreview,
+  draggable,
+  dragData,
+  onDragStart,
+  onDragEnd,
+  selectable,
+  selected,
+  onSelect,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -549,6 +623,11 @@ export const MeepleCard = React.memo(function MeepleCard({
   // Avoid nested-interactive: don't make card clickable when it has action buttons
   const isInteractive = !!onClick && !showActions;
 
+  // Feature visibility logic (Issue #3820)
+  const color = customColor || entityColors[entity].hsl;
+  const hasQuickActions = quickActions && quickActions.length > 0;
+  const showWishlistBtn = showWishlist && !hasQuickActions; // Priority: quickActions > wishlist
+
   if (loading) {
     return <MeepleCardSkeleton variant={variant} />;
   }
@@ -557,9 +636,15 @@ export const MeepleCard = React.memo(function MeepleCard({
   // Use article for semantic non-interactive cards
   const Component = isInteractive ? 'div' : 'article';
 
-  return (
+  // Card content JSX
+  const cardContent = (
     <Component
-      className={cn(meepleCardVariants({ variant }), className)}
+      className={cn(
+        meepleCardVariants({ variant }),
+        selected && 'ring-2 ring-offset-2 bg-accent/10',
+        selected && `ring-[hsl(${color})]`,
+        className
+      )}
       onClick={isInteractive ? onClick : undefined}
       role={isInteractive ? 'button' : undefined}
       tabIndex={isInteractive ? 0 : undefined}
@@ -579,12 +664,43 @@ export const MeepleCard = React.memo(function MeepleCard({
       data-entity={entity}
       data-variant={variant}
     >
+      {/* Feature: Bulk Selection Checkbox (highest z-index) */}
+      {selectable && (
+        <BulkSelectCheckbox
+          selectable={selectable}
+          selected={!!selected}
+          onSelect={onSelect || (() => {})}
+          id={testId || 'card'}
+          entityColor={color}
+        />
+      )}
+
       {/* Entity indicator */}
       <EntityIndicator
         entity={entity}
         variant={variant}
         customColor={customColor}
       />
+
+      {/* Feature: Status Badge (below entity badge) */}
+      {status && (
+        <StatusBadge
+          status={status}
+          showIcon={showStatusIcon}
+          className="absolute top-12 left-4 z-11"
+        />
+      )}
+
+      {/* Feature: Drag Handle (list variant, left side) */}
+      {draggable && variant === 'list' && dragData && (
+        <DragHandle
+          draggable={draggable}
+          dragData={dragData as any}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          className="mr-2"
+        />
+      )}
 
       {/* Cover image (not for compact variant) */}
       {variant !== 'compact' && (
@@ -599,6 +715,23 @@ export const MeepleCard = React.memo(function MeepleCard({
 
       {/* Content area */}
       <div className={contentVariants({ variant })}>
+        {/* Feature: Top-right corner (Wishlist or QuickActions) */}
+        {(showWishlistBtn || hasQuickActions) && (
+          <div className="absolute top-3 right-3 flex gap-2 z-15">
+            {hasQuickActions && (
+              <QuickActionsMenu actions={quickActions} userRole={userRole} size="sm" />
+            )}
+            {showWishlistBtn && onWishlistToggle && (
+              <WishlistButton
+                gameId={testId || 'card'}
+                isWishlisted={!!isWishlisted}
+                onToggle={onWishlistToggle}
+                size="sm"
+              />
+            )}
+          </div>
+        )}
+
         {/* Title */}
         <h3
           className={cn(
@@ -669,6 +802,14 @@ export const MeepleCard = React.memo(function MeepleCard({
       </div>
     </Component>
   );
+
+  // Feature: Wrap with HoverPreview if enabled
+  // TODO: Re-enable when Popover component available
+  // if (showPreview && onFetchPreview) {
+  //   return <HoverPreview ...>{cardContent}</HoverPreview>;
+  // }
+
+  return cardContent;
 });
 
 // ============================================================================

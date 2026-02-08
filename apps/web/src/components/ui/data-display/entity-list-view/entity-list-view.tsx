@@ -45,9 +45,11 @@ import { GameCarousel, type CarouselGame } from '../game-carousel';
 import { useViewMode } from './hooks/use-view-mode';
 import { useSearch } from './hooks/use-search';
 import { useSort } from './hooks/use-sort';
+import { useFilters } from './hooks/use-filters';
 import { ViewModeSwitcher } from './components/view-mode-switcher';
 import { SearchBar } from './components/search-bar';
 import { SortDropdown } from './components/sort-dropdown';
+import { FilterPanel } from './components/filter-panel';
 import { EmptyState } from './components/empty-state';
 import { LoadingSkeleton } from './components/loading-skeleton';
 import type { EntityListViewProps } from './entity-list-view.types';
@@ -103,6 +105,10 @@ export function EntityListView<T = any>({
   sort: controlledSort,
   onSortChange,
 
+  // Filters (Phase 4)
+  filters = [],
+  onFilterChange,
+
   // Layout & styling
   title,
   subtitle,
@@ -126,15 +132,29 @@ export function EntityListView<T = any>({
   }, [mode, onViewModeChange]);
 
   // Search functionality (Phase 3)
-  const { query, setQuery, filteredItems } = useSearch(
+  const { query, setQuery, filteredItems: searchedItems } = useSearch(
     items,
-    searchFields,
+    searchFields as string[],
     customSearch
   );
 
+  // Filter functionality (Phase 4)
+  const {
+    filterState,
+    setFilterState,
+    filteredItems: searchFilteredItems,
+    clearFilters,
+    activeCount: activeFilterCount,
+  } = useFilters(searchedItems, filters); // Apply search first, then filters
+
+  // Notify parent of filter changes
+  React.useEffect(() => {
+    onFilterChange?.(filterState);
+  }, [filterState, onFilterChange]);
+
   // Sort functionality (Phase 3)
   const { currentSort, setCurrentSort, sortedItems } = useSort(
-    filteredItems, // Apply search first, then sort
+    searchFilteredItems, // Apply search → filter, then sort
     sortOptions,
     defaultSort,
     controlledSort
@@ -145,7 +165,7 @@ export function EntityListView<T = any>({
     onSortChange?.(currentSort);
   }, [currentSort, onSortChange]);
 
-  // Final items after search + sort
+  // Final items after search → filter → sort pipeline
   const displayItems = sortedItems;
 
   // ========== Render Functions ==========
@@ -270,7 +290,7 @@ export function EntityListView<T = any>({
       aria-label={title || 'Entity list'}
     >
       {/* Header */}
-      {(title || subtitle || showViewSwitcher || searchable || sortOptions.length > 0) && (
+      {(title || subtitle || showViewSwitcher || searchable || sortOptions.length > 0 || filters.length > 0) && (
         <header className="space-y-4 mb-6">
           {/* Title, Subtitle & View Mode Switcher */}
           {(title || subtitle || showViewSwitcher) && (
@@ -298,26 +318,39 @@ export function EntityListView<T = any>({
             </div>
           )}
 
-          {/* Search & Sort Controls */}
-          {(searchable || sortOptions.length > 0) && (
-            <div className="flex flex-col sm:flex-row gap-3">
-              {/* SearchBar */}
-              {searchable && (
-                <div className="flex-1">
-                  <SearchBar
-                    value={query}
-                    onChange={setQuery}
-                    placeholder={searchPlaceholder}
-                  />
-                </div>
-              )}
+          {/* Search, Sort & Filter Controls */}
+          {(searchable || sortOptions.length > 0 || filters.length > 0) && (
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* SearchBar */}
+                {searchable && (
+                  <div className="flex-1">
+                    <SearchBar
+                      value={query}
+                      onChange={setQuery}
+                      placeholder={searchPlaceholder}
+                    />
+                  </div>
+                )}
 
-              {/* SortDropdown */}
-              {sortOptions.length > 0 && (
-                <SortDropdown
-                  value={currentSort}
-                  options={sortOptions}
-                  onChange={setCurrentSort}
+                {/* SortDropdown */}
+                {sortOptions.length > 0 && (
+                  <SortDropdown
+                    value={currentSort}
+                    options={sortOptions}
+                    onChange={setCurrentSort}
+                  />
+                )}
+              </div>
+
+              {/* FilterPanel */}
+              {filters.length > 0 && (
+                <FilterPanel
+                  filters={filters}
+                  filterState={filterState}
+                  onChange={setFilterState}
+                  onClear={clearFilters}
+                  activeCount={activeFilterCount}
                 />
               )}
             </div>

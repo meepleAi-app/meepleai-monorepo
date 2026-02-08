@@ -737,8 +737,12 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
 #pragma warning restore CA2100
                 await cmd.ExecuteNonQueryAsync();
 
-                // Return connection string for new database
+                // Return connection string for new database with test-optimized settings
                 builder.Database = databaseName;
+                builder.Timeout = 60; // Increase timeout to 60s for long-running integration tests
+                builder.CommandTimeout = 60;
+                builder.MaxPoolSize = 50; // Increase pool size to handle concurrent test execution
+                builder.MinPoolSize = 5;
 
                 // Issue #2577: Log successful database creation with timing
                 var duration = (DateTime.UtcNow - startTime).TotalSeconds;

@@ -9,7 +9,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { CollectionStats } from '@/components/collection/CollectionStats';
-import { MeepleCard } from '@/components/collection/MeepleCard';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { CollectionGrid } from '@/components/collection/CollectionGrid';
 
 import type { CollectionStats as CollectionStatsType, CollectionGame } from '@/types/collection';

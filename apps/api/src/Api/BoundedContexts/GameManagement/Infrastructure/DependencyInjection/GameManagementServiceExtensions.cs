@@ -39,6 +39,9 @@ internal static class GameManagementServiceExtensions
         // Issue #3070: Register session quota service
         services.AddScoped<ISessionQuotaService, SessionQuotaService>();
 
+        // Issue #3891: Register play record permission checker
+        services.AddScoped<PlayRecordPermissionChecker>();
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;

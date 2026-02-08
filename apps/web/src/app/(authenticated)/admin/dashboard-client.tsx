@@ -797,3 +797,6 @@ export default function AdminDashboardClient() {
     </div>
   );
 }
+
+// Named export alias for tests
+export { AdminDashboardClient as DashboardClient };

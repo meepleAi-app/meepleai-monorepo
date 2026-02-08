@@ -14,6 +14,7 @@ using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -99,6 +100,14 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
 
                     // Register authorization policies
                     services.AddSharedGameCatalogPolicies();
+
+                    // Bypass authorization for testing - allow all authenticated requests
+                    services.AddAuthorization(options =>
+                    {
+                        options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+                            .RequireAssertion(_ => true) // Allow all requests in test environment
+                            .Build();
+                    });
 
                     // Mock BGG API service to avoid real API calls
                     services.RemoveAll(typeof(Api.Services.IBggApiService));

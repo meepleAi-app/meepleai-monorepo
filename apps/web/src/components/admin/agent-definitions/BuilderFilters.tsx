@@ -2,9 +2,7 @@
 
 import { Search } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface BuilderFiltersProps {
   onFilterChange: (filters: { activeOnly: boolean; search: string }) => void;

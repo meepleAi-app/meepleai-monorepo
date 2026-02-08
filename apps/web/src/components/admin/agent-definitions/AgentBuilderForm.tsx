@@ -1,19 +1,15 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Plus, Trash2 } from 'lucide-react';
 import { useFieldArray, useForm } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
-import { Textarea } from '@/components/ui/textarea';
+import { Button, Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider, Textarea } from '@/components/ui';
 import { createAgentDefinitionSchema, type CreateAgentDefinition, type PromptTemplate, type ToolConfig } from '@/lib/api/schemas/agent-definitions.schemas';
 
 interface AgentBuilderFormProps {
   defaultValues?: Partial<CreateAgentDefinition>;
-  onSubmit: (data: CreateAgentDefinition) => void;
+  onSubmit: (data: z.output<typeof createAgentDefinitionSchema>) => void;
   isLoading?: boolean;
 }
 
@@ -26,7 +22,7 @@ const MODELS = [
 ];
 
 export function AgentBuilderForm({ defaultValues, onSubmit, isLoading }: AgentBuilderFormProps) {
-  const form = useForm<CreateAgentDefinition>({
+  const form = useForm<z.input<typeof createAgentDefinitionSchema>>({
     resolver: zodResolver(createAgentDefinitionSchema),
     defaultValues: defaultValues || {
       name: '',
@@ -49,9 +45,13 @@ export function AgentBuilderForm({ defaultValues, onSubmit, isLoading }: AgentBu
     name: 'tools',
   });
 
+  const handleFormSubmit = (data: z.input<typeof createAgentDefinitionSchema>) => {
+    onSubmit(data as z.output<typeof createAgentDefinitionSchema>);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
         {/* Basic Info */}
         <div className="space-y-4">
           <FormField

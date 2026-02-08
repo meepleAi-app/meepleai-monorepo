@@ -1,18 +1,15 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Plus, Trash2 } from 'lucide-react';
 import { useFieldArray, useForm } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Button, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@/components/ui';
 import { createStrategySchema, STRATEGY_TEMPLATES, type CreateStrategy } from '@/lib/api/schemas/strategies.schemas';
 
 interface StrategyEditorProps {
   defaultValues?: Partial<CreateStrategy>;
-  onSubmit: (data: CreateStrategy) => void;
+  onSubmit: (data: z.output<typeof createStrategySchema>) => void;
   isLoading?: boolean;
 }
 
@@ -25,7 +22,7 @@ const STEP_TYPES = [
 ];
 
 export function StrategyEditor({ defaultValues, onSubmit, isLoading }: StrategyEditorProps) {
-  const form = useForm<CreateStrategy>({
+  const form = useForm<z.input<typeof createStrategySchema>>({
     resolver: zodResolver(createStrategySchema),
     defaultValues: defaultValues || {
       name: '',
@@ -43,12 +40,16 @@ export function StrategyEditor({ defaultValues, onSubmit, isLoading }: StrategyE
     const template = STRATEGY_TEMPLATES[templateKey];
     form.setValue('name', template.name);
     form.setValue('description', template.description);
-    form.setValue('steps', template.steps);
+    form.setValue('steps', [...template.steps]);
+  };
+
+  const handleFormSubmit = (data: z.input<typeof createStrategySchema>) => {
+    onSubmit(data as z.output<typeof createStrategySchema>);
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
         {/* Template Library */}
         <div className="flex gap-2">
           <span className="text-sm font-medium">Quick Templates:</span>

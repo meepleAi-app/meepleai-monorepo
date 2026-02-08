@@ -1,6 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
-using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +11,7 @@ internal sealed class GetAgentStatsQueryHandler : IQueryHandler<GetAgentStatsQue
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
 
-    private static readonly Dictionary<string, AgentMetadata> AgentMetadataMap = new()
+    private static readonly Dictionary<string, AgentMetadata> AgentMetadataMap = new(StringComparer.OrdinalIgnoreCase)
     {
         ["qa-agent"] = new("Q&A Agent", "Answer questions about board games", "OpenRouter", "deepseek/deepseek-chat"),
         ["explain-agent"] = new("Explain Agent", "Explain complex game rules", "OpenRouter", "deepseek/deepseek-chat"),
@@ -52,7 +52,7 @@ internal sealed class GetAgentStatsQueryHandler : IQueryHandler<GetAgentStatsQue
         var logs = await logsQuery.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var agentGroups = logs
-            .GroupBy(l => ExtractAgentName(l.Endpoint))
+            .GroupBy(l => ExtractAgentName(l.Endpoint), StringComparer.OrdinalIgnoreCase)
             .Where(g => AgentMetadataMap.ContainsKey(g.Key))
             .ToList();
 
@@ -68,7 +68,7 @@ internal sealed class GetAgentStatsQueryHandler : IQueryHandler<GetAgentStatsQue
             ActiveAgents = agents.Count(a => a.IsActive),
             TotalExecutions = agents.Sum(a => a.ExecutionCount),
             TotalTokens = agents.Sum(a => a.TotalTokens),
-            AverageLatency = agents.Any() ? agents.Average(a => a.AverageLatencyMs) : 0
+            AverageLatency = agents.Count > 0 ? agents.Average(a => a.AverageLatencyMs) : 0
         };
 
         return new AgentStatsResult { Agents = agents, Totals = totals };
@@ -79,18 +79,18 @@ internal sealed class GetAgentStatsQueryHandler : IQueryHandler<GetAgentStatsQue
         var parts = endpoint.Split('/', StringSplitOptions.RemoveEmptyEntries);
         var lastPart = parts.LastOrDefault()?.ToLowerInvariant() ?? "";
         if (AgentMetadataMap.ContainsKey(lastPart)) return lastPart;
-        var agentName = lastPart.EndsWith("-agent") ? lastPart : lastPart + "-agent";
+        var agentName = lastPart.EndsWith("-agent", StringComparison.OrdinalIgnoreCase) ? lastPart : lastPart + "-agent";
         return AgentMetadataMap.ContainsKey(agentName) ? agentName : "unknown";
     }
 
-    private static AgentStatDto CreateAgentStat(IGrouping<string, Infrastructure.Entities.AiRequestLogEntity> group)
+    private static AgentStatDto CreateAgentStat(IGrouping<string, AiRequestLogEntity> group)
     {
         var agentName = group.Key;
         var metadata = AgentMetadataMap[agentName];
         var logs = group.ToList();
 
         var totalExecutions = logs.Count;
-        var successCount = logs.Count(l => l.Status == "Success");
+        var successCount = logs.Count(l => string.Equals(l.Status, "Success", StringComparison.Ordinal));
         var successRate = totalExecutions > 0 ? (double)successCount / totalExecutions : 0;
 
         var dailyGroups = logs.GroupBy(l => l.CreatedAt.Date).OrderBy(g => g.Key).ToList();

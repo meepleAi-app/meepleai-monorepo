@@ -1,10 +1,8 @@
 name: Generate Diagram SVGs
 
 on:
-  push:
-    paths:
-      - 'docs/09-bounded-contexts/diagrams/**/*.mmd'
   pull_request:
+    branches: [main, main-staging]
     paths:
       - 'docs/09-bounded-contexts/diagrams/**/*.mmd'
   workflow_dispatch: # Allow manual trigger

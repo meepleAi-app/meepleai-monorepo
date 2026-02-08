@@ -249,9 +249,10 @@ jobs:
           # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
           # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
           # - FrontendSdk tests: Use FrontendSdkTestFactory with own containers
+          # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
           # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
           dotnet test \
-            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk" \
+            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent" \
             --logger "console;verbosity=minimal" \
             --no-build \
             --configuration Release \

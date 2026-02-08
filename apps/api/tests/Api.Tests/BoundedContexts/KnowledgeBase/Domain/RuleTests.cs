@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain;
 

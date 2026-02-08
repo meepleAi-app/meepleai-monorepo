@@ -2,27 +2,18 @@
  * Tests for useDebounce hook
  */
 
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { useDebounce } from '../hooks/use-debounce';
-import { vi } from 'vitest';
 
 describe('useDebounce', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('should return initial value immediately', () => {
-    const { result } = renderHook(() => useDebounce('initial', 300));
+    const { result } = renderHook(() => useDebounce('initial', 50));
 
     expect(result.current).toBe('initial');
   });
 
-  it('should debounce value updates', () => {
-    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), {
+  it('should debounce value updates', async () => {
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 50), {
       initialProps: { value: 'initial' },
     });
 
@@ -32,40 +23,44 @@ describe('useDebounce', () => {
     // Value should not update immediately
     expect(result.current).toBe('initial');
 
-    // Fast-forward time by delay
-    vi.runAllTimers();
-
-    // After timers, value should be updated
-    expect(result.current).toBe('updated');
+    // Wait for debounce delay
+    await waitFor(
+      () => {
+        expect(result.current).toBe('updated');
+      },
+      { timeout: 200 }
+    );
   });
 
-  it('should cancel previous timeout on rapid updates', () => {
-    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), {
+  it('should cancel previous timeout on rapid updates', async () => {
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 50), {
       initialProps: { value: 'initial' },
     });
 
-    // Rapid updates
+    // Rapid updates (should only apply last one)
     rerender({ value: 'update1' });
-    vi.advanceTimersByTime(100);
+    await new Promise((resolve) => setTimeout(resolve, 20));
 
     rerender({ value: 'update2' });
-    vi.advanceTimersByTime(100);
+    await new Promise((resolve) => setTimeout(resolve, 20));
 
     rerender({ value: 'final' });
 
-    // Run all pending timers
-    vi.runAllTimers();
-
-    // Should have final value (previous timeouts cancelled)
-    expect(result.current).toBe('final');
+    // Wait for final debounce
+    await waitFor(
+      () => {
+        expect(result.current).toBe('final');
+      },
+      { timeout: 200 }
+    );
   });
 
-  it('should cleanup timeout on unmount', () => {
-    const { unmount } = renderHook(() => useDebounce('value', 300));
+  it('should cleanup timeout on unmount', async () => {
+    const { unmount } = renderHook(() => useDebounce('value', 50));
 
     unmount();
 
-    // Should not throw or cause memory leaks
-    expect(() => vi.advanceTimersByTime(300)).not.toThrow();
+    // Should not cause errors after unmount
+    await new Promise((resolve) => setTimeout(resolve, 100));
   });
 });

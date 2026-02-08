@@ -43,7 +43,11 @@ import { cn } from '@/lib/utils';
 import { MeepleCard } from '../meeple-card';
 import { GameCarousel, type CarouselGame } from '../game-carousel';
 import { useViewMode } from './hooks/use-view-mode';
+import { useSearch } from './hooks/use-search';
+import { useSort } from './hooks/use-sort';
 import { ViewModeSwitcher } from './components/view-mode-switcher';
+import { SearchBar } from './components/search-bar';
+import { SortDropdown } from './components/sort-dropdown';
 import { EmptyState } from './components/empty-state';
 import { LoadingSkeleton } from './components/loading-skeleton';
 import type { EntityListViewProps } from './entity-list-view.types';
@@ -89,6 +93,16 @@ export function EntityListView<T = any>({
   // Carousel configuration
   carouselOptions,
 
+  // Search & Sort
+  searchable = false,
+  searchPlaceholder,
+  searchFields = [],
+  onSearch: customSearch,
+  sortOptions = [],
+  defaultSort,
+  sort: controlledSort,
+  onSortChange,
+
   // Layout & styling
   title,
   subtitle,
@@ -111,6 +125,29 @@ export function EntityListView<T = any>({
     onViewModeChange?.(mode);
   }, [mode, onViewModeChange]);
 
+  // Search functionality (Phase 3)
+  const { query, setQuery, filteredItems } = useSearch(
+    items,
+    searchFields,
+    customSearch
+  );
+
+  // Sort functionality (Phase 3)
+  const { currentSort, setCurrentSort, sortedItems } = useSort(
+    filteredItems, // Apply search first, then sort
+    sortOptions,
+    defaultSort,
+    controlledSort
+  );
+
+  // Notify parent of sort changes
+  React.useEffect(() => {
+    onSortChange?.(currentSort);
+  }, [currentSort, onSortChange]);
+
+  // Final items after search + sort
+  const displayItems = sortedItems;
+
   // ========== Render Functions ==========
 
   /**
@@ -132,7 +169,7 @@ export function EntityListView<T = any>({
 
     return (
       <div className={gridClasses} data-testid="grid-layout">
-        {items.map((item, idx) => {
+        {displayItems.map((item, idx) => {
           const cardProps = renderItem(item);
 
           return (
@@ -157,7 +194,7 @@ export function EntityListView<T = any>({
   const renderListLayout = () => {
     return (
       <div className="space-y-2" data-testid="list-layout">
-        {items.map((item, idx) => {
+        {displayItems.map((item, idx) => {
           const cardProps = renderItem(item);
 
           return (
@@ -181,10 +218,10 @@ export function EntityListView<T = any>({
    */
   const renderCarouselLayout = () => {
     // Transform generic items to CarouselGame format
-    const carouselGames: CarouselGame[] = items.map((item) => {
+    const carouselGames: CarouselGame[] = displayItems.map((item) => {
       const cardProps = renderItem(item);
       return {
-        id: cardProps.id || String(items.indexOf(item)),
+        id: cardProps.id || String(displayItems.indexOf(item)),
         title: cardProps.title,
         subtitle: cardProps.subtitle,
         imageUrl: cardProps.imageUrl,
@@ -233,27 +270,57 @@ export function EntityListView<T = any>({
       aria-label={title || 'Entity list'}
     >
       {/* Header */}
-      {(title || subtitle || showViewSwitcher) && (
-        <header className="flex items-start justify-between mb-6">
-          {/* Title & Subtitle */}
-          <div className="flex-1">
-            {title && (
-              <h2 className="font-quicksand font-bold text-2xl md:text-3xl text-foreground">
-                {title}
-              </h2>
-            )}
-            {subtitle && (
-              <p className="mt-2 text-muted-foreground text-sm md:text-base">{subtitle}</p>
-            )}
-          </div>
+      {(title || subtitle || showViewSwitcher || searchable || sortOptions.length > 0) && (
+        <header className="space-y-4 mb-6">
+          {/* Title, Subtitle & View Mode Switcher */}
+          {(title || subtitle || showViewSwitcher) && (
+            <div className="flex items-start justify-between">
+              {/* Title & Subtitle */}
+              <div className="flex-1">
+                {title && (
+                  <h2 className="font-quicksand font-bold text-2xl md:text-3xl text-foreground">
+                    {title}
+                  </h2>
+                )}
+                {subtitle && (
+                  <p className="mt-2 text-muted-foreground text-sm md:text-base">{subtitle}</p>
+                )}
+              </div>
 
-          {/* View Mode Switcher */}
-          {showViewSwitcher && (
-            <ViewModeSwitcher
-              value={mode}
-              onChange={setMode}
-              availableModes={availableModes || ['grid', 'list', 'carousel']}
-            />
+              {/* View Mode Switcher */}
+              {showViewSwitcher && (
+                <ViewModeSwitcher
+                  value={mode}
+                  onChange={setMode}
+                  availableModes={availableModes || ['grid', 'list', 'carousel']}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Search & Sort Controls */}
+          {(searchable || sortOptions.length > 0) && (
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* SearchBar */}
+              {searchable && (
+                <div className="flex-1">
+                  <SearchBar
+                    value={query}
+                    onChange={setQuery}
+                    placeholder={searchPlaceholder}
+                  />
+                </div>
+              )}
+
+              {/* SortDropdown */}
+              {sortOptions.length > 0 && (
+                <SortDropdown
+                  value={currentSort}
+                  options={sortOptions}
+                  onChange={setCurrentSort}
+                />
+              )}
+            </div>
           )}
         </header>
       )}
@@ -265,7 +332,7 @@ export function EntityListView<T = any>({
 
       {/* Screen Reader Announcements */}
       <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {loading ? 'Loading...' : `Showing ${items.length} items in ${mode} view`}
+        {loading ? 'Loading...' : `Showing ${displayItems.length} items in ${mode} view`}
       </div>
     </section>
   );

@@ -1,8 +1,8 @@
-using MediatR;
+using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Queries;
 
-public sealed record GetAgentStatsQuery : IRequest<AgentStatsResult>
+public sealed record GetAgentStatsQuery : IQuery<AgentStatsResult>
 {
     public DateTime? StartDate { get; init; }
     public DateTime? EndDate { get; init; }

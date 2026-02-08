@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 

@@ -22,6 +22,7 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IGameSessionRepository, GameSessionRepository>();
         services.AddScoped<IGameSessionStateRepository, GameSessionStateRepository>(); // ISSUE-2403
+        services.AddScoped<IPlayRecordRepository, PlayRecordRepository>(); // ISSUE-3889
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

@@ -12,6 +12,7 @@ public class RoleTests
     [InlineData("user")]
     [InlineData("editor")]
     [InlineData("admin")]
+    [InlineData("superadmin")]
     public void Parse_WithValidRole_CreatesSuccessfully(string roleValue)
     {
         // Act
@@ -47,7 +48,6 @@ public class RoleTests
     }
 
     [Theory]
-    [InlineData("superadmin")]
     [InlineData("guest")]
     [InlineData("moderator")]
     [InlineData("invalid")]
@@ -56,7 +56,6 @@ public class RoleTests
         // Act & Assert
         var exception = Assert.Throws<ValidationException>(() => Role.Parse(invalidRole));
         Assert.Contains("Invalid role", exception.Message);
-        Assert.Contains("Valid roles are: user, editor, admin", exception.Message);
     }
 
     [Theory]

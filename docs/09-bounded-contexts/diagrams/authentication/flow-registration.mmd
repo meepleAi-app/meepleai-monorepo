@@ -1,0 +1,51 @@
+sequenceDiagram
+    participant Client
+    participant Endpoint
+    participant Mediator
+    participant Validator
+    participant Handler
+    participant UserDomain as User (Domain)
+    participant DB as Database
+    participant Events
+    participant Cookie
+
+    Client->>Endpoint: POST /api/v1/auth/register
+    Note right of Client: {email, password, displayName}
+
+    Endpoint->>Endpoint: Extract payload
+    Endpoint->>Endpoint: Create RegisterCommand
+
+    Endpoint->>Mediator: Send(RegisterCommand)
+
+    Mediator->>Validator: Validate(RegisterCommand)
+    Validator->>Validator: Check email format
+    Validator->>Validator: Validate password strength
+    Validator->>Mediator: Validation passed ✓
+
+    Mediator->>Handler: Handle(RegisterCommand)
+
+    Handler->>DB: Check email exists?
+    DB-->>Handler: Not found ✓
+
+    Handler->>UserDomain: User.Create(email, password)
+    UserDomain->>UserDomain: Hash password (PBKDF2)
+    UserDomain->>UserDomain: Create user entity
+    UserDomain->>Events: Raise UserCreatedEvent
+
+    Handler->>DB: SaveAsync(user)
+    DB-->>Handler: User saved ✓
+
+    Handler->>Handler: Generate session token
+    Handler->>DB: Create session
+    DB-->>Handler: Session created ✓
+
+    Handler->>Events: Publish UserRegisteredEvent
+
+    Handler-->>Mediator: RegisterResponse
+    Mediator-->>Endpoint: RegisterResponse
+
+    Endpoint->>Cookie: WriteSessionCookie(token, expiresAt)
+    Cookie-->>Client: Set-Cookie: meepleai_session
+
+    Endpoint-->>Client: 200 OK
+    Note left of Client: {user, expiresAt}

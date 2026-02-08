@@ -1,0 +1,64 @@
+sequenceDiagram
+    participant Client
+    participant Endpoint
+    participant Mediator
+    participant Validator
+    participant Handler
+    participant Domain as DiceRoll
+    participant RNG as RandomNumberGenerator
+    participant DB as Database
+    participant Events
+    participant SSE as SSE Service
+
+    Client->>Endpoint: POST /api/v1/tracking/sessions/{id}/dice/roll
+    Note right of Client: {participantId, formula: "2d6+3"}
+
+    Endpoint->>Endpoint: Extract sessionId, participantId, formula
+    Endpoint->>Endpoint: Create RollDiceCommand
+
+    Endpoint->>Mediator: Send(command)
+
+    Mediator->>Validator: Validate(command)
+    Validator->>Validator: Parse formula (XdY+Z format)
+    Validator->>Validator: Check dice type (d4/d6/d8/d10/d12/d20/d100)
+    Validator->>DB: Verify session exists and active
+    DB-->>Validator: Session found ✓
+    Validator->>DB: Verify participant in session
+    DB-->>Validator: Participant valid ✓
+    Validator->>Mediator: Validation passed ✓
+
+    Mediator->>Handler: Handle(command)
+
+    Handler->>Handler: Parse formula: "2d6+3"
+    Note over Handler: Extract: count=2, sides=6, modifier=+3
+
+    loop For each die (count=2)
+        Handler->>RNG: GetRandomNumber(1, 6)
+        RNG->>RNG: RandomNumberGenerator.GetBytes() (CSPRNG)
+        RNG-->>Handler: Roll = 4
+    end
+
+    Handler->>Handler: Calculate total
+    Note over Handler: Rolls: [4, 6]<br/>Sum: 10<br/>Modifier: +3<br/>Total: 13
+
+    Handler->>Domain: DiceRoll.Create(sessionId, participantId, formula, rolls, total)
+    Domain->>Domain: Formula = "2d6+3"
+    Domain->>Domain: Rolls = [4, 6]
+    Domain->>Domain: Total = 13
+    Domain->>Domain: RolledAt = UtcNow
+    Domain->>Events: Raise DiceRolledEvent
+
+    Handler->>DB: SaveAsync(diceRoll)
+    DB-->>Handler: Roll saved ✓
+
+    Handler->>Events: Publish DiceRolledEvent
+
+    Handler->>SSE: BroadcastToSession(sessionId, diceRolledEvent)
+    SSE->>SSE: Send SSE to all participants
+    Note over SSE: event: dice-rolled<br/>data: {participantId, formula, total, rolls}
+
+    Handler-->>Mediator: DiceRollDto
+    Mediator-->>Endpoint: DiceRollDto
+
+    Endpoint-->>Client: 200 OK
+    Note left of Client: {id, formula, rolls: [4,6], total: 13}

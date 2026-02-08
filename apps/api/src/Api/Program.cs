@@ -238,6 +238,9 @@ builder.Services.AddInfrastructureServices(builder.Configuration, builder.Enviro
 // In production, uses TimeProvider.System. Tests can override with TestTimeProvider/FakeTimeProvider.
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
+// Register IHttpContextAccessor for audit logging and request context
+builder.Services.AddHttpContextAccessor();
+
 // SEC-07: Issue #1787 - TOTP Replay Attack Prevention Background Cleanup
 builder.Services.AddHostedService<Api.Infrastructure.BackgroundTasks.UsedTotpCodeCleanupTask>();
 
@@ -250,6 +253,7 @@ builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
     cfg.AddOpenBehavior(typeof(Api.SharedKernel.Application.Behaviors.ValidationBehavior<,>));
+    cfg.AddOpenBehavior(typeof(Api.BoundedContexts.Administration.Application.Behaviors.AuditLoggingBehavior<,>)); // Issue #3691: Audit logging
 });
 
 // Application services (Domain, AI, Admin)
@@ -458,6 +462,7 @@ v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();
 v1Api.MapSessionTrackingEndpoints(); // GST-003: Session tracking real-time collaboration
 v1Api.MapSharedGameCatalogEndpoints(); // ISSUE-2371: Shared game catalog Phase 2
+v1Api.MapBggEndpoints(); // ISSUE-3120: BoardGameGeek integration
 v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
 v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
 v1Api.MapAiEndpoints();
@@ -472,11 +477,15 @@ v1Api.MapRateLimitAdminEndpoints();    // Issue #2738: Rate limit admin manageme
 v1Api.MapGameLibraryConfigEndpoints(); // Issue #2444: Game library tier limits config
 v1Api.MapSessionLimitsConfigEndpoints(); // Issue #3070: Session limits config
 v1Api.MapPdfUploadLimitsConfigEndpoints(); // Issue #3072: PDF upload limits config
-v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload limits config
+v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload limits config (bulk)
+v1Api.MapAdminConfigEndpoints();       // Issue #3673: PDF limits admin UI (per-tier)
 v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapDashboardEndpoints();         // Issue #3314: User dashboard aggregated API
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapAdminAgentMetricsEndpoints(); // Issue #3382: Agent Metrics Dashboard
+v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)
+v1Api.MapAgentPlaygroundEndpoints();    // Issue #3810: Agent Playground with SSE streaming
+v1Api.MapAdminStrategyEndpoints();      // Issue #3811: Strategy Editor for RAG pipelines
 v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics
 v1Api.MapAlertEndpoints();             // Alert management
 v1Api.MapAlertConfigEndpoints();       // Alert rules (Issue #921)
@@ -484,7 +493,10 @@ v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
 v1Api.MapUserLibraryEndpoints();       // User game library
 v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)
+v1Api.MapProposalMigrationEndpoints(); // Proposal migrations (Issue #3666)
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search
+v1Api.MapAdminAuditLogEndpoints();     // Issue #3691: Admin audit log system
+v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 v1Api.MapWorkflowEndpoints();          // n8n workflow integration
@@ -494,6 +506,10 @@ v1Api.MapApiKeyEndpoints();            // API key management
 v1Api.MapCacheEndpoints();             // Cache management
 v1Api.MapAdminUserEndpoints();         // User management
 v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
+v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
+v1Api.MapBatchJobEndpoints();          // Batch job system & operations (Issue #3693)
+v1Api.MapBatchJobLogsEndpoints();      // Batch job real-time logs SSE (Issue #3693 Task 3)
+v1Api.MapAdminResourcesEndpoints();    // Resources monitoring (Issue #3695)
 v1Api.MapTierStrategyAdminEndpoints(); // Tier-strategy configuration (Issue #3440)
 v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
 v1Api.MapAdminMiscEndpoints();         // Miscellaneous admin operations
@@ -507,6 +523,9 @@ v1Api.MapRagDashboardEndpoints();   // Issue #3304: RAG Dashboard configuration 
 
 // Issue #866: Agent management endpoints
 v1Api.MapAgentEndpoints();
+
+// Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
+v1Api.MapArbitroAgentEndpoints();
 
 // Issue #3377: AI model configuration endpoints
 v1Api.MapModelEndpoints();

@@ -59,7 +59,7 @@ import {
 import type { GameStateType, GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';
 
-import { MeepleCard } from './MeepleCard';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 
 // ============================================================================
 // Types

@@ -46,6 +46,9 @@ export const AdminUserSchema = z.object({
   email: z.string().email(),
   displayName: z.string().min(1),
   role: z.string().min(1),
+  tier: z.string().optional().default('Free'),              // Issue #3698: User tier
+  tokenUsage: z.number().int().optional().default(0),       // Issue #3698: Tokens used
+  tokenLimit: z.number().int().optional().default(10_000),  // Issue #3698: Monthly limit
   createdAt: z.string().datetime(),
   lastSeenAt: z.string().datetime().nullable().optional(),
   isTwoFactorEnabled: z.boolean().optional(),
@@ -372,6 +375,14 @@ export const DashboardMetricsSchema = z.object({
   errorRate24h: z.number().min(0).max(1),
   activeAlerts: z.number().int().nonnegative(),
   resolvedAlerts: z.number().int().nonnegative(),
+  // Issue #3694: Extended KPIs for Enterprise Admin Dashboard
+  tokenBalanceEur: z.number().nonnegative(),
+  tokenLimitEur: z.number().nonnegative(),
+  dbStorageGb: z.number().nonnegative(),
+  dbStorageLimitGb: z.number().nonnegative(),
+  dbGrowthMbPerDay: z.number().nonnegative(),
+  cacheHitRatePercent: z.number().min(0).max(100),
+  cacheHitRateTrendPercent: z.number(),
 });
 
 export type DashboardMetrics = z.infer<typeof DashboardMetricsSchema>;
@@ -536,5 +547,149 @@ export const BulkImportApiKeysResultSchema = z.object({
 });
 
 export type BulkImportApiKeysResult = z.infer<typeof BulkImportApiKeysResultSchema>;
+
+// ========== Audit Log (Issue #3691) ==========
+
+export const AuditLogEntrySchema = z.object({
+  id: z.string().uuid(),
+  adminUserId: z.string().uuid().nullable(),
+  action: z.string(),
+  resource: z.string(),
+  resourceId: z.string().nullable().optional(),
+  result: z.string(),
+  details: z.string().nullable().optional(),
+  ipAddress: z.string().nullable().optional(),
+  createdAt: z.string().datetime(),
+});
+export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>;
+
+export const AuditLogListResultSchema = z.object({
+  entries: z.array(AuditLogEntrySchema),
+  totalCount: z.number().int().nonnegative(),
+  limit: z.number().int().positive(),
+  offset: z.number().int().nonnegative(),
+});
+export type AuditLogListResult = z.infer<typeof AuditLogListResultSchema>;
+
+// ========== Token Management (Issue #3692) ==========
+
+export const TokenTierSchema = z.enum(['Free', 'Basic', 'Pro', 'Enterprise']);
+export type TokenTier = z.infer<typeof TokenTierSchema>;
+
+export const TokenBalanceSchema = z.object({
+  currentBalance: z.number(),
+  totalBudget: z.number(),
+  currency: z.string().default('EUR'),
+  usagePercent: z.number().min(0).max(100),
+  projectedDaysUntilDepletion: z.number().nullable(),
+  lastUpdated: z.string().datetime(),
+});
+export type TokenBalance = z.infer<typeof TokenBalanceSchema>;
+
+export const TokenConsumptionPointSchema = z.object({
+  date: z.string(),
+  tokens: z.number().nonnegative(),
+  cost: z.number().nonnegative(),
+});
+export type TokenConsumptionPoint = z.infer<typeof TokenConsumptionPointSchema>;
+
+export const TokenConsumptionDataSchema = z.object({
+  points: z.array(TokenConsumptionPointSchema),
+  totalTokens: z.number().nonnegative(),
+  totalCost: z.number().nonnegative(),
+  avgDailyTokens: z.number().nonnegative(),
+  avgDailyCost: z.number().nonnegative(),
+});
+export type TokenConsumptionData = z.infer<typeof TokenConsumptionDataSchema>;
+
+export const TierUsageSchema = z.object({
+  tier: TokenTierSchema,
+  limitPerMonth: z.number().nonnegative(),
+  currentUsage: z.number().nonnegative(),
+  userCount: z.number().int().nonnegative(),
+  usagePercent: z.number().min(0).max(100),
+});
+export type TierUsage = z.infer<typeof TierUsageSchema>;
+
+export const TierUsageListSchema = z.object({
+  tiers: z.array(TierUsageSchema),
+});
+export type TierUsageList = z.infer<typeof TierUsageListSchema>;
+
+export const TopConsumerSchema = z.object({
+  userId: z.string().uuid(),
+  displayName: z.string(),
+  email: z.string(),
+  tier: TokenTierSchema,
+  tokensUsed: z.number().nonnegative(),
+  percentOfTierLimit: z.number().min(0),
+});
+export type TopConsumer = z.infer<typeof TopConsumerSchema>;
+
+export const TopConsumersListSchema = z.object({
+  consumers: z.array(TopConsumerSchema),
+});
+export type TopConsumersList = z.infer<typeof TopConsumersListSchema>;
+
+export const AddCreditsRequestSchema = z.object({
+  amount: z.number().positive(),
+  currency: z.string().default('EUR'),
+  note: z.string().optional(),
+});
+export type AddCreditsRequest = z.infer<typeof AddCreditsRequestSchema>;
+
+export const UpdateTierLimitsRequestSchema = z.object({
+  tier: TokenTierSchema,
+  tokensPerMonth: z.number().nonnegative(),
+});
+export type UpdateTierLimitsRequest = z.infer<typeof UpdateTierLimitsRequestSchema>;
+
+// ========== Batch Jobs (Issue #3693) ==========
+
+export const BatchJobTypeSchema = z.enum([
+  'ResourceForecast',
+  'CostAnalysis',
+  'DataCleanup',
+  'BggSync',
+  'AgentBenchmark',
+]);
+export type BatchJobType = z.infer<typeof BatchJobTypeSchema>;
+
+export const BatchJobStatusSchema = z.enum(['Queued', 'Running', 'Completed', 'Failed', 'Cancelled']);
+export type BatchJobStatus = z.infer<typeof BatchJobStatusSchema>;
+
+export const BatchJobDtoSchema = z.object({
+  id: z.string().uuid(),
+  type: BatchJobTypeSchema,
+  status: BatchJobStatusSchema,
+  parameters: z.record(z.string(), z.any()).nullable(),
+  results: z.record(z.string(), z.any()).nullable(),
+  errorMessage: z.string().nullable(),
+  progress: z.number().min(0).max(100),
+  createdAt: z.string().datetime(),
+  startedAt: z.string().datetime().nullable(),
+  completedAt: z.string().datetime().nullable(),
+  duration: z.number().nullable(),
+});
+export type BatchJobDto = z.infer<typeof BatchJobDtoSchema>;
+
+export const BatchJobListSchema = z.object({
+  jobs: z.array(BatchJobDtoSchema),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+});
+export type BatchJobList = z.infer<typeof BatchJobListSchema>;
+
+export const CreateBatchJobRequestSchema = z.object({
+  type: BatchJobTypeSchema,
+  parameters: z.record(z.string(), z.any()).optional(),
+});
+export type CreateBatchJobRequest = z.infer<typeof CreateBatchJobRequestSchema>;
+
+export const CreateBatchJobResponseSchema = z.object({
+  id: z.string().uuid(),
+});
+export type CreateBatchJobResponse = z.infer<typeof CreateBatchJobResponseSchema>;
 
 // Note: PagedResult is defined in config.schemas.ts and re-exported via index.ts

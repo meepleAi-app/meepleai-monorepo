@@ -18,6 +18,8 @@ namespace Api.Extensions;
 /// - ShareRequestQuery: 100 req/min (querying share requests) - Issue #3098
 /// - ShareRequestUpdate: 50 req/min (updating share requests) - Issue #3098
 /// - UserDashboard: 100 req/min (user dashboard operations) - Issue #3098
+/// - BggSearch: 20 req/hour (BoardGameGeek search operations) - Issue #3120
+/// - ProposePrivateGame: 2 req/min (private game catalog proposals) - Issue #3665
 /// - Default: 60 req/min (general API protection)
 /// </summary>
 internal static class RateLimitingServiceExtensions
@@ -65,6 +67,14 @@ internal static class RateLimitingServiceExtensions
 
                 // Issue #3098: User dashboard rate limiting policy
                 options.AddPolicy("UserDashboard", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // Issue #3120: BGG search rate limiting policy
+                options.AddPolicy("BggSearch", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // Issue #3665: Private game proposal rate limiting policy
+                options.AddPolicy("ProposePrivateGame", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
             });
 
@@ -220,6 +230,40 @@ internal static class RateLimitingServiceExtensions
                     {
                         Window = TimeSpan.FromMinutes(1),
                         PermitLimit = 100, // User-specific operations
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 9: BggSearch - 20 req/hour for BGG search operations (Issue #3120)
+            options.AddPolicy("BggSearch", httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"bgg-search-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromHours(1), // 1 hour window
+                        PermitLimit = 20, // 20 searches per hour to respect BGG API
+                        SegmentsPerWindow = 6, // 10-minute segments
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 10: ProposePrivateGame - 2 req/min for proposing private games (Issue #3665)
+            options.AddPolicy("ProposePrivateGame", httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"propose-private-game-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 2, // Low limit to prevent proposal spam
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,

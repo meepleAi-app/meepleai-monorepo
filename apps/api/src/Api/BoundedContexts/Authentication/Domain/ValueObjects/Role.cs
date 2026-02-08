@@ -11,10 +11,11 @@ public sealed class Role : ValueObject
     public static readonly Role User = new("user");
     public static readonly Role Editor = new("editor");
     public static readonly Role Admin = new("admin");
+    public static readonly Role SuperAdmin = new("superadmin");
 
     private static readonly HashSet<string> ValidRoles = new(StringComparer.OrdinalIgnoreCase)
     {
-        "user", "editor", "admin"
+        "user", "editor", "admin", "superadmin"
     };
 
     public string Value { get; }
@@ -31,7 +32,7 @@ public sealed class Role : ValueObject
 
         var normalized = value.ToLowerInvariant();
         if (!ValidRoles.Contains(normalized))
-            throw new ValidationException(nameof(Role), $"Invalid role: {value}. Valid roles are: user, editor, admin");
+            throw new ValidationException(nameof(Role), $"Invalid role: {value}. Valid roles are: user, editor, admin, superadmin");
 
         return new Role(normalized);
     }
@@ -39,12 +40,16 @@ public sealed class Role : ValueObject
     public bool IsAdmin() => string.Equals(Value, "admin", StringComparison.Ordinal);
     public bool IsEditor() => string.Equals(Value, "editor", StringComparison.Ordinal);
     public bool IsUser() => string.Equals(Value, "user", StringComparison.Ordinal);
+    public bool IsSuperAdmin() => string.Equals(Value, "superadmin", StringComparison.Ordinal);
 
     public bool HasPermission(Role requiredRole)
     {
         ArgumentNullException.ThrowIfNull(requiredRole);
-        // Admin has all permissions
-        if (IsAdmin()) return true;
+        // SuperAdmin has all permissions
+        if (IsSuperAdmin()) return true;
+
+        // Admin has all permissions except SuperAdmin
+        if (IsAdmin() && !requiredRole.IsSuperAdmin()) return true;
 
         // Editor has editor + user permissions
         if (IsEditor() && (requiredRole.IsEditor() || requiredRole.IsUser())) return true;

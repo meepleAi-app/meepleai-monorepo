@@ -39,7 +39,21 @@ internal static class AuthenticationServiceExtensions
         .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>("SessionCookie", _ => { });
 
         // Add ASP.NET Core Authorization services (required for UseAuthorization middleware)
-        services.AddAuthorization();
+        // ISSUE-3690: Role-based authorization policies for admin dashboard
+        services.AddAuthorization(options =>
+        {
+            // SuperAdmin only - full system access including global feature flags
+            options.AddPolicy("RequireSuperAdmin", policy =>
+                policy.RequireRole("SuperAdmin"));
+
+            // Admin or above - operations, monitoring, user management
+            options.AddPolicy("RequireAdminOrAbove", policy =>
+                policy.RequireRole("SuperAdmin", "Admin"));
+
+            // Editor or above - content management
+            options.AddPolicy("RequireEditorOrAbove", policy =>
+                policy.RequireRole("SuperAdmin", "Admin", "Editor"));
+        });
 
         return services;
     }

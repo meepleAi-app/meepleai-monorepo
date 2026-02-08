@@ -21,6 +21,7 @@ internal static class UserLibraryServiceExtensions
         services.AddScoped<ILibraryShareLinkRepository, LibraryShareLinkRepository>();
         services.AddScoped<IGameLabelRepository, GameLabelRepository>();
         services.AddScoped<IPrivateGameRepository, PrivateGameRepository>(); // Issue #3662: Private games
+        services.AddScoped<IProposalMigrationRepository, ProposalMigrationRepository>(); // Issue #3666: Migration choice flow
 
         // Register domain services
         services.AddScoped<IGameLibraryQuotaService, GameLibraryQuotaService>();

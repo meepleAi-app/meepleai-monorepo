@@ -12,6 +12,12 @@ public class ShareRequestEntity
     public Guid? TargetSharedGameId { get; set; }
 
     /// <summary>
+    /// ID of the private game being proposed (for NewGameProposal contributions).
+    /// Issue #3665: Added for Phase 4 - Proposal System.
+    /// </summary>
+    public Guid? SourcePrivateGameId { get; set; }
+
+    /// <summary>
     /// Status enum: 0=Pending, 1=InReview, 2=ChangesRequested, 3=Approved, 4=Rejected, 5=Withdrawn
     /// </summary>
     public int Status { get; set; }
@@ -44,5 +50,12 @@ public class ShareRequestEntity
     // Navigation properties
     public SharedGameEntity SourceGame { get; set; } = default!;
     public SharedGameEntity? TargetSharedGame { get; set; }
+
+    /// <summary>
+    /// Navigation property to the private game (for NewGameProposal contributions).
+    /// Issue #3665: Added for Phase 4 - Proposal System.
+    /// </summary>
+    public UserLibrary.PrivateGameEntity? PrivateGame { get; set; }
+
     public ICollection<ShareRequestDocumentEntity> AttachedDocuments { get; set; } = new List<ShareRequestDocumentEntity>();
 }

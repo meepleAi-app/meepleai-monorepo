@@ -2,8 +2,10 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Administration.Application.Handlers;
@@ -26,15 +28,18 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
 
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<SeedE2ETestUsersCommandHandler> _logger;
 
     public SeedE2ETestUsersCommandHandler(
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
+        IConfiguration configuration,
         ILogger<SeedE2ETestUsersCommandHandler> logger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -42,7 +47,6 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var passwordHash = PasswordHash.Create(TestPassword);
         var usersCreated = 0;
 
         foreach (var (emailStr, displayName, role) in TestUsers)
@@ -55,6 +59,15 @@ internal sealed class SeedE2ETestUsersCommandHandler : ICommandHandler<SeedE2ETe
                 _logger.LogInformation("E2E test user already exists: {Email}. Skipping.", emailStr);
                 continue;
             }
+
+            // Use admin.secret password for admin, hardcoded password for other E2E users
+            var password = role == Role.Admin
+                ? SecretsHelper.GetSecretOrValue(_configuration, "ADMIN_PASSWORD", _logger, required: false)
+                    ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD")
+                    ?? TestPassword
+                : TestPassword;
+
+            var passwordHash = PasswordHash.Create(password);
 
             var user = new User(
                 id: Guid.NewGuid(),

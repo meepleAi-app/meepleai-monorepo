@@ -63,6 +63,18 @@ public interface IShareRequestRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets a pending game proposal (NewGameProposal type) for a private game.
+    /// Used to prevent duplicate proposals for the same private game.
+    /// Issue #3665: Phase 4 - Proposal System.
+    /// </summary>
+    /// <param name="privateGameId">The private game ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The pending proposal if found; otherwise null.</returns>
+    Task<ShareRequest?> GetPendingProposalForPrivateGameAsync(
+        Guid privateGameId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets all share requests for a specific user.
     /// </summary>
     /// <param name="userId">The user ID.</param>

@@ -1,11 +1,6 @@
 name: Security Scan
 
 on:
-  push:
-    branches: [main, main-staging]
-    paths:
-      - 'apps/**'
-      - '.github/workflows/**'
   pull_request:
     branches: [main, main-staging]
   schedule:

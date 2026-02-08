@@ -42,6 +42,17 @@ internal static class AdministrationServiceExtensions
         // Issue #3464: RAG pipeline strategy repository
         services.AddScoped<IRagPipelineStrategyRepository, RagPipelineStrategyRepository>();
 
+        // Issue #3692: Token Management repositories + OpenRouter API
+        services.AddScoped<ITokenTierRepository, TokenTierRepository>();
+        services.AddScoped<IUserTokenUsageRepository, UserTokenUsageRepository>();
+        services.AddScoped<ITokenTrackingService, TokenTrackingService>(); // Issue #3786: Token tracking service
+        services.AddHttpClient<IOpenRouterService, OpenRouterService>()
+            .AddPolicyHandler(GetRetryPolicy())
+            .AddPolicyHandler(GetCircuitBreakerPolicy());
+
+        // Issue #3693: Batch Job System repositories
+        services.AddScoped<IBatchJobRepository, BatchJobRepository>();
+
         // ISSUE-2528: Orphaned task cleanup configuration and service
         services.Configure<OrphanedTaskCleanupOptions>(
             configuration.GetSection(OrphanedTaskCleanupOptions.SectionKey));
@@ -101,6 +112,28 @@ internal static class AdministrationServiceExtensions
                 .WithIdentity("orphaned-task-cleanup-trigger", "maintenance")
                 .WithCronSchedule("0 0 * * * ?")  // Every hour at minute 0
                 .WithDescription("Runs hourly to clean up orphaned analysis tasks older than retention period"));
+
+            // Issue #3691: Audit log retention cleanup job (daily at 3 AM UTC)
+            q.AddJob<AuditLogRetentionJob>(opts => opts
+                .WithIdentity("audit-log-retention-job", "maintenance")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("audit-log-retention-job", "maintenance")
+                .WithIdentity("audit-log-retention-trigger", "maintenance")
+                .WithCronSchedule("0 0 3 * * ?")  // Daily at 3:00 AM UTC
+                .WithDescription("Runs daily to clean up audit logs older than 90 days"));
+
+            // Issue #3693 Task 2: Batch job processor (every 30 seconds)
+            q.AddJob<BatchJobProcessorJob>(opts => opts
+                .WithIdentity("batch-job-processor", "background")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("batch-job-processor", "background")
+                .WithIdentity("batch-job-processor-trigger", "background")
+                .WithSimpleSchedule(x => x.WithIntervalInSeconds(30).RepeatForever())
+                .WithDescription("Processes queued batch jobs every 30 seconds"));
         });
 
         services.AddQuartzHostedService(options =>

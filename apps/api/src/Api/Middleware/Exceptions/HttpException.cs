@@ -34,8 +34,8 @@ public class HttpException : Exception
         int statusCode,
         string errorCode,
         string message,
-        Exception innerException)
-        : base(message, innerException)
+        Exception? innerException)
+        : base(message, innerException!)
     {
         StatusCode = statusCode;
         ErrorCode = errorCode;

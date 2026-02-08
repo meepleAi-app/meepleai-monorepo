@@ -431,7 +431,10 @@ internal record UserDto(
     bool IsSuspended = false,
     string? SuspendReason = null,
     int Level = 1,
-    int ExperiencePoints = 0
+    int ExperiencePoints = 0,
+    string Tier = "Free",           // Issue #3698: User tier (Free, Basic, Pro, Enterprise)
+    int TokenUsage = 0,             // Issue #3698: Tokens used this month
+    int TokenLimit = 10_000         // Issue #3698: Monthly token limit for tier
 );
 
 /// <summary>
@@ -615,7 +618,15 @@ internal record DashboardMetrics(
     double AverageLatency7d,
     double ErrorRate24h,
     int ActiveAlerts,
-    int ResolvedAlerts
+    int ResolvedAlerts,
+    // Issue #3694: Extended KPIs for Enterprise Admin Dashboard
+    decimal TokenBalanceEur,
+    decimal TokenLimitEur,
+    decimal DbStorageGb,
+    decimal DbStorageLimitGb,
+    decimal DbGrowthMbPerDay,
+    double CacheHitRatePercent,
+    double CacheHitRateTrendPercent
 );
 
 internal record TimeSeriesDataPoint(
@@ -773,6 +784,91 @@ internal record PrometheusAlert(
     IReadOnlyDictionary<string, string> Annotations,
     DateTime StartsAt,
     DateTime? EndsAt
+);
+
+// ADMIN-RESOURCES: Resources Monitoring DTOs (Issue #3695)
+/// <summary>
+/// Database metrics including size, growth trends, and connection statistics
+/// </summary>
+internal record DatabaseMetricsDto(
+    long SizeBytes,
+    string SizeFormatted,
+    long GrowthLast7Days,
+    long GrowthLast30Days,
+    long GrowthLast90Days,
+    int ActiveConnections,
+    int MaxConnections,
+    long TransactionsCommitted,
+    long TransactionsRolledBack,
+    DateTime MeasuredAt
+);
+
+/// <summary>
+/// Table size statistics for identifying largest tables
+/// </summary>
+internal record TableSizeDto(
+    string TableName,
+    long SizeBytes,
+    string SizeFormatted,
+    long RowCount,
+    long IndexSizeBytes,
+    string IndexSizeFormatted,
+    long TotalSizeBytes,
+    string TotalSizeFormatted
+);
+
+/// <summary>
+/// Redis cache metrics including memory usage and hit rates
+/// </summary>
+internal record CacheMetricsDto(
+    long UsedMemoryBytes,
+    string UsedMemoryFormatted,
+    long MaxMemoryBytes,
+    string MaxMemoryFormatted,
+    double MemoryUsagePercent,
+    long TotalKeys,
+    long KeyspaceHits,
+    long KeyspaceMisses,
+    double HitRate,
+    long EvictedKeys,
+    long ExpiredKeys,
+    DateTime MeasuredAt
+);
+
+/// <summary>
+/// Hot key identification for cache optimization
+/// </summary>
+internal record HotKeyDto(
+    string KeyPattern,
+    long AccessCount,
+    long MemoryBytes,
+    string MemoryFormatted
+);
+
+/// <summary>
+/// Vector store (Qdrant) metrics
+/// </summary>
+internal record VectorStoreMetricsDto(
+    int TotalCollections,
+    long TotalVectors,
+    long IndexedVectors,
+    long MemoryBytes,
+    string MemoryFormatted,
+    IReadOnlyList<CollectionStatsDto> Collections,
+    DateTime MeasuredAt
+);
+
+/// <summary>
+/// Individual collection statistics
+/// </summary>
+internal record CollectionStatsDto(
+    string CollectionName,
+    long VectorCount,
+    long IndexedCount,
+    int VectorDimensions,
+    string DistanceMetric,
+    long MemoryBytes,
+    string MemoryFormatted
 );
 
 // ADMIN-01: Prompt Management DTOs - See PromptManagementDto.cs for full definitions

@@ -96,7 +96,11 @@ public class UserRepository : RepositoryBase, IUserRepository
             SuspendReason = entity.SuspendReason,
             // ISSUE-3339: Account Lockout
             FailedLoginAttempts = entity.FailedLoginAttempts,
-            LockedUntil = entity.LockedUntil
+            LockedUntil = entity.LockedUntil,
+            // ISSUE-3672: Email Verification
+            EmailVerified = entity.EmailVerified,
+            EmailVerifiedAt = entity.EmailVerifiedAt,
+            VerificationGracePeriodEndsAt = entity.VerificationGracePeriodEndsAt
         };
 
         // Map backup codes
@@ -161,6 +165,11 @@ public class UserRepository : RepositoryBase, IUserRepository
         // ISSUE-3339: Update lockout state
         existingUser.FailedLoginAttempts = entity.FailedLoginAttempts;
         existingUser.LockedUntil = entity.LockedUntil;
+
+        // ISSUE-3672: Update email verification state
+        existingUser.EmailVerified = entity.EmailVerified;
+        existingUser.EmailVerifiedAt = entity.EmailVerifiedAt;
+        existingUser.VerificationGracePeriodEndsAt = entity.VerificationGracePeriodEndsAt;
 
         // Synchronize backup codes collection (delete old, add new)
         // This ensures we don't duplicate codes on every update
@@ -294,6 +303,12 @@ public class UserRepository : RepositoryBase, IUserRepository
 
         // ISSUE-3339: Restore lockout state
         user.RestoreLockoutState(entity.FailedLoginAttempts, entity.LockedUntil);
+
+        // ISSUE-3672: Restore email verification state
+        user.RestoreEmailVerificationState(
+            entity.EmailVerified,
+            entity.EmailVerifiedAt,
+            entity.VerificationGracePeriodEndsAt);
 
         return user;
     }

@@ -10,6 +10,7 @@ from .state import (
     WorkflowResult,
 )
 from .tutor_state import TutorState
+from .arbitro_state import ArbitroState
 
 __all__ = [
     "AgentType",
@@ -20,4 +21,5 @@ __all__ = [
     "GameAgentState",
     "WorkflowResult",
     "TutorState",
+    "ArbitroState",
 ]

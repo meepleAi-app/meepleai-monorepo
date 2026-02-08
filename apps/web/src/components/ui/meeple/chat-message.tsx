@@ -13,8 +13,8 @@ import React from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { MeepleAvatar, type MeepleAvatarState } from './meeple-avatar';
 import { FeedbackButtons, type FeedbackValue } from './feedback-buttons';
+import { MeepleAvatar, type MeepleAvatarState } from './meeple-avatar';
 import { Avatar, AvatarImage, AvatarFallback } from '../data-display/avatar';
 import { ConfidenceBadge as StandaloneConfidenceBadge } from '../data-display/confidence-badge';
 

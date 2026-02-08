@@ -44,6 +44,7 @@ import {
   HistoryIcon,
   InboxIcon,
   FileSearchIcon,
+  ShieldCheckIcon,
 } from 'lucide-react';
 
 /**
@@ -359,6 +360,11 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         href: '/admin/bulk-export',
         label: 'Bulk Export',
         icon: DownloadIcon,
+      },
+      {
+        href: '/admin/audit-log',
+        label: 'Audit Log',
+        icon: ShieldCheckIcon,
       },
     ],
   },

@@ -30,6 +30,9 @@ public class UserEntity
     public bool EmailVerified { get; set; }
     public DateTime? EmailVerifiedAt { get; set; }
 
+    // ISSUE-3672: Email Verification Grace Period
+    public DateTime? VerificationGracePeriodEndsAt { get; set; }
+
     // ISSUE-2886: User Suspension
     public bool IsSuspended { get; set; }
     public DateTime? SuspendedAt { get; set; }

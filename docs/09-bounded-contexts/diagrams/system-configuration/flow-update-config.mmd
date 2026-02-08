@@ -1,0 +1,58 @@
+sequenceDiagram
+    participant Client
+    participant Endpoint
+    participant Mediator
+    participant Validator
+    participant Handler
+    participant Domain as Configuration
+    participant History as ConfigurationHistory
+    participant DB as Database
+    participant Cache as Redis
+    participant Events
+
+    Client->>Endpoint: PUT /api/v1/admin/configurations/{id}
+    Note right of Client: {value: "15"}
+
+    Endpoint->>Endpoint: Extract configId and value
+    Endpoint->>Endpoint: Create UpdateConfigValueCommand
+
+    Endpoint->>Mediator: Send(command)
+
+    Mediator->>Validator: Validate(command)
+    Validator->>Validator: Check value is valid format
+    Validator->>Validator: Verify admin role
+    Validator->>DB: Check config exists
+    DB-->>Validator: Config found ✓
+    Validator->>Mediator: Validation passed ✓
+
+    Mediator->>Handler: Handle(command)
+
+    Handler->>DB: Get Configuration
+    DB-->>Handler: Configuration (Key: "RAG:DefaultTopK", Value: "10")
+
+    Handler->>History: Create history record
+    History->>History: Version = current version
+    History->>History: Value = old value
+    History->>History: ChangedAt = UtcNow
+
+    Handler->>Domain: config.UpdateValue("15")
+    Domain->>Domain: Value = "15"
+    Domain->>Domain: Version++
+    Domain->>Domain: UpdatedAt = UtcNow
+    Domain->>Events: Raise ConfigurationUpdatedEvent
+
+    Handler->>DB: SaveAsync(config, history)
+    DB-->>Handler: Saved ✓
+
+    Handler->>Cache: InvalidateKey("config:RAG:DefaultTopK")
+    Cache-->>Handler: Cache invalidated ✓
+
+    Handler->>Events: Publish ConfigurationUpdatedEvent
+    Note over Events: All services receive update
+    Events->>Events: Broadcast to subscribers
+
+    Handler-->>Mediator: ConfigurationDto
+    Mediator-->>Endpoint: ConfigurationDto
+
+    Endpoint-->>Client: 200 OK
+    Note left of Client: {id, key, value: "15", version: 2}

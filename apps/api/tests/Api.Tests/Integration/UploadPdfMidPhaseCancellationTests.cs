@@ -299,6 +299,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            null,  // PrivateGameId
             UserId: testUser.Id,
             File: formFile);
 
@@ -374,6 +375,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            null,  // PrivateGameId
             UserId: testUser.Id,
             File: formFile);
 
@@ -438,6 +440,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            null,  // PrivateGameId
             UserId: testUser.Id,
             File: formFile);
 
@@ -473,6 +476,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            null,  // PrivateGameId
             UserId: testUser.Id,
             File: formFile);
 
@@ -516,6 +520,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            null,  // PrivateGameId
             UserId: testUser.Id,
             File: formFile);
 
@@ -558,6 +563,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         var command = new UploadPdfCommand(
             GameId: testGame.Id.ToString(),
             Metadata: null,
+            null,  // PrivateGameId
             UserId: testUser.Id,
             File: formFile);
 
@@ -626,6 +632,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
             var command = new UploadPdfCommand(
                 GameId: testGame.Id.ToString(),
                 Metadata: null,
+                null,  // PrivateGameId
                 UserId: testUser.Id,
                 File: formFile);
 

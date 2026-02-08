@@ -10,6 +10,34 @@ echo "🚀 Running pre-commit checks..."
 CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "detached")
 echo "📌 Current branch: $CURRENT_BRANCH"
 
+# ============================================
+# Port Conflict Check (Issue #3797)
+# ============================================
+
+# Only run on Windows (skip on Linux/macOS)
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" || -n "$WINDIR" ]]; then
+  echo "🔍 Checking for port conflicts (Windows)..."
+
+  # Check if cleanup script exists
+  if [ -f "tools/cleanup/cleanup-dev-ports.ps1" ]; then
+    # Run cleanup script in dry-run mode to check for conflicts
+    pwsh -ExecutionPolicy Bypass -File tools/cleanup/cleanup-dev-ports.ps1 -DryRun 2>&1 | grep -q "would be killed: 0" || {
+      echo ""
+      echo "⚠️  Port conflicts detected! Zombie dev processes found."
+      echo ""
+      echo "Run this to cleanup before committing:"
+      echo "  pwsh tools/cleanup/cleanup-dev-ports.ps1"
+      echo ""
+      echo "Or use the enhanced startup script:"
+      echo "  pwsh infra/scripts/start-dev.ps1"
+      echo ""
+      # Warning only - don't block commit
+    }
+  fi
+else
+  echo "ℹ️  Skipping port check (not Windows)"
+fi
+
 # Validate that apps/web directory exists
 if [ ! -d "apps/web" ]; then
   echo "❌ Error: apps/web directory not found. Are you in the repository root?"

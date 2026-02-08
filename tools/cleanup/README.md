@@ -4,6 +4,54 @@ Scripts for cleaning caches, removing temporary files, and maintaining repositor
 
 ## Scripts
 
+### 🔧 **cleanup-dev-ports.ps1** (NEW - Issue #3797)
+**Purpose:** Detect and kill zombie development processes on common ports
+
+**What it does:**
+1. Scans development ports: 3000 (web), 8080 (api), 5432 (postgres), 6379 (redis), 6333 (qdrant)
+2. Detects zombie processes from previous `pnpm dev` or `dotnet run` sessions
+3. Automatically skips Docker processes (safe filtering)
+4. Terminates only development processes (node, dotnet, postgres, etc.)
+5. Prevents port conflicts when starting Docker containers
+
+**Usage:**
+```powershell
+# Basic cleanup
+.\tools\cleanup\cleanup-dev-ports.ps1
+
+# Dry run - preview what would be killed
+.\tools\cleanup\cleanup-dev-ports.ps1 -DryRun
+
+# Detailed output
+.\tools\cleanup\cleanup-dev-ports.ps1 -DryRun -ShowDetails
+```
+
+**Output:**
+```
+[INFO] Starting development port cleanup...
+[WARN]   Found: node (PID 61940) on port 3000 - Uptime: 02:34:15
+[OK]   Killed: PID 61940 on port 3000
+
+[INFO] === Cleanup Summary ===
+[INFO] Processes found: 1
+[INFO] Docker processes (skipped): 5
+[OK] Processes killed: 1
+[OK] Port cleanup completed! Safe to start Docker containers.
+```
+
+**Who uses it:** All developers (Windows/WSL2)
+**When:**
+- Before `docker compose up` (prevents Issue #3797)
+- After Ctrl+C interrupted dev servers
+- "Port already in use" errors
+- Integrated in `infra/scripts/start-dev.ps1`
+
+**Requirements:** PowerShell 5.1+, Windows 10/11
+**Safety:** Automatically skips Docker and system processes
+**Related:** Issue #3797 (port conflict resolution)
+
+---
+
 ### 🧹 **cleanup-caches.sh** & **cleanup-caches.ps1**
 **Purpose:** Clean all cache directories and build artifacts to free disk space
 

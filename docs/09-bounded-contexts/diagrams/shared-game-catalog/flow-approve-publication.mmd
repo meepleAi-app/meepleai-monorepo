@@ -1,0 +1,57 @@
+sequenceDiagram
+    participant Client
+    participant Endpoint
+    participant Mediator
+    participant Validator
+    participant Handler
+    participant Domain as SharedGame
+    participant DB as Database
+    participant Events
+    participant Notif as UserNotifications
+    participant Badge as BadgeService
+
+    Client->>Endpoint: POST /api/v1/admin/shared-games/{id}/approve-publication
+
+    Endpoint->>Endpoint: Extract gameId
+    Endpoint->>Endpoint: Create ApproveSharedGamePublicationCommand
+
+    Endpoint->>Mediator: Send(command)
+
+    Mediator->>Validator: Validate(command)
+    Validator->>Validator: Verify admin role
+    Validator->>DB: Check game exists
+    DB-->>Validator: Game found ✓
+    Validator->>Validator: Verify Status = PendingApproval
+    Validator->>Mediator: Validation passed ✓
+
+    Mediator->>Handler: Handle(command)
+
+    Handler->>DB: Get SharedGame
+    DB-->>Handler: SharedGame (Status: PendingApproval)
+
+    Handler->>Domain: game.Approve(adminId)
+    Domain->>Domain: Status = Published
+    Domain->>Domain: PublishedAt = UtcNow
+    Domain->>Domain: ApprovedBy = adminId
+    Domain->>Events: Raise GamePublishedEvent
+
+    Handler->>DB: SaveAsync(game)
+    DB-->>Handler: Game updated ✓
+
+    Handler->>Events: Publish GamePublishedEvent
+
+    Events->>Notif: Send approval notification to submitter
+    Notif->>Notif: Create notification
+    Notif->>Notif: Send email
+
+    Events->>Badge: Check badge eligibility
+    Badge->>DB: Get submitter contribution count
+    DB-->>Badge: Count = 10
+    Badge->>Badge: Check "10 Games Published" badge
+    Badge->>Events: Publish BadgeEarnedEvent
+
+    Handler-->>Mediator: SharedGameDto
+    Mediator-->>Endpoint: SharedGameDto
+
+    Endpoint-->>Client: 200 OK
+    Note left of Client: {id, status: "Published", publishedAt}

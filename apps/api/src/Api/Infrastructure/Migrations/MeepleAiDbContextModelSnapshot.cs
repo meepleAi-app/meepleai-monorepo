@@ -1806,6 +1806,140 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("game_state_snapshots", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.PlayRecordEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeSpan?>("Duration")
+                        .HasColumnType("interval");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("GameName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid?>("GroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ScoringConfigJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("SessionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("StartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Visibility")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("IX_PlayRecords_CreatedByUserId");
+
+                    b.HasIndex("GameId")
+                        .HasDatabaseName("IX_PlayRecords_GameId")
+                        .HasFilter("game_id IS NOT NULL");
+
+                    b.HasIndex("SessionDate")
+                        .IsDescending()
+                        .HasDatabaseName("IX_PlayRecords_SessionDate");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_PlayRecords_Status");
+
+                    b.ToTable("play_records", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.RecordPlayerEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("PlayRecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayRecordId")
+                        .HasDatabaseName("IX_RecordPlayers_PlayRecordId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_RecordPlayers_UserId")
+                        .HasFilter("user_id IS NOT NULL");
+
+                    b.ToTable("record_players", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.RecordScoreEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Dimension")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("RecordPlayerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("Value")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecordPlayerId", "Dimension")
+                        .IsUnique()
+                        .HasDatabaseName("IX_RecordScores_Player_Dimension_Unique");
+
+                    b.ToTable("record_scores", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.GameSessionEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5657,7 +5791,7 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .IsUnique()
                         .HasDatabaseName("IX_GameLabels_Name_Predefined")
-                        .HasFilter("is_predefined = true");
+                        .HasFilter("\"IsPredefined\" = true");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_GameLabels_UserId");
@@ -5665,7 +5799,7 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("UserId", "Name")
                         .IsUnique()
                         .HasDatabaseName("IX_GameLabels_UserId_Name")
-                        .HasFilter("is_predefined = false");
+                        .HasFilter("\"IsPredefined\" = false");
 
                     b.ToTable("game_labels", (string)null);
                 });
@@ -6974,6 +7108,53 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("SessionState");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.PlayRecordEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Game");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.RecordPlayerEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameManagement.PlayRecordEntity", "PlayRecord")
+                        .WithMany("Players")
+                        .HasForeignKey("PlayRecordId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("PlayRecord");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.RecordScoreEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameManagement.RecordPlayerEntity", "RecordPlayer")
+                        .WithMany("Scores")
+                        .HasForeignKey("RecordPlayerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RecordPlayer");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.GameSessionEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "CreatedByUser")
@@ -7883,6 +8064,16 @@ namespace Api.Infrastructure.Migrations
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameSessionStateEntity", b =>
                 {
                     b.Navigation("Snapshots");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.PlayRecordEntity", b =>
+                {
+                    b.Navigation("Players");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.RecordPlayerEntity", b =>
+                {
+                    b.Navigation("Scores");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.AgentTypologyEntity", b =>

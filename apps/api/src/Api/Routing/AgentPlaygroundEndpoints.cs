@@ -29,7 +29,7 @@ internal static class AgentPlaygroundEndpoints
             try
             {
                 // Placeholder: Will integrate with AgentDefinition after #3850 merges
-                await SendSseEventAsync(context.Response, "start", new { agentId, message = "Chat started" }, ct);
+                await SendSseEventAsync(context.Response, "start", new { agentId, message = "Chat started" }, ct).ConfigureAwait(false);
 
                 // Simulate streaming response
                 var response = $"Playground test response for agent {agentId}: {request.Message}";
@@ -37,8 +37,8 @@ internal static class AgentPlaygroundEndpoints
 
                 foreach (var chunk in chunks)
                 {
-                    await SendSseEventAsync(context.Response, "chunk", new { content = chunk + " " }, ct);
-                    await Task.Delay(50, ct); // Simulate streaming delay
+                    await SendSseEventAsync(context.Response, "chunk", new { content = chunk + " " }, ct).ConfigureAwait(false);
+                    await Task.Delay(50, ct).ConfigureAwait(false); // Simulate streaming delay
                 }
 
                 // Send metadata
@@ -47,19 +47,19 @@ internal static class AgentPlaygroundEndpoints
                     tokens = 150,
                     latency = 1.2,
                     model = "gpt-4"
-                }, ct);
+                }, ct).ConfigureAwait(false);
 
-                await SendSseEventAsync(context.Response, "done", new { success = true }, ct);
+                await SendSseEventAsync(context.Response, "done", new { success = true }, ct).ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ex)
             {
-                logger.LogInformation("Playground chat cancelled for agent {AgentId}", agentId);
-                await SendSseEventAsync(context.Response, "error", new { message = "Cancelled" }, ct);
+                logger.LogInformation(ex, "Playground chat cancelled for agent {AgentId}", agentId);
+                await SendSseEventAsync(context.Response, "error", new { message = "Cancelled" }, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error in playground chat for agent {AgentId}", agentId);
-                await SendSseEventAsync(context.Response, "error", new { message = ex.Message }, ct);
+                await SendSseEventAsync(context.Response, "error", new { message = ex.Message }, ct).ConfigureAwait(false);
             }
 
             return Results.Ok();
@@ -78,8 +78,8 @@ internal static class AgentPlaygroundEndpoints
     {
         var json = System.Text.Json.JsonSerializer.Serialize(data);
         var message = $"event: {eventType}\ndata: {json}\n\n";
-        await response.WriteAsync(message, Encoding.UTF8, ct);
-        await response.Body.FlushAsync(ct);
+        await response.WriteAsync(message, Encoding.UTF8, ct).ConfigureAwait(false);
+        await response.Body.FlushAsync(ct).ConfigureAwait(false);
     }
 }
 

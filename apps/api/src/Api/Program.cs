@@ -524,6 +524,9 @@ v1Api.MapRagDashboardEndpoints();   // Issue #3304: RAG Dashboard configuration 
 // Issue #866: Agent management endpoints
 v1Api.MapAgentEndpoints();
 
+// Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
+v1Api.MapArbitroAgentEndpoints();
+
 // Issue #3377: AI model configuration endpoints
 v1Api.MapModelEndpoints();
 

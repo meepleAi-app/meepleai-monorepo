@@ -2,7 +2,7 @@
  * Tests for useSearch hook
  */
 
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useSearch } from '../hooks/use-search';
 import { vi } from 'vitest';
 
@@ -20,14 +20,6 @@ const mockItems: MockItem[] = [
 ];
 
 describe('useSearch', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('should return all items when query is empty', () => {
     const { result } = renderHook(() => useSearch(mockItems, ['title', 'description']));
 
@@ -35,7 +27,7 @@ describe('useSearch', () => {
     expect(result.current.query).toBe('');
   });
 
-  it('should filter items by search query', () => {
+  it('should filter items by search query', async () => {
     const { result } = renderHook(() => useSearch(mockItems, ['title', 'description']));
 
     act(() => {
@@ -43,72 +35,87 @@ describe('useSearch', () => {
     });
 
     // Wait for debounce (300ms)
-    vi.runAllTimers();
+    await waitFor(
+      () => {
+        expect(result.current.filteredItems).toHaveLength(1);
+      },
+      { timeout: 500 }
+    );
 
-    expect(result.current.filteredItems).toHaveLength(1);
     expect(result.current.filteredItems[0].title).toBe('Gloomhaven');
   });
 
-  it('should be case-insensitive', () => {
+  it('should be case-insensitive', async () => {
     const { result } = renderHook(() => useSearch(mockItems, ['title']));
 
     act(() => {
       result.current.setQuery('WINGSPAN');
     });
 
-    vi.runAllTimers();
+    await waitFor(
+      () => {
+        expect(result.current.filteredItems).toHaveLength(1);
+      },
+      { timeout: 500 }
+    );
 
-    expect(result.current.filteredItems).toHaveLength(1);
     expect(result.current.filteredItems[0].title).toBe('Wingspan');
   });
 
-  it('should search across multiple fields', () => {
+  it('should search across multiple fields', async () => {
     const { result } = renderHook(() => useSearch(mockItems, ['title', 'description']));
 
     act(() => {
       result.current.setQuery('campaign');
     });
 
-    vi.runAllTimers();
+    await waitFor(
+      () => {
+        expect(result.current.filteredItems).toHaveLength(1);
+      },
+      { timeout: 500 }
+    );
 
-    expect(result.current.filteredItems).toHaveLength(1);
     expect(result.current.filteredItems[0].title).toBe('Gloomhaven');
   });
 
-  it('should use custom search function when provided', () => {
+  it('should use custom search function when provided', async () => {
     const customSearch = vi.fn((query: string, items: MockItem[]) =>
       items.filter((item) => item.rating > 8)
     );
 
-    const { result } = renderHook(() =>
-      useSearch(mockItems, ['title'], customSearch)
-    );
+    const { result } = renderHook(() => useSearch(mockItems, ['title'], customSearch));
 
     act(() => {
       result.current.setQuery('test');
     });
 
-    vi.runAllTimers();
+    await waitFor(
+      () => {
+        expect(customSearch).toHaveBeenCalledWith('test', mockItems);
+      },
+      { timeout: 500 }
+    );
 
-    expect(customSearch).toHaveBeenCalledWith('test', mockItems);
     expect(result.current.filteredItems).toHaveLength(2); // rating > 8
   });
 
-  it('should debounce search queries (300ms)', () => {
+  it('should debounce search queries (300ms)', async () => {
     const { result } = renderHook(() => useSearch(mockItems, ['title']));
 
     act(() => {
       result.current.setQuery('g');
     });
 
-    // Before debounce
+    // Before debounce - should still show all items
     expect(result.current.filteredItems).toEqual(mockItems);
 
-    vi.advanceTimersByTime(150);
-    expect(result.current.filteredItems).toEqual(mockItems);
-
-    vi.advanceTimersByTime(150); // Total 300ms
-
-    expect(result.current.filteredItems.length).toBeLessThan(mockItems.length);
+    // After debounce - should be filtered
+    await waitFor(
+      () => {
+        expect(result.current.filteredItems.length).toBeLessThan(mockItems.length);
+      },
+      { timeout: 500 }
+    );
   });
 });

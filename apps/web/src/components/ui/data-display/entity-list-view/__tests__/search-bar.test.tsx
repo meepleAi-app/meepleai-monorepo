@@ -38,12 +38,25 @@ describe('SearchBar', () => {
   describe('Input Handling', () => {
     it('should call onChange when typing', async () => {
       const user = userEvent.setup();
-      render(<SearchBar value="" onChange={mockOnChange} />);
+
+      // Use controlled component pattern
+      let currentValue = '';
+      const handleChange = (val: string) => {
+        currentValue = val;
+        mockOnChange(val);
+      };
+
+      const { rerender } = render(<SearchBar value={currentValue} onChange={handleChange} />);
 
       const input = screen.getByRole('searchbox');
-      await user.type(input, 'gloom');
 
-      expect(mockOnChange).toHaveBeenCalledTimes(5); // 5 characters
+      // Type each character and rerender
+      for (const char of 'gloom') {
+        await user.type(input, char);
+        rerender(<SearchBar value={currentValue} onChange={handleChange} />);
+      }
+
+      expect(mockOnChange).toHaveBeenCalledTimes(5);
       expect(mockOnChange).toHaveBeenLastCalledWith('gloom');
     });
 

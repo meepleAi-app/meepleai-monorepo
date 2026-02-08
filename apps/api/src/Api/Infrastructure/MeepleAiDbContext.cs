@@ -239,9 +239,12 @@ public class MeepleAiDbContext : DbContext
         var events = _eventCollector.GetAndClearEvents();
 
         // Dispatch domain events after successful save
-        foreach (var domainEvent in events)
+        if (events != null)
         {
-            await _mediator.Publish(domainEvent, cancellationToken).ConfigureAwait(false);
+            foreach (var domainEvent in events)
+            {
+                await _mediator.Publish(domainEvent, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         return result;

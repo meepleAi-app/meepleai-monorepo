@@ -483,6 +483,7 @@ v1Api.MapAnalyticsEndpoints();         // Dashboard statistics & metrics
 v1Api.MapDashboardEndpoints();         // Issue #3314: User dashboard aggregated API
 v1Api.MapLlmAnalyticsEndpoints();      // ISSUE-1725: LLM cost optimization analytics
 v1Api.MapAdminAgentMetricsEndpoints(); // Issue #3382: Agent Metrics Dashboard
+v1Api.MapAdminAgentDefinitionEndpoints(); // Issue #3809: Agent Definition management (AI Lab)
 v1Api.MapAgentPlaygroundEndpoints();    // Issue #3810: Agent Playground with SSE streaming
 v1Api.MapAdminStrategyEndpoints();      // Issue #3811: Strategy Editor for RAG pipelines
 v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure health & Prometheus metrics

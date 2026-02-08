@@ -112,11 +112,19 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
       expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
     });
 
-    it('should show only grid mode in Phase 1', () => {
+    it('should show all 3 modes by default (Phase 2)', () => {
       render(<EntityListView {...defaultProps} />);
 
       expect(screen.getByRole('radio', { name: /grid view/i })).toBeInTheDocument();
-      expect(screen.queryByRole('radio', { name: /list view/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /list view/i })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /carousel view/i })).toBeInTheDocument();
+    });
+
+    it('should respect availableModes prop', () => {
+      render(<EntityListView {...defaultProps} availableModes={['grid', 'list']} />);
+
+      expect(screen.getByRole('radio', { name: /grid view/i })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /list view/i })).toBeInTheDocument();
       expect(screen.queryByRole('radio', { name: /carousel view/i })).not.toBeInTheDocument();
     });
   });
@@ -306,6 +314,93 @@ describe('EntityListView (Phase 1: Grid Mode)', () => {
       render(<EntityListView {...defaultProps} loading />);
 
       expect(screen.getByLabelText(/loading/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('List Mode (Phase 2)', () => {
+    it('should render list layout when mode is list', async () => {
+      const user = userEvent.setup();
+      render(<EntityListView {...defaultProps} />);
+
+      await user.click(screen.getByRole('radio', { name: /list view/i }));
+
+      expect(screen.getByTestId('list-layout')).toBeInTheDocument();
+      expect(screen.queryByTestId('grid-layout')).not.toBeInTheDocument();
+    });
+
+    it('should use MeepleCard variant="list" in list mode', async () => {
+      const user = userEvent.setup();
+      render(<EntityListView {...defaultProps} />);
+
+      await user.click(screen.getByRole('radio', { name: /list view/i }));
+
+      const cards = screen.getAllByTestId('meeple-card');
+      cards.forEach((card) => {
+        expect(card).toHaveAttribute('data-variant', 'list');
+      });
+    });
+
+    it('should display all items in list mode', async () => {
+      const user = userEvent.setup();
+      render(<EntityListView {...defaultProps} />);
+
+      await user.click(screen.getByRole('radio', { name: /list view/i }));
+
+      expect(screen.getByText('Twilight Imperium')).toBeInTheDocument();
+      expect(screen.getByText('Gloomhaven')).toBeInTheDocument();
+      expect(screen.getByText('Wingspan')).toBeInTheDocument();
+    });
+  });
+
+  describe('Carousel Mode (Phase 2)', () => {
+    it('should render carousel layout when mode is carousel', async () => {
+      const user = userEvent.setup();
+      render(<EntityListView {...defaultProps} />);
+
+      await user.click(screen.getByRole('radio', { name: /carousel view/i }));
+
+      expect(screen.getByTestId('carousel-layout')).toBeInTheDocument();
+      expect(screen.queryByTestId('grid-layout')).not.toBeInTheDocument();
+    });
+
+    it('should transform items to CarouselGame format', async () => {
+      const user = userEvent.setup();
+      render(<EntityListView {...defaultProps} />);
+
+      await user.click(screen.getByRole('radio', { name: /carousel view/i }));
+
+      // GameCarousel should receive games and display them
+      expect(screen.getByText('Twilight Imperium')).toBeInTheDocument();
+    });
+
+    it('should pass carousel options correctly', async () => {
+      const user = userEvent.setup();
+      render(
+        <EntityListView
+          {...defaultProps}
+          carouselOptions={{ autoPlay: true, showDots: false }}
+        />
+      );
+
+      await user.click(screen.getByRole('radio', { name: /carousel view/i }));
+
+      // Verify carousel with options (auto-play button should show "Pause")
+      expect(screen.queryByLabelText(/pause auto-play/i)).toBeInTheDocument();
+    });
+
+    it('should handle onItemClick via carousel onGameSelect', async () => {
+      const user = userEvent.setup();
+      const mockOnClick = vi.fn();
+
+      render(<EntityListView {...defaultProps} onItemClick={mockOnClick} />);
+
+      await user.click(screen.getByRole('radio', { name: /carousel view/i }));
+
+      // Click on carousel item (GameCarousel uses carousel-card-{index} testid)
+      const firstCard = screen.getByTestId('carousel-card-0');
+      await user.click(firstCard);
+
+      expect(mockOnClick).toHaveBeenCalledWith(mockGames[0]);
     });
   });
 

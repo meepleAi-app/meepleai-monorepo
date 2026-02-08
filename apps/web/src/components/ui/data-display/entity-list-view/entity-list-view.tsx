@@ -6,12 +6,14 @@
  *
  * @module components/ui/data-display/entity-list-view
  *
- * Phase 1 Status: Grid mode only (List/Carousel in Phase 2)
+ * Phase 2 Status: All view modes supported (Grid/List/Carousel)
  *
- * Features (Phase 1):
+ * Features (Phase 1-2):
  * - Grid layout with responsive columns
- * - View mode switcher (Grid only for now)
- * - localStorage persistence
+ * - List layout with compact vertical cards
+ * - Carousel integration with GameCarousel
+ * - View mode switcher (all 3 modes)
+ * - localStorage persistence across modes
  * - Empty and loading states
  * - TypeScript generic support
  *
@@ -39,6 +41,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { MeepleCard } from '../meeple-card';
+import { GameCarousel, type CarouselGame } from '../game-carousel';
 import { useViewMode } from './hooks/use-view-mode';
 import { ViewModeSwitcher } from './components/view-mode-switcher';
 import { EmptyState } from './components/empty-state';
@@ -83,6 +86,9 @@ export function EntityListView<T = any>({
   },
   gridGap = 4,
 
+  // Carousel configuration
+  carouselOptions,
+
   // Layout & styling
   title,
   subtitle,
@@ -96,7 +102,7 @@ export function EntityListView<T = any>({
   const { mode, setMode, isAvailable } = useViewMode(
     persistenceKey,
     defaultViewMode,
-    availableModes || ['grid'], // Phase 1: Grid only
+    availableModes || ['grid', 'list', 'carousel'],
     controlledViewMode
   );
 
@@ -146,26 +152,62 @@ export function EntityListView<T = any>({
 
   /**
    * Render list layout
-   * Phase 2: To be implemented
+   * Vertical stack with MeepleCard variant="list"
    */
   const renderListLayout = () => {
-    // Placeholder for Phase 2
     return (
       <div className="space-y-2" data-testid="list-layout">
-        <p className="text-muted-foreground text-sm">List mode coming in Phase 2</p>
+        {items.map((item, idx) => {
+          const cardProps = renderItem(item);
+
+          return (
+            <MeepleCard
+              key={cardProps.id || `item-${idx}`}
+              entity={entity}
+              variant="list"
+              {...cardProps}
+              onClick={onItemClick ? () => onItemClick(item) : cardProps.onClick}
+              className={cn(cardClassName, cardProps.className)}
+            />
+          );
+        })}
       </div>
     );
   };
 
   /**
    * Render carousel layout
-   * Phase 2: To be implemented
+   * Wraps GameCarousel component with item transformation
    */
   const renderCarouselLayout = () => {
-    // Placeholder for Phase 2
+    // Transform generic items to CarouselGame format
+    const carouselGames: CarouselGame[] = items.map((item) => {
+      const cardProps = renderItem(item);
+      return {
+        id: cardProps.id || String(items.indexOf(item)),
+        title: cardProps.title,
+        subtitle: cardProps.subtitle,
+        imageUrl: cardProps.imageUrl,
+        rating: cardProps.rating,
+        ratingMax: cardProps.ratingMax,
+        metadata: cardProps.metadata,
+        badge: cardProps.badge,
+      };
+    });
+
     return (
       <div data-testid="carousel-layout">
-        <p className="text-muted-foreground text-sm">Carousel mode coming in Phase 2</p>
+        <GameCarousel
+          games={carouselGames}
+          onGameSelect={(game) => {
+            const originalItem = items.find((item) => renderItem(item).id === game.id);
+            if (originalItem) onItemClick?.(originalItem);
+          }}
+          autoPlay={carouselOptions?.autoPlay ?? false}
+          autoPlayInterval={carouselOptions?.autoPlayInterval}
+          showDots={carouselOptions?.showDots ?? true}
+          sortable={false}
+        />
       </div>
     );
   };
@@ -210,7 +252,7 @@ export function EntityListView<T = any>({
             <ViewModeSwitcher
               value={mode}
               onChange={setMode}
-              availableModes={availableModes || ['grid']} // Phase 1: Grid only
+              availableModes={availableModes || ['grid', 'list', 'carousel']}
             />
           )}
         </header>

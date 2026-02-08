@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Enums;
 /// <summary>
 /// Visibility level for play records.
 /// </summary>
-internal enum PlayRecordVisibility
+public enum PlayRecordVisibility
 {
     /// <summary>
     /// Only the creator can view the record.

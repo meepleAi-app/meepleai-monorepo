@@ -123,6 +123,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.Administration.Domain.Entities.TokenTier> TokenTiers => Set<BoundedContexts.Administration.Domain.Entities.TokenTier>(); // ISSUE-3692: Token Management
     public DbSet<BoundedContexts.Administration.Domain.Entities.UserTokenUsage> UserTokenUsages => Set<BoundedContexts.Administration.Domain.Entities.UserTokenUsage>(); // ISSUE-3692: Token Management
     public DbSet<BoundedContexts.Administration.Domain.Entities.BatchJob> BatchJobs => Set<BoundedContexts.Administration.Domain.Entities.BatchJob>(); // ISSUE-3693: Batch Job System
+    public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition> AgentDefinitions => Set<BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition>(); // ISSUE-3808: Agent Definition for AI Lab
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();

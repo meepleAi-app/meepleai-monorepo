@@ -3,7 +3,7 @@ using Api.BoundedContexts.Administration.Domain.Enums;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
-using Api.BoundedContexts.Administration.Infrastructure.Repositories;
+using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Services;

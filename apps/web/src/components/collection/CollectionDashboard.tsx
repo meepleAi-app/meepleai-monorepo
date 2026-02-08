@@ -712,8 +712,15 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
                 {games.map(game => (
                   <MeepleCard
                     key={game.id}
-                    game={game}
-                    className={viewMode === 'list' ? 'flex-row' : undefined}
+                    id={game.id}
+                    entity="game"
+                    title={game.title}
+                    imageUrl={game.imageUrl}
+                    variant={viewMode === 'list' ? 'list' : 'grid'}
+                    metadata={[
+                      { label: 'Year', value: game.yearPublished?.toString() },
+                      { label: 'Plays', value: game.playCount.toString() },
+                    ].filter(m => m.value) as any}
                   />
                 ))}
               </motion.div>

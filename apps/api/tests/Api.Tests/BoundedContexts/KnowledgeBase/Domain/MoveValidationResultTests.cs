@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain;
 
@@ -27,7 +28,7 @@ public class MoveValidationResultTests
         // Assert
         Assert.True(result.IsValid);
         Assert.Equal("Move is legal per Knight rules", result.Reason);
-        Assert.Equal(0.95, result.Confidence);
+        Assert.Equal(0.95, result.ConfidenceScore);
         Assert.Equal(42.5, result.ExecutionTimeMs);
         Assert.Single(result.AppliedRuleIds);
         Assert.Single(result.Citations);
@@ -65,7 +66,7 @@ public class MoveValidationResultTests
         Assert.False(result.IsValid);
         Assert.Equal("Validation error occurred", result.Reason);
         Assert.Equal("Network timeout", result.ErrorMessage);
-        Assert.Equal(0, result.Confidence);
+        Assert.Equal(0, result.ConfidenceScore);
         Assert.Empty(result.AppliedRuleIds);
         Assert.Empty(result.Citations);
     }

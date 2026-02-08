@@ -1,6 +1,6 @@
 using Api.BoundedContexts.Administration.Domain.Entities;
 using Api.BoundedContexts.Administration.Domain.Repositories;
-using Api.BoundedContexts.Administration.Infrastructure.Repositories;
+using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -102,40 +102,40 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
     private async Task SeedTestUsersAsync()
     {
         // SuperAdmin user
-        var superAdmin = User.Create(
-            Email.Create("superadmin@test.com"),
-            "password123",
-            "Super Admin"
+        var superAdmin = new User(
+            SuperAdminId,
+            new Email("superadmin@test.com"),
+            "Super Admin",
+            PasswordHash.Create("password123"),
+            Role.SuperAdmin
         );
-        superAdmin.SetRole(Role.SuperAdmin);
-        typeof(User).GetProperty("Id")!.SetValue(superAdmin, SuperAdminId);
 
         // Admin user
-        var admin = User.Create(
-            Email.Create("admin@test.com"),
-            "password123",
-            "Admin User"
+        var admin = new User(
+            AdminId,
+            new Email("admin@test.com"),
+            "Admin User",
+            PasswordHash.Create("password123"),
+            Role.Admin
         );
-        admin.SetRole(Role.Admin);
-        typeof(User).GetProperty("Id")!.SetValue(admin, AdminId);
 
         // Editor user
-        var editor = User.Create(
-            Email.Create("editor@test.com"),
-            "password123",
-            "Editor User"
+        var editor = new User(
+            EditorId,
+            new Email("editor@test.com"),
+            "Editor User",
+            PasswordHash.Create("password123"),
+            Role.Editor
         );
-        editor.SetRole(Role.Editor);
-        typeof(User).GetProperty("Id")!.SetValue(editor, EditorId);
 
         // Regular user
-        var regularUser = User.Create(
-            Email.Create("user@test.com"),
-            "password123",
-            "Regular User"
+        var regularUser = new User(
+            RegularUserId,
+            new Email("user@test.com"),
+            "Regular User",
+            PasswordHash.Create("password123"),
+            Role.User
         );
-        // Default role is User
-        typeof(User).GetProperty("Id")!.SetValue(regularUser, RegularUserId);
 
         await _userRepository!.AddAsync(superAdmin, TestCancellationToken);
         await _userRepository.AddAsync(admin, TestCancellationToken);
@@ -148,11 +148,14 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
     public async Task AuditLog_WhenCreated_ShouldBeImmutable()
     {
         // Arrange - Create audit log entry
-        var auditLog = AuditLog.Create(
+        var entityId = Guid.NewGuid();
+        var auditLog = new AuditLog(
+            id: Guid.NewGuid(),
             userId: SuperAdminId,
             action: "test_action",
-            entityType: "TestEntity",
-            entityId: Guid.NewGuid(),
+            resource: "TestEntity",
+            result: "Success",
+            resourceId: entityId.ToString(),
             details: "{\"test\": \"data\"}"
         );
 
@@ -167,7 +170,7 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
         // No Update/Delete methods exist on AuditLog entity (append-only)
         retrieved!.UserId.Should().Be(SuperAdminId);
         retrieved.Action.Should().Be("test_action");
-        retrieved.Timestamp.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        retrieved.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
 
         // Verify repository has no Update method (append-only pattern)
         var repositoryType = typeof(AuditLogRepository);
@@ -179,26 +182,19 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
     public async Task AuditLog_WhenQueried_ShouldReturnOnlyAuthorizedRecords()
     {
         // Arrange - Create audit logs for different users
-        var superAdminLog = AuditLog.Create(SuperAdminId, "superadmin_action", "Config", Guid.NewGuid(), null);
-        var adminLog = AuditLog.Create(AdminId, "admin_action", "User", Guid.NewGuid(), null);
-        var editorLog = AuditLog.Create(EditorId, "editor_action", "Document", Guid.NewGuid(), null);
+        var superAdminLog = new AuditLog(Guid.NewGuid(), SuperAdminId, "superadmin_action", "Config", "Success", Guid.NewGuid().ToString(), null);
+        var adminLog = new AuditLog(Guid.NewGuid(), AdminId, "admin_action", "User", "Success", Guid.NewGuid().ToString(), null);
+        var editorLog = new AuditLog(Guid.NewGuid(), EditorId, "editor_action", "Document", "Success", Guid.NewGuid().ToString(), null);
 
         await _auditLogRepository!.AddAsync(superAdminLog, TestCancellationToken);
         await _auditLogRepository.AddAsync(adminLog, TestCancellationToken);
         await _auditLogRepository.AddAsync(editorLog, TestCancellationToken);
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
-        // Act - Query all logs (SuperAdmin can see all)
-        var allLogs = await _auditLogRepository.GetAllAsync(
-            skip: 0,
-            take: 100,
-            userId: null,
-            action: null,
-            entityType: null,
-            startDate: null,
-            endDate: null,
-            TestCancellationToken
-        );
+        // Act - Query all logs using DbContext (repository doesn't have GetAll anymore)
+        var allLogs = await _dbContext!.AuditLogs
+            .AsNoTracking()
+            .ToListAsync(TestCancellationToken);
 
         // Assert - All logs should be returned
         allLogs.Should().NotBeNull();
@@ -217,11 +213,13 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
         superAdmin!.Role.Should().Be(Role.SuperAdmin);
 
         // Act - Create audit log for critical action (simulating endpoint behavior)
-        var criticalAction = AuditLog.Create(
+        var criticalAction = new AuditLog(
+            id: Guid.NewGuid(),
             userId: SuperAdminId,
             action: "service_restart",
-            entityType: "System",
-            entityId: Guid.Empty,
+            resource: "System",
+            result: "Success",
+            resourceId: Guid.Empty.ToString(),
             details: "{\"service\": \"API\"}"
         );
 
@@ -250,7 +248,7 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
 
         // In real endpoint, this would return 403 Forbidden
         // Here we verify the role check logic works at entity level
-        var isAdmin = regularUser.Role is Role.Admin or Role.SuperAdmin or Role.Editor;
+        var isAdmin = regularUser.Role.IsAdmin() || regularUser.Role.IsSuperAdmin() || regularUser.Role.IsEditor();
         isAdmin.Should().BeFalse("Regular users should not have admin privileges");
     }
 
@@ -258,11 +256,14 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
     public async Task AuditLog_DeleteOperation_ShouldNotExist()
     {
         // Arrange
-        var auditLog = AuditLog.Create(
+        var entityId = Guid.NewGuid();
+        var auditLog = new AuditLog(
+            id: Guid.NewGuid(),
             userId: AdminId,
             action: "test_delete",
-            entityType: "Test",
-            entityId: Guid.NewGuid(),
+            resource: "Test",
+            result: "Success",
+            resourceId: entityId.ToString(),
             details: null
         );
 
@@ -298,11 +299,11 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
         editor!.Role.Should().Be(Role.Editor);
 
         // SuperAdmin > Admin > Editor in privilege hierarchy
-        var superAdminLevel = (int)Role.SuperAdmin;
-        var adminLevel = (int)Role.Admin;
-        var editorLevel = (int)Role.Editor;
-
-        superAdminLevel.Should().BeGreaterThan(adminLevel);
-        adminLevel.Should().BeGreaterThan(editorLevel);
+        // Verify using HasPermission method instead of int comparison
+        Role.SuperAdmin.HasPermission(Role.Admin).Should().BeTrue("SuperAdmin has all permissions");
+        Role.SuperAdmin.HasPermission(Role.Editor).Should().BeTrue("SuperAdmin has all permissions");
+        Role.Admin.HasPermission(Role.Editor).Should().BeTrue("Admin has editor permissions");
+        Role.Admin.HasPermission(Role.SuperAdmin).Should().BeFalse("Admin does not have SuperAdmin permissions");
+        Role.Editor.HasPermission(Role.Admin).Should().BeFalse("Editor does not have Admin permissions");
     }
 }

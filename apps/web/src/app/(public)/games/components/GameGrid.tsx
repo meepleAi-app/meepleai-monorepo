@@ -20,11 +20,11 @@ import { useRouter } from 'next/navigation';
 
 import { MeepleGameCatalogCard } from '@/components/catalog/MeepleGameCatalogCard';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { Game } from '@/lib/api';
+import { SharedGame } from '@/lib/api';
 
 export interface GameGridProps {
   /** Games to display */
-  games: Game[];
+  games: SharedGame[];
   /** View mode */
   variant: 'grid' | 'list';
   /** Loading state */

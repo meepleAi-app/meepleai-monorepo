@@ -1,7 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { Activity, Zap, TrendingUp, Users } from 'lucide-react';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 

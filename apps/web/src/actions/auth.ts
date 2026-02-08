@@ -228,6 +228,12 @@ export async function logoutAction(): Promise<AuthActionState> {
   try {
     await api.auth.logout();
 
+    // Force complete reload to clear middleware session cache and all client state
+    // This bypasses the middleware's 2-minute session validation cache
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+
     return {
       success: true,
       message: successMessages.logoutSuccess,
@@ -239,8 +245,12 @@ export async function logoutAction(): Promise<AuthActionState> {
       createErrorContext('AuthActions', 'logoutAction', { operation: 'logout' })
     );
 
-    // Even if API call fails, consider it success to clear client state
+    // Even if API call fails, force reload to clear client state
     // User can't remain logged in if server rejected logout
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+
     return {
       success: true,
       message: successMessages.logoutSuccess,

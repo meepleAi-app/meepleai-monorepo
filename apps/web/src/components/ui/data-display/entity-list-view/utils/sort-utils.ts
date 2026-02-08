@@ -74,6 +74,7 @@ export function createComparator<T>(
     if (valueA == null) return 1;
     if (valueB == null) return -1;
 
-    return sortComparators[type](valueA, valueB);
+    // Apply comparator with type assertion
+    return (sortComparators[type] as (a: any, b: any) => number)(valueA, valueB);
   };
 }

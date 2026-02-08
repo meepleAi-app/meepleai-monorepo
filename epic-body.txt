@@ -1,0 +1,137 @@
+# Epic: EntityListView - Generic Multi-View List Component
+
+## 📋 Overview
+
+Implement a generic, reusable component for displaying entity lists in three view modes (Grid, List, Carousel) with full search, sort, filter capabilities and localStorage persistence.
+
+## 🎯 Business Value
+
+- **User Experience**: Flexible visualization options adapt to user preferences and context
+- **Developer Experience**: Single reusable component eliminates code duplication across pages
+- **Accessibility**: WCAG AA compliant multi-view system with keyboard navigation
+- **Performance**: Optimized rendering with React.memo, virtualization support for large lists
+
+## 🎨 Design Overview
+
+**Three View Modes**:
+1. **Grid**: Multi-column card layout (responsive: 1-4 columns)
+2. **List**: Compact vertical list with smaller cards
+3. **Carousel**: Horizontal/vertical scrolling showcase with 3D depth
+
+**Core Features**:
+- ViewModeSwitcher UI (segmented control with icons)
+- localStorage persistence (per-page preference)
+- Search with 300ms debounce
+- Sort dropdown (configurable options)
+- Filter panel (select, checkbox, range, date-range)
+- Empty/loading states
+
+## 📐 Technical Architecture
+
+**Component Structure**:
+```
+entity-list-view/
+├── entity-list-view.tsx        # Main orchestrator
+├── components/
+│   ├── view-mode-switcher.tsx  # Mode selection UI
+│   ├── search-bar.tsx          # Search input
+│   ├── sort-dropdown.tsx       # Sort control
+│   ├── filter-panel.tsx        # Filter UI
+│   ├── empty-state.tsx         # Empty message
+│   └── loading-skeleton.tsx    # Loading state
+├── hooks/
+│   ├── use-view-mode.ts        # Mode persistence
+│   ├── use-search.ts           # Search logic
+│   ├── use-sort.ts             # Sort logic
+│   └── use-filters.ts          # Filter logic
+└── utils/
+    ├── search-utils.ts         # Search algorithm
+    ├── sort-utils.ts           # Sort comparators
+    └── filter-utils.ts         # Filter application
+```
+
+**Dependencies**:
+- MeepleCard component (existing)
+- GameCarousel component (existing)
+- shadcn/ui primitives (Select, Checkbox, Slider, Calendar)
+- lucide-react icons
+
+## 📊 Success Criteria
+
+### Functional
+- [ ] All 3 view modes (Grid/List/Carousel) functional
+- [ ] View mode persists in localStorage per page
+- [ ] Search filters items with 300ms debounce
+- [ ] Sort orders items by configurable criteria
+- [ ] Filters support 4 types (select/checkbox/range/date-range)
+- [ ] Responsive behavior tested on mobile/tablet/desktop
+
+### Quality
+- [ ] 90%+ test coverage (unit + component + integration)
+- [ ] WCAG 2.1 AA accessibility compliance
+- [ ] Performance: < 200ms initial render, < 50ms mode switch
+- [ ] Complete Storybook documentation
+- [ ] Zero TypeScript errors
+
+### Integration
+- [ ] Used in dashboard for games display
+- [ ] Used in dashboard for collections display
+- [ ] Migration guide for existing implementations
+
+## ⏱️ Timeline
+
+| Phase | Duration | Deliverables |
+|-------|----------|--------------|
+| Phase 1 - Foundation | 8-12h | useLocalStorage, useViewMode, ViewModeSwitcher, Grid mode |
+| Phase 2 - View Modes | 6-8h | List/Carousel integration, persistence |
+| Phase 3 - Search & Sort | 12-16h | SearchBar, SortDropdown, hooks |
+| Phase 4 - Filters | 12-16h | FilterPanel, 4 filter types |
+| Phase 5 - Polish | 4-6h | Accessibility, tests, docs |
+| Phase 6 - Dashboard | 4-6h | Dashboard integration |
+| **Total** | **46-64h** | **~1.5 weeks** |
+
+## 📦 Sub-Issues
+
+This Epic tracks 6 implementation phases (see linked sub-issues):
+
+1. **Phase 1**: Foundation (hooks + ViewModeSwitcher + Grid scaffold)
+2. **Phase 2**: View Modes (List + Carousel integration + persistence)
+3. **Phase 3**: Search & Sort (SearchBar + SortDropdown + hooks)
+4. **Phase 4**: Filters (FilterPanel + 4 filter types + hook)
+5. **Phase 5**: Polish (Accessibility + Performance + Tests + Docs)
+6. **Phase 6**: Dashboard Integration (Implement in dashboard pages)
+
+## 🔗 Dependencies
+
+**Blocks**:
+- Dashboard games/collections list improvements
+- User library view enhancements
+- Search page implementation
+
+**Requires**:
+- MeepleCard component (#3326) ✅
+- GameCarousel component ✅
+- shadcn/ui primitives ✅
+
+## 📚 References
+
+- [Planning Document](../docs/claudedocs/entity-list-view-planning.md)
+- [MeepleCard Component](apps/web/src/components/ui/data-display/meeple-card.tsx)
+- [GameCarousel Component](apps/web/src/components/ui/data-display/game-carousel.tsx)
+- [Design System: Cards](docs/design-system/cards.md)
+
+## 🏷️ Labels
+
+`enhancement`, `frontend`, `component`, `epic`
+
+## 📦 Sub-Issues
+
+- #3876 Phase 1: EntityListView Foundation (8-12h)
+- #3877 Phase 2: View Modes Integration (6-8h) - Depends on #3876
+- #3878 Phase 3: Search & Sort (12-16h) - Depends on #3877
+- #3879 Phase 4: Filter System (12-16h) - Depends on #3878
+- #3880 Phase 5: Polish & Testing (4-6h) - Depends on #3879
+- #3881 Phase 6: Dashboard Integration (4-6h) - Depends on #3880
+
+**Total Effort**: 46-64h (~1.5 weeks)
+**Dependencies**: Sequential (Phase N requires Phase N-1 complete)

@@ -6,7 +6,7 @@ PostgreSQL repository for storing dialogue state across sessions.
 import json
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 
 import asyncpg

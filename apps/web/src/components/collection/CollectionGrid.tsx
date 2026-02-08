@@ -355,8 +355,15 @@ export function CollectionGrid({
           {games.map((game) => (
             <MeepleCard
               key={game.id}
-              game={game}
-              onPlay={onGameClick}
+              id={game.id}
+              entity="game"
+              title={game.title}
+              imageUrl={game.imageUrl}
+              rating={game.rating}
+              metadata={[
+                game.yearPublished && { label: 'Year', value: game.yearPublished.toString() },
+                game.playCount && { label: 'Plays', value: game.playCount.toString() },
+              ].filter(Boolean) as any}
             />
           ))}
         </div>

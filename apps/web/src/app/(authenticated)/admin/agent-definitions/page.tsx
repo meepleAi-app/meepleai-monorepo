@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
 import { BuilderFilters } from '@/components/admin/agent-definitions/BuilderFilters';
 import { BuilderTable } from '@/components/admin/agent-definitions/BuilderTable';

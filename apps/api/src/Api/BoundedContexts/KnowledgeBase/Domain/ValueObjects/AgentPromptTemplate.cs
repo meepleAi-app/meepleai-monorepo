@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
 /// <summary>
@@ -25,6 +27,7 @@ public sealed record AgentPromptTemplate
     {
     }
 
+    [JsonConstructor]
     private AgentPromptTemplate(string role, string content)
     {
         Role = role;

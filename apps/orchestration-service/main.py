@@ -64,8 +64,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         intent_classifier = IntentClassifier(redis_cache=intent_cache)
         logger.info("✅ Intent classifier initialized with Redis cache")
 
-        # Initialize LangGraph orchestrator with intent classifier
-        orchestrator = GameOrchestrator(intent_classifier=intent_classifier)
+        # Initialize LangGraph orchestrator
+        orchestrator = GameOrchestrator()
         logger.info("✅ LangGraph orchestrator initialized successfully")
 
         yield

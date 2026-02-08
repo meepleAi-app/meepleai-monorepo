@@ -369,6 +369,9 @@ services:
     container_name: meepleai-orchestrator
     restart: unless-stopped
     profiles: [ai, full]
+    env_file:
+      - ./secrets/database.secret
+      - ./secrets/redis.secret
     ports:
       - "127.0.0.1:8004:8004"
     environment:

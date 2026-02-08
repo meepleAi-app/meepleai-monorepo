@@ -102,89 +102,78 @@ describe('CollectionStats', () => {
 });
 
 // ============================================================================
-// MeepleCard Tests
+// MeepleCard Tests - Updated for Epic #3820 New API
 // ============================================================================
 
-describe.skip('MeepleCard', () => {
+describe('MeepleCard', () => {
   it('should render game card with basic info', () => {
-    render(<MeepleCard game={mockGame} />);
+    render(
+      <MeepleCard
+        entity="game"
+        variant="grid"
+        id="test-game-1"
+        title="Test Game"
+        subtitle="Test Publisher · 2020"
+        data-testid="meeple-card-test-game-1"
+      />
+    );
 
     expect(screen.getByTestId('meeple-card-test-game-1')).toBeInTheDocument();
-    expect(screen.getByTestId('game-title-test-game-1')).toHaveTextContent('Test Game');
-    expect(screen.getByText('2020')).toBeInTheDocument();
+    expect(screen.getByText('Test Game')).toBeInTheDocument();
+    expect(screen.getByText(/2020/)).toBeInTheDocument();
   });
 
-  it('should show PDF badge when game has PDF', () => {
-    render(<MeepleCard game={mockGame} />);
+  it('should render with rating', () => {
+    render(
+      <MeepleCard
+        entity="game"
+        title="Rated Game"
+        rating={7.5}
+        ratingMax={10}
+      />
+    );
 
-    expect(screen.getByTestId('pdf-badge-test-game-1')).toBeInTheDocument();
+    expect(screen.getByText(/7\.5/)).toBeInTheDocument();
   });
 
-  it('should show chat badge when game has active chat', () => {
-    render(<MeepleCard game={mockGame} />);
-
-    expect(screen.getByTestId('chat-badge-test-game-1')).toBeInTheDocument();
-  });
-
-  it('should not show badges when game has no PDF or chat', () => {
-    const gameWithoutExtras = {
-      ...mockGame,
-      hasPdf: false,
-      hasActiveChat: false,
-    };
-
-    render(<MeepleCard game={gameWithoutExtras} />);
-
-    expect(screen.queryByTestId('pdf-badge-test-game-1')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('chat-badge-test-game-1')).not.toBeInTheDocument();
-  });
-
-  it('should call onPlay when play button clicked', async () => {
-    const onPlay = vi.fn();
+  it('should handle click events', async () => {
+    const onClick = vi.fn();
     const user = userEvent.setup();
 
-    render(<MeepleCard game={mockGame} onPlay={onPlay} />);
+    render(
+      <MeepleCard
+        entity="game"
+        title="Clickable Game"
+        onClick={onClick}
+        data-testid="clickable-card"
+      />
+    );
 
-    const playButton = screen.getByTestId('play-button-test-game-1');
-    await user.click(playButton);
-
-    expect(onPlay).toHaveBeenCalledWith('test-game-1');
+    await user.click(screen.getByTestId('clickable-card'));
+    expect(onClick).toHaveBeenCalled();
   });
 
-  it('should call onViewPdf when PDF badge clicked', async () => {
-    const onViewPdf = vi.fn();
-    const user = userEvent.setup();
+  it('should display loading state', () => {
+    render(
+      <MeepleCard
+        entity="game"
+        title="Loading Game"
+        loading={true}
+      />
+    );
 
-    render(<MeepleCard game={mockGame} onViewPdf={onViewPdf} />);
-
-    const pdfBadge = screen.getByTestId('pdf-badge-test-game-1');
-    await user.click(pdfBadge);
-
-    expect(onViewPdf).toHaveBeenCalledWith('test-game-1');
+    // Loading state shows skeleton placeholders
+    expect(screen.getByRole('article')).toHaveAttribute('aria-busy', 'true');
   });
 
-  it('should call onViewChat when chat badge clicked', async () => {
-    const onViewChat = vi.fn();
-    const user = userEvent.setup();
+  it('should support different entity types', () => {
+    const { rerender } = render(
+      <MeepleCard entity="game" title="Game Entity" />
+    );
+    expect(screen.getByRole('article')).toHaveAttribute('data-entity', 'game');
 
-    render(<MeepleCard game={mockGame} onViewChat={onViewChat} />);
-
-    const chatBadge = screen.getByTestId('chat-badge-test-game-1');
-    await user.click(chatBadge);
-
-    expect(onViewChat).toHaveBeenCalledWith('test-game-1');
-  });
-
-  it('should display play count badge', () => {
-    render(<MeepleCard game={mockGame} />);
-
-    expect(screen.getByText('5 partite')).toBeInTheDocument();
-  });
-
-  it('should display rating', () => {
-    render(<MeepleCard game={mockGame} />);
-
-    expect(screen.getByText('8.0')).toBeInTheDocument();
+    rerender(<MeepleCard entity="player" title="Player Entity" />);
+    expect(screen.getByRole('article')).toHaveAttribute('data-entity', 'player');
   });
 });
 

@@ -3,7 +3,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.Enums;
 /// <summary>
 /// Status of a play record in its lifecycle.
 /// </summary>
-internal enum PlayRecordStatus
+public enum PlayRecordStatus
 {
     /// <summary>
     /// Session is planned but not yet started.

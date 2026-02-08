@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeepleAI Frontend - Project Status & Strategic Roadmap (2026-02-08 UPDATED)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        quicksand: ['Quicksand', 'sans-serif'],
+                        nunito: ['Nunito', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Nunito', sans-serif; }
+        .glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); }
+        .progress-bar { transition: width 0.8s ease-in-out; }
+        .epic-card {
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .epic-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+        .tier-card {
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        .issue-item {
+            padding: 10px 12px;
+            margin: 6px 0;
+            background: #f9fafb;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s;
+        }
+        .issue-item:hover {
+            background: #f3f4f6;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-high { background: #fee2e2; color: #991b1b; }
+        .badge-medium { background: #fef3c7; color: #92400e; }
+        .badge-low { background: #e0e7ff; color: #3730a3; }
+        .badge-complete { background: #dcfce7; color: #166534; }
+        .badge-progress { background: #dbeafe; color: #1e40af; }
+        .badge-pending { background: #f3f4f6; color: #374151; }
+
+        .tier-1 { border-left-color: #ef4444; }
+        .tier-2 { border-left-color: #f97316; }
+        .tier-3 { border-left-color: #8b5cf6; }
+        .tier-4 { border-left-color: #10b981; }
+        .tier-5 { border-left-color: #6b7280; }
+        .tier-6 { border-left-color: #ec4899; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeIn 0.4s ease-out; }
+        .highlight-new {
+            background: linear-gradient(90deg, #fef3c7 0%, transparent 100%);
+            border-left: 3px solid #f59e0b;
+            padding-left: 12px;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50/50 via-white to-purple-50/30 min-h-screen p-6">
+
+    <!-- Header -->
+    <div class="max-w-7xl mx-auto mb-8">
+        <div class="glass rounded-2xl p-8 shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h1 class="text-4xl font-quicksand font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        MeepleAI Frontend - Strategic Roadmap
+                    </h1>
+                    <div class="mt-2 text-sm text-orange-700 font-semibold bg-orange-100 inline-block px-3 py-1 rounded-full">
+                        🆕 AGGIORNAMENTO 2026-02-08 - Nuova Prioritizzazione User-First
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-gray-600 font-semibold">Ultimo Aggiornamento</div>
+                    <div class="text-2xl font-quicksand font-bold text-blue-600">2026-02-08</div>
+                </div>
+            </div>
+            <p class="text-gray-700 text-lg">
+                Roadmap strategica con priorità <strong>ALTA</strong> per funzionalità utente e priorità <strong>BASSA</strong> per miglioramenti CI/CD
+            </p>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="max-w-7xl mx-auto mb-8">
+        <div class="stats-grid">
+            <div class="stat-card animate-in">
+                <div class="stat-value text-green-600">2</div>
+                <div class="stat-label">Epic Completati</div>
+                <div class="text-xs text-gray-500 mt-1">#3685, #3686</div>
+            </div>
+            <div class="stat-card animate-in" style="animation-delay: 0.1s">
+                <div class="stat-value text-blue-600">100+</div>
+                <div class="stat-label">Issue Aperte</div>
+                <div class="text-xs text-gray-500 mt-1">Incremento significativo</div>
+            </div>
+            <div class="stat-card animate-in" style="animation-delay: 0.2s">
+                <div class="stat-value text-purple-600">~90</div>
+                <div class="stat-label">Issue Sequenziate</div>
+                <div class="text-xs text-gray-500 mt-1">Sequenza ottimizzata</div>
+            </div>
+            <div class="stat-card animate-in" style="animation-delay: 0.3s">
+                <div class="stat-value text-orange-600">8-12</div>
+                <div class="stat-label">Settimane Stimate</div>
+                <div class="text-xs text-gray-500 mt-1">Con parallelizzazione</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completed Epics -->
+    <div class="max-w-7xl mx-auto mb-8">
+        <h2 class="text-2xl font-quicksand font-bold text-gray-800 mb-4">✅ Epic Completati (100%)</h2>
+
+        <div class="epic-card" style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);">
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <span class="text-sm font-semibold text-green-700">#3685</span>
+                    <h3 class="text-xl font-bold text-green-900">Core Dashboard [Admin Enterprise]</h3>
+                </div>
+                <span class="badge badge-complete">✅ COMPLETE</span>
+            </div>
+            <div class="text-sm text-green-800 mb-2">
+                <strong>PRs:</strong> #3798, #3799 (merged to main-dev) | <strong>Test:</strong> 43 (92% coverage) | <strong>Sub-issues:</strong> 9/9
+            </div>
+            <div class="w-full bg-green-200 rounded-full h-3">
+                <div class="bg-green-600 h-3 rounded-full" style="width: 100%"></div>
+            </div>
+        </div>
+
+        <div class="epic-card" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);">
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <span class="text-sm font-semibold text-blue-700">#3686</span>
+                    <h3 class="text-xl font-bold text-blue-900">User & Content Management [Admin Enterprise]</h3>
+                </div>
+                <span class="badge badge-complete">✅ COMPLETE</span>
+            </div>
+            <div class="text-sm text-blue-800 mb-2">
+                <strong>PRs:</strong> #3800-#3804 (merged to main-dev) | <strong>Test:</strong> 7 E2E | <strong>Sub-issues:</strong> 10/10
+            </div>
+            <div class="w-full bg-blue-200 rounded-full h-3">
+                <div class="bg-blue-600 h-3 rounded-full" style="width: 100%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Strategic Implementation Tiers -->
+    <div class="max-w-7xl mx-auto">
+        <h2 class="text-2xl font-quicksand font-bold text-gray-800 mb-4">🎯 Sequenza Strategica User-First (6 TIER)</h2>
+
+        <!-- TIER 1: Immediate User Value -->
+        <div class="tier-card tier-1 animate-in highlight-new">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-sm font-semibold text-red-600 mb-1">TIER 1 (2-2.5 settimane) 🔥 MASSIMA PRIORITÀ</div>
+                    <h3 class="text-xl font-bold text-gray-900">Immediate User Value - Frontend Interfaces</h3>
+                    <div class="text-sm text-gray-600 mt-1">Epic #3934 Admin UI Coverage + Dashboard Hub Frontend (valore utente immediato)</div>
+                </div>
+                <span class="badge badge-high">Priority: CRITICAL</span>
+            </div>
+
+            <div class="text-sm text-gray-700 mb-3 font-semibold bg-red-50 p-2 rounded">
+                <span class="text-red-700">🚀 QUICK WINS:</span> Backend API già esistenti - servono SOLO le interfacce frontend. Massimo ROI!
+            </div>
+
+            <div class="mb-3">
+                <div class="text-sm font-semibold text-gray-700 mb-2">Admin UI Coverage (Epic #3934) - 6 issues - 16-24h totali</div>
+                <div class="issue-item">
+                    <div>
+                        <span class="text-xs text-gray-500 mr-2">#3935</span>
+                        <span class="text-sm font-medium">Pending Approvals Workflow UI (3-4h)</span>
+                    </div>
+                    <span class="badge badge-high">HIGH</span>
+                </div>
+                <div class="issue-item">
+                    <div>
+                        <span class="text-xs text-gray-500 mr-2">#3936</span>
+                        <span class="text-sm font-medium">User Activity Timeline View (4-5h)</span>
+                    </div>
+                    <span class="badge badge-high">HIGH</span>
+                </div>
+                <div class="issue-item">
+                    <div>
+                        <span class="text-xs text-gray-500 mr-2">#3937</span>
+                        <span class="text-sm font-medium">Bulk User Actions Modal (2-3h)</span>
+                    </div>
+                    <span class="badge badge-high">HIGH</span>
+                </div>
+                <div class="issue-item">
+                    <div>
+                        <span class="text-xs text-gray-500 mr-2">#3938</span>
+                        <span class="text-sm font-medium">Global Sessions Monitoring Dashboard (3-4h)</span>
+                    </div>
+                    <span class="badge badge-high">HIGH</span>
+                </div>
+                <div class="issue-item">
+                    <div>
+                        <span class="text-xs text-gray-500 mr-2">#3939</span>
+                        <span class="text-sm font-medium">API Keys Stats Dashboard (2-3h)</span>
+                    </div>
+                    <span class="badge badge-medium">MEDIUM</span>
+                </div>
+                <div class="issue-item">
+                    <div>
+                        <span class="text-xs text-gray-500 mr-2">#3940</span>
+                        <span class="text-sm font-medium">Workflow Errors Monitoring View (2-3h)</span>
+                    </div>
+                    <span class="badge badge-medium">MEDIUM</span>
+                </div>
+            </div>
+
+            <div>
+                <div class="text-sm font-semibold text-gray-700 mb-2">Dashboard Hub Frontend - 11 issues - 44-66h totali</div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="issue-item">
+                        <div>
+                            <span class="text-xs text-gray-500 mr-2">#3910</span>
+                            <span class="text-sm font-medium">Dashboard Hub Layout Refactoring</span>
+                        </div>
+                    </div>
+                    <div class="issue-item">
+                        <div>
+                            <span class="text-xs text-gray-500 mr-2">#3911</span>
+                            <span class="text-sm font-medium">Enhanced Activity Feed Timeline</span>
+                        </div>
+                    </div>
+                    <div class="issue-item">
+                        <div>
+                            <span class="text-xs text-gray-500 mr-2">#3912</span>
+                            <span class="text-sm font-medium">Library Snapshot Component</span>
+                        </div>
+                    </div>
+                    <div class="issue-item">
+                        <div>
+                            <span class="text-xs text-gray-500 mr-2">#3913</span>
+                            <span class="text-sm font-medium">Quick Actions Grid Enhancement</span>
+                        </div>
+                    </div>
+                    <div class="issue-item">
+                        <div>
+                            <span class="text-xs text-gray-500 mr-2">#3914</span>
+                            <span class="text-sm font-medium">Responsive Layout Mobile/Desktop</span>
+                        </div>
+                    </div>
+                    <div class="issue-item">
+                        <div>
+                            <span class="text-xs text-gray-500 mr-2">#3919</span>
+                            <span class="text-sm font-medium">AI Insights Widget Component</span>
+                        </div>
+                    </div>
+                    <div class="issue-item">
+                        <div>
+                            <span class="text-xs text-gray-500 mr-2">#3920</span>
+                            <span class="text-sm font-medium">Wishlist Highlights Component</span>
+                        </div>
+                    </div>
+                    <div class="issue-item">
+                        <div>
+                            <span class="text-xs text-gray-500 mr-2">#3921</span>
+                            <span class="text-sm font-medium">Catalog Trending Widget</span>
+                        </div>
+                    </div>
+                    <div class="issue-item">
+                        <div>
+                            <span class="text-xs text-gray-500 mr-2">#3924</span>
+                            <span class="text-sm font-medium">Achievements Widget Component</span>
+                        </div>
+                    </div>
+                    <div class="issue-item">
+                        <div>
+                            <span class="text-xs text-gray-500 mr-2">#3925</span>
+                            <span class="text-sm font-medium">Advanced Timeline Filters & Search</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TIER 2: Backend Support -->
+        <div class="tier-card tier-2 animate-in highlight-new" style="animation-delay: 0.1s">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-sm font-semibold text-orange-600 mb-1">TIER 2 (1 settimana) - PARALLELO CON TIER 1</div>
+                    <h3 class="text-xl font-bold text-gray-900">Dashboard Hub Backend Support</h3>
+                    <div class="text-sm text-gray-600 mt-1">Backend services per Dashboard Hub (può essere parallelo)</div>
+                </div>
+                <span class="badge badge-high">Priority: HIGH</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="issue-item">
+                    <div>
+                        <span class="text-xs text-gray-500 mr-2">#3916</span>
+                        <span class="text-sm font-medium">AI Insights Service (RAG Integration)</span>
+                    </div>
+                </div>
+                <div class="issue-item">
+                    <div>
+                        <span class="text-xs text-gray-500 mr-2">#3917</span>
+                        <span class="text-sm font-medium">Wishlist Management API (CRUD)</span>
+                    </div>
+                </div>
+                <div class="issue-item">
+                    <div>
+                        <span class="text-xs text-gray-500 mr-2">#3918</span>
+                        <span class="text-sm font-medium">Catalog Trending Analytics Service</span>
+                    </div>
+                </div>
+                <div class="issue-item">
+                    <div>
+                        <span class="text-xs text-gray-500 mr-2">#3922</span>
+                        <span class="text-sm font-medium">Achievement System & Badge Engine</span>
+                    </div>
+                </div>
+                <div class="issue-item">
+                    <div>
+                        <span class="text-xs text-gray-500 mr-2">#3923</span>
+                        <span class="text-sm font-medium">Advanced Timeline Service (Filters + Search)</span>
+                    </div>
+                </div>
+                <div class="issue-item">
+                    <div>
+                        <span class="text-xs text-gray-500 mr-2">#3915</span>
+                        <span class="text-sm font-medium">Dashboard Hub Integration & E2E Test Suite</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TIER 3: AI Foundation -->
+        <div class="tier-card tier-3 animate-in" style="animation-delay: 0.2s">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-sm font-semibold text-purple-600 mb-1">TIER 3 (3.5-6 settimane)</div>
+                    <h3 class="text-xl font-bold text-gray-900">AI Multi-Agent Foundation + AI Platform</h3>
+                    <div class="text-sm text-gray-600 mt-1">Epic #3490 (17 issues) + Epic #3687 (12 issues) - SEQUENZIALE</div>
+                </div>
+                <span class="badge badge-medium">Priority: MEDIUM</span>
+            </div>
+
+            <div class="text-sm text-gray-700 mb-3 font-semibold bg-purple-50 p-2 rounded">
+                <span class="text-purple-700">🔒 DEPENDENCY:</span> Epic #3687 DIPENDE da completamento Epic #3490. Issue #3776 e #3777 sono BLOCKER.
+            </div>
+
+            <div class="mb-3">
+                <div class="text-sm font-semibold text-gray-700 mb-2">Epic #3490: Multi-Agent System (17 issues - 2.5-4 settimane)</div>
+                <div class="text-xs text-gray-600 mb-2">Arbitro Agent (5), Decisore Agent (7), Integration & Testing (5)</div>
+                <div class="grid grid-cols-3 gap-2 text-xs">
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3759</span> Rules Arbitration Engine</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3760</span> Move Validation Logic</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3761</span> Conflict Resolution</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3762</span> REST API /validate</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3763</span> Testing & Iteration</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3769</span> Strategic Analysis Engine</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3770</span> Move Suggestion Algorithm</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3771</span> Multi-Model Ensemble</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3772</span> Game State Parser</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3773</span> REST API /suggest</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3774</span> Performance Tuning <10s</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3775</span> Beta Testing</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3776</span> 🔒 Multi-Agent Orchestration</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3777</span> 🔒 Agent Switching Logic</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3778</span> Unified Dashboard UI</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3779</span> E2E Testing Suite</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3780</span> Complete Documentation</div>
+                </div>
+            </div>
+
+            <div>
+                <div class="text-sm font-semibold text-gray-700 mb-2">Epic #3687: AI Platform (12 issues - 1-2 settimane DOPO #3490)</div>
+                <div class="grid grid-cols-3 gap-2 text-xs">
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3708</span> AgentDefinition Data Model</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3709</span> Agent Builder UI</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3710</span> Agent Playground</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3711</span> Strategy Editor</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3712</span> Visual Pipeline Builder 📦</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3713</span> Agent Catalog & Stats</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3714</span> Chat Analytics</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3715</span> PDF Analytics</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3716</span> Model Performance Tracking</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3717</span> A/B Testing Framework</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3718</span> Testing - AI Platform</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3809</span> Agent Builder Form & CRUD</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TIER 4: Business Logic -->
+        <div class="tier-card tier-4 animate-in" style="animation-delay: 0.3s">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-sm font-semibold text-green-600 mb-1">TIER 4 (1-2 settimane) - PARALLELO CON TIER 3</div>
+                    <h3 class="text-xl font-bold text-gray-900">Business & Financial Management</h3>
+                    <div class="text-sm text-gray-600 mt-1">Epic #3688 - Business & Simulations (10 issues - indipendente)</div>
+                </div>
+                <span class="badge badge-medium">Priority: MEDIUM</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-xs">
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3720</span> Financial Ledger Data Model</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3721</span> Automatic Ledger Tracking</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3722</span> Manual Ledger CRUD</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3723</span> Ledger Dashboard & Viz</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3724</span> Export Ledger (PDF/CSV)</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3719</span> App Usage Stats</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3725</span> Agent Cost Calculator</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3726</span> Resource Forecasting 📦</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3728</span> App Usage Dashboard Frontend</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3727</span> Testing - Business</div>
+            </div>
+        </div>
+
+        <!-- TIER 5: Infrastructure & DevOps (LOW PRIORITY) -->
+        <div class="tier-card tier-5 animate-in" style="animation-delay: 0.4s">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-sm font-semibold text-gray-600 mb-1">TIER 5 (1-1.5 settimane) - PARALLELO CON TIER 3-4</div>
+                    <h3 class="text-xl font-bold text-gray-900">Infrastructure & DevOps (CI/CD Improvements)</h3>
+                    <div class="text-sm text-gray-600 mt-1">Epic #2967 (8 issues) + Epic #3366 (2 issues) - PRIORITÀ BASSA</div>
+                </div>
+                <span class="badge badge-low">Priority: LOW</span>
+            </div>
+
+            <div class="text-sm text-gray-700 mb-3 font-semibold bg-gray-50 p-2 rounded">
+                <span class="text-gray-700">⚙️ OPTIMIZATION:</span> Miglioramenti CI/CD a priorità BASSA come richiesto. Possono essere posticipati o paralleli.
+            </div>
+
+            <div class="mb-3">
+                <div class="text-sm font-semibold text-gray-700 mb-2">Epic #2967: Zero-Cost CI/CD Infrastructure (8 issues)</div>
+                <div class="grid grid-cols-3 gap-2 text-xs">
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#2968</span> Oracle Cloud Setup & VM</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#2969</span> GitHub Actions Runner</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#2970</span> Workflow Migration</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#2972</span> Performance Monitoring</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#2973</span> Cost Validation</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#2974</span> Prometheus + Grafana</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#2975</span> Troubleshooting Docs</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#2976</span> Maintenance Automation</div>
+                </div>
+            </div>
+
+            <div>
+                <div class="text-sm font-semibold text-gray-700 mb-2">Epic #3366: Infrastructure Enhancements (2 issues)</div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3367</span> Log Aggregation System (SP:5)</div>
+                    <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3368</span> k6 Load Testing (SP:3)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TIER 6: Advanced Features (LOW PRIORITY) -->
+        <div class="tier-card tier-6 animate-in" style="animation-delay: 0.5s">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="text-sm font-semibold text-pink-600 mb-1">TIER 6 (2-3 settimane) - OPZIONALE</div>
+                    <h3 class="text-xl font-bold text-gray-900">Advanced Features (Nice-to-Have)</h3>
+                    <div class="text-sm text-gray-600 mt-1">Enhancement, Gamification, RAG Strategies, Session Toolkit - PRIORITÀ BASSA</div>
+                </div>
+                <span class="badge badge-low">Priority: LOW</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-xs">
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3082</span> E2E Test Flows (50 flows)</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3700</span> Impersonate Mode [Epic 2]</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3120</span> Private Games & Catalog</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3320</span> EPIC: Gamification</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3341</span> EPIC: Session Toolkit Phase 2</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3348</span> EPIC: Advanced Features</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3355</span> Version History & Comparison</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3356</span> EPIC: Advanced RAG (9 Variants)</div>
+                <div class="issue-item p-2"><span class="text-gray-500 mr-1">#3358</span> RAG: Iterative Strategy</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Dependency Graph -->
+    <div class="max-w-7xl mx-auto mt-8 mb-8">
+        <h2 class="text-2xl font-quicksand font-bold text-gray-800 mb-4">🔗 Dependency Chain (Aggiornata)</h2>
+        <div class="glass rounded-xl p-6">
+            <div class="space-y-3 text-sm">
+                <div class="flex items-center">
+                    <div class="w-48 font-semibold text-red-700">TIER 1 (2-2.5 sett)</div>
+                    <div class="flex-1 text-gray-600">Admin UI Coverage + Dashboard Frontend → <strong>PRIORITÀ MASSIMA</strong> 🔥</div>
+                </div>
+                <div class="flex items-center pl-8">
+                    <div class="w-40 font-semibold text-orange-600">↓ PARALLEL WITH ↓</div>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-48 font-semibold text-orange-700">TIER 2 (1 sett)</div>
+                    <div class="flex-1 text-gray-600">Dashboard Backend Support (può essere parallelo con TIER 1)</div>
+                </div>
+                <div class="flex items-center pl-8">
+                    <div class="w-40 font-semibold text-gray-600">↓ THEN (AFTER TIER 1-2) ↓</div>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-48 font-semibold text-purple-700">TIER 3 (3.5-6 sett)</div>
+                    <div class="flex-1 text-gray-600">AI Multi-Agent (#3490) → MUST BE FIRST → Then AI Platform (#3687)</div>
+                </div>
+                <div class="flex items-center pl-8">
+                    <div class="w-40 font-semibold text-gray-600">↓ PARALLEL WITH ↓</div>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-48 font-semibold text-green-700">TIER 4 (1-2 sett)</div>
+                    <div class="flex-1 text-gray-600">Business Logic (#3688) - indipendente, può essere parallelo</div>
+                </div>
+                <div class="flex items-center pl-8">
+                    <div class="w-40 font-semibold text-gray-600">↓ PARALLEL WITH ↓</div>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-48 font-semibold text-gray-700">TIER 5 (1-1.5 sett)</div>
+                    <div class="flex-1 text-gray-600">Infrastructure CI/CD (#2967, #3366) - <strong>PRIORITÀ BASSA</strong></div>
+                </div>
+                <div class="flex items-center pl-8">
+                    <div class="w-40 font-semibold text-gray-600">↓ FINALLY (OPTIONAL) ↓</div>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-48 font-semibold text-pink-700">TIER 6 (2-3 sett)</div>
+                    <div class="flex-1 text-gray-600">Advanced Features - Nice-to-Have, priorità bassa</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline Summary -->
+    <div class="max-w-7xl mx-auto mt-8">
+        <h2 class="text-2xl font-quicksand font-bold text-gray-800 mb-4">📅 Timeline Aggiornata (User-First Strategy)</h2>
+        <div class="glass rounded-xl p-6">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-300">
+                        <th class="text-left py-3 px-4">Tier</th>
+                        <th class="text-left py-3 px-4">Epic/Gruppo</th>
+                        <th class="text-center py-3 px-4">Settimane</th>
+                        <th class="text-center py-3 px-4">Issue Count</th>
+                        <th class="text-center py-3 px-4">Priorità</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="border-b border-gray-200 bg-red-50">
+                        <td class="py-3 px-4 font-semibold text-red-700">TIER 1 🔥</td>
+                        <td class="py-3 px-4">#3934 Admin UI + Dashboard Hub Frontend</td>
+                        <td class="py-3 px-4 text-center">2-2.5</td>
+                        <td class="py-3 px-4 text-center">17</td>
+                        <td class="py-3 px-4 text-center"><span class="badge badge-high">CRITICAL</span></td>
+                    </tr>
+                    <tr class="border-b border-gray-200 bg-orange-50">
+                        <td class="py-3 px-4 font-semibold text-orange-700">TIER 2</td>
+                        <td class="py-3 px-4">Dashboard Hub Backend Support</td>
+                        <td class="py-3 px-4 text-center">1</td>
+                        <td class="py-3 px-4 text-center">6</td>
+                        <td class="py-3 px-4 text-center"><span class="badge badge-high">HIGH</span></td>
+                    </tr>
+                    <tr class="border-b border-gray-200">
+                        <td class="py-3 px-4 font-semibold text-purple-700">TIER 3</td>
+                        <td class="py-3 px-4">#3490 Multi-Agent + #3687 AI Platform</td>
+                        <td class="py-3 px-4 text-center">3.5-6</td>
+                        <td class="py-3 px-4 text-center">29</td>
+                        <td class="py-3 px-4 text-center"><span class="badge badge-medium">MEDIUM</span></td>
+                    </tr>
+                    <tr class="border-b border-gray-200">
+                        <td class="py-3 px-4 font-semibold text-green-700">TIER 4</td>
+                        <td class="py-3 px-4">#3688 Business & Simulations</td>
+                        <td class="py-3 px-4 text-center">1-2</td>
+                        <td class="py-3 px-4 text-center">10</td>
+                        <td class="py-3 px-4 text-center"><span class="badge badge-medium">MEDIUM</span></td>
+                    </tr>
+                    <tr class="border-b border-gray-200">
+                        <td class="py-3 px-4 font-semibold text-gray-700">TIER 5</td>
+                        <td class="py-3 px-4">Infrastructure CI/CD</td>
+                        <td class="py-3 px-4 text-center">1-1.5</td>
+                        <td class="py-3 px-4 text-center">10</td>
+                        <td class="py-3 px-4 text-center"><span class="badge badge-low">LOW</span></td>
+                    </tr>
+                    <tr class="border-b border-gray-200">
+                        <td class="py-3 px-4 font-semibold text-pink-700">TIER 6</td>
+                        <td class="py-3 px-4">Advanced Features (Optional)</td>
+                        <td class="py-3 px-4 text-center">2-3</td>
+                        <td class="py-3 px-4 text-center">9+</td>
+                        <td class="py-3 px-4 text-center"><span class="badge badge-low">LOW</span></td>
+                    </tr>
+                    <tr class="bg-blue-50 font-bold">
+                        <td colspan="2" class="py-3 px-4">TOTALE (con parallelizzazione ottimale)</td>
+                        <td class="py-3 px-4 text-center">8-12</td>
+                        <td class="py-3 px-4 text-center">~90</td>
+                        <td class="py-3 px-4 text-center">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Key Changes & Rationale -->
+    <div class="max-w-7xl mx-auto mt-8 mb-8">
+        <h2 class="text-2xl font-quicksand font-bold text-gray-800 mb-4">🆕 Cambiamenti Chiave & Rationale</h2>
+        <div class="glass rounded-xl p-6">
+            <div class="space-y-4">
+                <div class="p-4 bg-red-50 rounded-lg border-l-4 border-red-500">
+                    <h3 class="font-bold text-red-900 mb-2">🔥 TIER 1: Priorità Massima User-First</h3>
+                    <p class="text-sm text-red-800">
+                        <strong>Rationale:</strong> Epic #3934 Admin UI Coverage (6 issues) e Dashboard Hub Frontend (11 issues) forniscono <strong>valore utente immediato</strong>.
+                        Le API backend sono GIÀ PRONTE - servono SOLO le interfacce frontend. ROI massimo con minimo effort.
+                    </p>
+                </div>
+
+                <div class="p-4 bg-purple-50 rounded-lg border-l-4 border-purple-500">
+                    <h3 class="font-bold text-purple-900 mb-2">🔄 TIER 3: AI Foundation Posticipata</h3>
+                    <p class="text-sm text-purple-800">
+                        <strong>Rationale:</strong> Epic #3490 Multi-Agent e #3687 AI Platform sono fondamenta tecniche importanti MA meno visibili agli utenti finali rispetto alle interfacce UI.
+                        Posticipare DOPO TIER 1-2 permette di delivery rapido di funzionalità user-facing mentre il team backend lavora su AI foundation.
+                    </p>
+                </div>
+
+                <div class="p-4 bg-gray-50 rounded-lg border-l-4 border-gray-500">
+                    <h3 class="font-bold text-gray-900 mb-2">⚙️ TIER 5: CI/CD a Priorità Bassa (come richiesto)</h3>
+                    <p class="text-sm text-gray-800">
+                        <strong>Rationale:</strong> Miglioramenti CI/CD (#2967, #3366) sono importanti per developer experience MA hanno priorità BASSA rispetto a funzionalità utente.
+                        Possono essere eseguiti in parallelo con TIER 3-4 o posticipati completamente.
+                    </p>
+                </div>
+
+                <div class="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                    <h3 class="font-bold text-green-900 mb-2">⚡ Parallelizzazione Ottimale</h3>
+                    <p class="text-sm text-green-800">
+                        <strong>Strategia:</strong> TIER 2 (Backend) può essere parallelo con TIER 1 (Frontend). TIER 4 (Business) e TIER 5 (Infra) possono essere paralleli con TIER 3 (AI).
+                        Timeline totale: 8-12 settimane invece di 15-20 settimane sequenziali.
+                    </p>
+                </div>
+
+                <div class="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+                    <h3 class="font-bold text-yellow-900 mb-2">📊 Issue Count Update</h3>
+                    <p class="text-sm text-yellow-800">
+                        <strong>Update:</strong> Issue aperte aumentate da 62 a 100+ grazie a nuovi epic (#3934 Admin UI Coverage, Dashboard Hub Roadmap).
+                        Prioritizzazione TIER-based assicura focus su massimo valore utente.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="max-w-7xl mx-auto mt-8 mb-8">
+        <div class="glass rounded-xl p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-3">📝 Note Importanti</h3>
+            <ul class="space-y-2 text-sm text-gray-700">
+                <li class="flex items-start">
+                    <span class="mr-2">🆕</span>
+                    <div><strong>AGGIORNAMENTO 2026-02-08:</strong> Nuova strategia USER-FIRST. TIER 1 (Admin UI + Dashboard Frontend) ha priorità MASSIMA rispetto a fondamenta tecniche.</div>
+                </li>
+                <li class="flex items-start">
+                    <span class="mr-2">🔥</span>
+                    <div><strong>QUICK WINS:</strong> TIER 1 fornisce valore utente IMMEDIATO (16-24h per Epic #3934) perché le API backend sono già pronte.</div>
+                </li>
+                <li class="flex items-start">
+                    <span class="mr-2">🔒</span>
+                    <div><strong>CRITICAL DEPENDENCY:</strong> Epic #3490 (TIER 3) deve essere completato PRIMA di Epic #3687. Issue #3776 e #3777 sono BLOCKER.</div>
+                </li>
+                <li class="flex items-start">
+                    <span class="mr-2">⚡</span>
+                    <div><strong>PARALLEL EXECUTION:</strong> TIER 2 parallelo con TIER 1. TIER 4-5 paralleli con TIER 3. Timeline ottimizzata: 8-12 settimane.</div>
+                </li>
+                <li class="flex items-start">
+                    <span class="mr-2">⚙️</span>
+                    <div><strong>CI/CD PRIORITÀ BASSA:</strong> Come richiesto, Epic #2967 e #3366 (TIER 5) hanno priorità LOW e possono essere posticipati.</div>
+                </li>
+                <li class="flex items-start">
+                    <span class="mr-2">📦</span>
+                    <div><strong>LARGE ISSUES:</strong> #3712 (Visual Pipeline Builder) e #3726 (Resource Forecasting) richiedono planning separato.</div>
+                </li>
+                <li class="flex items-start">
+                    <span class="mr-2">✅</span>
+                    <div><strong>COMPLETAMENTO:</strong> ~90 issue sequenziate su 100+ totali aperte. TIER 6 (Advanced Features) è opzionale.</div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="max-w-7xl mx-auto mt-8 text-center text-sm text-gray-600">
+        <p>Generato da PM Agent • Aggiornamento: 2026-02-08 • Strategia User-First • MeepleAI Frontend Monorepo</p>
+    </div>
+
+</body>
+</html>

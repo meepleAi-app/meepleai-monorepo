@@ -14,10 +14,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Star, TrendingUp, Calendar, ArrowDownAZ } from 'lucide-react';
+import { Star, TrendingUp, Calendar, ArrowDownAZ, Users } from 'lucide-react';
 import { EntityListView } from '@/components/ui/data-display/entity-list-view';
 import { createComparator } from '@/components/ui/data-display/entity-list-view/utils/sort-utils';
-import type { SortOption } from '@/components/ui/data-display/entity-list-view/entity-list-view.types';
+import type { SortOption, FilterConfig } from '@/components/ui/data-display/entity-list-view/entity-list-view.types';
 
 // Mock game data
 interface Game {
@@ -96,6 +96,48 @@ const gameSortOptions: SortOption<Game>[] = [
   },
 ];
 
+// Filter configuration for games
+const gameFilters: FilterConfig<Game>[] = [
+  {
+    id: 'players',
+    type: 'range',
+    label: 'Number of Players',
+    field: 'maxPlayers',
+    min: 1,
+    max: 8,
+    unit: ' players',
+    description: 'Filter by max player count',
+  },
+  {
+    id: 'rating',
+    type: 'range',
+    label: 'Minimum Rating',
+    field: 'rating',
+    min: 1,
+    max: 10,
+    step: 0.1,
+    unit: '/10',
+  },
+  {
+    id: 'year',
+    type: 'select',
+    label: 'Year Published',
+    field: 'yearPublished',
+    options: [
+      { value: '2019', label: '2019' },
+      { value: '2017', label: '2017' },
+      { value: '2016', label: '2016' },
+    ],
+  },
+  {
+    id: 'hasImage',
+    type: 'checkbox',
+    label: 'Has Cover Image',
+    field: 'imageUrl',
+    description: 'Only show games with cover art',
+  },
+];
+
 export default function EntityListCompleteDemoPage() {
   const [isClient, setIsClient] = useState(false);
 
@@ -147,6 +189,7 @@ export default function EntityListCompleteDemoPage() {
         searchFields={['title', 'publisher']}
         sortOptions={gameSortOptions}
         defaultSort="rating"
+        filters={gameFilters}
         carouselOptions={{
           autoPlay: false,
           showDots: true,

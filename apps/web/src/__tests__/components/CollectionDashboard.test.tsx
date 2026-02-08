@@ -162,8 +162,10 @@ describe('MeepleCard', () => {
       />
     );
 
-    // Loading state shows skeleton placeholders
-    expect(screen.getByRole('article')).toHaveAttribute('aria-busy', 'true');
+    // Loading state shows skeleton placeholder with animation
+    const skeleton = screen.getByTestId('meeple-card-skeleton');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton.className).toContain('animate-pulse');
   });
 
   it('should support different entity types', () => {
@@ -212,8 +214,13 @@ describe('CollectionGrid', () => {
       />
     );
 
-    expect(screen.getByTestId('meeple-card-test-game-1')).toBeInTheDocument();
-    expect(screen.getByTestId('meeple-card-test-game-2')).toBeInTheDocument();
+    // Verify both game cards are rendered by their titles
+    expect(screen.getByText('Test Game')).toBeInTheDocument();
+    expect(screen.getByText('Test Game 2')).toBeInTheDocument();
+
+    // Verify correct number of cards (using data-entity attribute)
+    const cards = document.querySelectorAll('[data-entity="game"]');
+    expect(cards.length).toBe(2);
   });
 
   it('should show empty state when no games', () => {

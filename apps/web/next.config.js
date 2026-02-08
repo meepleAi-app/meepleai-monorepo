@@ -151,13 +151,20 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons', 'date-fns', 'lodash'],
   },
 
-  // Permanent redirects (Issue #1672: Remove deprecated /profile page)
+  // Permanent redirects
   async redirects() {
     return [
+      // Issue #1672: Remove deprecated /profile page
       {
         source: '/profile',
         destination: '/settings',
         permanent: true, // 308 redirect for SEO
+      },
+      // Issue #3843: Redirect old /giochi route to new /games route
+      {
+        source: '/giochi/:id*',
+        destination: '/games/:id*',
+        permanent: true, // 301 redirect for SEO (update index)
       },
     ];
   },

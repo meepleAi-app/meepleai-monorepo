@@ -47,7 +47,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 import type { CollectionGridProps, SortOption, SortConfig, FilterOption } from '@/types/collection';
 
-import { MeepleCard } from './MeepleCard';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 
 // ============================================================================
 // Sort & Filter Configuration

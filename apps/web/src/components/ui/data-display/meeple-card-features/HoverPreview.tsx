@@ -1,13 +1,16 @@
 /**
  * HoverPreview - Hover Tooltip Preview for MeepleCard
- * Issue #3827
+ * Issue #3827, #3859 - Epic #3820
  *
- * TODO: Requires Popover component (not yet available in ui/overlays)
- * Current: Placeholder implementation (returns children only)
- * Complete implementation ready - just needs Popover component
+ * Displays rich game information on hover with smooth animations.
+ * Uses Popover component for consistent overlay behavior.
  */
 
 'use client';
+
+import * as React from 'react';
+
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/overlays';
 
 export interface HoverPreviewData {
   description?: string;
@@ -28,13 +31,159 @@ export interface HoverPreviewProps {
 }
 
 /**
- * HoverPreview placeholder
- * Returns children without preview until Popover component available
+ * HoverPreview Component
+ *
+ * Shows game details in a popover on hover.
+ * Supports static data or async loading via onFetchPreview.
  */
 export function HoverPreview({
+  gameId,
+  previewData,
+  onFetchPreview,
+  delay = 500,
+  disabled = false,
   children,
 }: HoverPreviewProps) {
-  // TODO: Implement full hover preview when Popover component added
-  // Feature temporarily disabled (returns children as-is)
-  return <>{children}</>;
+  const [data, setData] = React.useState<HoverPreviewData | null>(previewData ?? null);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  // Fetch preview data on hover if not provided
+  React.useEffect(() => {
+    if (!isOpen || data || !onFetchPreview || disabled) return;
+
+    let isMounted = true;
+    const timeoutId = setTimeout(async () => {
+      if (!isMounted) return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const result = await onFetchPreview(gameId);
+        if (isMounted) {
+          setData(result);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Failed to load preview');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }, delay);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [isOpen, data, onFetchPreview, gameId, delay, disabled]);
+
+  if (disabled) {
+    return <>{children}</>;
+  }
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent className="w-80" align="start">
+        {isLoading ? (
+          <div className="space-y-2">
+            <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-full animate-pulse rounded bg-muted" />
+            <div className="h-4 w-5/6 animate-pulse rounded bg-muted" />
+          </div>
+        ) : error ? (
+          <div className="text-sm text-destructive">
+            <p className="font-medium">Error loading preview</p>
+            <p className="text-xs text-muted-foreground">{error}</p>
+          </div>
+        ) : data ? (
+          <div className="space-y-3">
+            {/* Description */}
+            {data.description && (
+              <div>
+                <p className="text-sm leading-relaxed text-foreground/90">{data.description}</p>
+              </div>
+            )}
+
+            {/* Designer & Complexity */}
+            {(data.designer || data.complexity !== undefined) && (
+              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                {data.designer && (
+                  <div>
+                    <span className="font-medium">Designer:</span>{' '}
+                    <span className="text-foreground/80">{data.designer}</span>
+                  </div>
+                )}
+                {data.complexity !== undefined && (
+                  <div>
+                    <span className="font-medium">Complexity:</span>{' '}
+                    <span className="text-foreground/80">{data.complexity}/5</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Weight */}
+            {data.weight && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Weight:</span>
+                <span
+                  className={`rounded px-2 py-0.5 text-xs font-medium ${
+                    data.weight === 'Light'
+                      ? 'bg-green-100 text-green-900 dark:bg-green-900/30 dark:text-green-300'
+                      : data.weight === 'Medium'
+                        ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300'
+                        : 'bg-red-100 text-red-900 dark:bg-red-900/30 dark:text-red-300'
+                  }`}
+                >
+                  {data.weight}
+                </span>
+              </div>
+            )}
+
+            {/* Categories */}
+            {data.categories && data.categories.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Categories</p>
+                <div className="flex flex-wrap gap-1">
+                  {data.categories.map((category, idx) => (
+                    <span
+                      key={idx}
+                      className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary dark:bg-primary/20"
+                    >
+                      {category}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Mechanics */}
+            {data.mechanics && data.mechanics.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Mechanics</p>
+                <div className="flex flex-wrap gap-1">
+                  {data.mechanics.map((mechanic, idx) => (
+                    <span
+                      key={idx}
+                      className="rounded-full bg-secondary/80 px-2 py-0.5 text-xs font-medium text-secondary-foreground dark:bg-secondary/60"
+                    >
+                      {mechanic}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No preview available</p>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
 }

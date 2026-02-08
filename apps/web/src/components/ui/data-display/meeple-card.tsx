@@ -66,7 +66,7 @@ import type { LucideIcon } from 'lucide-react';
 import { WishlistButton } from './meeple-card-features/WishlistButton';
 import { QuickActionsMenu } from './meeple-card-features/QuickActionsMenu';
 import { StatusBadge } from './meeple-card-features/StatusBadge';
-// import { HoverPreview } from './meeple-card-features/HoverPreview'; // TODO: Add Popover component
+import { HoverPreview } from './meeple-card-features/HoverPreview';
 import { DragHandle } from './meeple-card-features/DragHandle';
 import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
 
@@ -114,6 +114,8 @@ export interface MeepleCardAction {
  * MeepleCard component props
  */
 export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants> {
+  /** Unique entity ID (required for HoverPreview feature) */
+  id?: string;
   /** Entity type determines color scheme */
   entity: MeepleEntityType;
   /** Layout variant */
@@ -580,6 +582,7 @@ function MeepleCardSkeleton({ variant = 'grid' }: { variant?: MeepleCardVariant 
  * and custom entity types with multiple layout variants.
  */
 export const MeepleCard = React.memo(function MeepleCard({
+  id,
   entity,
   variant = 'grid',
   title,
@@ -804,10 +807,19 @@ export const MeepleCard = React.memo(function MeepleCard({
   );
 
   // Feature: Wrap with HoverPreview if enabled
-  // TODO: Re-enable when Popover component available
-  // if (showPreview && onFetchPreview) {
-  //   return <HoverPreview ...>{cardContent}</HoverPreview>;
-  // }
+  if (showPreview && onFetchPreview && id) {
+    return (
+      <HoverPreview
+        gameId={id}
+        previewData={previewData}
+        onFetchPreview={onFetchPreview}
+        delay={500}
+        disabled={loading}
+      >
+        {cardContent}
+      </HoverPreview>
+    );
+  }
 
   return cardContent;
 });

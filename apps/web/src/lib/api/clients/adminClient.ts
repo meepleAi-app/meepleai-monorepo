@@ -10,6 +10,8 @@ import { z } from 'zod';
 import { getApiBase } from '../core/httpClient';
 import {
   PublishGameResponseSchema,
+  AuditLogListResultSchema,
+  type AuditLogListResult,
   type ApprovalStatus,
   type PublishGameResponse,
   AdminUserSchema,
@@ -85,6 +87,22 @@ import {
   type TestModelRequest,
   type TestModelResponse,
   type ExportUsageReportParams,
+  TokenBalanceSchema,
+  TokenConsumptionDataSchema,
+  TierUsageListSchema,
+  TopConsumersListSchema,
+  type TokenBalance,
+  type TokenConsumptionData,
+  type TierUsageList,
+  type TopConsumersList,
+  type AddCreditsRequest,
+  type UpdateTierLimitsRequest,
+  BatchJobDtoSchema,
+  BatchJobListSchema,
+  CreateBatchJobResponseSchema,
+  type BatchJobDto,
+  type BatchJobList,
+  type CreateBatchJobRequest,
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -127,6 +145,19 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async deleteUser(userId: string): Promise<void> {
       await httpClient.delete(`/api/v1/admin/users/${userId}`);
+    },
+
+    /**
+     * Update user tier (admin only) - Issue #3699
+     * PUT /api/v1/admin/users/{id}/tier
+     */
+    async updateUserTier(userId: string, tier: string): Promise<AdminUser> {
+      const result = await httpClient.put<AdminUser>(
+        `/api/v1/admin/users/${userId}/tier`,
+        { tier },
+        AdminUserSchema
+      );
+      return result!;
     },
 
     /**
@@ -428,6 +459,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
     /**
      * Get all users with pagination and filtering (admin only)
      * GET /api/v1/admin/users
+     * Issue #3698: Added tier filter parameter
      */
     async getUsers(params?: {
       page?: number;
@@ -435,6 +467,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       search?: string;
       role?: string;
       status?: string;
+      tier?: string;              // Issue #3698: Filter by tier
     }): Promise<PagedResult<AdminUser>> {
       const queryParams = new URLSearchParams();
       if (params?.page) queryParams.set('page', params.page.toString());
@@ -442,6 +475,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       if (params?.search) queryParams.set('search', params.search);
       if (params?.role && params.role !== 'all') queryParams.set('role', params.role);
       if (params?.status && params.status !== 'all') queryParams.set('status', params.status);
+      if (params?.tier && params.tier !== 'all') queryParams.set('tier', params.tier); // Issue #3698
 
       const query = queryParams.toString();
       const result = await httpClient.get<PagedResult<AdminUser>>(
@@ -1215,6 +1249,211 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         { status },
         PublishGameResponseSchema
       );
+    },
+
+    // ========== Audit Log (Issue #3691) ==========
+
+    /**
+     * Get paginated audit log entries with optional filters
+     * GET /api/v1/admin/audit-log
+     */
+    async getAuditLogs(params?: {
+      limit?: number;
+      offset?: number;
+      adminUserId?: string;
+      action?: string;
+      resource?: string;
+      result?: string;
+      startDate?: string;
+      endDate?: string;
+    }): Promise<AuditLogListResult> {
+      const searchParams = new URLSearchParams();
+      if (params?.limit) searchParams.set('limit', String(params.limit));
+      if (params?.offset) searchParams.set('offset', String(params.offset));
+      if (params?.adminUserId) searchParams.set('adminUserId', params.adminUserId);
+      if (params?.action) searchParams.set('action', params.action);
+      if (params?.resource) searchParams.set('resource', params.resource);
+      if (params?.result) searchParams.set('result', params.result);
+      if (params?.startDate) searchParams.set('startDate', params.startDate);
+      if (params?.endDate) searchParams.set('endDate', params.endDate);
+      const qs = searchParams.toString();
+      const url = `/api/v1/admin/audit-log${qs ? `?${qs}` : ''}`;
+      const result = await httpClient.get<AuditLogListResult>(url, AuditLogListResultSchema);
+      if (!result) {
+        return { entries: [], totalCount: 0, limit: params?.limit ?? 50, offset: params?.offset ?? 0 };
+      }
+      return result;
+    },
+
+    /**
+     * Export audit log entries as CSV
+     * GET /api/v1/admin/audit-log/export
+     */
+    async exportAuditLogs(params?: {
+      adminUserId?: string;
+      action?: string;
+      resource?: string;
+      result?: string;
+      startDate?: string;
+      endDate?: string;
+    }): Promise<Blob> {
+      const searchParams = new URLSearchParams();
+      if (params?.adminUserId) searchParams.set('adminUserId', params.adminUserId);
+      if (params?.action) searchParams.set('action', params.action);
+      if (params?.resource) searchParams.set('resource', params.resource);
+      if (params?.result) searchParams.set('result', params.result);
+      if (params?.startDate) searchParams.set('startDate', params.startDate);
+      if (params?.endDate) searchParams.set('endDate', params.endDate);
+      const qs = searchParams.toString();
+      const url = `${getApiBase()}/api/v1/admin/audit-log/export${qs ? `?${qs}` : ''}`;
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error(`Export failed: ${response.statusText}`);
+      return response.blob();
+    },
+
+    // ========== Token Management (Issue #3692) ==========
+
+    /**
+     * Get current token balance and usage summary
+     * GET /api/v1/admin/resources/tokens
+     */
+    async getTokenBalance(): Promise<TokenBalance> {
+      const result = await httpClient.get<TokenBalance>('/api/v1/admin/resources/tokens', TokenBalanceSchema);
+      if (!result) throw new Error('No token balance data returned');
+      return result;
+    },
+
+    /**
+     * Get token consumption trend data
+     * GET /api/v1/admin/resources/tokens/consumption
+     */
+    async getTokenConsumption(days: number = 30): Promise<TokenConsumptionData> {
+      const result = await httpClient.get<TokenConsumptionData>(
+        `/api/v1/admin/resources/tokens/consumption?days=${days}`,
+        TokenConsumptionDataSchema
+      );
+      if (!result) throw new Error('No consumption data returned');
+      return result;
+    },
+
+    /**
+     * Get token usage breakdown per tier
+     * GET /api/v1/admin/resources/tokens/tiers
+     */
+    async getTokenTierUsage(): Promise<TierUsageList> {
+      const result = await httpClient.get<TierUsageList>('/api/v1/admin/resources/tokens/tiers', TierUsageListSchema);
+      if (!result) throw new Error('No tier usage data returned');
+      return result;
+    },
+
+    /**
+     * Get top token consumers
+     * GET /api/v1/admin/resources/tokens/top-consumers
+     */
+    async getTopConsumers(limit: number = 10): Promise<TopConsumersList> {
+      const result = await httpClient.get<TopConsumersList>(
+        `/api/v1/admin/resources/tokens/top-consumers?limit=${limit}`,
+        TopConsumersListSchema
+      );
+      if (!result) throw new Error('No consumer data returned');
+      return result;
+    },
+
+    /**
+     * Update tier token limits
+     * PUT /api/v1/admin/resources/tokens/tiers/{tier}
+     */
+    async updateTierLimits(request: UpdateTierLimitsRequest): Promise<void> {
+      await httpClient.put(
+        `/api/v1/admin/resources/tokens/tiers/${request.tier}`,
+        request,
+        z.any()
+      );
+    },
+
+    /**
+     * Add credits to token balance
+     * POST /api/v1/admin/resources/tokens/add-credits
+     */
+    async addTokenCredits(request: AddCreditsRequest): Promise<void> {
+      await httpClient.post(
+        '/api/v1/admin/resources/tokens/add-credits',
+        request,
+        z.any()
+      );
+    },
+
+    // ========== Batch Jobs (Issue #3693) ==========
+
+    /**
+     * Get all batch jobs with optional filters
+     * GET /api/v1/admin/batch-jobs
+     */
+    async getAllBatchJobs(params?: {
+      status?: string;
+      page?: number;
+      pageSize?: number;
+    }): Promise<BatchJobList> {
+      const queryParams = new URLSearchParams();
+      if (params?.status && params.status !== 'all') queryParams.set('status', params.status);
+      if (params?.page) queryParams.set('page', params.page.toString());
+      if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
+
+      const query = queryParams.toString();
+      const result = await httpClient.get<BatchJobList>(
+        `/api/v1/admin/batch-jobs${query ? `?${query}` : ''}`,
+        BatchJobListSchema
+      );
+      return result ?? { jobs: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Get batch job by ID
+     * GET /api/v1/admin/batch-jobs/{id}
+     */
+    async getBatchJob(id: string): Promise<BatchJobDto> {
+      const result = await httpClient.get<BatchJobDto>(
+        `/api/v1/admin/batch-jobs/${id}`,
+        BatchJobDtoSchema
+      );
+      if (!result) throw new Error(`Batch job ${id} not found`);
+      return result;
+    },
+
+    /**
+     * Create new batch job
+     * POST /api/v1/admin/batch-jobs
+     */
+    async createBatchJob(request: CreateBatchJobRequest): Promise<{ id: string }> {
+      return httpClient.post(
+        '/api/v1/admin/batch-jobs',
+        request,
+        CreateBatchJobResponseSchema
+      );
+    },
+
+    /**
+     * Cancel batch job
+     * POST /api/v1/admin/batch-jobs/{id}/cancel
+     */
+    async cancelBatchJob(id: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/batch-jobs/${id}/cancel`, {});
+    },
+
+    /**
+     * Retry failed batch job
+     * POST /api/v1/admin/batch-jobs/{id}/retry
+     */
+    async retryBatchJob(id: string): Promise<void> {
+      await httpClient.post(`/api/v1/admin/batch-jobs/${id}/retry`, {});
+    },
+
+    /**
+     * Delete batch job
+     * DELETE /api/v1/admin/batch-jobs/{id}
+     */
+    async deleteBatchJob(id: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/batch-jobs/${id}`);
     },
   };
 }

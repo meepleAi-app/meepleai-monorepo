@@ -15,6 +15,7 @@ public class UserSessionEntity
     public DateTime? RevokedAt { get; set; }
     public string? UserAgent { get; set; }
     public string? IpAddress { get; set; }
+    public string? DeviceFingerprint { get; set; } // Issue #3677: Device tracking
     required public UserEntity User { get; set; }
 }
 

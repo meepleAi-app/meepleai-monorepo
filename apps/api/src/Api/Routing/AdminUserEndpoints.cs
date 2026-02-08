@@ -249,6 +249,7 @@ internal static class AdminUserEndpoints
         string? search = null,
         string? role = null,
         string? status = null,
+        string? tier = null,        // Issue #3698: Filter by tier
         string? sortBy = null,
         string? sortOrder = "desc",
         int page = 1,
@@ -257,7 +258,7 @@ internal static class AdminUserEndpoints
         var (authorized, _, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var query = new GetAllUsersQuery(search, role, status, sortBy, sortOrder, page, limit);
+        var query = new GetAllUsersQuery(search, role, status, tier, sortBy, sortOrder, page, limit);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Json(result);
     }

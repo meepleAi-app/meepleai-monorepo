@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+
 import {
   Users,
   Gamepad2,
@@ -14,9 +15,7 @@ import {
   XCircle,
   Activity,
   Database,
-  Cpu,
   Zap,
-  Shield,
   Settings,
   BarChart3,
   PlusCircle,
@@ -34,6 +33,7 @@ import {
   Wifi,
   Crown,
 } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 // ============================================================================

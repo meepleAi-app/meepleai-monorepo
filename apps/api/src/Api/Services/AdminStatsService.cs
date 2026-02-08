@@ -19,6 +19,7 @@ internal class AdminStatsService : IAdminStatsService
     private readonly HybridCache _cache;
     private readonly ILogger<AdminStatsService> _logger;
     private readonly TimeProvider _timeProvider;
+    private readonly IResourceMetricsService _resourceMetrics;
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(1); // Issue #879: Reduced from 5min to 1min for dashboard stats
 
     // CA1869: Cache JsonSerializerOptions for better performance
@@ -32,11 +33,13 @@ internal class AdminStatsService : IAdminStatsService
         MeepleAiDbContext dbContext,
         HybridCache cache,
         ILogger<AdminStatsService> logger,
+        IResourceMetricsService resourceMetrics,
         TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
         _cache = cache;
         _logger = logger;
+        _resourceMetrics = resourceMetrics ?? throw new ArgumentNullException(nameof(resourceMetrics));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -104,6 +107,11 @@ internal class AdminStatsService : IAdminStatsService
         var basicMetrics = await ExecuteBasicMetricsQueriesAsync(startOfDay, cancellationToken).ConfigureAwait(false);
         var additionalMetrics = await ExecuteAdditionalMetricsQueriesAsync(startOfDay, start7DaysAgo, start30DaysAgo, cancellationToken).ConfigureAwait(false);
 
+        // Issue #3694: Get extended resource metrics
+        var (tokenBalanceEur, tokenLimitEur) = await _resourceMetrics.GetTokenBalanceAsync(cancellationToken).ConfigureAwait(false);
+        var (dbStorageGb, dbStorageLimitGb, dbGrowthMbPerDay) = await _resourceMetrics.GetDatabaseMetricsAsync(cancellationToken).ConfigureAwait(false);
+        var (cacheHitRatePercent, cacheHitRateTrendPercent) = await _resourceMetrics.GetCacheHitRateAsync(cancellationToken).ConfigureAwait(false);
+
         // Calculate error rate
         var errorRate = CalculateErrorRate(additionalMetrics.ErrorCount24h, additionalMetrics.TotalCount24h);
 
@@ -123,7 +131,14 @@ internal class AdminStatsService : IAdminStatsService
             AverageLatency7d: additionalMetrics.AvgLatency7d ?? 0.0,
             ErrorRate24h: errorRate,
             ActiveAlerts: additionalMetrics.ActiveAlerts,
-            ResolvedAlerts: additionalMetrics.ResolvedAlerts);
+            ResolvedAlerts: additionalMetrics.ResolvedAlerts,
+            TokenBalanceEur: tokenBalanceEur,
+            TokenLimitEur: tokenLimitEur,
+            DbStorageGb: dbStorageGb,
+            DbStorageLimitGb: dbStorageLimitGb,
+            DbGrowthMbPerDay: dbGrowthMbPerDay,
+            CacheHitRatePercent: cacheHitRatePercent,
+            CacheHitRateTrendPercent: cacheHitRateTrendPercent);
     }
 
     /// <summary>

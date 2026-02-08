@@ -41,6 +41,16 @@ scrape_configs:
           service: 'meepleai-api'
           component: 'backend'
 
+  # Issue #3797: Scrape Next.js middleware session cache metrics
+  - job_name: 'meepleai-web'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['web:3000']
+        labels:
+          service: 'meepleai-web'
+          component: 'frontend'
+
   # Jaeger scrape removed - replaced by HyperDX unified observability (Issue #1564)
   # HyperDX exposes its own metrics if needed at hyperdx:8180/metrics
 

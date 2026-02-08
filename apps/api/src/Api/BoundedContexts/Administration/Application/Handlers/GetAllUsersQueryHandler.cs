@@ -39,7 +39,6 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
         // Role filter
         if (!string.IsNullOrWhiteSpace(query.RoleFilter) && !string.Equals(query.RoleFilter, "all", StringComparison.Ordinal))
         {
-            // Direct comparison - Role values are standardized (admin/user/editor)
             dbQuery = dbQuery.Where(u => u.Role == query.RoleFilter);
         }
 
@@ -50,7 +49,13 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
             dbQuery = dbQuery.Where(u => u.IsSuspended == isSuspended);
         }
 
-        // Sorting
+        // Tier filter - Issue #3698
+        if (!string.IsNullOrWhiteSpace(query.TierFilter) && !string.Equals(query.TierFilter, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            dbQuery = dbQuery.Where(u => u.Tier.Equals(query.TierFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Sorting - Issue #3698: Added tier sorting
         var sortOrder = query.SortOrder ?? "asc";
         var isAsc = string.Equals(sortOrder, "asc", StringComparison.OrdinalIgnoreCase);
 
@@ -59,6 +64,7 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
             var s when string.Equals(s, "email", StringComparison.OrdinalIgnoreCase) => isAsc ? dbQuery.OrderBy(u => u.Email) : dbQuery.OrderByDescending(u => u.Email),
             var s when string.Equals(s, "displayname", StringComparison.OrdinalIgnoreCase) => isAsc ? dbQuery.OrderBy(u => u.DisplayName) : dbQuery.OrderByDescending(u => u.DisplayName),
             var s when string.Equals(s, "role", StringComparison.OrdinalIgnoreCase) => isAsc ? dbQuery.OrderBy(u => u.Role) : dbQuery.OrderByDescending(u => u.Role),
+            var s when string.Equals(s, "tier", StringComparison.OrdinalIgnoreCase) => isAsc ? dbQuery.OrderBy(u => u.Tier) : dbQuery.OrderByDescending(u => u.Tier),
             _ => isAsc ? dbQuery.OrderBy(u => u.CreatedAt) : dbQuery.OrderByDescending(u => u.CreatedAt)
         };
 
@@ -68,21 +74,48 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
             .Take(query.Limit)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
+        // Issue #3698: Fetch token usage for returned users
+        var userIds = users.Select(u => u.Id).ToList();
+        var tokenUsages = await _dbContext.UserTokenUsages
+            .Where(usage => userIds.Contains(usage.UserId))
+            .AsNoTracking()
+            .ToDictionaryAsync(usage => usage.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
+        var tierIds = tokenUsages.Values.Select(u => u.TierId).Distinct().ToList();
+        var tiers = await _dbContext.Set<Api.BoundedContexts.Administration.Domain.Entities.TokenTier>()
+            .Where(t => tierIds.Contains(t.Id))
+            .AsNoTracking()
+            .ToDictionaryAsync(t => t.Id, cancellationToken)
+            .ConfigureAwait(false);
+
         return new PagedResult<UserDto>(
-            Items: users.Select(MapToDto).ToList(),
+            Items: users.Select(u => MapToDto(u, tokenUsages.GetValueOrDefault(u.Id), tiers)).ToList(),
             Total: total,
             Page: query.Page,
             PageSize: query.Limit
         );
     }
 
-    private static UserDto MapToDto(UserEntity user)
+    private static UserDto MapToDto(
+        UserEntity user,
+        Api.BoundedContexts.Administration.Domain.Entities.UserTokenUsage? usage,
+        Dictionary<Guid, Api.BoundedContexts.Administration.Domain.Entities.TokenTier> tiers)
     {
         var lastSeenAt = user.Sessions
             .Where(s => s.RevokedAt == null)
             .OrderByDescending(s => s.LastSeenAt ?? s.CreatedAt)
             .FirstOrDefault()
             ?.LastSeenAt;
+
+        // Issue #3698: Get token usage and tier info
+        var tokensUsed = usage?.TokensUsed ?? 0;
+        var tokenLimit = 10_000; // Default Free tier
+
+        if (usage != null && tiers.TryGetValue(usage.TierId, out var tier))
+        {
+            tokenLimit = tier.Limits.TokensPerMonth;
+        }
 
         return new UserDto(
             Id: user.Id.ToString(),
@@ -94,7 +127,10 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
             IsSuspended: user.IsSuspended,
             SuspendReason: user.SuspendReason,
             Level: user.Level,
-            ExperiencePoints: user.ExperiencePoints
+            ExperiencePoints: user.ExperiencePoints,
+            Tier: user.Tier,            // Issue #3698: Tier from UserEntity
+            TokenUsage: tokensUsed,     // Issue #3698: From UserTokenUsage
+            TokenLimit: tokenLimit      // Issue #3698: From TokenTier
         );
     }
 }

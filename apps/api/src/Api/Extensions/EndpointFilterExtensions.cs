@@ -115,4 +115,29 @@ internal static class EndpointFilterExtensions
     {
         return builder.AddEndpointFilter<NotificationRateLimitFilter>();
     }
+
+    /// <summary>
+    /// Requires access to a specific feature flag for the endpoint.
+    /// Checks both role-based and tier-based access using FeatureFlagService.
+    ///
+    /// Must be used after .RequireSession() to ensure session is available.
+    /// Returns 403 Forbidden if the user's role+tier doesn't allow the feature.
+    /// </summary>
+    /// <param name="builder">The route handler builder.</param>
+    /// <param name="featureName">The feature flag name to check (e.g., "advanced_rag").</param>
+    /// <returns>The builder for method chaining.</returns>
+    /// <example>
+    /// <code>
+    /// group.MapGet("/advanced-search", handler)
+    ///     .RequireSession()
+    ///     .RequireFeature("advanced_rag");
+    /// </code>
+    /// </example>
+    /// <remarks>
+    /// Issue: #3674 - Feature Flag Tier-Based Access Verification
+    /// </remarks>
+    public static RouteHandlerBuilder RequireFeature(this RouteHandlerBuilder builder, string featureName)
+    {
+        return builder.AddEndpointFilter(new RequireFeatureFilterFactory(featureName));
+    }
 }

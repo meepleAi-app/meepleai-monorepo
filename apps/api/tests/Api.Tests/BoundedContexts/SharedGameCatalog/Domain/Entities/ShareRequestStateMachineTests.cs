@@ -136,6 +136,7 @@ public class ShareRequestStateMachineTests
             userId,
             sourceGameId,
             null,
+            null, // sourcePrivateGameId
             ShareRequestStatus.Pending, // Status is reviewable
             null,
             ContributionType.NewGame,
@@ -757,6 +758,7 @@ public class ShareRequestStateMachineTests
             userId,
             sourceGameId,
             null,
+            null, // sourcePrivateGameId
             ShareRequestStatus.InReview,
             originStatus,
             ContributionType.NewGame,

@@ -222,4 +222,26 @@ internal sealed class GameSession : AggregateRoot<Guid>
         var normalized = playerName.Trim().ToLowerInvariant();
         return _players.Any(p => string.Equals(p.PlayerName.ToLowerInvariant(), normalized, StringComparison.Ordinal));
     }
+
+    /// <summary>
+    /// Terminates the session due to quota enforcement.
+    /// Issue #3671: Automatic termination when user exceeds session quota.
+    /// </summary>
+    /// <param name="reason">Reason for termination (e.g., "QuotaExceeded")</param>
+    public void TerminateForQuota(string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
+        if (Status.IsFinished)
+            throw new InvalidOperationException($"Cannot terminate finished session (status: {Status})");
+
+        Status = SessionStatus.Abandoned;
+        CompletedAt = DateTime.UtcNow;
+
+        // Add notes for audit trail
+        Notes = Notes != null ? $"{Notes}\nAuto-terminated: {reason}" : $"Auto-terminated: {reason}";
+
+        // Raise domain event for quota termination (different from user abandonment)
+        AddDomainEvent(new GameSessionTerminatedEvent(Id, CreatedByUserId ?? Guid.Empty, reason, DateTime.UtcNow));
+    }
 }

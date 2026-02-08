@@ -1,0 +1,51 @@
+graph TB
+    subgraph WI["🔄 WorkflowIntegration Context"]
+        N8NConfig[n8n Configuration]
+        ErrorLog[Workflow Error Logging]
+        TemplateImport[Template Import]
+    end
+
+    subgraph External["🌐 External n8n"]
+        N8N[n8n Instance]
+    end
+
+    subgraph AllContexts["📦 All Bounded Contexts"]
+        Events[Domain Events]
+    end
+
+    subgraph Admin["📊 Administration Context"]
+        Audit[Audit Logging]
+    end
+
+    subgraph UN["🔔 UserNotifications Context"]
+        Notif[Notifications]
+    end
+
+    %% Event-Driven Webhooks
+    Events -.->|Webhook: ShareRequestCreatedEvent| N8N
+    Events -.->|Webhook: PdfUploadedEvent| N8N
+    Events -.->|Webhook: GamePublishedEvent| N8N
+    Events -.->|Webhook: BatchJobCompletedEvent| N8N
+
+    %% n8n Communication
+    N8NConfig -.->|Test connection| N8N
+    TemplateImport -.->|Fetch templates| N8N
+    N8N -.->|Workflow execution errors| ErrorLog
+
+    %% Integration Events
+    N8NConfig -->|N8NConfigurationCreatedEvent| Audit
+    N8NConfig -->|N8NConfigurationTestedEvent| Audit
+    ErrorLog -->|WorkflowErrorLoggedEvent| Notif
+
+    %% Styling
+    classDef wiStyle fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
+    classDef extStyle fill:#fafafa,stroke:#757575,stroke-width:2px
+    classDef eventsStyle fill:#f5f5f5,stroke:#9e9e9e,stroke-width:2px
+    classDef adminStyle fill:#fff4e6,stroke:#ff9800,stroke-width:2px
+    classDef unStyle fill:#fce4ec,stroke:#e91e63,stroke-width:2px
+
+    class N8NConfig,ErrorLog,TemplateImport wiStyle
+    class N8N extStyle
+    class Events eventsStyle
+    class Audit adminStyle
+    class Notif unStyle

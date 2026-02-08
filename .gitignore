@@ -104,6 +104,8 @@ temp/
 *.temp
 .cache/
 tmpclaude*
+# Windows temp path accidents (Issue: cleanup 2026-02-08)
+CUsersUtente*
 
 # Docker
 .dockerignore

@@ -25,6 +25,7 @@ internal class GameLabelEntityConfiguration : IEntityTypeConfiguration<GameLabel
             .HasMaxLength(7);
 
         builder.Property(e => e.IsPredefined)
+            .HasColumnName("is_predefined")
             .IsRequired()
             .HasDefaultValue(false);
 
@@ -47,13 +48,13 @@ internal class GameLabelEntityConfiguration : IEntityTypeConfiguration<GameLabel
         builder.HasIndex(e => new { e.UserId, e.Name })
             .IsUnique()
             .HasDatabaseName("IX_GameLabels_UserId_Name")
-            .HasFilter("is_predefined = false"); // Only for custom labels
+            .HasFilter("\"IsPredefined\" = false"); // Only for custom labels
 
         // Unique index: predefined labels must have unique names
         builder.HasIndex(e => e.Name)
             .IsUnique()
             .HasDatabaseName("IX_GameLabels_Name_Predefined")
-            .HasFilter("is_predefined = true");
+            .HasFilter("\"IsPredefined\" = true");
 
         // Relationships
         builder.HasOne(e => e.User)

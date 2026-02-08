@@ -92,6 +92,10 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
             role: role
         );
 
+        // Set 7-day grace period for email verification
+        // Issue #3672: Allow new users to use the app while verifying email
+        user.SetVerificationGracePeriod(DateTime.UtcNow.AddDays(7));
+
         // Create session for immediate authentication
         var sessionId = Guid.NewGuid();
         var sessionToken = SessionToken.Generate();
@@ -148,7 +152,10 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
             IsTwoFactorEnabled: user.IsTwoFactorEnabled,
             TwoFactorEnabledAt: user.TwoFactorEnabledAt,
             Level: user.Level,
-            ExperiencePoints: user.ExperiencePoints
+            ExperiencePoints: user.ExperiencePoints,
+            EmailVerified: user.EmailVerified,
+            EmailVerifiedAt: user.EmailVerifiedAt,
+            VerificationGracePeriodEndsAt: user.VerificationGracePeriodEndsAt
         );
     }
 }

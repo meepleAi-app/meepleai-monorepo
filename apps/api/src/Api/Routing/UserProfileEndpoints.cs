@@ -12,6 +12,8 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.SystemConfiguration.Application.Queries;
+using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.Routing;
@@ -34,6 +36,8 @@ internal static class UserProfileEndpoints
         MapActivityEndpoints(group);
         // Issue #3074: User AI usage tracking
         MapAiUsageEndpoints(group);
+        // Issue #3674: User available features
+        MapFeatureAccessEndpoints(group);
 
         return group;
     }
@@ -420,6 +424,46 @@ internal static class UserProfileEndpoints
 
 **Response**: UserAiUsageDto with detailed usage breakdown.")
         .Produces<UserAiUsageDto>(200)
+        .Produces(401);
+    }
+
+    private static void MapFeatureAccessEndpoints(RouteGroupBuilder group)
+    {
+        // Get user's available features based on role and tier (Issue #3674)
+        group.MapGet("/users/me/features", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct = default) =>
+        {
+            // Session validated by RequireSessionFilter
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var userId = session!.User!.Id;
+
+            logger.LogInformation("Retrieving available features for user {UserId}", userId);
+
+            var query = new GetUserAvailableFeaturesQuery { UserId = userId };
+            var features = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            logger.LogInformation(
+                "User {UserId} has access to {AccessCount}/{TotalCount} features",
+                userId, features.Count(f => f.HasAccess), features.Count);
+
+            return Results.Ok(features);
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetMyFeatures")
+        .WithTags("User Profile", "Features")
+        .WithSummary("Get features available to current user")
+        .WithDescription(@"Returns all feature flags with access status based on user's role and tier.
+
+**Issue**: #3674 - Feature Flags Verification
+
+**Authorization**: Requires active session. Users see all features with their access status.
+
+**Response**: List of UserFeatureDto showing which features the user can access.")
+        .Produces<IReadOnlyList<UserFeatureDto>>(200)
         .Produces(401);
     }
 }

@@ -16,7 +16,10 @@ internal record UserDto(
     bool IsTwoFactorEnabled,
     DateTime? TwoFactorEnabledAt,
     int Level,
-    int ExperiencePoints
+    int ExperiencePoints,
+    bool EmailVerified = false,                        // Issue #3672 (default for backward compatibility)
+    DateTime? EmailVerifiedAt = null,                  // Issue #3672
+    DateTime? VerificationGracePeriodEndsAt = null     // Issue #3672
 );
 
 /// <summary>

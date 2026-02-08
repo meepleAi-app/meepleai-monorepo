@@ -20,6 +20,7 @@ internal static class PrivateGameEndpoints
         MapGetPrivateGameEndpoint(group);
         MapUpdatePrivateGameEndpoint(group);
         MapDeletePrivateGameEndpoint(group);
+        MapProposePrivateGameEndpoint(group);
 
         return group;
     }
@@ -217,6 +218,58 @@ internal static class PrivateGameEndpoints
         .Produces<ProblemDetails>(StatusCodes.Status403Forbidden);
     }
 
+    /// <summary>
+    /// POST /api/v1/private-games/{id}/propose-to-catalog - Propose a private game to shared catalog
+    /// Rate limit: 2 requests per minute
+    /// Issue #3665: Phase 4 - Proposal System
+    /// </summary>
+    private static void MapProposePrivateGameEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/private-games/{id:guid}/propose-to-catalog", async (
+            Guid id,
+            [FromBody] ProposePrivateGameRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new ProposePrivateGameCommand(
+                UserId: userId,
+                PrivateGameId: id,
+                Notes: request.Notes,
+                AttachedDocumentIds: request.AttachedDocumentIds
+            );
+
+            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Created($"/api/v1/share-requests/{result.ShareRequestId}", result);
+        })
+        .RequireAuthorization()
+        .RequireRateLimiting("ProposePrivateGame")
+        .WithName("ProposePrivateGameToCatalog")
+        .WithTags("PrivateGames")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Propose private game to catalog";
+            operation.Description = "Submit a proposal to add your private game to the shared catalog. " +
+                "The proposal will be reviewed by admins. Rate limited to 2 requests per minute.";
+            return operation;
+        })
+        .ProducesValidationProblem()
+        .Produces<Api.BoundedContexts.SharedGameCatalog.Application.Commands.CreateShareRequestResponse>(StatusCodes.Status201Created)
+        .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
+        .Produces<ProblemDetails>(StatusCodes.Status403Forbidden)
+        .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
+        .Produces(StatusCodes.Status429TooManyRequests);
+    }
+
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)
     {
         userId = Guid.Empty;
@@ -267,4 +320,13 @@ internal record UpdatePrivateGameRequest(
     int? MinAge,
     decimal? ComplexityRating,
     string? ImageUrl
+);
+
+/// <summary>
+/// Request DTO for proposing a private game to catalog.
+/// Issue #3665: Phase 4 - Proposal System.
+/// </summary>
+internal record ProposePrivateGameRequest(
+    string? Notes = null,
+    List<Guid>? AttachedDocumentIds = null
 );

@@ -29,6 +29,9 @@ import { NextResponse } from 'next/server';
 
 import type { NextRequest } from 'next/server';
 
+// Issue #3797: Import metrics manager (works in Edge Runtime)
+import * as metrics from '@/lib/metrics/session-cache-metrics';
+
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -75,7 +78,7 @@ type SessionValidationEntry = {
   expiresAt: number;
 };
 
-const SESSION_CACHE_TTL_MS = 30 * 1000; // 30 seconds
+const SESSION_CACHE_TTL_MS = 120 * 1000; // 2 minutes (optimized for performance)
 const SESSION_CACHE_LIMIT = 200;
 const sessionValidationCache = new Map<string, SessionValidationEntry>();
 
@@ -98,11 +101,17 @@ function cacheSessionValidation(cookieValue: string, valid: boolean) {
 async function isSessionCookieValid(request: NextRequest, cookieValue: string): Promise<boolean> {
   const cached = sessionValidationCache.get(cookieValue);
   if (cached && cached.expiresAt > Date.now()) {
+    // Metrics: Cache hit
+    metrics.recordCacheHit();
+
     // Debug logging for session validation (use warn which is allowed by ESLint)
     // eslint-disable-next-line no-console
     console.log(`[middleware] Session validation CACHE HIT for ${cookieValue.substring(0, 10)}... valid=${cached.valid}`);
     return cached.valid;
   }
+
+  // Metrics: Cache miss
+  metrics.recordCacheMiss();
 
   const cookieHeader = request.headers.get('cookie');
   if (!cookieHeader) {
@@ -116,24 +125,55 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
     // Use first API origin (server-side Docker network URL)
     const apiOrigins = getApiOrigins();
     const apiUrl = `${apiOrigins[0]}/api/v1/auth/me`;
+
+    // Issue #3797: Add AbortController with 5s timeout to prevent indefinite hangs
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     // eslint-disable-next-line no-console
     console.log(`[middleware] Validating session at ${apiUrl} with cookie: ${cookieHeader.substring(0, 50)}...`);
 
-    const response = await fetch(apiUrl, {
-      headers: {
-        cookie: cookieHeader,
-      },
-      credentials: 'include',
-      cache: 'no-store',
-    });
+    try {
+      const response = await fetch(apiUrl, {
+        headers: {
+          cookie: cookieHeader,
+        },
+        credentials: 'include',
+        cache: 'no-store',
+        signal: controller.signal, // Add abort signal for timeout
+      });
 
-    // eslint-disable-next-line no-console
-    console.log(`[middleware] Session validation response: ${response.status} ok=${response.ok}`);
-    cacheSessionValidation(cookieValue, response.ok);
-    return response.ok;
+      clearTimeout(timeoutId); // Clear timeout on success
+
+      // Metrics: Validation success or failure
+      if (response.ok) {
+        metrics.recordValidationSuccess();
+      } else {
+        metrics.recordValidationFailure();
+      }
+
+      // eslint-disable-next-line no-console
+      console.log(`[middleware] Session validation response: ${response.status} ok=${response.ok}`);
+      cacheSessionValidation(cookieValue, response.ok);
+      return response.ok;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+
+      // Metrics: Track timeout vs other errors
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        metrics.recordValidationTimeout();
+        console.error('[middleware] Session validation TIMEOUT after 5s');
+      } else {
+        metrics.recordValidationFailure();
+        console.error('[middleware] Session validation fetch error:', fetchError);
+      }
+
+      cacheSessionValidation(cookieValue, false);
+      return false;
+    }
   } catch (error) {
-    cacheSessionValidation(cookieValue, false);
     console.error('[middleware] Failed to validate session cookie:', error);
+    cacheSessionValidation(cookieValue, false);
     return false;
   }
 }

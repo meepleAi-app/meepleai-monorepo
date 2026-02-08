@@ -1,0 +1,340 @@
+/**
+ * Tests for EntityListView component (Phase 1: Grid mode only)
+ */
+
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { EntityListView } from '../entity-list-view';
+import type { MeepleEntityType } from '../../meeple-card';
+import { vi } from 'vitest';
+
+// Mock data
+interface MockGame {
+  id: string;
+  title: string;
+  publisher: string;
+  rating: number;
+}
+
+const mockGames: MockGame[] = [
+  { id: '1', title: 'Twilight Imperium', publisher: 'FFG', rating: 8.7 },
+  { id: '2', title: 'Gloomhaven', publisher: 'Cephalofair', rating: 8.8 },
+  { id: '3', title: 'Wingspan', publisher: 'Stonemaier', rating: 8.1 },
+];
+
+const defaultProps = {
+  items: mockGames,
+  entity: 'game' as MeepleEntityType,
+  persistenceKey: 'test-list',
+  renderItem: (game: MockGame) => ({
+    id: game.id,
+    title: game.title,
+    subtitle: game.publisher,
+    rating: game.rating,
+    ratingMax: 10,
+  }),
+};
+
+describe('EntityListView (Phase 1: Grid Mode)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  describe('Basic Rendering', () => {
+    it('should render grid layout by default', () => {
+      render(<EntityListView {...defaultProps} />);
+
+      expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
+      expect(screen.getAllByTestId('meeple-card')).toHaveLength(3);
+    });
+
+    it('should render all items as MeepleCard components', () => {
+      render(<EntityListView {...defaultProps} />);
+
+      expect(screen.getByText('Twilight Imperium')).toBeInTheDocument();
+      expect(screen.getByText('Gloomhaven')).toBeInTheDocument();
+      expect(screen.getByText('Wingspan')).toBeInTheDocument();
+    });
+
+    it('should use grid variant for MeepleCard', () => {
+      render(<EntityListView {...defaultProps} />);
+
+      const cards = screen.getAllByTestId('meeple-card');
+      cards.forEach((card) => {
+        expect(card).toHaveAttribute('data-variant', 'grid');
+      });
+    });
+
+    it('should apply correct entity type to cards', () => {
+      render(<EntityListView {...defaultProps} entity="game" />);
+
+      const cards = screen.getAllByTestId('meeple-card');
+      cards.forEach((card) => {
+        expect(card).toHaveAttribute('data-entity', 'game');
+      });
+    });
+  });
+
+  describe('Title & Subtitle', () => {
+    it('should render title when provided', () => {
+      render(<EntityListView {...defaultProps} title="Featured Games" />);
+
+      expect(screen.getByRole('heading', { name: /featured games/i })).toBeInTheDocument();
+    });
+
+    it('should render subtitle when provided', () => {
+      render(
+        <EntityListView {...defaultProps} title="Games" subtitle="Explore the collection" />
+      );
+
+      expect(screen.getByText(/explore the collection/i)).toBeInTheDocument();
+    });
+
+    it('should not render header when no title, subtitle, or switcher', () => {
+      const { container } = render(<EntityListView {...defaultProps} showViewSwitcher={false} />);
+
+      // Check that the header element is not rendered (use container query to avoid global headings)
+      const header = container.querySelector('header');
+      expect(header).not.toBeInTheDocument();
+    });
+  });
+
+  describe('ViewModeSwitcher', () => {
+    it('should render ViewModeSwitcher by default', () => {
+      render(<EntityListView {...defaultProps} />);
+
+      expect(screen.getByRole('radiogroup', { name: /view mode/i })).toBeInTheDocument();
+    });
+
+    it('should hide ViewModeSwitcher when showViewSwitcher is false', () => {
+      render(<EntityListView {...defaultProps} showViewSwitcher={false} />);
+
+      expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+    });
+
+    it('should show only grid mode in Phase 1', () => {
+      render(<EntityListView {...defaultProps} />);
+
+      expect(screen.getByRole('radio', { name: /grid view/i })).toBeInTheDocument();
+      expect(screen.queryByRole('radio', { name: /list view/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('radio', { name: /carousel view/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Empty State', () => {
+    it('should render empty state when items array is empty', () => {
+      render(<EntityListView {...defaultProps} items={[]} />);
+
+      expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+      expect(screen.getByText(/no items to display/i)).toBeInTheDocument();
+    });
+
+    it('should render custom empty message', () => {
+      render(
+        <EntityListView {...defaultProps} items={[]} emptyMessage="No games found. Try adjusting your filters." />
+      );
+
+      expect(screen.getByText(/no games found/i)).toBeInTheDocument();
+    });
+
+    it('should not render grid layout when empty', () => {
+      render(<EntityListView {...defaultProps} items={[]} />);
+
+      expect(screen.queryByTestId('grid-layout')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Loading State', () => {
+    it('should render loading skeleton when loading is true', () => {
+      render(<EntityListView {...defaultProps} loading />);
+
+      expect(screen.getByTestId('loading-skeleton-grid')).toBeInTheDocument();
+    });
+
+    it('should not render items when loading', () => {
+      render(<EntityListView {...defaultProps} loading />);
+
+      expect(screen.queryByTestId('grid-layout')).not.toBeInTheDocument();
+      expect(screen.queryByText('Twilight Imperium')).not.toBeInTheDocument();
+    });
+
+    it('should not render empty state when loading', () => {
+      render(<EntityListView {...defaultProps} items={[]} loading />);
+
+      expect(screen.queryByTestId('empty-state')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Item Interaction', () => {
+    it('should call onItemClick when card is clicked', async () => {
+      const mockOnClick = vi.fn();
+      const user = userEvent.setup();
+
+      render(<EntityListView {...defaultProps} onItemClick={mockOnClick} />);
+
+      const firstCard = screen.getAllByTestId('meeple-card')[0];
+      await user.click(firstCard);
+
+      expect(mockOnClick).toHaveBeenCalledWith(mockGames[0]);
+      expect(mockOnClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not throw when onItemClick is not provided', async () => {
+      const user = userEvent.setup();
+
+      render(<EntityListView {...defaultProps} />);
+
+      const firstCard = screen.getAllByTestId('meeple-card')[0];
+
+      expect(async () => {
+        await user.click(firstCard);
+      }).not.toThrow();
+    });
+  });
+
+  describe('Grid Configuration', () => {
+    it('should apply default grid columns', () => {
+      const { container } = render(<EntityListView {...defaultProps} />);
+
+      const gridLayout = container.querySelector('[data-testid="grid-layout"]');
+      expect(gridLayout).toHaveClass('grid-cols-1');
+      expect(gridLayout).toHaveClass('sm:grid-cols-2');
+      expect(gridLayout).toHaveClass('lg:grid-cols-3');
+      expect(gridLayout).toHaveClass('xl:grid-cols-4');
+    });
+
+    it('should apply custom grid columns', () => {
+      const { container } = render(
+        <EntityListView
+          {...defaultProps}
+          gridColumns={{ default: 2, sm: 3, lg: 4, xl: 5 }}
+        />
+      );
+
+      const gridLayout = container.querySelector('[data-testid="grid-layout"]');
+      expect(gridLayout).toHaveClass('grid-cols-2');
+      expect(gridLayout).toHaveClass('sm:grid-cols-3');
+      expect(gridLayout).toHaveClass('lg:grid-cols-4');
+      expect(gridLayout).toHaveClass('xl:grid-cols-5');
+    });
+
+    it('should apply custom grid gap', () => {
+      const { container } = render(<EntityListView {...defaultProps} gridGap={6} />);
+
+      const gridLayout = container.querySelector('[data-testid="grid-layout"]');
+      expect(gridLayout).toHaveClass('gap-6');
+    });
+  });
+
+  describe('View Mode Persistence', () => {
+    it('should persist grid mode to localStorage', () => {
+      render(<EntityListView {...defaultProps} />);
+
+      expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
+      expect(localStorage.getItem('view-mode:test-list')).toBe('"grid"');
+    });
+
+    it('should restore grid mode from localStorage', () => {
+      localStorage.setItem('view-mode:test-list', '"grid"');
+
+      render(<EntityListView {...defaultProps} />);
+
+      expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
+    });
+
+    it('should use different localStorage keys for different persistenceKey values', () => {
+      const { unmount } = render(<EntityListView {...defaultProps} persistenceKey="page-a" />);
+
+      expect(localStorage.getItem('view-mode:page-a')).toBe('"grid"');
+
+      unmount();
+      render(<EntityListView {...defaultProps} persistenceKey="page-b" />);
+
+      expect(localStorage.getItem('view-mode:page-b')).toBe('"grid"');
+      expect(localStorage.getItem('view-mode:page-a')).toBe('"grid"');
+    });
+  });
+
+  describe('Controlled Mode', () => {
+    it('should use controlled viewMode when provided', () => {
+      render(<EntityListView {...defaultProps} viewMode="grid" />);
+
+      expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
+    });
+
+    it('should call onViewModeChange when mode changes', async () => {
+      const mockOnChange = vi.fn();
+
+      render(<EntityListView {...defaultProps} onViewModeChange={mockOnChange} />);
+
+      // Should be called on mount with initial mode
+      expect(mockOnChange).toHaveBeenCalledWith('grid');
+    });
+  });
+
+  describe('Custom Styling', () => {
+    it('should apply custom className to section', () => {
+      render(<EntityListView {...defaultProps} className="custom-section-class" />);
+
+      expect(screen.getByTestId('entity-list-view')).toHaveClass('custom-section-class');
+    });
+
+    it('should apply cardClassName to individual cards', () => {
+      render(<EntityListView {...defaultProps} cardClassName="custom-card-class" />);
+
+      const cards = screen.getAllByTestId('meeple-card');
+      cards.forEach((card) => {
+        expect(card).toHaveClass('custom-card-class');
+      });
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have aria-label on section', () => {
+      render(<EntityListView {...defaultProps} title="My Games" />);
+
+      expect(screen.getByRole('region', { name: /my games/i })).toBeInTheDocument();
+    });
+
+    it('should announce item count to screen readers', () => {
+      render(<EntityListView {...defaultProps} />);
+
+      expect(screen.getByText(/showing 3 items in grid view/i)).toBeInTheDocument();
+    });
+
+    it('should announce loading state to screen readers', () => {
+      render(<EntityListView {...defaultProps} loading />);
+
+      expect(screen.getByLabelText(/loading/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('TypeScript Generics', () => {
+    it('should maintain type safety with custom item types', () => {
+      interface CustomItem {
+        customId: number;
+        customTitle: string;
+      }
+
+      const customItems: CustomItem[] = [
+        { customId: 1, customTitle: 'Item 1' },
+        { customId: 2, customTitle: 'Item 2' },
+      ];
+
+      render(
+        <EntityListView<CustomItem>
+          items={customItems}
+          entity="custom"
+          persistenceKey="custom-list"
+          renderItem={(item) => ({
+            id: item.customId.toString(),
+            title: item.customTitle,
+          })}
+        />
+      );
+
+      expect(screen.getByText('Item 1')).toBeInTheDocument();
+      expect(screen.getByText('Item 2')).toBeInTheDocument();
+    });
+  });
+});

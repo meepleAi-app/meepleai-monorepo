@@ -38,6 +38,13 @@ internal sealed class NotificationType : ValueObject
     // ISSUE-2830: Loan reminder notification type
     public static readonly NotificationType LoanReminder = new("loan_reminder");
 
+    // ISSUE-3671: Session quota enforcement notification types
+    public static readonly NotificationType SessionTerminated = new("session_terminated");
+
+    // ISSUE-3668: Game proposal lifecycle notification types
+    public static readonly NotificationType GameProposalInReview = new("game_proposal_in_review");
+    public static readonly NotificationType GameProposalKbMerged = new("game_proposal_kb_merged");
+
     private NotificationType(string value)
     {
         Value = value;
@@ -80,6 +87,9 @@ internal sealed class NotificationType : ValueObject
             "rate_limit_reached" => RateLimitReached,
             "cooldown_ended" => CooldownEnded,
             "loan_reminder" => LoanReminder,
+            "session_terminated" => SessionTerminated,
+            "game_proposal_in_review" => GameProposalInReview,
+            "game_proposal_kb_merged" => GameProposalKbMerged,
             _ => throw new ArgumentException($"Unknown notification type: {value}", nameof(value))
         };
     }

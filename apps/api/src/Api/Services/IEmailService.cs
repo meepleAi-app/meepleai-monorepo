@@ -122,4 +122,19 @@ internal interface IEmailService
         DateTime lockedUntil,
         string? ipAddress,
         CancellationToken ct = default);
+
+    // ISSUE-3668: Game proposal lifecycle notification emails
+    Task SendShareRequestReviewStartedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        Guid shareRequestId,
+        CancellationToken ct = default);
+
+    Task SendShareRequestKbMergedEmailAsync(
+        string toEmail,
+        string userName,
+        string gameTitle,
+        Guid sharedGameId,
+        CancellationToken ct = default);
 }

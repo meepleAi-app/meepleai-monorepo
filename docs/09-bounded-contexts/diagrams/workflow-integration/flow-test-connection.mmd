@@ -1,0 +1,57 @@
+sequenceDiagram
+    participant Client
+    participant Endpoint
+    participant Mediator
+    participant Handler
+    participant Encryption
+    participant Domain as N8NConfiguration
+    participant N8N as n8n API
+    participant DB as Database
+    participant Events
+
+    Client->>Endpoint: POST /api/v1/admin/workflows/n8n/{id}/test
+
+    Endpoint->>Endpoint: Extract configId
+    Endpoint->>Endpoint: Create TestN8nConnectionCommand
+
+    Endpoint->>Mediator: Send(command)
+
+    Mediator->>Handler: Handle(command)
+
+    Handler->>DB: Get N8NConfiguration
+    DB-->>Handler: Configuration
+
+    Handler->>Encryption: DecryptApiKey(encryptedKey)
+    Encryption-->>Handler: Decrypted API key
+
+    Handler->>N8N: GET /healthz
+    Note over Handler: Headers: X-N8N-API-KEY
+
+    alt Connection successful
+        N8N-->>Handler: 200 OK {version: "0.220.0"}
+
+        Handler->>Domain: RecordTestResult(true, "Connected to n8n v0.220.0")
+        Domain->>Domain: LastTestedAt = UtcNow
+        Domain->>Domain: LastTestResult = success message
+        Domain->>Events: Raise N8NConfigurationTestedEvent
+
+        Handler->>DB: SaveAsync(configuration)
+        DB-->>Handler: Saved ✓
+
+        Handler-->>Mediator: {success: true, message: "Connected"}
+    else Connection failed
+        N8N-->>Handler: Error (timeout/401/500)
+
+        Handler->>Domain: RecordTestResult(false, errorMessage)
+        Domain->>Domain: LastTestedAt = UtcNow
+        Domain->>Domain: LastTestResult = error message
+
+        Handler->>DB: SaveAsync(configuration)
+
+        Handler-->>Mediator: {success: false, message: errorMessage}
+    end
+
+    Mediator-->>Endpoint: TestResult
+
+    Endpoint-->>Client: 200 OK
+    Note left of Client: {success, message, testedAt}

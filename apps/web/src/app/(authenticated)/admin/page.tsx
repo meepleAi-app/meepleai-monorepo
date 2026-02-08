@@ -1,5 +1,7 @@
 import { Suspense } from 'react';
+
 import { Metadata } from 'next';
+
 import AdminDashboardClient from './dashboard-client';
 
 export const metadata: Metadata = {

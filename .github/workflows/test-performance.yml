@@ -9,16 +9,12 @@ on:
     # K6: Run nightly at 2 AM UTC (only on main branch)
     - cron: '0 2 * * *'
   pull_request:
+    branches: [main, main-staging]
     paths:
       - 'apps/web/**'
       - 'apps/api/src/Api/Routing/**'
       - 'apps/api/src/Api/BoundedContexts/**'
       - 'tests/k6/**'
-      - '.github/workflows/test-performance.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'apps/web/**'
       - '.github/workflows/test-performance.yml'
   workflow_dispatch:
     inputs:

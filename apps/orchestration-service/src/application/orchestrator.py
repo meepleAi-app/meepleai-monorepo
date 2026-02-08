@@ -9,7 +9,8 @@ from typing import Any, Literal
 
 from langgraph.graph import StateGraph, END
 
-from ..domain import GameAgentState, AgentType, IntentType
+from ..domain import GameAgentState, AgentType, IntentType, ArbitroState
+from .arbitro_agent import ArbitroAgent
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,8 @@ class GameOrchestrator:
 
     def __init__(self):
         """Initialize the LangGraph workflow."""
+        # Initialize agents
+        self.arbitro = ArbitroAgent()
         self.graph = self._build_graph()
 
     def _build_graph(self) -> StateGraph:
@@ -171,28 +174,49 @@ class GameOrchestrator:
             "citations": [],
         }
 
-    def _arbitro_node(self, state: GameAgentState) -> dict[str, Any]:
+    async def _arbitro_node(self, state: GameAgentState) -> dict[str, Any]:
         """
         Arbitro agent: Validates moves and arbitrates rules disputes.
 
-        In production, this will:
-        1. Parse move notation
-        2. Validate against game rules
-        3. Check move legality
-        4. Provide ruling with rule citations
-
-        For now: Returns placeholder response.
+        ISSUE-3759: Real-time move validation with rule arbitration.
+        Target: <100ms P95 latency with Redis tier-1 cache.
         """
         logger.info(f"Arbitro agent processing: {state.pending_move or state.user_query}")
 
-        response = "[ARBITRO AGENT] Move validation placeholder. Real implementation in Phase 3."
+        try:
+            # Create ArbitroState from GameAgentState
+            arbitro_state = ArbitroState(
+                game_id=state.game_id,
+                session_id=state.session_id,
+                user_query=state.user_query,
+                intent=state.intent,
+                board_state=state.board_state,
+                pending_move=state.pending_move,
+                current_agent=AgentType.ARBITRO,
+                conversation_history=state.conversation_history,
+                move_notation=state.pending_move.move_notation if state.pending_move else state.user_query,
+                game_state=None,  # TODO: Extract from board_state
+            )
 
-        return {
-            "agent_response": response,
-            "current_agent": AgentType.ARBITRO,
-            "confidence_score": 0.90,
-            "citations": [],
-        }
+            # Execute Arbitro workflow
+            result = await self.arbitro.execute(arbitro_state)
+
+            return {
+                "agent_response": result.agent_response,
+                "current_agent": AgentType.ARBITRO,
+                "confidence_score": result.confidence_score or 0.90,
+                "citations": result.citations,
+            }
+
+        except Exception as e:
+            logger.error(f"Arbitro node failed: {e}", exc_info=True)
+            return {
+                "agent_response": "I encountered an error validating the move.",
+                "current_agent": AgentType.ARBITRO,
+                "confidence_score": 0.0,
+                "citations": [],
+                "error": str(e),
+            }
 
     def _decisore_node(self, state: GameAgentState) -> dict[str, Any]:
         """

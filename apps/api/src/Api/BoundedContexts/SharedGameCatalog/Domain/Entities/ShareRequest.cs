@@ -28,6 +28,7 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     private Guid _userId;
     private Guid _sourceGameId;
     private Guid? _targetSharedGameId;
+    private Guid? _sourcePrivateGameId;
     private ShareRequestStatus _status;
     private ShareRequestStatus? _statusBeforeReview;
     private readonly ContributionType _contributionType;
@@ -64,6 +65,13 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     /// Null for new game contributions.
     /// </summary>
     public Guid? TargetSharedGameId => _targetSharedGameId;
+
+    /// <summary>
+    /// Gets the ID of the source private game (for NewGameProposal contributions).
+    /// Null for other contribution types.
+    /// Issue #3665: Added for Phase 4 - Proposal System.
+    /// </summary>
+    public Guid? SourcePrivateGameId => _sourcePrivateGameId;
 
     /// <summary>
     /// Gets the current status of this share request.
@@ -141,6 +149,12 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     public IReadOnlyCollection<ShareRequestDocument> AttachedDocuments => _attachedDocuments.AsReadOnly();
 
     /// <summary>
+    /// Navigation property to the source private game (for NewGameProposal contributions).
+    /// Issue #3665: Added for Phase 4 - Proposal System.
+    /// </summary>
+    public UserLibrary.Domain.Entities.PrivateGame? PrivateGame { get; }
+
+    /// <summary>
     /// Gets or sets the row version for optimistic concurrency control.
     /// </summary>
     [Timestamp]
@@ -164,6 +178,7 @@ public sealed class ShareRequest : AggregateRoot<Guid>
         Guid userId,
         Guid sourceGameId,
         Guid? targetSharedGameId,
+        Guid? sourcePrivateGameId,
         ShareRequestStatus status,
         ShareRequestStatus? statusBeforeReview,
         ContributionType contributionType,
@@ -184,6 +199,7 @@ public sealed class ShareRequest : AggregateRoot<Guid>
         _userId = userId;
         _sourceGameId = sourceGameId;
         _targetSharedGameId = targetSharedGameId;
+        _sourcePrivateGameId = sourcePrivateGameId;
         _status = status;
         _statusBeforeReview = statusBeforeReview;
         _contributionType = contributionType;
@@ -248,6 +264,7 @@ public sealed class ShareRequest : AggregateRoot<Guid>
             userId,
             sourceGameId,
             targetSharedGameId,
+            null, // sourcePrivateGameId
             ShareRequestStatus.Pending,
             null,
             contributionType,
@@ -264,6 +281,58 @@ public sealed class ShareRequest : AggregateRoot<Guid>
 
         request.AddDomainEvent(new ShareRequestCreatedEvent(
             id, userId, sourceGameId, contributionType));
+
+        return request;
+    }
+
+    /// <summary>
+    /// Creates a new share request for proposing a private game to the catalog.
+    /// Issue #3665: Added for Phase 4 - Proposal System.
+    /// </summary>
+    /// <param name="userId">The ID of the user creating the proposal.</param>
+    /// <param name="privateGameId">The ID of the private game to propose.</param>
+    /// <param name="userNotes">Optional notes from the user explaining why this game should be added.</param>
+    /// <returns>A new ShareRequest instance for game proposal.</returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when required parameters are invalid.
+    /// </exception>
+    public static ShareRequest CreateGameProposal(
+        Guid userId,
+        Guid privateGameId,
+        string? userNotes = null)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("UserId cannot be empty", nameof(userId));
+
+        if (privateGameId == Guid.Empty)
+            throw new ArgumentException("PrivateGameId cannot be empty", nameof(privateGameId));
+
+        if (userNotes != null && userNotes.Length > 2000)
+            throw new ArgumentException("UserNotes cannot exceed 2000 characters", nameof(userNotes));
+
+        var id = Guid.NewGuid();
+        var request = new ShareRequest(
+            id,
+            userId,
+            Guid.Empty, // sourceGameId not used for proposals
+            null, // targetSharedGameId
+            privateGameId, // sourcePrivateGameId
+            ShareRequestStatus.Pending,
+            null,
+            ContributionType.NewGameProposal,
+            userNotes?.Trim(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            DateTime.UtcNow,
+            null,
+            userId,
+            null);
+
+        request.AddDomainEvent(new ShareRequestCreatedEvent(
+            id, userId, privateGameId, ContributionType.NewGameProposal));
 
         return request;
     }

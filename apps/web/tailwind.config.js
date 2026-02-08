@@ -26,6 +26,7 @@ module.exports = {
         'pulse-meeple': 'pulseMeeple 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         shake: 'shake 0.4s ease-in-out',
         'bounce-slow': 'bounce 1s infinite',
+        'heart-beat': 'heartBeat 0.6s ease-in-out',
       },
       keyframes: {
         fadeIn: {
@@ -52,6 +53,11 @@ module.exports = {
         pulseMeeple: {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.5' },
+        },
+        heartBeat: {
+          '0%, 100%': { transform: 'scale(1)' },
+          '15%': { transform: 'scale(1.15)' },
+          '30%': { transform: 'scale(1)' },
         },
       },
     },

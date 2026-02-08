@@ -52,6 +52,13 @@ public static class TestcontainersConfiguration
     /// </summary>
     public const string RerankerImage = "infra-reranker-service:latest";
 
+    /// <summary>
+    /// Orchestration service image for multi-agent coordination.
+    /// Issue #3871: Added for Arbitro Agent integration testing.
+    /// Built from apps/orchestration-service.
+    /// </summary>
+    public const string OrchestrationImage = "infra-orchestration-service:latest";
+
     #endregion
 
     #region PostgreSQL Configuration
@@ -242,7 +249,13 @@ public static class TestcontainersConfiguration
     /// <summary>
     /// Reranker service port.
     /// </summary>
-    public const int RerankerServicePort = 8004;
+    public const int RerankerServicePort = 8003;
+
+    /// <summary>
+    /// Orchestration service port for multi-agent coordination.
+    /// Issue #3871: Added for Arbitro Agent integration testing.
+    /// </summary>
+    public const int OrchestrationServicePort = 8004;
 
     /// <summary>
     /// PDF service health check timeout in seconds.
@@ -302,6 +315,12 @@ public static class TestcontainersConfiguration
     /// Set this to use external service instead of Testcontainer.
     /// </summary>
     public const string EnvRerankerServiceUrl = "TEST_RERANKER_URL";
+
+    /// <summary>
+    /// Environment variable for external Orchestration service URL.
+    /// Issue #3871: Set this to use external service instead of Testcontainer.
+    /// </summary>
+    public const string EnvOrchestrationServiceUrl = "TEST_ORCHESTRATION_URL";
 
     #endregion
 

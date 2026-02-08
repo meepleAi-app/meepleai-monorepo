@@ -11,6 +11,7 @@ import {
   LayoutDashboardIcon,
   UsersIcon,
   GamepadIcon,
+  PlayCircleIcon,
   ShareIcon,
   HelpCircleIcon,
   BotIcon,
@@ -139,6 +140,13 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         href: '/admin/games',
         label: 'Games List',
         icon: GamepadIcon,
+      },
+      {
+        href: '/admin/game-sessions',
+        label: 'Game Sessions',
+        icon: PlayCircleIcon,
+        badge: { key: 'activeSessions', variant: 'default' },
+        activePattern: /^\/admin\/game-sessions/,
       },
       {
         href: '/admin/shared-games',

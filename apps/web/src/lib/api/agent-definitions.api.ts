@@ -1,10 +1,11 @@
-import { httpClient } from './http-client';
+import { HttpClient } from './core/httpClient';
 import type {
   AgentDefinitionDto,
   CreateAgentDefinition,
   UpdateAgentDefinition,
 } from './schemas/agent-definitions.schemas';
 
+const httpClient = new HttpClient({});
 const BASE_URL = '/api/v1/admin/agent-definitions';
 
 export const agentDefinitionsApi = {
@@ -19,35 +20,42 @@ export const agentDefinitionsApi = {
     const query = searchParams.toString();
     const url = query ? `${BASE_URL}?${query}` : BASE_URL;
 
-    return httpClient.get<AgentDefinitionDto[]>(url);
+    const result = await httpClient.get<AgentDefinitionDto[]>(url);
+    return result ?? [];
   },
 
   /**
    * Get agent definition by ID
    */
   async getById(id: string): Promise<AgentDefinitionDto> {
-    return httpClient.get<AgentDefinitionDto>(`${BASE_URL}/${id}`);
+    const result = await httpClient.get<AgentDefinitionDto>(`${BASE_URL}/${id}`);
+    if (!result) throw new Error(`Agent definition ${id} not found`);
+    return result;
   },
 
   /**
    * Create new agent definition
    */
   async create(data: CreateAgentDefinition): Promise<AgentDefinitionDto> {
-    return httpClient.post<AgentDefinitionDto>(BASE_URL, data);
+    const result = await httpClient.post<AgentDefinitionDto>(BASE_URL, data);
+    if (!result) throw new Error('Failed to create agent definition');
+    return result;
   },
 
   /**
    * Update existing agent definition
    */
   async update(id: string, data: Omit<UpdateAgentDefinition, 'id'>): Promise<AgentDefinitionDto> {
-    return httpClient.put<AgentDefinitionDto>(`${BASE_URL}/${id}`, data);
+    const result = await httpClient.put<AgentDefinitionDto>(`${BASE_URL}/${id}`, data);
+    if (!result) throw new Error(`Failed to update agent definition ${id}`);
+    return result;
   },
 
   /**
    * Delete agent definition
    */
   async delete(id: string): Promise<void> {
-    return httpClient.delete<void>(`${BASE_URL}/${id}`);
+    await httpClient.delete(`${BASE_URL}/${id}`);
   },
 
   /**

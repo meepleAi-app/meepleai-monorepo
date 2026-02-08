@@ -22,7 +22,7 @@
 
 import { Metadata } from 'next';
 
-import { type Game } from '@/lib/api';
+import { type GameStatus, type SharedGame } from '@/lib/api';
 
 import { AddGameButton } from './components/AddGameButton';
 import { GameGrid } from './components/GameGrid';
@@ -69,7 +69,7 @@ interface SharedGamesApiResponse {
 }
 
 interface PaginatedResponse {
-  games: Game[];
+  games: SharedGame[];
   total: number;
   page: number;
   pageSize: number;
@@ -96,22 +96,25 @@ export const metadata: Metadata = {
 // Server Actions / Data Fetching
 // ============================================================================
 
-/** Map API response item to Game type expected by GameGrid */
-function mapApiItemToGame(item: SharedGamesApiItem): Game {
+/** Map API response item to SharedGame type expected by GameGrid */
+function mapApiItemToGame(item: SharedGamesApiItem): SharedGame {
   return {
     id: item.id,
-    title: item.title,
-    publisher: null, // Not provided by shared-games API
-    yearPublished: item.yearPublished,
-    minPlayers: item.minPlayers,
-    maxPlayers: item.maxPlayers,
-    minPlayTimeMinutes: item.playingTimeMinutes, // Map single field to min
-    maxPlayTimeMinutes: item.playingTimeMinutes, // Map single field to max
     bggId: item.bggId,
+    title: item.title,
+    yearPublished: item.yearPublished ?? new Date().getFullYear(),
+    description: item.description ?? '',
+    minPlayers: item.minPlayers ?? 1,
+    maxPlayers: item.maxPlayers ?? 8,
+    playingTimeMinutes: item.playingTimeMinutes ?? 60,
+    minAge: 0, // Not provided by API
+    complexityRating: null,
+    averageRating: item.averageRating ?? null,
+    imageUrl: item.imageUrl ?? '',
+    thumbnailUrl: item.thumbnailUrl ?? '',
+    status: (item.status as GameStatus) ?? 'Published',
     createdAt: item.createdAt,
-    imageUrl: item.imageUrl,
-    description: item.description,
-    averageRating: item.averageRating,
+    modifiedAt: null,
   };
 }
 

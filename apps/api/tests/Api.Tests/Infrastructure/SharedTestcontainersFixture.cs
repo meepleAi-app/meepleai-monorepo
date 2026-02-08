@@ -44,6 +44,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     private IContainer? _smoldoclingContainer;
     private IContainer? _embeddingContainer;
     private IContainer? _rerankerContainer;
+    private IContainer? _orchestrationContainer;
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _initialized;
     private bool _pdfServicesEnabled;
@@ -83,6 +84,12 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     /// Null if PDF services are not enabled.
     /// </summary>
     public string? RerankerServiceUrl { get; private set; }
+
+    /// <summary>
+    /// Orchestration service URL for multi-agent coordination.
+    /// Issue #3871: Added for Arbitro Agent integration testing.
+    /// </summary>
+    public string? OrchestrationServiceUrl { get; private set; }
 
     /// <summary>
     /// Indicates whether PDF processing services are enabled.
@@ -137,6 +144,12 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                 ? StartRedisContainerAsync()
                 : Task.FromResult(externalRedis);
 
+            // Issue #3871: Start orchestration-service for Arbitro integration tests
+            var externalOrchestration = Environment.GetEnvironmentVariable(TestcontainersConfiguration.EnvOrchestrationServiceUrl);
+            var orchestrationTask = string.IsNullOrWhiteSpace(externalOrchestration)
+                ? StartOrchestrationServiceAsync()
+                : Task.FromResult<string?>(externalOrchestration);
+
             // Start PDF services if enabled
             Task<string?>? unstructuredTask = null;
             Task<string?>? smoldoclingTask = null;
@@ -171,7 +184,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
 
             // Wait for all containers to start in parallel
             var startTime = DateTime.UtcNow;
-            var allTasks = new List<Task> { postgresTask, redisTask };
+            var allTasks = new List<Task> { postgresTask, redisTask, orchestrationTask };
             if (unstructuredTask != null) allTasks.Add(unstructuredTask);
             if (smoldoclingTask != null) allTasks.Add(smoldoclingTask);
             if (embeddingTask != null) allTasks.Add(embeddingTask);
@@ -182,6 +195,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
 
             PostgresConnectionString = await postgresTask;
             RedisConnectionString = await redisTask;
+            OrchestrationServiceUrl = await orchestrationTask;
 
             if (_pdfServicesEnabled && unstructuredTask != null && smoldoclingTask != null && embeddingTask != null && rerankerTask != null)
             {
@@ -189,11 +203,11 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                 SmolDoclingServiceUrl = await smoldoclingTask;
                 EmbeddingServiceUrl = await embeddingTask;
                 RerankerServiceUrl = await rerankerTask;
-                Console.WriteLine($"✅ All containers initialized in {duration:F2}s (parallel startup with PDF services)");
+                Console.WriteLine($"✅ All containers initialized in {duration:F2}s (parallel startup with orchestration + PDF services)");
             }
             else
             {
-                Console.WriteLine($"✅ Containers initialized in {duration:F2}s (parallel startup)");
+                Console.WriteLine($"✅ Containers initialized in {duration:F2}s (parallel startup with orchestration)");
             }
 
             // Issue #2920: Pre-warm connection pools with health check queries
@@ -537,6 +551,61 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     }
 
     /// <summary>
+    /// Starts Orchestration service container with retry logic.
+    /// Issue #3871: Added for Arbitro Agent integration testing.
+    /// </summary>
+    private async Task<string?> StartOrchestrationServiceAsync()
+    {
+        for (int attempt = 0; attempt < TestcontainersConfiguration.ContainerStartupMaxRetries; attempt++)
+        {
+            try
+            {
+                _orchestrationContainer = new ContainerBuilder()
+                    .WithImage(TestcontainersConfiguration.OrchestrationImage)
+                    .WithPortBinding(TestcontainersConfiguration.OrchestrationServicePort, true)
+                    .WithEnvironment("MOCK_LLM", "true") // Mock LLM calls for deterministic testing
+                    .WithEnvironment("API_BASE_URL", "http://host.docker.internal:8080") // Point to API
+                    .WithWaitStrategy(Wait.ForUnixContainer()
+                        .UntilHttpRequestIsSucceeded(r => r
+                            .ForPath("/health")
+                            .ForPort(TestcontainersConfiguration.OrchestrationServicePort)
+                            .ForStatusCode(System.Net.HttpStatusCode.OK)))
+                    .WithCleanUp(true)
+                    .Build();
+
+                await _orchestrationContainer.StartAsync();
+
+                var port = _orchestrationContainer.GetMappedPublicPort(TestcontainersConfiguration.OrchestrationServicePort);
+                var serviceUrl = $"http://localhost:{port}";
+
+                Console.WriteLine($"✅ Orchestration service started at {serviceUrl}");
+                return serviceUrl;
+            }
+            catch (Exception ex) when (attempt < TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                Console.WriteLine($"⚠️ Orchestration service startup attempt {attempt + 1}/{TestcontainersConfiguration.ContainerStartupMaxRetries} failed: {ex.Message}");
+
+                if (_orchestrationContainer != null)
+                {
+                    try { await _orchestrationContainer.DisposeAsync(); }
+                    catch { /* Ignore cleanup errors */ }
+                    _orchestrationContainer = null;
+                }
+
+                await Task.Delay(TestcontainersConfiguration.ContainerStartupRetryDelays[attempt]);
+            }
+            catch (Exception ex) when (attempt == TestcontainersConfiguration.ContainerStartupMaxRetries - 1)
+            {
+                Console.WriteLine($"❌ Orchestration service failed to start after {TestcontainersConfiguration.ContainerStartupMaxRetries} attempts: {ex.Message}");
+                Console.WriteLine($"   Ensure Docker image '{TestcontainersConfiguration.OrchestrationImage}' is built: cd apps/orchestration-service && docker build -t {TestcontainersConfiguration.OrchestrationImage} .");
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Pre-warms connection pools with health check queries.
     /// Issue #2920: Reduces first-test latency by establishing initial connections.
     /// </summary>
@@ -610,6 +679,13 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
             {
                 await _rerankerContainer.StopAsync();
                 await _rerankerContainer.DisposeAsync();
+            }
+
+            // Issue #3871: Dispose orchestration-service container
+            if (_orchestrationContainer != null)
+            {
+                await _orchestrationContainer.StopAsync();
+                await _orchestrationContainer.DisposeAsync();
             }
         }
         finally

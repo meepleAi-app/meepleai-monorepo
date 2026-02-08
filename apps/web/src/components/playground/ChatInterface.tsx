@@ -2,9 +2,7 @@
 
 import { Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button, Input, ScrollArea } from '@/components/ui';
 import { usePlaygroundStore } from '@/stores/playground-store';
 import { cn } from '@/lib/utils';
 
@@ -102,8 +100,8 @@ export function ChatInterface({ agentId, onSendMessage }: ChatInterfaceProps) {
           <Input
             placeholder="Type your message..."
             value={input}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)}
-            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
             disabled={isStreaming}
           />
           <Button onClick={handleSend} disabled={isStreaming || !input.trim()}>

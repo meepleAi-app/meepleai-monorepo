@@ -412,9 +412,10 @@ public class AdminStatsServiceUnitTests : IDisposable
 
         var cache = new FakeHybridCache();
         var logger = new Mock<ILogger<AdminStatsService>>();
+        var mockResourceMetrics = new Mock<Api.Services.IResourceMetricsService>();
 
-        // Act - Create service with null TimeProvider
-        var service = new AdminStatsService(dbContext, cache, logger.Object, null);
+        // Act - Create service with null TimeProvider (should use SystemTimeProvider)
+        var service = new AdminStatsService(dbContext, cache, logger.Object, mockResourceMetrics.Object, null);
 
         var queryParams = new AnalyticsQueryParams(Days: 1);
         var result = await service.GetDashboardStatsAsync(queryParams);

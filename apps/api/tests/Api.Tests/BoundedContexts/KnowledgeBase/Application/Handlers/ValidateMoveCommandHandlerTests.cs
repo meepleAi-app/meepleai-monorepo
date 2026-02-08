@@ -157,7 +157,7 @@ public class ValidateMoveCommandHandlerTests
             .ThrowsAsync(new HttpRequestException("Service unavailable"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<Api.Middleware.Exceptions.ExternalServiceException>(() =>
             _handler.Handle(command, CancellationToken.None));
     }
 

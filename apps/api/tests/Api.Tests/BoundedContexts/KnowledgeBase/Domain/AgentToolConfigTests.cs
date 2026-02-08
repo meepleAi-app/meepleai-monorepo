@@ -38,7 +38,7 @@ public sealed class AgentToolConfigTests
 
         // Assert
         tool.GetSettings().Should().ContainKey("max_results");
-        tool.GetSettings()["max_results"].Should().Be(10);
+        tool.GetSettings()["max_results"].Should().BeEquivalentTo(10);
     }
 
     [Theory]

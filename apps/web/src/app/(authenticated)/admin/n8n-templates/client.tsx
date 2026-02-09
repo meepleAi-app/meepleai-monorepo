@@ -5,8 +5,11 @@ import { useState, useEffect, useCallback } from 'react';
 
 import { AdminAuthGuard } from '@/components/admin/AdminAuthGuard';
 import { useAuthUser } from '@/components/auth/AuthProvider';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { ErrorDisplay } from '@/components/errors';
 import { LoadingButton } from '@/components/loading/LoadingButton';
+import { AlertCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { categorizeError } from '@/lib/errorUtils';
@@ -155,7 +158,16 @@ export function AdminPageClient() {
             </p>
           </div>
 
-          {/* Success Message */}
+          {/* Tabs - Issue #3950 */}
+          <Tabs defaultValue="templates" className="mb-6">
+            <TabsList>
+              <TabsTrigger value="templates">Templates</TabsTrigger>
+              <TabsTrigger value="errors">Errors</TabsTrigger>
+            </TabsList>
+
+            {/* Templates Tab */}
+            <TabsContent value="templates" className="space-y-6">
+              {/* Success Message */}
           {successMessage && (
             <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700">
               <div className="flex items-center">
@@ -218,6 +230,19 @@ export function AdminPageClient() {
               ))}
             </div>
           )}
+
+            </TabsContent>
+
+            {/* Errors Tab - Issue #3950 */}
+            <TabsContent value="errors" className="space-y-6">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Workflow error monitoring coming soon. Backend API integration in progress.
+                </AlertDescription>
+              </Alert>
+            </TabsContent>
+          </Tabs>
 
           {/* Import Modal */}
           {selectedTemplate && (

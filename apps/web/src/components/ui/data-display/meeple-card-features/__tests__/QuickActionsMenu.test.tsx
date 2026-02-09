@@ -173,9 +173,11 @@ describe('QuickActionsMenu', () => {
       render(<QuickActionsMenu actions={disabledAction} />);
 
       await user.click(screen.getByTestId('quick-actions-trigger'));
-      const action = screen.getByText('Disabled Action');
+      const actionElement = screen.getByText('Disabled Action');
 
-      expect(action.closest('button')).toBeDisabled();
+      // DropdownMenuItem renders a div with role="menuitem", not a button
+      const menuItem = actionElement.closest('[role="menuitem"]');
+      expect(menuItem).toHaveAttribute('data-disabled', 'true');
     });
 
     it('should handle async actions', async () => {

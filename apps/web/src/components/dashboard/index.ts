@@ -6,6 +6,7 @@
 
 // Main Dashboard
 export { Dashboard, type SectionConfig } from './Dashboard';
+export { DashboardHub } from './DashboardHub'; // Issue #3975 - New Hub Layout
 
 // Sections and Layout
 export { DashboardSection, type ViewMode, type DashboardSectionProps } from './DashboardSection';

@@ -1,24 +1,27 @@
 /**
- * Dashboard Client Component - Issue #3307
+ * Dashboard Client Component - Issue #3975
  *
- * Client-side dashboard with:
- * - 6 reorderable sections
- * - Grid/List view toggle per section
- * - Global search with filters
- * - Warm Tabletop aesthetic
+ * Client-side dashboard hub with aggregated data from `/api/v1/dashboard`
  *
- * @see docs/features/dashboard-requirements.md
+ * Features:
+ * - Multi-section overview hub
+ * - Hero stats, active sessions, library snapshot, activity feed
+ * - Responsive layout (mobile/tablet/desktop)
+ * - Error boundaries for partial failures
+ *
+ * @see Epic #3901 - Dashboard Hub Core (MVP)
+ * @see docs/07-frontend/dashboard-overview-hub.md
  */
 
 'use client';
 
-import { Dashboard } from '@/components/dashboard';
+import { DashboardHub } from '@/components/dashboard/DashboardHub';
 import { Layout } from '@/components/layout';
 
 export function DashboardClient() {
   return (
     <Layout showActionBar>
-      <Dashboard />
+      <DashboardHub />
     </Layout>
   );
 }

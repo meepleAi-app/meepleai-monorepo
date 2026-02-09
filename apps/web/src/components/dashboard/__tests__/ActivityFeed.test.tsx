@@ -178,11 +178,11 @@ describe('ActivityFeed', () => {
       expect(eventLink).toHaveAttribute('href', '/library/game-1');
     });
 
-    it('session_completed event links to toolkit', () => {
+    it('session_completed event links to sessions', () => {
       render(<ActivityFeed events={mockEvents} />);
 
       const eventLink = screen.getByTestId('activity-event-event-2');
-      expect(eventLink).toHaveAttribute('href', '/toolkit/session-1');
+      expect(eventLink).toHaveAttribute('href', '/sessions/session-1');
     });
 
     it('chat_saved event links to chat', () => {
@@ -323,12 +323,12 @@ describe('ActivityFeed', () => {
       expect(screen.getByText('Nessuna attività recente')).toBeInTheDocument();
     });
 
-    it('shows explore catalog CTA', () => {
+    it('shows library CTA', () => {
       render(<ActivityFeed events={[]} />);
 
       const cta = screen.getByTestId('start-playing-cta');
       expect(cta).toBeInTheDocument();
-      expect(cta.closest('a')).toHaveAttribute('href', '/games/catalog');
+      expect(cta.closest('a')).toHaveAttribute('href', '/library');
     });
 
     it('does not show timeline in empty state', () => {

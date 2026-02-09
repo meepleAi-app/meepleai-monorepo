@@ -414,6 +414,18 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
             user = oauthAccount.User;
             await UpdateOAuthTokenAsync(oauthAccount, tokenResponse, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("OAuth login for existing account. Provider: {Provider}, UserId: {UserId}", provider, user.Id);
+
+            // Issue #3672: Verify email for existing OAuth users created before this fix
+            // Covers case: user created pre-fix with EmailVerified=false, now logging in again
+            if (!user.EmailVerified)
+            {
+                var now = _timeProvider.GetUtcNow().UtcDateTime;
+                user.EmailVerified = true;
+                user.EmailVerifiedAt = now;
+                user.VerificationGracePeriodEndsAt = null;
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation("Email verified for existing OAuth user {UserId} (retroactive fix)", user.Id);
+            }
         }
         else
         {

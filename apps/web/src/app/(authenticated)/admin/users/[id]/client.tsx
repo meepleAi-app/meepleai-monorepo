@@ -42,6 +42,7 @@ import { Spinner } from '@/components/loading';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Dialog,
   DialogContent,
@@ -579,10 +580,27 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
               )}
             </div>
 
-            {/* Right Column: Activity Timeline & Role History */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Role History Card (Issue #2890) */}
-              {roleHistory.length > 0 && (
+            {/* Right Column: Tabbed Content - Issue #3946 */}
+            <div className="lg:col-span-2">
+              <Tabs defaultValue="overview" className="space-y-6">
+                <TabsList>
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="activity">
+                    Activity
+                    {totalActivities > 0 && (
+                      <Badge variant="secondary" className="ml-2">
+                        {totalActivities}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="sessions">Sessions</TabsTrigger>
+                  <TabsTrigger value="api-keys">API Keys</TabsTrigger>
+                </TabsList>
+
+                {/* Overview Tab */}
+                <TabsContent value="overview" className="space-y-6">
+                  {/* Role History Card (Issue #2890) */}
+                  {roleHistory.length > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Cronologia Ruoli</CardTitle>
@@ -613,9 +631,11 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                   </CardContent>
                 </Card>
               )}
+                </TabsContent>
 
-              {/* Activity Timeline */}
-              <Card>
+                {/* Activity Tab - Issue #3946 */}
+                <TabsContent value="activity" className="space-y-6">
+                  <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
@@ -692,6 +712,56 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                   )}
                 </CardContent>
               </Card>
+                </TabsContent>
+
+                {/* Sessions Tab - Issue #3946 */}
+                <TabsContent value="sessions" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>User Sessions</CardTitle>
+                      <CardDescription>
+                        Game sessions for this user
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          Session history coming soon. View all sessions in{' '}
+                          <Link href="/admin/game-sessions" className="underline">
+                            Game Sessions
+                          </Link>
+                          .
+                        </AlertDescription>
+                      </Alert>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* API Keys Tab - Issue #3946 */}
+                <TabsContent value="api-keys" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>API Keys</CardTitle>
+                      <CardDescription>
+                        API keys created by this user
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          API key management coming soon. View all keys in{' '}
+                          <Link href="/admin/api-keys" className="underline">
+                            API Keys
+                          </Link>
+                          .
+                        </AlertDescription>
+                      </Alert>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         )}

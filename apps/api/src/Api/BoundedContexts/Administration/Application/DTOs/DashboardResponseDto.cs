@@ -1,82 +1,70 @@
 namespace Api.BoundedContexts.Administration.Application.DTOs;
 
 /// <summary>
-/// Complete dashboard response DTO for public API endpoint (Issue #3314).
+/// Complete dashboard response DTO for public API endpoint (Issue #3972).
 /// Aggregates user info, stats, active sessions, library snapshot, activity, and chats.
+/// Schema aligned with frontend DashboardData type.
 /// </summary>
 public record DashboardResponseDto(
     DashboardUserDto User,
-    DashboardStatsResponseDto Stats,
+    DashboardUserStatsDto Stats,
     IReadOnlyList<DashboardSessionDto> ActiveSessions,
     DashboardLibrarySnapshotDto LibrarySnapshot,
     IReadOnlyList<DashboardActivityDto> RecentActivity,
-    IReadOnlyList<DashboardChatDto> RecentChats
+    IReadOnlyList<DashboardChatDto> ChatHistory
 );
 
 /// <summary>
-/// User info for dashboard (Issue #3314).
+/// User info for dashboard (Issue #3972).
 /// </summary>
 public record DashboardUserDto(
-    string Name,
-    DateTime LastAccess
+    Guid Id,
+    string Username,
+    string Email
 );
 
 /// <summary>
-/// Dashboard stats with trends (Issue #3314).
+/// Dashboard stats - flat structure matching frontend DashboardStats (Issue #3972).
 /// </summary>
-public record DashboardStatsResponseDto(
-    DashboardStatItemDto Collection,
-    DashboardPlayedStatDto Played,
-    DashboardStatCountDto Chats,
-    DashboardStatItemDto Wishlist
+public record DashboardUserStatsDto(
+    int LibraryCount,
+    int PlayedLast30Days,
+    int ChatCount,
+    int WishlistCount,
+    int CurrentStreak
 );
 
 /// <summary>
-/// Stat item with total and trend (Issue #3314).
-/// </summary>
-public record DashboardStatItemDto(
-    int Total,
-    int Trend
-);
-
-/// <summary>
-/// Played stat with streak (Issue #3314).
-/// </summary>
-public record DashboardPlayedStatDto(
-    int Total,
-    int Streak
-);
-
-/// <summary>
-/// Stat count only (Issue #3314).
-/// </summary>
-public record DashboardStatCountDto(
-    int Total
-);
-
-/// <summary>
-/// Active session for dashboard (Issue #3314).
+/// Active session for dashboard (Issue #3972).
 /// </summary>
 public record DashboardSessionDto(
     Guid Id,
     string GameName,
     Guid GameId,
-    DateTime StartDate,
+    string? CoverUrl,
     DashboardPlayersDto Players,
-    int Turn,
-    int Duration
+    DashboardProgressDto Progress,
+    DateTime LastActivity
 );
 
 /// <summary>
-/// Players info for session (Issue #3314).
+/// Players info for session (Issue #3972).
 /// </summary>
 public record DashboardPlayersDto(
     int Current,
-    int Max
+    int Total
 );
 
 /// <summary>
-/// Library snapshot for dashboard (Issue #3314).
+/// Progress info for session (Issue #3972).
+/// </summary>
+public record DashboardProgressDto(
+    int Turn,
+    string Duration
+);
+
+/// <summary>
+/// Library snapshot for dashboard (Issue #3972).
 /// </summary>
 public record DashboardLibrarySnapshotDto(
     DashboardQuotaDto Quota,
@@ -84,16 +72,15 @@ public record DashboardLibrarySnapshotDto(
 );
 
 /// <summary>
-/// Library quota info (Issue #3314).
+/// Library quota info (Issue #3972).
 /// </summary>
 public record DashboardQuotaDto(
     int Used,
-    int Total,
-    int Percentage
+    int Total
 );
 
 /// <summary>
-/// Top game for library snapshot (Issue #3314).
+/// Top game for library snapshot (Issue #3972).
 /// </summary>
 public record DashboardTopGameDto(
     Guid Id,
@@ -104,21 +91,27 @@ public record DashboardTopGameDto(
 );
 
 /// <summary>
-/// Activity event for dashboard (Issue #3314).
+/// Activity event for dashboard (Issue #3972).
+/// Polymorphic fields: gameId/gameName for game events, sessionId for session events,
+/// chatId/topic for chat events.
 /// </summary>
 public record DashboardActivityDto(
     string Id,
     string Type,
-    string Title,
-    string? EntityId,
+    string? GameId,
+    string? GameName,
+    string? SessionId,
+    string? ChatId,
+    string? Topic,
     DateTime Timestamp
 );
 
 /// <summary>
-/// Chat thread for dashboard (Issue #3314).
+/// Chat thread for dashboard (Issue #3972).
 /// </summary>
 public record DashboardChatDto(
     string Id,
-    string Title,
-    DateTime LastMessageAt
+    string Topic,
+    int? MessageCount,
+    DateTime Timestamp
 );

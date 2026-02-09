@@ -11,7 +11,7 @@ using MediatR;
 namespace Api.Routing;
 
 /// <summary>
-/// User dashboard API endpoints (Issue #3314).
+/// User dashboard API endpoints (Issue #3314, #3972).
 /// Provides aggregated dashboard data for authenticated users.
 /// SSE real-time updates (Issue #3324).
 /// </summary>

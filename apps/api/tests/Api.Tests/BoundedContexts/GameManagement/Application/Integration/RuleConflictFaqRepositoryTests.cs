@@ -5,9 +5,13 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
-using Api.Tests.Fixtures;
+using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Npgsql;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Integration;
@@ -18,28 +22,78 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Integration;
 /// Issue #3966: Repository integration tests.
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
-[Collection(nameof(DatabaseCollection))]
+[Trait("Dependency", "PostgreSQL")]
+[Collection("SharedTestcontainers")]
 public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
 {
-    private readonly DatabaseFixture _fixture;
+    private readonly SharedTestcontainersFixture _fixture;
+    private string _isolatedDbConnectionString = string.Empty;
+    private string _databaseName = string.Empty;
     private MeepleAiDbContext _context = null!;
     private RuleConflictFaqRepository _repository = null!;
+    private IServiceProvider? _serviceProvider;
 
-    public RuleConflictFaqRepositoryTests(DatabaseFixture fixture)
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
+
+    public RuleConflictFaqRepositoryTests(SharedTestcontainersFixture fixture)
     {
         _fixture = fixture;
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
-        _context = await _fixture.CreateDbContextAsync();
-        var eventCollector = new DomainEventCollector();
+        _databaseName = $"test_rulefaq_{Guid.NewGuid():N}";
+        _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+
+        var services = new ServiceCollection();
+        services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
+        services.AddDbContext<MeepleAiDbContext>(options =>
+        {
+            options.UseNpgsql(_isolatedDbConnectionString, o => o.UseVector());
+            options.ConfigureWarnings(w =>
+                w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+        });
+
+        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
+        services.AddScoped<IDomainEventCollector, DomainEventCollector>();
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+
+        _serviceProvider = services.BuildServiceProvider();
+        _context = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        // Apply migrations with retry
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                await _context.Database.MigrateAsync(TestCancellationToken);
+                break;
+            }
+            catch (NpgsqlException) when (attempt < 2)
+            {
+                await Task.Delay(TestConstants.Timing.RetryDelay, TestCancellationToken);
+            }
+        }
+
+        var eventCollector = _serviceProvider.GetRequiredService<IDomainEventCollector>();
         _repository = new RuleConflictFaqRepository(_context, eventCollector);
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await _context.DisposeAsync();
+
+        if (!string.IsNullOrEmpty(_databaseName))
+        {
+            try
+            {
+                await _fixture.DropIsolatedDatabaseAsync(_databaseName);
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
+        }
     }
 
     [Fact]
@@ -57,8 +111,8 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
             TimeProvider.System);
 
         // Act
-        await _repository.AddAsync(faq, CancellationToken.None);
-        await _context.SaveChangesAsync();
+        await _repository.AddAsync(faq, TestCancellationToken);
+        await _context.SaveChangesAsync(TestCancellationToken);
 
         // Assert
         var entity = await _context.RuleConflictFAQs.FindAsync(faq.Id);
@@ -90,12 +144,12 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
             7,
             TimeProvider.System);
 
-        await _repository.AddAsync(faq1, CancellationToken.None);
-        await _context.SaveChangesAsync();
+        await _repository.AddAsync(faq1, TestCancellationToken);
+        await _context.SaveChangesAsync(TestCancellationToken);
 
         // Act & Assert
-        await _repository.AddAsync(faq2, CancellationToken.None);
-        await Assert.ThrowsAsync<DbUpdateException>(() => _context.SaveChangesAsync());
+        await _repository.AddAsync(faq2, TestCancellationToken);
+        await Assert.ThrowsAsync<DbUpdateException>(() => _context.SaveChangesAsync(TestCancellationToken));
     }
 
     [Fact]
@@ -112,12 +166,12 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
             5,
             TimeProvider.System);
 
-        await _repository.AddAsync(faq, CancellationToken.None);
-        await _context.SaveChangesAsync();
+        await _repository.AddAsync(faq, TestCancellationToken);
+        await _context.SaveChangesAsync(TestCancellationToken);
 
         // Act - Delete game (should cascade to FAQ)
         _context.Games.Remove(game);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(TestCancellationToken);
 
         // Assert
         var faqEntity = await _context.RuleConflictFAQs.FindAsync(faq.Id);
@@ -138,14 +192,14 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
             5,
             TimeProvider.System);
 
-        await _repository.AddAsync(faq, CancellationToken.None);
-        await _context.SaveChangesAsync();
+        await _repository.AddAsync(faq, TestCancellationToken);
+        await _context.SaveChangesAsync(TestCancellationToken);
 
         // Act - Search with different casing/spacing
         var result = await _repository.FindByPatternAsync(
             game.Id,
             "upper_case_pattern", // Lowercase, no spaces
-            CancellationToken.None);
+            TestCancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -162,13 +216,13 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
         var faq2 = CreateAndRecordUsage(game.Id, "pattern2", usageCount: 50);
         var faq3 = CreateAndRecordUsage(game.Id, "pattern3", usageCount: 25);
 
-        await _repository.AddAsync(faq1, CancellationToken.None);
-        await _repository.AddAsync(faq2, CancellationToken.None);
-        await _repository.AddAsync(faq3, CancellationToken.None);
-        await _context.SaveChangesAsync();
+        await _repository.AddAsync(faq1, TestCancellationToken);
+        await _repository.AddAsync(faq2, TestCancellationToken);
+        await _repository.AddAsync(faq3, TestCancellationToken);
+        await _context.SaveChangesAsync(TestCancellationToken);
 
         // Act
-        var results = await _repository.GetByGameIdAsync(game.Id, CancellationToken.None);
+        var results = await _repository.GetByGameIdAsync(game.Id, TestCancellationToken);
 
         // Assert
         Assert.Equal(3, results.Count);
@@ -182,15 +236,13 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
         var game = new GameEntity
         {
             Id = Guid.NewGuid(),
-            Title = "Test Game",
+            Name = "Test Game",
             Publisher = "Test Publisher",
-            CreatedBy = Guid.NewGuid(),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow
         };
 
         _context.Games.Add(game);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(TestCancellationToken);
         return game;
     }
 

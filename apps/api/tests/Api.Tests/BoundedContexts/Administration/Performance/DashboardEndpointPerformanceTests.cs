@@ -2,10 +2,10 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using Api.BoundedContexts.Administration.Application.DTOs;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Authentication;
-using Api.Infrastructure.Entities.GameManagement;
-using Api.Infrastructure.Entities.SessionTracking;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Tests.Constants;
 using DotNet.Testcontainers.Builders;
@@ -88,7 +88,7 @@ public class DashboardEndpointPerformanceTests : IAsyncLifetime
             .WithEnvironment("POSTGRES_SHARED_BUFFERS", "256MB")
             .WithEnvironment("POSTGRES_MAX_CONNECTIONS", "200")
             .WithPortBinding(5432, true)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(5432))
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("database system is ready to accept connections"))
             .Build();
 
         await _postgresContainer.StartAsync();
@@ -98,7 +98,7 @@ public class DashboardEndpointPerformanceTests : IAsyncLifetime
         _redisContainer = new ContainerBuilder()
             .WithImage("redis:7.4-alpine")
             .WithPortBinding(6379, true)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(6379))
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Ready to accept connections"))
             .Build();
 
         await _redisContainer.StartAsync();
@@ -351,14 +351,11 @@ public class DashboardEndpointPerformanceTests : IAsyncLifetime
         {
             Id = _testUserId,
             Email = "perf-test@example.com",
-            Username = "perftest",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Test123!"),
-            FirstName = "Performance",
-            LastName = "Test",
-            EmailConfirmed = true,
-            Role = UserRole.User,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            DisplayName = "Performance Test",
+            PasswordHash = "hash", // Simplified for perf tests
+            Role = "user",
+            EmailVerified = true,
+            CreatedAt = DateTime.UtcNow
         };
 
         dbContext.Users.Add(user);
@@ -369,15 +366,14 @@ public class DashboardEndpointPerformanceTests : IAsyncLifetime
             var game = new GameEntity
             {
                 Id = Guid.NewGuid(),
-                Title = $"Test Game {i}",
-                Description = "Performance test game",
+                Name = $"Test Game {i}",
                 MinPlayers = 2,
                 MaxPlayers = 4,
-                PlayingTimeMinutes = 60,
+                MinPlayTimeMinutes = 60,
+                MaxPlayTimeMinutes = 60,
                 YearPublished = 2024,
                 Publisher = "Test Publisher",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow
             };
 
             dbContext.Games.Add(game);
@@ -388,9 +384,7 @@ public class DashboardEndpointPerformanceTests : IAsyncLifetime
                 Id = Guid.NewGuid(),
                 UserId = _testUserId,
                 GameId = game.Id,
-                AddedAt = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                AddedAt = DateTime.UtcNow
             };
 
             dbContext.UserLibraryEntries.Add(libraryEntry);
@@ -408,23 +402,25 @@ public class DashboardEndpointPerformanceTests : IAsyncLifetime
         using var scope = _factory!.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        var session = new SessionEntity
+        var token = SessionToken.Generate();
+        var tokenHash = token.ComputeHash();
+
+        var session = new UserSessionEntity
         {
             Id = Guid.NewGuid(),
             UserId = _testUserId,
-            Token = Guid.NewGuid().ToString(),
-            DeviceName = "Performance Test",
-            IpAddress = "127.0.0.1",
-            ExpiresAt = DateTime.UtcNow.AddHours(2),
+            TokenHash = tokenHash,
             CreatedAt = DateTime.UtcNow,
-            LastActiveAt = DateTime.UtcNow
+            ExpiresAt = DateTime.UtcNow.AddHours(2),
+            LastSeenAt = DateTime.UtcNow,
+            User = null! // Navigation property, not needed for insert
         };
 
-        dbContext.Sessions.Add(session);
+        dbContext.UserSessions.Add(session);
         await dbContext.SaveChangesAsync();
 
-        var cookie = $"meepleai_session={session.Token}";
-        _output.WriteLine($"✅ Session created: {session.Token.Substring(0, 8)}...");
+        var cookie = $"meepleai_session={token.Value}";
+        _output.WriteLine($"✅ Session created: {token.Value[..8]}...");
 
         return cookie;
     }

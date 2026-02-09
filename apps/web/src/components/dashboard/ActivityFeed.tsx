@@ -1,19 +1,22 @@
 /**
  * ActivityFeed - Dashboard Widget for Recent Activity Timeline
  * Issue #3311 - Implement ActivityFeed timeline
+ * Issue #3911 - Enhanced Activity Feed Timeline Component
  *
  * Features:
  * - Vertical timeline with last 10 activities
- * - Icons for 5 activity types (game_added, session_completed, chat_saved, wishlist_added, achievement_unlocked)
- * - Relative timestamps (Today, Yesterday, date)
+ * - Icons for 4 required types (game_added, session_completed, chat_saved, wishlist_added)
+ * - Achievement type included as future enhancement
+ * - Relative timestamps (Oggi HH:mm, Ieri HH:mm, dd/mm HH:mm)
  * - Clickable events → navigate to entity
  * - "View All Timeline" CTA → /activity
- * - Empty state with "Inizia a Giocare" CTA
+ * - Empty state with "Vai alla Libreria" CTA
  * - Loading skeleton state
+ * - Warm Tabletop aesthetic (amber/emerald/blue/yellow/purple)
  *
  * @example
  * ```tsx
- * <ActivityFeed />
+ * <ActivityFeed events={userActivities} isLoading={loading} />
  * ```
  */
 
@@ -194,7 +197,7 @@ const ACTIVITY_TYPE_CONFIG: Record<ActivityEventType, ActivityTypeConfig> = {
     icon: Dices,
     iconColor: 'text-emerald-600 dark:text-emerald-400',
     bgColor: 'bg-emerald-500/20',
-    href: (entityId) => entityId ? `/toolkit/${entityId}` : '/toolkit',
+    href: (entityId) => entityId ? `/sessions/${entityId}` : '/sessions',
   },
   chat_saved: {
     icon: MessageSquare,
@@ -333,7 +336,7 @@ function EmptyState() {
       <p className="text-xs text-muted-foreground/70 mb-4">
         Inizia ad aggiungere giochi e giocare!
       </p>
-      <Link href="/games/catalog">
+      <Link href="/library">
         <Button
           size="sm"
           variant="outline"
@@ -341,7 +344,7 @@ function EmptyState() {
           data-testid="start-playing-cta"
         >
           <Library className="h-4 w-4 mr-1" />
-          Esplora Catalogo
+          Vai alla Libreria
         </Button>
       </Link>
     </div>

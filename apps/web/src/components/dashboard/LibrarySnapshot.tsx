@@ -1,18 +1,25 @@
 /**
  * LibrarySnapshot - Dashboard Widget for Library Overview
  * Issue #3310 - Implement LibrarySnapshot component
+ * Issue #3912 - Library Snapshot Component (enhancements)
  *
  * Features:
- * - Quota progress bar with dynamic colors
+ * - Quota progress bar with dynamic colors (< 50% green, 50-80% amber, > 80% red)
  * - Top 3 games by play count
  * - Cover thumbnails with lazy loading
- * - Rating display with stars
- * - Empty state with "Add First Game" CTA
+ * - Rating display with 5-star system (0-5 scale for better UX)
+ * - Empty state with "Aggiungi Primo Gioco" CTA
  * - Loading skeleton state
+ * - Hover lift effects with shadow
+ * - Warm Tabletop aesthetic (amber/emerald/red palette)
+ *
+ * Note: Uses 5-star rating (0-5) instead of 10-point scale per Issue #3912.
+ * Rationale: Industry standard, better UX, compact display.
+ * Conversion from 10-point: rating_5 = Math.round(rating_10 / 2)
  *
  * @example
  * ```tsx
- * <LibrarySnapshot />
+ * <LibrarySnapshot quota={{used: 127, total: 200}} topGames={topGames} />
  * ```
  */
 
@@ -223,7 +230,7 @@ function GameCard({ game, index }: { game: TopGame; index: number }) {
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.1 }}
-      className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/30 transition-colors"
+      className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
       data-testid={`top-game-${game.id}`}
     >
       {/* Cover Image */}

@@ -1,14 +1,21 @@
 /**
  * DashboardSection - Reusable Section Container
  * Issue #3286 - User Dashboard Layout System
+ * Issue #3914 - Responsive Layout Mobile/Desktop Optimization
  *
  * Features:
- * - Collapsible with animation
+ * - Collapsible with smooth animation (mobile space optimization)
  * - Grid/List view toggle (independent per section)
  * - Sticky header with scroll detection
- * - Drag handle for reordering
+ * - Drag handle for reordering (desktop only)
  * - Active state indicator
+ * - Touch-friendly (44x44px minimum)
+ * - Keyboard accessible (ARIA labels, roles)
  * - Warm Tabletop aesthetic
+ *
+ * Responsive Behavior:
+ * - Mobile (< 640px): Collapse enabled, drag disabled, touch-friendly
+ * - Tablet/Desktop: Full features, drag-to-reorder
  *
  * @example
  * ```tsx
@@ -17,7 +24,9 @@
  *   title="La Mia Collezione"
  *   icon={Gamepad2}
  *   viewMode="grid"
+ *   collapsed={false}
  *   onViewModeChange={(mode) => setViewMode(mode)}
+ *   onCollapseToggle={() => toggleCollapse()}
  * >
  *   {children}
  * </DashboardSection>

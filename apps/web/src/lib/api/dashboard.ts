@@ -143,7 +143,17 @@ const MOCK_DASHBOARD_DATA: DashboardData = {
 // ============================================================================
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DASHBOARD === 'true' || true; // Default to mock until backend ready
+
+/**
+ * Mock data toggle for development
+ *
+ * Backend Issue #3972 (Dashboard Aggregated API) is not yet complete.
+ * To switch to real API: add `NEXT_PUBLIC_USE_MOCK_DASHBOARD=false` to `.env.local`
+ * Any other value (or omitting the var) keeps mock data active.
+ *
+ * @default true - mock data is ON until backend #3972 is deployed
+ */
+const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DASHBOARD !== 'false';
 
 /**
  * Fetch aggregated dashboard data

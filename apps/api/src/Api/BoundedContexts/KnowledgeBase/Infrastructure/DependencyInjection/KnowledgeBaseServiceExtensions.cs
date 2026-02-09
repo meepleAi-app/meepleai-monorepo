@@ -80,7 +80,8 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<IContextRetrievalStrategy, HybridSearchStrategy>();
         services.AddSingleton<IContextRetrievalStrategy, CapabilityMatchingStrategy>();
         services.AddScoped<IContextSource, ConversationMemorySource>();
-        services.AddScoped<IContextSource, GameStateSource>();
+        services.AddScoped<GameStateSource>();
+        services.AddScoped<IContextSource, GameStateSource>(sp => sp.GetRequiredService<GameStateSource>());
         services.AddScoped<IContextSource, StrategyPatternSource>();
 
         // ISSUE-3492: Hybrid Search with Reranking Pipeline

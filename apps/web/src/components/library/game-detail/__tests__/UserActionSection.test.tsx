@@ -21,6 +21,11 @@ vi.mock('@/hooks/queries/useLibrary', () => ({
     mutateAsync: vi.fn().mockResolvedValue({}),
     isPending: false,
   }),
+  useToggleLibraryFavorite: () => ({
+    mutate: vi.fn(),
+    mutateAsync: vi.fn().mockResolvedValue({}),
+    isPending: false,
+  }),
 }));
 
 vi.mock('@/hooks/queries/useLabels', () => ({

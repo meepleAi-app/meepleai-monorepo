@@ -1,0 +1,112 @@
+INCOMPLETE CHECKBOXES - TOP 50 ISSUES RANKED BY UNCHECKED COUNT
+================================================================
+
+Generated: 2026-02-09
+Dataset: 789 total closed issues (100 sample analyzed)
+
+This is a prioritized list of the 50 issues with the most unchecked checkboxes.
+Use this to triage post-closure work and improve acceptance criteria tracking.
+
+---
+
+RANK | ISSUE | UNCHECKED | TITLE
+-----|-------|-----------|------
+   1 | #3881 |    65     | Phase 6: EntityListView - Dashboard Integration
+   2 | #3880 |    40     | Phase 5: EntityListView - Polish & Testing
+   3 | #3849 |    27     | Post-merge monitoring
+   4 | #3846 |    27     | Manual QA testing checklist
+   5 | #3697 |    24     | [Epic 1] Testing & Integration
+   6 | #3907 |    22     | Backend: Dashboard Aggregated API Endpoint
+   7 | #3915 |    22     | Testing: Dashboard Hub Integration & E2E Test Suite
+   8 | #3910 |    21     | Frontend: Dashboard Hub Layout Refactoring + Cleanup Legacy
+   9 | #3955 |    21     | [Validation] Phase 1+2 Service Health & Performance Verif.
+  10 | #3822 |    21     | Analizzare pagina /giochi/[id] esistente
+  11 | #3823 |    18     | Verificare test coverage MeepleCard esistente
+  12 | #3914 |    16     | Frontend: Responsive Layout Mobile/Desktop Optimization
+  13 | #3908 |    15     | Backend: Activity Timeline Aggregation Service
+  14 | #3848 |    15     | Creare PR e merge strategy
+  15 | #3821 |    15     | Audit completo componenti card duplicati
+  16 | #3911 |    14     | Frontend: Enhanced Activity Feed Timeline Component
+  17 | #3909 |    13     | Backend: Cache Invalidation Strategy for Dashboard
+  18 | #3950 |    13     | Workflow Errors View - Error Monitoring in N8N Templates
+  19 | #3904 |    13     | Backend: Dashboard Aggregated API Endpoint
+  20 | #3842 |    13     | Analizzare e consolidare componenti duplicati
+  21 | #3913 |    10     | Frontend: Quick Actions Grid Enhancement
+  22 | #3820 |    10     | MeepleCard System Refactoring - SharedGames Catalog Integrat
+  23 | #3844 |    10     | Aggiornare documentazione MeepleCard
+  24 | #3840 |    10     | Test E2E pagina dettaglio /games/[id]
+  25 | #3687 |     9     | EPIC: AI Platform [Admin Enterprise]
+  26 | #3949 |     9     | Dashboard Hub - Stats & Analysis Module
+  27 | #3947 |     9     | Dashboard Hub - Quick Actions Bar
+  28 | #3902 |     9     | Backend: Enhanced Activity Stream
+  29 | #3843 |     8     | Completare migrazioni dati / aggiornare seeder
+  30 | #3841 |     8     | Implementare funzionalita di paging e filtering
+  31 | #3839 |     7     | Implementare test coverage E2E per funzionalita chiave
+  32 | #3878 |     7     | Phase 4: EntityListView - Sorting & Filtering
+  33 | #3838 |     7     | Integrare dataset mock O rimandare a backend
+  34 | #3837 |     7     | Implementare search in table (client-side per MVP)
+  35 | #3903 |     6     | Frontend: Dashboard Cards & Widgets Refinement
+  36 | #3906 |     6     | Backend: User Action Events Tracking
+  37 | #3877 |     6     | Phase 3: EntityListView - Pagination Implementation
+  38 | #3948 |     6     | Dashboard Hub - Sidebar Navigation Component
+  39 | #3946 |     6     | Dashboard Hub - Central Hub Staging
+  40 | #3875 |     5     | Phase 1: EntityListView - Core Table Layout
+  41 | #3876 |     5     | Phase 2: EntityListView - Responsive Optimization
+  42 | #3944 |     5     | [Staging] Aggregating N8N deployment feedback
+  43 | #3943 |     5     | [Review] Re-verify all backend fixes for completeness
+  44 | #3942 |     5     | [Validation] Webhook processing success rate
+  45 | #3941 |     5     | [Validation] Complete deployment health checks
+  46 | #3940 |     5     | [Validation] PostgreSQL schema verification
+  47 | #3939 |     5     | [Validation] All service endpoints operational
+  48 | #3896 |     5     | Performance Analysis: Dashboard Load Time
+  49 | #3945 |     4     | [Deploy] Production rollout of aggregation changes
+  50 | #3905 |     4     | Testing: Dashboard Components Unit Tests
+
+---
+
+ANALYSIS NOTES
+
+1. Top Issues (65-40 unchecked):
+   - #3881: Phase 6 integration - 65 unchecked items
+   - #3880: Phase 5 polish - 40 unchecked items
+   These appear to be large integration/testing phases with many follow-up items
+
+2. High-Volume Category:
+   - Issues #3846-#3822: QA/Testing focus (multiple with 15-27 unchecked)
+   - Strong correlation with testing/validation checklists
+
+3. Patterns Observed:
+   - Testing/QA issues have highest average unchecked count
+   - Phase-based issues (Phase 1-6) contain majority of unchecked items
+   - Deferred testing is common pattern ("deferred - awaiting backend")
+   - Post-merge monitoring/validation issues numerous
+
+4. Recommendations:
+   - Define "done" criteria for phase-based work items
+   - Separate must-complete from optional/deferred items
+   - Create follow-up issues for unchecked deferred items
+   - Review before-merge vs after-merge checklist items
+
+---
+
+CATEGORY BREAKDOWN
+
+Testing:           177 items (21.7%)  - Highest volume
+Other:            501 items (61.3%)  - Uncategorized
+Monitoring:        59 items (7.2%)   - Service/performance monitoring
+Documentation:     37 items (4.5%)   - Docs, guides
+Cleanup:          15 items (1.8%)    - Refactoring, cleanup
+Performance:       15 items (1.8%)   - Optimization
+Quality Gates:     13 items (1.6%)   - Code review, standards
+
+TOTAL:            817 unchecked checkboxes across 80 issues
+
+---
+
+DATA SOURCE
+
+File: C:\Users\Utente\.claude\projects\D--Repositories-meepleai-monorepo-dev\9b8a810f-4628-4298-80d9-ad2b76b0484f\tool-results\mcp-MCP_DOCKER-search_issues-1770640748241.txt
+
+Analysis: 100 most recent closed issues from 789 total
+All from: February 2026
+

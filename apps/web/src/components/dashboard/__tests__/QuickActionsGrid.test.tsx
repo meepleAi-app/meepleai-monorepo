@@ -13,14 +13,19 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { Library, Dices } from 'lucide-react';
 import { QuickActionsGrid, type QuickAction } from '../QuickActionsGrid';
 
+// Mock analytics
+vi.mock('@/lib/analytics/track-event', () => ({
+  trackEvent: vi.fn(),
+}));
+
 // Mock next/link
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({ children, href, onClick, ...props }: { children: React.ReactNode; href: string; onClick?: () => void; [key: string]: unknown }) => (
+    <a href={href} onClick={onClick} {...props}>{children}</a>
   ),
 }));
 
@@ -83,7 +88,7 @@ describe('QuickActionsGrid', () => {
 
       expect(screen.getByTestId('quick-action-label-library')).toHaveTextContent('Vai alla Collezione');
       expect(screen.getByTestId('quick-action-label-session')).toHaveTextContent('Nuova Sessione');
-      expect(screen.getByTestId('quick-action-label-chat')).toHaveTextContent('Chat AI Regole');
+      expect(screen.getByTestId('quick-action-label-chat')).toHaveTextContent('Chat AI');
       expect(screen.getByTestId('quick-action-label-catalog')).toHaveTextContent('Esplora Catalogo');
       expect(screen.getByTestId('quick-action-label-settings')).toHaveTextContent('Impostazioni');
     });
@@ -107,11 +112,11 @@ describe('QuickActionsGrid', () => {
       expect(action).toHaveAttribute('href', '/library');
     });
 
-    it('session action links to /toolkit', () => {
+    it('session action links to /sessions/new', () => {
       render(<QuickActionsGrid />);
 
       const action = screen.getByTestId('quick-action-session');
-      expect(action).toHaveAttribute('href', '/toolkit');
+      expect(action).toHaveAttribute('href', '/sessions/new');
     });
 
     it('chat action links to /chat', () => {

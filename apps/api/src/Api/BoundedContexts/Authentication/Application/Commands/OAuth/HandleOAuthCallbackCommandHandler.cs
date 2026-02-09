@@ -412,6 +412,18 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
             }
 
             user = oauthAccount.User;
+
+            // Issue #3672: Verify email for existing OAuth users BEFORE updating tokens
+            // Must be before UpdateOAuthTokenAsync to ensure changes are tracked
+            if (!user.EmailVerified)
+            {
+                var now = _timeProvider.GetUtcNow().UtcDateTime;
+                user.EmailVerified = true;
+                user.EmailVerifiedAt = now;
+                user.VerificationGracePeriodEndsAt = null;
+                _logger.LogInformation("Email verified for existing OAuth user {UserId} (retroactive fix)", user.Id);
+            }
+
             await UpdateOAuthTokenAsync(oauthAccount, tokenResponse, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("OAuth login for existing account. Provider: {Provider}, UserId: {UserId}", provider, user.Id);
         }
@@ -429,6 +441,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                     ? emailParts[0]
                     : "User";
 
+                var now = _timeProvider.GetUtcNow().UtcDateTime;
                 user = new UserEntity
                 {
                     Id = Guid.NewGuid(),
@@ -438,7 +451,10 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                     DisplayName = userInfo.Name ?? emailPrefix,
                     PasswordHash = GenerateRandomPasswordHash(),
                     Role = UserRole.User.ToString(),
-                    CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
+                    CreatedAt = now,
+                    // Issue #3672: OAuth users have pre-verified emails from provider
+                    EmailVerified = true,
+                    EmailVerifiedAt = now
                 };
                 _db.Users.Add(user);
                 await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -448,6 +464,18 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
             else
             {
                 _logger.LogInformation("Linking OAuth to existing user. Provider: {Provider}, UserId: {UserId}", provider, user.Id);
+
+                // Issue #3672: Mark email as verified when linking OAuth account
+                // Rationale: If OAuth provider verified the email, we can trust it
+                if (!user.EmailVerified)
+                {
+                    var now = _timeProvider.GetUtcNow().UtcDateTime;
+                    user.EmailVerified = true;
+                    user.EmailVerifiedAt = now;
+                    user.VerificationGracePeriodEndsAt = null; // Clear grace period if any
+                    await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                    _logger.LogInformation("Email verified via OAuth linking for user {UserId}", user.Id);
+                }
             }
 
             // Create OAuth account link

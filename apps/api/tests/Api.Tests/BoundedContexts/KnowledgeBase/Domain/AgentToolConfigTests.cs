@@ -38,7 +38,8 @@ public sealed class AgentToolConfigTests
 
         // Assert
         tool.GetSettings().Should().ContainKey("max_results");
-        tool.GetSettings()["max_results"].Should().Be(10);
+        // JSON deserialization may return JsonElement, so use ToString() for comparison
+        tool.GetSettings()["max_results"].ToString().Should().Be("10");
     }
 
     [Theory]

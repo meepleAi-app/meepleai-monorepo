@@ -73,7 +73,7 @@ public sealed class CreateAgentDefinitionCommandHandlerTests
         var act = () => _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*already exists*");
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.ConflictException>().WithMessage("*already exists*");
     }
 
     [Fact]

@@ -97,7 +97,10 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
             IsTwoFactorEnabled: user.IsTwoFactorEnabled,
             TwoFactorEnabledAt: user.TwoFactorEnabledAt,
             Level: user.Level,
-            ExperiencePoints: user.ExperiencePoints
+            ExperiencePoints: user.ExperiencePoints,
+            EmailVerified: user.EmailVerified,                           // Issue #3672
+            EmailVerifiedAt: user.EmailVerifiedAt,                       // Issue #3672
+            VerificationGracePeriodEndsAt: user.VerificationGracePeriodEndsAt  // Issue #3672
         );
     }
 }

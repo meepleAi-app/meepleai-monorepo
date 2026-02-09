@@ -108,6 +108,7 @@ internal static class TestSessionHelper
                 Role = role.ToLowerInvariant(), // DB stores lowercase
                 PasswordHash = TestPasswordHash, // Required for domain mapping
                 Tier = "free", // Default tier
+                EmailVerified = true, // Test users are pre-verified to bypass EmailVerificationMiddleware
                 CreatedAt = DateTime.UtcNow
             };
             dbContext.Set<UserEntity>().Add(user);

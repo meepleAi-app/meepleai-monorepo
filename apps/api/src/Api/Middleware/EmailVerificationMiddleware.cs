@@ -33,6 +33,12 @@ internal class EmailVerificationMiddleware
         "/api/v1/auth/resend-verification",
         "/api/v1/auth/email/verify",       // Alternative path
         "/api/v1/auth/email/resend",       // Alternative path
+        "/api/v1/auth/oauth/google/login",     // OAuth login endpoints
+        "/api/v1/auth/oauth/google/callback",
+        "/api/v1/auth/oauth/github/login",
+        "/api/v1/auth/oauth/github/callback",
+        "/api/v1/auth/oauth/discord/login",
+        "/api/v1/auth/oauth/discord/callback",
         "/api/v1/health",                  // Health checks
         "/api/v1/health/ready",
         "/api/v1/health/live"

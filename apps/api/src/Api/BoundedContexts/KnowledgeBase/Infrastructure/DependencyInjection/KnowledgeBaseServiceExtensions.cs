@@ -88,6 +88,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-3491: Context Assembler (orchestrates multi-source context assembly)
         services.AddScoped<ContextAssembler>();
+
+        // ISSUE-3760: Arbitro Agent Service (AI-powered move validation)
+        services.AddScoped<IArbitroAgentService, ArbitroAgentService>();
     }
 
     private static void AddValidationServices(IServiceCollection services)

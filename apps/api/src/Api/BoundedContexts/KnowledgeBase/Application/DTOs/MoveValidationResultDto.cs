@@ -55,6 +55,18 @@ public record MoveValidationResultDto
     /// Timestamp of validation (UTC)
     /// </summary>
     public required DateTime Timestamp { get; init; }
+
+    /// <summary>
+    /// Whether rule conflicts were detected during validation.
+    /// Issue #3761: Conflict detection support.
+    /// </summary>
+    public bool ConflictDetected { get; init; }
+
+    /// <summary>
+    /// List of conflicts resolved (if any).
+    /// Issue #3761: Conflict resolution tracking.
+    /// </summary>
+    public List<ConflictResolutionDto>? ConflictsResolved { get; init; }
 }
 
 /// <summary>

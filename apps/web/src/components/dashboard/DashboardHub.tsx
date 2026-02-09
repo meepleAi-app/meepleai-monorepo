@@ -1,5 +1,5 @@
 /**
- * DashboardHub - Main Navigation Hub (Issue #3975)
+ * DashboardHub - Main Navigation Hub (Issue #3975, #3979)
  *
  * Multi-section dashboard with aggregated data from `/api/v1/dashboard`
  *
@@ -11,6 +11,9 @@
  * - Chat History
  * - Quick Actions Grid
  * - Responsive Layout: Mobile (1-col), Tablet (2-col), Desktop (3-col asymmetric)
+ * - Framer Motion stagger animations with reduced motion support
+ * - Lazy loading below-fold sections (Intersection Observer)
+ * - Touch-friendly targets (44px min) on mobile
  * - Skeleton Loading States
  * - Error handling for partial failures
  *
@@ -22,12 +25,16 @@
 
 import { Component, type ReactNode } from 'react';
 
+import { motion } from 'framer-motion';
+import { useInView } from 'react-intersection-observer';
+
 import { useDashboardData } from '@/hooks/useDashboardData';
 import {
   adaptStatsForHeroStats,
   adaptActiveSessions,
   adaptChatThreads,
 } from '@/lib/adapters/dashboardAdapter';
+import { useReducedMotion } from '@/lib/animations';
 
 import { ActiveSessionsWidget } from './ActiveSessionsWidget';
 import { ActivityFeed } from './ActivityFeed';
@@ -35,6 +42,62 @@ import { ChatHistorySection } from './ChatHistorySection';
 import { HeroStats } from './HeroStats';
 import { LibrarySnapshot } from './LibrarySnapshot';
 import { QuickActionsGrid } from './QuickActionsGrid';
+
+// ============================================================================
+// Animation Variants
+// ============================================================================
+
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.3, ease: 'easeOut' },
+  },
+};
+
+// No-animation fallback for reduced motion
+const noMotionVariants = {
+  hidden: { opacity: 1 },
+  visible: { opacity: 1 },
+};
+
+// ============================================================================
+// Lazy Section Wrapper
+// ============================================================================
+
+interface LazySectionProps {
+  children: ReactNode;
+  className?: string;
+  fallbackHeight?: string;
+}
+
+function LazySection({ children, className, fallbackHeight = 'h-64' }: LazySectionProps) {
+  const { ref, inView } = useInView({
+    triggerOnce: true,
+    threshold: 0.1,
+    rootMargin: '100px 0px',
+  });
+
+  return (
+    <div ref={ref} className={className}>
+      {inView ? (
+        children
+      ) : (
+        <div className={`${fallbackHeight} animate-pulse rounded-2xl bg-gray-200`} />
+      )}
+    </div>
+  );
+}
 
 // ============================================================================
 // Loading Skeleton
@@ -81,7 +144,7 @@ function DashboardErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProp
       <p className="max-w-md text-center text-red-700">{error.message}</p>
       <button
         onClick={resetErrorBoundary}
-        className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+        className="min-h-[44px] min-w-[44px] rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
       >
         Try Again
       </button>
@@ -142,7 +205,7 @@ function SectionErrorFallback({ label, onRetry }: { label: string; onRetry: () =
       </p>
       <button
         onClick={onRetry}
-        className="ml-4 shrink-0 rounded-lg bg-yellow-600 px-3 py-1.5 text-xs text-white hover:bg-yellow-700"
+        className="ml-4 min-h-[44px] min-w-[44px] shrink-0 rounded-lg bg-yellow-600 px-3 py-1.5 text-xs text-white hover:bg-yellow-700"
       >
         Retry
       </button>
@@ -156,6 +219,7 @@ function SectionErrorFallback({ label, onRetry }: { label: string; onRetry: () =
 
 export function DashboardHub() {
   const { data, isLoading, error } = useDashboardData();
+  const shouldReduceMotion = useReducedMotion();
 
   // Loading State
   if (isLoading) {
@@ -212,11 +276,19 @@ export function DashboardHub() {
     timestamp: event.timestamp.toISOString(),
   }));
 
+  const variants = shouldReduceMotion ? noMotionVariants : sectionVariants;
+  const container = shouldReduceMotion ? undefined : containerVariants;
+
   // Success State - Render Dashboard
   return (
-    <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 md:gap-6 md:p-6 lg:grid-cols-3 lg:gap-8 lg:p-8">
-      {/* Hero Stats Overview - Full Width */}
-      <section className="col-span-full">
+    <motion.div
+      className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 md:gap-6 md:p-6 lg:grid-cols-3 lg:gap-8 lg:p-8"
+      variants={container}
+      initial="hidden"
+      animate="visible"
+    >
+      {/* Hero Stats Overview - Full Width (above fold) */}
+      <motion.section className="col-span-full" variants={variants}>
         <SimpleErrorBoundary
           fallback={({ resetErrorBoundary }) => (
             <SectionErrorFallback label="Hero Stats" onRetry={resetErrorBoundary} />
@@ -224,10 +296,10 @@ export function DashboardHub() {
         >
           <HeroStats stats={heroStats} />
         </SimpleErrorBoundary>
-      </section>
+      </motion.section>
 
-      {/* Active Sessions Widget - Full Width */}
-      <section className="col-span-full">
+      {/* Active Sessions Widget - Full Width (above fold) */}
+      <motion.section className="col-span-full" variants={variants}>
         <SimpleErrorBoundary
           fallback={({ resetErrorBoundary }) => (
             <SectionErrorFallback label="Active Sessions" onRetry={resetErrorBoundary} />
@@ -235,51 +307,59 @@ export function DashboardHub() {
         >
           <ActiveSessionsWidget sessions={activeSessions} />
         </SimpleErrorBoundary>
-      </section>
+      </motion.section>
 
-      {/* Library Snapshot - Sidebar (1 col) */}
-      <section className="md:col-span-1 lg:col-span-1">
-        <SimpleErrorBoundary
-          fallback={({ resetErrorBoundary }) => (
-            <SectionErrorFallback label="Library Snapshot" onRetry={resetErrorBoundary} />
-          )}
-        >
-          <LibrarySnapshot quota={data.librarySnapshot.quota} topGames={data.librarySnapshot.topGames} />
-        </SimpleErrorBoundary>
-      </section>
+      {/* Library Snapshot - Sidebar (1 col, lazy loaded) */}
+      <motion.section className="md:col-span-1 lg:col-span-1" variants={variants}>
+        <LazySection fallbackHeight="h-96">
+          <SimpleErrorBoundary
+            fallback={({ resetErrorBoundary }) => (
+              <SectionErrorFallback label="Library Snapshot" onRetry={resetErrorBoundary} />
+            )}
+          >
+            <LibrarySnapshot quota={data.librarySnapshot.quota} topGames={data.librarySnapshot.topGames} />
+          </SimpleErrorBoundary>
+        </LazySection>
+      </motion.section>
 
-      {/* Activity Feed - Main Content (2 cols on desktop) */}
-      <section className="md:col-span-1 lg:col-span-2">
-        <SimpleErrorBoundary
-          fallback={({ resetErrorBoundary }) => (
-            <SectionErrorFallback label="Activity Feed" onRetry={resetErrorBoundary} />
-          )}
-        >
-          <ActivityFeed events={activityEvents} />
-        </SimpleErrorBoundary>
-      </section>
+      {/* Activity Feed - Main Content (2 cols on desktop, lazy loaded) */}
+      <motion.section className="md:col-span-1 lg:col-span-2" variants={variants}>
+        <LazySection fallbackHeight="h-96">
+          <SimpleErrorBoundary
+            fallback={({ resetErrorBoundary }) => (
+              <SectionErrorFallback label="Activity Feed" onRetry={resetErrorBoundary} />
+            )}
+          >
+            <ActivityFeed events={activityEvents} />
+          </SimpleErrorBoundary>
+        </LazySection>
+      </motion.section>
 
-      {/* Chat History - 2 cols */}
-      <section className="md:col-span-2">
-        <SimpleErrorBoundary
-          fallback={({ resetErrorBoundary }) => (
-            <SectionErrorFallback label="Chat History" onRetry={resetErrorBoundary} />
-          )}
-        >
-          <ChatHistorySection threads={chatThreads} />
-        </SimpleErrorBoundary>
-      </section>
+      {/* Chat History - 2 cols (lazy loaded) */}
+      <motion.section className="md:col-span-2" variants={variants}>
+        <LazySection fallbackHeight="h-64">
+          <SimpleErrorBoundary
+            fallback={({ resetErrorBoundary }) => (
+              <SectionErrorFallback label="Chat History" onRetry={resetErrorBoundary} />
+            )}
+          >
+            <ChatHistorySection threads={chatThreads} />
+          </SimpleErrorBoundary>
+        </LazySection>
+      </motion.section>
 
-      {/* Quick Actions Grid - 1 col */}
-      <section className="md:col-span-2 lg:col-span-1">
-        <SimpleErrorBoundary
-          fallback={({ resetErrorBoundary }) => (
-            <SectionErrorFallback label="Quick Actions" onRetry={resetErrorBoundary} />
-          )}
-        >
-          <QuickActionsGrid />
-        </SimpleErrorBoundary>
-      </section>
-    </div>
+      {/* Quick Actions Grid - 1 col (lazy loaded) */}
+      <motion.section className="md:col-span-2 lg:col-span-1" variants={variants}>
+        <LazySection fallbackHeight="h-48">
+          <SimpleErrorBoundary
+            fallback={({ resetErrorBoundary }) => (
+              <SectionErrorFallback label="Quick Actions" onRetry={resetErrorBoundary} />
+            )}
+          >
+            <QuickActionsGrid />
+          </SimpleErrorBoundary>
+        </LazySection>
+      </motion.section>
+    </motion.div>
   );
 }

@@ -134,12 +134,12 @@ public sealed class RecordFaqUsageCommandHandlerTests
         await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        var domainEvents = existingFaq.GetDomainEvents();
+        var domainEvents = existingFaq.DomainEvents;
         Assert.Single(domainEvents);
         var usedEvent = Assert.IsType<RuleConflictFAQUsedEvent>(domainEvents.First());
-        Assert.Equal(faqId, usedEvent.FaqId);
+        Assert.Equal(faqId, usedEvent.FAQId);
         Assert.Equal(gameId, usedEvent.GameId);
-        Assert.Equal(1, usedEvent.NewUsageCount); // First usage after creation
+        Assert.Equal(1, usedEvent.TotalUsageCount); // First usage after creation
     }
 
     [Fact]

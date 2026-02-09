@@ -94,8 +94,9 @@ function DashboardErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProp
 // ============================================================================
 
 interface ErrorBoundaryProps {
-  fallback: ReactNode;
+  fallback: ReactNode | ((props: { resetErrorBoundary: () => void; error: Error }) => ReactNode);
   children: ReactNode;
+  onReset?: () => void;
 }
 
 interface ErrorBoundaryState {
@@ -113,13 +114,40 @@ class SimpleErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
     return { hasError: true, error };
   }
 
+  resetErrorBoundary = () => {
+    this.setState({ hasError: false, error: null });
+    this.props.onReset?.();
+  };
+
   render() {
-    if (this.state.hasError) {
-      return this.props.fallback;
+    if (this.state.hasError && this.state.error) {
+      return typeof this.props.fallback === 'function'
+        ? this.props.fallback({ resetErrorBoundary: this.resetErrorBoundary, error: this.state.error })
+        : this.props.fallback;
     }
 
     return this.props.children;
   }
+}
+
+// ============================================================================
+// Section Error Fallback (with retry)
+// ============================================================================
+
+function SectionErrorFallback({ label, onRetry }: { label: string; onRetry: () => void }) {
+  return (
+    <div className="flex items-center justify-between rounded-2xl border-2 border-dashed border-yellow-200 bg-yellow-50 p-6">
+      <p className="text-sm text-yellow-800">
+        ⚠️ {label} failed to load. Other sections are still working.
+      </p>
+      <button
+        onClick={onRetry}
+        className="ml-4 shrink-0 rounded-lg bg-yellow-600 px-3 py-1.5 text-xs text-white hover:bg-yellow-700"
+      >
+        Retry
+      </button>
+    </div>
+  );
 }
 
 // ============================================================================
@@ -190,13 +218,9 @@ export function DashboardHub() {
       {/* Hero Stats Overview - Full Width */}
       <section className="col-span-full">
         <SimpleErrorBoundary
-          fallback={
-            <div className="rounded-2xl border-2 border-dashed border-yellow-200 bg-yellow-50 p-6">
-              <p className="text-sm text-yellow-800">
-                ⚠️ Hero Stats failed to load. Other sections are still working.
-              </p>
-            </div>
-          }
+          fallback={({ resetErrorBoundary }) => (
+            <SectionErrorFallback label="Hero Stats" onRetry={resetErrorBoundary} />
+          )}
         >
           <HeroStats stats={heroStats} />
         </SimpleErrorBoundary>
@@ -205,13 +229,9 @@ export function DashboardHub() {
       {/* Active Sessions Widget - Full Width */}
       <section className="col-span-full">
         <SimpleErrorBoundary
-          fallback={
-            <div className="rounded-2xl border-2 border-dashed border-yellow-200 bg-yellow-50 p-6">
-              <p className="text-sm text-yellow-800">
-                ⚠️ Active Sessions failed to load. Other sections are still working.
-              </p>
-            </div>
-          }
+          fallback={({ resetErrorBoundary }) => (
+            <SectionErrorFallback label="Active Sessions" onRetry={resetErrorBoundary} />
+          )}
         >
           <ActiveSessionsWidget sessions={activeSessions} />
         </SimpleErrorBoundary>
@@ -220,13 +240,9 @@ export function DashboardHub() {
       {/* Library Snapshot - Sidebar (1 col) */}
       <section className="md:col-span-1 lg:col-span-1">
         <SimpleErrorBoundary
-          fallback={
-            <div className="rounded-2xl border-2 border-dashed border-yellow-200 bg-yellow-50 p-6">
-              <p className="text-sm text-yellow-800">
-                ⚠️ Library Snapshot failed to load. Other sections are still working.
-              </p>
-            </div>
-          }
+          fallback={({ resetErrorBoundary }) => (
+            <SectionErrorFallback label="Library Snapshot" onRetry={resetErrorBoundary} />
+          )}
         >
           <LibrarySnapshot quota={data.librarySnapshot.quota} topGames={data.librarySnapshot.topGames} />
         </SimpleErrorBoundary>
@@ -235,13 +251,9 @@ export function DashboardHub() {
       {/* Activity Feed - Main Content (2 cols on desktop) */}
       <section className="md:col-span-1 lg:col-span-2">
         <SimpleErrorBoundary
-          fallback={
-            <div className="rounded-2xl border-2 border-dashed border-yellow-200 bg-yellow-50 p-6">
-              <p className="text-sm text-yellow-800">
-                ⚠️ Activity Feed failed to load. Other sections are still working.
-              </p>
-            </div>
-          }
+          fallback={({ resetErrorBoundary }) => (
+            <SectionErrorFallback label="Activity Feed" onRetry={resetErrorBoundary} />
+          )}
         >
           <ActivityFeed events={activityEvents} />
         </SimpleErrorBoundary>
@@ -250,13 +262,9 @@ export function DashboardHub() {
       {/* Chat History - 2 cols */}
       <section className="md:col-span-2">
         <SimpleErrorBoundary
-          fallback={
-            <div className="rounded-2xl border-2 border-dashed border-yellow-200 bg-yellow-50 p-6">
-              <p className="text-sm text-yellow-800">
-                ⚠️ Chat History failed to load. Other sections are still working.
-              </p>
-            </div>
-          }
+          fallback={({ resetErrorBoundary }) => (
+            <SectionErrorFallback label="Chat History" onRetry={resetErrorBoundary} />
+          )}
         >
           <ChatHistorySection threads={chatThreads} />
         </SimpleErrorBoundary>
@@ -265,13 +273,9 @@ export function DashboardHub() {
       {/* Quick Actions Grid - 1 col */}
       <section className="md:col-span-2 lg:col-span-1">
         <SimpleErrorBoundary
-          fallback={
-            <div className="rounded-2xl border-2 border-dashed border-yellow-200 bg-yellow-50 p-6">
-              <p className="text-sm text-yellow-800">
-                ⚠️ Quick Actions failed to load. Other sections are still working.
-              </p>
-            </div>
-          }
+          fallback={({ resetErrorBoundary }) => (
+            <SectionErrorFallback label="Quick Actions" onRetry={resetErrorBoundary} />
+          )}
         >
           <QuickActionsGrid />
         </SimpleErrorBoundary>

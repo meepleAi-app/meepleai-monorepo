@@ -11,8 +11,15 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { DashboardHub } from '../DashboardHub';
-import * as dashboardApi from '@/lib/api/dashboard';
+import { fetchDashboardData } from '@/lib/api/dashboard';
 import type { DashboardData } from '@/types/dashboard';
+
+// Mock the dashboard API module
+vi.mock('@/lib/api/dashboard', () => ({
+  fetchDashboardData: vi.fn(),
+}));
+
+const mockFetchDashboardData = vi.mocked(fetchDashboardData);
 
 // ============================================================================
 // Mock Data
@@ -104,21 +111,21 @@ describe('DashboardHub', () => {
   describe('Loading State', () => {
     it('shows skeleton during data fetch', () => {
       // Mock loading state
-      vi.spyOn(dashboardApi, 'fetchDashboardData').mockImplementation(
+      mockFetchDashboardData.mockImplementation(
         () => new Promise(() => {}) // Never resolves
       );
 
-      render(<DashboardHub />, { wrapper: createQueryWrapper() });
+      const { container } = render(<DashboardHub />, { wrapper: createQueryWrapper() });
 
-      // Should show skeleton elements
-      const skeletons = screen.getAllByRole('generic', { hidden: true });
+      // Should show skeleton elements (divs with animate-pulse class)
+      const skeletons = container.querySelectorAll('.animate-pulse');
       expect(skeletons.length).toBeGreaterThan(0);
     });
   });
 
   describe('Success State', () => {
     beforeEach(() => {
-      vi.spyOn(dashboardApi, 'fetchDashboardData').mockResolvedValue(mockDashboardData);
+      mockFetchDashboardData.mockResolvedValue(mockDashboardData);
     });
 
     it('renders all dashboard sections with data', async () => {
@@ -128,8 +135,8 @@ describe('DashboardHub', () => {
         // Hero Stats should show username
         expect(screen.getByText(/TestUser/i)).toBeInTheDocument();
 
-        // Active sessions should show game name
-        expect(screen.getByText(/Catan/i)).toBeInTheDocument();
+        // Active sessions should show game name (appears in sessions + library)
+        expect(screen.getAllByText(/Catan/i).length).toBeGreaterThanOrEqual(1);
       });
     });
 
@@ -137,8 +144,10 @@ describe('DashboardHub', () => {
       const { container } = render(<DashboardHub />, { wrapper: createQueryWrapper() });
 
       await waitFor(() => {
-        const sections = container.querySelectorAll('section');
-        expect(sections.length).toBe(6); // Hero, Sessions, Library, Activity, Chat, QuickActions
+        // Count only direct child sections of the grid (child components also render <section>)
+        const grid = container.querySelector('.grid');
+        const directSections = grid?.querySelectorAll(':scope > section');
+        expect(directSections?.length).toBe(6); // Hero, Sessions, Library, Activity, Chat, QuickActions
       });
     });
 
@@ -156,20 +165,22 @@ describe('DashboardHub', () => {
 
   describe('Error State', () => {
     it('shows error fallback when API fails', async () => {
-      const mockError = new Error('API Error');
-      vi.spyOn(dashboardApi, 'fetchDashboardData').mockRejectedValue(mockError);
+      mockFetchDashboardData.mockRejectedValue(new Error('API Error'));
 
       render(<DashboardHub />, { wrapper: createQueryWrapper() });
 
-      await waitFor(() => {
-        // Should show error UI
-        expect(screen.queryByText(/error/i)).toBeInTheDocument();
-        expect(screen.queryByText(/try again/i)).toBeInTheDocument();
-      });
-    });
+      // Hook has retry: 2 with exponential backoff (~3-6s), so we need a long timeout
+      await waitFor(
+        () => {
+          expect(screen.getByText('Dashboard Error')).toBeInTheDocument();
+          expect(screen.getByText(/try again/i)).toBeInTheDocument();
+        },
+        { timeout: 15000 },
+      );
+    }, 20000);
 
     it('shows error fallback when data is null', async () => {
-      vi.spyOn(dashboardApi, 'fetchDashboardData').mockResolvedValue(null as any);
+      mockFetchDashboardData.mockResolvedValue(null as any);
 
       render(<DashboardHub />, { wrapper: createQueryWrapper() });
 
@@ -182,15 +193,15 @@ describe('DashboardHub', () => {
 
   describe('Data Adapters', () => {
     beforeEach(() => {
-      vi.spyOn(dashboardApi, 'fetchDashboardData').mockResolvedValue(mockDashboardData);
+      mockFetchDashboardData.mockResolvedValue(mockDashboardData);
     });
 
     it('adapts API data to component formats correctly', async () => {
       render(<DashboardHub />, { wrapper: createQueryWrapper() });
 
       await waitFor(() => {
-        // Active sessions adapted correctly
-        expect(screen.getByText(/Catan/i)).toBeInTheDocument();
+        // Active sessions adapted correctly (appears in sessions + library)
+        expect(screen.getAllByText(/Catan/i).length).toBeGreaterThanOrEqual(1);
 
         // Activity adapted correctly (should show formatted activity)
         const activityText = screen.queryByText(/Added.*Wingspan/i) || screen.queryByText(/Wingspan/i);
@@ -204,7 +215,7 @@ describe('DashboardHub', () => {
 
   describe('Responsive Layout', () => {
     beforeEach(() => {
-      vi.spyOn(dashboardApi, 'fetchDashboardData').mockResolvedValue(mockDashboardData);
+      mockFetchDashboardData.mockResolvedValue(mockDashboardData);
     });
 
     it('applies full-width class to hero and sessions sections', async () => {

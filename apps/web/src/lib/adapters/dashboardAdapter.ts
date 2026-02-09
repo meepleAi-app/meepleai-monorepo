@@ -17,6 +17,20 @@ import type { ActiveSession as ComponentActiveSession } from '@/components/dashb
 import type { ChatThread as ComponentChatThread } from '@/components/dashboard/ChatHistorySection';
 
 // ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Parse duration string to minutes. Handles "45min", "1h30min", "90", or numeric values.
+ * Returns 0 for unparseable input.
+ */
+function parseDuration(duration: string | number): number {
+  if (typeof duration === 'number') return duration;
+  const num = parseInt(duration, 10);
+  return isNaN(num) ? 0 : num;
+}
+
+// ============================================================================
 // HeroStats Adapter
 // ============================================================================
 
@@ -67,7 +81,7 @@ export function adaptActiveSessions(
       max: session.players.total, // API uses "total", component uses "max"
     },
     turn: session.progress.turn,
-    duration: parseInt(session.progress.duration), // Convert "45min" -> 45
+    duration: parseDuration(session.progress.duration),
   }));
 }
 

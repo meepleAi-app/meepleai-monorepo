@@ -1,94 +1,79 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Middleware.Exceptions;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// ISSUE-3759: Handler for ValidateMoveCommand.
-/// Calls orchestration-service for LangGraph-based Arbitro agent processing.
+/// Handler for ValidateMoveCommand - Arbitro Agent move validation.
+/// Issue #3760: Arbitro Agent Move Validation Logic with Game State Analysis.
 /// </summary>
-internal class ValidateMoveCommandHandler : IRequestHandler<ValidateMoveCommand, ValidateMoveResponse>
+internal sealed class ValidateMoveCommandHandler : IRequestHandler<ValidateMoveCommand, MoveValidationResultDto>
 {
-    private readonly HttpClient _httpClient;
+    private readonly IGameSessionRepository _gameSessionRepository;
+    private readonly IArbitroAgentService _arbitroAgentService;
     private readonly ILogger<ValidateMoveCommandHandler> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public ValidateMoveCommandHandler(
-        IHttpClientFactory httpClientFactory,
-        ILogger<ValidateMoveCommandHandler> logger)
+        IGameSessionRepository gameSessionRepository,
+        IArbitroAgentService arbitroAgentService,
+        ILogger<ValidateMoveCommandHandler> logger,
+        TimeProvider timeProvider)
     {
-        _httpClient = httpClientFactory.CreateClient("OrchestrationService");
-        _logger = logger;
+        _gameSessionRepository = gameSessionRepository ?? throw new ArgumentNullException(nameof(gameSessionRepository));
+        _arbitroAgentService = arbitroAgentService ?? throw new ArgumentNullException(nameof(arbitroAgentService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public async Task<ValidateMoveResponse> Handle(ValidateMoveCommand request, CancellationToken cancellationToken)
+    public async Task<MoveValidationResultDto> Handle(
+        ValidateMoveCommand request,
+        CancellationToken cancellationToken)
     {
-        try
+        ArgumentNullException.ThrowIfNull(request);
+
+        _logger.LogInformation(
+            "Handling ValidateMoveCommand: session={SessionId}, player={Player}, action={Action}",
+            request.GameSessionId,
+            request.PlayerName,
+            request.Action);
+
+        // Load GameSession from repository
+        var session = await _gameSessionRepository
+            .GetByIdAsync(request.GameSessionId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (session == null)
         {
-            _logger.LogInformation(
-                "Validating move for game {GameId}, session {SessionId}: {Move}",
-                request.GameId, request.SessionId, request.Move);
-
-            // Call orchestration service for Arbitro agent
-            var apiRequest = new
-            {
-                game_id = request.GameId,
-                session_id = request.SessionId,
-                move = request.Move,
-                game_state = request.GameState,
-                agent_type = "arbitro" // Route to Arbitro agent
-            };
-
-            var httpResponse = await _httpClient.PostAsJsonAsync(
-                "/execute",
-                apiRequest,
-                cancellationToken).ConfigureAwait(false);
-
-            httpResponse.EnsureSuccessStatusCode();
-
-            var responseContent = await httpResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            var orchestrationResponse = JsonSerializer.Deserialize<OrchestrationResponse>(responseContent);
-
-            if (orchestrationResponse == null)
-            {
-                throw new InvalidOperationException("Failed to deserialize orchestration response");
-            }
-
-            _logger.LogInformation(
-                "Move validation completed: valid={IsValid}, confidence={Confidence}, time={Time}ms",
-                orchestrationResponse.IsValid, orchestrationResponse.Confidence, orchestrationResponse.ExecutionTimeMs);
-
-            return new ValidateMoveResponse(
-                IsValid: orchestrationResponse.IsValid,
-                Reason: orchestrationResponse.Reason,
-                AppliedRuleIds: orchestrationResponse.AppliedRuleIds,
-                Confidence: orchestrationResponse.Confidence,
-                Citations: orchestrationResponse.Citations,
-                ExecutionTimeMs: orchestrationResponse.ExecutionTimeMs,
-                ErrorMessage: orchestrationResponse.Error
-            );
+            throw new NotFoundException("GameSession", request.GameSessionId.ToString());
         }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex, "Orchestration service unavailable");
-            throw new ExternalServiceException("Arbitro agent service unavailable", ex);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Move validation failed");
-            throw;
-        }
+
+        // Create Move value object from command
+        var move = new Move(
+            playerName: request.PlayerName,
+            action: request.Action,
+            position: request.Position,
+            timestamp: _timeProvider.GetUtcNow().UtcDateTime,
+            additionalContext: request.AdditionalContext);
+
+        // Delegate to ArbitroAgentService for AI-powered validation
+        var result = await _arbitroAgentService.ValidateMoveAsync(
+            session,
+            move,
+            cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "ValidateMoveCommand completed: decision={Decision}, confidence={Confidence:F2}, latency={Latency}ms",
+            result.Decision,
+            result.Confidence,
+            result.LatencyMs);
+
+        return result;
     }
-
-    private sealed record OrchestrationResponse(
-        [property: JsonPropertyName("is_valid")] bool IsValid,
-        [property: JsonPropertyName("reason")] string Reason,
-        [property: JsonPropertyName("applied_rule_ids")] List<Guid> AppliedRuleIds,
-        [property: JsonPropertyName("confidence")] double Confidence,
-        [property: JsonPropertyName("citations")] List<string> Citations,
-        [property: JsonPropertyName("execution_time_ms")] double ExecutionTimeMs,
-        [property: JsonPropertyName("error")] string? Error
-    );
 }

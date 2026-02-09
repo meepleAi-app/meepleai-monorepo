@@ -1,13 +1,17 @@
 /**
  * QuickActionsGrid - Dashboard Widget for Quick Navigation
  * Issue #3313 - Implement QuickActionsGrid
+ * Issue #3913 - Quick Actions Grid Enhancement
  *
  * Features:
  * - 5 quick action buttons with icons and labels
  * - Responsive grid: 2-col mobile, 5-col desktop
- * - Hover/focus states
+ * - Hover effects: scale 1.05 + shadow intensify
+ * - Analytics tracking on click events
  * - Touch-friendly (min 44x44px)
+ * - Keyboard navigation (focus states)
  * - Navigation to key app sections
+ * - Warm Tabletop aesthetic (amber/emerald/blue/purple/slate palette)
  *
  * @example
  * ```tsx
@@ -29,6 +33,7 @@ import {
 import Link from 'next/link';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { trackEvent } from '@/lib/analytics/track-event';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -70,14 +75,14 @@ const DEFAULT_ACTIONS: QuickAction[] = [
     id: 'session',
     icon: Dices,
     label: 'Nuova Sessione',
-    href: '/toolkit',
+    href: '/sessions/new',
     iconColor: 'text-emerald-600 dark:text-emerald-400',
     bgColor: 'bg-emerald-500/20 hover:bg-emerald-500/30',
   },
   {
     id: 'chat',
     icon: MessageSquare,
-    label: 'Chat AI Regole',
+    label: 'Chat AI',
     href: '/chat',
     iconColor: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-500/20 hover:bg-blue-500/30',
@@ -132,6 +137,15 @@ function QuickActionsGridSkeleton({ className }: { className?: string }) {
 function ActionButton({ action, index }: { action: QuickAction; index: number }) {
   const Icon = action.icon;
 
+  const handleClick = () => {
+    trackEvent(`dashboard_quick_action_${action.id}`, {
+      action_name: action.label,
+      destination: action.href,
+      source: 'dashboard',
+      timestamp: new Date().toISOString(),
+    });
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -140,6 +154,7 @@ function ActionButton({ action, index }: { action: QuickAction; index: number })
     >
       <Link
         href={action.href}
+        onClick={handleClick}
         className={cn(
           'flex flex-col items-center gap-2 p-3 rounded-xl',
           'transition-all duration-200',

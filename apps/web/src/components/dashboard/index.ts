@@ -35,8 +35,5 @@ export { ActiveSessionsPanel, type ActiveSessionsPanelProps } from './ActiveSess
 // MeepleCard-based dashboard components (Issue #3334)
 export { MeepleGameWidget, MeepleGameWidgetSkeleton, type DashboardGame, type MeepleGameWidgetProps } from './MeepleGameWidget';
 
-// Compact Dashboard (Issue #3306: MVP Refinement)
-export { UserDashboardCompact } from './UserDashboardCompact';
-
-// Unified Dashboard with Mode Toggle (Compact/Extended)
-export { UserDashboard, type UserDashboardProps, type DashboardMode } from './UserDashboard';
+// Legacy UserDashboard and UserDashboardCompact removed - Issue #3910
+// Use Dashboard.tsx for modern hub layout

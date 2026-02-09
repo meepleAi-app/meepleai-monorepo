@@ -222,7 +222,7 @@ internal static class PlayRecordEndpoints
 
     #region Request/Response Models
 
-    private record CreatePlayRecordRequest(
+    private sealed record CreatePlayRecordRequest(
         Guid? GameId,
         string GameName,
         DateTime SessionDate,
@@ -231,17 +231,17 @@ internal static class PlayRecordEndpoints
         List<string>? ScoringDimensions = null,
         Dictionary<string, string>? DimensionUnits = null);
 
-    private record AddPlayerRequest(Guid? UserId, string DisplayName);
+    private sealed record AddPlayerRequest(Guid? UserId, string DisplayName);
 
-    private record RecordScoreRequest(Guid PlayerId, string Dimension, int Value, string? Unit);
+    private sealed record RecordScoreRequest(Guid PlayerId, string Dimension, int Value, string? Unit);
 
-    private record CompleteRecordRequest(TimeSpan? ManualDuration);
+    private sealed record CompleteRecordRequest(TimeSpan? ManualDuration);
 
-    private record UpdateRecordRequest(DateTime? SessionDate, string? Notes, string? Location);
+    private sealed record UpdateRecordRequest(DateTime? SessionDate, string? Notes, string? Location);
 
-    private record GetHistoryQueryParams(int Page = 1, int PageSize = 20, Guid? GameId = null);
+    private sealed record GetHistoryQueryParams(int Page = 1, int PageSize = 20, Guid? GameId = null);
 
-    private record GetStatisticsQueryParams(DateTime? StartDate = null, DateTime? EndDate = null);
+    private sealed record GetStatisticsQueryParams(DateTime? StartDate = null, DateTime? EndDate = null);
 
     #endregion
 }

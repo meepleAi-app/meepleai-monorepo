@@ -53,7 +53,7 @@ internal class PlayRecordEntityConfiguration : IEntityTypeConfiguration<PlayReco
         // Indexes
         builder.HasIndex(e => e.GameId)
             .HasDatabaseName("IX_PlayRecords_GameId")
-            .HasFilter("game_id IS NOT NULL");
+            .HasFilter("\"GameId\" IS NOT NULL");
         builder.HasIndex(e => e.CreatedByUserId)
             .HasDatabaseName("IX_PlayRecords_CreatedByUserId");
         builder.HasIndex(e => e.SessionDate)

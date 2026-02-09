@@ -22,6 +22,8 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IGameSessionRepository, GameSessionRepository>();
         services.AddScoped<IGameSessionStateRepository, GameSessionStateRepository>(); // ISSUE-2403
+        services.AddScoped<IPlayRecordRepository, PlayRecordRepository>(); // ISSUE-3889
+        services.AddScoped<IRuleConflictFaqRepository, RuleConflictFaqRepository>(); // ISSUE-3761: Conflict FAQ
 
         // Register Unit of Work (shared across bounded contexts)
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
@@ -37,6 +39,9 @@ internal static class GameManagementServiceExtensions
 
         // Issue #3070: Register session quota service
         services.AddScoped<ISessionQuotaService, SessionQuotaService>();
+
+        // Issue #3891: Register play record permission checker
+        services.AddScoped<PlayRecordPermissionChecker>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

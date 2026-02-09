@@ -1,205 +1,247 @@
+using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
-using FluentAssertions;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.Middleware.Exceptions;
+using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Moq.Protected;
-using System.Net;
-using System.Text.Json;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 
 /// <summary>
-/// ISSUE-3759: Unit tests for ValidateMoveCommandHandler.
-/// Tests CQRS handler calls orchestration service for Arbitro agent.
+/// Tests for ValidateMoveCommandHandler.
+/// Issue #3760: Arbitro Agent Move Validation Logic with Game State Analysis.
 /// </summary>
-[Trait("Category", "Unit")]
+[Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
-[Trait("Issue", "3759")]
+[Trait("Issue", "3760")]
 public class ValidateMoveCommandHandlerTests
 {
-    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
-    private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler;
+    private readonly Mock<IGameSessionRepository> _mockGameSessionRepository;
+    private readonly Mock<IArbitroAgentService> _mockArbitroService;
     private readonly Mock<ILogger<ValidateMoveCommandHandler>> _mockLogger;
+    private readonly TimeProvider _timeProvider;
     private readonly ValidateMoveCommandHandler _handler;
 
     public ValidateMoveCommandHandlerTests()
     {
-        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
-        _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+        _mockGameSessionRepository = new Mock<IGameSessionRepository>();
+        _mockArbitroService = new Mock<IArbitroAgentService>();
         _mockLogger = new Mock<ILogger<ValidateMoveCommandHandler>>();
+        _timeProvider = TimeProvider.System;
 
-        var httpClient = new HttpClient(_mockHttpMessageHandler.Object)
-        {
-            BaseAddress = new Uri("http://orchestration-service:8004")
-        };
-
-        _mockHttpClientFactory
-            .Setup(x => x.CreateClient("OrchestrationService"))
-            .Returns(httpClient);
-
-        _handler = new ValidateMoveCommandHandler(_mockHttpClientFactory.Object, _mockLogger.Object);
+        _handler = new ValidateMoveCommandHandler(
+            _mockGameSessionRepository.Object,
+            _mockArbitroService.Object,
+            _mockLogger.Object,
+            _timeProvider);
     }
 
     [Fact]
-    public async Task Handle_ValidMove_ReturnsValidResult()
+    public async Task Handle_WithValidSession_CallsArbitroService()
     {
         // Arrange
-        var command = new ValidateMoveCommand(
-            GameId: Guid.NewGuid(),
-            SessionId: Guid.NewGuid(),
-            Move: "Nf3",
-            GameState: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-        );
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var session = CreateMockGameSession(sessionId, gameId, "Alice");
 
-        var ruleId = Guid.Parse("00000000-0000-0000-0000-000000000001");
-        var orchestrationResponse = new
+        _mockGameSessionRepository
+            .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        _mockArbitroService
+            .Setup(s => s.ValidateMoveAsync(
+                It.IsAny<GameSession>(),
+                It.IsAny<Move>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateValidResult());
+
+        var command = new ValidateMoveCommand
         {
-            is_valid = true,
-            reason = "Knight moves in L-shape, position is legal",
-            applied_rule_ids = new List<Guid> { ruleId },
-            confidence = 0.95,
-            citations = new List<string> { "chess_rules.pdf#L45" },
-            execution_time_ms = 42.3,
-            error = (string?)null
+            GameSessionId = sessionId,
+            PlayerName = "Alice",
+            Action = "roll dice",
+            Position = null,
+            AdditionalContext = null
         };
-
-        var responseJson = JsonSerializer.Serialize(orchestrationResponse);
-
-        _mockHttpMessageHandler.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
-            {
-                StatusCode = HttpStatusCode.OK,
-                Content = new StringContent(responseJson)
-            });
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().NotBeNull();
-        result.IsValid.Should().BeTrue();
-        result.Reason.Should().Contain("Knight");
-        result.Confidence.Should().Be(0.95);
-        result.ExecutionTimeMs.Should().Be(42.3);
-        result.AppliedRuleIds.Should().ContainSingle();
-        result.Citations.Should().ContainSingle();
-        result.ErrorMessage.Should().BeNull();
+        Assert.NotNull(result);
+        Assert.Equal("VALID", result.Decision);
+        Assert.True(result.Confidence > 0.7);
+
+        _mockArbitroService.Verify(
+            s => s.ValidateMoveAsync(
+                It.Is<GameSession>(gs => gs.Id == sessionId),
+                It.Is<Move>(m => m.PlayerName == "Alice" && m.Action == "roll dice"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task Handle_InvalidMove_ReturnsInvalidResult()
+    public async Task Handle_WithNonExistentSession_ThrowsNotFoundException()
     {
         // Arrange
-        var command = new ValidateMoveCommand(
-            GameId: Guid.NewGuid(),
-            SessionId: Guid.NewGuid(),
-            Move: "Ke9", // Invalid - king can't move off board
-            GameState: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-        );
+        var sessionId = Guid.NewGuid();
 
-        var ruleId = Guid.Parse("00000000-0000-0000-0000-000000000003");
-        var orchestrationResponse = new
+        _mockGameSessionRepository
+            .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GameSession?)null);
+
+        var command = new ValidateMoveCommand
         {
-            is_valid = false,
-            reason = "Move violates board boundaries",
-            applied_rule_ids = new List<Guid> { ruleId },
-            confidence = 0.98,
-            citations = new List<string>(),
-            execution_time_ms = 38.5,
-            error = (string?)null
+            GameSessionId = sessionId,
+            PlayerName = "Bob",
+            Action = "move piece",
+            Position = "A5",
+            AdditionalContext = null
         };
-
-        var responseJson = JsonSerializer.Serialize(orchestrationResponse);
-
-        _mockHttpMessageHandler.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
-            {
-                StatusCode = HttpStatusCode.OK,
-                Content = new StringContent(responseJson)
-            });
-
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.IsValid.Should().BeFalse();
-        result.Reason.Should().Contain("violates");
-        result.Confidence.Should().Be(0.98);
-    }
-
-    [Fact]
-    public async Task Handle_OrchestrationServiceUnavailable_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var command = new ValidateMoveCommand(
-            GameId: Guid.NewGuid(),
-            SessionId: Guid.NewGuid(),
-            Move: "e4",
-            GameState: "start"
-        );
-
-        _mockHttpMessageHandler.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("Service unavailable"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _handler.Handle(command, CancellationToken.None));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => _handler.Handle(command, CancellationToken.None));
     }
 
     [Fact]
-    public async Task Handle_PerformanceTarget_CompletesUnder100ms()
+    public async Task Handle_WithAdditionalContext_PassesToArbitroService()
     {
         // Arrange
-        var command = new ValidateMoveCommand(
-            GameId: Guid.NewGuid(),
-            SessionId: Guid.NewGuid(),
-            Move: "e4",
-            GameState: "start"
-        );
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var session = CreateMockGameSession(sessionId, gameId, "Charlie");
 
-        var orchestrationResponse = new
+        var additionalContext = new Dictionary<string, string>
         {
-            is_valid = true,
-            reason = "Valid pawn move",
-            applied_rule_ids = new List<Guid> { Guid.NewGuid() },
-            confidence = 0.95,
-            citations = new List<string>(),
-            execution_time_ms = 85.0, // Under 100ms target
-            error = (string?)null
+            { "card", "King of Hearts" },
+            { "resource", "wood" }
         };
 
-        var responseJson = JsonSerializer.Serialize(orchestrationResponse);
+        _mockGameSessionRepository
+            .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
 
-        _mockHttpMessageHandler.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
-            {
-                StatusCode = HttpStatusCode.OK,
-                Content = new StringContent(responseJson)
-            });
+        _mockArbitroService
+            .Setup(s => s.ValidateMoveAsync(
+                It.IsAny<GameSession>(),
+                It.IsAny<Move>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateValidResult());
+
+        var command = new ValidateMoveCommand
+        {
+            GameSessionId = sessionId,
+            PlayerName = "Charlie",
+            Action = "play card",
+            Position = "discard pile",
+            AdditionalContext = additionalContext
+        };
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.ExecutionTimeMs.Should().BeLessThan(100);
+        Assert.NotNull(result);
+
+        _mockArbitroService.Verify(
+            s => s.ValidateMoveAsync(
+                It.IsAny<GameSession>(),
+                It.Is<Move>(m =>
+                    m.AdditionalContext != null &&
+                    m.AdditionalContext.ContainsKey("card") &&
+                    m.AdditionalContext["card"] == "King of Hearts"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => _handler.Handle(null!, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Handle_CreatesCorrectMoveValueObject()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var session = CreateMockGameSession(sessionId, gameId, "Diana");
+
+        Move? capturedMove = null;
+
+        _mockGameSessionRepository
+            .Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        _mockArbitroService
+            .Setup(s => s.ValidateMoveAsync(
+                It.IsAny<GameSession>(),
+                It.IsAny<Move>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<GameSession, Move, CancellationToken>((_, move, _) => capturedMove = move)
+            .ReturnsAsync(CreateValidResult());
+
+        var command = new ValidateMoveCommand
+        {
+            GameSessionId = sessionId,
+            PlayerName = "Diana",
+            Action = "draw card",
+            Position = "top of deck",
+            AdditionalContext = new Dictionary<string, string> { { "deck", "main" } }
+        };
+
+        // Act
+        await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(capturedMove);
+        Assert.Equal("Diana", capturedMove.PlayerName);
+        Assert.Equal("draw card", capturedMove.Action);
+        Assert.Equal("top of deck", capturedMove.Position);
+        Assert.NotNull(capturedMove.AdditionalContext);
+        Assert.Equal("main", capturedMove.AdditionalContext["deck"]);
+    }
+
+    private static GameSession CreateMockGameSession(Guid sessionId, Guid gameId, string playerName)
+    {
+        var players = new List<SessionPlayer>
+        {
+            new SessionPlayer(playerName, 1) // playerName, playerNumber
+        };
+
+        var session = new GameSession(
+            id: sessionId,
+            gameId: gameId,
+            players: players,
+            createdByUserId: null);
+
+        return session;
+    }
+
+    private static MoveValidationResultDto CreateValidResult()
+    {
+        return new MoveValidationResultDto
+        {
+            Decision = "VALID",
+            Confidence = 0.95,
+            Reasoning = "Move follows all applicable rules",
+            ViolatedRules = new List<string>(),
+            Suggestions = null,
+            ApplicableRules = new List<ArbitroRuleAtomDto>(),
+            TokenUsage = TokenUsageDto.Empty,
+            CostBreakdown = CostBreakdownDto.Zero("Test"),
+            LatencyMs = 50,
+            Timestamp = DateTime.UtcNow
+        };
     }
 }

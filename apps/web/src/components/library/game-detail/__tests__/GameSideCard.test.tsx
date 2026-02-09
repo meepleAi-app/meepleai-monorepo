@@ -38,7 +38,7 @@ describe('GameSideCard - Rendering', () => {
 
   it('renders Social Links tab', () => {
     const { container } = render(<GameSideCard gameId="game-123" gameTitle="Catan" bggId={null} />);
-    expect(container.textContent).toContain('Social Links');
+    expect(container.textContent).toContain('Link Utili'); // Italian localization
   });
 
   it('renders with BGG ID provided', () => {

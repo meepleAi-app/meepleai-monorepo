@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 
 /// <summary>
@@ -29,6 +31,7 @@ public sealed record AgentToolConfig
     {
     }
 
+    [JsonConstructor]
     private AgentToolConfig(string name, string settingsJson)
     {
         Name = name;

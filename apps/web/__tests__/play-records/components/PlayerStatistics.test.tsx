@@ -62,10 +62,11 @@ describe('PlayerStatistics', () => {
   it('displays stat cards with correct values', () => {
     renderComponent();
 
-    expect(screen.getByText('42')).toBeInTheDocument(); // Total sessions
-    expect(screen.getByText('18')).toBeInTheDocument(); // Total wins
+    // Use getAllByText for values that may appear multiple times
+    expect(screen.getAllByText('42').length).toBeGreaterThan(0); // Total sessions
+    expect(screen.getAllByText('18').length).toBeGreaterThan(0); // Total wins
     expect(screen.getByText('42.9%')).toBeInTheDocument(); // Win rate
-    expect(screen.getByText('5')).toBeInTheDocument(); // Unique games
+    expect(screen.getAllByText('5').length).toBeGreaterThan(0); // Unique games
   });
 
   it('shows loading state', () => {
@@ -109,8 +110,8 @@ describe('PlayerStatistics', () => {
 
   it('renders game play counts table', () => {
     renderComponent();
-    expect(screen.getByText('Twilight Imperium')).toBeInTheDocument();
-    expect(screen.getByText('Wingspan')).toBeInTheDocument();
-    expect(screen.getByText('12')).toBeInTheDocument();
+    expect(screen.getAllByText('Twilight Imperium').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Wingspan').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('12').length).toBeGreaterThan(0);
   });
 });

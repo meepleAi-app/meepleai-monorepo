@@ -84,7 +84,14 @@ internal sealed class BatchJobRepository : IBatchJobRepository
     public async Task UpdateAsync(BatchJob batchJob, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(batchJob);
-        _context.BatchJobs.Update(batchJob);
+
+        // Detach existing tracked entity if present to avoid tracking conflicts
+        var entry = _context.Entry(batchJob);
+        if (entry.State == EntityState.Detached)
+        {
+            _context.BatchJobs.Update(batchJob);
+        }
+
         await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 

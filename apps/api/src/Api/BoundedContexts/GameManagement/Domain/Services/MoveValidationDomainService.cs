@@ -100,6 +100,37 @@ internal class MoveValidationDomainService
     }
 
     /// <summary>
+    /// Retrieves applicable rules for a move without performing validation.
+    /// Used by ArbitroAgent for AI-powered validation.
+    /// </summary>
+    /// <param name="gameId">Game identifier.</param>
+    /// <param name="move">Move to find rules for.</param>
+    /// <param name="ruleSpecVersion">Optional rule version.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>List of applicable rules or empty if no RuleSpec found.</returns>
+    public async Task<List<RuleAtom>> GetApplicableRulesAsync(
+        Guid gameId,
+        Move move,
+        string? ruleSpecVersion = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(move);
+
+        var ruleSpec = await GetRuleSpecAsync(gameId, ruleSpecVersion, cancellationToken).ConfigureAwait(false);
+
+        if (ruleSpec == null)
+        {
+            _logger.LogWarning(
+                "No RuleSpec found for game {GameId}, version {Version}",
+                gameId,
+                ruleSpecVersion ?? "latest");
+            return new List<RuleAtom>();
+        }
+
+        return FindApplicableRules(ruleSpec, move);
+    }
+
+    /// <summary>
     /// Retrieves the RuleSpec for a game, using specified version or latest.
     /// </summary>
     private async Task<RuleSpec?> GetRuleSpecAsync(

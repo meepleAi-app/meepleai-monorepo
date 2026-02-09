@@ -7,14 +7,14 @@
 
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-
-import { Button } from '@/components/ui/primitives/button';
-import { SessionCreateForm } from '@/components/play-records/SessionCreateForm';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { useCreatePlayRecord } from '@/lib/hooks/use-play-records';
+
+import { SessionCreateForm } from '@/components/play-records/SessionCreateForm';
+import { Button } from '@/components/ui/primitives/button';
 import type { SessionCreateForm as SessionFormData } from '@/lib/api/schemas/play-records.schemas';
+import { useCreatePlayRecord } from '@/lib/hooks/use-play-records';
 
 export default function NewPlayRecordPage() {
   const router = useRouter();

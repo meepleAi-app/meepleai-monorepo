@@ -9,9 +9,12 @@
 'use client';
 
 import React from 'react';
+
 import { cn } from '@/lib/utils';
-import { MeepleCardSkeleton } from '../../meeple-card';
+
 import { GameCarouselSkeleton } from '../../game-carousel';
+import { MeepleCardSkeleton } from '../../meeple-card';
+
 import type { ViewMode } from '../entity-list-view.types';
 
 export interface LoadingSkeletonProps {

@@ -41,6 +41,7 @@ import {
 import Link from 'next/link';
 
 import { Badge } from '@/components/ui/data-display/badge';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   Select,
@@ -59,7 +60,6 @@ import {
 import type { GameStateType, GetUserLibraryParams } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';
 
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 
 // ============================================================================
 // Types
@@ -720,7 +720,7 @@ export function CollectionDashboard({ className }: CollectionDashboardProps) {
                     metadata={[
                       { label: 'Year', value: game.yearPublished?.toString() },
                       { label: 'Plays', value: game.playCount.toString() },
-                    ].filter(m => m.value) as any}
+                    ].filter(m => m.value) as Array<{ label: string; value: string }>}
                   />
                 ))}
               </motion.div>

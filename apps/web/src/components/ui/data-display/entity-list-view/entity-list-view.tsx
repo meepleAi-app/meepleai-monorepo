@@ -39,19 +39,22 @@
 'use client';
 
 import React from 'react';
+
 import { cn } from '@/lib/utils';
-import { MeepleCard } from '../meeple-card';
+
 import { GameCarousel, type CarouselGame } from '../game-carousel';
-import { useViewMode } from './hooks/use-view-mode';
-import { useSearch } from './hooks/use-search';
-import { useSort } from './hooks/use-sort';
-import { useFilters } from './hooks/use-filters';
-import { ViewModeSwitcher } from './components/view-mode-switcher';
+import { MeepleCard } from '../meeple-card';
+import { EmptyState } from './components/empty-state';
+import { FilterPanel } from './components/filter-panel';
+import { LoadingSkeleton } from './components/loading-skeleton';
 import { SearchBar } from './components/search-bar';
 import { SortDropdown } from './components/sort-dropdown';
-import { FilterPanel } from './components/filter-panel';
-import { EmptyState } from './components/empty-state';
-import { LoadingSkeleton } from './components/loading-skeleton';
+import { ViewModeSwitcher } from './components/view-mode-switcher';
+import { useFilters } from './hooks/use-filters';
+import { useSearch } from './hooks/use-search';
+import { useSort } from './hooks/use-sort';
+import { useViewMode } from './hooks/use-view-mode';
+
 import type { EntityListViewProps } from './entity-list-view.types';
 
 // ============================================================================
@@ -66,6 +69,7 @@ import type { EntityListViewProps } from './entity-list-view.types';
  * Phase 3: Search + Sort
  * Phase 4: Filters
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function EntityListView<T = any>({
   // Required
   items,
@@ -119,7 +123,7 @@ export function EntityListView<T = any>({
   'data-testid': testId,
 }: EntityListViewProps<T>) {
   // View mode state with localStorage persistence
-  const { mode, setMode, isAvailable } = useViewMode(
+  const { mode, setMode, isAvailable: _isAvailable } = useViewMode(
     persistenceKey,
     defaultViewMode,
     availableModes || ['grid', 'list', 'carousel'],

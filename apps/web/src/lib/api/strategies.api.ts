@@ -1,4 +1,5 @@
 import { HttpClient } from './core/httpClient';
+
 import type { CreateStrategy, StrategyDto } from './schemas/strategies.schemas';
 
 const httpClient = new HttpClient({});

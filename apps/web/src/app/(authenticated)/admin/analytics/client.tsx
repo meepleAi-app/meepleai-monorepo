@@ -19,13 +19,12 @@ import { useAuthUser } from '@/components/auth/AuthProvider';
 import { ErrorDisplay } from '@/components/errors';
 import { LoadingButton } from '@/components/loading/LoadingButton';
 import { api } from '@/lib/api';
-import { categorizeError } from '@/lib/errorUtils';
-import { getErrorMessage } from '@/lib/utils/errorHandler';
 import type {
   DashboardStats,
-  DashboardMetrics,
   TimeSeriesDataPoint,
 } from '@/lib/api/schemas/admin.schemas';
+import { categorizeError } from '@/lib/errorUtils';
+import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 type ToastMessage = {
   id: string;

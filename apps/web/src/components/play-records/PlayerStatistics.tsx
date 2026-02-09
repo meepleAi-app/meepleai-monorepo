@@ -22,7 +22,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 
@@ -42,7 +41,6 @@ import {
   TableRow,
 } from '@/components/ui/data-display/table';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-
 import { usePlayerStatistics } from '@/lib/hooks/use-play-records';
 
 const CHART_COLORS = [

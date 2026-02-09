@@ -11,8 +11,9 @@
  * - Dark mode variants
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { LibrarySnapshot, type TopGame, type LibraryQuota } from './LibrarySnapshot';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Dashboard/LibrarySnapshot',

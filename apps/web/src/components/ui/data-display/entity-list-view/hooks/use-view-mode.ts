@@ -24,8 +24,10 @@
  * ```
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
+
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+
 import type { ViewMode } from '../entity-list-view.types';
 
 /**

@@ -12,9 +12,10 @@ import React, { type ReactNode, Suspense } from 'react';
 
 import { useSearchParams } from 'next/navigation';
 
-import { EnterpriseTabSystem } from './EnterpriseTabSystem';
 import type { EnterpriseSection } from '@/config/enterprise-navigation';
 import { cn } from '@/lib/utils';
+
+import { EnterpriseTabSystem } from './EnterpriseTabSystem';
 
 interface EnterpriseSectionPageProps {
   section: EnterpriseSection;

@@ -2,10 +2,12 @@
  * Storybook stories for ViewModeSwitcher component
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
+
 import { ViewModeSwitcher } from './view-mode-switcher';
+
 import type { ViewMode } from '../entity-list-view.types';
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta: Meta<typeof ViewModeSwitcher> = {
   title: 'UI/Data Display/EntityListView/ViewModeSwitcher',

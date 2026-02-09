@@ -1,12 +1,14 @@
 'use client';
 
-import { Download, Trash2 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+
+import { useQuery } from '@tanstack/react-query';
+import { Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+
 import { ChatInterface } from '@/components/playground/ChatInterface';
 import { DebugPanel } from '@/components/playground/DebugPanel';
+import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
 import { usePlaygroundStore } from '@/stores/playground-store';
 
@@ -41,8 +43,6 @@ export default function AgentPlaygroundPage() {
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let assistantMessageId: string | null = null;
-
       // Add placeholder assistant message
       addMessage({ role: 'assistant', content: '' });
 

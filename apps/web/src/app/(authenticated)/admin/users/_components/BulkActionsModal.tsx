@@ -11,9 +11,10 @@
 
 import { useState } from 'react';
 
-import { Key, UserCog, Upload, Download, AlertCircle } from 'lucide-react';
+import { Key, UserCog, Download, AlertCircle } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import {
   Dialog,
   DialogContent,
@@ -22,10 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
-import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
 import {
   Select,
   SelectContent,
@@ -33,6 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import {
   bulkPasswordReset,
@@ -53,7 +53,7 @@ export function BulkActionsModal({
   open,
   onClose,
   selectedUserIds,
-  selectedUserEmails,
+  selectedUserEmails: _selectedUserEmails,
   onSuccess,
 }: BulkActionsModalProps) {
   const [loading, setLoading] = useState(false);

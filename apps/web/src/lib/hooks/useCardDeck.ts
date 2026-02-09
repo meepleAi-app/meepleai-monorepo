@@ -348,6 +348,7 @@ export function useCardDeck(options: UseCardDeckOptions): CardDeckState {
 
         // Update local hand state
         setHands(prev => {
+          // eslint-disable-next-line security/detect-object-injection
           const currentHand = prev[deckId]?.cards || [];
           return {
             ...prev,
@@ -413,6 +414,7 @@ export function useCardDeck(options: UseCardDeckOptions): CardDeckState {
 
         // Update local hand state (remove discarded cards)
         setHands(prev => {
+          // eslint-disable-next-line security/detect-object-injection
           const currentHand = prev[deckId]?.cards || [];
           const cardIdSet = new Set(cardIds);
           return {
@@ -427,12 +429,14 @@ export function useCardDeck(options: UseCardDeckOptions): CardDeckState {
 
         // Update discard pile
         setDiscardPiles(prev => {
+          // eslint-disable-next-line security/detect-object-injection
           const currentPile = prev[deckId]?.cards || [];
           return {
             ...prev,
             [deckId]: {
               deckId,
               cards: [...data.discardedCards, ...currentPile],
+              // eslint-disable-next-line security/detect-object-injection
               totalCount: (prev[deckId]?.totalCount || 0) + data.discardedCards.length,
             },
           };

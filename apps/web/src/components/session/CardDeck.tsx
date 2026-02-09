@@ -74,6 +74,7 @@ function getCardDisplayValue(value?: string): string {
     Queen: 'Q',
     King: 'K',
   };
+  // eslint-disable-next-line security/detect-object-injection
   return valueMap[value] || value;
 }
 
@@ -127,6 +128,7 @@ function PlayingCard({ card, isSelected, isFaceDown, onClick, className }: Playi
           {card.imageUrl ? (
             // Custom card with image
             <div className="w-full h-full flex flex-col items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={card.imageUrl}
                 alt={card.name}

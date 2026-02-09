@@ -27,10 +27,11 @@
 
 import { NextResponse } from 'next/server';
 
+import * as metrics from '@/lib/metrics/session-cache-metrics';
+
 import type { NextRequest } from 'next/server';
 
 // Issue #3797: Import metrics manager (works in Edge Runtime)
-import * as metrics from '@/lib/metrics/session-cache-metrics';
 
 // ============================================================================
 // Configuration

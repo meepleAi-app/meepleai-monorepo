@@ -1,14 +1,16 @@
 'use client';
 
+import { useState } from 'react';
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui';
-import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
+
 import { BuilderFilters } from '@/components/admin/agent-definitions/BuilderFilters';
 import { BuilderTable } from '@/components/admin/agent-definitions/BuilderTable';
+import { Button } from '@/components/ui';
+import { agentDefinitionsApi } from '@/lib/api/agent-definitions.api';
 
 export default function AgentDefinitionsPage() {
   const queryClient = useQueryClient();

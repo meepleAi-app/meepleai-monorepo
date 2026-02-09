@@ -418,7 +418,9 @@ export function usePrivateNotes(options: UsePrivateNotesOptions): PrivateNotesSt
             if (existingIndex >= 0) {
               // Update existing note
               const updated = [...prev];
+              // eslint-disable-next-line security/detect-object-injection
               updated[existingIndex] = {
+                // eslint-disable-next-line security/detect-object-injection
                 ...updated[existingIndex],
                 isRevealed: true,
                 content: event.content,

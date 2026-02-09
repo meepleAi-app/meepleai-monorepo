@@ -77,6 +77,7 @@ export const useWishlist = create<WishlistState>()(
         wishlistIds: Array.from(state.wishlistIds),
       }),
       // Deserialize Array back to Set
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       merge: (persistedState: any, currentState) => ({
         ...currentState,
         wishlistIds: new Set(persistedState?.wishlistIds || []),

@@ -22,7 +22,9 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+
 import { Search, X } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 export interface SearchBarProps {

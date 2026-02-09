@@ -14,10 +14,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Star, TrendingUp, Calendar, ArrowDownAZ, Users } from 'lucide-react';
+
+import { Star, TrendingUp, Calendar, ArrowDownAZ } from 'lucide-react';
+
 import { EntityListView } from '@/components/ui/data-display/entity-list-view';
-import { createComparator } from '@/components/ui/data-display/entity-list-view/utils/sort-utils';
 import type { SortOption, FilterConfig } from '@/components/ui/data-display/entity-list-view/entity-list-view.types';
+import { createComparator } from '@/components/ui/data-display/entity-list-view/utils/sort-utils';
 
 // Mock game data
 interface Game {
@@ -181,6 +183,7 @@ export default function EntityListCompleteDemoPage() {
             { label: 'Year', value: game.yearPublished.toString(), icon: Calendar },
           ],
         })}
+        // eslint-disable-next-line no-console
         onItemClick={(game) => console.log('Clicked:', game.title)}
         title="Featured Games"
         subtitle="Browse, search, and sort your collection"

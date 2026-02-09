@@ -10,7 +10,6 @@
 
 import type {
   PlayRecordDto,
-  PlayRecordSummary,
   PlayHistoryResponse,
   PlayerStatistics,
   CreatePlayRecordRequest,

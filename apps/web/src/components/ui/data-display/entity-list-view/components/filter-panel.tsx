@@ -10,17 +10,22 @@
 'use client';
 
 import React from 'react';
-import { Filter, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
+import { Filter } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
+
 import { FilterChip } from './filter-chip';
-import { SelectFilter } from './filters/select-filter';
 import { CheckboxFilter } from './filters/checkbox-filter';
-import { RangeFilter } from './filters/range-filter';
 import { DateRangeFilter } from './filters/date-range-filter';
-import type { FilterConfig, FilterState } from '../entity-list-view.types';
+import { RangeFilter } from './filters/range-filter';
+import { SelectFilter } from './filters/select-filter';
 import { getFilterDisplayValue } from '../utils/filter-utils';
+
+import type { FilterConfig, FilterState } from '../entity-list-view.types';
+
 
 export interface FilterPanelProps<T> {
   /** Filter configuration */

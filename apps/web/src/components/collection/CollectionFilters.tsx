@@ -201,6 +201,7 @@ export function CollectionFilters({
   className,
 }: CollectionFiltersProps) {
   const handleToggleFilter = (key: 'hasPdf' | 'hasActiveChat') => {
+    // eslint-disable-next-line security/detect-object-injection
     const newValue = cycleToggle(filters[key]);
     onFilterChange({
       ...filters,

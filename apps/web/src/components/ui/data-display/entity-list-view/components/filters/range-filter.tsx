@@ -7,8 +7,10 @@
 'use client';
 
 import React from 'react';
-import { Slider } from '@/components/ui/slider';
+
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+
 import type { RangeFilter as RangeFilterConfig } from '../../entity-list-view.types';
 
 export interface RangeFilterProps<T> {

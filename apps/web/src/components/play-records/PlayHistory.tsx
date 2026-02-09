@@ -14,13 +14,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+
 import { Calendar, Filter, Grid3X3, List, Search, X, AlertCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { Button } from '@/components/ui/primitives/button';
-import { Input } from '@/components/ui/primitives/input';
-import { Label } from '@/components/ui/primitives/label';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import {
   Select,
   SelectContent,
@@ -28,9 +27,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-import { Badge } from '@/components/ui/data-display/badge';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-
+import { Button } from '@/components/ui/primitives/button';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import type { PlayRecordStatus } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayHistory } from '@/lib/hooks/use-play-records';
 import {
   usePlayRecordsStore,
@@ -38,13 +38,12 @@ import {
   selectViewPreferences,
   selectHasActiveFilters,
 } from '@/lib/stores/play-records-store';
-import type { PlayRecordSummary } from '@/lib/api/schemas/play-records.schemas';
 
 export interface PlayHistoryProps {
   userId?: string; // Optional: filter by specific user (default: current user)
 }
 
-export function PlayHistory({ userId }: PlayHistoryProps) {
+export function PlayHistory({ userId: _userId }: PlayHistoryProps) {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -77,7 +76,8 @@ export function PlayHistory({ userId }: PlayHistoryProps) {
   const formatDuration = (duration: string | null): string => {
     if (!duration) return 'N/A';
     // Parse ISO 8601 duration (e.g., "PT2H30M")
-    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+    // eslint-disable-next-line security/detect-unsafe-regex -- ISO 8601 duration, anchored and safe
+    const match = duration.match(/^PT(?:(\d+)H)?(?:(\d+)M)?$/);
     if (!match) return duration;
     const hours = match[1] ? `${match[1]}h` : '';
     const minutes = match[2] ? `${match[2]}m` : '';
@@ -162,7 +162,7 @@ export function PlayHistory({ userId }: PlayHistoryProps) {
               <Label htmlFor="status" className="text-sm">Status</Label>
               <Select
                 value={filters.status}
-                onValueChange={(value) => setFilter('status', value as any)}
+                onValueChange={(value) => setFilter('status', value as PlayRecordStatus | 'all')}
               >
                 <SelectTrigger id="status" className="mt-1">
                   <SelectValue />
@@ -179,7 +179,7 @@ export function PlayHistory({ userId }: PlayHistoryProps) {
 
             <div>
               <Label htmlFor="sort" className="text-sm">Sort By</Label>
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'recent' | 'oldest' | 'game' | 'duration')}>
                 <SelectTrigger id="sort" className="mt-1">
                   <SelectValue />
                 </SelectTrigger>

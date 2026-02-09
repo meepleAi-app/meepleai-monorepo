@@ -44,6 +44,7 @@ export function PrivateGameCard({ game, onEdit, onDelete, onPropose }: PrivateGa
       {(game.description || game.imageUrl) && (
         <CardContent className="space-y-3">
           {game.imageUrl && (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={game.imageUrl}
               alt={game.title}

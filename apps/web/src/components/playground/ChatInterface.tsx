@@ -1,17 +1,19 @@
 'use client';
 
-import { Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+
+import { Send } from 'lucide-react';
+
 import { Button, Input, ScrollArea } from '@/components/ui';
-import { usePlaygroundStore } from '@/stores/playground-store';
 import { cn } from '@/lib/utils';
+import { usePlaygroundStore } from '@/stores/playground-store';
 
 interface ChatInterfaceProps {
   agentId: string;
   onSendMessage: (message: string) => Promise<void>;
 }
 
-export function ChatInterface({ agentId, onSendMessage }: ChatInterfaceProps) {
+export function ChatInterface({ agentId: _agentId, onSendMessage }: ChatInterfaceProps) {
   const [input, setInput] = useState('');
   const { messages, isStreaming, addMessage } = usePlaygroundStore();
   const scrollRef = useRef<HTMLDivElement>(null);

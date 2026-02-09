@@ -12,7 +12,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
 import { Users, Clock, Calendar, Star, TrendingUp } from 'lucide-react';
+
 import { EntityListView } from '@/components/ui/data-display/entity-list-view';
 
 // ============================================================================
@@ -293,6 +295,7 @@ export default function EntityListViewDemoPage() {
             })}
             onItemClick={(game) => {
               setClickedGame(game.title);
+              // eslint-disable-next-line no-console
               console.log('Game clicked:', game);
             }}
             title="Featured Games"
@@ -321,6 +324,7 @@ export default function EntityListViewDemoPage() {
             })}
             onItemClick={(collection) => {
               setClickedGame(collection.name);
+              // eslint-disable-next-line no-console
               console.log('Collection clicked:', collection);
             }}
             title="My Collections"
@@ -339,7 +343,7 @@ export default function EntityListViewDemoPage() {
           items={[]}
           entity="event"
           persistenceKey="demo-events"
-          renderItem={(event: any) => ({
+          renderItem={(event: { id: string; title: string }) => ({
             id: event.id,
             title: event.title,
           })}
@@ -388,7 +392,7 @@ export default function EntityListViewDemoPage() {
           ]}
           entity="player"
           persistenceKey="demo-players"
-          renderItem={(player: any) => ({
+          renderItem={(player: { id: string; name: string; username: string; plays: number }) => ({
             id: player.id,
             title: player.name,
             subtitle: player.username,
@@ -397,7 +401,7 @@ export default function EntityListViewDemoPage() {
               { icon: Star, value: 'Top 5%' },
             ],
           })}
-          onItemClick={(player: any) => {
+          onItemClick={(player: { id: string; name: string; username: string; plays: number }) => {
             setClickedGame(`Player: ${player.name}`);
           }}
           title="Top Players"

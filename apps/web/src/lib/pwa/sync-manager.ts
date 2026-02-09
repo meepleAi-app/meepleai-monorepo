@@ -162,6 +162,7 @@ class SyncManager {
   // ==========================================================================
 
   private handleOnline = async () => {
+    // eslint-disable-next-line no-console
     console.log('[SyncManager] Back online');
     this.updateState({ isOnline: true });
 
@@ -170,6 +171,7 @@ class SyncManager {
   };
 
   private handleOffline = () => {
+    // eslint-disable-next-line no-console
     console.log('[SyncManager] Went offline');
     this.updateState({ isOnline: false });
   };
@@ -186,11 +188,13 @@ class SyncManager {
 
   public async syncAll(): Promise<SyncResult> {
     if (this.syncInProgress) {
+      // eslint-disable-next-line no-console
       console.log('[SyncManager] Sync already in progress');
       return { success: false, synced: 0, failed: 0, errors: [] };
     }
 
     if (!navigator.onLine) {
+      // eslint-disable-next-line no-console
       console.log('[SyncManager] Cannot sync: offline');
       return { success: false, synced: 0, failed: 0, errors: [] };
     }
@@ -209,6 +213,7 @@ class SyncManager {
       const pendingActions = await getPendingActions();
       this.updateState({ pendingCount: pendingActions.length });
 
+      // eslint-disable-next-line no-console
       console.log(`[SyncManager] Syncing ${pendingActions.length} pending actions`);
 
       for (const action of pendingActions) {
@@ -340,6 +345,7 @@ class SyncManager {
     try {
       const registration = await navigator.serviceWorker.ready;
       await (registration as ServiceWorkerRegistration & { sync: { register: (tag: string) => Promise<void> } }).sync.register('session-sync');
+      // eslint-disable-next-line no-console
       console.log('[SyncManager] Background sync registered');
       return true;
     } catch (error) {

@@ -28,8 +28,11 @@
 'use client';
 
 import React from 'react';
+
 import { Grid3x3, List as ListIcon, GalleryHorizontal } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
+
 import type { ViewMode } from '../entity-list-view.types';
 
 // ============================================================================
@@ -100,10 +103,12 @@ export const ViewModeSwitcher = React.memo(function ViewModeSwitcher({
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       e.preventDefault();
       const nextIdx = (currentIdx + 1) % availableModes.length;
+      // eslint-disable-next-line security/detect-object-injection
       onChange(availableModes[nextIdx]);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
       e.preventDefault();
       const prevIdx = (currentIdx - 1 + availableModes.length) % availableModes.length;
+      // eslint-disable-next-line security/detect-object-injection
       onChange(availableModes[prevIdx]);
     }
   };
@@ -122,6 +127,7 @@ export const ViewModeSwitcher = React.memo(function ViewModeSwitcher({
       data-testid={testId || 'view-mode-switcher'}
     >
       {availableModes.map((mode) => {
+        // eslint-disable-next-line security/detect-object-injection
         const config = MODE_CONFIG[mode];
         const Icon = config.icon;
         const isActive = value === mode;

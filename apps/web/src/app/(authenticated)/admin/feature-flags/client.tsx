@@ -6,10 +6,11 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
+import Link from 'next/link';
+
 import { AdminAuthGuard } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { api } from '@/lib/api';
-import Link from 'next/link';
 
 type FeatureFlag = {
   key: string;

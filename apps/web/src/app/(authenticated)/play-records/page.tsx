@@ -7,11 +7,11 @@
 
 'use client';
 
-import Link from 'next/link';
 import { Plus } from 'lucide-react';
+import Link from 'next/link';
 
-import { Button } from '@/components/ui/primitives/button';
 import { PlayHistory } from '@/components/play-records/PlayHistory';
+import { Button } from '@/components/ui/primitives/button';
 
 export default function PlayRecordsPage() {
   return (

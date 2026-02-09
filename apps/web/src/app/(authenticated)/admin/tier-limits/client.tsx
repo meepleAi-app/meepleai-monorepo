@@ -6,10 +6,12 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { AdminAuthGuard } from '@/components/admin';
-import { useAuthUser } from '@/components/auth/AuthProvider';
+
 import { Edit2 } from 'lucide-react';
 import Link from 'next/link';
+
+import { AdminAuthGuard } from '@/components/admin';
+import { useAuthUser } from '@/components/auth/AuthProvider';
 
 type TierLimit = {
   tierId: string;
@@ -40,6 +42,7 @@ export function TierLimitsClient() {
       const data = await response.json();
 
       // Map API response to TierLimit type
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mappedLimits = (data.tiers || data || []).map((tier: any) => ({
         tierId: tier.id,
         tierName: tier.name || 'Unknown',

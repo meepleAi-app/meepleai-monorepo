@@ -500,6 +500,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
               </Card>
 
               {/* Token Usage Card (Issue #3704) */}
+              {/* eslint-disable @typescript-eslint/no-explicit-any -- Token usage fields not yet in UserProfile type */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm">Token Usage (This Month)</CardTitle>
@@ -549,6 +550,7 @@ export function UserDetailClient({ userId }: UserDetailClientProps) {
                   </div>
                 </CardContent>
               </Card>
+              {/* eslint-enable @typescript-eslint/no-explicit-any */}
 
               {/* Badges Card (Issue #2890) */}
               {badges.length > 0 && (

@@ -4,8 +4,8 @@
  * @module components/ui/data-display/entity-list-view/types
  */
 
-import type { LucideIcon } from 'lucide-react';
 import type { MeepleCardProps, MeepleEntityType } from '../meeple-card';
+import type { LucideIcon } from 'lucide-react';
 
 // ============================================================================
 // View Mode Types
@@ -110,6 +110,7 @@ export type FilterConfig<T> =
 /**
  * Active filter state (filterId -> filterValue)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type FilterState = Record<string, any>;
 
 // ============================================================================
@@ -164,6 +165,7 @@ export interface CarouselOptions {
  *
  * @template T - Type of items in the list
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface EntityListViewProps<T = any> {
   // ========== REQUIRED ==========
 

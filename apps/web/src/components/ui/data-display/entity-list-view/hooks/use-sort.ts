@@ -31,6 +31,7 @@
  */
 
 import { useMemo, useState } from 'react';
+
 import type { SortOption } from '../entity-list-view.types';
 
 /**

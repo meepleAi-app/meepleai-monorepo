@@ -5,10 +5,11 @@
  * Phase 2+: List, Carousel, Search, Sort, Filter stories
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { Users, Clock } from 'lucide-react';
+
 import { EntityListView } from './entity-list-view';
-import type { EntityListViewProps } from './entity-list-view.types';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 // Mock game data
 interface Game {

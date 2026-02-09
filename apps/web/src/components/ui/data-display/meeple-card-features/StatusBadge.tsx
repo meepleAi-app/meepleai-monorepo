@@ -6,6 +6,7 @@
 'use client';
 
 import { CheckCircle, Heart, Play, ArrowLeftRight, Repeat, type LucideIcon } from 'lucide-react';
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/overlays/tooltip';
 import { cn } from '@/lib/utils';
 
@@ -72,6 +73,7 @@ export function StatusBadge({ status, showIcon = false, size = 'sm', className }
   return (
     <div className={cn('flex flex-col gap-1', className)} data-testid="status-badge-container">
       {statuses.map((s) => {
+        // eslint-disable-next-line security/detect-object-injection
         const config = statusConfig[s];
         const Icon = config.icon;
 

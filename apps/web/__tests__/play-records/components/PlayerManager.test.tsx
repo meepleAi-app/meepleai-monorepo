@@ -6,7 +6,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { PlayerManager } from '@/components/play-records/PlayerManager';
 import type { SessionPlayer } from '@/lib/api/schemas/play-records.schemas';
@@ -96,7 +97,8 @@ describe('PlayerManager', () => {
     fireEvent.click(addButton);
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Player Type')).toBeInTheDocument();
+      // RadioGroup doesn't have labelable element, check for text instead
+      expect(screen.getByText('Player Type')).toBeInTheDocument();
     });
   });
 
@@ -116,7 +118,7 @@ describe('PlayerManager', () => {
     fireEvent.click(guestRadio);
 
     // Enter name
-    const nameInput = screen.getByPlaceholder('Enter player name...');
+    const nameInput = screen.getByPlaceholderText('Enter player name...');
     fireEvent.change(nameInput, { target: { value: 'Charlie' } });
 
     // Submit

@@ -190,6 +190,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
                 confidence: 0.0,
                 reasoning: $"AI validation unavailable: {llmResult.ErrorMessage}",
                 applicableRules: MapToRuleAtomDtos(applicableRules),
+                conflicts: null,
                 elapsedMs: stopwatch.ElapsedMilliseconds);
         }
 

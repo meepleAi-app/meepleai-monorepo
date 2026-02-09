@@ -9,9 +9,10 @@ using Microsoft.Extensions.Caching.Hybrid;
 namespace Api.BoundedContexts.Administration.Application.Handlers;
 
 /// <summary>
-/// Handler for GetDashboardQuery (Issue #3314).
+/// Handler for GetDashboardQuery (Issue #3972).
 /// Aggregates data from multiple bounded contexts with HybridCache optimization.
 /// Target latency: under 500ms (p99) with 5-minute Redis cache.
+/// Response schema aligned with frontend DashboardData type.
 /// </summary>
 internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, DashboardResponseDto>
 {
@@ -50,7 +51,7 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
             {
                 _logger.LogInformation("Cache miss for dashboard API {UserId}, generating fresh data", query.UserId);
 
-                // Parallel execution for performance (Issue #3314: under 500ms p99)
+                // Parallel execution for performance (Issue #3972: under 500ms p99)
                 var userTask = GetUserInfoAsync(query.UserId, cancel);
                 var statsTask = GetStatsAsync(query.UserId, cancel);
                 var sessionsTask = GetActiveSessionsAsync(query.UserId, cancel);
@@ -67,7 +68,7 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
                     ActiveSessions: await sessionsTask.ConfigureAwait(false),
                     LibrarySnapshot: await libraryTask.ConfigureAwait(false),
                     RecentActivity: await activityTask.ConfigureAwait(false),
-                    RecentChats: await chatsTask.ConfigureAwait(false)
+                    ChatHistory: await chatsTask.ConfigureAwait(false)
                 );
             },
             new HybridCacheEntryOptions
@@ -88,73 +89,66 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
             var user = await _dbContext.Users
                 .AsNoTracking()
                 .Where(u => u.Id == userId)
-                .Select(u => new { u.DisplayName, u.Email, u.CreatedAt })
+                .Select(u => new { u.Id, u.DisplayName, u.Email })
                 .FirstOrDefaultAsync(ct)
                 .ConfigureAwait(false);
 
             return new DashboardUserDto(
-                Name: user?.DisplayName ?? user?.Email ?? "User",
-                LastAccess: user?.CreatedAt ?? DateTime.UtcNow
+                Id: user?.Id ?? userId,
+                Username: user?.DisplayName ?? "User",
+                Email: user?.Email ?? string.Empty
             );
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch user info for {UserId}", userId);
-            return new DashboardUserDto("User", DateTime.UtcNow);
+            return new DashboardUserDto(userId, "User", string.Empty);
         }
     }
 
-    private async Task<DashboardStatsResponseDto> GetStatsAsync(Guid userId, CancellationToken ct)
+    private async Task<DashboardUserStatsDto> GetStatsAsync(Guid userId, CancellationToken ct)
     {
         try
         {
-            // Collection stats
-            var collectionTotal = await _dbContext.UserLibraryEntries
+            // Library count
+            var libraryCount = await _dbContext.UserLibraryEntries
                 .AsNoTracking()
                 .CountAsync(e => e.UserId == userId, ct)
                 .ConfigureAwait(false);
 
-            // Trend: games added in last 30 days
+            // Games played in last 30 days (sessions)
             var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
-            var collectionTrend = await _dbContext.UserLibraryEntries
-                .AsNoTracking()
-                .CountAsync(e => e.UserId == userId && e.AddedAt >= thirtyDaysAgo, ct)
-                .ConfigureAwait(false);
-
-            // Played stats (sessions count)
-            var sessionsPlayed = await _dbContext.UserLibraryEntries
+            var playedLast30Days = await _dbContext.UserLibraryEntries
                 .AsNoTracking()
                 .Where(e => e.UserId == userId)
                 .SelectMany(e => e.Sessions)
-                .CountAsync(ct)
+                .CountAsync(s => s.PlayedAt >= thirtyDaysAgo, ct)
                 .ConfigureAwait(false);
 
-            // Chat stats (using ChatThreads)
-            var chatsTotal = await _dbContext.ChatThreads
+            // Chat count
+            var chatCount = await _dbContext.ChatThreads
                 .AsNoTracking()
                 .CountAsync(c => c.UserId == userId, ct)
                 .ConfigureAwait(false);
 
             // Wishlist is not available in current schema, returning 0
-            var wishlistTotal = 0;
-            var wishlistTrend = 0;
+            var wishlistCount = 0;
 
-            return new DashboardStatsResponseDto(
-                Collection: new DashboardStatItemDto(collectionTotal, collectionTrend),
-                Played: new DashboardPlayedStatDto(sessionsPlayed, 0),
-                Chats: new DashboardStatCountDto(chatsTotal),
-                Wishlist: new DashboardStatItemDto(wishlistTotal, wishlistTrend)
+            // Current streak: consecutive days with sessions (simplified)
+            var currentStreak = 0;
+
+            return new DashboardUserStatsDto(
+                LibraryCount: libraryCount,
+                PlayedLast30Days: playedLast30Days,
+                ChatCount: chatCount,
+                WishlistCount: wishlistCount,
+                CurrentStreak: currentStreak
             );
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch stats for {UserId}", userId);
-            return new DashboardStatsResponseDto(
-                Collection: new DashboardStatItemDto(0, 0),
-                Played: new DashboardPlayedStatDto(0, 0),
-                Chats: new DashboardStatCountDto(0),
-                Wishlist: new DashboardStatItemDto(0, 0)
-            );
+            return new DashboardUserStatsDto(0, 0, 0, 0, 0);
         }
     }
 
@@ -162,7 +156,6 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
     {
         try
         {
-            // Get recent game sessions from user's library entries
             var sessions = await _dbContext.UserLibraryEntries
                 .AsNoTracking()
                 .Include(e => e.Sessions)
@@ -175,7 +168,7 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
                     {
                         Session = s,
                         Game = e.SharedGame,
-                        GameId = e.GameId
+                        SharedGameId = e.SharedGameId
                     }))
                 .OrderByDescending(x => x.Session.PlayedAt)
                 .Take(5)
@@ -188,14 +181,18 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
                     ? 1
                     : s.Session.Players.Split(',', StringSplitOptions.RemoveEmptyEntries).Length;
 
+                var durationStr = s.Session.DurationMinutes > 0
+                    ? $"{s.Session.DurationMinutes}min"
+                    : "0min";
+
                 return new DashboardSessionDto(
                     Id: s.Session.Id,
                     GameName: s.Game?.Title ?? "Unknown Game",
-                    GameId: s.GameId,
-                    StartDate: s.Session.PlayedAt,
+                    GameId: s.SharedGameId ?? Guid.Empty,
+                    CoverUrl: s.Game?.ImageUrl,
                     Players: new DashboardPlayersDto(playerCount, playerCount),
-                    Turn: 0,
-                    Duration: s.Session.DurationMinutes
+                    Progress: new DashboardProgressDto(0, durationStr),
+                    LastActivity: s.Session.PlayedAt
                 );
             }).ToList();
         }
@@ -210,15 +207,11 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
     {
         try
         {
-            // Quota
             var used = await _dbContext.UserLibraryEntries
                 .AsNoTracking()
                 .CountAsync(e => e.UserId == userId, ct)
                 .ConfigureAwait(false);
 
-            var percentage = used * 100 / DefaultLibraryQuota;
-
-            // Top 3 games by play count (TimesPlayed)
             var topGames = await _dbContext.UserLibraryEntries
                 .AsNoTracking()
                 .Include(e => e.SharedGame)
@@ -237,7 +230,7 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
                 .ConfigureAwait(false);
 
             return new DashboardLibrarySnapshotDto(
-                Quota: new DashboardQuotaDto(used, DefaultLibraryQuota, Math.Min(percentage, 100)),
+                Quota: new DashboardQuotaDto(used, DefaultLibraryQuota),
                 TopGames: topGames
             );
         }
@@ -245,7 +238,7 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
         {
             _logger.LogError(ex, "Failed to fetch library snapshot for {UserId}", userId);
             return new DashboardLibrarySnapshotDto(
-                Quota: new DashboardQuotaDto(0, DefaultLibraryQuota, 0),
+                Quota: new DashboardQuotaDto(0, DefaultLibraryQuota),
                 TopGames: Array.Empty<DashboardTopGameDto>()
             );
         }
@@ -255,7 +248,6 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
     {
         try
         {
-            // Combine activities from multiple sources
             var activities = new List<DashboardActivityDto>();
 
             // Recent library additions
@@ -268,8 +260,11 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
                 .Select(e => new DashboardActivityDto(
                     $"game-{e.Id}",
                     "game_added",
-                    $"Aggiunto \"{e.SharedGame!.Title}\"",
-                    e.GameId.ToString(),
+                    (e.SharedGameId ?? Guid.Empty).ToString(),
+                    e.SharedGame!.Title,
+                    null,
+                    null,
+                    null,
                     e.AddedAt
                 ))
                 .ToListAsync(ct)
@@ -296,12 +291,15 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
             activities.AddRange(recentSessions.Select(s => new DashboardActivityDto(
                 $"session-{s.Session.Id}",
                 "session_completed",
-                $"Giocato \"{s.GameTitle}\"",
+                null,
+                s.GameTitle,
                 s.Session.Id.ToString(),
+                null,
+                null,
                 s.Session.PlayedAt
             )));
 
-            // Recent chats (using ChatThreads)
+            // Recent chats
             var recentChats = await _dbContext.ChatThreads
                 .AsNoTracking()
                 .Where(c => c.UserId == userId)
@@ -310,8 +308,11 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
                 .Select(c => new DashboardActivityDto(
                     $"chat-{c.Id}",
                     "chat_saved",
-                    c.Title ?? "Chat salvata",
+                    null,
+                    null,
+                    null,
                     c.Id.ToString(),
+                    c.Title ?? "Chat salvata",
                     c.LastMessageAt
                 ))
                 .ToListAsync(ct)
@@ -319,7 +320,6 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
 
             activities.AddRange(recentChats);
 
-            // Sort by timestamp and take top 10
             return activities
                 .OrderByDescending(a => a.Timestamp)
                 .Take(MaxRecentActivity)
@@ -347,8 +347,9 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
             return result.Chats
                 .Select(c => new DashboardChatDto(
                     Id: c.Id.ToString(),
-                    Title: c.Title ?? c.GameName ?? "Chat",
-                    LastMessageAt: c.LastMessageAt
+                    Topic: c.Title ?? c.GameName ?? "Chat",
+                    MessageCount: c.MessageCount,
+                    Timestamp: c.LastMessageAt
                 ))
                 .ToList();
         }

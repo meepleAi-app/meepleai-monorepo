@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 
-import { AlertCircle, Key, Download, Trash2, BarChart3, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Key, Download, Trash2, BarChart3, Eye, EyeOff, Activity, TrendingUp, Upload } from 'lucide-react';
 import Link from 'next/link';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 import { AdminAuthGuard, BulkActionBar } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
@@ -67,6 +68,11 @@ type StatsModalState = {
   apiKey?: ApiKeyWithStatsDto;
 };
 
+type ImportModalState = {
+  isOpen: boolean;
+  importing: boolean;
+};
+
 export function ApiKeysPageClient() {
   const { user, loading: authLoading } = useAuthUser();
 
@@ -87,6 +93,10 @@ export function ApiKeysPageClient() {
   });
   const [statsModal, setStatsModal] = useState<StatsModalState>({
     isOpen: false,
+  });
+  const [importModal, setImportModal] = useState<ImportModalState>({
+    isOpen: false,
+    importing: false,
   });
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
@@ -281,6 +291,38 @@ export function ApiKeysPageClient() {
     }
   }, [userIdFilter, statusFilter, searchTerm, addToast]);
 
+  // Import from CSV - Issue #3949
+  const handleImport = useCallback(
+    async (file: File) => {
+      if (!file) return;
+
+      setImportModal(prev => ({ ...prev, importing: true }));
+
+      try {
+        const text = await file.text();
+        const result = await api.admin.importApiKeysFromCSV(text);
+
+        if (result.successCount > 0) {
+          addToast('success', `${result.successCount} API key(s) imported successfully`);
+        }
+
+        if (result.failedCount > 0) {
+          addToast(
+            'error',
+            `${result.failedCount} failed: ${result.errors.slice(0, 3).join(', ')}${result.errors.length > 3 ? '...' : ''}`
+          );
+        }
+
+        setImportModal({ isOpen: false, importing: false });
+        fetchApiKeys();
+      } catch (err) {
+        addToast('error', err instanceof Error ? err.message : 'Failed to import API keys');
+        setImportModal(prev => ({ ...prev, importing: false }));
+      }
+    },
+    [addToast, fetchApiKeys]
+  );
+
   // Toggle selection
   const toggleKeySelection = useCallback((keyId: string) => {
     setSelectedKeys(prev => {
@@ -318,6 +360,40 @@ export function ApiKeysPageClient() {
   const showStats = (apiKey: ApiKeyWithStatsDto) => {
     setStatsModal({ isOpen: true, apiKey });
   };
+
+  // Calculate aggregate stats - Issue #3949
+  const stats = useMemo(() => {
+    const totalKeys = apiKeys.length;
+    const activeKeys = apiKeys.filter(
+      k => k.apiKey.isActive && (!k.apiKey.expiresAt || new Date(k.apiKey.expiresAt) > new Date())
+    ).length;
+    const requestsToday = apiKeys.reduce((sum, k) => sum + (k.usageStats?.usageCountLast24Hours || 0), 0);
+    const avgRequestsPerKey = activeKeys > 0 ? requestsToday / activeKeys : 0;
+    const newKeysThisMonth = apiKeys.filter(k => {
+      const created = new Date(k.apiKey.createdAt);
+      const now = new Date();
+      return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+    }).length;
+
+    // Top keys by usage (30 days)
+    const topKeys = [...apiKeys]
+      .filter(k => k.usageStats)
+      .sort((a, b) => (b.usageStats?.usageCountLast30Days || 0) - (a.usageStats?.usageCountLast30Days || 0))
+      .slice(0, 10)
+      .map(k => ({
+        name: k.apiKey.keyName.length > 20 ? k.apiKey.keyName.slice(0, 20) + '...' : k.apiKey.keyName,
+        requests: k.usageStats?.usageCountLast30Days || 0,
+      }));
+
+    return {
+      totalKeys,
+      activeKeys,
+      requestsToday,
+      avgRequestsPerKey,
+      newKeysThisMonth,
+      topKeys,
+    };
+  }, [apiKeys]);
 
   // Early return after all hooks
   if (!user) return null;
@@ -389,6 +465,136 @@ export function ApiKeysPageClient() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Stats Dashboard - Issue #3949 */}
+        {(
+            <div className="space-y-6 mb-6">
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Key className="h-4 w-4" />
+                      Total API Keys
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{stats.totalKeys}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <span className="text-green-600">+{stats.newKeysThisMonth}</span> this month
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-green-600" />
+                      Active Keys
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-600">{stats.activeKeys}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {stats.totalKeys > 0 ? ((stats.activeKeys / stats.totalKeys) * 100).toFixed(1) : 0}% active
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-blue-600" />
+                      Requests (24h)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-blue-600">
+                      {stats.requestsToday.toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Last 24 hours</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      Avg Requests/Key
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{stats.avgRequestsPerKey.toFixed(1)}</div>
+                    <p className="text-xs text-muted-foreground mt-1">per day (active keys)</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Usage Charts */}
+              {stats.totalKeys > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Top Keys Chart */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm">Top API Keys by Usage (30d)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {stats.topKeys.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={stats.topKeys}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={12} />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="requests" fill="#3b82f6" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="text-sm text-muted-foreground text-center py-12">
+                          No usage data available
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Requests Distribution */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm">Usage Distribution</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Last 24 Hours</span>
+                          <span className="font-medium">
+                            {apiKeys.reduce((sum, k) => sum + (k.usageStats?.usageCountLast24Hours || 0), 0).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Last 7 Days</span>
+                          <span className="font-medium">
+                            {apiKeys.reduce((sum, k) => sum + (k.usageStats?.usageCountLast7Days || 0), 0).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Last 30 Days</span>
+                          <span className="font-medium">
+                            {apiKeys.reduce((sum, k) => sum + (k.usageStats?.usageCountLast30Days || 0), 0).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Total (All Time)</span>
+                          <span className="font-medium">
+                            {apiKeys.reduce((sum, k) => sum + (k.usageStats?.totalUsageCount || 0), 0).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </div>
         )}
 
         {/* Filters */}
@@ -509,6 +715,14 @@ export function ApiKeysPageClient() {
           <Button variant="outline" onClick={handleExport} data-testid="export-csv-button">
             <Download className="h-4 w-4 mr-2" />
             Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setImportModal({ isOpen: true, importing: false })}
+            data-testid="import-csv-button"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Import CSV
           </Button>
         </div>
 
@@ -769,6 +983,60 @@ export function ApiKeysPageClient() {
             )}
             <DialogFooter>
               <Button onClick={() => setStatsModal({ isOpen: false })}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Import CSV Modal - Issue #3949 */}
+        <Dialog open={importModal.isOpen} onOpenChange={isOpen => setImportModal({ isOpen, importing: false })}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Import API Keys</DialogTitle>
+              <DialogDescription>
+                Upload CSV file with API keys. Format: name,userId,scopes
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <Label htmlFor="csv-file">CSV File</Label>
+                <Input
+                  id="csv-file"
+                  type="file"
+                  accept=".csv"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImport(file);
+                  }}
+                  disabled={importModal.importing}
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Max 1000 keys per import. Download template:{' '}
+                  <button
+                    onClick={() => {
+                      const template = 'name,userId,scopes\nProduction API,user-uuid,read:games;write:sessions\n';
+                      const blob = new Blob([template], { type: 'text/csv' });
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'api-keys-template.csv';
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                    }}
+                    className="text-primary underline hover:no-underline"
+                  >
+                    template.csv
+                  </button>
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setImportModal({ isOpen: false, importing: false })}
+                disabled={importModal.importing}
+              >
+                Cancel
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

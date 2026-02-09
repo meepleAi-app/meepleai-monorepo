@@ -1,13 +1,23 @@
 /**
  * Dashboard - Main Navigation Hub
  * Issue #3286 - User Dashboard Layout System
+ * Issue #3914 - Responsive Layout Mobile/Desktop Optimization
  *
  * The primary navigation hub for MeepleAI featuring:
  * - 6 reorderable sections (drag-to-reorder)
  * - Grid/List view toggle per section
+ * - Responsive layout: Mobile (1-col), Tablet (2-col), Desktop (3-col asymmetric)
+ * - Collapsible sections on mobile for space optimization
  * - Sticky ActionBar per focused section
  * - Global search with filters
+ * - Touch-friendly (44x44px minimum)
+ * - Keyboard navigation support
  * - Warm Tabletop aesthetic
+ *
+ * Responsive Breakpoints:
+ * - Mobile (< 640px): Single column, stack all widgets
+ * - Tablet (640-1024px): 2-column grid (md/lg)
+ * - Desktop (> 1024px): 3-column asymmetric (xl)
  *
  * @example
  * ```tsx
@@ -697,17 +707,29 @@ export function Dashboard() {
         <HeroStats />
       </div>
 
-      {/* Dashboard Widgets - Issue #3309, #3310, #3311, #3312, #3313 */}
+      {/* Dashboard Widgets - Issue #3309, #3310, #3311, #3312, #3313, #3914 */}
       <div className="mx-auto max-w-7xl px-4 pb-6 sm:px-6 lg:px-8 space-y-4">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Row 1: Sessions + Library + Activity (3-col desktop, 2-col tablet, 1-col mobile) */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           <ActiveSessionsWidget />
           <LibrarySnapshot />
+          {/* Activity spans 2 cols on desktop for asymmetric layout */}
+          <div className="xl:col-span-1">
+            <ActivityFeed />
+          </div>
         </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <ActivityFeed />
-          <ChatHistorySection />
+
+        {/* Row 2: Chat + Quick Actions (asymmetric on desktop) */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {/* Chat spans 2 cols on desktop for emphasis */}
+          <div className="md:col-span-2 xl:col-span-2">
+            <ChatHistorySection />
+          </div>
+          {/* Quick Actions spans 1 col on desktop, full on mobile/tablet */}
+          <div className="md:col-span-2 xl:col-span-1">
+            <QuickActionsGrid />
+          </div>
         </div>
-        <QuickActionsGrid />
       </div>
 
       {/* Reorderable Sections */}

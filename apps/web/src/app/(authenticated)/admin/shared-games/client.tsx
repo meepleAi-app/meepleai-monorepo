@@ -50,6 +50,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api, type SharedGame } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 import { GameCard, GameCardSkeleton, ImportFromBggModal, SharedGamesFilters, SharedGamesStats } from './_components';
 import { useSharedGamesQuery } from './_hooks';
@@ -238,13 +239,16 @@ function SharedGamesClientInner() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {/* Pending Approvals Link (Admin Only) */}
-            {isAdmin && statsData && statsData.pendingApprovals > 0 && (
+            {/* Pending Approvals Link (Admin Only) - Issue #3941 */}
+            {isAdmin && statsData && (
               <Link href="/admin/shared-games/pending-approvals">
                 <Button variant="outline" className="relative">
                   <Clock className="h-4 w-4 mr-2" />
                   Approvals
-                  <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  <span className={cn(
+                    "absolute -top-2 -right-2 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center",
+                    statsData.pendingApprovals > 0 ? "bg-amber-500" : "bg-muted text-muted-foreground"
+                  )}>
                     {statsData.pendingApprovals > 99 ? '99+' : statsData.pendingApprovals}
                   </span>
                 </Button>

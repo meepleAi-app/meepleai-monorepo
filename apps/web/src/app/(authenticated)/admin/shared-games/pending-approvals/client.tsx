@@ -1,11 +1,15 @@
 /**
- * Pending Approvals Client - Issue #2514, Issue #3350
+ * Pending Approvals Client - Issue #2514, #3350, #3941
  *
- * Admin interface for reviewing and approving games submitted for publication:
- * - List all games in PendingApproval status
- * - Approve games (PendingApproval → Published)
- * - Reject games with reason (PendingApproval → Draft)
- * - Batch approve/reject multiple games at once (Issue #3350)
+ * Admin interface for reviewing and approving games submitted for publication.
+ * Refactored to use EntityListView + MeepleCard (Epic #3875)
+ *
+ * Features:
+ * - EntityListView with grid/list/compact modes
+ * - Search, sort, filter capabilities
+ * - Batch approve/reject with selection
+ * - Approve/reject dialogs with reason
+ * - Toast notifications
  *
  * Backend Integration:
  * - GET /api/v1/admin/shared-games/pending-approvals
@@ -17,38 +21,26 @@
 
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import {
   CheckCircle,
   XCircle,
-  Eye,
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
   Clock,
   ArrowLeft,
-  CheckSquare,
-  Square,
-  MinusSquare,
+  Users,
+  Calendar,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { AdminAuthGuard, PlayersBadge, PlayTimeBadge, ComplexityBadge } from '@/components/admin';
+import { AdminAuthGuard } from '@/components/admin';
 import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Spinner } from '@/components/loading';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/data-display/table';
+import { EntityListView } from '@/components/ui/data-display/entity-list-view';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import {
   Dialog,
@@ -59,7 +51,6 @@ import {
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
-import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api, type SharedGame } from '@/lib/api';
@@ -133,48 +124,8 @@ export function PendingApprovalsClient() {
     }, 5000);
   }, []);
 
-  // Selection helpers (Issue #3350)
-  const allSelected = useMemo(() => {
-    return games.length > 0 && games.every(game => selectedIds.has(game.id));
-  }, [games, selectedIds]);
-
-  const someSelected = useMemo(() => {
-    return games.some(game => selectedIds.has(game.id)) && !allSelected;
-  }, [games, selectedIds, allSelected]);
-
-  const selectedCount = useMemo(() => {
-    return games.filter(game => selectedIds.has(game.id)).length;
-  }, [games, selectedIds]);
-
-  const toggleSelectAll = useCallback(() => {
-    if (allSelected) {
-      // Deselect all on current page
-      setSelectedIds(prev => {
-        const newSet = new Set(prev);
-        games.forEach(game => newSet.delete(game.id));
-        return newSet;
-      });
-    } else {
-      // Select all on current page
-      setSelectedIds(prev => {
-        const newSet = new Set(prev);
-        games.forEach(game => newSet.add(game.id));
-        return newSet;
-      });
-    }
-  }, [games, allSelected]);
-
-  const toggleSelect = useCallback((gameId: string) => {
-    setSelectedIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(gameId)) {
-        newSet.delete(gameId);
-      } else {
-        newSet.add(gameId);
-      }
-      return newSet;
-    });
-  }, []);
+  // Selection helpers
+  const selectedCount = Array.from(selectedIds).filter(id => games.some(g => g.id === id)).length;
 
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
@@ -263,9 +214,7 @@ export function PendingApprovalsClient() {
 
   // Handle batch approve
   const handleBatchApprove = async () => {
-    const selectedGameIds = Array.from(selectedIds).filter(id =>
-      games.some(g => g.id === id)
-    );
+    const selectedGameIds = Array.from(selectedIds).filter(id => games.some(g => g.id === id));
 
     if (selectedGameIds.length === 0) {
       addToast('error', 'Seleziona almeno un gioco da approvare');
@@ -302,12 +251,8 @@ export function PendingApprovalsClient() {
 
   // Handle batch reject (opens modal)
   const handleBatchRejectClick = () => {
-    const selectedGameIds = Array.from(selectedIds).filter(id =>
-      games.some(g => g.id === id)
-    );
-    const selectedTitles = games
-      .filter(g => selectedIds.has(g.id))
-      .map(g => g.title);
+    const selectedGameIds = Array.from(selectedIds).filter(id => games.some(g => g.id === id));
+    const selectedTitles = games.filter(g => selectedIds.has(g.id)).map(g => g.title);
 
     if (selectedGameIds.length === 0) {
       addToast('error', 'Seleziona almeno un gioco da rifiutare');
@@ -333,10 +278,7 @@ export function PendingApprovalsClient() {
 
     try {
       setBatchRejecting(true);
-      const result = await api.sharedGames.batchReject(
-        batchRejectModal.gameIds,
-        batchRejectReason
-      );
+      const result = await api.sharedGames.batchReject(batchRejectModal.gameIds, batchRejectReason);
 
       if (result.successCount > 0) {
         addToast(
@@ -371,8 +313,17 @@ export function PendingApprovalsClient() {
 
   // Pagination
   const totalPages = Math.ceil(total / pageSize);
-  const canPrevPage = page > 1;
-  const canNextPage = page < totalPages;
+
+  // Format date helper
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('it-IT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   return (
     <AdminAuthGuard loading={authLoading} user={user}>
@@ -447,193 +398,99 @@ export function PendingApprovalsClient() {
               </div>
             )}
 
-            {/* Loading State */}
-            {loading && (
-              <div className="flex justify-center py-12">
-                <Spinner size="lg" />
-              </div>
-            )}
+            {/* EntityListView - Issue #3941 */}
+            <EntityListView
+              items={games}
+              entity="game"
+              persistenceKey="admin-pending-approvals"
+              defaultViewMode="grid"
+              availableModes={['grid', 'list']}
+              searchable
+              searchFields={['title', 'description']}
+              searchPlaceholder="Cerca giochi in attesa..."
+              renderItem={(game) => ({
+                id: game.id,
+                title: game.title,
+                subtitle: `Year: ${game.yearPublished || 'N/A'} • Players: ${game.minPlayers}-${game.maxPlayers}`,
+                imageUrl: game.thumbnailUrl,
+                metadata: [
+                  {
+                    icon: Clock,
+                    label: 'Submitted',
+                    value: formatDate(game.modifiedAt || game.createdAt),
+                  },
+                  {
+                    icon: Users,
+                    value: `${game.minPlayers}-${game.maxPlayers}`,
+                  },
+                  {
+                    icon: Calendar,
+                    value: game.yearPublished?.toString() || 'N/A',
+                  },
+                ],
+                actions: [
+                  {
+                    label: 'View',
+                    onClick: () => handleViewGame(game.id),
+                  },
+                  {
+                    label: 'Approve',
+                    primary: true,
+                    onClick: () => handleApprove(game),
+                    disabled: approving === game.id,
+                  },
+                  {
+                    label: 'Reject',
+                    onClick: () => handleRejectClick(game),
+                    disabled: approving === game.id,
+                  },
+                ],
+                badge: 'Pending',
+                // Bulk selection support (Feature #3829)
+                selectable: true,
+                selected: selectedIds.has(game.id),
+                onSelect: (id, selected) => {
+                  if (selected) {
+                    setSelectedIds(prev => new Set([...prev, id]));
+                  } else {
+                    setSelectedIds(prev => {
+                      const newSet = new Set(prev);
+                      newSet.delete(id);
+                      return newSet;
+                    });
+                  }
+                },
+              })}
+              onItemClick={(game) => handleViewGame(game.id)}
+              emptyMessage="Nessun gioco in attesa di approvazione. Ottimo lavoro!"
+              loading={loading}
+            />
 
-            {/* Empty State */}
-            {!loading && games.length === 0 && (
-              <Alert>
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <AlertDescription>
-                  Nessun gioco in attesa di approvazione. Ottimo lavoro!
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Games Table */}
-            {!loading && games.length > 0 && (
-              <>
-                <div className="border rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        {/* Selection checkbox header (Issue #3350) */}
-                        <TableHead className="w-[50px]">
-                          <button
-                            onClick={toggleSelectAll}
-                            className="flex items-center justify-center p-1 hover:bg-muted rounded"
-                            title={allSelected ? 'Deseleziona tutto' : 'Seleziona tutto'}
-                          >
-                            {allSelected ? (
-                              <CheckSquare className="h-5 w-5 text-primary" />
-                            ) : someSelected ? (
-                              <MinusSquare className="h-5 w-5 text-primary" />
-                            ) : (
-                              <Square className="h-5 w-5 text-muted-foreground" />
-                            )}
-                          </button>
-                        </TableHead>
-                        <TableHead className="w-[80px]">Immagine</TableHead>
-                        <TableHead className="w-[25%]">Titolo</TableHead>
-                        <TableHead className="w-[12%]">Giocatori</TableHead>
-                        <TableHead className="w-[12%]">Durata</TableHead>
-                        <TableHead className="w-[12%]">Complessità</TableHead>
-                        <TableHead className="w-[15%]">Sottomesso</TableHead>
-                        <TableHead className="w-[20%] text-right">Azioni</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {games.map(game => (
-                        <TableRow
-                          key={game.id}
-                          className={selectedIds.has(game.id) ? 'bg-muted/50' : ''}
-                        >
-                          {/* Selection checkbox (Issue #3350) */}
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedIds.has(game.id)}
-                              onCheckedChange={() => toggleSelect(game.id)}
-                              aria-label={`Seleziona ${game.title}`}
-                            />
-                          </TableCell>
-
-                          {/* Thumbnail */}
-                          <TableCell>
-                            {game.thumbnailUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={game.thumbnailUrl}
-                                alt={game.title}
-                                className="w-12 h-12 object-cover rounded"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
-                                <FileText className="h-6 w-6 text-muted-foreground" />
-                              </div>
-                            )}
-                          </TableCell>
-
-                          {/* Title & Year */}
-                          <TableCell>
-                            <div className="font-medium">{game.title}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {game.yearPublished}
-                            </div>
-                          </TableCell>
-
-                          {/* Players */}
-                          <TableCell>
-                            <PlayersBadge min={game.minPlayers} max={game.maxPlayers} />
-                          </TableCell>
-
-                          {/* Playing Time */}
-                          <TableCell>
-                            <PlayTimeBadge minutes={game.playingTimeMinutes} />
-                          </TableCell>
-
-                          {/* Complexity */}
-                          <TableCell>
-                            <ComplexityBadge rating={game.complexityRating ?? 0} />
-                          </TableCell>
-
-                          {/* Submitted Date */}
-                          <TableCell className="text-sm text-muted-foreground">
-                            {game.modifiedAt
-                              ? new Date(game.modifiedAt).toLocaleDateString('it-IT', {
-                                  day: '2-digit',
-                                  month: 'short',
-                                  year: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
-                              : new Date(game.createdAt).toLocaleDateString('it-IT')}
-                          </TableCell>
-
-                          {/* Actions */}
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleViewGame(game.id)}
-                                title="Visualizza dettagli"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => handleApprove(game)}
-                                disabled={approving === game.id}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                {approving === game.id ? (
-                                  <Spinner size="sm" className="mr-1" />
-                                ) : (
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                )}
-                                Approva
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => handleRejectClick(game)}
-                                disabled={approving === game.id}
-                              >
-                                <XCircle className="h-4 w-4 mr-1" />
-                                Rifiuta
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Pagina {page} di {totalPages}
                 </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      Pagina {page} di {totalPages}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage(p => p - 1)}
-                        disabled={!canPrevPage}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        Precedente
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage(p => p + 1)}
-                        disabled={!canNextPage}
-                      >
-                        Successivo
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    Precedente
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                  >
+                    Successivo
+                  </Button>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

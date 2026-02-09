@@ -120,6 +120,9 @@ const nextConfig = {
 
   // Issue #2209: Next.js Image optimization - configure remote image domains
   images: {
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
       {
         protocol: 'https',

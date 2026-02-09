@@ -1,7 +1,12 @@
 /**
- * DashboardHub Tests - Issue #3975
+ * DashboardHub Tests - Issue #3975, #3979
  *
- * Unit tests for DashboardHub component
+ * Unit tests for DashboardHub component including:
+ * - Loading/Success/Error states
+ * - Responsive grid layout
+ * - Framer Motion animations (mocked)
+ * - Lazy loading below-fold sections
+ * - Touch-friendly targets
  *
  * @see Epic #3901 - Dashboard Hub Core (MVP)
  */
@@ -17,6 +22,17 @@ import type { DashboardData } from '@/types/dashboard';
 // Mock the dashboard API module
 vi.mock('@/lib/api/dashboard', () => ({
   fetchDashboardData: vi.fn(),
+}));
+
+// Mock react-intersection-observer (useInView for lazy loading)
+const mockUseInView = vi.fn();
+vi.mock('react-intersection-observer', () => ({
+  useInView: (...args: unknown[]) => mockUseInView(...args),
+}));
+
+// Mock useReducedMotion from our animations lib
+vi.mock('@/lib/animations', () => ({
+  useReducedMotion: () => false,
 }));
 
 const mockFetchDashboardData = vi.mocked(fetchDashboardData);
@@ -99,6 +115,16 @@ function createQueryWrapper() {
   );
 }
 
+/** Helper: mock useInView to return inView=true (sections visible) */
+function mockAllSectionsVisible() {
+  mockUseInView.mockReturnValue({ ref: { current: null }, inView: true });
+}
+
+/** Helper: mock useInView to return inView=false (sections not visible) */
+function mockAllSectionsHidden() {
+  mockUseInView.mockReturnValue({ ref: { current: null }, inView: false });
+}
+
 // ============================================================================
 // Tests
 // ============================================================================
@@ -106,6 +132,8 @@ function createQueryWrapper() {
 describe('DashboardHub', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: all lazy sections visible (so existing tests work)
+    mockAllSectionsVisible();
   });
 
   describe('Loading State', () => {
@@ -238,6 +266,73 @@ describe('DashboardHub', () => {
         // Activity should be 2 cols on desktop
         const activitySections = container.querySelectorAll('.lg\\:col-span-2');
         expect(activitySections.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe('Lazy Loading (Issue #3979)', () => {
+    beforeEach(() => {
+      mockFetchDashboardData.mockResolvedValue(mockDashboardData);
+    });
+
+    it('shows skeleton placeholder for below-fold sections when not in view', async () => {
+      mockAllSectionsHidden();
+
+      const { container } = render(<DashboardHub />, { wrapper: createQueryWrapper() });
+
+      await waitFor(() => {
+        // Above-fold sections (Hero, Sessions) should still render
+        expect(screen.getByText(/TestUser/i)).toBeInTheDocument();
+
+        // Below-fold sections show skeleton placeholders
+        // LazySection renders animate-pulse divs when inView=false
+        const grid = container.querySelector('.grid');
+        const skeletons = grid?.querySelectorAll('.animate-pulse');
+        // 4 below-fold sections: Library, Activity, Chat, QuickActions
+        expect(skeletons?.length).toBe(4);
+      });
+    });
+
+    it('renders content for below-fold sections when in view', async () => {
+      mockAllSectionsVisible();
+
+      render(<DashboardHub />, { wrapper: createQueryWrapper() });
+
+      await waitFor(() => {
+        // All sections should render their content
+        expect(screen.getByText(/TestUser/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/Catan/i).length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText(/Regole Wingspan/i)).toBeInTheDocument();
+      });
+    });
+
+    it('calls useInView with triggerOnce and threshold options', async () => {
+      render(<DashboardHub />, { wrapper: createQueryWrapper() });
+
+      await waitFor(() => {
+        // useInView should be called for each LazySection (4 below-fold)
+        expect(mockUseInView).toHaveBeenCalled();
+        const firstCall = mockUseInView.mock.calls[0][0];
+        expect(firstCall).toEqual(
+          expect.objectContaining({
+            triggerOnce: true,
+            threshold: 0.1,
+          }),
+        );
+      });
+    });
+  });
+
+  describe('Touch Targets (Issue #3979)', () => {
+    it('error fallback buttons have minimum 44px touch targets', async () => {
+      mockFetchDashboardData.mockResolvedValue(null as any);
+
+      const { container } = render(<DashboardHub />, { wrapper: createQueryWrapper() });
+
+      await waitFor(() => {
+        const tryAgainButton = screen.getByText(/try again/i);
+        expect(tryAgainButton.className).toContain('min-h-[44px]');
+        expect(tryAgainButton.className).toContain('min-w-[44px]');
       });
     });
   });

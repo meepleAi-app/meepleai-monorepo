@@ -89,7 +89,7 @@ export function GameCatalogCard({ game }: GameCatalogCardProps) {
       <CardHeader className="p-0">
         {/* Cover Image */}
         <div className="relative w-full h-48 bg-muted">
-          {game.imageUrl ? (
+          {game.imageUrl && !game.imageUrl.includes('placehold.co') ? (
             <Image
               src={game.imageUrl}
               alt={game.title}

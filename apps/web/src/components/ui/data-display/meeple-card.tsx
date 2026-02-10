@@ -388,12 +388,16 @@ function CoverImage({
   const placeholder =
     'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"%3E%3Crect width="400" height="300" fill="%23334155"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="64" fill="%239CA3AF"%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E';
 
+  // Treat placehold.co URLs as "no image" - they return SVGs that Next.js Image can't optimize
+  const isPlaceholder = src?.includes('placehold.co');
+  const imageSrc = (src && !isPlaceholder) ? src : placeholder;
+
   const showOverlay = variant === 'hero' || variant === 'featured' || variant === 'grid';
 
   return (
     <div className={coverVariants({ variant })}>
       <Image
-        src={src || placeholder}
+        src={imageSrc}
         alt={alt}
         fill
         sizes={

@@ -6,8 +6,9 @@ using MediatR;
 namespace Api.BoundedContexts.Administration.Application.Handlers;
 
 /// <summary>
-/// Handler for GetActivityTimelineQuery (Issue #3973).
-/// Delegates to IActivityTimelineService for cross-context event aggregation.
+/// Handler for GetActivityTimelineQuery (Issue #3973, #3923).
+/// Delegates to IActivityTimelineService for cross-context event aggregation
+/// with support for type filtering, text search, pagination, and sort order.
 /// </summary>
 internal sealed class GetActivityTimelineQueryHandler
     : IRequestHandler<GetActivityTimelineQuery, ActivityTimelineResponseDto>
@@ -23,15 +24,19 @@ internal sealed class GetActivityTimelineQueryHandler
         GetActivityTimelineQuery query,
         CancellationToken cancellationToken)
     {
-        var events = await _timelineService.GetRecentActivitiesAsync(
+        var (events, totalCount) = await _timelineService.GetFilteredActivitiesAsync(
             query.UserId,
-            query.Limit,
+            query.Types,
+            query.SearchTerm,
+            query.Skip,
+            query.Take,
+            query.Order,
             cancellationToken).ConfigureAwait(false);
 
         var dtos = events
             .Select(ActivityEventDto.FromEvent)
             .ToList();
 
-        return new ActivityTimelineResponseDto(dtos, dtos.Count);
+        return new ActivityTimelineResponseDto(dtos, totalCount);
     }
 }

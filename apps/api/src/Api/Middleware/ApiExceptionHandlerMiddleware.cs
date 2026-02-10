@@ -3,6 +3,7 @@ using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.SharedKernel.Domain.Exceptions;
 using FluentValidation;
+using Microsoft.AspNetCore.Http;
 
 #pragma warning disable MA0048 // File name must match type name - Contains middleware and extension methods
 namespace Api.Middleware;
@@ -194,6 +195,13 @@ internal class ApiExceptionHandlerMiddleware
                 StatusCodes.Status400BadRequest,
                 "domain_error",
                 domainEx.Message
+            ),
+
+            // ASP.NET request binding exceptions (e.g., invalid JSON body)
+            BadHttpRequestException badReqEx => (
+                StatusCodes.Status400BadRequest,
+                "bad_request",
+                badReqEx.InnerException?.Message ?? badReqEx.Message
             ),
 
             // System exceptions with specific mappings

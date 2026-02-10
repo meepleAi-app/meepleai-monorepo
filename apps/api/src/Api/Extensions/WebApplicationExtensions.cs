@@ -66,6 +66,15 @@ internal static class WebApplicationExtensions
             });
         }
 
+        // Enable request body buffering so the body stream can be re-read.
+        // Required because .NET 9 middleware may consume the body stream before
+        // endpoint parameter binding, causing InvalidJsonRequestBody errors.
+        app.Use(async (context, next) =>
+        {
+            context.Request.EnableBuffering();
+            await next().ConfigureAwait(false);
+        });
+
         // API-01: API exception handler middleware (must be early in pipeline)
         app.UseApiExceptionHandler();
 

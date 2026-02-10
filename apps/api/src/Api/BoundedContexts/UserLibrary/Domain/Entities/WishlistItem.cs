@@ -66,6 +66,11 @@ internal sealed class WishlistItem : AggregateRoot<Guid>
     public WishlistVisibility Visibility { get; private set; }
 
     /// <summary>
+    /// When the item was last updated (null if never updated after creation).
+    /// </summary>
+    public DateTime? UpdatedAt { get; private set; }
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable CS8618
@@ -114,6 +119,7 @@ internal sealed class WishlistItem : AggregateRoot<Guid>
     public void UpdatePriority(WishlistPriority priority)
     {
         Priority = priority;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -125,6 +131,7 @@ internal sealed class WishlistItem : AggregateRoot<Guid>
             throw new ArgumentException("TargetPrice must be greater than 0", nameof(targetPrice));
 
         TargetPrice = targetPrice;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -133,6 +140,7 @@ internal sealed class WishlistItem : AggregateRoot<Guid>
     public void UpdateNotes(string? notes)
     {
         Notes = notes?.Trim();
+        UpdatedAt = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -141,6 +149,7 @@ internal sealed class WishlistItem : AggregateRoot<Guid>
     public void UpdateVisibility(WishlistVisibility visibility)
     {
         Visibility = visibility;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -169,5 +178,7 @@ internal sealed class WishlistItem : AggregateRoot<Guid>
 
         if (visibility.HasValue)
             UpdateVisibility(visibility.Value);
+
+        UpdatedAt = DateTime.UtcNow;
     }
 }

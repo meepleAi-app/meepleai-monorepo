@@ -42,6 +42,9 @@ internal class WishlistItemEntityConfiguration : IEntityTypeConfiguration<Wishli
             .IsRequired()
             .HasDefaultValue(0); // Private
 
+        builder.Property(e => e.UpdatedAt)
+            .IsRequired(false);
+
         // Indexes
         // User's wishlist query
         builder.HasIndex(e => e.UserId)

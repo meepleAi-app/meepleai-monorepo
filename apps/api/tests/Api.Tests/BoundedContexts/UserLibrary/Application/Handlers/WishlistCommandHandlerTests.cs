@@ -72,6 +72,7 @@ public sealed class WishlistCommandHandlerTests
         result.Priority.Should().Be("HIGH");
         result.TargetPrice.Should().Be(29.99m);
         result.Notes.Should().Be("Want this!");
+        result.UpdatedAt.Should().BeNull();
         result.Visibility.Should().Be("PRIVATE");
 
         _wishlistRepoMock.Verify(r => r.AddAsync(It.IsAny<WishlistItem>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -176,6 +177,7 @@ public sealed class WishlistCommandHandlerTests
         result.Priority.Should().Be("HIGH");
         result.TargetPrice.Should().Be(50m);
         result.Notes.Should().Be("New notes");
+        result.UpdatedAt.Should().NotBeNull();
 
         _wishlistRepoMock.Verify(r => r.UpdateAsync(existingItem, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

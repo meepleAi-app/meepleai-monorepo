@@ -39,6 +39,7 @@ internal class GetWishlistQueryHandler : IQueryHandler<GetWishlistQuery, IReadOn
             TargetPrice: item.TargetPrice,
             Notes: item.Notes,
             AddedAt: item.AddedAt,
+            UpdatedAt: item.UpdatedAt,
             Visibility: item.Visibility.ToString().ToUpperInvariant()
         );
     }

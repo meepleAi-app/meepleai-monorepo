@@ -339,6 +339,7 @@ export function LibrarySnapshot({
         <Progress
           value={percentage}
           className={cn('h-2', `[&>div]:${quotaColors.bar}`)}
+          aria-label="Quota libreria"
           data-testid="quota-progress"
         />
       </div>

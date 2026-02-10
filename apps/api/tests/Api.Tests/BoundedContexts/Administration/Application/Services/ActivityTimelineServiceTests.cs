@@ -18,7 +18,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Services;
 /// Tests cross-context event aggregation, ordering, limiting, and caching.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class ActivityTimelineServiceTests : IDisposable
+public sealed class ActivityTimelineServiceTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<IHybridCacheService> _mockCache;

@@ -62,13 +62,13 @@ public class StrategyModelMappingServiceTests
 
         // Setup cache to invoke factory function (cache miss scenario)
         _mockCache
-            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping?>(
+            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping>(
                 It.IsAny<string>(),
-                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping?>>>(),
+                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping>>>(),
                 It.IsAny<string[]>(),
                 It.IsAny<TimeSpan>(),
                 It.IsAny<CancellationToken>()))
-            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping?>>, string[], TimeSpan, CancellationToken>(
+            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping>>, string[], TimeSpan, CancellationToken>(
                 async (key, factory, tags, ttl, ct) => await factory(ct));
 
         // Act
@@ -96,13 +96,13 @@ public class StrategyModelMappingServiceTests
             .ReturnsAsync((StrategyModelMappingEntry?)null);
 
         _mockCache
-            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping?>(
+            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping>(
                 It.IsAny<string>(),
-                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping?>>>(),
+                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping>>>(),
                 It.IsAny<string[]>(),
                 It.IsAny<TimeSpan>(),
                 It.IsAny<CancellationToken>()))
-            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping?>>, string[], TimeSpan, CancellationToken>(
+            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping>>, string[], TimeSpan, CancellationToken>(
                 async (key, factory, tags, ttl, ct) => await factory(ct));
 
         // Act
@@ -135,13 +135,13 @@ public class StrategyModelMappingServiceTests
             .ReturnsAsync(entry);
 
         _mockCache
-            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping?>(
+            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping>(
                 It.IsAny<string>(),
-                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping?>>>(),
+                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping>>>(),
                 It.IsAny<string[]>(),
                 It.IsAny<TimeSpan>(),
                 It.IsAny<CancellationToken>()))
-            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping?>>, string[], TimeSpan, CancellationToken>(
+            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping>>, string[], TimeSpan, CancellationToken>(
                 async (key, factory, tags, ttl, ct) => await factory(ct));
 
         // Act
@@ -163,13 +163,13 @@ public class StrategyModelMappingServiceTests
             .ReturnsAsync((StrategyModelMappingEntry?)null);
 
         _mockCache
-            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping?>(
+            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping>(
                 It.IsAny<string>(),
-                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping?>>>(),
+                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping>>>(),
                 It.IsAny<string[]>(),
                 It.IsAny<TimeSpan>(),
                 It.IsAny<CancellationToken>()))
-            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping?>>, string[], TimeSpan, CancellationToken>(
+            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping>>, string[], TimeSpan, CancellationToken>(
                 async (key, factory, tags, ttl, ct) => await factory(ct));
 
         // Act
@@ -191,13 +191,13 @@ public class StrategyModelMappingServiceTests
             .ReturnsAsync((StrategyModelMappingEntry?)null);
 
         _mockCache
-            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping?>(
+            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping>(
                 It.IsAny<string>(),
-                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping?>>>(),
+                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping>>>(),
                 It.IsAny<string[]>(),
                 It.IsAny<TimeSpan>(),
                 It.IsAny<CancellationToken>()))
-            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping?>>, string[], TimeSpan, CancellationToken>(
+            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping>>, string[], TimeSpan, CancellationToken>(
                 async (key, factory, tags, ttl, ct) => await factory(ct));
 
         // Act
@@ -219,13 +219,13 @@ public class StrategyModelMappingServiceTests
             .ReturnsAsync((StrategyModelMappingEntry?)null);
 
         _mockCache
-            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping?>(
+            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping>(
                 It.IsAny<string>(),
-                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping?>>>(),
+                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping>>>(),
                 It.IsAny<string[]>(),
                 It.IsAny<TimeSpan>(),
                 It.IsAny<CancellationToken>()))
-            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping?>>, string[], TimeSpan, CancellationToken>(
+            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping>>, string[], TimeSpan, CancellationToken>(
                 async (key, factory, tags, ttl, ct) => await factory(ct));
 
         // Act
@@ -243,9 +243,9 @@ public class StrategyModelMappingServiceTests
         var expectedCacheKey = "strategy-model:EXPERT";
 
         _mockCache
-            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping?>(
+            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping>(
                 expectedCacheKey,
-                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping?>>>(),
+                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping>>>(),
                 It.IsAny<string[]>(),
                 It.IsAny<TimeSpan>(),
                 It.IsAny<CancellationToken>()))
@@ -256,9 +256,9 @@ public class StrategyModelMappingServiceTests
 
         // Assert
         _mockCache.Verify(
-            c => c.GetOrCreateAsync<StrategyModelMapping?>(
+            c => c.GetOrCreateAsync<StrategyModelMapping>(
                 expectedCacheKey,
-                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping?>>>(),
+                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping>>>(),
                 It.IsAny<string[]>(),
                 It.IsAny<TimeSpan>(),
                 It.IsAny<CancellationToken>()),
@@ -273,13 +273,13 @@ public class StrategyModelMappingServiceTests
         string[]? capturedTags = null;
 
         _mockCache
-            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping?>(
+            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping>(
                 It.IsAny<string>(),
-                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping?>>>(),
+                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping>>>(),
                 It.IsAny<string[]>(),
                 It.IsAny<TimeSpan?>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, Func<CancellationToken, Task<StrategyModelMapping?>>, string[], TimeSpan?, CancellationToken>(
+            .Callback<string, Func<CancellationToken, Task<StrategyModelMapping>>, string[], TimeSpan?, CancellationToken>(
                 (k, f, tags, ttl, ct) => capturedTags = tags)
             .ReturnsAsync(StrategyModelMapping.Default(strategy));
 
@@ -310,13 +310,13 @@ public class StrategyModelMappingServiceTests
             .ReturnsAsync(entry);
 
         _mockCache
-            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping?>(
+            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping>(
                 It.IsAny<string>(),
-                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping?>>>(),
+                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping>>>(),
                 It.IsAny<string[]>(),
                 It.IsAny<TimeSpan>(),
                 It.IsAny<CancellationToken>()))
-            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping?>>, string[], TimeSpan, CancellationToken>(
+            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping>>, string[], TimeSpan, CancellationToken>(
                 async (key, factory, tags, ttl, ct) => await factory(ct));
 
         // Act
@@ -350,13 +350,13 @@ public class StrategyModelMappingServiceTests
             .ReturnsAsync((StrategyModelMappingEntry?)null);
 
         _mockCache
-            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping?>(
+            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping>(
                 It.IsAny<string>(),
-                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping?>>>(),
+                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping>>>(),
                 It.IsAny<string[]>(),
                 It.IsAny<TimeSpan>(),
                 It.IsAny<CancellationToken>()))
-            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping?>>, string[], TimeSpan, CancellationToken>(
+            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping>>, string[], TimeSpan, CancellationToken>(
                 async (key, factory, tags, ttl, ct) => await factory(ct));
 
         // Act
@@ -378,13 +378,13 @@ public class StrategyModelMappingServiceTests
             .ReturnsAsync((StrategyModelMappingEntry?)null);
 
         _mockCache
-            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping?>(
+            .Setup(c => c.GetOrCreateAsync<StrategyModelMapping>(
                 It.IsAny<string>(),
-                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping?>>>(),
+                It.IsAny<Func<CancellationToken, Task<StrategyModelMapping>>>(),
                 It.IsAny<string[]>(),
                 It.IsAny<TimeSpan>(),
                 It.IsAny<CancellationToken>()))
-            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping?>>, string[], TimeSpan, CancellationToken>(
+            .Returns<string, Func<CancellationToken, Task<StrategyModelMapping>>, string[], TimeSpan, CancellationToken>(
                 async (key, factory, tags, ttl, ct) => await factory(ct));
 
         // Act

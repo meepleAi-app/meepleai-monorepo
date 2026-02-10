@@ -24,7 +24,6 @@ public sealed class AuditLoggingBehaviorTests
 {
     private readonly Mock<IHttpContextAccessor> _httpContextAccessorMock;
     private readonly Mock<AuditService> _auditServiceMock;
-    private readonly ILogger<AuditLoggingBehavior<TestAuditableCommand, string>> _logger;
 
     public AuditLoggingBehaviorTests()
     {
@@ -38,8 +37,7 @@ public sealed class AuditLoggingBehaviorTests
         _auditServiceMock = new Mock<AuditService>(
             dbContext,
             Mock.Of<ILogger<AuditService>>(),
-            null);
-        _logger = NullLogger<AuditLoggingBehavior<TestAuditableCommand, string>>.Instance;
+            null!);
     }
 
     [Fact]

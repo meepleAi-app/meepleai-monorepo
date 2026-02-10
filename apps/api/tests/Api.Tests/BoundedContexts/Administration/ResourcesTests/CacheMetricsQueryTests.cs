@@ -58,7 +58,7 @@ public class CacheMetricsQueryTests : IAsyncLifetime
         var query = new GetCacheMetricsQuery();
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None).ConfigureAwait(false);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
@@ -78,7 +78,7 @@ public class CacheMetricsQueryTests : IAsyncLifetime
         var query = new GetCacheMetricsQuery();
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None).ConfigureAwait(false);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.UsedMemoryFormatted.Should().MatchRegex(@"^\d+\.?\d* (B|KB|MB|GB|TB)$",
@@ -94,12 +94,12 @@ public class CacheMetricsQueryTests : IAsyncLifetime
         var db = _connection!.GetDatabase();
 
         // Perform some cache operations to generate hits/misses
-        await db.StringGetAsync("test:key1").ConfigureAwait(false); // Hit
-        await db.StringGetAsync("test:key1").ConfigureAwait(false); // Hit
-        await db.StringGetAsync("nonexistent").ConfigureAwait(false); // Miss
+        await db.StringGetAsync("test:key1"); // Hit
+        await db.StringGetAsync("test:key1"); // Hit
+        await db.StringGetAsync("nonexistent"); // Miss
 
         // Act
-        var result = await handler.Handle(query, CancellationToken.None).ConfigureAwait(false);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert
         result.KeyspaceHits.Should().BeGreaterThanOrEqualTo(2, "should have at least our test hits");
@@ -116,8 +116,7 @@ public class CacheMetricsQueryTests : IAsyncLifetime
         var act = () => handler.Handle(null!, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<ArgumentNullException>()
-            .ConfigureAwait(false);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]

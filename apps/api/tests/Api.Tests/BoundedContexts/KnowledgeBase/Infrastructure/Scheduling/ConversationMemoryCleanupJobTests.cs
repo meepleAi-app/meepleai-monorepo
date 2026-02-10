@@ -222,7 +222,7 @@ public class ConversationMemoryCleanupJobTests
     public async Task Execute_PassesCancellationToken_ToRepository()
     {
         // Arrange
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         _jobContextMock.Setup(c => c.CancellationToken).Returns(cts.Token);
 
         var job = CreateJob();

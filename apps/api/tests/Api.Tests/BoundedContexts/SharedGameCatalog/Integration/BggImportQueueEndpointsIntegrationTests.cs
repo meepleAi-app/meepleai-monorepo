@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using System.Net;
-using System.Net.Http.Json;
-using System.Text;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -42,7 +39,6 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     private readonly string _testDbName;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
-    private IBggImportQueueService _queueService = null!;
 
     private static readonly Guid TestAdminUserId = Guid.NewGuid();
 
@@ -134,8 +130,6 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
             dbContext.Set<UserEntity>().Add(adminUser);
             await dbContext.SaveChangesAsync();
 
-            // Get queue service for direct database access in tests
-            _queueService = scope.ServiceProvider.GetRequiredService<IBggImportQueueService>();
         }
 
         _client = _factory.CreateClient();
@@ -640,16 +634,18 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
     /// <summary>
     /// SSE event structure for queue progress streaming
     /// </summary>
+#pragma warning disable S1144, S3459 // Properties are populated via JSON deserialization
     private sealed class SseQueueEvent
     {
-        public DateTime timestamp { get; init; }
-        public int queued { get; init; }
-        public int processing { get; init; }
-        public int completed { get; init; }
-        public int failed { get; init; }
-        public int eta { get; init; }
-        public List<BggImportQueueEntity> items { get; init; } = new();
+        public DateTime timestamp { get; set; }
+        public int queued { get; set; }
+        public int processing { get; set; }
+        public int completed { get; set; }
+        public int failed { get; set; }
+        public int eta { get; set; }
+        public List<BggImportQueueEntity> items { get; set; } = new();
     }
+#pragma warning restore S1144, S3459
 
     #endregion
 }

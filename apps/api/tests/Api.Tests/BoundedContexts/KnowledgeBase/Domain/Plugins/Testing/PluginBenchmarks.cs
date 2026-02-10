@@ -58,10 +58,12 @@ public static class PluginBenchmarks
         // Force GC before benchmarking
         if (options.MeasureMemory)
         {
+#pragma warning disable S1215 // GC.Collect is intentional for benchmarking memory measurement
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
             totalMemoryBefore = GC.GetTotalMemory(true);
+#pragma warning restore S1215
         }
 
         var stopwatch = new Stopwatch();
@@ -94,10 +96,12 @@ public static class PluginBenchmarks
 
         if (options.MeasureMemory)
         {
+#pragma warning disable S1215 // GC.Collect is intentional for benchmarking memory measurement
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
             totalMemoryAfter = GC.GetTotalMemory(true);
+#pragma warning restore S1215
         }
 
         results.EndTime = DateTimeOffset.UtcNow;

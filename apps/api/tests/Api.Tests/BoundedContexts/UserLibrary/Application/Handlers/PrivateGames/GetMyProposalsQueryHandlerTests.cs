@@ -169,7 +169,9 @@ public sealed class GetMyProposalsQueryHandlerTests : IDisposable
                 Title = gameTitle,
                 MinPlayers = 2,
                 MaxPlayers = 4,
+#pragma warning disable MA0099 // PrivateGameSource.Manual is the explicit enum value (value happens to be 0)
                 Source = (int)PrivateGameSource.Manual,
+#pragma warning restore MA0099
                 CreatedAt = DateTime.UtcNow,
                 IsDeleted = false
             }

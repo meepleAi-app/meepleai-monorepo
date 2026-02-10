@@ -496,6 +496,7 @@ v1Api.MapAlertConfigurationEndpoints(); // Alert configuration (Issue #915)
 v1Api.MapNotificationEndpoints();      // User notifications (Issue #2053)
 v1Api.MapUserLibraryEndpoints();       // User game library
 v1Api.MapWishlistEndpoints();          // Wishlist management (Issue #3917)
+v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)
 v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)
 v1Api.MapProposalMigrationEndpoints(); // Proposal migrations (Issue #3666)
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search

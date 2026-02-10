@@ -38,6 +38,7 @@ import Link from 'next/link';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
+import { useWishlistHighlights } from '@/hooks/useWishlistHighlights';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -291,19 +292,25 @@ function EmptyState() {
 // ============================================================================
 
 export function WishlistHighlights({
-  items = [],
-  isLoading = false,
+  items: itemsProp,
+  isLoading: isLoadingProp,
   onMarkPurchased,
   className,
 }: WishlistHighlightsProps) {
+  // Use hook when no data prop is provided
+  const { data: hookData, isLoading: hookLoading } = useWishlistHighlights();
+
+  const isLoading = isLoadingProp ?? (itemsProp === undefined && hookLoading);
+
   const sortedItems = useMemo(() => {
+    const items = itemsProp ?? hookData ?? [];
     return [...items]
       .sort(
         (a, b) =>
           PRIORITY_ORDER[b.priority] - PRIORITY_ORDER[a.priority]
       )
       .slice(0, MAX_ITEMS);
-  }, [items]);
+  }, [itemsProp, hookData]);
 
   if (isLoading) {
     return <WishlistHighlightsSkeleton className={className} />;

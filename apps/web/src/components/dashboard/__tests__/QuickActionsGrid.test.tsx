@@ -263,6 +263,47 @@ describe('QuickActionsGrid', () => {
   });
 
   // ============================================================================
+  // Analytics Tracking Tests
+  // ============================================================================
+
+  describe('Analytics Tracking', () => {
+    it('fires trackEvent on action click', async () => {
+      const { trackEvent } = await import('@/lib/analytics/track-event');
+
+      render(<QuickActionsGrid />);
+
+      const libraryAction = screen.getByTestId('quick-action-library');
+      fireEvent.click(libraryAction);
+
+      expect(trackEvent).toHaveBeenCalledWith(
+        'dashboard_quick_action_library',
+        expect.objectContaining({
+          action_name: 'Vai alla Collezione',
+          destination: '/library',
+          source: 'dashboard',
+        })
+      );
+    });
+
+    it('fires trackEvent with correct args for each action', async () => {
+      const { trackEvent } = await import('@/lib/analytics/track-event');
+
+      render(<QuickActionsGrid />);
+
+      fireEvent.click(screen.getByTestId('quick-action-chat'));
+
+      expect(trackEvent).toHaveBeenCalledWith(
+        'dashboard_quick_action_chat',
+        expect.objectContaining({
+          action_name: 'Chat AI',
+          destination: '/chat',
+          source: 'dashboard',
+        })
+      );
+    });
+  });
+
+  // ============================================================================
   // Accessibility Tests
   // ============================================================================
 

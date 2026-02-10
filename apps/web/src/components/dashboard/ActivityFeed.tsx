@@ -223,7 +223,14 @@ const ACTIVITY_TYPE_CONFIG: Record<ActivityEventType, ActivityTypeConfig> = {
 // Helper Functions
 // ============================================================================
 
-function formatRelativeTime(isoDate: string): string {
+/**
+ * Formats a timestamp as relative time in Italian.
+ * - Today: "Oggi 15:00"
+ * - Yesterday: "Ieri"
+ * - 2-6 days ago: "3 giorni fa"
+ * - 7+ days ago: "19 Gen"
+ */
+export function formatRelativeTime(isoDate: string): string {
   const date = new Date(isoDate);
   const now = new Date();
 
@@ -232,6 +239,10 @@ function formatRelativeTime(isoDate: string): string {
     date.getDate() === now.getDate() &&
     date.getMonth() === now.getMonth() &&
     date.getFullYear() === now.getFullYear();
+
+  if (isToday) {
+    return `Oggi ${date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+  }
 
   // Check if yesterday
   const yesterday = new Date(now);
@@ -241,32 +252,33 @@ function formatRelativeTime(isoDate: string): string {
     date.getMonth() === yesterday.getMonth() &&
     date.getFullYear() === yesterday.getFullYear();
 
-  if (isToday) {
-    return `Oggi ${date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
-  }
   if (isYesterday) {
-    return `Ieri ${date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+    return 'Ieri';
   }
-  // More than yesterday, show date
-  return date.toLocaleDateString('it-IT', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+
+  // Calculate days difference
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((startOfToday.getTime() - startOfDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  // 2-6 days ago: "X giorni fa"
+  if (diffDays >= 2 && diffDays <= 6) {
+    return `${diffDays} giorni fa`;
+  }
+
+  // 7+ days: "19 Gen" format
+  return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
 }
 
 function _getDateGroup(isoDate: string): string {
   const date = new Date(isoDate);
   const now = new Date();
 
-  // Check if same day
   const isToday =
     date.getDate() === now.getDate() &&
     date.getMonth() === now.getMonth() &&
     date.getFullYear() === now.getFullYear();
 
-  // Check if yesterday
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   const isYesterday =
@@ -276,7 +288,13 @@ function _getDateGroup(isoDate: string): string {
 
   if (isToday) return 'Oggi';
   if (isYesterday) return 'Ieri';
-  return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((startOfToday.getTime() - startOfDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays >= 2 && diffDays <= 6) return `${diffDays} giorni fa`;
+  return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
 }
 
 // ============================================================================
@@ -426,7 +444,7 @@ function EventItem({ event, index }: { event: ActivityEvent; index: number }) {
 // ============================================================================
 
 export function ActivityFeed({
-  events = MOCK_EVENTS,
+  events = [],
   totalCount,
   limit = 10,
   isLoading = false,

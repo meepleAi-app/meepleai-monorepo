@@ -16,7 +16,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ActivityFeed, type ActivityEvent, type ActivityEventType } from '../ActivityFeed';
+import { ActivityFeed, formatRelativeTime, type ActivityEvent, type ActivityEventType } from '../ActivityFeed';
 
 // Mock next/link
 vi.mock('next/link', () => ({
@@ -369,12 +369,11 @@ describe('ActivityFeed', () => {
   // ============================================================================
 
   describe('Default Props', () => {
-    it('uses mock data when events not provided', () => {
+    it('shows empty state when events not provided', () => {
       render(<ActivityFeed />);
 
-      // Should render with default mock data
-      expect(screen.getByTestId('activity-feed-widget')).toBeInTheDocument();
-      expect(screen.getByTestId('activity-event-event-1')).toBeInTheDocument();
+      // Should render empty state with no events provided
+      expect(screen.getByTestId('activity-feed-empty')).toBeInTheDocument();
     });
 
     it('isLoading defaults to false', () => {
@@ -479,6 +478,56 @@ describe('ActivityFeed', () => {
       // Should link to default route without entityId
       const eventLink = screen.getByTestId('activity-event-no-entity-event');
       expect(eventLink).toHaveAttribute('href', '/library');
+    });
+  });
+
+  // ============================================================================
+  // Relative Time Formatting Tests (Issue #3976)
+  // ============================================================================
+
+  describe('formatRelativeTime', () => {
+    it('shows "Oggi HH:mm" for today events', () => {
+      const now = new Date();
+      now.setHours(15, 30, 0, 0);
+      const result = formatRelativeTime(now.toISOString());
+      expect(result).toMatch(/^Oggi \d{2}:\d{2}$/);
+    });
+
+    it('shows "Ieri" for yesterday events (no time)', () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(10, 0, 0, 0);
+      const result = formatRelativeTime(yesterday.toISOString());
+      expect(result).toBe('Ieri');
+    });
+
+    it('shows "2 giorni fa" for 2 days ago', () => {
+      const twoDaysAgo = new Date();
+      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+      const result = formatRelativeTime(twoDaysAgo.toISOString());
+      expect(result).toBe('2 giorni fa');
+    });
+
+    it('shows "6 giorni fa" for 6 days ago', () => {
+      const sixDaysAgo = new Date();
+      sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+      const result = formatRelativeTime(sixDaysAgo.toISOString());
+      expect(result).toBe('6 giorni fa');
+    });
+
+    it('shows short date for 7+ days ago', () => {
+      const tenDaysAgo = new Date();
+      tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+      const result = formatRelativeTime(tenDaysAgo.toISOString());
+      // Should be like "31 gen" or "1 feb" (Italian short month)
+      expect(result).toMatch(/^\d{1,2}\s\w{3}$/);
+    });
+
+    it('shows short date for events from previous month', () => {
+      const lastMonth = new Date();
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+      const result = formatRelativeTime(lastMonth.toISOString());
+      expect(result).toMatch(/^\d{1,2}\s\w{3}$/);
     });
   });
 });

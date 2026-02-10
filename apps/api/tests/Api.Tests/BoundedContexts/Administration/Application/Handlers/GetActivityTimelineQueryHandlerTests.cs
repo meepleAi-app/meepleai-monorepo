@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Handlers;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Services;
+using Api.Tests.Constants;
 using Moq;
 using Xunit;
 
@@ -10,6 +11,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// <summary>
 /// Unit tests for GetActivityTimelineQueryHandler (Issue #3973).
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class GetActivityTimelineQueryHandlerTests
 {
     private readonly Mock<IActivityTimelineService> _mockTimelineService;

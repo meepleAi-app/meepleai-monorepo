@@ -1,3 +1,5 @@
+using Api.BoundedContexts.Administration.Application.Services;
+using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
@@ -235,6 +237,9 @@ internal static class ApplicationServiceExtensions
 
         // Issue #2854: User dashboard service for aggregated dashboard data
         services.AddScoped<IUserDashboardService, UserDashboardService>();
+
+        // Issue #3973: Activity timeline aggregation service
+        services.AddScoped<IActivityTimelineService, ActivityTimelineService>();
 
         return services;
     }

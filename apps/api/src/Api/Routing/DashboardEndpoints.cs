@@ -69,6 +69,25 @@ internal static class DashboardEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .WithOpenApi();
 
+        // Issue #3973: Activity timeline aggregation
+        group.MapGet("/dashboard/activity-timeline", HandleGetActivityTimeline)
+            .RequireSession()
+            .RequireAuthorization()
+            .WithName("GetActivityTimeline")
+            .WithTags("Dashboard")
+            .WithSummary("Get user activity timeline")
+            .WithDescription(@"Returns a chronological timeline of user activities aggregated from multiple sources:
+- **game_added**: Games added to library
+- **session_completed**: Game sessions played
+- **chat_saved**: Chat conversations
+- **wishlist_added**: Wishlist additions
+
+**Performance**: Target latency < 200ms with 5-minute cache.
+**Query Parameters**: `limit` (default: 10, max: 50)")
+            .Produces<ActivityTimelineResponseDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .WithOpenApi();
+
         // Issue #3324: SSE real-time dashboard stream
         MapDashboardStreamEndpoint(group);
 
@@ -185,6 +204,21 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
         var query = new GetDashboardQuery(session.User!.Id);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        return Results.Json(result);
+    }
+
+    private static async Task<IResult> HandleGetActivityTimeline(
+        HttpContext context,
+        IMediator mediator,
+        int limit = 10,
+        CancellationToken ct = default)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var clampedLimit = Math.Clamp(limit, 1, 50);
+
+        var query = new GetActivityTimelineQuery(session.User!.Id, clampedLimit);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Json(result);

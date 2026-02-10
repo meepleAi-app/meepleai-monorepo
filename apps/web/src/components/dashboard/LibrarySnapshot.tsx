@@ -276,13 +276,13 @@ function GameCard({ game, index }: { game: TopGame; index: number }) {
 // ============================================================================
 
 export function LibrarySnapshot({
-  quota = MOCK_QUOTA,
-  topGames = MOCK_TOP_GAMES,
+  quota = { used: 0, total: 0 },
+  topGames = [],
   isLoading = false,
   className,
 }: LibrarySnapshotProps) {
   const percentage = useMemo(
-    () => Math.round((quota.used / quota.total) * 100),
+    () => (quota.total > 0 ? Math.round((quota.used / quota.total) * 100) : 0),
     [quota]
   );
   const quotaColors = useMemo(() => getQuotaColor(percentage), [percentage]);
@@ -338,7 +338,7 @@ export function LibrarySnapshot({
         </div>
         <Progress
           value={percentage}
-          className="h-2"
+          className={cn('h-2', `[&>div]:${quotaColors.bar}`)}
           data-testid="quota-progress"
         />
       </div>

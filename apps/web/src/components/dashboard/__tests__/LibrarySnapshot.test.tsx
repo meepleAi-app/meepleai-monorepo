@@ -155,6 +155,27 @@ describe('LibrarySnapshot', () => {
       const quotaText = screen.getByTestId('quota-text');
       expect(quotaText).toHaveClass('text-red-600');
     });
+
+    it('applies emerald color to progress bar indicator for low quota', () => {
+      render(<LibrarySnapshot quota={lowQuota} topGames={mockTopGames} />);
+
+      const progress = screen.getByTestId('quota-progress');
+      expect(progress).toHaveClass('[&>div]:bg-emerald-500');
+    });
+
+    it('applies amber color to progress bar indicator for medium quota', () => {
+      render(<LibrarySnapshot quota={mediumQuota} topGames={mockTopGames} />);
+
+      const progress = screen.getByTestId('quota-progress');
+      expect(progress).toHaveClass('[&>div]:bg-amber-500');
+    });
+
+    it('applies red color to progress bar indicator for high quota', () => {
+      render(<LibrarySnapshot quota={highQuota} topGames={mockTopGames} />);
+
+      const progress = screen.getByTestId('quota-progress');
+      expect(progress).toHaveClass('[&>div]:bg-red-500');
+    });
   });
 
   // ============================================================================
@@ -285,12 +306,13 @@ describe('LibrarySnapshot', () => {
   // ============================================================================
 
   describe('Default Props', () => {
-    it('uses mock data when props not provided', () => {
+    it('shows empty state when props not provided', () => {
       render(<LibrarySnapshot />);
 
-      // Should render with default mock data
+      // Should render with empty defaults (no mock data)
       expect(screen.getByTestId('library-snapshot-widget')).toBeInTheDocument();
-      expect(screen.getByTestId('game-title-game-1')).toHaveTextContent('Catan');
+      expect(screen.getByTestId('library-snapshot-empty')).toBeInTheDocument();
+      expect(screen.getByTestId('quota-text')).toHaveTextContent('0/0 (0%)');
     });
 
     it('isLoading defaults to false', () => {

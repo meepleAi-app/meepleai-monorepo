@@ -14,7 +14,6 @@ namespace Api.Tests.Unit.Administration.Operations;
 public sealed class GetServiceHealthQueryHandlerTests
 {
     private readonly Mock<HealthCheckService> _mockHealthCheckService;
-    private readonly Mock<TimeProvider> _mockTimeProvider;
     private readonly GetServiceHealthQueryHandler _handler;
 
     public GetServiceHealthQueryHandlerTests()
@@ -23,7 +22,6 @@ public sealed class GetServiceHealthQueryHandlerTests
         // These tests should be integration tests instead
         // Temporarily skip mock setup - tests will be moved to integration suite
         _mockHealthCheckService = null!;
-        _mockTimeProvider = null!;
         _handler = null!;
     }
 

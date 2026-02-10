@@ -127,7 +127,7 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
         // Start subscriber in background
         var subscriberTask = Task.Run(async () =>
         {
-            await foreach (var progress in progressService.SubscribeToProgress(TestUserId, TestEntryId, cts.Token).ConfigureAwait(false))
+            await foreach (var progress in progressService.SubscribeToProgress(TestUserId, TestEntryId, cts.Token))
             {
                 receivedProgress.Add(progress);
                 if (progress.Step is ProcessingStep.Completed or ProcessingStep.Failed)
@@ -138,23 +138,23 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
         }, cts.Token);
 
         // Give subscriber time to connect
-        await Task.Delay(100, cts.Token).ConfigureAwait(false);
+        await Task.Delay(100, cts.Token);
 
         // Act - Publish progress updates
         await progressService.PublishProgressAsync(TestUserId, TestEntryId,
-            ProcessingProgressJson.ForStep(ProcessingStep.Uploading, 20, "Starting..."), cts.Token).ConfigureAwait(false);
+            ProcessingProgressJson.ForStep(ProcessingStep.Uploading, 20, "Starting..."), cts.Token);
 
         await progressService.PublishProgressAsync(TestUserId, TestEntryId,
-            ProcessingProgressJson.ForStep(ProcessingStep.Extracting, 40, "Extracting..."), cts.Token).ConfigureAwait(false);
+            ProcessingProgressJson.ForStep(ProcessingStep.Extracting, 40, "Extracting..."), cts.Token);
 
         await progressService.PublishProgressAsync(TestUserId, TestEntryId,
-            ProcessingProgressJson.ForStep(ProcessingStep.Chunking, 60, "Chunking..."), cts.Token).ConfigureAwait(false);
+            ProcessingProgressJson.ForStep(ProcessingStep.Chunking, 60, "Chunking..."), cts.Token);
 
         await progressService.PublishProgressAsync(TestUserId, TestEntryId,
-            ProcessingProgressJson.Completed(), cts.Token).ConfigureAwait(false);
+            ProcessingProgressJson.Completed(), cts.Token);
 
         // Wait for subscriber to complete
-        await subscriberTask.ConfigureAwait(false);
+        await subscriberTask;
 
         // Assert
         receivedProgress.Should().HaveCount(4);
@@ -177,19 +177,19 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
         // Start subscriber
         var subscriberTask = Task.Run(async () =>
         {
-            await foreach (var progress in progressService.SubscribeToProgress(TestUserId, TestEntryId, cts.Token).ConfigureAwait(false))
+            await foreach (var progress in progressService.SubscribeToProgress(TestUserId, TestEntryId, cts.Token))
             {
                 receivedProgress.Add(progress);
             }
         }, cts.Token);
 
-        await Task.Delay(100, cts.Token).ConfigureAwait(false);
+        await Task.Delay(100, cts.Token);
 
         // Act - Publish failure (terminal state)
         await progressService.PublishProgressAsync(TestUserId, TestEntryId,
-            ProcessingProgressJson.Failed("Test failure"), cts.Token).ConfigureAwait(false);
+            ProcessingProgressJson.Failed("Test failure"), cts.Token);
 
-        await subscriberTask.ConfigureAwait(false);
+        await subscriberTask;
 
         // Assert
         receivedProgress.Should().HaveCount(1);
@@ -212,25 +212,25 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
         // Start subscriber
         var subscriberTask = Task.Run(async () =>
         {
-            await foreach (var _ in progressService.SubscribeToProgress(TestUserId, TestEntryId, cts.Token).ConfigureAwait(false))
+            await foreach (var _ in progressService.SubscribeToProgress(TestUserId, TestEntryId, cts.Token))
             {
                 // Just enumerate
             }
         }, cts.Token);
 
-        await Task.Delay(100, cts.Token).ConfigureAwait(false);
+        await Task.Delay(100, cts.Token);
 
         // Act & Assert
         progressService.HasActiveSubscribers(TestUserId, TestEntryId).Should().BeTrue();
 
         // Cleanup
-        await cts.CancelAsync().ConfigureAwait(false);
-        try { await subscriberTask.ConfigureAwait(false); }
+        await cts.CancelAsync();
+        try { await subscriberTask; }
         catch (OperationCanceledException) { /* Expected */ }
     }
 
     [Fact]
-    public void PublishProgress_WithNoSubscribers_DoesNotThrow()
+    public async Task PublishProgress_WithNoSubscribers_DoesNotThrow()
     {
         // Arrange
         var progressService = new PrivatePdfProgressStreamService(
@@ -238,10 +238,10 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
 
         // Act - Should not throw
         var act = async () => await progressService.PublishProgressAsync(TestUserId, TestEntryId,
-            ProcessingProgressJson.ForStep(ProcessingStep.Uploading, 10, "Test"), CancellationToken.None).ConfigureAwait(false);
+            ProcessingProgressJson.ForStep(ProcessingStep.Uploading, 10, "Test"), CancellationToken.None);
 
         // Assert
-        act.Should().NotThrowAsync();
+        await act.Should().NotThrowAsync();
     }
 
     [Fact]
@@ -258,7 +258,7 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
         // Start two subscribers
         var subscriber1Task = Task.Run(async () =>
         {
-            await foreach (var progress in progressService.SubscribeToProgress(TestUserId, TestEntryId, cts.Token).ConfigureAwait(false))
+            await foreach (var progress in progressService.SubscribeToProgress(TestUserId, TestEntryId, cts.Token))
             {
                 subscriber1Progress.Add(progress);
                 if (progress.Step == ProcessingStep.Completed) break;
@@ -267,23 +267,23 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
 
         var subscriber2Task = Task.Run(async () =>
         {
-            await foreach (var progress in progressService.SubscribeToProgress(TestUserId, TestEntryId, cts.Token).ConfigureAwait(false))
+            await foreach (var progress in progressService.SubscribeToProgress(TestUserId, TestEntryId, cts.Token))
             {
                 subscriber2Progress.Add(progress);
                 if (progress.Step == ProcessingStep.Completed) break;
             }
         }, cts.Token);
 
-        await Task.Delay(100, cts.Token).ConfigureAwait(false);
+        await Task.Delay(100, cts.Token);
 
         // Act
         await progressService.PublishProgressAsync(TestUserId, TestEntryId,
-            ProcessingProgressJson.ForStep(ProcessingStep.Indexing, 90, "Indexing..."), cts.Token).ConfigureAwait(false);
+            ProcessingProgressJson.ForStep(ProcessingStep.Indexing, 90, "Indexing..."), cts.Token);
 
         await progressService.PublishProgressAsync(TestUserId, TestEntryId,
-            ProcessingProgressJson.Completed(), cts.Token).ConfigureAwait(false);
+            ProcessingProgressJson.Completed(), cts.Token);
 
-        await Task.WhenAll(subscriber1Task, subscriber2Task).ConfigureAwait(false);
+        await Task.WhenAll(subscriber1Task, subscriber2Task);
 
         // Assert
         subscriber1Progress.Should().HaveCount(2);
@@ -314,11 +314,11 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
         };
 
         _dbContext!.Set<PdfDocumentEntity>().Add(pdfEntity);
-        await _dbContext.SaveChangesAsync(TestCancellationToken).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Verify PDF exists in database before handler runs
         var pdfBeforeHandler = await _dbContext.Set<PdfDocumentEntity>()
-            .FirstOrDefaultAsync(p => p.Id == TestPdfId, TestCancellationToken).ConfigureAwait(false);
+            .FirstOrDefaultAsync(p => p.Id == TestPdfId, TestCancellationToken);
         pdfBeforeHandler.Should().NotBeNull("PDF should exist in database before handler runs");
         pdfBeforeHandler!.ExtractedText.Should().NotBeNullOrEmpty("PDF should have extracted text");
 
@@ -386,13 +386,13 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
             pdfDocumentId: TestPdfId);
 
         // Act
-        await handler.Handle(notification, TestCancellationToken).ConfigureAwait(false);
+        await handler.Handle(notification, TestCancellationToken);
 
         // Assert - First verify mocks were invoked
         chunkingWasCalled.Should().BeTrue("ChunkText mock should have been called - if not, the handler failed before chunking");
 
         var updatedPdf = await _dbContext.Set<PdfDocumentEntity>()
-            .FirstAsync(p => p.Id == TestPdfId, TestCancellationToken).ConfigureAwait(false);
+            .FirstAsync(p => p.Id == TestPdfId, TestCancellationToken);
 
         updatedPdf.ProcessingStatus.Should().Be("indexed");
         updatedPdf.ProcessedAt.Should().NotBeNull();
@@ -425,7 +425,7 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
         };
 
         _dbContext!.Set<PdfDocumentEntity>().Add(pdfEntity);
-        await _dbContext.SaveChangesAsync(TestCancellationToken).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var progressService = new PrivatePdfProgressStreamService(
             NullLogger<PrivatePdfProgressStreamService>.Instance);
@@ -436,14 +436,14 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
         // Subscribe to progress
         var subscriberTask = Task.Run(async () =>
         {
-            await foreach (var progress in progressService.SubscribeToProgress(TestUserId, pdfIdNoText, cts.Token).ConfigureAwait(false))
+            await foreach (var progress in progressService.SubscribeToProgress(TestUserId, pdfIdNoText, cts.Token))
             {
                 receivedProgress.Add(progress);
                 if (progress.Step is ProcessingStep.Completed or ProcessingStep.Failed) break;
             }
         }, cts.Token);
 
-        await Task.Delay(100, cts.Token).ConfigureAwait(false);
+        await Task.Delay(100, cts.Token);
 
         var handler = new PrivatePdfAssociatedEventHandler(
             _dbContext,
@@ -462,8 +462,8 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
             pdfDocumentId: pdfIdNoText);
 
         // Act
-        await handler.Handle(notification, TestCancellationToken).ConfigureAwait(false);
-        await subscriberTask.ConfigureAwait(false);
+        await handler.Handle(notification, TestCancellationToken);
+        await subscriberTask;
 
         // Assert - Handler should publish failure due to missing text
         receivedProgress.Should().Contain(p => p.Step == ProcessingStep.Failed);
@@ -483,14 +483,14 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
 
         var subscriberTask = Task.Run(async () =>
         {
-            await foreach (var progress in progressService.SubscribeToProgress(TestUserId, nonExistentPdfId, cts.Token).ConfigureAwait(false))
+            await foreach (var progress in progressService.SubscribeToProgress(TestUserId, nonExistentPdfId, cts.Token))
             {
                 receivedProgress.Add(progress);
                 if (progress.Step is ProcessingStep.Completed or ProcessingStep.Failed) break;
             }
         }, cts.Token);
 
-        await Task.Delay(100, cts.Token).ConfigureAwait(false);
+        await Task.Delay(100, cts.Token);
 
         var handler = new PrivatePdfAssociatedEventHandler(
             _dbContext!,
@@ -509,8 +509,8 @@ public sealed class PrivatePdfUploadIntegrationTests : IAsyncLifetime
             pdfDocumentId: nonExistentPdfId);
 
         // Act
-        await handler.Handle(notification, TestCancellationToken).ConfigureAwait(false);
-        await subscriberTask.ConfigureAwait(false);
+        await handler.Handle(notification, TestCancellationToken);
+        await subscriberTask;
 
         // Assert
         receivedProgress.Should().Contain(p => p.Step == ProcessingStep.Failed);

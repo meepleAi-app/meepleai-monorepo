@@ -74,7 +74,7 @@ public class VacuumDatabaseCommandTests : IAsyncLifetime
         var command = new VacuumDatabaseCommand(Confirmed: true, FullVacuum: false);
 
         // Act
-        var result = await handler.Handle(command, CancellationToken.None).ConfigureAwait(false);
+        var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.Should().BeTrue();
@@ -90,7 +90,7 @@ public class VacuumDatabaseCommandTests : IAsyncLifetime
         var command = new VacuumDatabaseCommand(Confirmed: true, FullVacuum: true);
 
         // Act
-        var result = await handler.Handle(command, CancellationToken.None).ConfigureAwait(false);
+        var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.Should().BeTrue();
@@ -110,8 +110,7 @@ public class VacuumDatabaseCommandTests : IAsyncLifetime
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*Confirmation is required*")
-            .ConfigureAwait(false);
+            .WithMessage("*Confirmation is required*");
     }
 
     [Fact]
@@ -126,8 +125,7 @@ public class VacuumDatabaseCommandTests : IAsyncLifetime
         var act = () => handler.Handle(null!, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<ArgumentNullException>()
-            .ConfigureAwait(false);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]

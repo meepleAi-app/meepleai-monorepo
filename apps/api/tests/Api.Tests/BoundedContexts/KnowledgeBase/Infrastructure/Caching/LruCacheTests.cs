@@ -12,7 +12,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "3494")]
-public class LruCacheTests : IDisposable
+public sealed class LruCacheTests : IDisposable
 {
     private readonly FakeTimeProvider _timeProvider;
     private readonly LruCache<string, string> _cache;

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
@@ -10,6 +11,7 @@ using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Handlers;
@@ -26,6 +28,7 @@ internal class AddGameToLibraryCommandHandler : ICommandHandler<AddGameToLibrary
     private readonly IUnitOfWork _unitOfWork;
     private readonly IGameLibraryQuotaService _quotaService;
     private readonly MeepleAiDbContext _db;
+    private readonly IPublisher _publisher;
     private readonly ILogger<AddGameToLibraryCommandHandler> _logger;
 
     public AddGameToLibraryCommandHandler(
@@ -34,6 +37,7 @@ internal class AddGameToLibraryCommandHandler : ICommandHandler<AddGameToLibrary
         IUnitOfWork unitOfWork,
         IGameLibraryQuotaService quotaService,
         MeepleAiDbContext db,
+        IPublisher publisher,
         ILogger<AddGameToLibraryCommandHandler> logger)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
@@ -41,6 +45,7 @@ internal class AddGameToLibraryCommandHandler : ICommandHandler<AddGameToLibrary
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _quotaService = quotaService ?? throw new ArgumentNullException(nameof(quotaService));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -78,6 +83,11 @@ internal class AddGameToLibraryCommandHandler : ICommandHandler<AddGameToLibrary
 
         await _libraryRepository.AddAsync(entry, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Issue #3974: Publish cache invalidation event
+        await _publisher.Publish(
+            new UserLibraryGameAddedEvent(command.UserId, command.GameId),
+            cancellationToken).ConfigureAwait(false);
 
         return new UserLibraryEntryDto(
             Id: entry.Id,

@@ -1,26 +1,65 @@
 /**
- * WishlistHighlights Tests (Issue #3317)
+ * WishlistHighlights Tests (Issue #3920)
  *
- * Test coverage for wishlist highlights widget.
+ * Test coverage for wishlist highlights widget:
+ * - Renders top 5 items sorted by priority
+ * - Priority badges colored correctly (HIGH=rose, MEDIUM=amber, LOW=emerald)
+ * - Empty state shown when no items
+ * - Game covers displayed
+ * - Target price display
+ * - Mark as purchased quick action
+ * - Loading skeleton state
+ * - Accessibility
  */
 
-import { render, screen } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { WishlistHighlights, type WishlistItem } from '../WishlistHighlights';
+import {
+  WishlistHighlights,
+  type WishlistHighlightItem,
+} from '../WishlistHighlights';
 
-// Mock Next.js Link - preserve all props including data-testid
+// Mock Next.js Link
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
+// Mock Next.js Image
+vi.mock('next/image', () => ({
+  default: ({
+    src,
+    alt,
+    ...props
+  }: {
+    src: string;
+    alt: string;
+    [key: string]: unknown;
+  }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} {...props} />
   ),
 }));
 
 // Mock framer-motion
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+    div: ({
+      children,
+      ...props
+    }: React.HTMLAttributes<HTMLDivElement>) => (
       <div {...props}>{children}</div>
     ),
   },
@@ -30,63 +69,36 @@ vi.mock('framer-motion', () => ({
 // Test Data
 // ============================================================================
 
-const mockItems: WishlistItem[] = [
+const mockItems: WishlistHighlightItem[] = [
   {
     id: 'wish-1',
-    gameId: 'game-1',
-    gameName: 'Terraforming Mars',
-    priority: 5,
-    addedAt: '2026-01-20T10:00:00Z',
+    game: { id: 'game-1', name: 'Terraforming Mars', coverUrl: '/covers/terraforming.jpg' },
+    priority: 'HIGH',
+    targetPrice: 49.99,
   },
   {
     id: 'wish-2',
-    gameId: 'game-2',
-    gameName: 'Gloomhaven',
-    priority: 4,
-    addedAt: '2026-01-15T10:00:00Z',
+    game: { id: 'game-2', name: 'Gloomhaven', coverUrl: '/covers/gloomhaven.jpg' },
+    priority: 'HIGH',
+    targetPrice: 89.99,
   },
   {
     id: 'wish-3',
-    gameId: 'game-3',
-    gameName: 'Brass Birmingham',
-    priority: 4,
-    addedAt: '2026-01-25T10:00:00Z',
+    game: { id: 'game-3', name: 'Brass Birmingham', coverUrl: '/covers/brass.jpg' },
+    priority: 'MEDIUM',
   },
   {
     id: 'wish-4',
-    gameId: 'game-4',
-    gameName: 'Spirit Island',
-    priority: 3,
-    addedAt: '2026-01-10T10:00:00Z',
+    game: { id: 'game-4', name: 'Spirit Island', coverUrl: '/covers/spirit.jpg' },
+    priority: 'MEDIUM',
+    targetPrice: 59.99,
   },
   {
     id: 'wish-5',
-    gameId: 'game-5',
-    gameName: 'Root',
-    priority: 3,
-    addedAt: '2026-01-22T10:00:00Z',
+    game: { id: 'game-5', name: 'Root', coverUrl: '/covers/root.jpg' },
+    priority: 'LOW',
   },
 ];
-
-// ============================================================================
-// Test Helpers
-// ============================================================================
-
-let queryClient: QueryClient;
-
-function renderComponent(props: Partial<React.ComponentProps<typeof WishlistHighlights>> = {}) {
-  queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  });
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <WishlistHighlights {...props} />
-    </QueryClientProvider>
-  );
-}
 
 // ============================================================================
 // Tests
@@ -99,129 +111,322 @@ describe('WishlistHighlights', () => {
 
   describe('Loading State', () => {
     it('renders skeleton when loading', () => {
-      renderComponent({ isLoading: true });
+      render(<WishlistHighlights isLoading />);
 
-      expect(screen.getByTestId('wishlist-highlights-skeleton')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('wishlist-highlights-skeleton')
+      ).toBeInTheDocument();
     });
 
-    it('shows 5 skeleton rows', () => {
-      renderComponent({ isLoading: true });
+    it('skeleton has glassmorphic styling', () => {
+      render(<WishlistHighlights isLoading />);
 
       const skeleton = screen.getByTestId('wishlist-highlights-skeleton');
-      // Check that skeleton has structure
       expect(skeleton).toHaveClass('rounded-2xl');
     });
   });
 
   describe('Success State', () => {
     it('renders widget with items', () => {
-      renderComponent({ items: mockItems });
+      render(<WishlistHighlights items={mockItems} />);
 
-      expect(screen.getByTestId('wishlist-highlights-widget')).toBeInTheDocument();
-      expect(screen.getByTestId('wishlist-highlights-title')).toHaveTextContent('Wishlist Highlights');
+      expect(
+        screen.getByTestId('wishlist-highlights-widget')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId('wishlist-highlights-title')
+      ).toHaveTextContent('Wishlist Highlights');
     });
 
-    it('renders all wishlist items', () => {
-      renderComponent({ items: mockItems });
+    it('renders all 5 wishlist items', () => {
+      render(<WishlistHighlights items={mockItems} />);
 
-      // Items are sorted by priority, check all are present
       const itemsList = screen.getByTestId('wishlist-items-list');
-      const items = itemsList.querySelectorAll('[data-testid^="wishlist-item-"]');
+      const items = itemsList.querySelectorAll(
+        '[data-testid^="wishlist-item-"]'
+      );
       expect(items.length).toBe(5);
-
-      // Verify first item is highest priority
-      expect(screen.getByTestId('wishlist-name-wish-1')).toHaveTextContent('Terraforming Mars');
     });
 
     it('limits to 5 items maximum', () => {
-      const manyItems: WishlistItem[] = [
+      const manyItems: WishlistHighlightItem[] = [
         ...mockItems,
-        { id: 'wish-6', gameId: 'game-6', gameName: 'Extra Game', priority: 2, addedAt: '2026-01-01T10:00:00Z' },
-        { id: 'wish-7', gameId: 'game-7', gameName: 'Another Game', priority: 1, addedAt: '2026-01-02T10:00:00Z' },
+        {
+          id: 'wish-6',
+          game: { id: 'game-6', name: 'Extra Game', coverUrl: '/covers/extra.jpg' },
+          priority: 'LOW',
+        },
+        {
+          id: 'wish-7',
+          game: { id: 'game-7', name: 'Another Game', coverUrl: '/covers/another.jpg' },
+          priority: 'LOW',
+        },
       ];
 
-      renderComponent({ items: manyItems });
+      render(<WishlistHighlights items={manyItems} />);
 
       const itemsList = screen.getByTestId('wishlist-items-list');
-      const items = itemsList.querySelectorAll('[data-testid^="wishlist-item-"]');
+      const items = itemsList.querySelectorAll(
+        '[data-testid^="wishlist-item-"]'
+      );
       expect(items.length).toBe(5);
     });
 
-    it('sorts items by priority descending', () => {
-      const unsortedItems: WishlistItem[] = [
-        { id: 'wish-low', gameId: 'game-1', gameName: 'Low Priority', priority: 1, addedAt: '2026-01-01T10:00:00Z' },
-        { id: 'wish-high', gameId: 'game-2', gameName: 'High Priority', priority: 5, addedAt: '2026-01-02T10:00:00Z' },
-        { id: 'wish-med', gameId: 'game-3', gameName: 'Medium Priority', priority: 3, addedAt: '2026-01-03T10:00:00Z' },
+    it('sorts items by priority descending (HIGH > MEDIUM > LOW)', () => {
+      const unsortedItems: WishlistHighlightItem[] = [
+        {
+          id: 'wish-low',
+          game: { id: 'game-1', name: 'Low Priority', coverUrl: '/covers/low.jpg' },
+          priority: 'LOW',
+        },
+        {
+          id: 'wish-high',
+          game: { id: 'game-2', name: 'High Priority', coverUrl: '/covers/high.jpg' },
+          priority: 'HIGH',
+        },
+        {
+          id: 'wish-med',
+          game: { id: 'game-3', name: 'Medium Priority', coverUrl: '/covers/med.jpg' },
+          priority: 'MEDIUM',
+        },
       ];
 
-      renderComponent({ items: unsortedItems });
+      render(<WishlistHighlights items={unsortedItems} />);
 
-      const ranks = screen.getAllByTestId(/^wishlist-rank-/);
-      // First item should be rank 1 (highest priority = 5)
-      expect(ranks[0]).toHaveTextContent('1.');
+      // First item should be HIGH priority
+      const names = screen.getAllByTestId(/^wishlist-name-/);
+      expect(names[0]).toHaveTextContent('High Priority');
+      expect(names[1]).toHaveTextContent('Medium Priority');
+      expect(names[2]).toHaveTextContent('Low Priority');
     });
 
-    it('displays correct ranks', () => {
-      renderComponent({ items: mockItems });
+    it('displays game names', () => {
+      render(<WishlistHighlights items={mockItems} />);
 
-      mockItems.forEach((item, index) => {
-        const rank = screen.getByTestId(`wishlist-rank-${item.id}`);
-        expect(rank).toBeInTheDocument();
-      });
+      expect(
+        screen.getByTestId('wishlist-name-wish-1')
+      ).toHaveTextContent('Terraforming Mars');
+      expect(
+        screen.getByTestId('wishlist-name-wish-5')
+      ).toHaveTextContent('Root');
     });
 
-    it('shows priority stars for each item', () => {
-      renderComponent({ items: mockItems });
+    it('shows manage wishlist link in header', () => {
+      render(<WishlistHighlights items={mockItems} />);
 
-      mockItems.forEach((item) => {
-        expect(screen.getByTestId(`wishlist-priority-${item.id}`)).toBeInTheDocument();
-      });
+      const link = screen.getByTestId('view-wishlist-link');
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveAttribute('href', '/wishlist');
+    });
+  });
+
+  describe('Game Covers', () => {
+    it('renders cover images for items with coverUrl', () => {
+      render(<WishlistHighlights items={mockItems} />);
+
+      const coverLink = screen.getByTestId('wishlist-cover-wish-1');
+      const img = coverLink.querySelector('img');
+      expect(img).toBeInTheDocument();
+      expect(img).toHaveAttribute('alt', 'Terraforming Mars');
     });
 
-    it('links to game detail pages', () => {
-      renderComponent({ items: mockItems });
+    it('cover links to game detail page', () => {
+      render(<WishlistHighlights items={mockItems} />);
 
-      mockItems.forEach((item) => {
-        const link = screen.getByTestId(`wishlist-item-${item.id}`);
-        expect(link).toHaveAttribute('href', `/games/${item.gameId}`);
-      });
+      const coverLink = screen.getByTestId('wishlist-cover-wish-1');
+      expect(coverLink).toHaveAttribute('href', '/games/game-1');
     });
 
-    it('shows manage wishlist CTA', () => {
-      renderComponent({ items: mockItems });
+    it('shows placeholder when no coverUrl', () => {
+      const itemsNoCover: WishlistHighlightItem[] = [
+        {
+          id: 'wish-no-cover',
+          game: { id: 'game-nc', name: 'No Cover Game', coverUrl: '' },
+          priority: 'HIGH',
+        },
+      ];
 
-      const cta = screen.getByTestId('manage-wishlist-cta');
-      expect(cta).toBeInTheDocument();
-      expect(cta.closest('a')).toHaveAttribute('href', '/wishlist');
+      render(<WishlistHighlights items={itemsNoCover} />);
+
+      const coverLink = screen.getByTestId('wishlist-cover-wish-no-cover');
+      const img = coverLink.querySelector('img');
+      expect(img).toBeNull();
+    });
+  });
+
+  describe('Priority Badges', () => {
+    it('renders priority badges', () => {
+      render(<WishlistHighlights items={mockItems} />);
+
+      const badges = screen.getAllByTestId('priority-badge');
+      expect(badges.length).toBe(5);
+    });
+
+    it('HIGH priority shows "Alta" label with rose colors', () => {
+      const highItems: WishlistHighlightItem[] = [
+        {
+          id: 'wish-high',
+          game: { id: 'game-1', name: 'High Game', coverUrl: '/c.jpg' },
+          priority: 'HIGH',
+        },
+      ];
+
+      render(<WishlistHighlights items={highItems} />);
+
+      const badge = screen.getByTestId('priority-badge');
+      expect(badge).toHaveTextContent('Alta');
+      expect(badge.className).toContain('bg-rose-100');
+    });
+
+    it('MEDIUM priority shows "Media" label with amber colors', () => {
+      const medItems: WishlistHighlightItem[] = [
+        {
+          id: 'wish-med',
+          game: { id: 'game-1', name: 'Med Game', coverUrl: '/c.jpg' },
+          priority: 'MEDIUM',
+        },
+      ];
+
+      render(<WishlistHighlights items={medItems} />);
+
+      const badge = screen.getByTestId('priority-badge');
+      expect(badge).toHaveTextContent('Media');
+      expect(badge.className).toContain('bg-amber-100');
+    });
+
+    it('LOW priority shows "Bassa" label with emerald colors', () => {
+      const lowItems: WishlistHighlightItem[] = [
+        {
+          id: 'wish-low',
+          game: { id: 'game-1', name: 'Low Game', coverUrl: '/c.jpg' },
+          priority: 'LOW',
+        },
+      ];
+
+      render(<WishlistHighlights items={lowItems} />);
+
+      const badge = screen.getByTestId('priority-badge');
+      expect(badge).toHaveTextContent('Bassa');
+      expect(badge.className).toContain('bg-emerald-100');
+    });
+  });
+
+  describe('Target Price', () => {
+    it('displays target price when provided', () => {
+      render(<WishlistHighlights items={mockItems} />);
+
+      const price = screen.getByTestId('wishlist-price-wish-1');
+      expect(price).toHaveTextContent('Target: 49.99');
+    });
+
+    it('does not display price when not provided', () => {
+      render(<WishlistHighlights items={mockItems} />);
+
+      // wish-3 has no targetPrice
+      expect(
+        screen.queryByTestId('wishlist-price-wish-3')
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Mark as Purchased Action', () => {
+    it('shows purchase button when onMarkPurchased provided', () => {
+      const handlePurchased = vi.fn();
+
+      render(
+        <WishlistHighlights
+          items={mockItems}
+          onMarkPurchased={handlePurchased}
+        />
+      );
+
+      const btn = screen.getByTestId('wishlist-purchased-wish-1');
+      expect(btn).toBeInTheDocument();
+    });
+
+    it('calls onMarkPurchased with item id when clicked', () => {
+      const handlePurchased = vi.fn();
+
+      render(
+        <WishlistHighlights
+          items={mockItems}
+          onMarkPurchased={handlePurchased}
+        />
+      );
+
+      const btn = screen.getByTestId('wishlist-purchased-wish-1');
+      fireEvent.click(btn);
+
+      expect(handlePurchased).toHaveBeenCalledWith('wish-1');
+      expect(handlePurchased).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not show purchase button when no callback', () => {
+      render(<WishlistHighlights items={mockItems} />);
+
+      expect(
+        screen.queryByTestId('wishlist-purchased-wish-1')
+      ).not.toBeInTheDocument();
+    });
+
+    it('has accessible aria-label on purchase button', () => {
+      const handlePurchased = vi.fn();
+
+      render(
+        <WishlistHighlights
+          items={mockItems}
+          onMarkPurchased={handlePurchased}
+        />
+      );
+
+      const btn = screen.getByTestId('wishlist-purchased-wish-1');
+      expect(btn).toHaveAttribute(
+        'aria-label',
+        'Segna Terraforming Mars come acquistato'
+      );
     });
   });
 
   describe('Empty State', () => {
     it('renders empty state when no items', () => {
-      renderComponent({ items: [] });
+      render(<WishlistHighlights items={[]} />);
 
-      expect(screen.getByTestId('wishlist-highlights-empty')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('wishlist-highlights-empty')
+      ).toBeInTheDocument();
       expect(screen.getByText('Wishlist vuota')).toBeInTheDocument();
     });
 
     it('shows explore catalog CTA in empty state', () => {
-      renderComponent({ items: [] });
+      render(<WishlistHighlights items={[]} />);
 
       const cta = screen.getByTestId('explore-catalog-cta');
       expect(cta).toBeInTheDocument();
       expect(cta.closest('a')).toHaveAttribute('href', '/games/catalog');
     });
+
+    it('empty state CTA says "Aggiungi primo gioco"', () => {
+      render(<WishlistHighlights items={[]} />);
+
+      expect(
+        screen.getByText('Aggiungi primo gioco')
+      ).toBeInTheDocument();
+    });
   });
 
   describe('Styling', () => {
     it('applies custom className', () => {
-      renderComponent({ items: mockItems, className: 'custom-class' });
+      render(
+        <WishlistHighlights items={mockItems} className="custom-class" />
+      );
 
-      expect(screen.getByTestId('wishlist-highlights-widget')).toHaveClass('custom-class');
+      expect(
+        screen.getByTestId('wishlist-highlights-widget')
+      ).toHaveClass('custom-class');
     });
 
     it('has glassmorphic styling', () => {
-      renderComponent({ items: mockItems });
+      render(<WishlistHighlights items={mockItems} />);
 
       const widget = screen.getByTestId('wishlist-highlights-widget');
       expect(widget).toHaveClass('rounded-2xl');
@@ -231,19 +436,23 @@ describe('WishlistHighlights', () => {
 
   describe('Accessibility', () => {
     it('has semantic section element', () => {
-      renderComponent({ items: mockItems });
+      render(<WishlistHighlights items={mockItems} />);
 
-      expect(screen.getByTestId('wishlist-highlights-widget').tagName).toBe('SECTION');
+      expect(
+        screen.getByTestId('wishlist-highlights-widget').tagName
+      ).toBe('SECTION');
     });
 
     it('has heading element', () => {
-      renderComponent({ items: mockItems });
+      render(<WishlistHighlights items={mockItems} />);
 
-      expect(screen.getByRole('heading', { level: 3 })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { level: 3 })
+      ).toBeInTheDocument();
     });
 
-    it('all links are accessible', () => {
-      renderComponent({ items: mockItems });
+    it('all links are accessible with href', () => {
+      render(<WishlistHighlights items={mockItems} />);
 
       const links = screen.getAllByRole('link');
       links.forEach((link) => {

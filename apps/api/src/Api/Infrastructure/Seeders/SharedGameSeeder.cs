@@ -59,8 +59,9 @@ internal static class SharedGameSeeder
         {
             try
             {
-                // Check if already exists
+                // Check if already exists (AsTracking needed: DbContext defaults to NoTracking)
                 var existing = await db.SharedGames
+                    .AsTracking()
                     .FirstOrDefaultAsync(g => g.Title == gameData.Name && !g.IsDeleted, cancellationToken)
                     .ConfigureAwait(false);
 

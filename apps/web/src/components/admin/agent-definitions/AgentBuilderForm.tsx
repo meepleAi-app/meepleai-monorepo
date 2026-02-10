@@ -1,11 +1,12 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Plus, Trash2 } from 'lucide-react';
 import { useFieldArray, useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { Button, Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider, Textarea } from '@/components/ui';
-import { createAgentDefinitionSchema, type CreateAgentDefinition, type PromptTemplate, type ToolConfig } from '@/lib/api/schemas/agent-definitions.schemas';
+import { createAgentDefinitionSchema, type CreateAgentDefinition } from '@/lib/api/schemas/agent-definitions.schemas';
 
 interface AgentBuilderFormProps {
   defaultValues?: Partial<CreateAgentDefinition>;

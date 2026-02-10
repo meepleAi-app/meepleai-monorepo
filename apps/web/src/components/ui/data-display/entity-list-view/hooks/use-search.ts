@@ -19,6 +19,7 @@
  */
 
 import { useMemo, useState } from 'react';
+
 import { useDebounce } from './use-debounce';
 import { fuzzySearch } from '../utils/search-utils';
 

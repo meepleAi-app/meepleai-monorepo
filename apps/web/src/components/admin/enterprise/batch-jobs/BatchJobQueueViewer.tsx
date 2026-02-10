@@ -27,7 +27,6 @@ import {
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/data-display/badge';
-import { Progress } from '@/components/ui/feedback/progress';
 import {
   Table,
   TableBody,
@@ -36,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/data-display/table';
+import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { BatchJobDto, BatchJobStatus } from '@/lib/api/schemas';
@@ -117,6 +117,7 @@ export function BatchJobQueueViewer({ jobs, loading, onJobClick }: BatchJobQueue
     try {
       await api.admin.cancelBatchJob(jobId);
       toast.success('Job cancelled successfully');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       onJobClick(jobs.find(j => j.id === jobId)!);
     } catch (error) {
       toast.error('Failed to cancel job');
@@ -132,6 +133,7 @@ export function BatchJobQueueViewer({ jobs, loading, onJobClick }: BatchJobQueue
     try {
       await api.admin.retryBatchJob(jobId);
       toast.success('Job retried successfully');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       onJobClick(jobs.find(j => j.id === jobId)!);
     } catch (error) {
       toast.error('Failed to retry job');
@@ -149,6 +151,7 @@ export function BatchJobQueueViewer({ jobs, loading, onJobClick }: BatchJobQueue
     try {
       await api.admin.deleteBatchJob(jobId);
       toast.success('Job deleted successfully');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       onJobClick(jobs.find(j => j.id === jobId)!);
     } catch (error) {
       toast.error('Failed to delete job');

@@ -14,11 +14,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { UserPlus, X, User, UserCircle } from 'lucide-react';
+import { useForm } from 'react-hook-form';
 
-import { Button } from '@/components/ui/primitives/button';
+import { Badge } from '@/components/ui/data-display/badge';
 import {
   Form,
   FormControl,
@@ -28,11 +29,10 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/forms/form';
+import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
 import { Label } from '@/components/ui/primitives/label';
-import { Badge } from '@/components/ui/data-display/badge';
-
+import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
 import { PlayerAddFormSchema, type PlayerAddForm } from '@/lib/api/schemas/play-records.schemas';
 import type { SessionPlayer } from '@/lib/api/schemas/play-records.schemas';
 

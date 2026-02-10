@@ -91,7 +91,7 @@ Validates a player move against game rules using the Arbitro Agent's AI reasonin
 
 **Performance**: ~200-500ms total (LLM ~200-400ms + overhead &lt;100ms P95)
 ")
-        .Produces<MoveValidationResultDto>(200, "application/json", "Move validation completed")
+        .Produces<MoveValidationResultDto>(200, "application/json")
         .ProducesProblem(400, "application/problem+json")
         .ProducesValidationProblem(400, "application/problem+json")
         .ProducesProblem(401, "application/problem+json")

@@ -136,11 +136,6 @@ const nextConfig = {
         hostname: '**.boardgamegeek.com',
         pathname: '/**',
       },
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        pathname: '/**',
-      },
     ],
   },
 

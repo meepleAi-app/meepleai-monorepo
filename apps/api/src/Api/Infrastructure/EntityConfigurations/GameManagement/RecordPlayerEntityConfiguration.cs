@@ -27,7 +27,7 @@ internal class RecordPlayerEntityConfiguration : IEntityTypeConfiguration<Record
         // Indexes
         builder.HasIndex(e => e.UserId)
             .HasDatabaseName("IX_RecordPlayers_UserId")
-            .HasFilter("user_id IS NOT NULL");
+            .HasFilter("\"UserId\" IS NOT NULL");
 
         builder.HasIndex(e => e.PlayRecordId)
             .HasDatabaseName("IX_RecordPlayers_PlayRecordId");

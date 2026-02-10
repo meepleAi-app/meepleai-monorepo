@@ -15,14 +15,14 @@
 
 import { useCallback } from 'react';
 
-import { Rows, Square } from 'lucide-react';
+import { GalleryHorizontal, Rows, Square } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/primitives/toggle-group';
 
 export interface ViewToggleProps {
   /** Current view mode from URL searchParams */
-  currentView: 'grid' | 'list';
+  currentView: 'grid' | 'list' | 'carousel';
 }
 
 export function ViewToggle({ currentView }: ViewToggleProps) {
@@ -32,7 +32,7 @@ export function ViewToggle({ currentView }: ViewToggleProps) {
 
   const handleViewChange = useCallback(
     (value: string) => {
-      if (!value || (value !== 'grid' && value !== 'list')) return;
+      if (!value || (value !== 'grid' && value !== 'list' && value !== 'carousel')) return;
 
       const params = new URLSearchParams(searchParams?.toString() || '');
       params.set('view', value);
@@ -58,6 +58,10 @@ export function ViewToggle({ currentView }: ViewToggleProps) {
       <ToggleGroupItem value="list" aria-label="List view" className="gap-2">
         <Rows className="h-4 w-4" />
         <span className="hidden sm:inline">List</span>
+      </ToggleGroupItem>
+      <ToggleGroupItem value="carousel" aria-label="Carousel view" className="gap-2">
+        <GalleryHorizontal className="h-4 w-4" />
+        <span className="hidden sm:inline">Carousel</span>
       </ToggleGroupItem>
     </ToggleGroup>
   );

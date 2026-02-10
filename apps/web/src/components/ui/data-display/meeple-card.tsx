@@ -60,15 +60,16 @@ import Image from 'next/image';
 
 import { cn } from '@/lib/utils';
 
+import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
+import { DragHandle, type DragData } from './meeple-card-features/DragHandle';
+import { HoverPreview } from './meeple-card-features/HoverPreview';
+import { QuickActionsMenu } from './meeple-card-features/QuickActionsMenu';
+import { StatusBadge } from './meeple-card-features/StatusBadge';
+import { WishlistButton } from './meeple-card-features/WishlistButton';
+
 import type { LucideIcon } from 'lucide-react';
 
 // Feature components (Issue #3820)
-import { WishlistButton } from './meeple-card-features/WishlistButton';
-import { QuickActionsMenu } from './meeple-card-features/QuickActionsMenu';
-import { StatusBadge } from './meeple-card-features/StatusBadge';
-import { HoverPreview } from './meeple-card-features/HoverPreview';
-import { DragHandle } from './meeple-card-features/DragHandle';
-import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
 
 // ============================================================================
 // Types & Interfaces
@@ -159,6 +160,7 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
 
   /** Feature: Quick Actions Menu (#3825) */
   quickActions?: Array<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any;
     label: string;
     onClick: () => void;
@@ -184,13 +186,14 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
     categories?: string[];
     mechanics?: string[];
   };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onFetchPreview?: (id: string) => Promise<any>;
 
   /** Feature: Drag & Drop (#3828) */
   draggable?: boolean;
   dragData?: { id: string; type: string; index: number };
-  onDragStart?: (data: any) => void;
-  onDragEnd?: (data: any) => void;
+  onDragStart?: (data: DragData) => void;
+  onDragEnd?: (data: { from: number; to: number }) => void;
 
   /** Feature: Bulk Selection (#3829) */
   selectable?: boolean;
@@ -385,12 +388,16 @@ function CoverImage({
   const placeholder =
     'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"%3E%3Crect width="400" height="300" fill="%23334155"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="64" fill="%239CA3AF"%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E';
 
+  // Treat placehold.co URLs as "no image" - they return SVGs that Next.js Image can't optimize
+  const isPlaceholder = src?.includes('placehold.co');
+  const imageSrc = (src && !isPlaceholder) ? src : placeholder;
+
   const showOverlay = variant === 'hero' || variant === 'featured' || variant === 'grid';
 
   return (
     <div className={coverVariants({ variant })}>
       <Image
-        src={src || placeholder}
+        src={imageSrc}
         alt={alt}
         fill
         sizes={
@@ -627,6 +634,7 @@ export const MeepleCard = React.memo(function MeepleCard({
   const isInteractive = !!onClick && !showActions;
 
   // Feature visibility logic (Issue #3820)
+  // eslint-disable-next-line security/detect-object-injection
   const color = customColor || entityColors[entity].hsl;
   const hasQuickActions = quickActions && quickActions.length > 0;
   const showWishlistBtn = showWishlist && !hasQuickActions; // Priority: quickActions > wishlist
@@ -698,7 +706,7 @@ export const MeepleCard = React.memo(function MeepleCard({
       {draggable && variant === 'list' && dragData && (
         <DragHandle
           draggable={draggable}
-          dragData={dragData as any}
+          dragData={dragData as DragData}
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
           className="mr-2"

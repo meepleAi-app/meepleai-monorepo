@@ -15,9 +15,11 @@ import type { FilterConfig, FilterState } from '../entity-list-view.types';
 /**
  * Get nested value from object using dot notation
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getNestedValue<T>(obj: T, field: keyof T | string): any {
   if (typeof field === 'string' && field.includes('.')) {
-    return field.split('.').reduce((acc, part) => acc?.[part], obj as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, security/detect-object-injection
+    return field.split('.').reduce((acc, part) => (acc as any)?.[part], obj as any);
   }
   return obj[field as keyof T];
 }
@@ -113,7 +115,9 @@ export function countActiveFilters(filterState: FilterState): number {
  */
 export function getFilterDisplayValue(
   filterId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   filterValue: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   filterConfig: FilterConfig<any>[]
 ): string {
   const filter = filterConfig.find((f) => f.id === filterId);

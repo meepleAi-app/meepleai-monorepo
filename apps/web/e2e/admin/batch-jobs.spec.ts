@@ -90,7 +90,7 @@ async function setupBatchJobMocks(page: Page) {
     const page = parseInt(url.searchParams.get('page') || '1');
     const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
 
-    let filteredJobs = status && status !== 'all' ? allJobs.filter((j) => j.status === status) : allJobs;
+    const filteredJobs = status && status !== 'all' ? allJobs.filter((j) => j.status === status) : allJobs;
 
     const skip = (page - 1) * pageSize;
     const paginatedJobs = filteredJobs.slice(skip, skip + pageSize);

@@ -1,7 +1,9 @@
 'use client';
 
-import { Search } from 'lucide-react';
 import { useState } from 'react';
+
+import { Search } from 'lucide-react';
+
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 
 interface BuilderFiltersProps {

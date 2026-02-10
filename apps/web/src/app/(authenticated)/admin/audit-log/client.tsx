@@ -379,11 +379,11 @@ export function AuditLogClient() {
 }
 
 function ResultBadge({ result }: { result: string }) {
-  const colors = {
+  const colors: Record<string, string> = {
     Success: 'bg-green-500/10 text-green-700 dark:text-green-400',
     Error: 'bg-red-500/10 text-red-700 dark:text-red-400',
     Denied: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400',
-  } as Record<string, string>;
+  };
 
   return (
     <span className={cn(

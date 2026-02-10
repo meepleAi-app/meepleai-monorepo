@@ -157,6 +157,7 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
         { tier },
         AdminUserSchema
       );
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       return result!;
     },
 

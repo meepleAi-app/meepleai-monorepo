@@ -21,6 +21,18 @@ internal sealed class RuleConflictFaqRepository : RepositoryBase, IRuleConflictF
     {
     }
 
+    public async Task<RuleConflictFAQ?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var faqEntity = await DbContext.RuleConflictFAQs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(f => f.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+
+        return faqEntity != null ? MapToDomain(faqEntity) : null;
+    }
+
     public async Task<RuleConflictFAQ?> FindByPatternAsync(
         Guid gameId,
         string pattern,

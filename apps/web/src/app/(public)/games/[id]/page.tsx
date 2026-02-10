@@ -43,6 +43,7 @@ import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { api, SharedGameDetail } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
@@ -65,6 +66,8 @@ interface GameNotes {
 export default function GameDetailPage() {
   const params = useParams();
   const gameId = params?.id as string | undefined;
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
 
   // Core game data
   const [gameDetail, setGameDetail] = useState<SharedGameDetail | null>(null);
@@ -496,80 +499,83 @@ export default function GameDetailPage() {
           </div>
         </div>
 
-        {/* ========== BOTTOM SECTION: User Info & Actions ========== */}
-        {/* TODO: Show only when authenticated - placeholder for now */}
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {/* Left Column: Collection Status & Actions */}
-          <Card className="border-l-4 border-l-[hsl(25,95%,38%)] shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-quicksand text-xl">Azioni Rapide</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Favorite Toggle */}
-              <Button
-                onClick={toggleFavorite}
-                variant={isFavorite ? 'default' : 'outline'}
-                className="w-full font-nunito"
-              >
-                <Heart
-                  className={cn(
-                    'mr-2 h-4 w-4',
-                    isFavorite && 'fill-white'
-                  )}
-                />
-                {isFavorite ? 'Rimuovi dai Preferiti' : 'Aggiungi ai Preferiti'}
-              </Button>
+        {/* ========== BOTTOM SECTION: User Info & Actions (authenticated only) ========== */}
+        {isAuthenticated && (
+          <>
+            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              {/* Left Column: Collection Status & Actions */}
+              <Card className="border-l-4 border-l-[hsl(25,95%,38%)] shadow-lg">
+                <CardHeader>
+                  <CardTitle className="font-quicksand text-xl">Azioni Rapide</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Favorite Toggle */}
+                  <Button
+                    onClick={toggleFavorite}
+                    variant={isFavorite ? 'default' : 'outline'}
+                    className="w-full font-nunito"
+                  >
+                    <Heart
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        isFavorite && 'fill-white'
+                      )}
+                    />
+                    {isFavorite ? 'Rimuovi dai Preferiti' : 'Aggiungi ai Preferiti'}
+                  </Button>
 
-              {/* Add to Collection */}
-              <Button variant="outline" className="w-full font-nunito">
-                <BookOpen className="mr-2 h-4 w-4" />
-                Aggiungi alla Collezione
-              </Button>
+                  {/* Add to Collection */}
+                  <Button variant="outline" className="w-full font-nunito">
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    Aggiungi alla Collezione
+                  </Button>
 
-              {/* Remove from Collection */}
-              <Button variant="destructive" className="w-full font-nunito">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Rimuovi dalla Collezione
-              </Button>
-            </CardContent>
-          </Card>
+                  {/* Remove from Collection */}
+                  <Button variant="destructive" className="w-full font-nunito">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Rimuovi dalla Collezione
+                  </Button>
+                </CardContent>
+              </Card>
 
-          {/* Right Column: Notes */}
-          <Card className="border-l-4 border-l-[hsl(262,83%,62%)] shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-quicksand text-xl">Note Personali</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Scrivi strategie, regole custom, impressioni..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={6}
-                className="resize-none font-nunito"
-              />
-              <Button onClick={handleSaveNotes} className="w-full font-nunito">
-                Salva Note
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+              {/* Right Column: Notes */}
+              <Card className="border-l-4 border-l-[hsl(262,83%,62%)] shadow-lg">
+                <CardHeader>
+                  <CardTitle className="font-quicksand text-xl">Note Personali</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Textarea
+                    placeholder="Scrivi strategie, regole custom, impressioni..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={6}
+                    className="resize-none font-nunito"
+                  />
+                  <Button onClick={handleSaveNotes} className="w-full font-nunito">
+                    Salva Note
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
 
-        {/* Statistiche Partite - Placeholder */}
-        <div className="mt-6 max-w-4xl mx-auto">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-quicksand text-xl">Statistiche Partite</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="font-nunito">
-                  Accedi per visualizzare le tue statistiche di gioco
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-        </div>
+            {/* Statistiche Partite - Placeholder */}
+            <div className="mt-6 max-w-4xl mx-auto">
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle className="font-quicksand text-xl">Statistiche Partite</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="font-nunito">
+                      Accedi per visualizzare le tue statistiche di gioco
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -7,17 +7,16 @@
 
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Edit, Play, CheckCircle, Clock, MapPin, User } from 'lucide-react';
-
-import { Button } from '@/components/ui/primitives/button';
-import { Badge } from '@/components/ui/data-display/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { useParams, useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { PlayerManager } from '@/components/play-records/PlayerManager';
 import { ScoringInterface } from '@/components/play-records/ScoringInterface';
-import { toast } from 'sonner';
+import { Badge } from '@/components/ui/data-display/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import { Button } from '@/components/ui/primitives/button';
 import {
   usePlayRecord,
   useAddPlayer,

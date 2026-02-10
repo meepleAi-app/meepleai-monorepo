@@ -7,6 +7,8 @@
 'use client';
 
 import React from 'react';
+
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -14,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+
 import type { SelectFilter as SelectFilterConfig } from '../../entity-list-view.types';
 
 export interface SelectFilterProps<T> {

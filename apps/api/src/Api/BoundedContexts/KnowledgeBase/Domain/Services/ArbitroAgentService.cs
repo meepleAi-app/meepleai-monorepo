@@ -9,6 +9,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.ContextEngineering;
 using Api.Models;
 using Api.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -37,6 +38,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
     private readonly ILlmService _llmService;
     private readonly ILogger<ArbitroAgentService> _logger;
     private readonly TimeProvider _timeProvider;
+    private readonly IUnitOfWork _unitOfWork;
 
     // Escalation threshold: below this confidence with conflicts → recommend human review
     private const double EscalationThreshold = 0.60;
@@ -63,7 +65,8 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
         IRuleConflictFaqRepository conflictFaqRepository,
         ILlmService llmService,
         ILogger<ArbitroAgentService> logger,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IUnitOfWork unitOfWork)
     {
         _gameStateSource = gameStateSource ?? throw new ArgumentNullException(nameof(gameStateSource));
         _moveValidationService = moveValidationService ?? throw new ArgumentNullException(nameof(moveValidationService));
@@ -71,6 +74,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
     /// <summary>
@@ -166,6 +170,7 @@ internal sealed class ArbitroAgentService : IArbitroAgentService
                 // Record usage and return FAQ resolution immediately
                 faqResolution.RecordUsage(_timeProvider);
                 await _conflictFaqRepository.UpdateAsync(faqResolution, cancellationToken).ConfigureAwait(false);
+                await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false); // Dispatch RuleConflictFAQUsedEvent
 
                 return CreateFaqResolvedResult(faqResolution, conflicts, applicableRules, stopwatch.ElapsedMilliseconds);
             }

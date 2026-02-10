@@ -193,6 +193,7 @@ export function AddGameWizard() {
           >
             {/* Screen reader announcement */}
             <span className="sr-only">
+              {/* eslint-disable-next-line security/detect-object-injection */}
               Step {visualStepIndex + 1} of {visualSteps.length}: {visualSteps[visualStepIndex]?.description}
             </span>
 

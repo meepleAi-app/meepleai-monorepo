@@ -88,6 +88,7 @@ export function useFeedback({
   const [feedbackStates, setFeedbackStates] = useState<Record<string, FeedbackState>>(() => {
     const initial: Record<string, FeedbackState> = {};
     for (const [messageId, value] of Object.entries(initialFeedback)) {
+      // eslint-disable-next-line security/detect-object-injection
       initial[messageId] = { value, isLoading: false };
     }
     return initial;
@@ -96,6 +97,7 @@ export function useFeedback({
   // Get feedback state for a message
   const getFeedback = useCallback(
     (messageId: string): FeedbackState => {
+      // eslint-disable-next-line security/detect-object-injection
       return feedbackStates[messageId] ?? { value: null, isLoading: false };
     },
     [feedbackStates]
@@ -108,7 +110,9 @@ export function useFeedback({
       setFeedbackStates(prev => ({
         ...prev,
         [messageId]: {
+          // eslint-disable-next-line security/detect-object-injection
           ...prev[messageId],
+          // eslint-disable-next-line security/detect-object-injection
           value: prev[messageId]?.value ?? null,
           isLoading: true,
           error: undefined,
@@ -143,7 +147,9 @@ export function useFeedback({
         setFeedbackStates(prev => ({
           ...prev,
           [messageId]: {
+            // eslint-disable-next-line security/detect-object-injection
             ...prev[messageId],
+            // eslint-disable-next-line security/detect-object-injection
             value: prev[messageId]?.value ?? null,
             isLoading: false,
             error: errorMessage,

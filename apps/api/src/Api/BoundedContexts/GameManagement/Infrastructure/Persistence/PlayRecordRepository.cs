@@ -299,7 +299,7 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
     /// <summary>
     /// DTO for JSON serialization of SessionScoringConfig.
     /// </summary>
-    private class SessionScoringConfigDto
+    private sealed class SessionScoringConfigDto
     {
         public List<string> EnabledDimensions { get; set; } = new();
         public Dictionary<string, string> DimensionUnits { get; set; } = new(StringComparer.OrdinalIgnoreCase);

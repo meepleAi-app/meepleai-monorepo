@@ -12,6 +12,7 @@ import {
   UseMutationResult,
 } from '@tanstack/react-query';
 
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { api } from '@/lib/api';
 import type {
   PaginatedLibraryResponse,
@@ -96,12 +97,15 @@ export function useLibraryStats(enabled: boolean = true): UseQueryResult<UserLib
 export function useLibraryQuota(
   enabled: boolean = true
 ): UseQueryResult<LibraryQuotaResponse, Error> {
+  const { data: user } = useCurrentUser();
+  const isAuthenticated = !!user;
+
   return useQuery({
     queryKey: libraryKeys.quota(),
     queryFn: async (): Promise<LibraryQuotaResponse> => {
       return api.library.getQuota();
     },
-    enabled,
+    enabled: enabled && isAuthenticated,
     staleTime: 5 * 60 * 1000, // Quota unlikely to change frequently (5min)
   });
 }
@@ -117,12 +121,15 @@ export function useGameInLibraryStatus(
   gameId: string,
   enabled: boolean = true
 ): UseQueryResult<GameInLibraryStatus, Error> {
+  const { data: user } = useCurrentUser();
+  const isAuthenticated = !!user;
+
   return useQuery({
     queryKey: libraryKeys.gameStatus(gameId),
     queryFn: async (): Promise<GameInLibraryStatus> => {
       return api.library.getGameStatus(gameId);
     },
-    enabled: enabled && !!gameId,
+    enabled: enabled && !!gameId && isAuthenticated,
     staleTime: 30 * 1000, // Status can change frequently (30s)
   });
 }

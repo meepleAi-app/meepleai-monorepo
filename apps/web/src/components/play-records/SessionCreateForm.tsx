@@ -11,12 +11,10 @@
 
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Calendar, Users, Trophy, ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { useForm } from 'react-hook-form';
 
-import { Button } from '@/components/ui/primitives/button';
 import {
   Form,
   FormControl,
@@ -26,8 +24,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/forms/form';
-import { Input } from '@/components/ui/primitives/input';
-import { Textarea } from '@/components/ui/primitives/textarea';
 import {
   Select,
   SelectContent,
@@ -35,15 +31,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
-import { Label } from '@/components/ui/primitives/label';
+import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
-
-import { SessionCreateFormSchema, type SessionCreateForm } from '@/lib/api/schemas/play-records.schemas';
-import { usePlayRecordsStore, selectSessionCreation } from '@/lib/stores/play-records-store';
+import { Input } from '@/components/ui/primitives/input';
+import { Label } from '@/components/ui/primitives/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/primitives/radio-group';
+import { Textarea } from '@/components/ui/primitives/textarea';
+import { SessionCreateFormSchema, type SessionCreateForm as SessionCreateFormData } from '@/lib/api/schemas/play-records.schemas';
+import { usePlayRecordsStore } from '@/lib/stores/play-records-store';
 
 export interface SessionCreateFormProps {
-  onSubmit: (data: SessionCreateForm) => void;
+  onSubmit: (data: SessionCreateFormData) => void;
   onCancel?: () => void;
   isSubmitting?: boolean;
 }
@@ -61,13 +59,12 @@ export function SessionCreateForm({
 }: SessionCreateFormProps) {
   const {
     sessionCreation,
-    setSessionField,
     nextStep,
     prevStep,
     resetSessionCreation,
   } = usePlayRecordsStore();
 
-  const form = useForm<SessionCreateForm>({
+  const form = useForm<SessionCreateFormData>({
     resolver: zodResolver(SessionCreateFormSchema),
     defaultValues: {
       gameType: 'catalog',
@@ -83,7 +80,7 @@ export function SessionCreateForm({
 
   const handleNext = async () => {
     // Validate current step fields
-    const fieldsToValidate: Array<keyof SessionCreateForm> =
+    const fieldsToValidate: Array<keyof SessionCreateFormData> =
       currentStep === 0
         ? ['gameType', 'gameId', 'gameName']
         : currentStep === 1

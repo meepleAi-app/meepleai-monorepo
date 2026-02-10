@@ -39,7 +39,7 @@ const API_BASE =
 // ============================================================================
 
 interface SearchParams {
-  view?: 'grid' | 'list';
+  view?: 'grid' | 'list' | 'carousel';
   search?: string;
   page?: string;
 }

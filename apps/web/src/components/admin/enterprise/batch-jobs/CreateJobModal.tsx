@@ -69,7 +69,7 @@ export function CreateJobModal({ open, onClose, onCreate }: CreateJobModalProps)
       JSON.parse(value);
       setParametersError(null);
       return true;
-    } catch (error) {
+    } catch (_error) {
       setParametersError('Invalid JSON format');
       return false;
     }

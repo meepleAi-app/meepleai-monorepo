@@ -3,9 +3,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+
 import { StrategyEditor } from '@/components/admin/strategies/StrategyEditor';
-import { strategiesApi } from '@/lib/api/strategies.api';
 import type { CreateStrategy } from '@/lib/api/schemas/strategies.schemas';
+import { strategiesApi } from '@/lib/api/strategies.api';
 
 export default function EditStrategyPage({ params }: { params: { id: string } }) {
   const router = useRouter();

@@ -1872,7 +1872,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("GameId")
                         .HasDatabaseName("IX_PlayRecords_GameId")
-                        .HasFilter("game_id IS NOT NULL");
+                        .HasFilter("\"GameId\" IS NOT NULL");
 
                     b.HasIndex("SessionDate")
                         .IsDescending()
@@ -1908,7 +1908,7 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_RecordPlayers_UserId")
-                        .HasFilter("user_id IS NOT NULL");
+                        .HasFilter("\"UserId\" IS NOT NULL");
 
                     b.ToTable("record_players", (string)null);
                 });

@@ -23,7 +23,6 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { AuditLogWidget } from './AuditLogWidget';
 
 import {
   Sheet,
@@ -44,6 +43,8 @@ import {
   type EnterpriseSection,
 } from '@/config/enterprise-navigation';
 import { cn } from '@/lib/utils';
+
+import { AuditLogWidget } from './AuditLogWidget';
 
 const SIDEBAR_COLLAPSED_KEY = 'enterprise-sidebar-collapsed';
 

@@ -111,6 +111,13 @@ internal sealed class AutoConfigurationService : IAutoConfigurationService
             _logger,
             cancellationToken).ConfigureAwait(false);
 
+        // Seed strategy patterns for AI agent decision-making (Issue #3493, #3956)
+        _logger.LogInformation("Seeding strategy patterns for common game openings...");
+        await StrategyPatternSeeder.SeedAsync(
+            _dbContext,
+            _logger,
+            cancellationToken).ConfigureAwait(false);
+
         // Seed predefined badges (ISSUE-2731)
         _logger.LogInformation("Seeding badges...");
         await BadgeSeeder.SeedBadgesAsync(

@@ -11,6 +11,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 
+// Issue #3918: Catalog Trending Analytics Service
+
 namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
 
 /// <summary>
@@ -42,6 +44,7 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IBadgeRepository, BadgeRepository>(); // Issue #2731: Badge gamification system
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>(); // Issue #2731: User badge awards
         services.AddScoped<IContributorRepository, ContributorRepository>(); // Issue #2735: Contributor stats endpoints
+        services.AddScoped<IGameAnalyticsEventRepository, GameAnalyticsEventRepository>(); // Issue #3918: Trending analytics
 
         // Register domain services
         services.AddScoped<DocumentVersioningService>(); // Issue #2391 Sprint 1
@@ -97,6 +100,18 @@ internal static class SharedGameCatalogServiceExtensions
                 .WithIdentity("top-contributor-badge-trigger", "shared-game-catalog")
                 .WithCronSchedule("0 0 1 * * ?")
                 .WithDescription("Runs monthly on the 1st day at midnight UTC to assign TOP_CONTRIBUTOR badge to top 10 contributors"));
+
+            // Issue #3918: Register trending calculation job
+            q.AddJob<CalculateTrendingJob>(opts => opts
+                .WithIdentity("calculate-trending-job", "shared-game-catalog")
+                .StoreDurably(true));
+
+            // Trigger: Run daily at 03:00 UTC
+            q.AddTrigger(opts => opts
+                .ForJob("calculate-trending-job", "shared-game-catalog")
+                .WithIdentity("calculate-trending-trigger", "shared-game-catalog")
+                .WithCronSchedule("0 0 3 * * ?")
+                .WithDescription("Runs daily at 03:00 UTC to pre-compute trending game scores"));
         });
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs

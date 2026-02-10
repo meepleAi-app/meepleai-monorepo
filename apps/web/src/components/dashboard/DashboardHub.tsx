@@ -8,6 +8,7 @@
  * - Active Sessions Widget
  * - Library Snapshot
  * - Activity Feed Timeline
+ * - Wishlist Highlights (Issue #3920)
  * - Chat History
  * - Quick Actions Grid
  * - Responsive Layout: Mobile (1-col), Tablet (2-col), Desktop (3-col asymmetric)
@@ -42,6 +43,7 @@ import { ChatHistorySection } from './ChatHistorySection';
 import { HeroStats } from './HeroStats';
 import { LibrarySnapshot } from './LibrarySnapshot';
 import { QuickActionsGrid } from './QuickActionsGrid';
+import { WishlistHighlights } from './WishlistHighlights';
 
 // ============================================================================
 // Animation Variants
@@ -118,8 +120,11 @@ function DashboardSkeleton() {
       {/* Activity Feed Skeleton */}
       <div className="h-96 animate-pulse rounded-2xl bg-gray-200 md:col-span-1 lg:col-span-2" />
 
+      {/* Wishlist Highlights Skeleton */}
+      <div className="h-80 animate-pulse rounded-2xl bg-gray-200" />
+
       {/* Chat History Skeleton */}
-      <div className="h-64 animate-pulse rounded-2xl bg-gray-200 md:col-span-2" />
+      <div className="h-64 animate-pulse rounded-2xl bg-gray-200 md:col-span-1 lg:col-span-2" />
 
       {/* Quick Actions Skeleton */}
       <div className="h-48 animate-pulse rounded-2xl bg-gray-200 md:col-span-2 lg:col-span-1" />
@@ -335,8 +340,21 @@ export function DashboardHub() {
         </LazySection>
       </motion.section>
 
+      {/* Wishlist Highlights - Sidebar (1 col, lazy loaded) - Issue #3920 */}
+      <motion.section className="md:col-span-1 lg:col-span-1" variants={variants}>
+        <LazySection fallbackHeight="h-80">
+          <SimpleErrorBoundary
+            fallback={({ resetErrorBoundary }) => (
+              <SectionErrorFallback label="Wishlist Highlights" onRetry={resetErrorBoundary} />
+            )}
+          >
+            <WishlistHighlights />
+          </SimpleErrorBoundary>
+        </LazySection>
+      </motion.section>
+
       {/* Chat History - 2 cols (lazy loaded) */}
-      <motion.section className="md:col-span-2" variants={variants}>
+      <motion.section className="md:col-span-1 lg:col-span-2" variants={variants}>
         <LazySection fallbackHeight="h-64">
           <SimpleErrorBoundary
             fallback={({ resetErrorBoundary }) => (

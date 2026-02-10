@@ -1,32 +1,39 @@
 /**
  * WishlistHighlights - Dashboard Widget for Top 5 Wishlist Games
- * Issue #3317 - Implement WishlistHighlights widget
+ * Issue #3920 - Frontend: Wishlist Highlights Component
  *
  * Features:
- * - Shows top 5 wishlist games by priority
- * - Priority stars (1-5)
- * - Click navigation to game detail
- * - CTA to manage wishlist
- * - Empty state with explore catalog CTA
+ * - Shows top 5 wishlist games sorted by priority (HIGH > MEDIUM > LOW)
+ * - Game cover thumbnails with lazy loading
+ * - Colored priority badges (HIGH=rose, MEDIUM=amber, LOW=emerald)
+ * - Target price display
+ * - Quick action: "Segna come acquistato" (removes from wishlist)
+ * - CTA: "Gestisci Wishlist" links to /wishlist
+ * - Empty state with "Aggiungi primo gioco" CTA
  * - Loading skeleton state
  *
  * @example
  * ```tsx
- * <WishlistHighlights />
+ * <WishlistHighlights
+ *   items={wishlistItems}
+ *   onMarkPurchased={(id) => removeFromWishlist(id)}
+ * />
  * ```
  */
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 
 import { motion } from 'framer-motion';
 import {
-  Star,
   Heart,
   ChevronRight,
-  Sparkles,
+  Plus,
+  ShoppingCart,
+  Gamepad2,
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -37,20 +44,26 @@ import { cn } from '@/lib/utils';
 // Types
 // ============================================================================
 
-export interface WishlistItem {
+export type WishlistPriorityLevel = 'HIGH' | 'MEDIUM' | 'LOW';
+
+export interface WishlistHighlightItem {
   id: string;
-  gameId: string;
-  gameName: string;
-  gameImageUrl?: string | null;
-  priority: number; // 1-5
-  addedAt: string;
+  game: {
+    id: string;
+    name: string;
+    coverUrl: string;
+  };
+  priority: WishlistPriorityLevel;
+  targetPrice?: number;
 }
 
 export interface WishlistHighlightsProps {
   /** Wishlist items data */
-  items?: WishlistItem[];
+  items?: WishlistHighlightItem[];
   /** Loading state */
   isLoading?: boolean;
+  /** Callback when user marks an item as purchased */
+  onMarkPurchased?: (itemId: string) => void;
   /** Additional CSS classes */
   className?: string;
 }
@@ -61,47 +74,32 @@ export interface WishlistHighlightsProps {
 
 const MAX_ITEMS = 5;
 
-// ============================================================================
-// Mock Data (for development)
-// ============================================================================
+const PRIORITY_ORDER: Record<WishlistPriorityLevel, number> = {
+  HIGH: 3,
+  MEDIUM: 2,
+  LOW: 1,
+};
 
-const MOCK_ITEMS: WishlistItem[] = [
-  {
-    id: 'wish-1',
-    gameId: 'game-1',
-    gameName: 'Terraforming Mars',
-    priority: 5,
-    addedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
+const PRIORITY_CONFIG: Record<
+  WishlistPriorityLevel,
+  { label: string; className: string }
+> = {
+  HIGH: {
+    label: 'Alta',
+    className:
+      'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
   },
-  {
-    id: 'wish-2',
-    gameId: 'game-2',
-    gameName: 'Gloomhaven',
-    priority: 4,
-    addedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20).toISOString(),
+  MEDIUM: {
+    label: 'Media',
+    className:
+      'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   },
-  {
-    id: 'wish-3',
-    gameId: 'game-3',
-    gameName: 'Brass Birmingham',
-    priority: 4,
-    addedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
+  LOW: {
+    label: 'Bassa',
+    className:
+      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   },
-  {
-    id: 'wish-4',
-    gameId: 'game-4',
-    gameName: 'Spirit Island',
-    priority: 3,
-    addedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15).toISOString(),
-  },
-  {
-    id: 'wish-5',
-    gameId: 'game-5',
-    gameName: 'Root',
-    priority: 3,
-    addedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
-  },
-];
+};
 
 // ============================================================================
 // Skeleton Component
@@ -127,19 +125,13 @@ function WishlistHighlightsSkeleton({ className }: { className?: string }) {
       {/* Items Skeleton */}
       <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex items-center justify-between p-2 rounded-lg"
-          >
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-5 w-5 rounded" />
-              <Skeleton className="h-4 w-32" />
+          <div key={i} className="flex items-center gap-3 p-2">
+            <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-3 w-16" />
             </div>
-            <div className="flex gap-0.5">
-              {Array.from({ length: 5 }).map((_, j) => (
-                <Skeleton key={j} className="h-4 w-4" />
-              ))}
-            </div>
+            <Skeleton className="h-6 w-12 rounded-full" />
           </div>
         ))}
       </div>
@@ -151,74 +143,116 @@ function WishlistHighlightsSkeleton({ className }: { className?: string }) {
 }
 
 // ============================================================================
-// Priority Stars Component
+// Priority Badge Component
 // ============================================================================
 
-function PriorityStars({ priority, size = 'sm' }: { priority: number; size?: 'sm' | 'md' }) {
-  const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4';
+function PriorityBadge({ priority }: { priority: WishlistPriorityLevel }) {
+  const config = PRIORITY_CONFIG[priority];
 
   return (
-    <div className="flex gap-0.5" data-testid="priority-stars">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Star
-          key={i}
-          className={cn(
-            iconSize,
-            i < priority
-              ? 'text-amber-500 fill-amber-500'
-              : 'text-muted-foreground/30'
-          )}
-        />
-      ))}
-    </div>
+    <span
+      className={cn(
+        'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide',
+        config.className
+      )}
+      data-testid="priority-badge"
+    >
+      {config.label}
+    </span>
   );
 }
 
 // ============================================================================
-// Wishlist Item Component
+// Wishlist Item Row Component
 // ============================================================================
 
 interface WishlistItemRowProps {
-  item: WishlistItem;
-  rank: number;
+  item: WishlistHighlightItem;
   index: number;
+  onMarkPurchased?: (itemId: string) => void;
 }
 
-function WishlistItemRow({ item, rank, index }: WishlistItemRowProps) {
+function WishlistItemRow({
+  item,
+  index,
+  onMarkPurchased,
+}: WishlistItemRowProps) {
+  const handleMarkPurchased = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onMarkPurchased?.(item.id);
+    },
+    [item.id, onMarkPurchased]
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05 }}
+      data-testid={`wishlist-item-${item.id}`}
     >
-      <Link
-        href={`/games/${item.gameId}`}
-        className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors group"
-        data-testid={`wishlist-item-${item.id}`}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          {/* Rank */}
-          <span
-            className="text-sm font-bold text-muted-foreground w-5 text-center tabular-nums"
-            data-testid={`wishlist-rank-${item.id}`}
-          >
-            {rank}.
-          </span>
+      <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/30 transition-all duration-200 group">
+        {/* Cover Image */}
+        <Link
+          href={`/games/${item.game.id}`}
+          className="relative h-10 w-10 shrink-0 rounded-lg overflow-hidden bg-muted"
+          data-testid={`wishlist-cover-${item.id}`}
+        >
+          {item.game.coverUrl ? (
+            <Image
+              src={item.game.coverUrl}
+              alt={item.game.name}
+              fill
+              sizes="40px"
+              className="object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center">
+              <Gamepad2 className="h-5 w-5 text-muted-foreground/50" />
+            </div>
+          )}
+        </Link>
 
-          {/* Game Name */}
-          <span
-            className="text-sm font-medium truncate group-hover:text-primary transition-colors"
+        {/* Game Info */}
+        <Link
+          href={`/games/${item.game.id}`}
+          className="flex-1 min-w-0"
+        >
+          <p
+            className="font-medium text-sm truncate group-hover:text-primary transition-colors"
             data-testid={`wishlist-name-${item.id}`}
           >
-            {item.gameName}
-          </span>
-        </div>
+            {item.game.name}
+          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <PriorityBadge priority={item.priority} />
+            {item.targetPrice !== undefined && item.targetPrice !== null && (
+              <span
+                className="text-xs text-muted-foreground"
+                data-testid={`wishlist-price-${item.id}`}
+              >
+                Target: {item.targetPrice.toFixed(2)}
+              </span>
+            )}
+          </div>
+        </Link>
 
-        {/* Priority Stars */}
-        <div data-testid={`wishlist-priority-${item.id}`}>
-          <PriorityStars priority={item.priority} />
-        </div>
-      </Link>
+        {/* Quick Action: Mark as Purchased */}
+        {onMarkPurchased && (
+          <button
+            onClick={handleMarkPurchased}
+            className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+            title="Segna come acquistato"
+            aria-label={`Segna ${item.game.name} come acquistato`}
+            data-testid={`wishlist-purchased-${item.id}`}
+          >
+            <ShoppingCart className="h-4 w-4" />
+          </button>
+        )}
+      </div>
     </motion.div>
   );
 }
@@ -236,12 +270,7 @@ function EmptyState() {
       <div className="h-12 w-12 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center mb-3">
         <Heart className="h-6 w-6 text-pink-500" />
       </div>
-      <p className="text-sm text-muted-foreground mb-1">
-        Wishlist vuota
-      </p>
-      <p className="text-xs text-muted-foreground mb-3">
-        Aggiungi giochi che vorresti avere
-      </p>
+      <p className="text-sm text-muted-foreground mb-3">Wishlist vuota</p>
       <Link href="/games/catalog">
         <Button
           size="sm"
@@ -249,8 +278,8 @@ function EmptyState() {
           className="rounded-full"
           data-testid="explore-catalog-cta"
         >
-          <Sparkles className="h-4 w-4 mr-1" />
-          Esplora Catalogo
+          <Plus className="h-4 w-4 mr-1" />
+          Aggiungi primo gioco
         </Button>
       </Link>
     </div>
@@ -262,14 +291,17 @@ function EmptyState() {
 // ============================================================================
 
 export function WishlistHighlights({
-  items = MOCK_ITEMS,
+  items = [],
   isLoading = false,
+  onMarkPurchased,
   className,
 }: WishlistHighlightsProps) {
-  // Sort by priority (descending) and limit to MAX_ITEMS
   const sortedItems = useMemo(() => {
     return [...items]
-      .sort((a, b) => b.priority - a.priority)
+      .sort(
+        (a, b) =>
+          PRIORITY_ORDER[b.priority] - PRIORITY_ORDER[a.priority]
+      )
       .slice(0, MAX_ITEMS);
   }, [items]);
 
@@ -298,43 +330,31 @@ export function WishlistHighlights({
             Wishlist Highlights
           </h3>
         </div>
+
+        <Link
+          href="/wishlist"
+          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+          data-testid="view-wishlist-link"
+        >
+          Gestisci Wishlist
+          <ChevronRight className="h-3 w-3" />
+        </Link>
       </div>
 
       {/* Content */}
       {sortedItems.length === 0 ? (
         <EmptyState />
       ) : (
-        <>
-          {/* Subtitle */}
-          <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
-            <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-            Top {sortedItems.length} Wishlist:
-          </p>
-
-          {/* Items List */}
-          <div className="space-y-1" data-testid="wishlist-items-list">
-            {sortedItems.map((item, index) => (
-              <WishlistItemRow
-                key={item.id}
-                item={item}
-                rank={index + 1}
-                index={index}
-              />
-            ))}
-          </div>
-
-          {/* CTA */}
-          <Link href="/wishlist" className="block mt-4">
-            <Button
-              variant="outline"
-              className="w-full rounded-full"
-              data-testid="manage-wishlist-cta"
-            >
-              Gestisci Wishlist
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </Link>
-        </>
+        <div className="space-y-1" data-testid="wishlist-items-list">
+          {sortedItems.map((item, index) => (
+            <WishlistItemRow
+              key={item.id}
+              item={item}
+              index={index}
+              onMarkPurchased={onMarkPurchased}
+            />
+          ))}
+        </div>
       )}
     </section>
   );

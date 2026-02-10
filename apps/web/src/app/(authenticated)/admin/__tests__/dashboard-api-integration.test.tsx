@@ -26,6 +26,8 @@ import {
 } from '@/__tests__/mocks/handlers';
 import { useAdminDashboard } from '@/lib/hooks/useAdminDashboard';
 import { createMockDashboardMetrics } from '@/__tests__/fixtures/mockAdminData';
+import { resetAllCircuits } from '@/lib/api/core/circuitBreaker';
+import { globalRequestCache } from '@/lib/api/core/requestCache';
 
 /**
  * Test component that uses admin dashboard hooks
@@ -41,6 +43,9 @@ function DashboardTestComponent() {
     return (
       <div data-testid="dashboard-error">
         Error: {error instanceof Error ? error.message : 'Unknown error'}
+        <button onClick={() => refetch()} data-testid="refetch-button">
+          Retry
+        </button>
       </div>
     );
   }
@@ -63,21 +68,20 @@ function DashboardTestComponent() {
   );
 }
 
-// Skip entire test suite due to Vitest fake timers + MSW/React Query timing conflicts
-// These tests work in isolation but timeout when using fake timers with waitFor
-// The fake timers prevent the network request from resolving and React state updates
-describe.skip('Dashboard API Integration Tests', () => {
+// Issue #3981: Re-enabled with real timers for data fetching tests.
+// Polling/timing tests use fake timers only where needed with runOnlyPendingTimersAsync.
+describe('Dashboard API Integration Tests', () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
     queryClient = createTestQueryClient();
     resetAdminState();
-    vi.useFakeTimers();
+    resetAllCircuits();
+    globalRequestCache.clear();
   });
 
   afterEach(() => {
     queryClient.clear();
-    vi.clearAllTimers();
     vi.useRealTimers();
   });
 
@@ -108,18 +112,22 @@ describe.skip('Dashboard API Integration Tests', () => {
         expect(screen.getByTestId('dashboard-data')).toBeInTheDocument();
       });
 
-      // Update mock data
+      // Update mock data and clear request dedup cache to ensure fresh request
       updateDashboardStats({
         metrics: createMockDashboardMetrics({ totalUsers: 3000 }),
       });
+      globalRequestCache.clear();
 
       // Click refetch button
       fireEvent.click(screen.getByTestId('refetch-button'));
 
       // Wait for refetch to complete
-      await waitFor(() => {
-        expect(screen.getByTestId('total-users')).toHaveTextContent('3000');
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('total-users')).toHaveTextContent('3000');
+        },
+        { timeout: 3000 }
+      );
     });
   });
 
@@ -142,7 +150,7 @@ describe.skip('Dashboard API Integration Tests', () => {
       );
     });
 
-    it('should show loading state during refetch', async () => {
+    it('should keep showing data during background refetch', async () => {
       renderWithQuery(<DashboardTestComponent />, { queryClient });
 
       // Wait for initial load
@@ -150,21 +158,26 @@ describe.skip('Dashboard API Integration Tests', () => {
         expect(screen.getByTestId('dashboard-data')).toBeInTheDocument();
       });
 
-      // Add latency for refetch
+      // Add latency for refetch, update mock data, clear dedup cache
       setAdminNetworkLatency(300);
+      updateDashboardStats({
+        metrics: createMockDashboardMetrics({ totalUsers: 3100 }),
+      });
+      globalRequestCache.clear();
 
-      // Click refetch
+      // Click refetch - TanStack Query v5 keeps showing stale data during refetch
       fireEvent.click(screen.getByTestId('refetch-button'));
 
-      // Should show loading during refetch
-      expect(screen.getByTestId('dashboard-loading')).toBeInTheDocument();
+      // Should still show existing data (stale-while-revalidate behavior)
+      expect(screen.getByTestId('dashboard-data')).toBeInTheDocument();
+      expect(screen.getByTestId('total-users')).toHaveTextContent('2847');
 
-      // Wait for refetch to complete
+      // Wait for refetch to complete with new data
       await waitFor(
         () => {
-          expect(screen.getByTestId('dashboard-data')).toBeInTheDocument();
+          expect(screen.getByTestId('total-users')).toHaveTextContent('3100');
         },
-        { timeout: 2000 }
+        { timeout: 3000 }
       );
     });
   });
@@ -175,78 +188,89 @@ describe.skip('Dashboard API Integration Tests', () => {
 
       renderWithQuery(<DashboardTestComponent />, { queryClient });
 
-      // Wait for error to be displayed
-      await waitFor(() => {
-        expect(screen.getByTestId('dashboard-error')).toBeInTheDocument();
-      });
+      // Wait for error to be displayed (httpClient has its own retry logic ~3s)
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('dashboard-error')).toBeInTheDocument();
+        },
+        { timeout: 10000 }
+      );
 
       // Verify error message
       expect(screen.getByTestId('dashboard-error')).toHaveTextContent('Error:');
     });
 
     it('should handle network error', async () => {
-      // Simulate network timeout by setting very high latency
-      setAdminNetworkLatency(60000);
+      // Use API failure to simulate network error (more reliable than timeout)
+      setAdminApiFailures({ analytics: true });
+
+      const errorQueryClient = new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+            staleTime: 0,
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+            refetchOnReconnect: false,
+            networkMode: 'online',
+          },
+        },
+      });
 
       renderWithQuery(<DashboardTestComponent />, {
-        queryClient: new QueryClient({
-          defaultOptions: {
-            queries: {
-              retry: false,
-              staleTime: 0,
-              refetchOnMount: false,
-              refetchOnWindowFocus: false,
-              refetchOnReconnect: false,
-              networkMode: 'online',
-            },
-          },
-        }),
+        queryClient: errorQueryClient,
       });
 
       // Should show loading initially
       expect(screen.getByTestId('dashboard-loading')).toBeInTheDocument();
 
-      // Fast-forward past timeout
-      vi.advanceTimersByTime(60000);
-
-      // Wait for timeout error
+      // Wait for error state (httpClient has its own retry logic ~7s)
       await waitFor(
         () => {
-          const errorElement = screen.queryByTestId('dashboard-error');
-          if (errorElement) {
-            expect(errorElement).toBeInTheDocument();
-          }
+          expect(screen.getByTestId('dashboard-error')).toBeInTheDocument();
         },
-        { timeout: 5000 }
+        { timeout: 15000 }
       );
+
+      errorQueryClient.clear();
     });
 
     it('should recover from error on retry', async () => {
-      renderWithQuery(<DashboardTestComponent />, { queryClient });
-
-      // Initially set to fail
+      // Set to fail BEFORE rendering
       setAdminApiFailures({ analytics: true });
 
-      // Wait for error
-      await waitFor(() => {
-        expect(screen.getByTestId('dashboard-error')).toBeInTheDocument();
-      });
+      renderWithQuery(<DashboardTestComponent />, { queryClient });
 
-      // Fix the API
+      // Wait for error (httpClient has its own retry logic ~7s)
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('dashboard-error')).toBeInTheDocument();
+        },
+        { timeout: 15000 }
+      );
+
+      // Fix the API and reset circuit breaker + dedup cache
       setAdminApiFailures({ analytics: false });
+      resetAllCircuits();
+      globalRequestCache.clear();
 
       // Retry by clicking refetch
       fireEvent.click(screen.getByTestId('refetch-button'));
 
-      // Should now succeed
-      await waitFor(() => {
-        expect(screen.getByTestId('dashboard-data')).toBeInTheDocument();
-      });
+      // Should now succeed (may take a moment due to httpClient retry)
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('dashboard-data')).toBeInTheDocument();
+        },
+        { timeout: 15000 }
+      );
     });
   });
 
   describe('Real-time Polling (30s interval)', () => {
     it('should refetch data every 30 seconds with polling enabled', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+
       const queryClientWithPolling = new QueryClient({
         defaultOptions: {
           queries: {
@@ -263,6 +287,7 @@ describe.skip('Dashboard API Integration Tests', () => {
       renderWithQuery(<DashboardTestComponent />, { queryClient: queryClientWithPolling });
 
       // Wait for initial load
+      await vi.advanceTimersByTimeAsync(1000);
       await waitFor(() => {
         expect(screen.getByTestId('dashboard-data')).toBeInTheDocument();
       });
@@ -270,26 +295,29 @@ describe.skip('Dashboard API Integration Tests', () => {
       // Initial data
       expect(screen.getByTestId('total-users')).toHaveTextContent('2847');
 
-      // Update mock data for next poll
+      // Update mock data for next poll and clear dedup cache
       updateDashboardStats({
         metrics: createMockDashboardMetrics({ totalUsers: 3000 }),
       });
+      globalRequestCache.clear();
 
       // Advance time by 30 seconds (trigger poll)
-      vi.advanceTimersByTime(30000);
+      await vi.advanceTimersByTimeAsync(30000);
 
       // Wait for polling refetch
       await waitFor(
         () => {
           expect(screen.getByTestId('total-users')).toHaveTextContent('3000');
         },
-        { timeout: 2000 }
+        { timeout: 5000 }
       );
 
       queryClientWithPolling.clear();
     });
 
     it('should continue polling after multiple intervals', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+
       const queryClientWithPolling = new QueryClient({
         defaultOptions: {
           queries: {
@@ -305,6 +333,7 @@ describe.skip('Dashboard API Integration Tests', () => {
 
       renderWithQuery(<DashboardTestComponent />, { queryClient: queryClientWithPolling });
 
+      await vi.advanceTimersByTimeAsync(1000);
       await waitFor(() => {
         expect(screen.getByTestId('dashboard-data')).toBeInTheDocument();
       });
@@ -313,7 +342,8 @@ describe.skip('Dashboard API Integration Tests', () => {
       updateDashboardStats({
         metrics: createMockDashboardMetrics({ totalUsers: 3000 }),
       });
-      vi.advanceTimersByTime(30000);
+      globalRequestCache.clear();
+      await vi.advanceTimersByTimeAsync(30000);
 
       await waitFor(() => {
         expect(screen.getByTestId('total-users')).toHaveTextContent('3000');
@@ -323,7 +353,8 @@ describe.skip('Dashboard API Integration Tests', () => {
       updateDashboardStats({
         metrics: createMockDashboardMetrics({ totalUsers: 3500 }),
       });
-      vi.advanceTimersByTime(30000);
+      globalRequestCache.clear();
+      await vi.advanceTimersByTimeAsync(30000);
 
       await waitFor(() => {
         expect(screen.getByTestId('total-users')).toHaveTextContent('3500');
@@ -340,7 +371,7 @@ describe.skip('Dashboard API Integration Tests', () => {
           queries: {
             retry: false,
             staleTime: 0, // Data becomes stale immediately
-            cacheTime: 60000, // Keep in cache for 60s
+            gcTime: 60000, // Keep in cache for 60s
             refetchOnMount: 'always',
             refetchOnWindowFocus: false,
             refetchOnReconnect: false,
@@ -362,10 +393,11 @@ describe.skip('Dashboard API Integration Tests', () => {
       // Unmount component
       unmount();
 
-      // Update mock data
+      // Update mock data and clear dedup cache
       updateDashboardStats({
         metrics: createMockDashboardMetrics({ totalUsers: 3200 }),
       });
+      globalRequestCache.clear();
 
       // Re-render (stale data should be shown immediately, then revalidated)
       renderWithQuery(<DashboardTestComponent />, {
@@ -385,21 +417,26 @@ describe.skip('Dashboard API Integration Tests', () => {
     });
 
     it('should refetch when data becomes stale', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+
       const queryClientWithStaleTime = new QueryClient({
         defaultOptions: {
           queries: {
             retry: false,
             staleTime: 5000, // 5s before stale
-            cacheTime: 60000,
-            refetchOnMount: true,
+            gcTime: 60000,
+            refetchOnMount: 'always',
             refetchOnWindowFocus: false,
             refetchOnReconnect: false,
           },
         },
       });
 
-      renderWithQuery(<DashboardTestComponent />, { queryClient: queryClientWithStaleTime });
+      const { unmount } = renderWithQuery(<DashboardTestComponent />, {
+        queryClient: queryClientWithStaleTime,
+      });
 
+      await vi.advanceTimersByTimeAsync(1000);
       await waitFor(() => {
         expect(screen.getByTestId('dashboard-data')).toBeInTheDocument();
       });
@@ -407,22 +444,23 @@ describe.skip('Dashboard API Integration Tests', () => {
       // Data is fresh for 5 seconds
       expect(screen.getByTestId('total-users')).toHaveTextContent('2847');
 
-      // Advance time by 6 seconds (data becomes stale)
-      vi.advanceTimersByTime(6000);
+      // Unmount to allow remounting
+      unmount();
 
-      // Update mock data
+      // Advance time by 6 seconds (data becomes stale)
+      await vi.advanceTimersByTimeAsync(6000);
+
+      // Update mock data and clear dedup cache
       updateDashboardStats({
         metrics: createMockDashboardMetrics({ totalUsers: 3100 }),
       });
+      globalRequestCache.clear();
 
-      // Trigger a refetch (e.g., by remounting)
-      const { unmount } = render(<div />);
-      unmount();
-
-      // Re-render should trigger refetch because data is stale
+      // Re-render should trigger refetch because data is stale and refetchOnMount is 'always'
       renderWithQuery(<DashboardTestComponent />, { queryClient: queryClientWithStaleTime });
 
-      // Should show stale data first, then fresh data
+      await vi.advanceTimersByTimeAsync(2000);
+      // Should show fresh data after revalidation
       await waitFor(() => {
         expect(screen.getByTestId('total-users')).toHaveTextContent('3100');
       });

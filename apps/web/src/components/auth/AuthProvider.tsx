@@ -79,18 +79,33 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [error, setError] = useState<string | null>(null);
 
   const loadCurrentUser = useCallback(async () => {
+    // Skip API call if we know user is not authenticated (no prior session)
+    // This prevents a 401 console error for anonymous users
+    const hadSession = typeof window !== 'undefined' && localStorage.getItem('meepleai_has_session') === 'true';
+    if (!hadSession) {
+      setUser(null);
+      setLoading(false);
+      setInitialLoading(false);
+      return;
+    }
+
     setLoading(true);
     setInitialLoading(true);
     setError(null);
     try {
       const user = await api.auth.getMe();
       setUser(user);
+      if (!user) {
+        // Session expired or invalid - clear the flag
+        localStorage.removeItem('meepleai_has_session');
+      }
     } catch (err) {
       logger.warn('Failed to load current user', {
         component: 'AuthProvider',
         metadata: { error: err instanceof Error ? err.message : String(err) },
       });
       setUser(null);
+      localStorage.removeItem('meepleai_has_session');
     } finally {
       setLoading(false);
       setInitialLoading(false);
@@ -129,6 +144,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // Normal login - set user and return result
       const user = loginResponse.user ?? null;
       setUser(user);
+      if (user) {
+        localStorage.setItem('meepleai_has_session', 'true');
+      }
       return {
         user,
         requiresTwoFactor: false,
@@ -150,6 +168,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       const authUser = await api.auth.register(data);
       setUser(authUser);
+      localStorage.setItem('meepleai_has_session', 'true');
       return authUser;
     } catch (err) {
       logger.error('Registration failed', err instanceof Error ? err : new Error(String(err)), {
@@ -175,6 +194,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } finally {
       // Always clear user, even if API call fails
       setUser(null);
+      localStorage.removeItem('meepleai_has_session');
       setLoading(false);
     }
   }, []);

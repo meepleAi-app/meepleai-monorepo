@@ -9,6 +9,7 @@
  * - Library Snapshot
  * - Activity Feed Timeline
  * - Wishlist Highlights (Issue #3920)
+ * - Catalog Trending (Issue #3921)
  * - Chat History
  * - Quick Actions Grid
  * - Responsive Layout: Mobile (1-col), Tablet (2-col), Desktop (3-col asymmetric)
@@ -19,6 +20,7 @@
  * - Error handling for partial failures
  *
  * @see Epic #3901 - Dashboard Hub Core (MVP)
+ * @see Issue #3921 - Catalog Trending Widget
  * @see docs/07-frontend/dashboard-overview-hub.md
  */
 
@@ -39,6 +41,7 @@ import { useReducedMotion } from '@/lib/animations';
 
 import { ActiveSessionsWidget } from './ActiveSessionsWidget';
 import { ActivityFeed } from './ActivityFeed';
+import { CatalogTrending } from './CatalogTrending';
 import { ChatHistorySection } from './ChatHistorySection';
 import { HeroStats } from './HeroStats';
 import { LibrarySnapshot } from './LibrarySnapshot';
@@ -122,6 +125,9 @@ function DashboardSkeleton() {
 
       {/* Wishlist Highlights Skeleton */}
       <div className="h-80 animate-pulse rounded-2xl bg-gray-200" />
+
+      {/* Catalog Trending Skeleton */}
+      <div className="h-80 animate-pulse rounded-2xl bg-gray-200 md:col-span-1 lg:col-span-2" />
 
       {/* Chat History Skeleton */}
       <div className="h-64 animate-pulse rounded-2xl bg-gray-200 md:col-span-1 lg:col-span-2" />
@@ -349,6 +355,19 @@ export function DashboardHub() {
             )}
           >
             <WishlistHighlights />
+          </SimpleErrorBoundary>
+        </LazySection>
+      </motion.section>
+
+      {/* Catalog Trending - 2 cols (lazy loaded) - Issue #3921 */}
+      <motion.section className="md:col-span-1 lg:col-span-2" variants={variants}>
+        <LazySection fallbackHeight="h-80">
+          <SimpleErrorBoundary
+            fallback={({ resetErrorBoundary }) => (
+              <SectionErrorFallback label="Catalog Trending" onRetry={resetErrorBoundary} />
+            )}
+          >
+            <CatalogTrending />
           </SimpleErrorBoundary>
         </LazySection>
       </motion.section>

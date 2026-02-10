@@ -14,6 +14,14 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+// Mock useAuth to provide authenticated user context
+vi.mock('@/components/auth/AuthProvider', () => ({
+  useAuth: () => ({
+    user: { id: 'user-1', email: 'test@test.com', displayName: 'Test', role: 'User' },
+    loading: false,
+  }),
+}));
+
 describe('useSessionCheck', () => {
   beforeEach(() => {
     vi.clearAllMocks();

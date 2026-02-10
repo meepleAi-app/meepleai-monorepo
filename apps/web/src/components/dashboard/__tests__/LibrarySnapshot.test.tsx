@@ -13,13 +13,13 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { LibrarySnapshot, type TopGame, type LibraryQuota } from '../LibrarySnapshot';
 
 // Mock next/link
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({ children, href, onClick, ...props }: { children: React.ReactNode; href: string; onClick?: () => void; [key: string]: unknown }) => (
+    <a href={href} onClick={onClick} {...props}>{children}</a>
   ),
 }));
 
@@ -392,6 +392,31 @@ describe('LibrarySnapshot', () => {
 
       expect(screen.getByTestId('top-game-game-1')).toBeInTheDocument();
       expect(screen.queryByTestId('top-game-game-2')).not.toBeInTheDocument();
+    });
+  });
+
+  // ============================================================================
+  // Analytics Tracking Tests (Issue #3982)
+  // ============================================================================
+
+  describe('Analytics Tracking', () => {
+    it('calls onNavigate when clicking view library link', () => {
+      const onNavigate = vi.fn();
+      render(
+        <LibrarySnapshot quota={mockQuota} topGames={mockTopGames} onNavigate={onNavigate} />
+      );
+
+      const viewLink = screen.getByTestId('view-library-link');
+      fireEvent.click(viewLink);
+
+      expect(onNavigate).toHaveBeenCalledWith('/library', 'library_snapshot');
+    });
+
+    it('does not error when onNavigate is not provided', () => {
+      render(<LibrarySnapshot quota={mockQuota} topGames={mockTopGames} />);
+
+      const viewLink = screen.getByTestId('view-library-link');
+      expect(() => fireEvent.click(viewLink)).not.toThrow();
     });
   });
 });

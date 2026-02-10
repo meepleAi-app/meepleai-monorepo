@@ -31,6 +31,7 @@ import { Component, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 
+import { useDashboardAnalytics } from '@/hooks/useDashboardAnalytics';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import {
   adaptStatsForHeroStats,
@@ -231,6 +232,7 @@ function SectionErrorFallback({ label, onRetry }: { label: string; onRetry: () =
 export function DashboardHub() {
   const { data, isLoading, error } = useDashboardData();
   const shouldReduceMotion = useReducedMotion();
+  const { trackClickThrough } = useDashboardAnalytics();
 
   // Loading State
   if (isLoading) {
@@ -328,7 +330,7 @@ export function DashboardHub() {
               <SectionErrorFallback label="Library Snapshot" onRetry={resetErrorBoundary} />
             )}
           >
-            <LibrarySnapshot quota={data.librarySnapshot.quota} topGames={data.librarySnapshot.topGames} />
+            <LibrarySnapshot quota={data.librarySnapshot.quota} topGames={data.librarySnapshot.topGames} onNavigate={trackClickThrough} />
           </SimpleErrorBoundary>
         </LazySection>
       </motion.section>

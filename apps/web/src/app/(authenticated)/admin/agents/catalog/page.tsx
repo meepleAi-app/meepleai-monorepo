@@ -1,8 +1,9 @@
 'use client';
 
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { Activity, Zap, TrendingUp, Users } from 'lucide-react';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 
 const mockAgents = [
   {

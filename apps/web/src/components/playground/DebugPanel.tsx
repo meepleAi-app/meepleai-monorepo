@@ -1,6 +1,7 @@
 'use client';
 
 import { Activity, Clock, Cpu } from 'lucide-react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { usePlaygroundStore } from '@/stores/playground-store';
 
@@ -11,6 +12,7 @@ export function DebugPanel() {
   const totalTokens = messages.reduce((sum, msg) => sum + (msg.metadata?.tokens || 0), 0);
   const avgLatency = messages
     .filter((msg) => msg.metadata?.latency)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     .reduce((sum, msg, _, arr) => sum + (msg.metadata!.latency! / arr.length), 0);
   const lastModel = messages.findLast((msg) => msg.metadata?.model)?.metadata?.model;
 

@@ -24,8 +24,11 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+
 import { ChevronDown, Check } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
+
 import type { SortOption } from '../entity-list-view.types';
 
 export interface SortDropdownProps<T> {
@@ -91,10 +94,12 @@ export function SortDropdown<T>({
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       const nextIndex = (currentIndex + 1) % options.length;
+      // eslint-disable-next-line security/detect-object-injection
       onChange(options[nextIndex].value);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       const prevIndex = (currentIndex - 1 + options.length) % options.length;
+      // eslint-disable-next-line security/detect-object-injection
       onChange(options[prevIndex].value);
     } else if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();

@@ -19,6 +19,11 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 
 import { MeepleGameCatalogCard } from '@/components/catalog/MeepleGameCatalogCard';
+import {
+  type CarouselGame,
+  GameCarousel,
+  GameCarouselSkeleton,
+} from '@/components/ui/data-display/game-carousel';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { SharedGame } from '@/lib/api';
 
@@ -26,9 +31,35 @@ export interface GameGridProps {
   /** Games to display */
   games: SharedGame[];
   /** View mode */
-  variant: 'grid' | 'list';
+  variant: 'grid' | 'list' | 'carousel';
   /** Loading state */
   loading?: boolean;
+}
+
+function mapToCarouselGame(game: SharedGame): CarouselGame {
+  const subtitle = [
+    game.yearPublished ? `${game.yearPublished}` : null,
+    game.bggId ? `BGG #${game.bggId}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  return {
+    id: game.id,
+    title: game.title,
+    subtitle: subtitle || undefined,
+    imageUrl: game.imageUrl || undefined,
+    rating: game.averageRating ?? undefined,
+    ratingMax: 10,
+    metadata: [
+      ...(game.minPlayers && game.maxPlayers
+        ? [{ label: 'Players', value: `${game.minPlayers}-${game.maxPlayers}` }]
+        : []),
+      ...(game.playingTimeMinutes
+        ? [{ label: 'Time', value: `${game.playingTimeMinutes} min` }]
+        : []),
+    ],
+  };
 }
 
 export function GameGrid({ games, variant, loading = false }: GameGridProps) {
@@ -41,6 +72,9 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
 
   // Loading skeleton
   if (loading) {
+    if (variant === 'carousel') {
+      return <GameCarouselSkeleton />;
+    }
     return (
       <div
         className={
@@ -67,6 +101,18 @@ export function GameGrid({ games, variant, loading = false }: GameGridProps) {
         <h3 className="text-lg font-semibold mb-2">Nessun gioco trovato</h3>
         <p className="text-muted-foreground">Prova a modificare i filtri o la ricerca</p>
       </div>
+    );
+  }
+
+  // Carousel view
+  if (variant === 'carousel') {
+    return (
+      <GameCarousel
+        games={games.map(mapToCarouselGame)}
+        onGameSelect={(game) => handleGameClick(game.id)}
+        showDots
+        autoPlay={false}
+      />
     );
   }
 

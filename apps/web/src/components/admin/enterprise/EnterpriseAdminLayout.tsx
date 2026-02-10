@@ -18,11 +18,12 @@ import React, { type ReactNode, Suspense } from 'react';
 
 import { useSearchParams } from 'next/navigation';
 
+import type { EnterpriseSection } from '@/config/enterprise-navigation';
+import { cn } from '@/lib/utils';
+
 import { EnterpriseAdminSidebar } from './EnterpriseAdminSidebar';
 import { EnterpriseTabSystem } from './EnterpriseTabSystem';
 import { MobileBottomNav } from './MobileBottomNav';
-import type { EnterpriseSection } from '@/config/enterprise-navigation';
-import { cn } from '@/lib/utils';
 
 export interface EnterpriseAdminLayoutProps {
   /** Current section configuration */

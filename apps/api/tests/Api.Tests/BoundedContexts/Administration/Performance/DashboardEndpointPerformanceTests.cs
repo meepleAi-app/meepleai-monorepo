@@ -1,0 +1,443 @@
+using System.Diagnostics;
+using System.Net;
+using System.Net.Http.Json;
+using Api.BoundedContexts.Administration.Application.DTOs;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.Authentication;
+using Api.Infrastructure.Entities.UserLibrary;
+using Api.Tests.Constants;
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
+using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+namespace Api.Tests.BoundedContexts.Administration.Performance;
+
+/// <summary>
+/// Performance Tests for Dashboard Endpoint (Issue #3981).
+/// Validates Epic #3901 performance requirements:
+/// - Cached response &lt; 500ms (p99)
+/// - Uncached response &lt; 2s
+/// - Cache hit rate &gt; 80%
+/// </summary>
+/// <remarks>
+/// Issue #3981: Dashboard Performance Measurement &amp; Optimization
+/// Parent Epic #3901: Dashboard Hub Core MVP
+/// Related Issues: #3907 (Dashboard API), #3909 (Cache Strategy)
+///
+/// Performance Targets (from Epic #3901):
+/// - API /api/v1/dashboard responds in &lt; 500ms (cached, p99)
+/// - Uncached response &lt; 2s
+/// - Cache hit rate &gt; 80%
+///
+/// Testing Strategy:
+/// - Testcontainers for realistic database performance
+/// - Redis for cache behavior validation
+/// - Stopwatch for precise timing measurement
+/// - Multiple iterations for statistical significance
+///
+/// Pattern: Performance testing with real infrastructure
+/// </remarks>
+[Trait("Category", TestCategories.Performance)]
+[Trait("Category", TestCategories.Integration)]
+[Trait("Dependency", "Testcontainers")]
+[Trait("BoundedContext", "Administration")]
+[Trait("Issue", "3981")]
+[Trait("Epic", "3901")]
+[Trait("Skip", "CI")] // Run separately in performance suite
+[Collection("Performance")] // Isolated collection to avoid interference
+public class DashboardEndpointPerformanceTests : IAsyncLifetime
+{
+    private readonly Xunit.ITestOutputHelper _output;
+    private IContainer? _postgresContainer;
+    private IContainer? _redisContainer;
+    private WebApplicationFactory<Program>? _factory;
+    private HttpClient? _client;
+    private IDistributedCache? _cache;
+    private string? _authCookie;
+    private Guid _testUserId;
+
+    // Performance constants
+    private const int CachedResponseTargetMs = 500;
+    private const int UncachedResponseTargetMs = 2000;
+    private const double CacheHitRateTargetPercent = 80.0;
+    private const int WarmupIterations = 5;
+    private const int MeasurementIterations = 10;
+
+    public DashboardEndpointPerformanceTests(Xunit.ITestOutputHelper output)
+    {
+        _output = output;
+        _testUserId = Guid.NewGuid();
+    }
+
+    public async ValueTask InitializeAsync()
+    {
+        _output.WriteLine("⚡ Initializing Dashboard Performance Test Infrastructure...");
+
+        // Start PostgreSQL container
+        _postgresContainer = new ContainerBuilder()
+            .WithImage("pgvector/pgvector:pg16")
+            .WithEnvironment("POSTGRES_USER", "postgres")
+            .WithEnvironment("POSTGRES_PASSWORD", "postgres")
+            .WithEnvironment("POSTGRES_DB", "perf_test")
+            .WithEnvironment("POSTGRES_SHARED_BUFFERS", "256MB")
+            .WithEnvironment("POSTGRES_MAX_CONNECTIONS", "200")
+            .WithPortBinding(5432, true)
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("database system is ready to accept connections"))
+            .Build();
+
+        await _postgresContainer.StartAsync();
+        await Task.Delay(TimeSpan.FromSeconds(2)); // Stability
+
+        // Start Redis container
+        _redisContainer = new ContainerBuilder()
+            .WithImage("redis:7.4-alpine")
+            .WithPortBinding(6379, true)
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Ready to accept connections"))
+            .Build();
+
+        await _redisContainer.StartAsync();
+        await Task.Delay(TimeSpan.FromSeconds(1));
+
+        var postgresPort = _postgresContainer.GetMappedPublicPort(5432);
+        var redisPort = _redisContainer.GetMappedPublicPort(6379);
+
+        _output.WriteLine($"✅ PostgreSQL: localhost:{postgresPort}");
+        _output.WriteLine($"✅ Redis: localhost:{redisPort}");
+
+        // Setup WebApplicationFactory with test containers
+        var connectionString = $"Host=localhost;Port={postgresPort};Database=perf_test;Username=postgres;Password=postgres;Pooling=true;Minimum Pool Size=10;Maximum Pool Size=100;";
+        var redisConnectionString = $"localhost:{redisPort}";
+
+        _factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    // Replace DbContext with test container
+                    var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<MeepleAiDbContext>));
+                    if (descriptor != null)
+                    {
+                        services.Remove(descriptor);
+                    }
+
+                    services.AddDbContext<MeepleAiDbContext>(options =>
+                        options.UseNpgsql(connectionString, o => o.UseVector()));
+
+                    // Configure Redis cache
+                    services.AddStackExchangeRedisCache(options =>
+                    {
+                        options.Configuration = redisConnectionString;
+                    });
+                });
+            });
+
+        _client = _factory.CreateClient();
+
+        // Get services from factory
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        _cache = scope.ServiceProvider.GetRequiredService<IDistributedCache>();
+
+        // Apply migrations
+        await dbContext.Database.MigrateAsync();
+
+        // Seed test data
+        await SeedTestDataAsync(dbContext);
+
+        // Create authenticated session
+        _authCookie = await CreateAuthenticatedSessionAsync();
+
+        _output.WriteLine("✅ Infrastructure ready for performance testing");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _client?.Dispose();
+        _factory?.Dispose();
+
+        if (_redisContainer != null)
+        {
+            await _redisContainer.DisposeAsync();
+        }
+
+        if (_postgresContainer != null)
+        {
+            await _postgresContainer.DisposeAsync();
+        }
+
+        _output.WriteLine("🧹 Test infrastructure disposed");
+    }
+
+    /// <summary>
+    /// Performance Test: Cached Dashboard API Response &lt; 500ms (p99)
+    /// Issue #3981 checkbox: API response time &lt; 500ms (cached)
+    /// Epic #3901 success criteria: API /api/v1/dashboard responds in &lt; 500ms (cached)
+    /// </summary>
+    [Fact]
+    public async Task DashboardAPI_CachedResponse_Under500ms()
+    {
+        // Arrange: Warm up cache
+        _output.WriteLine("🔥 Warming up cache...");
+        var warmupRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/dashboard");
+        warmupRequest.Headers.Add("Cookie", _authCookie);
+
+        for (int i = 0; i < WarmupIterations; i++)
+        {
+            var warmupResponse = await _client!.SendAsync(warmupRequest.Clone());
+            warmupResponse.EnsureSuccessStatusCode();
+        }
+
+        // Act: Measure cached responses
+        _output.WriteLine($"📊 Measuring {MeasurementIterations} cached responses...");
+        var measurements = new List<long>();
+
+        for (int i = 0; i < MeasurementIterations; i++)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/dashboard");
+            request.Headers.Add("Cookie", _authCookie);
+
+            var stopwatch = Stopwatch.StartNew();
+            var response = await _client!.SendAsync(request);
+            stopwatch.Stop();
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            measurements.Add(stopwatch.ElapsedMilliseconds);
+        }
+
+        // Assert: Calculate p99 (90th percentile for 10 samples)
+        measurements.Sort();
+        var p99Index = (int)Math.Ceiling(measurements.Count * 0.99) - 1;
+        var p99Latency = measurements[p99Index];
+        var avgLatency = measurements.Average();
+
+        _output.WriteLine($"📈 Results:");
+        _output.WriteLine($"   Min: {measurements.Min()}ms");
+        _output.WriteLine($"   Avg: {avgLatency:F2}ms");
+        _output.WriteLine($"   Max: {measurements.Max()}ms");
+        _output.WriteLine($"   P99: {p99Latency}ms");
+
+        // Assert
+        p99Latency.Should().BeLessThan(CachedResponseTargetMs,
+            $"Cached dashboard API should respond in < {CachedResponseTargetMs}ms (p99), actual: {p99Latency}ms");
+
+        avgLatency.Should().BeLessThan(CachedResponseTargetMs * 0.6, // Avg should be much better
+            $"Average latency should be < {CachedResponseTargetMs * 0.6}ms, actual: {avgLatency:F2}ms");
+    }
+
+    /// <summary>
+    /// Performance Test: Uncached Dashboard API Response &lt; 2s
+    /// Issue #3981 checkbox: API response time &lt; 2s (uncached)
+    /// Epic #3901 technical criteria validation
+    /// </summary>
+    [Fact]
+    public async Task DashboardAPI_UncachedResponse_Under2s()
+    {
+        // Arrange: Clear cache before each request
+        _output.WriteLine("🔄 Testing uncached responses (cache cleared each time)...");
+        var measurements = new List<long>();
+
+        for (int i = 0; i < 5; i++) // Fewer iterations for uncached (slower)
+        {
+            // Clear cache
+            var cacheKey = $"dashboard:{_testUserId}";
+            await _cache!.RemoveAsync(cacheKey);
+
+            // Measure uncached response
+            var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/dashboard");
+            request.Headers.Add("Cookie", _authCookie);
+
+            var stopwatch = Stopwatch.StartNew();
+            var response = await _client!.SendAsync(request);
+            stopwatch.Stop();
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            measurements.Add(stopwatch.ElapsedMilliseconds);
+
+            _output.WriteLine($"   Iteration {i + 1}: {stopwatch.ElapsedMilliseconds}ms");
+        }
+
+        // Assert
+        var avgLatency = measurements.Average();
+        var maxLatency = measurements.Max();
+
+        _output.WriteLine($"📈 Uncached Results:");
+        _output.WriteLine($"   Avg: {avgLatency:F2}ms");
+        _output.WriteLine($"   Max: {maxLatency}ms");
+
+        maxLatency.Should().BeLessThan(UncachedResponseTargetMs,
+            $"Uncached dashboard API should respond in < {UncachedResponseTargetMs}ms, actual: {maxLatency}ms");
+
+        avgLatency.Should().BeLessThan(UncachedResponseTargetMs * 0.8,
+            $"Average uncached latency should be < {UncachedResponseTargetMs * 0.8}ms, actual: {avgLatency:F2}ms");
+    }
+
+    /// <summary>
+    /// Performance Test: Cache Hit Rate &gt; 80%
+    /// Issue #3981 checkbox: Cache hit rate &gt; 80% measured
+    /// Issue #3909 success criteria: Production cache hit rate &gt; 80%
+    /// </summary>
+    [Fact]
+    public async Task DashboardCache_HitRateGreaterThan80Percent()
+    {
+        // Arrange: Clear cache, prepare for measurement
+        _output.WriteLine("📊 Measuring cache hit rate over 100 requests...");
+        var cacheKey = $"dashboard:{_testUserId}";
+        await _cache!.RemoveAsync(cacheKey);
+
+        int totalRequests = 100;
+        int cacheHits = 0;
+        int cacheMisses = 0;
+
+        // Act: First request (miss)
+        var firstRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/dashboard");
+        firstRequest.Headers.Add("Cookie", _authCookie);
+        var firstResponse = await _client!.SendAsync(firstRequest);
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        cacheMisses++; // First request is always a miss
+
+        // Act: Subsequent 99 requests (should be hits)
+        for (int i = 1; i < totalRequests; i++)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/dashboard");
+            request.Headers.Add("Cookie", _authCookie);
+            var response = await _client!.SendAsync(request);
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            // Check if response was cached (via custom header or timing)
+            // For this test, we assume: if < 100ms, it's cached
+            var stopwatch = Stopwatch.StartNew();
+            _ = await _client!.SendAsync(request.Clone());
+            stopwatch.Stop();
+
+            if (stopwatch.ElapsedMilliseconds < 100)
+            {
+                cacheHits++;
+            }
+            else
+            {
+                cacheMisses++;
+            }
+        }
+
+        // Calculate hit rate
+        var hitRate = (double)cacheHits / totalRequests * 100;
+
+        _output.WriteLine($"📈 Cache Performance:");
+        _output.WriteLine($"   Total Requests: {totalRequests}");
+        _output.WriteLine($"   Cache Hits: {cacheHits}");
+        _output.WriteLine($"   Cache Misses: {cacheMisses}");
+        _output.WriteLine($"   Hit Rate: {hitRate:F2}%");
+
+        // Assert
+        hitRate.Should().BeGreaterThan(CacheHitRateTargetPercent,
+            $"Cache hit rate should be > {CacheHitRateTargetPercent}%, actual: {hitRate:F2}%");
+    }
+
+    // Helper methods
+
+    private async Task SeedTestDataAsync(MeepleAiDbContext dbContext)
+    {
+        _output.WriteLine("🌱 Seeding test data...");
+
+        // Create test user
+        var user = new UserEntity
+        {
+            Id = _testUserId,
+            Email = "perf-test@example.com",
+            DisplayName = "Performance Test",
+            PasswordHash = "hash", // Simplified for perf tests
+            Role = "user",
+            EmailVerified = true,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        dbContext.Users.Add(user);
+
+        // Add sample library games (for dashboard data)
+        for (int i = 0; i < 10; i++)
+        {
+            var game = new GameEntity
+            {
+                Id = Guid.NewGuid(),
+                Name = $"Test Game {i}",
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                MinPlayTimeMinutes = 60,
+                MaxPlayTimeMinutes = 60,
+                YearPublished = 2024,
+                Publisher = "Test Publisher",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            dbContext.Games.Add(game);
+
+            // Add to user's library
+            var libraryEntry = new UserLibraryEntryEntity
+            {
+                Id = Guid.NewGuid(),
+                UserId = _testUserId,
+                GameId = game.Id,
+                AddedAt = DateTime.UtcNow
+            };
+
+            dbContext.UserLibraryEntries.Add(libraryEntry);
+        }
+
+        await dbContext.SaveChangesAsync();
+        _output.WriteLine($"✅ Seeded {10} games for user {_testUserId}");
+    }
+
+    private async Task<string> CreateAuthenticatedSessionAsync()
+    {
+        _output.WriteLine("🔐 Creating authenticated session...");
+
+        // Create session directly in database (bypass login for performance tests)
+        using var scope = _factory!.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var token = SessionToken.Generate();
+        var tokenHash = token.ComputeHash();
+
+        var session = new UserSessionEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = _testUserId,
+            TokenHash = tokenHash,
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddHours(2),
+            LastSeenAt = DateTime.UtcNow,
+            User = null! // Navigation property, not needed for insert
+        };
+
+        dbContext.UserSessions.Add(session);
+        await dbContext.SaveChangesAsync();
+
+        var cookie = $"meepleai_session={token.Value}";
+        _output.WriteLine($"✅ Session created: {token.Value[..8]}...");
+
+        return cookie;
+    }
+}
+
+// Extension to clone HttpRequestMessage
+internal static class HttpRequestMessageExtensions
+{
+    public static HttpRequestMessage Clone(this HttpRequestMessage request)
+    {
+        var clone = new HttpRequestMessage(request.Method, request.RequestUri);
+
+        foreach (var header in request.Headers)
+        {
+            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        return clone;
+    }
+}

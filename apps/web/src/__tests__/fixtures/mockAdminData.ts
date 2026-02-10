@@ -66,6 +66,14 @@ export function createMockDashboardMetrics(
     errorRate24h: 0.02,
     activeAlerts: 2,
     resolvedAlerts: 50,
+    // Issue #3694: Extended KPIs for Enterprise Admin Dashboard
+    tokenBalanceEur: 450.75,
+    tokenLimitEur: 1000.0,
+    dbStorageGb: 2.5,
+    dbStorageLimitGb: 10.0,
+    dbGrowthMbPerDay: 15.3,
+    cacheHitRatePercent: 87.5,
+    cacheHitRateTrendPercent: 2.1,
     ...overrides,
   };
 }
@@ -171,28 +179,28 @@ export function createMockInfrastructureDetails(
         state: 'Healthy',
         errorMessage: null,
         checkedAt: new Date('2026-01-23T12:00:00Z').toISOString(),
-        responseTime: '00:00:00.0150000',
+        responseTimeMs: 15,
       },
       {
         serviceName: 'PostgreSQL',
         state: 'Healthy',
         errorMessage: null,
         checkedAt: new Date('2026-01-23T12:00:00Z').toISOString(),
-        responseTime: '00:00:00.0050000',
+        responseTimeMs: 5,
       },
       {
         serviceName: 'Redis',
         state: 'Healthy',
         errorMessage: null,
         checkedAt: new Date('2026-01-23T12:00:00Z').toISOString(),
-        responseTime: '00:00:00.0020000',
+        responseTimeMs: 2,
       },
       {
         serviceName: 'Qdrant',
         state: 'Healthy',
         errorMessage: null,
         checkedAt: new Date('2026-01-23T12:00:00Z').toISOString(),
-        responseTime: '00:00:00.0080000',
+        responseTimeMs: 8,
       },
     ],
     prometheusMetrics: {

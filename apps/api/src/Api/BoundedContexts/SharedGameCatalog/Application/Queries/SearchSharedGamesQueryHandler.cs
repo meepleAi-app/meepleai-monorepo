@@ -73,13 +73,26 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             dbQuery = dbQuery.Where(g => g.Status == (int)query.Status);
         }
 
-        // Full-text search: SearchTerm using PostgreSQL FTS
+        // Full-text search: SearchTerm using PostgreSQL FTS with prefix matching
         if (!string.IsNullOrWhiteSpace(query.SearchTerm))
         {
             var searchTerm = query.SearchTerm.Trim();
-            dbQuery = dbQuery.Where(g =>
-                EF.Functions.ToTsVector("italian", g.Title + " " + g.Description)
-                    .Matches(EF.Functions.PlainToTsQuery("italian", searchTerm)));
+
+            // Build prefix tsquery: "wing span" → "wing:* & span:*"
+            // This enables partial word matching (e.g. "wing" matches "Wingspan")
+            var words = searchTerm
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(w => string.Concat(w.Where(c => char.IsLetterOrDigit(c))))
+                .Where(w => w.Length > 0)
+                .Select(w => w + ":*");
+            var prefixQuery = string.Join(" & ", words);
+
+            if (!string.IsNullOrEmpty(prefixQuery))
+            {
+                dbQuery = dbQuery.Where(g =>
+                    EF.Functions.ToTsVector("italian", g.Title + " " + g.Description)
+                        .Matches(EF.Functions.ToTsQuery("italian", prefixQuery)));
+            }
         }
 
         // Category filter: Any match

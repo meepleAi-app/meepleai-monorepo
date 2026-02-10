@@ -147,6 +147,7 @@ export function VoiceInputButton({
       let finalTranscript = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
+        // eslint-disable-next-line security/detect-object-injection
         const result = event.results[i];
         const transcript = result[0].transcript;
 

@@ -11,8 +11,9 @@
  * - Dark mode variants
  */
 
-import type { Meta, StoryObj } from '@storybook/react';
 import { ActivityFeed, type ActivityEvent } from './ActivityFeed';
+
+import type { Meta, StoryObj } from '@storybook/react';
 
 const meta = {
   title: 'Dashboard/ActivityFeed',

@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// Types of rule conflicts that can occur during move validation.
 /// Issue #3761: Arbitro Agent Conflict Resolution and Edge Cases.
 /// </summary>
-internal enum ConflictType
+public enum ConflictType
 {
     /// <summary>
     /// Multiple rules directly contradict each other (e.g., "can move" vs "cannot move")

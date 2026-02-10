@@ -10,8 +10,8 @@
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { Button } from '@/components/ui/primitives/button';
 import { PlayerStatistics } from '@/components/play-records/PlayerStatistics';
+import { Button } from '@/components/ui/primitives/button';
 
 export default function StatisticsPage() {
   const router = useRouter();

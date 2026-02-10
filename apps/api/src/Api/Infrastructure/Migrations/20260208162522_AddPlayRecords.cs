@@ -108,7 +108,7 @@ namespace Api.Infrastructure.Migrations
                 name: "IX_PlayRecords_GameId",
                 table: "play_records",
                 column: "GameId",
-                filter: "game_id IS NOT NULL");
+                filter: "\"GameId\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlayRecords_SessionDate",
@@ -130,7 +130,7 @@ namespace Api.Infrastructure.Migrations
                 name: "IX_RecordPlayers_UserId",
                 table: "record_players",
                 column: "UserId",
-                filter: "user_id IS NOT NULL");
+                filter: "\"UserId\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RecordScores_Player_Dimension_Unique",

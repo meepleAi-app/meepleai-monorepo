@@ -39,6 +39,16 @@ import type {
   SharedLibrary,
 } from '@/lib/api/schemas/library.schemas';
 
+// Mock useCurrentUser to return authenticated user (hooks gate on auth status)
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    data: { id: 'user-1', email: 'test@test.com', displayName: 'Test', role: 'User' },
+    isLoading: false,
+    isError: false,
+  }),
+  userKeys: { all: ['user'] as const, current: () => ['user', 'current'] as const },
+}));
+
 // Mock API module
 vi.mock('@/lib/api', () => ({
   api: {

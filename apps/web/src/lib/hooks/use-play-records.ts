@@ -6,11 +6,11 @@
  */
 
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+
 import { playRecordsApi } from '@/lib/api/play-records.api';
 import type {
   PlayRecordDto,
   PlayHistoryResponse,
-  PlayerStatistics,
   CreatePlayRecordRequest,
   AddPlayerRequest,
   RecordScoreRequest,
@@ -35,7 +35,9 @@ export const playRecordsKeys = {
  */
 export function usePlayRecord(id: string | undefined) {
   return useQuery({
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     queryKey: playRecordsKeys.detail(id!),
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     queryFn: () => playRecordsApi.getRecord(id!),
     enabled: !!id,
   });

@@ -13,6 +13,7 @@ import React from 'react';
 import { EnterpriseSectionPage } from '@/components/admin/enterprise/EnterpriseSectionPage';
 import { ENTERPRISE_SECTIONS } from '@/config/enterprise-navigation';
 
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 const section = ENTERPRISE_SECTIONS.find((s) => s.id === 'simulations')!;
 
 export default function SimulationsPage() {

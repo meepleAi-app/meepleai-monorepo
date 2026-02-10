@@ -35,6 +35,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
   Select,
@@ -47,7 +48,6 @@ import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 import type { CollectionGridProps, SortOption, SortConfig, FilterOption } from '@/types/collection';
 
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 
 // ============================================================================
 // Sort & Filter Configuration
@@ -169,7 +169,7 @@ export function CollectionGrid({
   filters,
   onSortChange,
   onFilterChange,
-  onGameClick,
+  onGameClick: _onGameClick,
   isLoading = false,
   className,
 }: CollectionGridProps) {
@@ -363,7 +363,7 @@ export function CollectionGrid({
               metadata={[
                 game.yearPublished && { label: 'Year', value: game.yearPublished.toString() },
                 game.playCount && { label: 'Plays', value: game.playCount.toString() },
-              ].filter(Boolean) as any}
+              ].filter(Boolean) as Array<{ label: string; value: string }>}
             />
           ))}
         </div>

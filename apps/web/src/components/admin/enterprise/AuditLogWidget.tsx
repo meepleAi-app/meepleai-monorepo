@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   AlertTriangleIcon,
@@ -53,22 +53,27 @@ export function AuditLogWidget({ collapsed }: { collapsed?: boolean }) {
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchRecent = useCallback(async () => {
-    try {
-      const result = await api.admin.getAuditLogs({ limit: 5, offset: 0 });
-      setEntries(result.entries);
-    } catch {
-      // Widget should not show errors - fail silently
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
+    let cancelled = false;
+
+    async function fetchRecent() {
+      try {
+        const result = await api.admin.getAuditLogs({ limit: 5, offset: 0 });
+        if (!cancelled) setEntries(result.entries);
+      } catch {
+        // Widget should not show errors - fail silently
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
     fetchRecent();
     const interval = setInterval(fetchRecent, WIDGET_POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchRecent]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Collapsed: just show the audit log link icon
   if (collapsed) {

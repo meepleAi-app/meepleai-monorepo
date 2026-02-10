@@ -7,8 +7,10 @@
 'use client';
 
 import React from 'react';
+
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+
 import type { CheckboxFilter as CheckboxFilterConfig } from '../../entity-list-view.types';
 
 export interface CheckboxFilterProps<T> {

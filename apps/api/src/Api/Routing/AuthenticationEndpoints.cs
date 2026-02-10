@@ -52,8 +52,32 @@ internal static class AuthenticationEndpoints
 
     private static void MapRegisterEndpoint(RouteGroupBuilder group)
     {
-        group.MapPost("/auth/register", async ([FromBody] RegisterPayload payload, IMediator mediator, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/auth/register", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
+            // Manually read the body to work around .NET 9 body stream consumption issue.
+            // The framework's [FromBody] parameter binding fails with "no JSON tokens" because
+            // the request body stream is consumed before the endpoint handler runs.
+            context.Request.Body.Position = 0;
+            RegisterPayload? payload;
+            try
+            {
+                payload = await context.Request.ReadFromJsonAsync<RegisterPayload>(ct).ConfigureAwait(false);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return Results.BadRequest(new { error = "Invalid request payload" });
+            }
+
+            if (payload == null)
+            {
+                return Results.BadRequest(new { error = "Invalid request payload" });
+            }
+
+            if (string.IsNullOrWhiteSpace(payload.Email) || string.IsNullOrWhiteSpace(payload.Password))
+            {
+                return Results.BadRequest(new { error = "Email and password are required" });
+            }
+
             var displayName = string.IsNullOrWhiteSpace(payload.DisplayName)
                 ? payload.Email.Split('@')[0]
                 : payload.DisplayName.Trim();
@@ -78,8 +102,22 @@ internal static class AuthenticationEndpoints
 
     private static void MapLoginEndpoint(RouteGroupBuilder group)
     {
-        group.MapPost("/auth/login", async ([FromBody] LoginPayload payload, HttpContext context, IMediator mediator, IConfigurationService configService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/auth/login", async (HttpContext context, IMediator mediator, IConfigurationService configService, ILogger<Program> logger, CancellationToken ct) =>
         {
+            // Manually read the body to work around .NET 9 body stream consumption issue.
+            // The framework's [FromBody] parameter binding fails with "no JSON tokens" because
+            // the request body stream is consumed before the endpoint handler runs.
+            context.Request.Body.Position = 0;
+            LoginPayload? payload;
+            try
+            {
+                payload = await context.Request.ReadFromJsonAsync<LoginPayload>(ct).ConfigureAwait(false);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return Results.BadRequest(new { error = "Invalid request payload" });
+            }
+
             if (payload == null)
             {
                 logger.LogWarning("Login failed: payload is null");
@@ -116,7 +154,7 @@ internal static class AuthenticationEndpoints
             {
                 logger.LogWarning("Login failed for {Email}: missing user or session token", DataMasking.MaskEmail(payload.Email));
                 CookieHelpers.RemoveSessionCookie(context);
-                return Results.Unauthorized();
+                return Results.Json(new { error = "Invalid email or password" }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             var sessionExpirationDays = (await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30).ConfigureAwait(false)) ?? 30;

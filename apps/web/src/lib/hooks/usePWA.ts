@@ -166,6 +166,7 @@ export function usePWA(): UsePWAReturn {
       swRegistrationRef.current = registration;
       setIsInstalled(true);
 
+      // eslint-disable-next-line no-console
       console.log('[PWA] Service worker registered:', registration.scope);
 
       // Check for updates
@@ -174,6 +175,7 @@ export function usePWA(): UsePWAReturn {
         if (newWorker) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // eslint-disable-next-line no-console
               console.log('[PWA] New service worker available');
               setUpdateAvailable(true);
             }
@@ -183,6 +185,7 @@ export function usePWA(): UsePWAReturn {
 
       // Handle controller change (after update)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
+        // eslint-disable-next-line no-console
         console.log('[PWA] Service worker controller changed');
         setUpdateAvailable(false);
       });
@@ -207,6 +210,7 @@ export function usePWA(): UsePWAReturn {
     event.preventDefault();
     installPromptRef.current = event;
     setCanInstall(true);
+    // eslint-disable-next-line no-console
     console.log('[PWA] Install prompt captured');
   };
 
@@ -214,6 +218,7 @@ export function usePWA(): UsePWAReturn {
     setCanInstall(false);
     setIsStandalone(true);
     installPromptRef.current = null;
+    // eslint-disable-next-line no-console
     console.log('[PWA] App installed');
   };
 
@@ -231,6 +236,7 @@ export function usePWA(): UsePWAReturn {
       await installPromptRef.current.prompt();
       const { outcome } = await installPromptRef.current.userChoice;
 
+      // eslint-disable-next-line no-console
       console.log('[PWA] Install prompt result:', outcome);
 
       if (outcome === 'accepted') {

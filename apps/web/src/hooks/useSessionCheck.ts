@@ -18,6 +18,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+import { useAuth } from '@/components/auth/AuthProvider';
 import { api } from '@/lib/api';
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -32,6 +33,8 @@ export interface UseSessionCheckResult {
 }
 
 export function useSessionCheck(): UseSessionCheckResult {
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
   const [remainingMinutes, setRemainingMinutes] = useState<number | null>(null);
   const [isNearExpiry, setIsNearExpiry] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
@@ -71,8 +74,14 @@ export function useSessionCheck(): UseSessionCheckResult {
     }
   }, []);
 
-  // Poll every 5 minutes
+  // Poll every 5 minutes, only when authenticated
   useEffect(() => {
+    if (!isAuthenticated) {
+      setRemainingMinutes(null);
+      setIsNearExpiry(false);
+      return;
+    }
+
     // Initial check
     checkSessionStatus();
 
@@ -81,7 +90,7 @@ export function useSessionCheck(): UseSessionCheckResult {
 
     // Cleanup on unmount
     return () => clearInterval(intervalId);
-  }, [checkSessionStatus]);
+  }, [checkSessionStatus, isAuthenticated]);
 
   return {
     remainingMinutes,

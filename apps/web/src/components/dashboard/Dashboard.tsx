@@ -694,7 +694,7 @@ export function Dashboard() {
           return null;
       }
     },
-    [collectionFilter, filteredGames, sharedTab, sharedGames]
+    [collectionFilter, collectionInlineFilters, filteredGames, sharedTab, sharedGames]
   );
 
   return (

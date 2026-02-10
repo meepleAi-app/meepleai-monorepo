@@ -16,8 +16,10 @@
  * getNestedValue(obj, 'game.title'); // 'Gloomhaven'
  * ```
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((acc, part) => acc?.[part], obj);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, security/detect-object-injection
+  return path.split('.').reduce((acc: any, part) => acc?.[part], obj);
 }
 
 /**

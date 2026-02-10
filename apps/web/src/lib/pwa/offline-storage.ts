@@ -103,6 +103,7 @@ export async function initOfflineStorage(): Promise<IDBDatabase> {
 
     request.onsuccess = () => {
       dbInstance = request.result;
+      // eslint-disable-next-line no-console
       console.log('[OfflineStorage] Database opened successfully');
       resolve(dbInstance);
     };
@@ -136,6 +137,7 @@ export async function initOfflineStorage(): Promise<IDBDatabase> {
         db.createObjectStore(STORES.METADATA, { keyPath: 'key' });
       }
 
+      // eslint-disable-next-line no-console
       console.log('[OfflineStorage] Database schema created/upgraded');
     };
   });
@@ -159,6 +161,7 @@ export async function saveSession(session: OfflineSession): Promise<void> {
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
+      // eslint-disable-next-line no-console
       console.log('[OfflineStorage] Session saved:', session.id);
       resolve();
     };
@@ -217,6 +220,7 @@ export async function deleteSession(id: string): Promise<void> {
     };
 
     transaction.oncomplete = () => {
+      // eslint-disable-next-line no-console
       console.log('[OfflineStorage] Session deleted:', id);
       resolve();
     };
@@ -248,6 +252,7 @@ export async function queueAction(action: Omit<OfflineAction, 'id' | 'timestamp'
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
+      // eslint-disable-next-line no-console
       console.log('[OfflineStorage] Action queued:', fullAction.type, id);
       resolve(id);
     };
@@ -291,6 +296,7 @@ export async function removeAction(id: string): Promise<void> {
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
+      // eslint-disable-next-line no-console
       console.log('[OfflineStorage] Action removed:', id);
       resolve();
     };
@@ -330,6 +336,7 @@ export async function clearAllActions(): Promise<void> {
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
+      // eslint-disable-next-line no-console
       console.log('[OfflineStorage] All actions cleared');
       resolve();
     };
@@ -482,6 +489,7 @@ export async function clearAllData(): Promise<void> {
     }
 
     transaction.oncomplete = () => {
+      // eslint-disable-next-line no-console
       console.log('[OfflineStorage] All data cleared');
       resolve();
     };

@@ -10,6 +10,13 @@ namespace Api.BoundedContexts.GameManagement.Domain.Repositories;
 internal interface IRuleConflictFaqRepository
 {
     /// <summary>
+    /// Gets FAQ by ID.
+    /// </summary>
+    Task<RuleConflictFAQ?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds FAQ resolution for a specific conflict pattern.
     /// </summary>
     Task<RuleConflictFAQ?> FindByPatternAsync(

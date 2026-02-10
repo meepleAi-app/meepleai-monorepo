@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -5,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using MediatR;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 
@@ -15,13 +17,16 @@ internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThread
 {
     private readonly IChatThreadRepository _threadRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPublisher _publisher;
 
     public CreateChatThreadCommandHandler(
         IChatThreadRepository threadRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IPublisher publisher)
     {
         _threadRepository = threadRepository ?? throw new ArgumentNullException(nameof(threadRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
     }
 
     public async Task<ChatThreadDto> Handle(CreateChatThreadCommand command, CancellationToken cancellationToken)
@@ -44,6 +49,11 @@ internal class CreateChatThreadCommandHandler : ICommandHandler<CreateChatThread
         // Persist
         await _threadRepository.AddAsync(thread, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Issue #3974: Publish cache invalidation event
+        await _publisher.Publish(
+            new UserChatSavedEvent(command.UserId, thread.Id),
+            cancellationToken).ConfigureAwait(false);
 
         // Map to DTO
         return MapToDto(thread);

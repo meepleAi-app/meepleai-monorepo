@@ -1,9 +1,11 @@
+using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Handlers;
@@ -17,17 +19,20 @@ internal class UpdateGameStateCommandHandler : ICommandHandler<UpdateGameStateCo
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly HybridCache _cache;
+    private readonly IPublisher _publisher;
     private readonly ILogger<UpdateGameStateCommandHandler> _logger;
 
     public UpdateGameStateCommandHandler(
         IUserLibraryRepository libraryRepository,
         IUnitOfWork unitOfWork,
         HybridCache cache,
+        IPublisher publisher,
         ILogger<UpdateGameStateCommandHandler> logger)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -63,5 +68,13 @@ internal class UpdateGameStateCommandHandler : ICommandHandler<UpdateGameStateCo
 
         _logger.LogInformation("Updated game {GameId} state to {NewState} for user {UserId}",
             command.GameId, command.NewState, command.UserId);
+
+        // Issue #3974: Publish cache invalidation event for wishlist changes
+        if (command.NewState.Equals("wishlist", StringComparison.OrdinalIgnoreCase))
+        {
+            await _publisher.Publish(
+                new UserWishlistUpdatedEvent(command.UserId, command.GameId),
+                cancellationToken).ConfigureAwait(false);
+        }
     }
 }

@@ -1,8 +1,10 @@
+using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Handlers;
@@ -16,17 +18,20 @@ internal class RecordGameSessionCommandHandler : ICommandHandler<RecordGameSessi
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly HybridCache _cache;
+    private readonly IPublisher _publisher;
     private readonly ILogger<RecordGameSessionCommandHandler> _logger;
 
     public RecordGameSessionCommandHandler(
         IUserLibraryRepository libraryRepository,
         IUnitOfWork unitOfWork,
         HybridCache cache,
+        IPublisher publisher,
         ILogger<RecordGameSessionCommandHandler> logger)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -57,6 +62,11 @@ internal class RecordGameSessionCommandHandler : ICommandHandler<RecordGameSessi
 
         _logger.LogInformation("Recorded session {SessionId} for game {GameId} by user {UserId}",
             session.Id, command.GameId, command.UserId);
+
+        // Issue #3974: Publish cache invalidation event
+        await _publisher.Publish(
+            new UserGameSessionCompletedEvent(command.UserId, session.Id),
+            cancellationToken).ConfigureAwait(false);
 
         return session.Id;
     }

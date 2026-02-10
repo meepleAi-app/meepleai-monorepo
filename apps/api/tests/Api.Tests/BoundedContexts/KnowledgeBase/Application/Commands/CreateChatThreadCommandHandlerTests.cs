@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
+using MediatR;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
@@ -17,13 +18,15 @@ public class CreateChatThreadCommandHandlerTests
 {
     private readonly Mock<IChatThreadRepository> _mockRepository;
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
+    private readonly Mock<IPublisher> _mockPublisher;
     private readonly CreateChatThreadCommandHandler _handler;
 
     public CreateChatThreadCommandHandlerTests()
     {
         _mockRepository = new Mock<IChatThreadRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
-        _handler = new CreateChatThreadCommandHandler(_mockRepository.Object, _mockUnitOfWork.Object);
+        _mockPublisher = new Mock<IPublisher>();
+        _handler = new CreateChatThreadCommandHandler(_mockRepository.Object, _mockUnitOfWork.Object, _mockPublisher.Object);
     }
 
     [Fact]

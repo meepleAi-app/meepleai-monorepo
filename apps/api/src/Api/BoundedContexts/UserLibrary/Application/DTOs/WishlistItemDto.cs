@@ -12,5 +12,6 @@ internal record WishlistItemDto(
     decimal? TargetPrice,
     string? Notes,
     DateTime AddedAt,
+    DateTime? UpdatedAt,
     string Visibility
 );

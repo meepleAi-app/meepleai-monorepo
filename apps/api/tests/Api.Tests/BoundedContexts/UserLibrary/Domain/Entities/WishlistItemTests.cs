@@ -32,6 +32,7 @@ public sealed class WishlistItemTests
         item.TargetPrice.Should().BeNull();
         item.Notes.Should().BeNull();
         item.AddedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        item.UpdatedAt.Should().BeNull();
         item.Visibility.Should().Be(WishlistVisibility.Private);
     }
 
@@ -150,6 +151,8 @@ public sealed class WishlistItemTests
 
         // Assert
         item.Priority.Should().Be(newPriority);
+        item.UpdatedAt.Should().NotBeNull();
+        item.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
     #endregion
@@ -167,6 +170,7 @@ public sealed class WishlistItemTests
 
         // Assert
         item.TargetPrice.Should().Be(49.99m);
+        item.UpdatedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -225,6 +229,7 @@ public sealed class WishlistItemTests
 
         // Assert
         item.Notes.Should().Be("New notes");
+        item.UpdatedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -271,6 +276,7 @@ public sealed class WishlistItemTests
 
         // Assert
         item.Visibility.Should().Be(newVisibility);
+        item.UpdatedAt.Should().NotBeNull();
     }
 
     #endregion
@@ -394,6 +400,40 @@ public sealed class WishlistItemTests
         item.TargetPrice.Should().Be(50m);
         item.Notes.Should().Be("Updated");
         item.Visibility.Should().Be(WishlistVisibility.Public);
+        item.UpdatedAt.Should().NotBeNull();
+        item.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public void Update_ClearTargetPrice_SetsUpdatedAt()
+    {
+        // Arrange
+        var item = WishlistItem.Create(
+            Guid.NewGuid(), Guid.NewGuid(),
+            WishlistPriority.High, targetPrice: 49.99m);
+
+        // Act
+        item.Update(clearTargetPrice: true);
+
+        // Assert
+        item.TargetPrice.Should().BeNull();
+        item.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Update_ClearNotes_SetsUpdatedAt()
+    {
+        // Arrange
+        var item = WishlistItem.Create(
+            Guid.NewGuid(), Guid.NewGuid(),
+            WishlistPriority.High, notes: "Old notes");
+
+        // Act
+        item.Update(clearNotes: true);
+
+        // Assert
+        item.Notes.Should().BeNull();
+        item.UpdatedAt.Should().NotBeNull();
     }
 
     #endregion

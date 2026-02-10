@@ -45,6 +45,11 @@ public class WishlistItemEntity
     /// </summary>
     public int Visibility { get; set; }
 
+    /// <summary>
+    /// When the item was last updated (null if never updated).
+    /// </summary>
+    public DateTime? UpdatedAt { get; set; }
+
     // Navigation properties
     public UserEntity? User { get; set; }
     public SharedGameEntity? SharedGame { get; set; }

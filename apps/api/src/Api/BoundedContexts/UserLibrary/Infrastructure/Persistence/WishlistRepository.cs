@@ -142,12 +142,15 @@ internal class WishlistRepository : RepositoryBase, IWishlistRepository
             notes: entity.Notes,
             visibility: (WishlistVisibility)entity.Visibility);
 
-        // Override Id and AddedAt from DB using reflection
+        // Override Id, AddedAt, and UpdatedAt from DB using reflection
         var idProp = typeof(WishlistItem).BaseType?.BaseType?.GetProperty("Id");
         idProp?.SetValue(item, entity.Id);
 
         var addedAtProp = typeof(WishlistItem).GetProperty("AddedAt");
         addedAtProp?.SetValue(item, entity.AddedAt);
+
+        var updatedAtProp = typeof(WishlistItem).GetProperty("UpdatedAt");
+        updatedAtProp?.SetValue(item, entity.UpdatedAt);
 
         // Clear domain events from Create method
         item.ClearDomainEvents();
@@ -166,6 +169,7 @@ internal class WishlistRepository : RepositoryBase, IWishlistRepository
             TargetPrice = domainEntity.TargetPrice,
             Notes = domainEntity.Notes,
             AddedAt = domainEntity.AddedAt,
+            UpdatedAt = domainEntity.UpdatedAt,
             Visibility = (int)domainEntity.Visibility
         };
     }

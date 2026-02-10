@@ -130,6 +130,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.Administration.Domain.Entities.BatchJob> BatchJobs => Set<BoundedContexts.Administration.Domain.Entities.BatchJob>(); // ISSUE-3693: Batch Job System
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition> AgentDefinitions => Set<BoundedContexts.KnowledgeBase.Domain.Entities.AgentDefinition>(); // ISSUE-3808: Agent Definition for AI Lab
     public DbSet<GameAnalyticsEventEntity> GameAnalyticsEvents => Set<GameAnalyticsEventEntity>(); // ISSUE-3918: Catalog Trending Analytics
+    public DbSet<Entities.Gamification.AchievementEntity> Achievements => Set<Entities.Gamification.AchievementEntity>(); // ISSUE-3922: Achievement System
+    public DbSet<Entities.Gamification.UserAchievementEntity> UserAchievements => Set<Entities.Gamification.UserAchievementEntity>(); // ISSUE-3922: Achievement System
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();

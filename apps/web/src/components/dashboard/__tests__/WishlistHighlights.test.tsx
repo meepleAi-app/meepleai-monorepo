@@ -13,11 +13,13 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import {
   WishlistHighlights,
   type WishlistHighlightItem,
+  type WishlistHighlightsProps,
 } from '../WishlistHighlights';
 
 // Mock Next.js Link
@@ -65,6 +67,33 @@ vi.mock('framer-motion', () => ({
   },
 }));
 
+// Mock the hook to avoid real API calls in tests
+vi.mock('@/hooks/useWishlistHighlights', () => ({
+  useWishlistHighlights: () => ({
+    data: undefined,
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+// ============================================================================
+// Test Helpers
+// ============================================================================
+
+function renderComponent(props: Partial<WishlistHighlightsProps> = {}) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <WishlistHighlights {...props} />
+    </QueryClientProvider>
+  );
+}
+
 // ============================================================================
 // Test Data
 // ============================================================================
@@ -111,7 +140,7 @@ describe('WishlistHighlights', () => {
 
   describe('Loading State', () => {
     it('renders skeleton when loading', () => {
-      render(<WishlistHighlights isLoading />);
+      renderComponent({ isLoading: true });
 
       expect(
         screen.getByTestId('wishlist-highlights-skeleton')
@@ -119,7 +148,7 @@ describe('WishlistHighlights', () => {
     });
 
     it('skeleton has glassmorphic styling', () => {
-      render(<WishlistHighlights isLoading />);
+      renderComponent({ isLoading: true });
 
       const skeleton = screen.getByTestId('wishlist-highlights-skeleton');
       expect(skeleton).toHaveClass('rounded-2xl');
@@ -128,7 +157,7 @@ describe('WishlistHighlights', () => {
 
   describe('Success State', () => {
     it('renders widget with items', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       expect(
         screen.getByTestId('wishlist-highlights-widget')
@@ -139,7 +168,7 @@ describe('WishlistHighlights', () => {
     });
 
     it('renders all 5 wishlist items', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       const itemsList = screen.getByTestId('wishlist-items-list');
       const items = itemsList.querySelectorAll(
@@ -163,7 +192,7 @@ describe('WishlistHighlights', () => {
         },
       ];
 
-      render(<WishlistHighlights items={manyItems} />);
+      renderComponent({ items: manyItems });
 
       const itemsList = screen.getByTestId('wishlist-items-list');
       const items = itemsList.querySelectorAll(
@@ -191,7 +220,7 @@ describe('WishlistHighlights', () => {
         },
       ];
 
-      render(<WishlistHighlights items={unsortedItems} />);
+      renderComponent({ items: unsortedItems });
 
       // First item should be HIGH priority
       const names = screen.getAllByTestId(/^wishlist-name-/);
@@ -201,7 +230,7 @@ describe('WishlistHighlights', () => {
     });
 
     it('displays game names', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       expect(
         screen.getByTestId('wishlist-name-wish-1')
@@ -212,7 +241,7 @@ describe('WishlistHighlights', () => {
     });
 
     it('shows manage wishlist link in header', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       const link = screen.getByTestId('view-wishlist-link');
       expect(link).toBeInTheDocument();
@@ -222,7 +251,7 @@ describe('WishlistHighlights', () => {
 
   describe('Game Covers', () => {
     it('renders cover images for items with coverUrl', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       const coverLink = screen.getByTestId('wishlist-cover-wish-1');
       const img = coverLink.querySelector('img');
@@ -231,7 +260,7 @@ describe('WishlistHighlights', () => {
     });
 
     it('cover links to game detail page', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       const coverLink = screen.getByTestId('wishlist-cover-wish-1');
       expect(coverLink).toHaveAttribute('href', '/games/game-1');
@@ -246,7 +275,7 @@ describe('WishlistHighlights', () => {
         },
       ];
 
-      render(<WishlistHighlights items={itemsNoCover} />);
+      renderComponent({ items: itemsNoCover });
 
       const coverLink = screen.getByTestId('wishlist-cover-wish-no-cover');
       const img = coverLink.querySelector('img');
@@ -256,7 +285,7 @@ describe('WishlistHighlights', () => {
 
   describe('Priority Badges', () => {
     it('renders priority badges', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       const badges = screen.getAllByTestId('priority-badge');
       expect(badges.length).toBe(5);
@@ -271,7 +300,7 @@ describe('WishlistHighlights', () => {
         },
       ];
 
-      render(<WishlistHighlights items={highItems} />);
+      renderComponent({ items: highItems });
 
       const badge = screen.getByTestId('priority-badge');
       expect(badge).toHaveTextContent('Alta');
@@ -287,7 +316,7 @@ describe('WishlistHighlights', () => {
         },
       ];
 
-      render(<WishlistHighlights items={medItems} />);
+      renderComponent({ items: medItems });
 
       const badge = screen.getByTestId('priority-badge');
       expect(badge).toHaveTextContent('Media');
@@ -303,7 +332,7 @@ describe('WishlistHighlights', () => {
         },
       ];
 
-      render(<WishlistHighlights items={lowItems} />);
+      renderComponent({ items: lowItems });
 
       const badge = screen.getByTestId('priority-badge');
       expect(badge).toHaveTextContent('Bassa');
@@ -313,14 +342,14 @@ describe('WishlistHighlights', () => {
 
   describe('Target Price', () => {
     it('displays target price when provided', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       const price = screen.getByTestId('wishlist-price-wish-1');
       expect(price).toHaveTextContent('Target: 49.99');
     });
 
     it('does not display price when not provided', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       // wish-3 has no targetPrice
       expect(
@@ -333,12 +362,10 @@ describe('WishlistHighlights', () => {
     it('shows purchase button when onMarkPurchased provided', () => {
       const handlePurchased = vi.fn();
 
-      render(
-        <WishlistHighlights
-          items={mockItems}
-          onMarkPurchased={handlePurchased}
-        />
-      );
+      renderComponent({
+        items: mockItems,
+        onMarkPurchased: handlePurchased,
+      });
 
       const btn = screen.getByTestId('wishlist-purchased-wish-1');
       expect(btn).toBeInTheDocument();
@@ -347,12 +374,10 @@ describe('WishlistHighlights', () => {
     it('calls onMarkPurchased with item id when clicked', () => {
       const handlePurchased = vi.fn();
 
-      render(
-        <WishlistHighlights
-          items={mockItems}
-          onMarkPurchased={handlePurchased}
-        />
-      );
+      renderComponent({
+        items: mockItems,
+        onMarkPurchased: handlePurchased,
+      });
 
       const btn = screen.getByTestId('wishlist-purchased-wish-1');
       fireEvent.click(btn);
@@ -362,7 +387,7 @@ describe('WishlistHighlights', () => {
     });
 
     it('does not show purchase button when no callback', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       expect(
         screen.queryByTestId('wishlist-purchased-wish-1')
@@ -372,12 +397,10 @@ describe('WishlistHighlights', () => {
     it('has accessible aria-label on purchase button', () => {
       const handlePurchased = vi.fn();
 
-      render(
-        <WishlistHighlights
-          items={mockItems}
-          onMarkPurchased={handlePurchased}
-        />
-      );
+      renderComponent({
+        items: mockItems,
+        onMarkPurchased: handlePurchased,
+      });
 
       const btn = screen.getByTestId('wishlist-purchased-wish-1');
       expect(btn).toHaveAttribute(
@@ -389,7 +412,7 @@ describe('WishlistHighlights', () => {
 
   describe('Empty State', () => {
     it('renders empty state when no items', () => {
-      render(<WishlistHighlights items={[]} />);
+      renderComponent({ items: [] });
 
       expect(
         screen.getByTestId('wishlist-highlights-empty')
@@ -398,7 +421,7 @@ describe('WishlistHighlights', () => {
     });
 
     it('shows explore catalog CTA in empty state', () => {
-      render(<WishlistHighlights items={[]} />);
+      renderComponent({ items: [] });
 
       const cta = screen.getByTestId('explore-catalog-cta');
       expect(cta).toBeInTheDocument();
@@ -406,7 +429,7 @@ describe('WishlistHighlights', () => {
     });
 
     it('empty state CTA says "Aggiungi primo gioco"', () => {
-      render(<WishlistHighlights items={[]} />);
+      renderComponent({ items: [] });
 
       expect(
         screen.getByText('Aggiungi primo gioco')
@@ -416,9 +439,7 @@ describe('WishlistHighlights', () => {
 
   describe('Styling', () => {
     it('applies custom className', () => {
-      render(
-        <WishlistHighlights items={mockItems} className="custom-class" />
-      );
+      renderComponent({ items: mockItems, className: 'custom-class' });
 
       expect(
         screen.getByTestId('wishlist-highlights-widget')
@@ -426,7 +447,7 @@ describe('WishlistHighlights', () => {
     });
 
     it('has glassmorphic styling', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       const widget = screen.getByTestId('wishlist-highlights-widget');
       expect(widget).toHaveClass('rounded-2xl');
@@ -436,7 +457,7 @@ describe('WishlistHighlights', () => {
 
   describe('Accessibility', () => {
     it('has semantic section element', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       expect(
         screen.getByTestId('wishlist-highlights-widget').tagName
@@ -444,7 +465,7 @@ describe('WishlistHighlights', () => {
     });
 
     it('has heading element', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       expect(
         screen.getByRole('heading', { level: 3 })
@@ -452,7 +473,7 @@ describe('WishlistHighlights', () => {
     });
 
     it('all links are accessible with href', () => {
-      render(<WishlistHighlights items={mockItems} />);
+      renderComponent({ items: mockItems });
 
       const links = screen.getAllByRole('link');
       links.forEach((link) => {

@@ -188,7 +188,7 @@ public class SessionDeckTests
         deck.ReturnCards(_participantId, drawnCards.Take(2).ToList());
 
         // Assert
-        Assert.Equal(1, deck.GetHand(_participantId).Count);
+        Assert.Single(deck.GetHand(_participantId));
         Assert.Equal(51, deck.DrawPile.Count);
         // Returned cards should be at the bottom
         Assert.Contains(drawnCards[0], deck.DrawPile.TakeLast(2));

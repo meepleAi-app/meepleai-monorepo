@@ -58,7 +58,7 @@ public static class PluginContractTests
         // Format check (lowercase alphanumeric with hyphens)
         if (!string.IsNullOrEmpty(plugin.Id))
         {
-            var isValidFormat = System.Text.RegularExpressions.Regex.IsMatch(plugin.Id, @"^[a-z0-9-]+$");
+            var isValidFormat = System.Text.RegularExpressions.Regex.IsMatch(plugin.Id, @"^[a-z0-9-]+$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(5));
             checks.Add((isValidFormat, "Id should be lowercase alphanumeric with hyphens only"));
         }
 
@@ -105,7 +105,7 @@ public static class PluginContractTests
         if (!string.IsNullOrEmpty(plugin.Version))
         {
             var semverPattern = @"^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$";
-            var isValidSemver = System.Text.RegularExpressions.Regex.IsMatch(plugin.Version, semverPattern);
+            var isValidSemver = System.Text.RegularExpressions.Regex.IsMatch(plugin.Version, semverPattern, System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(5));
             checks.Add((isValidSemver, "Version should follow semantic versioning (e.g., 1.0.0)"));
         }
 
@@ -227,9 +227,9 @@ public static class PluginContractTests
             var result = await plugin.ExecuteAsync(input, config);
 
             checks.Add((result != null, "ExecuteAsync must return a non-null output"));
-            checks.Add((result.ExecutionId == input.ExecutionId, "Output.ExecutionId must match input"));
+            checks.Add((result!.ExecutionId == input.ExecutionId, "Output.ExecutionId must match input"));
             checks.Add((result.Metrics != null, "Output.Metrics must not be null"));
-            checks.Add((result.Metrics.DurationMs >= 0, "Execution duration must be non-negative"));
+            checks.Add((result.Metrics!.DurationMs >= 0, "Execution duration must be non-negative"));
 
             if (result.Success)
             {

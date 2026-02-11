@@ -1,7 +1,12 @@
 /**
- * CatalogTrending Tests (Issue #3318)
+ * CatalogTrending Tests (Issue #3921)
  *
- * Test coverage for catalog trending widget.
+ * Test coverage for catalog trending widget with updated thresholds:
+ * - > 20% → hot (Flame)
+ * - 10-20% → up (TrendingUp)
+ * - < 10% → stable (ArrowRight)
+ * - < 0% → down (TrendingDown)
+ * - 0% → neutral (Minus)
  */
 
 import { render, screen } from '@testing-library/react';
@@ -31,6 +36,15 @@ vi.mock('date-fns', () => ({
   formatDistanceToNow: vi.fn(() => '5 minuti fa'),
 }));
 
+// Mock useCatalogTrending hook
+vi.mock('@/hooks/useCatalogTrending', () => ({
+  useCatalogTrending: vi.fn(() => ({
+    data: undefined,
+    isLoading: false,
+    error: null,
+  })),
+}));
+
 // ============================================================================
 // Test Data
 // ============================================================================
@@ -39,14 +53,14 @@ const mockGames: TrendingGame[] = [
   {
     id: 'game-1',
     name: 'Ark Nova',
-    trend: 15,
+    trend: 25,
     rank: 1,
     previousRank: 2,
   },
   {
     id: 'game-2',
     name: 'Wingspan',
-    trend: 12,
+    trend: 18,
     rank: 2,
     previousRank: 3,
   },
@@ -150,8 +164,8 @@ describe('CatalogTrending', () => {
     it('sorts games by rank ascending', () => {
       const unsortedGames: TrendingGame[] = [
         { id: 'game-low', name: 'Low Rank', trend: 5, rank: 3, previousRank: 4 },
-        { id: 'game-high', name: 'High Rank', trend: 10, rank: 1, previousRank: 2 },
-        { id: 'game-med', name: 'Medium Rank', trend: 7, rank: 2, previousRank: 3 },
+        { id: 'game-high', name: 'High Rank', trend: 25, rank: 1, previousRank: 2 },
+        { id: 'game-med', name: 'Medium Rank', trend: 15, rank: 2, previousRank: 3 },
       ];
 
       renderComponent({ games: unsortedGames });
@@ -197,10 +211,10 @@ describe('CatalogTrending', () => {
     });
   });
 
-  describe('Trend Indicators', () => {
-    it('shows hot icon for trends >= 10%', () => {
+  describe('Trend Indicators (Issue #3921 thresholds)', () => {
+    it('shows hot icon for trends > 20%', () => {
       const hotGame: TrendingGame[] = [
-        { id: 'hot-game', name: 'Hot Game', trend: 15, rank: 1, previousRank: 2 },
+        { id: 'hot-game', name: 'Hot Game', trend: 25, rank: 1, previousRank: 2 },
       ];
 
       renderComponent({ games: hotGame });
@@ -208,14 +222,44 @@ describe('CatalogTrending', () => {
       expect(screen.getByTestId('trend-icon-hot')).toBeInTheDocument();
     });
 
-    it('shows up icon for positive trends < 10%', () => {
+    it('shows up icon for trends 10-20%', () => {
       const upGame: TrendingGame[] = [
-        { id: 'up-game', name: 'Up Game', trend: 5, rank: 1, previousRank: 2 },
+        { id: 'up-game', name: 'Up Game', trend: 15, rank: 1, previousRank: 2 },
       ];
 
       renderComponent({ games: upGame });
 
       expect(screen.getByTestId('trend-icon-up')).toBeInTheDocument();
+    });
+
+    it('shows up icon for exactly 10%', () => {
+      const borderGame: TrendingGame[] = [
+        { id: 'border-game', name: 'Border Game', trend: 10, rank: 1, previousRank: 2 },
+      ];
+
+      renderComponent({ games: borderGame });
+
+      expect(screen.getByTestId('trend-icon-up')).toBeInTheDocument();
+    });
+
+    it('shows up icon for exactly 20%', () => {
+      const borderGame: TrendingGame[] = [
+        { id: 'border-game', name: 'Border Game', trend: 20, rank: 1, previousRank: 2 },
+      ];
+
+      renderComponent({ games: borderGame });
+
+      expect(screen.getByTestId('trend-icon-up')).toBeInTheDocument();
+    });
+
+    it('shows stable icon for trends < 10% (positive)', () => {
+      const stableGame: TrendingGame[] = [
+        { id: 'stable-game', name: 'Stable Game', trend: 5, rank: 1, previousRank: 2 },
+      ];
+
+      renderComponent({ games: stableGame });
+
+      expect(screen.getByTestId('trend-icon-stable')).toBeInTheDocument();
     });
 
     it('shows down icon for negative trends', () => {
@@ -228,14 +272,14 @@ describe('CatalogTrending', () => {
       expect(screen.getByTestId('trend-icon-down')).toBeInTheDocument();
     });
 
-    it('shows stable icon for zero trend', () => {
-      const stableGame: TrendingGame[] = [
-        { id: 'stable-game', name: 'Stable Game', trend: 0, rank: 1, previousRank: 1 },
+    it('shows neutral icon for zero trend', () => {
+      const neutralGame: TrendingGame[] = [
+        { id: 'neutral-game', name: 'Neutral Game', trend: 0, rank: 1, previousRank: 1 },
       ];
 
-      renderComponent({ games: stableGame });
+      renderComponent({ games: neutralGame });
 
-      expect(screen.getByTestId('trend-icon-stable')).toBeInTheDocument();
+      expect(screen.getByTestId('trend-icon-neutral')).toBeInTheDocument();
     });
 
     it('displays positive trends with plus sign', () => {
@@ -312,7 +356,7 @@ describe('CatalogTrending', () => {
 
     it('has gold color for rank 1', () => {
       const topGame: TrendingGame[] = [
-        { id: 'top-game', name: 'Top Game', trend: 20, rank: 1, previousRank: 2 },
+        { id: 'top-game', name: 'Top Game', trend: 25, rank: 1, previousRank: 2 },
       ];
 
       renderComponent({ games: topGame });

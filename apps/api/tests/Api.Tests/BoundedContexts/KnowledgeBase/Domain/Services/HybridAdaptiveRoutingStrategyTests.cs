@@ -26,7 +26,6 @@ public class HybridAdaptiveRoutingStrategyTests
     private readonly ILogger<HybridAdaptiveRoutingStrategy> _logger;
     private readonly IOptions<AiProviderSettings> _aiSettings;
     private readonly Mock<IStrategyModelMappingService> _mockStrategyMappingService;
-    private readonly Mock<IServiceScopeFactory> _mockServiceScopeFactory;
     private readonly Mock<ITierStrategyAccessService> _mockTierAccessService;
     private readonly Mock<ILlmModelOverrideService> _mockOverrideService;
     private readonly Mock<IServiceScopeFactory> _mockScopeFactory;
@@ -50,7 +49,6 @@ public class HybridAdaptiveRoutingStrategyTests
         });
 
         _mockStrategyMappingService = new Mock<IStrategyModelMappingService>();
-        _mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         _mockTierAccessService = new Mock<ITierStrategyAccessService>();
         _mockOverrideService = new Mock<ILlmModelOverrideService>();
         _mockScopeFactory = new Mock<IServiceScopeFactory>();

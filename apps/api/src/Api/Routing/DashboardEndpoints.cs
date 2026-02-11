@@ -69,21 +69,25 @@ internal static class DashboardEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .WithOpenApi();
 
-        // Issue #3973: Activity timeline aggregation
+        // Issue #3973, #3923: Activity timeline with advanced filters
         group.MapGet("/dashboard/activity-timeline", HandleGetActivityTimeline)
             .RequireSession()
             .RequireAuthorization()
             .WithName("GetActivityTimeline")
             .WithTags("Dashboard")
-            .WithSummary("Get user activity timeline")
+            .WithSummary("Get user activity timeline with filters, search, and pagination")
             .WithDescription(@"Returns a chronological timeline of user activities aggregated from multiple sources:
 - **game_added**: Games added to library
 - **session_completed**: Game sessions played
 - **chat_saved**: Chat conversations
 - **wishlist_added**: Wishlist additions
 
-**Performance**: Target latency < 200ms with 5-minute cache.
-**Query Parameters**: `limit` (default: 10, max: 50)")
+**Filtering**: `type` parameter accepts comma-separated event types (e.g., `type=game_added,session_completed`)
+**Search**: `search` parameter performs case-insensitive partial match on game name/title/topic
+**Pagination**: `skip` (default: 0) and `take` (default: 20, max: 100)
+**Sorting**: `order` parameter accepts `asc` or `desc` (default: `desc`)
+
+**Performance**: Target latency < 500ms with 5-minute cache.")
             .Produces<ActivityTimelineResponseDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .WithOpenApi();
@@ -212,13 +216,35 @@ eventSource.addEventListener('DashboardStatsUpdatedEvent', (e) => {
     private static async Task<IResult> HandleGetActivityTimeline(
         HttpContext context,
         IMediator mediator,
-        int limit = 10,
+        string? type = null,
+        string? search = null,
+        int skip = 0,
+        int take = 20,
+        string? order = null,
         CancellationToken ct = default)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var clampedLimit = Math.Clamp(limit, 1, 50);
 
-        var query = new GetActivityTimelineQuery(session.User!.Id, clampedLimit);
+        // Parse comma-separated type filter
+        string[]? types = null;
+        if (!string.IsNullOrWhiteSpace(type))
+        {
+            types = type.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+
+        // Parse sort direction
+        var sortDirection = string.Equals(order, "asc", StringComparison.OrdinalIgnoreCase)
+            ? SortDirection.Ascending
+            : SortDirection.Descending;
+
+        var query = new GetActivityTimelineQuery(
+            session.User!.Id,
+            types,
+            search,
+            Math.Max(0, skip),
+            Math.Clamp(take, 1, 100),
+            sortDirection);
+
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Json(result);

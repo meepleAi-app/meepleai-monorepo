@@ -17,7 +17,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "3494")]
-public class MultiTierCacheTests : IDisposable
+public sealed class MultiTierCacheTests : IDisposable
 {
     private readonly Mock<IHybridCacheService> _mockL2Cache;
     private readonly Mock<IRedisFrequencyTracker> _mockFrequencyTracker;

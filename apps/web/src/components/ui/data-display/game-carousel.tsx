@@ -42,6 +42,7 @@ import {
 import { cn } from '@/lib/utils';
 
 import { MeepleCard, type MeepleCardMetadata } from './meeple-card';
+import { useEntityActions } from '@/hooks/use-entity-actions';
 
 // ============================================================================
 // Types & Interfaces
@@ -547,6 +548,16 @@ export const GameCarousel = React.memo(function GameCarousel({
   const containerRef = useRef<HTMLDivElement>(null);
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Issue #4040: Generate entity actions for current visible card
+  // Only generate for center card to avoid unnecessary hook calls
+  // Guard: Use first game's ID as fallback to prevent empty string (broken links)
+  const centerGame = games[currentIndex];
+  const fallbackId = games.length > 0 ? (centerGame?.id || games[0]?.id || 'placeholder') : 'placeholder';
+  const centerEntityActions = useEntityActions({
+    entity: 'game',
+    id: fallbackId,
+  });
+
   // Support controlled and uncontrolled sort modes
   const currentSort = controlledSort ?? internalSort;
   const handleSortChange = useCallback((newSort: CarouselSortValue) => {
@@ -797,6 +808,11 @@ export const GameCarousel = React.memo(function GameCarousel({
                       ]
                     )}
                     data-testid={`carousel-card-${position.index}`}
+                    // Issue #4040: Quick actions + Info button (only on center card)
+                    entityQuickActions={isCenter ? centerEntityActions.quickActions : undefined}
+                    showInfoButton={isCenter}
+                    infoHref={isCenter ? `/games/${game.id}` : undefined}
+                    infoTooltip="Vai al dettaglio"
                   />
                 </div>
               </div>

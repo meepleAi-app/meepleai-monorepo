@@ -1,6 +1,7 @@
 /**
  * Tests for Private Games Page
  * Issue #4052: Verify RequireRole protection
+ * Issue #4055: Updated for LibraryNavTabs integration
  */
 
 import { render, screen } from '@testing-library/react';
@@ -28,6 +29,11 @@ vi.mock('@/actions/auth', () => ({
 // Mock PrivateGamesClient to isolate page-level testing
 vi.mock('../PrivateGamesClient', () => ({
   default: () => <div data-testid="private-games-client">Private Games</div>,
+}));
+
+// Mock LibraryNavTabs to isolate page-level testing (Issue #4055)
+vi.mock('@/components/library', () => ({
+  LibraryNavTabs: () => <div data-testid="library-nav-tabs">Nav Tabs</div>,
 }));
 
 const mockGetCurrentUser = getCurrentUser as Mock;
@@ -98,5 +104,16 @@ describe('PrivateGamesPage', () => {
     render(<PrivateGamesPage />);
 
     expect(await screen.findByTestId('private-games-client')).toBeInTheDocument();
+  });
+
+  it('should render LibraryNavTabs when authenticated (Issue #4055)', async () => {
+    mockGetCurrentUser.mockResolvedValue({
+      success: true,
+      user: { id: '1', email: 'test@test.com', role: 'User' },
+    });
+
+    render(<PrivateGamesPage />);
+
+    expect(await screen.findByTestId('library-nav-tabs')).toBeInTheDocument();
   });
 });

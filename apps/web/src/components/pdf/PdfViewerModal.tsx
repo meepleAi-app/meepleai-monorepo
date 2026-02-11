@@ -28,9 +28,9 @@ import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
-// Configure PDF.js worker
+// Configure PDF.js worker - use version query to bust service worker cache
 if (typeof window !== 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+  pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs?v=${pdfjs.version}`;
 }
 
 export interface PdfViewerModalProps {

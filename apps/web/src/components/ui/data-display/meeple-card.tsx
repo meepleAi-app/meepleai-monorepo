@@ -62,6 +62,7 @@ import { cn } from '@/lib/utils';
 
 import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
 import { DragHandle, type DragData } from './meeple-card-features/DragHandle';
+import { FlipCard, type MeepleCardFlipData } from './meeple-card-features/FlipCard';
 import { HoverPreview } from './meeple-card-features/HoverPreview';
 import { QuickActionsMenu } from './meeple-card-features/QuickActionsMenu';
 import { StatusBadge } from './meeple-card-features/StatusBadge';
@@ -199,6 +200,14 @@ export interface MeepleCardProps extends VariantProps<typeof meepleCardVariants>
   selectable?: boolean;
   selected?: boolean;
   onSelect?: (id: string, selected: boolean) => void;
+
+  /** Feature: Flip Card (3D flip to show back content) */
+  flippable?: boolean;
+  flipData?: MeepleCardFlipData;
+  isFlipped?: boolean;
+  onFlip?: (flipped: boolean) => void;
+  /** Flip trigger mode: 'card' = click anywhere, 'button' = dedicated button */
+  flipTrigger?: 'card' | 'button';
 }
 
 // ============================================================================
@@ -253,7 +262,7 @@ const meepleCardVariants = cva(
           'hover:-translate-y-2',
         ],
         hero: [
-          'relative rounded-3xl overflow-hidden',
+          'relative flex flex-col rounded-3xl overflow-hidden',
           'min-h-[320px]',
           'shadow-xl hover:shadow-2xl',
           'hover:scale-[1.01]',
@@ -286,7 +295,7 @@ const contentVariants = cva('', {
       list: 'flex-1 min-w-0 py-1',
       compact: 'flex-1 min-w-0',
       featured: 'flex-1 flex flex-col p-5',
-      hero: 'relative z-10 flex flex-col justify-end p-6 min-h-[320px]',
+      hero: 'relative z-10 mt-auto flex flex-col justify-end p-5 bg-black/80 backdrop-blur-sm',
     },
   },
   defaultVariants: { variant: 'grid' },
@@ -395,7 +404,7 @@ function CoverImage({
   const showOverlay = variant === 'hero' || variant === 'featured' || variant === 'grid';
 
   return (
-    <div className={coverVariants({ variant })}>
+    <div className={cn(coverVariants({ variant }))}>
       <Image
         src={imageSrc}
         alt={alt}
@@ -624,6 +633,12 @@ export const MeepleCard = React.memo(function MeepleCard({
   selectable,
   selected,
   onSelect,
+  // Flip feature props
+  flippable,
+  flipData,
+  isFlipped,
+  onFlip,
+  flipTrigger,
 }: MeepleCardProps) {
   const coverSrc = entity === 'player' ? avatarUrl || imageUrl : imageUrl;
   const showActions = actions.length > 0 && (variant === 'featured' || variant === 'hero');
@@ -786,8 +801,8 @@ export const MeepleCard = React.memo(function MeepleCard({
           />
         )}
 
-        {/* Metadata */}
-        {metadata.length > 0 && variant !== 'compact' && (
+        {/* Metadata (non-grid variants render inline; grid uses footer below) */}
+        {metadata.length > 0 && variant !== 'compact' && variant !== 'grid' && (
           <MetadataChips
             metadata={metadata}
             variant={variant}
@@ -811,8 +826,47 @@ export const MeepleCard = React.memo(function MeepleCard({
           </span>
         )}
       </div>
+
+      {/* Grid footer: metadata info bar (~1/5 of card) */}
+      {variant === 'grid' && metadata.length > 0 && (
+        <div
+          className={cn(
+            'flex items-center justify-evenly gap-2',
+            'px-4 py-3',
+            'border-t border-border/50',
+            'bg-muted/60 dark:bg-muted/40',
+            'rounded-b-2xl',
+          )}
+          data-testid="meeple-card-footer"
+        >
+          {metadata.map((item, index) => (
+            <span
+              key={index}
+              className="flex items-center gap-1.5 text-xs text-foreground/70 dark:text-foreground/60"
+            >
+              {item.icon && <item.icon className="w-3.5 h-3.5" aria-hidden="true" />}
+              <span className="font-nunito font-semibold">{item.label || item.value}</span>
+            </span>
+          ))}
+        </div>
+      )}
     </Component>
   );
+
+  // Feature: Wrap with FlipCard if enabled (takes priority over HoverPreview)
+  if (flippable && flipData) {
+    return (
+      <FlipCard
+        flipData={flipData}
+        variant={variant}
+        isFlipped={isFlipped}
+        onFlip={onFlip}
+        flipTrigger={flipTrigger}
+      >
+        {cardContent}
+      </FlipCard>
+    );
+  }
 
   // Feature: Wrap with HoverPreview if enabled
   if (showPreview && onFetchPreview && id) {
@@ -838,3 +892,4 @@ export const MeepleCard = React.memo(function MeepleCard({
 
 export { MeepleCardSkeleton, entityColors };
 export type { MeepleCardMetadata as MeepleMetadata, MeepleCardAction as MeepleAction };
+export type { MeepleCardFlipData } from './meeple-card-features/FlipCard';

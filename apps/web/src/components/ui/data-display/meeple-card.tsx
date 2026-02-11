@@ -59,6 +59,12 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import Image from 'next/image';
 
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 
 import { BulkSelectCheckbox } from './meeple-card-features/BulkSelectCheckbox';
 import { DragHandle, type DragData } from './meeple-card-features/DragHandle';
@@ -365,27 +371,16 @@ function EntityIndicator({
   }
 
   if (variant === 'featured' || variant === 'grid') {
+    // Left border accent only; entity badge is rendered by VerticalTagStack
     return (
-      <>
-        {/* Left border accent */}
-        <span
-          className="absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200"
-          style={{ backgroundColor: `hsl(${color})` }}
-          aria-hidden="true"
-        />
-        {/* Top badge */}
-        <span
-          className={cn(
-            'absolute top-3 left-4 z-10',
-            'px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
-            'text-white rounded-md shadow-sm',
-            className
-          )}
-          style={{ backgroundColor: `hsl(${color})` }}
-        >
-          {name}
-        </span>
-      </>
+      <span
+        className={cn(
+          'absolute left-0 top-0 bottom-0 w-1 group-hover:w-1.5 transition-all duration-200',
+          className
+        )}
+        style={{ backgroundColor: `hsl(${color})` }}
+        aria-hidden="true"
+      />
     );
   }
 
@@ -396,6 +391,79 @@ function EntityIndicator({
       style={{ backgroundColor: `hsl(${color})` }}
       aria-hidden="true"
     />
+  );
+}
+
+/**
+ * Vertical tag stack (top-left of card)
+ * Issue #4062: Stacks entity badge, status, and custom badge vertically
+ * with compact sizing (80px max), truncation, and hover tooltips.
+ */
+function VerticalTagStack({
+  entity,
+  customColor,
+  status,
+  showStatusIcon,
+  badge,
+}: {
+  entity: MeepleEntityType;
+  customColor?: string;
+  status?: MeepleCardProps['status'];
+  showStatusIcon?: boolean;
+  badge?: string;
+}) {
+  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
+  const color = customColor || entityColors[entity].hsl;
+  // eslint-disable-next-line security/detect-object-injection -- entity is from typed MeepleEntityType union
+  const name = entityColors[entity].name;
+
+  return (
+    <TooltipProvider delayDuration={300}>
+      <div
+        className="absolute top-3 left-4 z-10 flex flex-col gap-1.5"
+        data-testid="meeple-card-tag-stack"
+      >
+        {/* Entity type badge (highest priority) */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className="max-w-[80px] truncate px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white rounded-md shadow-sm cursor-default"
+              style={{ backgroundColor: `hsl(${color})` }}
+            >
+              {name}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            {name}
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Status badge */}
+        {status && (
+          <StatusBadge
+            status={status}
+            showIcon={showStatusIcon}
+            className="max-w-[80px]"
+          />
+        )}
+
+        {/* Custom badge */}
+        {badge && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className="max-w-[80px] truncate bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-[10px] font-semibold text-muted-foreground border border-border/50 cursor-default"
+              >
+                {badge}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              {badge}
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }
 
@@ -729,15 +797,26 @@ export const MeepleCard = React.memo(function MeepleCard({
         />
       )}
 
-      {/* Entity indicator */}
+      {/* Entity indicator (left border for grid/featured, ribbon for hero, dot for list/compact) */}
       <EntityIndicator
         entity={entity}
         variant={variant}
         customColor={customColor}
       />
 
-      {/* Feature: Status Badge (below entity badge) */}
-      {status && (
+      {/* Vertical tag stack: entity badge + status + custom badge (grid/featured only) */}
+      {(variant === 'grid' || variant === 'featured') && (
+        <VerticalTagStack
+          entity={entity}
+          customColor={customColor}
+          status={status}
+          showStatusIcon={showStatusIcon}
+          badge={badge}
+        />
+      )}
+
+      {/* Status Badge for non-grid/non-featured variants */}
+      {status && variant !== 'grid' && variant !== 'featured' && (
         <StatusBadge
           status={status}
           showIcon={showStatusIcon}
@@ -871,8 +950,8 @@ export const MeepleCard = React.memo(function MeepleCard({
           />
         )}
 
-        {/* Badge overlay */}
-        {badge && !isHeroOrFeatured && (
+        {/* Badge overlay (only for non-grid/non-featured variants without VerticalTagStack) */}
+        {badge && variant !== 'grid' && variant !== 'featured' && !isHeroOrFeatured && (
           <span className="absolute top-3 right-3 bg-card/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-xs font-semibold text-muted-foreground border border-border/50">
             {badge}
           </span>

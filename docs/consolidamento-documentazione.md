@@ -70,17 +70,17 @@ Mixed:        guida-visualcode.md (italiano)
    - (nota: `session-tracking.md` non esiste)
 
 2. **Rinominare** 11 file COMPLETE (rimuovere `-COMPLETE`):
-   - `administration.md` → `administration.md`
-   - `authentication.md` → `authentication.md`
-   - `document-processing.md` → `document-processing.md`
-   - `game-management.md` → `game-management.md`
-   - `knowledge-base.md` → `knowledge-base.md`
-   - `session-tracking.md` → `session-tracking.md`
-   - `shared-game-catalog.md` → `shared-game-catalog.md`
-   - `system-configuration.md` → `system-configuration.md`
-   - `user-library.md` → `user-library.md`
-   - `user-notifications.md` → `user-notifications.md`
-   - `workflow-integration.md` → `workflow-integration.md`
+   - `administration-COMPLETE.md` → `administration.md`
+   - `authentication-COMPLETE.md` → `authentication.md`
+   - `document-processing-COMPLETE.md` → `document-processing.md`
+   - `game-management-COMPLETE.md` → `game-management.md`
+   - `knowledge-base-COMPLETE.md` → `knowledge-base.md`
+   - `session-tracking-COMPLETE.md` → `session-tracking.md`
+   - `shared-game-catalog-COMPLETE.md` → `shared-game-catalog.md`
+   - `system-configuration-COMPLETE.md` → `system-configuration.md`
+   - `user-library-COMPLETE.md` → `user-library.md`
+   - `user-notifications-COMPLETE.md` → `user-notifications.md`
+   - `workflow-integration-COMPLETE.md` → `workflow-integration.md`
 
 3. **Aggiornare** riferimenti nel README.md
 
@@ -120,52 +120,52 @@ foreach ($file in $completeFiles) {
 **File da rinominare**:
 
 #### 02-development/
-- `azul-test-instructions.md` → `azul-test-instructions.md`
-- `bgg-api-token-setup.md` → `bgg-api-token-setup.md`
-- `branch-protection-setup.md` → `branch-protection-setup.md`
-- `quick-start-guide.md` → `quick-start-guide.md`
-- `workflow-audit-report.md` → `workflow-audit-report.md`
+- `AZUL_TEST_INSTRUCTIONS.md` → `azul-test-instructions.md`
+- `BGG_API_TOKEN_SETUP.md` → `bgg-api-token-setup.md`
+- `BRANCH_PROTECTION_SETUP.md` → `branch-protection-setup.md`
+- `QUICK_START_GUIDE.md` → `quick-start-guide.md`
+- `WORKFLOW_AUDIT_REPORT.md` → `workflow-audit-report.md`
 
 #### 02-development/monitoring/
-- `metrics-limitation.md` → `metrics-limitation.md`
+- `METRICS-LIMITATION.md` → `metrics-limitation.md`
 
 #### 04-deployment/
-- `capacity-planning.md` → `capacity-planning.md`
-- `new-guides-index.md` → `new-guides-index.md`
+- `CAPACITY_PLANNING.md` → `capacity-planning.md`
+- `NEW-GUIDES-INDEX.md` → `new-guides-index.md`
 
 #### 05-testing/
-- `ci-cd-pipeline.md` → `ci-cd-pipeline.md`
+- `CI_CD_PIPELINE.md` → `ci-cd-pipeline.md`
 
 #### 05-testing/backend/
-- `backend-e2-e-testing.md` → `backend-e2e-testing.md`
-- `integration-test-optimization.md` → `integration-test-optimization.md`
+- `BACKEND_E2E_TESTING.md` → `backend-e2e-testing.md`
+- `INTEGRATION_TEST_OPTIMIZATION.md` → `integration-test-optimization.md`
 
 #### 05-testing/e2e/
-- `background-rulebook-analysis-manual-testing.md` → `background-rulebook-analysis-manual-testing.md`
-- `e2-e-test-guide.md` → `e2e-test-guide.md`
-- `rulebook-analysis-manual-testing.md` → `rulebook-analysis-manual-testing.md`
+- `BackgroundRulebookAnalysis-ManualTesting.md` → `background-rulebook-analysis-manual-testing.md`
+- `E2E_TEST_GUIDE.md` → `e2e-test-guide.md`
+- `RulebookAnalysis-ManualTesting.md` → `rulebook-analysis-manual-testing.md`
 
 #### 07-frontend/epics/
-- `epic-gc-001-game-carousel-integration.md` → `epic-gc-001-game-carousel-integration.md`
-- `epic-gc-001-summary.md` → `epic-gc-001-summary.md`
+- `EPIC-GC-001-game-carousel-integration.md` → `epic-gc-001-game-carousel-integration.md`
+- `EPIC-GC-001-SUMMARY.md` → `epic-gc-001-summary.md`
 
 #### 04-features/admin-dashboard-enterprise/
-- `epics-and-issues.md` → `epics-and-issues.md`
-- `issue-tracking.md` → `issue-tracking.md`
+- `EPICS-AND-ISSUES.md` → `epics-and-issues.md`
+- `ISSUE-TRACKING.md` → `issue-tracking.md`
 - `ROADMAP.html` → `roadmap.html` (no change)
-- `specification.md` → `specification.md`
+- `SPECIFICATION.md` → `specification.md`
 
 #### 04-features/private-games-proposal/
-- `design.md` → `design.md`
-- `implementation-plan.md` → `implementation-plan.md`
-- `user-stories.md` → `user-stories.md`
+- `DESIGN.md` → `design.md`
+- `IMPLEMENTATION-PLAN.md` → `implementation-plan.md`
+- `USER-STORIES.md` → `user-stories.md`
 
 #### 09-bounded-contexts/
-- `diagram-summary.md` → `diagram-summary.md`
+- `DIAGRAM_SUMMARY.md` → `diagram-summary.md`
 
 #### Root docs/
-- `index.md` → `index.md`
-- `skills-reference.md` → `skills-reference.md`
+- `INDEX.md` → `index.md`
+- `SKILLS-REFERENCE.md` → `skills-reference.md`
 - `S3.md` → `s3.md` (già corretto)
 
 ### Script PowerShell Conversione Globale

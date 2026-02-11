@@ -146,6 +146,7 @@ export const ENTERPRISE_SECTIONS: EnterpriseSection[] = [
     description: 'Usage stats, financial ledger e reports',
     tabs: [
       { id: 'usage-stats', label: 'Usage Stats', icon: ActivityIcon },
+      { id: 'ledger-dashboard', label: 'Ledger Dashboard', icon: TrendingUpIcon },
       { id: 'financial-ledger', label: 'Financial Ledger', icon: WalletIcon },
       { id: 'reports', label: 'Reports', icon: ClipboardListIcon },
     ],

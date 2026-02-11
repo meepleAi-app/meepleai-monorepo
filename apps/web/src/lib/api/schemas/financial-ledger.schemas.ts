@@ -1,5 +1,7 @@
 /**
- * Financial Ledger Zod Schemas (Issue #3722: Manual Ledger CRUD)
+ * Financial Ledger Zod Schemas
+ * Issue #3722: Manual Ledger CRUD
+ * Issue #3723: Ledger Dashboard and Visualization
  */
 
 import { z } from 'zod';
@@ -119,3 +121,32 @@ export type GetLedgerSummaryParams = {
   dateFrom: string;
   dateTo: string;
 };
+
+// ========== Dashboard Schemas (Issue #3723) ==========
+
+export const MonthlyRevenueDataSchema = z.object({
+  month: z.string(),
+  revenue: z.number(),
+  costs: z.number(),
+});
+export type MonthlyRevenueData = z.infer<typeof MonthlyRevenueDataSchema>;
+
+export const CategoryBreakdownItemSchema = z.object({
+  category: z.string(),
+  amount: z.number(),
+  percentage: z.number(),
+  type: LedgerEntryTypeSchema,
+});
+export type CategoryBreakdownItem = z.infer<typeof CategoryBreakdownItemSchema>;
+
+export const LedgerDashboardDataSchema = z.object({
+  monthlyData: z.array(MonthlyRevenueDataSchema),
+  categoryBreakdown: z.array(CategoryBreakdownItemSchema),
+  currentMonthBalance: z.number(),
+  currentMonthRevenue: z.number(),
+  currentMonthCosts: z.number(),
+  profitMargin: z.number(),
+  profitMarginTrend: z.number(),
+  recentEntries: z.array(LedgerEntryDtoSchema),
+});
+export type LedgerDashboardData = z.infer<typeof LedgerDashboardDataSchema>;

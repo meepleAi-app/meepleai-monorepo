@@ -127,7 +127,7 @@ export default function AgentsPage() {
             type="search"
             placeholder="Search agents..."
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
             className="pl-10"
             aria-label="Search agents"
           />
@@ -147,7 +147,7 @@ export default function AgentsPage() {
         </Select>
 
         {/* Sort */}
-        <Select value={sortBy} onValueChange={value => setSortBy(value as typeof sortBy)}>
+        <Select value={sortBy} onValueChange={(value: string) => setSortBy(value as typeof sortBy)}>
           <SelectTrigger className="w-full md:w-48" aria-label="Sort agents">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>

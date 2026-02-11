@@ -11,6 +11,7 @@ using Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.UserLibrary.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.BusinessSimulations.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Gamification.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 using Api.Helpers;
@@ -75,6 +76,9 @@ internal static class ApplicationServiceExtensions
 
         // Issue #3922: Gamification bounded context (achievements, badges)
         services.AddGamificationContext();
+
+        // Issue #3720: BusinessSimulations bounded context (financial ledger, simulations)
+        services.AddBusinessSimulationsContext();
 
         // ISSUE-2370: SharedGameCatalog bounded context
         // ISSUE-2454: Background processing configuration

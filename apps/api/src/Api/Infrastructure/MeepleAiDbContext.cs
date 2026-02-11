@@ -132,6 +132,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameAnalyticsEventEntity> GameAnalyticsEvents => Set<GameAnalyticsEventEntity>(); // ISSUE-3918: Catalog Trending Analytics
     public DbSet<Entities.Gamification.AchievementEntity> Achievements => Set<Entities.Gamification.AchievementEntity>(); // ISSUE-3922: Achievement System
     public DbSet<Entities.Gamification.UserAchievementEntity> UserAchievements => Set<Entities.Gamification.UserAchievementEntity>(); // ISSUE-3922: Achievement System
+    public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry> LedgerEntries => Set<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry>(); // ISSUE-3720: Financial Ledger
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();

@@ -1,0 +1,1 @@
+export { ResourceForecastingTab } from './ResourceForecastingTab';

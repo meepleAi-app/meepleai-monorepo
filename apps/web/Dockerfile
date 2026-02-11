@@ -34,8 +34,10 @@ ENV NODE_ENV=production
 # Ensure public directory exists (Next.js may need it)
 RUN mkdir -p public
 
-# Copy PDF.js worker to public for client-side access (pdfjs-dist v5)
-RUN cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/pdf.worker.min.mjs
+# Copy PDF.js worker to public for client-side access
+# Worker version must match the pdfjs-dist bundled by react-pdf (resolved via pnpm)
+RUN WORKER_PATH=$(find node_modules -path "*/pdfjs-dist/build/pdf.worker.min.mjs" -type f | head -1) && \
+    cp "$WORKER_PATH" public/pdf.worker.min.mjs
 
 # Build Next.js application (generates .next/standalone)
 RUN pnpm run build

@@ -91,6 +91,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip blob: URLs (e.g., PDF preview from File objects)
+  if (request.url.startsWith('blob:')) {
+    return;
+  }
+
   // Skip requests that should never be cached
   if (shouldNotCache(url)) {
     return;

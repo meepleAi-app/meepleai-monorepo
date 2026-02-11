@@ -33,6 +33,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+import { api } from '@/lib/api';
 
 // Configure PDF.js worker for page count validation
 // Use pdfjs.version to ensure worker matches the bundled API version
@@ -52,9 +53,10 @@ interface PdfUploadModalProps {
   onClose: () => void;
   gameId: string;
   gameTitle: string;
+  onUploadSuccess?: () => void;
 }
 
-export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: PdfUploadModalProps) {
+export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuccess }: PdfUploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [step, setStep] = useState<UploadStep>('select');
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -109,7 +111,8 @@ export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: 
         return `Il PDF ha troppe pagine: ${pages} (max ${MAX_PAGE_COUNT} pagine)`;
       }
       return null;
-    } catch (_error) {
+    } catch (error) {
+      console.error('[PdfUploadModal] PDF validation error:', error);
       return 'Impossibile leggere il PDF. Il file potrebbe essere corrotto.';
     }
   }, []);
@@ -177,24 +180,13 @@ export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: 
     setUploadProgress(0);
 
     try {
-      // Simulate upload progress (replace with actual upload logic)
-      // TODO: Implement actual PDF upload with backend endpoint
-      const interval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(interval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 200);
+      await api.pdf.uploadPdf(gameId, file, (percent) => {
+        setUploadProgress(percent);
+      });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      clearInterval(interval);
       setUploadProgress(100);
-
       toast.success(`PDF "${file.name}" caricato con successo per "${gameTitle}"!`);
+      onUploadSuccess?.();
 
       // Close modal after short delay
       setTimeout(() => {
@@ -207,7 +199,7 @@ export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: 
       setUploadProgress(0);
       setStep('preview'); // Go back to preview on error
     }
-  }, [file, gameTitle, handleClose]);
+  }, [file, gameId, gameTitle, handleClose, onUploadSuccess]);
 
   const handleUpload = async (e: FormEvent) => {
     e.preventDefault();

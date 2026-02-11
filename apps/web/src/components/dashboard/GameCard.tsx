@@ -34,8 +34,8 @@ import { motion } from 'framer-motion';
 import { Heart, Bot, MapPin, Calendar, Gamepad2, Share2, Lock, MessageSquare } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
-import { cn } from '@/lib/utils';
 import { useEntityActions } from '@/hooks/use-entity-actions';
+import { cn } from '@/lib/utils';
 
 import type { ViewMode } from './DashboardSection';
 

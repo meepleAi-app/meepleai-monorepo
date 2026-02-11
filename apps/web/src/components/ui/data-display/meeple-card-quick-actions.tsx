@@ -12,6 +12,12 @@ import React from 'react';
 
 
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 
 import { entityColors } from './meeple-card';
 
@@ -70,7 +76,7 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
   const iconSize = size === 'sm' ? 'w-[15px] h-[15px]' : 'w-[18px] h-[18px]';
 
   return (
-    <>
+    <TooltipProvider delayDuration={200}>
       {visibleActions.map((action, index) => {
         const Icon = action.icon;
 
@@ -79,95 +85,67 @@ export const MeepleCardQuickActions = React.memo(function MeepleCardQuickActions
         const delay = (visibleActions.length - 1 - index) * 40;
 
         return (
-          <button
-            key={index}
-            onClick={(e) => {
-              e.stopPropagation();
-              action.onClick();
-            }}
-            disabled={action.disabled}
-            className={cn(
-              // Base styles
-              buttonSize,
-              'rounded-full flex items-center justify-center',
-              'border border-white/50',
-              'bg-white/80 backdrop-blur-[8px]',
-              'transition-all duration-300 ease-out',
-              // Hover state
-              'hover:bg-white hover:scale-110',
-              'hover:shadow-md',
-              // Focus state
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
-              // Disabled state
-              'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
-              // Fade in on parent card hover
-              'opacity-0 pointer-events-none',
-              'group-hover:opacity-100 group-hover:pointer-events-auto',
-            )}
-            style={{
-              transitionDelay: `${delay}ms`,
-              // Entity-colored focus ring
-              ['--tw-ring-color' as string]: `hsl(${entityColor})`,
-            }}
-            aria-label={action.label}
-            data-tooltip={action.label}
-          >
-            <Icon
-              className={cn(
-                iconSize,
-                'stroke-slate-600 transition-colors duration-200',
-              )}
-              strokeWidth={2}
-              style={{
-                // Entity-colored icon on hover
-                ['--hover-color' as string]: `hsl(${entityColor})`,
-              }}
-            />
+          <Tooltip key={index}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  action.onClick();
+                }}
+                disabled={action.disabled}
+                className={cn(
+                  // Base styles
+                  buttonSize,
+                  'rounded-full flex items-center justify-center',
+                  'border border-white/50',
+                  'bg-white/80 backdrop-blur-[8px]',
+                  'transition-all duration-300 ease-out',
+                  // Hover state
+                  'hover:bg-white hover:scale-110',
+                  'hover:shadow-md',
+                  // Focus state
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
+                  // Disabled state
+                  'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
+                  // Fade in on parent card hover
+                  'opacity-0 pointer-events-none',
+                  'group-hover:opacity-100 group-hover:pointer-events-auto',
+                )}
+                style={{
+                  transitionDelay: `${delay}ms`,
+                  // Entity-colored focus ring
+                  ['--tw-ring-color' as string]: `hsl(${entityColor})`,
+                }}
+                aria-label={action.label}
+              >
+                <Icon
+                  className={cn(
+                    iconSize,
+                    'stroke-slate-600 transition-colors duration-200',
+                  )}
+                  strokeWidth={2}
+                  style={{
+                    // Entity-colored icon on hover
+                    ['--hover-color' as string]: `hsl(${entityColor})`,
+                  }}
+                />
 
-            {/* Entity-colored hover glow */}
-            <span
-              className="absolute inset-0 rounded-full opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none"
-              style={{
-                boxShadow: `0 0 0 2px hsl(${entityColor})`,
-              }}
-              aria-hidden="true"
-            />
-          </button>
+                {/* Entity-colored hover glow */}
+                <span
+                  className="absolute inset-0 rounded-full opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+                  style={{
+                    boxShadow: `0 0 0 2px hsl(${entityColor})`,
+                  }}
+                  aria-hidden="true"
+                />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={10}>
+              {action.label}
+            </TooltipContent>
+          </Tooltip>
         );
       })}
-    </>
+    </TooltipProvider>
   );
 });
-
-// Tooltip styles (inject into document head if not already present)
-if (typeof document !== 'undefined' && !document.getElementById('meeple-qa-tooltip-styles')) {
-  const style = document.createElement('style');
-  style.id = 'meeple-qa-tooltip-styles';
-  style.textContent = `
-    [data-tooltip] {
-      position: relative;
-    }
-    [data-tooltip]::after {
-      content: attr(data-tooltip);
-      position: absolute;
-      bottom: calc(100% + 6px);
-      left: 50%;
-      transform: translateX(-50%) translateY(-4px);
-      background: hsl(var(--foreground));
-      color: hsl(var(--background));
-      font-size: 11px;
-      padding: 4px 8px;
-      border-radius: 6px;
-      white-space: nowrap;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.15s ease, transform 0.15s ease;
-      z-index: 50;
-    }
-    [data-tooltip]:hover::after {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-  `;
-  document.head.appendChild(style);
-}

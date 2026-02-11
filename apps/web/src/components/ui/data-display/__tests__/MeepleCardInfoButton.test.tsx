@@ -22,11 +22,11 @@ describe('MeepleCardInfoButton', () => {
     expect(link).toHaveAttribute('href', '/games/123');
   });
 
-  it('displays default tooltip', () => {
+  it('displays default tooltip via aria-label', () => {
     render(<MeepleCardInfoButton {...defaultProps} />);
 
     const button = screen.getByTestId('meeple-card-info-button');
-    expect(button).toHaveAttribute('data-tooltip', 'View details');
+    expect(button).toHaveAttribute('aria-label', 'View details');
   });
 
   it('displays custom tooltip when provided', () => {
@@ -38,7 +38,7 @@ describe('MeepleCardInfoButton', () => {
     );
 
     const button = screen.getByTestId('meeple-card-info-button');
-    expect(button).toHaveAttribute('data-tooltip', 'Vai al dettaglio');
+    expect(button).toHaveAttribute('aria-label', 'Vai al dettaglio');
   });
 
   it('applies entity-colored styling for game', () => {

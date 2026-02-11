@@ -28,6 +28,9 @@ export { SharedLibraryGameCard } from './SharedLibraryGameCard';
 // View Mode Toggle (Issue #2866)
 export { ViewModeToggle, type ViewModeToggleProps, type ViewMode } from './ViewModeToggle';
 
+// Library Navigation Tabs (Issue #4055)
+export { LibraryNavTabs } from './LibraryNavTabs';
+
 // Game Detail Components (Issue #3513)
 export {
   GameDetailHero,

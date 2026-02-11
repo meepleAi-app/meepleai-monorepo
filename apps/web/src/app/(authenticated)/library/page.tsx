@@ -1,6 +1,7 @@
 /**
  * User Library Page (Issue #2464, #2613, #2618)
  * Updated: Issue #3104 - Navigation handled by layout
+ * Updated: Issue #4055 - Library section navigation tabs
  * Updated: Protected route - requires authentication
  *
  * Enhanced user library management with search, filtering, and actions.
@@ -27,6 +28,7 @@
 import dynamic from 'next/dynamic';
 
 import { RequireRole } from '@/components/auth/RequireRole';
+import { LibraryNavTabs } from '@/components/library';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 
 // Dynamically import the client component with SSR disabled
@@ -54,6 +56,7 @@ const LibraryPageClient = dynamic(() => import('./LibraryPageClient'), {
 export default function LibraryPage() {
   return (
     <RequireRole allowedRoles={['User', 'Editor', 'Admin']}>
+      <LibraryNavTabs />
       <LibraryPageClient />
     </RequireRole>
   );

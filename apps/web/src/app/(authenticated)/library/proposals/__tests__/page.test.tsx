@@ -1,6 +1,7 @@
 /**
  * Tests for My Proposals Page
  * Issue #4056: Verify RequireRole protection
+ * Issue #4055: Updated for LibraryNavTabs integration
  */
 
 import { render, screen } from '@testing-library/react';
@@ -23,6 +24,11 @@ vi.mock('next/navigation', () => ({
 // Mock getCurrentUser action
 vi.mock('@/actions/auth', () => ({
   getCurrentUser: vi.fn(),
+}));
+
+// Mock LibraryNavTabs to isolate page-level testing (Issue #4055)
+vi.mock('@/components/library', () => ({
+  LibraryNavTabs: () => <div data-testid="library-nav-tabs">Nav Tabs</div>,
 }));
 
 const mockGetCurrentUser = getCurrentUser as Mock;
@@ -97,5 +103,16 @@ describe('MyProposalsPage', () => {
     render(<MyProposalsPage />);
 
     expect(await screen.findByText('My Proposals')).toBeInTheDocument();
+  });
+
+  it('should render LibraryNavTabs when authenticated (Issue #4055)', async () => {
+    mockGetCurrentUser.mockResolvedValue({
+      success: true,
+      user: { id: '1', email: 'test@test.com', role: 'User' },
+    });
+
+    render(<MyProposalsPage />);
+
+    expect(await screen.findByTestId('library-nav-tabs')).toBeInTheDocument();
   });
 });

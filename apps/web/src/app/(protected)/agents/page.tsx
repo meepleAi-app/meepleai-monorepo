@@ -15,14 +15,14 @@
 import React, { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { Input } from '@/components/ui/forms/input';
+import { Input } from '@/components/ui/primitives/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/primitives/select';
+} from '@/components/ui/select';
 
 // TODO: Replace with actual API fetch
 // import { useQuery } from '@tanstack/react-query';

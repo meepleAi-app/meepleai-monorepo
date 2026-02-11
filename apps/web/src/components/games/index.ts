@@ -1,4 +1,4 @@
 // Games components barrel export
-export { GameCard } from './GameCard';
+export { MeepleGameCard } from './MeepleGameCard';
 export { SimilarGamesCarousel } from './SimilarGamesCarousel';
 export * from './detail';

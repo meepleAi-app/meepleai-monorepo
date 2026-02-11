@@ -308,12 +308,12 @@ export default function EntityListViewDemoPage() {
         </section>
       )}
 
-      {/* Collections Section (Teal) */}
+      {/* Collections Section (Custom) - Issue #4030: collection removed, use custom */}
       {showCollections && (
         <section>
           <EntityListView
             items={MOCK_COLLECTIONS}
-            entity="collection"
+            entity="custom"
             persistenceKey="demo-collections"
             defaultViewMode="grid"
             renderItem={(collection) => ({

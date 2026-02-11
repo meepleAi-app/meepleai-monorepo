@@ -128,7 +128,7 @@ describe('MeepleCard - Snapshots', () => {
     it('should match snapshot for collection entity', () => {
       const { container } = render(
         <MeepleCard
-          entity="collection"
+          entity="custom"
           variant="grid"
           title="Euro Games Essentials"
           subtitle="Curated by @boardgame_guru"

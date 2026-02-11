@@ -29,6 +29,7 @@ import { z } from 'zod';
 import { PrivateGameCard } from '@/components/library/PrivateGameCard';
 import { type AddPrivateGameFormData } from '@/components/library/AddPrivateGameForm';
 import { AddPrivateGameWithBgg } from '@/components/library/AddPrivateGameWithBgg';
+import { ProposeGameModal } from '@/components/library/ProposeGameModal';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,6 +61,7 @@ import {
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { api } from '@/lib/api';
 import type { PrivateGameDto, GetPrivateGamesParams } from '@/lib/api/schemas/private-games.schemas';
+import { useCreateShareRequest } from '@/hooks/queries/useShareRequests';
 
 type SortByOption = 'title' | 'createdAt' | 'updatedAt';
 type SortDirection = 'asc' | 'desc';
@@ -84,9 +86,13 @@ export default function PrivateGamesClient() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [proposeDialogOpen, setProposeDialogOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState<PrivateGameDto | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Propose mutation
+  const createShareRequest = useCreateShareRequest();
 
   const PAGE_SIZE = 12;
 
@@ -230,6 +236,21 @@ export default function PrivateGamesClient() {
     }
   };
 
+  const openPropose = (game: PrivateGameDto) => {
+    setSelectedGame(game);
+    setProposeDialogOpen(true);
+  };
+
+  const handlePropose = async (gameId: string, notes: string) => {
+    await createShareRequest.mutateAsync({
+      sourceGameId: gameId,
+      notes: notes || undefined,
+      attachedDocumentIds: [],
+    });
+    setProposeDialogOpen(false);
+    setSelectedGame(null);
+  };
+
   return (
     <div className="container mx-auto py-8 space-y-6">
       {/* Header */}
@@ -339,6 +360,7 @@ export default function PrivateGamesClient() {
                 game={game}
                 onEdit={openEdit}
                 onDelete={openDelete}
+                onPropose={openPropose}
               />
             ))}
           </div>
@@ -449,6 +471,17 @@ export default function PrivateGamesClient() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Propose Game Modal (Issue #4054) */}
+      <ProposeGameModal
+        isOpen={proposeDialogOpen}
+        onClose={() => {
+          setProposeDialogOpen(false);
+          setSelectedGame(null);
+        }}
+        game={selectedGame}
+        onPropose={handlePropose}
+      />
     </div>
   );
 }

@@ -27,14 +27,14 @@ import {
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
+import { useAuth } from '@/components/auth/AuthProvider';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { useAuth } from '@/components/auth/AuthProvider';
 import { api, type SharedGameDetail } from '@/lib/api';
 import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';

@@ -82,7 +82,7 @@ export interface ActivityFeedProps {
 // Mock Data (for development)
 // ============================================================================
 
-const MOCK_EVENTS: ActivityEvent[] = [
+const _MOCK_EVENTS: ActivityEvent[] = [
   {
     id: 'event-1',
     type: 'game_added',

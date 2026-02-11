@@ -133,6 +133,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<Entities.Gamification.AchievementEntity> Achievements => Set<Entities.Gamification.AchievementEntity>(); // ISSUE-3922: Achievement System
     public DbSet<Entities.Gamification.UserAchievementEntity> UserAchievements => Set<Entities.Gamification.UserAchievementEntity>(); // ISSUE-3922: Achievement System
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry> LedgerEntries => Set<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry>(); // ISSUE-3720: Financial Ledger
+    public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario> CostScenarios => Set<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario>(); // ISSUE-3725: Agent Cost Calculator
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();

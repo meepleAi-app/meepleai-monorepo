@@ -1,6 +1,7 @@
 /**
  * Enterprise Simulations Section Page
  * Issue #3689 - Layout Base & Navigation System
+ * Issue #3725 - Agent Cost Calculator
  *
  * Section 7: Simulations & Forecasting
  * Tabs: Cost Calculator | Resource Forecast | Batch Jobs
@@ -10,6 +11,7 @@
 
 import React from 'react';
 
+import { AgentCostCalculatorTab } from '@/components/admin/enterprise/cost-calculator';
 import { EnterpriseSectionPage } from '@/components/admin/enterprise/EnterpriseSectionPage';
 import { ENTERPRISE_SECTIONS } from '@/config/enterprise-navigation';
 
@@ -20,7 +22,9 @@ export default function SimulationsPage() {
   return (
     <EnterpriseSectionPage
       section={section}
-      tabContent={{}}
+      tabContent={{
+        'cost-calculator': <AgentCostCalculatorTab />,
+      }}
     />
   );
 }

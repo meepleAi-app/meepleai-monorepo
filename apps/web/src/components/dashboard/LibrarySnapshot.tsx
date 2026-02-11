@@ -77,12 +77,12 @@ export interface LibrarySnapshotProps {
 // Mock Data (for development)
 // ============================================================================
 
-const MOCK_QUOTA: LibraryQuota = {
+const _MOCK_QUOTA: LibraryQuota = {
   used: 127,
   total: 200,
 };
 
-const MOCK_TOP_GAMES: TopGame[] = [
+const _MOCK_TOP_GAMES: TopGame[] = [
   {
     id: 'game-1',
     title: 'Catan',

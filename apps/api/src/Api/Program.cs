@@ -513,6 +513,7 @@ v1Api.MapAdminUserEndpoints();         // User management
 v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
 v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
 v1Api.MapFinancialLedgerEndpoints();  // Financial Ledger CRUD (Issue #3722)
+v1Api.MapCostCalculatorEndpoints();   // Agent Cost Calculator (Issue #3725)
 v1Api.MapBatchJobEndpoints();          // Batch job system & operations (Issue #3693)
 v1Api.MapBatchJobLogsEndpoints();      // Batch job real-time logs SSE (Issue #3693 Task 3)
 v1Api.MapAdminResourcesEndpoints();    // Resources monitoring (Issue #3695)

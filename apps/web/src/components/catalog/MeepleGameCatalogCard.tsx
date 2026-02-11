@@ -29,8 +29,8 @@ import { Users, Clock, BarChart2 } from 'lucide-react';
 import { toast } from '@/components/layout/Toast';
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
-import { useEntityActions } from '@/hooks/use-entity-actions';
 import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
+import { useEntityActions } from '@/hooks/use-entity-actions';
 import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
 // ============================================================================

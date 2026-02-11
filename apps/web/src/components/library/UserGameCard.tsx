@@ -48,7 +48,6 @@ import { GameActionsModal } from '@/components/library/GameActionsModal';
 import type { ViewMode } from '@/components/library/ViewModeToggle';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
-import { useEntityActions } from '@/hooks/use-entity-actions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,6 +65,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { useAgentConfig } from '@/hooks/queries';
 import { useCanShareGame } from '@/hooks/queries/useCanShareGame';
+import { useEntityActions } from '@/hooks/use-entity-actions';
 import type { UserLibraryEntry } from '@/lib/api';
 import type { GameStateType } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';

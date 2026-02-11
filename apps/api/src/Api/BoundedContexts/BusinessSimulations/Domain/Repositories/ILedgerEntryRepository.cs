@@ -46,4 +46,18 @@ internal interface ILedgerEntryRepository : IRepository<LedgerEntry, Guid>
         DateTime from,
         DateTime to,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets ledger entries with combined filters (type, category, source, date range).
+    /// Issue #3722: Manual Ledger CRUD
+    /// </summary>
+    Task<(IReadOnlyList<LedgerEntry> Entries, int Total)> GetFilteredAsync(
+        LedgerEntryType? type = null,
+        LedgerCategory? category = null,
+        LedgerEntrySource? source = null,
+        DateTime? dateFrom = null,
+        DateTime? dateTo = null,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default);
 }

@@ -1,0 +1,45 @@
+sequenceDiagram
+    participant Client
+    participant Endpoint
+    participant Mediator
+    participant Validator
+    participant Handler
+    participant GameDomain as Game (Domain)
+    participant SessionDomain as GameSession (Domain)
+    participant DB
+    participant Events
+
+    Client->>Endpoint: POST /api/v1/sessions
+    Note right of Client: {gameId, players: [{name, order, color}]}
+
+    Endpoint->>Mediator: Send(StartGameSessionCommand)
+
+    Mediator->>Validator: Validate(command)
+    Validator->>Validator: Check player count
+    Validator->>Validator: Validate player order
+    Validator->>Mediator: Validation passed ✓
+
+    Mediator->>Handler: Handle(command)
+
+    Handler->>DB: Find game by ID
+    DB-->>Handler: Game found
+
+    Handler->>GameDomain: Validate player count
+    GameDomain->>GameDomain: Check MinPlayers ≤ count ≤ MaxPlayers
+    GameDomain-->>Handler: Valid ✓
+
+    Handler->>SessionDomain: GameSession.Create(gameId, players)
+    SessionDomain->>SessionDomain: Set Status = Setup
+    SessionDomain->>SessionDomain: Add players
+    SessionDomain->>Events: Raise GameSessionStartedEvent
+
+    Handler->>DB: SaveAsync(session)
+    DB-->>Handler: Session saved ✓
+
+    Handler->>Events: Publish GameSessionStartedEvent
+
+    Handler-->>Mediator: GameSessionDto
+    Mediator-->>Endpoint: GameSessionDto
+
+    Endpoint-->>Client: 201 Created
+    Note left of Client: {id, gameId, status: "Setup", players: [...]}

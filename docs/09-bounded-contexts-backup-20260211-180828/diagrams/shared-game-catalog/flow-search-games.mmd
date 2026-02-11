@@ -1,0 +1,45 @@
+sequenceDiagram
+    participant Client
+    participant Endpoint
+    participant Mediator
+    participant Handler
+    participant DB as PostgreSQL
+    participant FTS as Full-Text Search
+    participant Cache as Redis
+
+    Client->>Endpoint: GET /api/v1/shared-games?q=azul&minPlayers=2
+
+    Endpoint->>Endpoint: Extract query params
+    Endpoint->>Endpoint: Create SearchSharedGamesQuery
+
+    Endpoint->>Mediator: Send(query)
+
+    Mediator->>Handler: Handle(query)
+
+    Handler->>Cache: TryGetCached("search:azul:minPlayers=2")
+    Cache-->>Handler: Cache miss
+
+    Handler->>FTS: Build FTS query
+    Note over FTS: to_tsvector('italian', Title || Description)
+
+    Handler->>DB: Execute search query
+    Note over DB: WHERE to_tsvector(...) @@ to_tsquery('azul')<br/>AND MinPlayers >= 2<br/>AND Status = Published<br/>AND NOT IsDeleted<br/>ORDER BY ts_rank DESC
+
+    DB-->>Handler: List<SharedGame>
+
+    Handler->>Handler: Apply additional filters
+    Note over Handler: Categories, mechanics, player count
+
+    Handler->>Handler: Map to SharedGameDto[]
+
+    Handler->>DB: Count total results
+    DB-->>Handler: TotalCount = 5
+
+    Handler->>Cache: SetCached("search:azul:minPlayers=2", result, TTL: 5min)
+    Cache-->>Handler: Cached ✓
+
+    Handler-->>Mediator: PaginatedSearchResult
+    Mediator-->>Endpoint: PaginatedSearchResult
+
+    Endpoint-->>Client: 200 OK
+    Note left of Client: {games[], pagination: {totalCount: 5}}

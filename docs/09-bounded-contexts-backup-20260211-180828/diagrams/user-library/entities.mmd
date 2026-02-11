@@ -1,0 +1,60 @@
+erDiagram
+    UserLibraryEntry ||--o{ UserLibraryEntry_Label : "has many"
+    Label ||--o{ UserLibraryEntry_Label : "referenced by"
+    UserLibraryEntry ||--o| AgentConfiguration : "has config"
+    User ||--o{ UserLibraryEntry : "owns"
+    User ||--o{ Label : "creates"
+    User ||--o{ LibraryShareLink : "creates"
+
+    UserLibraryEntry {
+        Guid Id PK
+        Guid UserId FK
+        Guid GameId FK
+        DateTime AddedAt
+        int TimesPlayed
+        DateTime LastPlayedAt
+        DateTime PurchaseDate
+        decimal PurchasePrice
+        string Condition
+        bool IsLoanedOut
+        string LoanedToName
+        DateTime LoanedUntil
+        Guid PrivatePdfDocumentId FK
+    }
+
+    Label {
+        Guid Id PK
+        Guid UserId FK
+        string Name
+        string Color
+        DateTime CreatedAt
+        bool IsSystem
+    }
+
+    UserLibraryEntry_Label {
+        Guid EntryId FK
+        Guid LabelId FK
+    }
+
+    LibraryShareLink {
+        Guid Id PK
+        Guid UserId FK
+        string ShareToken UK
+        bool IsActive
+        DateTime ExpiresAt
+        int MaxViews
+        int ViewCount
+        DateTime CreatedAt
+    }
+
+    AgentConfiguration {
+        string ModelType
+        double Temperature
+        string RagStrategy
+    }
+
+    User {
+        Guid Id PK
+        string Email
+        string DisplayName
+    }

@@ -1,0 +1,83 @@
+erDiagram
+    User ||--o{ ApiKey : "has many"
+    User ||--o{ Session : "has many"
+    User ||--o{ RefreshToken : "has many"
+    User ||--o{ OAuthAccount : "has many"
+    ApiKey ||--o{ ApiKeyUsageLog : "tracks"
+    Session ||--o{ SessionActivity : "tracks"
+
+    User {
+        Guid Id PK
+        string Email UK
+        string PasswordHash
+        string DisplayName
+        string Role
+        bool EmailConfirmed
+        bool TwoFactorEnabled
+        string TwoFactorSecret
+        List-string BackupCodes
+        bool IsLocked
+        DateTime LockedUntil
+        int FailedLoginAttempts
+        DateTime CreatedAt
+        DateTime LastLoginAt
+    }
+
+    ApiKey {
+        Guid Id PK
+        Guid UserId FK
+        string KeyHash UK
+        string Name
+        string Scopes
+        DateTime CreatedAt
+        DateTime ExpiresAt
+        DateTime LastUsedAt
+        bool IsRevoked
+        string Metadata
+    }
+
+    Session {
+        Guid Id PK
+        Guid UserId FK
+        string SessionToken UK
+        string DeviceInfo
+        string IpAddress
+        string UserAgent
+        DateTime CreatedAt
+        DateTime ExpiresAt
+        DateTime LastSeenAt
+        bool IsRevoked
+    }
+
+    OAuthAccount {
+        Guid Id PK
+        Guid UserId FK
+        string Provider
+        string ProviderUserId UK
+        string Email
+        DateTime LinkedAt
+    }
+
+    RefreshToken {
+        Guid Id PK
+        Guid UserId FK
+        string Token UK
+        DateTime ExpiresAt
+        bool IsRevoked
+    }
+
+    ApiKeyUsageLog {
+        Guid Id PK
+        Guid ApiKeyId FK
+        string Endpoint
+        string HttpMethod
+        DateTime RequestedAt
+        int ResponseStatus
+    }
+
+    SessionActivity {
+        Guid Id PK
+        Guid SessionId FK
+        string Activity
+        DateTime ActivityAt
+    }

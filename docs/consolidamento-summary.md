@@ -23,8 +23,8 @@
 + 11 file unificati (versioni complete senza suffisso)
 
 Esempio:
-- authentication.md (323 righe)
-- authentication.md (1422 righe)
+- authentication.md (323 righe) - versione breve eliminata
+- authentication-COMPLETE.md (1422 righe) - rinominata
 + authentication.md (1422 righe - versione completa)
 ```
 
@@ -33,10 +33,10 @@ Esempio:
 Files da rinominare: ~35
 
 Esempi:
-- azul-test-instructions.md → azul-test-instructions.md
-- bgg-api-token-setup.md → bgg-api-token-setup.md
-- epic-gc-001-summary.md → epic-gc-001-summary.md
-- background-rulebook-analysis-manual-testing.md → background-rulebook-analysis-manual-testing.md
+- AZUL_TEST_INSTRUCTIONS.md → azul-test-instructions.md
+- BGG_API_TOKEN_SETUP.md → bgg-api-token-setup.md
+- EPIC-GC-001-SUMMARY.md → epic-gc-001-summary.md
+- BackgroundRulebookAnalysis-ManualTesting.md → background-rulebook-analysis-manual-testing.md
 
 Eccezioni (invariati):
 ✓ README.md

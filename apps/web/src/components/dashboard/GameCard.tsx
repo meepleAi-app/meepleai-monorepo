@@ -2,6 +2,10 @@
  * GameCard - Game Display Component
  * Issue #3286 - User Dashboard Layout System
  *
+ * @deprecated This component is legacy. For new development, use MeepleCard with entity="game"
+ * from '@/components/ui/data-display/meeple-card' + useEntityActions hook.
+ * See MEEPLE_CARD_USAGE.md for migration guide. Epic #4029
+ *
  * Features:
  * - Grid view: Compact card with image, name, rating, play count
  * - List view: Detailed row with all info + quick AI button

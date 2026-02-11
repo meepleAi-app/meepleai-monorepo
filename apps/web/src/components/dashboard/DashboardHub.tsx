@@ -7,7 +7,7 @@
  * - Hero Stats Overview
  * - Active Sessions Widget
  * - Library Snapshot
- * - Activity Feed Timeline
+ * - Activity Feed Timeline with Advanced Filters (Issue #3925)
  * - Wishlist Highlights (Issue #3920)
  * - Catalog Trending (Issue #3921)
  * - Achievements Widget (Issue #3924)
@@ -44,7 +44,7 @@ import { useReducedMotion } from '@/lib/animations';
 
 import { AchievementsWidget } from './AchievementsWidget';
 import { ActiveSessionsWidget } from './ActiveSessionsWidget';
-import { ActivityFeed } from './ActivityFeed';
+import { ActivityFeedWithFilters } from './ActivityFeedWithFilters';
 import { CatalogTrending } from './CatalogTrending';
 import { ChatHistorySection } from './ChatHistorySection';
 import { HeroStats } from './HeroStats';
@@ -268,30 +268,6 @@ export function DashboardHub() {
   const activeSessions = adaptActiveSessions(data.activeSessions);
   const chatThreads = adaptChatThreads(data.chatHistory);
 
-  // Convert activity events to ActivityFeed format
-  const activityEvents = data.recentActivity.map((event) => ({
-    id: event.id,
-    type: event.type,
-    title:
-      event.type === 'game_added'
-        ? `Added "${event.gameName}"`
-        : event.type === 'session_completed'
-          ? `Played "${event.gameName}"`
-          : event.type === 'chat_saved'
-            ? `Chat: "${event.topic}"`
-            : `Wishlisted "${event.gameName}"`,
-    entityId: event.gameId || event.sessionId || event.chatId,
-    entityType:
-      event.type === 'game_added'
-        ? ('game' as const)
-        : event.type === 'session_completed'
-          ? ('session' as const)
-          : event.type === 'chat_saved'
-            ? ('chat' as const)
-            : ('wishlist' as const),
-    timestamp: event.timestamp.toISOString(),
-  }));
-
   const variants = shouldReduceMotion ? noMotionVariants : sectionVariants;
   const container = shouldReduceMotion ? undefined : containerVariants;
 
@@ -338,7 +314,7 @@ export function DashboardHub() {
         </LazySection>
       </motion.section>
 
-      {/* Activity Feed - Main Content (2 cols on desktop, lazy loaded) */}
+      {/* Activity Feed with Filters - Main Content (2 cols on desktop, lazy loaded) - Issue #3925 */}
       <motion.section className="md:col-span-1 lg:col-span-2" variants={variants}>
         <LazySection fallbackHeight="h-96">
           <SimpleErrorBoundary
@@ -346,7 +322,7 @@ export function DashboardHub() {
               <SectionErrorFallback label="Activity Feed" onRetry={resetErrorBoundary} />
             )}
           >
-            <ActivityFeed events={activityEvents} />
+            <ActivityFeedWithFilters />
           </SimpleErrorBoundary>
         </LazySection>
       </motion.section>

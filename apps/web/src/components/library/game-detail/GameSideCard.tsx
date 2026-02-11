@@ -1,4 +1,8 @@
 /**
+ * @deprecated Use `MeepleInfoCard` instead.
+ * This component is superseded by the unified MeepleInfoCard.
+ * See: `@/components/ui/data-display/meeple-info-card`
+ *
  * GameSideCard Component (Issue #3513)
  *
  * Side card with tabbed interface for:

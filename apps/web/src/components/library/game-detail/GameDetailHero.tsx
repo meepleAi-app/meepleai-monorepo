@@ -1,4 +1,8 @@
 /**
+ * @deprecated Use `MeepleCard` with `flippable` + `flipData` props instead.
+ * This component is superseded by the unified MeepleCard flip feature.
+ * See: `@/components/ui/data-display/meeple-card`
+ *
  * GameDetailHero Component (Issue #3513)
  *
  * Flippable game card with:

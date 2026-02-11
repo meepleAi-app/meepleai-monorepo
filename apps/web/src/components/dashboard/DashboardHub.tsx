@@ -33,6 +33,7 @@ import { Component, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 
+import { useAuthUser } from '@/hooks/useAuthUser';
 import { useDashboardAnalytics } from '@/hooks/useDashboardAnalytics';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import {
@@ -234,6 +235,7 @@ function SectionErrorFallback({ label, onRetry }: { label: string; onRetry: () =
 
 export function DashboardHub() {
   const { data, isLoading, error } = useDashboardData();
+  const { user: authUser } = useAuthUser();
   const shouldReduceMotion = useReducedMotion();
   const { trackClickThrough } = useDashboardAnalytics();
 
@@ -265,6 +267,10 @@ export function DashboardHub() {
 
   // Adapt data to component formats
   const heroStats = adaptStatsForHeroStats(data);
+  // Override mock userName with real authenticated user's name
+  if (authUser?.displayName) {
+    heroStats.userName = authUser.displayName;
+  }
   const activeSessions = adaptActiveSessions(data.activeSessions);
   const chatThreads = adaptChatThreads(data.chatHistory);
 

@@ -35,6 +35,7 @@ const NO_CACHE_PATTERNS = [
   /\/api\/v1\/users\/me/,
   /\/_next\/webpack-hmr/,
   /\/__nextjs/,
+  /pdf\.worker/,
 ];
 
 // ============================================================================

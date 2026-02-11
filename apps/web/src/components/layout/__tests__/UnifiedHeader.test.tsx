@@ -374,6 +374,82 @@ describe('UnifiedHeader', () => {
     });
   });
 
+  describe('Auth Loading State (Issue #4056)', () => {
+    it('should show loading skeleton while auth is loading', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      });
+      render(<UnifiedHeader />);
+
+      expect(screen.getByTestId('user-menu-loading')).toBeInTheDocument();
+      expect(screen.queryByText('Accedi')).not.toBeInTheDocument();
+    });
+
+    it('should not show Accedi button while auth is loading', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: null,
+        isLoading: true,
+      });
+      render(<UnifiedHeader />);
+
+      expect(screen.queryByText('Accedi')).not.toBeInTheDocument();
+    });
+
+    it('should only show public nav items while auth is loading', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      });
+      render(<UnifiedHeader />);
+
+      // Catalogo is visible to everyone (no auth flags)
+      expect(screen.getByLabelText('Navigate to games catalog')).toBeInTheDocument();
+
+      // Auth-only items should be hidden while loading
+      expect(screen.queryByLabelText('Navigate to dashboard')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Navigate to your game library')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Navigate to chat interface')).not.toBeInTheDocument();
+
+      // Anonymous-only items should also be hidden while loading
+      expect(screen.queryByLabelText('Navigate to home page')).not.toBeInTheDocument();
+    });
+
+    it('should hide settings and notifications while auth is loading', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+      });
+      render(<UnifiedHeader />);
+
+      expect(screen.queryByLabelText('Navigate to settings')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('notification-bell')).not.toBeInTheDocument();
+    });
+
+    it('should show Accedi button after loading completes with no user', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: null,
+        isLoading: false,
+      });
+      render(<UnifiedHeader />);
+
+      expect(screen.queryByTestId('user-menu-loading')).not.toBeInTheDocument();
+      expect(screen.getByText('Accedi')).toBeInTheDocument();
+    });
+
+    it('should show user menu after loading completes with user', () => {
+      mockUseCurrentUser.mockReturnValue({
+        data: { id: '1', email: 'test@example.com', displayName: 'Test', role: 'User' },
+        isLoading: false,
+      });
+      render(<UnifiedHeader />);
+
+      expect(screen.queryByTestId('user-menu-loading')).not.toBeInTheDocument();
+      expect(screen.queryByText('Accedi')).not.toBeInTheDocument();
+      expect(screen.getByTestId('user-menu-trigger')).toBeInTheDocument();
+    });
+  });
+
   describe('Styling', () => {
     it('should be sticky at top', () => {
       render(<UnifiedHeader />);

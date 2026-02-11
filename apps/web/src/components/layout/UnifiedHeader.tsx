@@ -156,7 +156,7 @@ export interface UnifiedHeaderProps {
 export function UnifiedHeader({ className }: UnifiedHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: user } = useCurrentUser();
+  const { data: user, isLoading: isAuthLoading } = useCurrentUser();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoggingOut, startTransition] = useTransition();
 
@@ -204,7 +204,12 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
     user?.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U';
 
   // Filter nav items based on authentication and role
+  // While auth is loading, show only items visible to everyone (no authOnly, no anonOnly)
   const visibleNavItems = NAV_ITEMS.filter(item => {
+    if (isAuthLoading) {
+      // While loading, only show items with no auth restrictions
+      return !item.authOnly && !item.anonOnly && !item.adminOnly && !item.editorOnly;
+    }
     // Admin-only items: only for admins
     if (item.adminOnly && !isAdmin) return false;
     // Editor-only items: only for editors (includes admins)
@@ -246,6 +251,16 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
 
   // User Menu
   const UserMenu = () => {
+    // Show skeleton while auth state is loading to prevent flash of "Accedi" button
+    if (isAuthLoading) {
+      return (
+        <div className="flex items-center gap-2" data-testid="user-menu-loading">
+          <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+          <div className="hidden lg:block w-20 h-4 rounded bg-muted animate-pulse" />
+        </div>
+      );
+    }
+
     if (!user) {
       return (
         <Link href="/login">
@@ -375,7 +390,7 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
 
         {/* Right: Settings + Notifications + User Menu (Settings/Notifications only for authenticated) */}
         <div className="flex items-center gap-2">
-          {isAuthenticated && (
+          {isAuthenticated && !isAuthLoading && (
             <>
               <Link
                 href="/settings"

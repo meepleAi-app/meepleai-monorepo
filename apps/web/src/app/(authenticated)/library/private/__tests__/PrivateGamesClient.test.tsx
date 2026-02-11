@@ -36,26 +36,29 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-// Mock AddPrivateGameForm to simplify testing
-vi.mock('@/components/library/AddPrivateGameForm', () => ({
-  AddPrivateGameForm: ({
+// Mock AddPrivateGameWithBgg to simplify testing (Issue #4053)
+vi.mock('@/components/library/AddPrivateGameWithBgg', () => ({
+  AddPrivateGameWithBgg: ({
     onSubmit,
     onCancel,
     isSubmitting,
   }: {
-    onSubmit: (data: Record<string, unknown>) => void;
+    onSubmit: (data: Record<string, unknown>, source: string, bggId?: number, thumbnailUrl?: string) => void;
     onCancel: () => void;
     isSubmitting: boolean;
   }) => (
-    <div data-testid="add-private-game-form">
+    <div data-testid="add-private-game-with-bgg">
       <button
         data-testid="mock-submit-add"
         onClick={() =>
-          onSubmit({
-            title: 'New Game',
-            minPlayers: 2,
-            maxPlayers: 4,
-          })
+          onSubmit(
+            {
+              title: 'New Game',
+              minPlayers: 2,
+              maxPlayers: 4,
+            },
+            'Manual'
+          )
         }
         disabled={isSubmitting}
       >
@@ -66,6 +69,11 @@ vi.mock('@/components/library/AddPrivateGameForm', () => ({
       </button>
     </div>
   ),
+}));
+
+// Keep AddPrivateGameForm mock for edit dialog
+vi.mock('@/components/library/AddPrivateGameForm', () => ({
+  AddPrivateGameForm: () => <div data-testid="add-private-game-form" />,
 }));
 
 // Mock PrivateGameCard
@@ -524,7 +532,7 @@ describe('PrivateGamesClient', () => {
       await waitFor(() => {
         expect(screen.getByText('Add Private Game')).toBeInTheDocument();
         expect(
-          screen.getByText('Add a new game to your personal collection.')
+          screen.getByText('Search BoardGameGeek to auto-fill or enter details manually.')
         ).toBeInTheDocument();
       });
     });

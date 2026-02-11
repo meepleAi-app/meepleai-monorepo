@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Pgvector;
+using Pgvector.EntityFrameworkCore;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
@@ -364,6 +365,165 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
         // Assert
         var memories = await _dbContext.ConversationMemories.ToListAsync(TestCancellationToken);
         memories.Should().BeEmpty();
+    }
+
+    #endregion
+
+    #region Vector Similarity Search Tests
+
+    [Fact]
+    public async Task VectorSimilaritySearch_ReturnsResultsOrderedByDistance()
+    {
+        // Arrange
+        var user = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+
+        // Create 3 memories with distinct embeddings
+        var embeddings = new[]
+        {
+            CreateNormalizedEmbedding(0.5f),  // "close" to query
+            CreateNormalizedEmbedding(-0.5f), // "far" from query
+            CreateNormalizedEmbedding(0.3f),  // "medium" from query
+        };
+
+        for (int i = 0; i < 3; i++)
+        {
+            var memory = new ConversationMemory(
+                Guid.NewGuid(), Guid.NewGuid(), user.Id, null,
+                $"Memory {i}", "user", DateTime.UtcNow.AddMinutes(-i));
+            await _repository!.AddAsync(memory, TestCancellationToken);
+            await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+            var entity = await _dbContext.ConversationMemories
+                .FirstAsync(m => m.Id == memory.Id, TestCancellationToken);
+            entity.Embedding = new Vector(embeddings[i]);
+            await _dbContext.SaveChangesAsync(TestCancellationToken);
+        }
+
+        // Query embedding close to embeddings[0]
+        var queryEmbedding = new Vector(CreateNormalizedEmbedding(0.5f));
+
+        // Act - LINQ vector similarity search
+        var results = await _dbContext.ConversationMemories
+            .Where(m => m.Embedding != null)
+            .OrderBy(m => m.Embedding!.CosineDistance(queryEmbedding))
+            .Take(3)
+            .AsNoTracking()
+            .ToListAsync(TestCancellationToken);
+
+        // Assert
+        results.Should().HaveCount(3);
+        results[0].Content.Should().Be("Memory 0", "Closest embedding should be first");
+    }
+
+    [Fact]
+    public async Task VectorSimilaritySearch_WithUserFilter_ReturnsOnlyUserMemories()
+    {
+        // Arrange
+        var user = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+
+        // Create a second user
+        var otherUser = new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = Guid.NewGuid(),
+            Email = "other@test.com",
+            Role = "user",
+            Tier = "free",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Users.Add(otherUser);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // Add memories for both users with embeddings
+        var embedding = CreateNormalizedEmbedding(0.5f);
+
+        var userMemory = new ConversationMemory(
+            Guid.NewGuid(), Guid.NewGuid(), user.Id, null,
+            "User memory", "user", DateTime.UtcNow);
+        var otherMemory = new ConversationMemory(
+            Guid.NewGuid(), Guid.NewGuid(), otherUser.Id, null,
+            "Other memory", "user", DateTime.UtcNow);
+
+        await _repository!.AddAsync(userMemory, TestCancellationToken);
+        await _repository.AddAsync(otherMemory, TestCancellationToken);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // Set embeddings
+        foreach (var id in new[] { userMemory.Id, otherMemory.Id })
+        {
+            var entity = await _dbContext.ConversationMemories
+                .FirstAsync(m => m.Id == id, TestCancellationToken);
+            entity.Embedding = new Vector(embedding);
+        }
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var queryEmbedding = new Vector(CreateNormalizedEmbedding(0.5f));
+
+        // Act - Filtered vector search
+        var results = await _dbContext.ConversationMemories
+            .Where(m => m.UserId == user.Id && m.Embedding != null)
+            .OrderBy(m => m.Embedding!.CosineDistance(queryEmbedding))
+            .Take(10)
+            .AsNoTracking()
+            .ToListAsync(TestCancellationToken);
+
+        // Assert
+        results.Should().AllSatisfy(r => r.UserId.Should().Be(user.Id));
+        results.Should().NotContain(r => r.Content == "Other memory");
+    }
+
+    [Fact]
+    public async Task VectorSimilaritySearch_RawSql_ReturnsCorrectResults()
+    {
+        // Arrange
+        var user = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+
+        var embedding = CreateNormalizedEmbedding(0.7f);
+        var memory = new ConversationMemory(
+            Guid.NewGuid(), Guid.NewGuid(), user.Id, null,
+            "Embedded memory", "assistant", DateTime.UtcNow);
+
+        await _repository!.AddAsync(memory, TestCancellationToken);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var entity = await _dbContext.ConversationMemories
+            .FirstAsync(m => m.Id == memory.Id, TestCancellationToken);
+        entity.Embedding = new Vector(embedding);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        var queryEmbedding = new Vector(CreateNormalizedEmbedding(0.7f));
+
+        // Act - Raw SQL vector similarity search
+        var results = await _dbContext.ConversationMemories
+            .FromSqlRaw(@"
+                SELECT id, session_id, user_id, game_id, content, message_type, timestamp, embedding
+                FROM conversation_memory
+                ORDER BY embedding <=> {0}::vector
+                LIMIT 10",
+                queryEmbedding)
+            .AsNoTracking()
+            .ToListAsync(TestCancellationToken);
+
+        // Assert
+        results.Should().NotBeEmpty();
+        results.Should().Contain(r => r.Content == "Embedded memory");
+    }
+
+    private static float[] CreateNormalizedEmbedding(float baseValue)
+    {
+        var embedding = new float[1536];
+        for (int i = 0; i < embedding.Length; i++)
+        {
+            embedding[i] = baseValue + (i % 10) * 0.01f;
+        }
+
+        // Normalize to unit vector
+        var magnitude = (float)Math.Sqrt(embedding.Sum(x => (double)x * x));
+        for (int i = 0; i < embedding.Length; i++)
+        {
+            embedding[i] /= magnitude;
+        }
+
+        return embedding;
     }
 
     #endregion

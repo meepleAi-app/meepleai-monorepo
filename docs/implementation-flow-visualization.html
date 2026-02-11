@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeepleAI - 2-Terminal Parallel Implementation Flow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card p {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .timeline {
+            padding: 2rem;
+        }
+
+        .week {
+            margin-bottom: 3rem;
+        }
+
+        .week-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .week-header h2 {
+            font-size: 1.5rem;
+        }
+
+        .week-header .badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .terminals {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .terminal {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            border: 2px solid #dee2e6;
+        }
+
+        .terminal-a {
+            border-left: 5px solid #28a745;
+        }
+
+        .terminal-b {
+            border-left: 5px solid #007bff;
+        }
+
+        .terminal h3 {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .terminal-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .terminal-a .terminal-icon {
+            background: #28a745;
+        }
+
+        .terminal-b .terminal-icon {
+            background: #007bff;
+        }
+
+        .issue-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .issue-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .issue-number {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .priority {
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .priority-critical {
+            background: #dc3545;
+            color: white;
+        }
+
+        .priority-high {
+            background: #fd7e14;
+            color: white;
+        }
+
+        .priority-medium {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .priority-low {
+            background: #6c757d;
+            color: white;
+        }
+
+        .issue-title {
+            font-size: 0.95rem;
+            color: #212529;
+            margin-bottom: 0.5rem;
+        }
+
+        .issue-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .checkpoint {
+            background: #fff3cd;
+            border: 2px dashed #ffc107;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .checkpoint h3 {
+            color: #856404;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .checkpoint-tasks {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .checkpoint-task {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .test-suite {
+            background: #d1ecf1;
+            border: 2px solid #bee5eb;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .test-suite h3 {
+            color: #0c5460;
+            margin-bottom: 1rem;
+        }
+
+        .test-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .test-list li {
+            background: white;
+            padding: 0.8rem;
+            border-radius: 5px;
+            border-left: 3px solid #17a2b8;
+            font-size: 0.9rem;
+        }
+
+        .legend {
+            display: flex;
+            gap: 2rem;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-top: 2px solid #dee2e6;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .terminals {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .toggle-details {
+            background: #e9ecef;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .toggle-details:hover {
+            background: #dee2e6;
+        }
+
+        .details {
+            display: none;
+            margin-top: 0.8rem;
+            padding: 0.8rem;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        .details.show {
+            display: block;
+        }
+
+        .epic-badge {
+            background: #6f42c1;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 MeepleAI - Roadmap Parallela 2-Terminal</h1>
+            <p>Implementation Flow - 47 Issue across 4 Epics + Gap Analysis</p>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>47</h3>
+                <p>Total Issues</p>
+            </div>
+            <div class="stat-card">
+                <h3>4</h3>
+                <p>Settimane</p>
+            </div>
+            <div class="stat-card">
+                <h3>2</h3>
+                <p>Terminal Paralleli</p>
+            </div>
+            <div class="stat-card">
+                <h3>50%</h3>
+                <p>Time Savings</p>
+            </div>
+            <div class="stat-card">
+                <h3>37% → 75%</h3>
+                <p>UI Coverage</p>
+            </div>
+        </div>
+
+        <div class="timeline">
+            <!-- WEEK 1 -->
+            <div class="week">
+                <div class="week-header">
+                    <h2>Week 1: Epic #1 (MeepleCard) + Gap Analysis Part 1</h2>
+                    <span class="badge">11 Issue</span>
+                </div>
+
+                <div class="terminals">
+                    <!-- Terminal A -->
+                    <div class="terminal terminal-a">
+                        <h3>
+                            <span class="terminal-icon">A</span>
+                            Terminal A - Frontend Focus
+                        </h3>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4073</span>
+                                <div>
+                                    <span class="epic-badge">Epic #1</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">WCAG 2.1 AA Accessibility</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 1 giorno</span>
+                                <span>🎨 Frontend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> Keyboard navigation, ARIA labels, contrast ratios<br>
+                                <strong>Components:</strong> MeepleCard accessibility audit<br>
+                                <strong>Tests:</strong> Keyboard navigation E2E, screen reader testing
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4076</span>
+                                <div>
+                                    <span class="epic-badge">Epic #1</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Mobile Tag Optimization</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 1 giorno</span>
+                                <span>🎨 Frontend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> Responsive tag layout, touch targets >44px<br>
+                                <strong>Components:</strong> TagList responsive behavior<br>
+                                <strong>Tests:</strong> Mobile viewport testing, touch interaction
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4075</span>
+                                <div>
+                                    <span class="epic-badge">Epic #1</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Tag System Vertical Layout</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 1 giorno</span>
+                                <span>🎨 Frontend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> Redesign tag positioning vertical<br>
+                                <strong>Components:</strong> TagContainer layout logic
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4072</span>
+                                <div>
+                                    <span class="epic-badge">Epic #1</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Smart Tooltip Positioning</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 0.5 giorni</span>
+                                <span>🎨 Frontend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> Auto-positioning at viewport boundaries<br>
+                                <strong>Components:</strong> TooltipProvider enhancement
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4080</span>
+                                <div>
+                                    <span class="epic-badge">Epic #1</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Context-Aware Tests</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 1 giorno</span>
+                                <span>🧪 Testing</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> Unit tests per tutti i variant contexts<br>
+                                <strong>Tests:</strong> Game, Player, Collection, Event, Agent variants
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4081</span>
+                                <div>
+                                    <span class="epic-badge">Epic #1</span>
+                                    <span class="priority priority-high">HIGH</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Performance Optimization</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 0.5 giorni</span>
+                                <span>⚡ Performance</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> React.memo, useMemo, lazy loading<br>
+                                <strong>Target:</strong> <1s render time for 100+ cards
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4114</span>
+                                <div>
+                                    <span class="epic-badge">Gap</span>
+                                    <span class="priority priority-critical">CRITICAL</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Wishlist Management System UI</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 3 giorni</span>
+                                <span>🎨 Frontend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> /library/wishlist page, WishlistButton, Dashboard widget<br>
+                                <strong>Components:</strong> WishlistTable, WishlistGrid, WishlistHighlightsWidget<br>
+                                <strong>Features:</strong> Add/remove, sorting, filtering, bulk operations
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Terminal B -->
+                    <div class="terminal terminal-b">
+                        <h3>
+                            <span class="terminal-icon">B</span>
+                            Terminal B - Backend Focus
+                        </h3>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4079</span>
+                                <div>
+                                    <span class="epic-badge">Epic #1</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Agent Type Support (Backend)</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 0.5 giorni</span>
+                                <span>🔧 Backend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> Backend DTO per agent entities<br>
+                                <strong>Endpoint:</strong> Enhance game detail response
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4078</span>
+                                <div>
+                                    <span class="epic-badge">Epic #1</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Ownership State Logic (Backend)</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 0.5 giorni</span>
+                                <span>🔧 Backend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> Backend ownership validation<br>
+                                <strong>Endpoint:</strong> User library ownership queries
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4077</span>
+                                <div>
+                                    <span class="epic-badge">Epic #1</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Collection Limits Management (Backend)</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 0.5 giorni</span>
+                                <span>🔧 Backend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> Backend limits calculation per tier<br>
+                                <strong>Endpoint:</strong> User tier limits API
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4074</span>
+                                <div>
+                                    <span class="epic-badge">Epic #1</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Permission System Integration</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 0.5 giorni</span>
+                                <span>🔧 Backend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> Backend permission checks, caching<br>
+                                <strong>Middleware:</strong> Authorization enhancements
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4113</span>
+                                <div>
+                                    <span class="epic-badge">Gap</span>
+                                    <span class="priority priority-critical">CRITICAL</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Notification System Backend</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 3 giorni</span>
+                                <span>🔧 Backend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> SSE infrastructure, notification preferences<br>
+                                <strong>Endpoints:</strong> GET/POST /notifications, SSE events<br>
+                                <strong>Integration:</strong> Email notifications for critical events
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4115</span>
+                                <div>
+                                    <span class="epic-badge">Gap</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Play Records Backend Actions</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 2 giorni</span>
+                                <span>🔧 Backend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> Players, Scores, Start/Complete endpoints<br>
+                                <strong>Validation:</strong> Cannot complete without scores<br>
+                                <strong>Tests:</strong> Integration tests per workflow
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="checkpoint">
+                    <h3>🔄 CHECKPOINT 1 - End Week 1</h3>
+                    <p>Sincronizzazione e integrazione Terminal A + B</p>
+                    <div class="checkpoint-tasks">
+                        <div class="checkpoint-task">
+                            ✅ Merge feature branches → main-dev
+                        </div>
+                        <div class="checkpoint-task">
+                            🧪 Integration tests cross-terminal
+                        </div>
+                        <div class="checkpoint-task">
+                            👀 Code review reciproco
+                        </div>
+                        <div class="checkpoint-task">
+                            📊 Progress review (11/47 issue)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WEEK 2 -->
+            <div class="week">
+                <div class="week-header">
+                    <h2>Week 2: Epic #3 (Navbar) + Epic #4 (PDF) + Gap Part 2</h2>
+                    <span class="badge">15 Issue</span>
+                </div>
+
+                <div class="terminals">
+                    <!-- Terminal A -->
+                    <div class="terminal terminal-a">
+                        <h3>
+                            <span class="terminal-icon">A</span>
+                            Terminal A - Frontend Focus
+                        </h3>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4097-#4102</span>
+                                <div>
+                                    <span class="epic-badge">Epic #3</span>
+                                    <span class="priority priority-high">HIGH</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Navbar Restructuring (6 issue)</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 4 giorni</span>
+                                <span>🎨 Frontend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>#4097:</strong> Dropdown Grouping Structure<br>
+                                <strong>#4098:</strong> Mobile Hamburger Menu<br>
+                                <strong>#4099:</strong> Dynamic Route / (Welcome vs Dashboard)<br>
+                                <strong>#4100:</strong> Anonymous Catalog Restrictions<br>
+                                <strong>#4101:</strong> Dual CTA (Login + Register)<br>
+                                <strong>#4102:</strong> Settings Dropdown (8 sections)
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4113</span>
+                                <div>
+                                    <span class="epic-badge">Gap</span>
+                                    <span class="priority priority-critical">CRITICAL</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Notification System UI (Frontend)</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 2 giorni</span>
+                                <span>🎨 Frontend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Components:</strong> NotificationBell, NotificationDropdown<br>
+                                <strong>Features:</strong> Real-time SSE updates, Toast notifications<br>
+                                <strong>Integration:</strong> Backend SSE (from Terminal B Week 1)
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Terminal B -->
+                    <div class="terminal terminal-b">
+                        <h3>
+                            <span class="terminal-icon">B</span>
+                            Terminal B - Backend Focus
+                        </h3>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4106-#4111</span>
+                                <div>
+                                    <span class="epic-badge">Epic #4</span>
+                                    <span class="priority priority-high">HIGH</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">PDF Status Tracking (6 issue)</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 5 giorni</span>
+                                <span>🔧 Backend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>#4106:</strong> 7-State Embedding Pipeline<br>
+                                <strong>#4107:</strong> Manual Retry + Error Handling<br>
+                                <strong>#4108:</strong> Multi-Location Status (Backend)<br>
+                                <strong>#4109:</strong> Real-time SSE Updates<br>
+                                <strong>#4110:</strong> Duration Metrics & ETA<br>
+                                <strong>#4111:</strong> Notification Channel Config
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4117</span>
+                                <div>
+                                    <span class="epic-badge">Gap</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Achievement System Backend</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 1 giorno</span>
+                                <span>🔧 Backend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> Achievement progress calculation<br>
+                                <strong>Endpoints:</strong> GET /achievements, /recent, /progress<br>
+                                <strong>Logic:</strong> Unlock triggers, rarity calculation
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="checkpoint">
+                    <h3>🔄 CHECKPOINT 2 - End Week 2</h3>
+                    <p>Sincronizzazione e testing completo</p>
+                    <div class="checkpoint-tasks">
+                        <div class="checkpoint-task">
+                            ✅ Navbar complete + Notifications UI
+                        </div>
+                        <div class="checkpoint-task">
+                            ✅ PDF Status + Achievements Backend
+                        </div>
+                        <div class="checkpoint-task">
+                            🧪 E2E: Navbar + PDF + Notifications
+                        </div>
+                        <div class="checkpoint-task">
+                            📊 Progress: 26/47 issue (55%)
+                        </div>
+                    </div>
+                </div>
+
+                <div class="test-suite">
+                    <h3>🧪 Test Suite - Checkpoint 2</h3>
+                    <ul class="test-list">
+                        <li>✓ navbar-mobile-menu.spec.ts</li>
+                        <li>✓ navbar-dropdowns.spec.ts</li>
+                        <li>✓ notifications-realtime-sse.spec.ts</li>
+                        <li>✓ pdf-7-state-pipeline.spec.ts</li>
+                        <li>✓ pdf-manual-retry.spec.ts</li>
+                        <li>✓ achievements-backend-integration.test.cs</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- WEEK 3 -->
+            <div class="week">
+                <div class="week-header">
+                    <h2>Week 3: Epic #2 (Agent System)</h2>
+                    <span class="badge">14 Issue</span>
+                </div>
+
+                <div class="terminals">
+                    <div class="terminal terminal-a">
+                        <h3>
+                            <span class="terminal-icon">A</span>
+                            Terminal A - Frontend Focus
+                        </h3>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4085-#4093</span>
+                                <div>
+                                    <span class="epic-badge">Epic #2</span>
+                                    <span class="priority priority-high">HIGH</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Agent System UI (7 issue)</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 5 giorni</span>
+                                <span>🎨 Frontend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>#4085:</strong> Chat UI Base Component<br>
+                                <strong>#4087:</strong> Chat History Timeline<br>
+                                <strong>#4090:</strong> Agent List Page<br>
+                                <strong>#4091:</strong> Dashboard Widget<br>
+                                <strong>#4092:</strong> Game Page Section<br>
+                                <strong>#4093:</strong> Strategy Builder UI
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4117</span>
+                                <div>
+                                    <span class="epic-badge">Gap</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Achievement Display UI</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 1.5 giorni</span>
+                                <span>🎨 Frontend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Page:</strong> /profile/achievements<br>
+                                <strong>Components:</strong> AchievementCard, Grid, Dashboard widget
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="terminal terminal-b">
+                        <h3>
+                            <span class="terminal-icon">B</span>
+                            Terminal B - Backend Focus
+                        </h3>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4082-#4096</span>
+                                <div>
+                                    <span class="epic-badge">Epic #2</span>
+                                    <span class="priority priority-high">HIGH</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Agent System Backend (8 issue)</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 5 giorni</span>
+                                <span>🔧 Backend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>#4082:</strong> Multi-Agent Orchestration<br>
+                                <strong>#4083:</strong> Strategy System<br>
+                                <strong>#4084:</strong> Semi-Auto Creation<br>
+                                <strong>#4086:</strong> Chat Persistence<br>
+                                <strong>#4088:</strong> Resume Chat Logic<br>
+                                <strong>#4094:</strong> POC Strategy<br>
+                                <strong>#4095:</strong> Tier Limits<br>
+                                <strong>#4096:</strong> KB Integration
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4116</span>
+                                <div>
+                                    <span class="epic-badge">Gap</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">2FA Backend Infrastructure</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 1 giorno</span>
+                                <span>🔧 Backend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Scope:</strong> TOTP generation, verification, recovery codes<br>
+                                <strong>Security:</strong> Rate limiting, audit logging
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="checkpoint">
+                    <h3>🔄 CHECKPOINT 3 - End Week 3</h3>
+                    <p>Agent System Integration & Testing</p>
+                    <div class="checkpoint-tasks">
+                        <div class="checkpoint-task">
+                            ✅ Agent System UI + Backend complete
+                        </div>
+                        <div class="checkpoint-task">
+                            🧪 E2E: Agent chat complete flows
+                        </div>
+                        <div class="checkpoint-task">
+                            ✅ Achievements + 2FA Backend ready
+                        </div>
+                        <div class="checkpoint-task">
+                            📊 Progress: 40/47 issue (85%)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WEEK 4 -->
+            <div class="week">
+                <div class="week-header">
+                    <h2>Week 4: Finalization + Testing + Gap Completion</h2>
+                    <span class="badge">7 Issue + Testing</span>
+                </div>
+
+                <div class="terminals">
+                    <div class="terminal terminal-a">
+                        <h3>
+                            <span class="terminal-icon">A</span>
+                            Terminal A - Frontend Completion
+                        </h3>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4108-#4110</span>
+                                <div>
+                                    <span class="epic-badge">Epic #4</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">PDF Status UI (3 issue)</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 3 giorni</span>
+                                <span>🎨 Frontend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>#4108:</strong> Multi-Location Status Display<br>
+                                <strong>#4109:</strong> Real-time Updates UI (SSE)<br>
+                                <strong>#4110:</strong> Duration & ETA Display
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4116</span>
+                                <div>
+                                    <span class="epic-badge">Gap</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">2FA Self-Service UI</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 2 giorni</span>
+                                <span>🎨 Frontend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Page:</strong> /settings/security<br>
+                                <strong>Components:</strong> TwoFactorSetup wizard, QR code, Recovery codes
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4115</span>
+                                <div>
+                                    <span class="epic-badge">Gap</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Play Records Actions UI</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 2 giorni</span>
+                                <span>🎨 Frontend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Components:</strong> AddPlayerDialog, ScoreTracker, SessionControls<br>
+                                <strong>Integration:</strong> Backend endpoints (from Week 1)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="terminal terminal-b">
+                        <h3>
+                            <span class="terminal-icon">B</span>
+                            Terminal B - Backend Completion
+                        </h3>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4104-#4105</span>
+                                <div>
+                                    <span class="epic-badge">Epic #3</span>
+                                    <span class="priority priority-low">LOW</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Navbar Backend Support (2 issue)</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 1 giorno</span>
+                                <span>🔧 Backend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>#4104:</strong> Notifications Page Endpoint<br>
+                                <strong>#4105:</strong> Notifications Config Endpoint
+                            </div>
+                        </div>
+
+                        <div class="issue-card" onclick="toggleDetails(this)">
+                            <div class="issue-header">
+                                <span class="issue-number">#4118</span>
+                                <div>
+                                    <span class="epic-badge">Gap</span>
+                                    <span class="priority priority-medium">MEDIUM</span>
+                                </div>
+                            </div>
+                            <div class="issue-title">Admin Bulk Operations</div>
+                            <div class="issue-meta">
+                                <span>⏱️ 4 giorni</span>
+                                <span>🔧 Backend + Frontend</span>
+                            </div>
+                            <button class="toggle-details">Dettagli ▼</button>
+                            <div class="details">
+                                <strong>Backend:</strong> Bulk endpoints (password reset, role change, import/export)<br>
+                                <strong>Frontend:</strong> BulkActionsToolbar, Import/Export dialogs<br>
+                                <strong>Features:</strong> CSV processing, background jobs
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="checkpoint">
+                    <h3>🎯 CHECKPOINT 4 (FINAL) - End Week 4</h3>
+                    <p>Complete Validation & Production Ready</p>
+                    <div class="checkpoint-tasks">
+                        <div class="checkpoint-task">
+                            ✅ All 47 issue closed
+                        </div>
+                        <div class="checkpoint-task">
+                            🧪 47 E2E tests passing
+                        </div>
+                        <div class="checkpoint-task">
+                            ⚡ Performance <1s all pages
+                        </div>
+                        <div class="checkpoint-task">
+                            📊 Coverage: 37% → 75%
+                        </div>
+                    </div>
+                </div>
+
+                <div class="test-suite">
+                    <h3>🧪 Complete Test Suite - Final Validation</h3>
+                    <ul class="test-list">
+                        <li>✓ Epic #1: 11 MeepleCard tests</li>
+                        <li>✓ Epic #2: 15 Agent System tests</li>
+                        <li>✓ Epic #3: 9 Navbar tests</li>
+                        <li>✓ Epic #4: 6 PDF Status tests</li>
+                        <li>✓ Gap Analysis: 16 critical feature tests</li>
+                        <li>✓ Performance Suite: 5 tests (<1s target)</li>
+                        <li>✓ Visual Regression: 10 screenshots</li>
+                        <li>✓ Accessibility: 8 WCAG audits</li>
+                        <li>✓ Smoke Tests: 6 critical flows</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #dc3545;"></div>
+                <span>Critical Priority</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fd7e14;"></div>
+                <span>High Priority</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffc107;"></div>
+                <span>Medium Priority</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #6c757d;"></div>
+                <span>Low Priority</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #28a745;"></div>
+                <span>Terminal A</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #007bff;"></div>
+                <span>Terminal B</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleDetails(card) {
+            const details = card.querySelector('.details');
+            const button = card.querySelector('.toggle-details');
+
+            if (details.classList.contains('show')) {
+                details.classList.remove('show');
+                button.textContent = 'Dettagli ▼';
+            } else {
+                details.classList.add('show');
+                button.textContent = 'Nascondi ▲';
+            }
+        }
+
+        // Auto-expand first card of each week
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.week').forEach(week => {
+                const firstCard = week.querySelector('.issue-card');
+                if (firstCard) {
+                    // toggleDetails(firstCard);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

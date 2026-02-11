@@ -737,12 +737,30 @@ export const SessionDurationBucketSchema = z.object({
 });
 export type SessionDurationBucket = z.infer<typeof SessionDurationBucketSchema>;
 
+// ========== App Usage Dashboard (Issue #3728) ==========
+
+export const DauMauTrendPointSchema = z.object({
+  date: z.string(),
+  dau: z.number().nonnegative(),
+  mau: z.number().nonnegative(),
+});
+export type DauMauTrendPoint = z.infer<typeof DauMauTrendPointSchema>;
+
+export const PeakHourEntrySchema = z.object({
+  hour: z.number().int().min(0).max(23),
+  dayOfWeek: z.number().int().min(0).max(6),
+  value: z.number().nonnegative(),
+});
+export type PeakHourEntry = z.infer<typeof PeakHourEntrySchema>;
+
 export const AppUsageStatsSchema = z.object({
   engagement: EngagementMetricsSchema,
   retentionCohorts: z.array(RetentionCohortSchema),
   featureAdoption: z.array(FeatureAdoptionItemSchema),
   geoDistribution: z.array(GeoDistributionItemSchema),
   sessionDurationDistribution: z.array(SessionDurationBucketSchema),
+  dauMauTrend: z.array(DauMauTrendPointSchema).optional(),
+  peakHours: z.array(PeakHourEntrySchema).optional(),
   generatedAt: z.string(),
 });
 export type AppUsageStats = z.infer<typeof AppUsageStatsSchema>;

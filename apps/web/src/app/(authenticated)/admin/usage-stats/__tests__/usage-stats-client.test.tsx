@@ -1,15 +1,16 @@
 /**
- * UsageStatsClient Tests (Issue #3719)
+ * UsageStatsClient Tests (Issue #3728)
  *
- * Tests for the App Usage Stats dashboard:
- * - Loading state
- * - Error state
+ * Tests for the App Usage Dashboard:
+ * - Loading / error states
  * - KPI cards rendering
  * - Period selector
+ * - DAU/MAU trend chart
+ * - Peak hours heatmap
+ * - Feature adoption funnel
  * - Retention cohort table
- * - Feature adoption chart
- * - Geo distribution table
  * - Session duration chart
+ * - Geo distribution table
  * - Accessibility
  */
 
@@ -27,12 +28,17 @@ vi.mock('recharts', () => ({
   BarChart: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="bar-chart">{children}</div>
   ),
+  LineChart: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="line-chart">{children}</div>
+  ),
+  Line: () => <div data-testid="line" />,
   Bar: () => <div data-testid="bar" />,
   XAxis: () => <div data-testid="x-axis" />,
   YAxis: () => <div data-testid="y-axis" />,
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
   Tooltip: () => <div data-testid="tooltip" />,
   Cell: () => <div data-testid="cell" />,
+  Legend: () => <div data-testid="legend" />,
 }));
 
 // Mock the hook
@@ -69,6 +75,18 @@ const mockData = {
     { label: '0-1 min', count: 4521, percentage: 13.1 },
     { label: '1-5 min', count: 8932, percentage: 25.9 },
   ],
+  dauMauTrend: [
+    { date: '2026-02-01', dau: 1100, mau: 8200 },
+    { date: '2026-02-02', dau: 1250, mau: 8400 },
+    { date: '2026-02-03', dau: 1180, mau: 8500 },
+  ],
+  peakHours: [
+    { hour: 9, dayOfWeek: 0, value: 50 },
+    { hour: 10, dayOfWeek: 0, value: 65 },
+    { hour: 18, dayOfWeek: 0, value: 80 },
+    { hour: 9, dayOfWeek: 5, value: 30 },
+    { hour: 3, dayOfWeek: 3, value: 5 },
+  ],
   generatedAt: '2026-02-11T10:00:00Z',
 };
 
@@ -84,11 +102,23 @@ const createWrapper = () => {
   );
 };
 
+function setupLoaded() {
+  vi.mocked(useAppUsageStats).mockReturnValue({
+    data: mockData,
+    isLoading: false,
+    isError: false,
+    error: null,
+    isFetching: false,
+    refetch: mockRefetch,
+  } as unknown as ReturnType<typeof useAppUsageStats>);
+}
+
 describe('UsageStatsClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
+  // ==== Loading State ====
   describe('loading state', () => {
     it('should show loading spinner when data is loading', () => {
       vi.mocked(useAppUsageStats).mockReturnValue({
@@ -122,6 +152,7 @@ describe('UsageStatsClient', () => {
     });
   });
 
+  // ==== Error State ====
   describe('error state', () => {
     it('should show error message on fetch failure', () => {
       vi.mocked(useAppUsageStats).mockReturnValue({
@@ -140,24 +171,14 @@ describe('UsageStatsClient', () => {
     });
   });
 
+  // ==== KPI Cards ====
   describe('KPI cards', () => {
-    beforeEach(() => {
-      vi.mocked(useAppUsageStats).mockReturnValue({
-        data: mockData,
-        isLoading: false,
-        isError: false,
-        error: null,
-        isFetching: false,
-        refetch: mockRefetch,
-      } as unknown as ReturnType<typeof useAppUsageStats>);
-    });
+    beforeEach(setupLoaded);
 
     it('should render 6 KPI cards', () => {
       render(<UsageStatsClient />, { wrapper: createWrapper() });
 
-      const kpiGrid = screen.getByTestId('usage-stats-kpis');
-      expect(kpiGrid).toBeInTheDocument();
-
+      expect(screen.getByTestId('usage-stats-kpis')).toBeInTheDocument();
       expect(screen.getByTestId('kpi-dau')).toBeInTheDocument();
       expect(screen.getByTestId('kpi-mau')).toBeInTheDocument();
       expect(screen.getByTestId('kpi-dau-mau-ratio')).toBeInTheDocument();
@@ -203,17 +224,9 @@ describe('UsageStatsClient', () => {
     });
   });
 
+  // ==== Period Selector ====
   describe('period selector', () => {
-    beforeEach(() => {
-      vi.mocked(useAppUsageStats).mockReturnValue({
-        data: mockData,
-        isLoading: false,
-        isError: false,
-        error: null,
-        isFetching: false,
-        refetch: mockRefetch,
-      } as unknown as ReturnType<typeof useAppUsageStats>);
-    });
+    beforeEach(setupLoaded);
 
     it('should render period selector with 3 options', () => {
       render(<UsageStatsClient />, { wrapper: createWrapper() });
@@ -247,17 +260,135 @@ describe('UsageStatsClient', () => {
     });
   });
 
-  describe('retention cohort table', () => {
-    beforeEach(() => {
-      vi.mocked(useAppUsageStats).mockReturnValue({
-        data: mockData,
-        isLoading: false,
-        isError: false,
-        error: null,
-        isFetching: false,
-        refetch: mockRefetch,
-      } as unknown as ReturnType<typeof useAppUsageStats>);
+  // ==== DAU/MAU Trend Chart ====
+  describe('DAU/MAU trend chart', () => {
+    beforeEach(setupLoaded);
+
+    it('should render DAU/MAU trend chart section', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      expect(screen.getByTestId('dau-mau-trend-chart')).toBeInTheDocument();
     });
+
+    it('should display chart title', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      const chartSection = screen.getByTestId('dau-mau-trend-chart');
+      expect(within(chartSection).getByText('DAU / MAU Trend')).toBeInTheDocument();
+    });
+
+    it('should render line chart mock', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      const chartSection = screen.getByTestId('dau-mau-trend-chart');
+      expect(within(chartSection).getByTestId('line-chart')).toBeInTheDocument();
+    });
+  });
+
+  // ==== Peak Hours Heatmap ====
+  describe('peak hours heatmap', () => {
+    beforeEach(setupLoaded);
+
+    it('should render peak hours heatmap section', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      expect(screen.getByTestId('peak-hours-heatmap')).toBeInTheDocument();
+    });
+
+    it('should display heatmap title', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      const heatmap = screen.getByTestId('peak-hours-heatmap');
+      expect(within(heatmap).getByText('Peak Activity Hours')).toBeInTheDocument();
+    });
+
+    it('should render 7 day rows', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      for (let i = 0; i < 7; i++) {
+        expect(screen.getByTestId(`heatmap-row-${i}`)).toBeInTheDocument();
+      }
+    });
+
+    it('should show day labels', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      const heatmap = screen.getByTestId('peak-hours-heatmap');
+      expect(within(heatmap).getByText('Mon')).toBeInTheDocument();
+      expect(within(heatmap).getByText('Fri')).toBeInTheDocument();
+      expect(within(heatmap).getByText('Sun')).toBeInTheDocument();
+    });
+
+    it('should display Low/High legend', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      const heatmap = screen.getByTestId('peak-hours-heatmap');
+      expect(within(heatmap).getByText('Low')).toBeInTheDocument();
+      expect(within(heatmap).getByText('High')).toBeInTheDocument();
+    });
+
+    it('should have gridcell roles with aria-labels', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      const gridcells = screen.getAllByRole('gridcell');
+      expect(gridcells.length).toBeGreaterThan(0);
+      expect(gridcells[0]).toHaveAttribute('aria-label');
+    });
+  });
+
+  // ==== Feature Adoption Funnel ====
+  describe('feature adoption funnel', () => {
+    beforeEach(setupLoaded);
+
+    it('should render feature adoption funnel section', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      expect(screen.getByTestId('feature-adoption-funnel')).toBeInTheDocument();
+    });
+
+    it('should display funnel title', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      const funnel = screen.getByTestId('feature-adoption-funnel');
+      expect(within(funnel).getByText('Feature Adoption Funnel')).toBeInTheDocument();
+    });
+
+    it('should render funnel items sorted by adoption rate descending', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      const item0 = screen.getByTestId('funnel-item-0');
+      const item1 = screen.getByTestId('funnel-item-1');
+
+      // AI Chat (38.3%) should come first, PDF Upload (24.4%) second
+      expect(within(item0).getByText('AI Chat')).toBeInTheDocument();
+      expect(within(item0).getByText('38.3%')).toBeInTheDocument();
+      expect(within(item1).getByText('PDF Upload')).toBeInTheDocument();
+    });
+
+    it('should display user counts', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      const funnel = screen.getByTestId('feature-adoption-funnel');
+      expect(within(funnel).getByText(/3,?420 users/)).toBeInTheDocument();
+      expect(within(funnel).getByText(/2,?180 users/)).toBeInTheDocument();
+    });
+  });
+
+  // ==== Session Duration Chart ====
+  describe('session duration chart', () => {
+    beforeEach(setupLoaded);
+
+    it('should render session duration chart section', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      expect(screen.getByTestId('session-duration-chart')).toBeInTheDocument();
+      expect(screen.getByText('Session Duration Distribution')).toBeInTheDocument();
+    });
+  });
+
+  // ==== Retention Cohort Table ====
+  describe('retention cohort table', () => {
+    beforeEach(setupLoaded);
 
     it('should render retention cohort table', () => {
       render(<UsageStatsClient />, { wrapper: createWrapper() });
@@ -293,17 +424,9 @@ describe('UsageStatsClient', () => {
     });
   });
 
+  // ==== Geo Distribution ====
   describe('geo distribution table', () => {
-    beforeEach(() => {
-      vi.mocked(useAppUsageStats).mockReturnValue({
-        data: mockData,
-        isLoading: false,
-        isError: false,
-        error: null,
-        isFetching: false,
-        refetch: mockRefetch,
-      } as unknown as ReturnType<typeof useAppUsageStats>);
-    });
+    beforeEach(setupLoaded);
 
     it('should render geo distribution table', () => {
       render(<UsageStatsClient />, { wrapper: createWrapper() });
@@ -335,44 +458,10 @@ describe('UsageStatsClient', () => {
     });
   });
 
-  describe('charts', () => {
-    beforeEach(() => {
-      vi.mocked(useAppUsageStats).mockReturnValue({
-        data: mockData,
-        isLoading: false,
-        isError: false,
-        error: null,
-        isFetching: false,
-        refetch: mockRefetch,
-      } as unknown as ReturnType<typeof useAppUsageStats>);
-    });
-
-    it('should render session duration chart section', () => {
-      render(<UsageStatsClient />, { wrapper: createWrapper() });
-
-      expect(screen.getByTestId('session-duration-chart')).toBeInTheDocument();
-      expect(screen.getByText('Session Duration Distribution')).toBeInTheDocument();
-    });
-
-    it('should render feature adoption chart section', () => {
-      render(<UsageStatsClient />, { wrapper: createWrapper() });
-
-      expect(screen.getByTestId('feature-adoption-chart')).toBeInTheDocument();
-      expect(screen.getByText('Feature Adoption Rate')).toBeInTheDocument();
-    });
-  });
-
+  // ==== Refresh Button ====
   describe('refresh button', () => {
     it('should call refetch when clicked', () => {
-      vi.mocked(useAppUsageStats).mockReturnValue({
-        data: mockData,
-        isLoading: false,
-        isError: false,
-        error: null,
-        isFetching: false,
-        refetch: mockRefetch,
-      } as unknown as ReturnType<typeof useAppUsageStats>);
-
+      setupLoaded();
       render(<UsageStatsClient />, { wrapper: createWrapper() });
 
       fireEvent.click(screen.getByLabelText('Refresh data'));
@@ -396,34 +485,19 @@ describe('UsageStatsClient', () => {
     });
   });
 
+  // ==== Timestamp ====
   describe('data generation timestamp', () => {
     it('should show generated at timestamp', () => {
-      vi.mocked(useAppUsageStats).mockReturnValue({
-        data: mockData,
-        isLoading: false,
-        isError: false,
-        error: null,
-        isFetching: false,
-        refetch: mockRefetch,
-      } as unknown as ReturnType<typeof useAppUsageStats>);
-
+      setupLoaded();
       render(<UsageStatsClient />, { wrapper: createWrapper() });
 
       expect(screen.getByTestId('usage-stats-generated-at')).toBeInTheDocument();
     });
   });
 
+  // ==== Accessibility ====
   describe('accessibility', () => {
-    beforeEach(() => {
-      vi.mocked(useAppUsageStats).mockReturnValue({
-        data: mockData,
-        isLoading: false,
-        isError: false,
-        error: null,
-        isFetching: false,
-        refetch: mockRefetch,
-      } as unknown as ReturnType<typeof useAppUsageStats>);
-    });
+    beforeEach(setupLoaded);
 
     it('should have role="radiogroup" on period selector', () => {
       render(<UsageStatsClient />, { wrapper: createWrapper() });
@@ -471,8 +545,18 @@ describe('UsageStatsClient', () => {
 
       expect(screen.getByText('Distribution bar')).toHaveClass('sr-only');
     });
+
+    it('should have aria-labels on heatmap grid cells', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      const gridcells = screen.getAllByRole('gridcell');
+      expect(gridcells.length).toBeGreaterThan(0);
+      // Check first cell has proper aria-label format
+      expect(gridcells[0].getAttribute('aria-label')).toMatch(/\w+ \d+:00: \d+ sessions/);
+    });
   });
 
+  // ==== Mock Data Fallback ====
   describe('mock data fallback', () => {
     it('should use mock data when API returns null', () => {
       vi.mocked(useAppUsageStats).mockReturnValue({
@@ -486,9 +570,28 @@ describe('UsageStatsClient', () => {
 
       render(<UsageStatsClient />, { wrapper: createWrapper() });
 
-      // Should still render KPIs from mock data
+      // Should still render all sections from mock data
       expect(screen.getByTestId('usage-stats-kpis')).toBeInTheDocument();
-      expect(screen.getByTestId('kpi-dau')).toBeInTheDocument();
+      expect(screen.getByTestId('dau-mau-trend-chart')).toBeInTheDocument();
+      expect(screen.getByTestId('peak-hours-heatmap')).toBeInTheDocument();
+      expect(screen.getByTestId('feature-adoption-funnel')).toBeInTheDocument();
+    });
+  });
+
+  // ==== Page Title ====
+  describe('page title', () => {
+    beforeEach(setupLoaded);
+
+    it('should display the dashboard title', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      expect(screen.getByText('App Usage Dashboard')).toBeInTheDocument();
+    });
+
+    it('should display the dashboard description', () => {
+      render(<UsageStatsClient />, { wrapper: createWrapper() });
+
+      expect(screen.getByText(/DAU\/MAU trends, peak hours/)).toBeInTheDocument();
     });
   });
 });

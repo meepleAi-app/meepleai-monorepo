@@ -6,6 +6,7 @@ using Api.Infrastructure.Seeders;
 using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Administration.Application.Services;
@@ -21,19 +22,25 @@ internal sealed class AutoConfigurationService : IAutoConfigurationService
     private readonly ILogger<AutoConfigurationService> _logger;
     private readonly MeepleAiDbContext _dbContext;
     private readonly IBggApiService _bggApiService;
+    private readonly IEmbeddingService _embeddingService;
+    private readonly IConfiguration _configuration;
 
     public AutoConfigurationService(
         IUserRepository userRepository,
         IMediator mediator,
         ILogger<AutoConfigurationService> logger,
         MeepleAiDbContext dbContext,
-        IBggApiService bggApiService)
+        IBggApiService bggApiService,
+        IEmbeddingService embeddingService,
+        IConfiguration configuration)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _bggApiService = bggApiService ?? throw new ArgumentNullException(nameof(bggApiService));
+        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     public async Task<bool> IsFirstRunAsync(CancellationToken cancellationToken = default)
@@ -111,12 +118,21 @@ internal sealed class AutoConfigurationService : IAutoConfigurationService
             _logger,
             cancellationToken).ConfigureAwait(false);
 
-        // Seed strategy patterns for AI agent decision-making (Issue #3493, #3956)
-        _logger.LogInformation("Seeding strategy patterns for common game openings...");
-        await StrategyPatternSeeder.SeedAsync(
-            _dbContext,
-            _logger,
-            cancellationToken).ConfigureAwait(false);
+        // Seed strategy patterns for AI agent decision-making (Issue #3493, #3956, #3984)
+        var seedingEnabled = _configuration.GetValue("Seeding:EnableStrategyPatterns", true);
+        if (seedingEnabled)
+        {
+            _logger.LogInformation("Seeding strategy patterns for common game openings...");
+            await StrategyPatternSeeder.SeedAsync(
+                _dbContext,
+                _logger,
+                _embeddingService,
+                cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            _logger.LogInformation("Strategy pattern seeding disabled via configuration");
+        }
 
         // Seed predefined badges (ISSUE-2731)
         _logger.LogInformation("Seeding badges...");

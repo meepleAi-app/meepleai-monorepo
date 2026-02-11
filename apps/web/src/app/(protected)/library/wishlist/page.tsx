@@ -47,7 +47,7 @@ export default function WishlistPage() {
           title="Sample Game"
           subtitle="Publisher"
           imageUrl="https://via.placeholder.com/300"
-          showWishlistBtn
+          showWishlist
           isWishlisted={true}
           onWishlistToggle={() => {}}
         />

@@ -56,6 +56,7 @@ export interface CarouselGame {
   ratingMax?: number;
   metadata?: MeepleCardMetadata[];
   badge?: string;
+  description?: string;
 }
 
 /**
@@ -105,6 +106,8 @@ export interface GameCarouselProps {
   sort?: CarouselSortValue;
   /** Callback when sort changes */
   onSortChange?: (sort: CarouselSortValue) => void;
+  /** Enable flip on carousel cards */
+  flippable?: boolean;
   /** Additional CSS classes */
   className?: string;
   /** Test ID */
@@ -531,6 +534,7 @@ export const GameCarousel = React.memo(function GameCarousel({
   defaultSort = 'rating',
   sort: controlledSort,
   onSortChange,
+  flippable,
   className,
   'data-testid': testId,
 }: GameCarouselProps) {
@@ -780,6 +784,9 @@ export const GameCarousel = React.memo(function GameCarousel({
                     metadata={game.metadata}
                     badge={game.badge}
                     onClick={() => handleCardClick(game, position)}
+                    flippable={flippable && !!game.description}
+                    flipData={flippable && game.description ? { description: game.description } : undefined}
+                    flipTrigger="button"
                     className={cn(
                       // Enhanced shadow for center card
                       isCenter && [

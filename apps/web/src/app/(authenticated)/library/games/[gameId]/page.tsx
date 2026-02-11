@@ -3,21 +3,22 @@
  *
  * Displays comprehensive game details for a game in the user's library.
  * Features:
- * - Flippable game card with front (basic info) and back (detailed info)
- * - Side card for Knowledge Base (PDFs) and Social Links
- * - User section with collection status, labels, stats, and actions
+ * - Flippable MeepleCard (hero) with front (basic info) and back (detailed info)
+ * - MeepleInfoCard with Knowledge Base (PDFs), Social Links, and Stats
+ * - User section with collection status, labels, and actions
  */
 
 'use client';
 
+import { useMemo } from 'react';
 
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Clock, Gauge, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
-import { GameDetailHero } from '@/components/library/game-detail/GameDetailHero';
-import { GameSideCard } from '@/components/library/game-detail/GameSideCard';
 import { UserActionSection } from '@/components/library/game-detail/UserActionSection';
+import { MeepleCard } from '@/components/ui/data-display/meeple-card';
+import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
@@ -29,7 +30,28 @@ export default function LibraryGameDetailPage() {
 
   const { data: gameDetail, isLoading, error } = useLibraryGameDetail(gameId);
 
-  // Handle loading in the loading.tsx file
+  // Build metadata chips for MeepleCard
+  const metadata = useMemo(() => {
+    if (!gameDetail) return [];
+    const items = [];
+
+    if (gameDetail.minPlayers && gameDetail.maxPlayers) {
+      const players = gameDetail.minPlayers === gameDetail.maxPlayers
+        ? `${gameDetail.minPlayers}`
+        : `${gameDetail.minPlayers}-${gameDetail.maxPlayers}`;
+      items.push({ icon: Users, value: players });
+    }
+
+    if (gameDetail.playingTimeMinutes) {
+      items.push({ icon: Clock, value: `${gameDetail.playingTimeMinutes} min` });
+    }
+
+    if (gameDetail.complexityRating) {
+      items.push({ icon: Gauge, value: `${gameDetail.complexityRating.toFixed(1)}/5` });
+    }
+
+    return items;
+  }, [gameDetail]);
 
   // Error state
   if (error) {
@@ -115,13 +137,47 @@ export default function LibraryGameDetailPage() {
 
       {/* Main Content */}
       <main className="relative z-10 mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        {/* Cards Section - Game Card + Side Card */}
+        {/* Cards Section - MeepleCard (hero, flippable) + MeepleInfoCard */}
         <section className="mb-8 flex flex-col items-center justify-center gap-6 lg:flex-row lg:items-start">
           {/* Flippable Game Card */}
-          <GameDetailHero gameDetail={gameDetail} />
+          <MeepleCard
+            entity="game"
+            variant="hero"
+            title={gameDetail.gameTitle}
+            subtitle={
+              (gameDetail.gamePublisher ?? 'Publisher sconosciuto') +
+              (gameDetail.gameYearPublished ? ` (${gameDetail.gameYearPublished})` : '')
+            }
+            imageUrl={gameDetail.gameImageUrl ?? undefined}
+            rating={gameDetail.averageRating ?? undefined}
+            ratingMax={10}
+            metadata={metadata}
+            flippable
+            flipData={{
+              description: gameDetail.description ?? undefined,
+              categories: gameDetail.categories,
+              mechanics: gameDetail.mechanics,
+              designers: gameDetail.designers,
+              publishers: gameDetail.publishers,
+              complexityRating: gameDetail.complexityRating,
+              minAge: gameDetail.minAge,
+            }}
+          />
 
-          {/* Side Card - KB & Social */}
-          <GameSideCard gameId={gameId} gameTitle={gameDetail.gameTitle} />
+          {/* Info Card - KB, Social & Stats */}
+          <MeepleInfoCard
+            gameId={gameId}
+            gameTitle={gameDetail.gameTitle}
+            bggId={gameDetail.bggId}
+            showStats
+            statsData={{
+              timesPlayed: gameDetail.timesPlayed,
+              lastPlayed: gameDetail.lastPlayed,
+              winRate: gameDetail.winRate,
+              avgDuration: gameDetail.avgDuration,
+            }}
+            recentSessions={gameDetail.recentSessions}
+          />
         </section>
 
         {/* User Actions Section */}

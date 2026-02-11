@@ -35,8 +35,9 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 
 // Configure PDF.js worker for page count validation
+// Use pdfjs.version to ensure worker matches the bundled API version
 if (typeof window !== 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+  pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs?v=${pdfjs.version}`;
 }
 
 // Validation constants (Issue #2616)
@@ -100,7 +101,7 @@ export function PdfUploadModal({ isOpen, onClose, gameId: _gameId, gameTitle }: 
   const validatePageCount = useCallback(async (selectedFile: File): Promise<string | null> => {
     try {
       const arrayBuffer = await selectedFile.arrayBuffer();
-      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+      const pdf = await pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
       const pages = pdf.numPages;
       setPageCount(pages);
 

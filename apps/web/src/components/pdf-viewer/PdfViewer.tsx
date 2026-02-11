@@ -15,8 +15,8 @@ import 'react-pdf/dist/Page/TextLayer.css';
 
 import { PdfControls } from './PdfControls';
 
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Configure PDF.js worker - use version query to bust service worker cache
+pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs?v=${pdfjs.version}`;
 
 export interface PdfViewerProps {
   /** URL or file path of the PDF to display */

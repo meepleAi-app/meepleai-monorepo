@@ -23,6 +23,7 @@ import {
   type UpdateLedgerEntryRequest,
   type GetLedgerEntriesParams,
   type GetLedgerSummaryParams,
+  type ExportLedgerParams,
 } from '../schemas/financial-ledger.schemas';
 import {
   PublishGameResponseSchema,
@@ -1550,6 +1551,25 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const result = await httpClient.get('/api/v1/admin/financial-ledger/dashboard', LedgerDashboardDataSchema);
       if (!result) throw new Error('Failed to load ledger dashboard data');
       return result;
+    },
+
+    /**
+     * Export ledger entries as CSV, Excel, or PDF
+     * GET /api/v1/admin/financial-ledger/export
+     * Issue #3724: Export Ledger (PDF/CSV/Excel)
+     */
+    async exportLedgerEntries(params: ExportLedgerParams): Promise<Blob> {
+      const searchParams = new URLSearchParams();
+      searchParams.set('format', String(params.format));
+      if (params.dateFrom) searchParams.set('dateFrom', params.dateFrom);
+      if (params.dateTo) searchParams.set('dateTo', params.dateTo);
+      if (params.type !== undefined) searchParams.set('type', String(params.type));
+      if (params.category !== undefined) searchParams.set('category', String(params.category));
+      const qs = searchParams.toString();
+      const url = `${getApiBase()}/api/v1/admin/financial-ledger/export${qs ? `?${qs}` : ''}`;
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error(`Export failed: ${response.statusText}`);
+      return response.blob();
     },
   };
 }

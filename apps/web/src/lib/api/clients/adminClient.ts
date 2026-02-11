@@ -103,6 +103,8 @@ import {
   type BatchJobDto,
   type BatchJobList,
   type CreateBatchJobRequest,
+  AppUsageStatsSchema,
+  type AppUsageStats,
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -1455,6 +1457,25 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async deleteBatchJob(id: string): Promise<void> {
       await httpClient.delete(`/api/v1/admin/batch-jobs/${id}`);
+    },
+
+    // ========== App Usage Stats (Issue #3719) ==========
+
+    /**
+     * Get app usage statistics (DAU/MAU, retention, feature adoption, geo)
+     * GET /api/v1/admin/usage-stats
+     */
+    async getUsageStats(params?: {
+      period?: '7d' | '30d' | '90d';
+    }): Promise<AppUsageStats | null> {
+      const queryParams = new URLSearchParams();
+      if (params?.period) queryParams.set('period', params.period);
+
+      const query = queryParams.toString();
+      return httpClient.get(
+        `/api/v1/admin/usage-stats${query ? `?${query}` : ''}`,
+        AppUsageStatsSchema
+      );
     },
   };
 }

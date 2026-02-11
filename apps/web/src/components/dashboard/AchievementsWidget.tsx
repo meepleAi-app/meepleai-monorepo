@@ -1,18 +1,28 @@
 /**
  * AchievementsWidget - Dashboard Widget for Recent Achievements
- * Issue #3321 - Implement AchievementsWidget with badges
+ * Issue #3924 - Frontend: Achievements Widget Component
  *
  * Features:
+ * - Fetches from GET /api/v1/achievements/recent via useRecentAchievements hook
  * - Shows last 3 unlocked achievements with colored badges
+ * - Badge icon + name + points + unlock date
+ * - Celebration animation on new unlock (spring scale + sparkle effect)
+ * - Progress bar for next achievement
  * - Rarity-based color coding (common, rare, epic, legendary)
  * - Category icons (collection, gameplay, chat, streak, milestone)
- * - Click navigation to achievement detail
- * - CTA to view all badges
+ * - Link: "Vedi Tutti i Badge" -> /achievements
  * - Loading skeleton state
+ *
+ * @see Issue #3922 - Achievement System & Badge Engine (Backend)
+ * @see Epic #3906 - Gamification & Advanced Features
  *
  * @example
  * ```tsx
+ * // Auto-fetches via hook
  * <AchievementsWidget />
+ *
+ * // Props override for testing
+ * <AchievementsWidget achievements={mockData} nextProgress={mockProgress} />
  * ```
  */
 
@@ -22,7 +32,7 @@ import { useMemo } from 'react';
 
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trophy,
   Medal,
@@ -33,11 +43,14 @@ import {
   Target,
   ChevronRight,
   Sparkles,
+  Star,
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { Progress } from '@/components/ui/feedback/progress';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
+import { useRecentAchievements } from '@/hooks/useRecentAchievements';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -53,16 +66,25 @@ export interface Achievement {
   description: string;
   category: AchievementCategory;
   rarity: AchievementRarity;
+  points: number;
   unlockedAt: string;
   icon?: string;
 }
 
+export interface NextAchievementProgress {
+  achievementName: string;
+  current: number;
+  target: number;
+}
+
 export interface AchievementsWidgetProps {
-  /** Achievements data */
+  /** Achievements data (overrides hook) */
   achievements?: Achievement[];
-  /** Loading state */
+  /** Next achievement progress (overrides hook) */
+  nextProgress?: NextAchievementProgress | null;
+  /** Loading state (overrides hook) */
   isLoading?: boolean;
-  /** Show new unlock animation */
+  /** Show new unlock celebration animation */
   hasNewUnlock?: boolean;
   /** Additional CSS classes */
   className?: string;
@@ -113,37 +135,6 @@ const CATEGORY_ICONS: Record<AchievementCategory, React.ElementType> = {
 };
 
 // ============================================================================
-// Mock Data (for development)
-// ============================================================================
-
-const MOCK_ACHIEVEMENTS: Achievement[] = [
-  {
-    id: 'ach-1',
-    name: 'Giocatore Costante',
-    description: '7 giorni di streak',
-    category: 'streak',
-    rarity: 'rare',
-    unlockedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-  },
-  {
-    id: 'ach-2',
-    name: 'Collezionista',
-    description: '100+ giochi in collezione',
-    category: 'collection',
-    rarity: 'epic',
-    unlockedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-  },
-  {
-    id: 'ach-3',
-    name: 'Esperto AI',
-    description: '50+ chat completate',
-    category: 'chat',
-    rarity: 'common',
-    unlockedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(), // 3 days ago
-  },
-];
-
-// ============================================================================
 // Skeleton Component
 // ============================================================================
 
@@ -184,6 +175,13 @@ function AchievementsWidgetSkeleton({ className }: { className?: string }) {
         ))}
       </div>
 
+      {/* Progress Skeleton */}
+      <div className="mt-4 p-3 rounded-xl border">
+        <Skeleton className="h-3 w-40 mb-2" />
+        <Skeleton className="h-2 w-full rounded-full" />
+        <Skeleton className="h-3 w-16 mt-1" />
+      </div>
+
       {/* CTA Skeleton */}
       <Skeleton className="h-9 w-full mt-4 rounded-full" />
     </div>
@@ -221,15 +219,48 @@ function RarityBadge({ rarity }: { rarity: AchievementRarity }) {
 }
 
 // ============================================================================
+// Celebration Badge (animated sparkle on new unlock)
+// ============================================================================
+
+function CelebrationBadge({ achievement }: { achievement: Achievement }) {
+  const colors = RARITY_COLORS[achievement.rarity];
+
+  return (
+    <motion.div
+      initial={{ scale: 0, rotate: -180 }}
+      animate={{ scale: 1, rotate: 0 }}
+      transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+      className={cn(
+        'h-10 w-10 rounded-lg flex items-center justify-center relative',
+        colors.bg
+      )}
+      data-testid={`achievement-icon-${achievement.id}`}
+    >
+      <Medal className={cn('h-5 w-5', colors.text)} />
+      {/* Sparkle particles */}
+      <motion.div
+        className="absolute -top-1 -right-1"
+        initial={{ opacity: 0, scale: 0 }}
+        animate={{ opacity: [0, 1, 0], scale: [0, 1.2, 0] }}
+        transition={{ delay: 0.3, duration: 0.6 }}
+      >
+        <Sparkles className="h-3 w-3 text-amber-400" />
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ============================================================================
 // Achievement Card Component
 // ============================================================================
 
 interface AchievementCardProps {
   achievement: Achievement;
   index: number;
+  isCelebrating: boolean;
 }
 
-function AchievementCard({ achievement, index }: AchievementCardProps) {
+function AchievementCard({ achievement, index, isCelebrating }: AchievementCardProps) {
   const colors = RARITY_COLORS[achievement.rarity];
 
   return (
@@ -249,16 +280,20 @@ function AchievementCard({ achievement, index }: AchievementCardProps) {
         )}
         data-testid={`achievement-card-${achievement.id}`}
       >
-        {/* Icon */}
-        <div
-          className={cn(
-            'h-10 w-10 rounded-lg flex items-center justify-center',
-            colors.bg
-          )}
-          data-testid={`achievement-icon-${achievement.id}`}
-        >
-          <Medal className={cn('h-5 w-5', colors.text)} />
-        </div>
+        {/* Icon (with celebration animation for first item) */}
+        {isCelebrating && index === 0 ? (
+          <CelebrationBadge achievement={achievement} />
+        ) : (
+          <div
+            className={cn(
+              'h-10 w-10 rounded-lg flex items-center justify-center',
+              colors.bg
+            )}
+            data-testid={`achievement-icon-${achievement.id}`}
+          >
+            <Medal className={cn('h-5 w-5', colors.text)} />
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 min-w-0">
@@ -280,15 +315,60 @@ function AchievementCard({ achievement, index }: AchievementCardProps) {
           >
             {achievement.description}
           </p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            {formatDistanceToNow(new Date(achievement.unlockedAt), { addSuffix: true, locale: it })}
-          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-[10px] text-muted-foreground">
+              {formatDistanceToNow(new Date(achievement.unlockedAt), { addSuffix: true, locale: it })}
+            </p>
+            <span
+              className={cn('flex items-center gap-0.5 text-[10px] font-medium', colors.text)}
+              data-testid={`achievement-points-${achievement.id}`}
+            >
+              <Star className="h-2.5 w-2.5" />
+              {achievement.points} pts
+            </span>
+          </div>
         </div>
 
         {/* Rarity Badge */}
         <RarityBadge rarity={achievement.rarity} />
       </Link>
     </motion.div>
+  );
+}
+
+// ============================================================================
+// Next Achievement Progress Component
+// ============================================================================
+
+function NextProgressSection({ progress }: { progress: NextAchievementProgress }) {
+  const percentage = Math.min(Math.round((progress.current / progress.target) * 100), 100);
+
+  return (
+    <div
+      className="mt-4 p-3 rounded-xl border border-border/40 bg-muted/30"
+      data-testid="next-achievement-progress"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+          <Target className="h-3 w-3 text-amber-500" />
+          Prossimo Obiettivo
+        </span>
+        <span className="text-[10px] text-muted-foreground" data-testid="next-achievement-count">
+          {progress.current}/{progress.target}
+        </span>
+      </div>
+      <p className="text-sm font-medium mb-2" data-testid="next-achievement-name">
+        {progress.achievementName}
+      </p>
+      <Progress
+        value={percentage}
+        className="h-2 [&>div]:bg-amber-500"
+        aria-label={`Progresso verso ${progress.achievementName}: ${percentage}%`}
+      />
+      <p className="text-[10px] text-muted-foreground mt-1" data-testid="next-achievement-percentage">
+        {percentage}% completato
+      </p>
+    </div>
   );
 }
 
@@ -331,11 +411,22 @@ function EmptyState() {
 // ============================================================================
 
 export function AchievementsWidget({
-  achievements = MOCK_ACHIEVEMENTS,
-  isLoading = false,
+  achievements: achievementsProp,
+  nextProgress: nextProgressProp,
+  isLoading: isLoadingProp,
   hasNewUnlock = false,
   className,
 }: AchievementsWidgetProps) {
+  // Use hook for data fetching, but allow prop overrides for testing
+  const { data: hookData, isLoading: hookLoading } = useRecentAchievements();
+
+  const achievements = useMemo(
+    () => achievementsProp ?? hookData?.achievements ?? [],
+    [achievementsProp, hookData?.achievements]
+  );
+  const nextProgress = nextProgressProp !== undefined ? nextProgressProp : hookData?.nextProgress ?? null;
+  const isLoading = isLoadingProp ?? hookLoading;
+
   // Sort by unlockedAt (most recent first) and limit
   const recentAchievements = useMemo(() => {
     return [...achievements]
@@ -367,15 +458,20 @@ export function AchievementsWidget({
           >
             Achievements & Badges
           </h3>
-          {hasNewUnlock && (
-            <span
-              className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 rounded-full"
-              data-testid="new-unlock-indicator"
-            >
-              <Sparkles className="h-3 w-3 text-amber-500" />
-              <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">NEW</span>
-            </span>
-          )}
+          <AnimatePresence>
+            {hasNewUnlock && (
+              <motion.span
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 rounded-full"
+                data-testid="new-unlock-indicator"
+              >
+                <Sparkles className="h-3 w-3 text-amber-500" />
+                <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">NEW</span>
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -397,9 +493,15 @@ export function AchievementsWidget({
                 key={achievement.id}
                 achievement={achievement}
                 index={index}
+                isCelebrating={hasNewUnlock}
               />
             ))}
           </div>
+
+          {/* Next Achievement Progress */}
+          {nextProgress && (
+            <NextProgressSection progress={nextProgress} />
+          )}
 
           {/* CTA */}
           <Link href="/achievements" className="block mt-4">

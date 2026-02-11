@@ -9,7 +9,7 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
 /// <summary>
-/// Unit tests for GetActivityTimelineQueryHandler (Issue #3973).
+/// Unit tests for GetActivityTimelineQueryHandler (Issue #3973, #3923).
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class GetActivityTimelineQueryHandlerTests
@@ -28,7 +28,7 @@ public class GetActivityTimelineQueryHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var query = new GetActivityTimelineQuery(userId, 10);
+        var query = new GetActivityTimelineQuery(userId);
         var events = new List<ActivityEvent>
         {
             new GameAddedEvent
@@ -60,8 +60,10 @@ public class GetActivityTimelineQueryHandlerTests
         };
 
         _mockTimelineService
-            .Setup(s => s.GetRecentActivitiesAsync(userId, 10, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(events);
+            .Setup(s => s.GetFilteredActivitiesAsync(
+                userId, null, null, 0, 20, SortDirection.Descending,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(((IReadOnlyList<ActivityEvent>)events, 3));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -103,8 +105,10 @@ public class GetActivityTimelineQueryHandlerTests
         var query = new GetActivityTimelineQuery(userId);
 
         _mockTimelineService
-            .Setup(s => s.GetRecentActivitiesAsync(userId, 10, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ActivityEvent>());
+            .Setup(s => s.GetFilteredActivitiesAsync(
+                userId, null, null, 0, 20, SortDirection.Descending,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(((IReadOnlyList<ActivityEvent>)new List<ActivityEvent>(), 0));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -116,22 +120,33 @@ public class GetActivityTimelineQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ShouldPassCorrectLimitToService()
+    public async Task Handle_ShouldPassFilterParametersToService()
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var query = new GetActivityTimelineQuery(userId, 25);
+        var types = new[] { "game_added", "session_completed" };
+        var query = new GetActivityTimelineQuery(
+            userId,
+            Types: types,
+            SearchTerm: "wingspan",
+            Skip: 10,
+            Take: 5,
+            Order: SortDirection.Ascending);
 
         _mockTimelineService
-            .Setup(s => s.GetRecentActivitiesAsync(userId, 25, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ActivityEvent>());
+            .Setup(s => s.GetFilteredActivitiesAsync(
+                userId, types, "wingspan", 10, 5, SortDirection.Ascending,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(((IReadOnlyList<ActivityEvent>)new List<ActivityEvent>(), 0));
 
         // Act
         await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         _mockTimelineService.Verify(
-            s => s.GetRecentActivitiesAsync(userId, 25, It.IsAny<CancellationToken>()),
+            s => s.GetFilteredActivitiesAsync(
+                userId, types, "wingspan", 10, 5, SortDirection.Ascending,
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -154,8 +169,10 @@ public class GetActivityTimelineQueryHandlerTests
         };
 
         _mockTimelineService
-            .Setup(s => s.GetRecentActivitiesAsync(userId, 10, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(events);
+            .Setup(s => s.GetFilteredActivitiesAsync(
+                userId, null, null, 0, 20, SortDirection.Descending,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(((IReadOnlyList<ActivityEvent>)events, 1));
 
         // Act
         var result = await _handler.Handle(query, CancellationToken.None);
@@ -171,22 +188,69 @@ public class GetActivityTimelineQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ShouldReturnTotalCount_SeparateFromPagedResults()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var query = new GetActivityTimelineQuery(userId, Skip: 0, Take: 2);
+        var events = new List<ActivityEvent>
+        {
+            new GameAddedEvent
+            {
+                Id = Guid.NewGuid(),
+                Timestamp = DateTime.UtcNow,
+                Type = "game_added",
+                GameId = Guid.NewGuid(),
+                GameName = "Catan"
+            },
+            new GameAddedEvent
+            {
+                Id = Guid.NewGuid(),
+                Timestamp = DateTime.UtcNow.AddHours(-1),
+                Type = "game_added",
+                GameId = Guid.NewGuid(),
+                GameName = "Wingspan"
+            }
+        };
+
+        // Total count is 10 but only 2 returned (paged)
+        _mockTimelineService
+            .Setup(s => s.GetFilteredActivitiesAsync(
+                userId, null, null, 0, 2, SortDirection.Descending,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(((IReadOnlyList<ActivityEvent>)events, 10));
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(2, result.Activities.Count);
+        Assert.Equal(10, result.TotalCount);
+    }
+
+    [Fact]
     public async Task Handle_ShouldCallServiceExactlyOnce()
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var query = new GetActivityTimelineQuery(userId, 5);
+        var query = new GetActivityTimelineQuery(userId);
 
         _mockTimelineService
-            .Setup(s => s.GetRecentActivitiesAsync(userId, 5, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ActivityEvent>());
+            .Setup(s => s.GetFilteredActivitiesAsync(
+                It.IsAny<Guid>(), It.IsAny<string[]?>(), It.IsAny<string?>(),
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SortDirection>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(((IReadOnlyList<ActivityEvent>)new List<ActivityEvent>(), 0));
 
         // Act
         await _handler.Handle(query, CancellationToken.None);
 
         // Assert
         _mockTimelineService.Verify(
-            s => s.GetRecentActivitiesAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            s => s.GetFilteredActivitiesAsync(
+                It.IsAny<Guid>(), It.IsAny<string[]?>(), It.IsAny<string?>(),
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SortDirection>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }

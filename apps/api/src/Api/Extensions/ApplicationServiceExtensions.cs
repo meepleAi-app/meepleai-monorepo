@@ -11,6 +11,7 @@ using Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.UserLibrary.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.Gamification.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 using Api.Helpers;
 using Api.Services;
@@ -71,6 +72,9 @@ internal static class ApplicationServiceExtensions
 
         // GST-003: SessionTracking bounded context
         services.AddSessionTrackingContext();
+
+        // Issue #3922: Gamification bounded context (achievements, badges)
+        services.AddGamificationContext();
 
         // ISSUE-2370: SharedGameCatalog bounded context
         // ISSUE-2454: Background processing configuration

@@ -52,7 +52,7 @@ public sealed class GetDashboardQueryValidatorTests
     public void Validate_WithDefaultUserId_ShouldHaveError()
     {
         // Arrange
-        var query = new GetDashboardQuery(default);
+        var query = new GetDashboardQuery(Guid.Empty);
 
         // Act
         var result = _validator.TestValidate(query);

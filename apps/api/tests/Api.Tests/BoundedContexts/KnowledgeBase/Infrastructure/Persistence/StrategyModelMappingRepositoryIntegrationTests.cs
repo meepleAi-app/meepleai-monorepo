@@ -103,12 +103,12 @@ public class StrategyModelMappingRepositoryIntegrationTests : IAsyncLifetime
             UpdatedAt = DateTime.UtcNow
         };
 
-        _dbContext.Set<StrategyModelMappingEntity>().Add(entity);
+        _dbContext!.Set<StrategyModelMappingEntity>().Add(entity);
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 
         // Act
-        var result = await _repository.GetByStrategyAsync(RagStrategy.Fast);
+        var result = await _repository!.GetByStrategyAsync(RagStrategy.Fast);
 
         // Assert
         result.Should().NotBeNull();
@@ -167,12 +167,12 @@ public class StrategyModelMappingRepositoryIntegrationTests : IAsyncLifetime
             }
         };
 
-        _dbContext.Set<StrategyModelMappingEntity>().AddRange(entities);
+        _dbContext!.Set<StrategyModelMappingEntity>().AddRange(entities);
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 
         // Act
-        var result = await _repository.GetAllAsync();
+        var result = await _repository!.GetAllAsync();
 
         // Assert
         result.Should().HaveCount(2);
@@ -212,12 +212,12 @@ public class StrategyModelMappingRepositoryIntegrationTests : IAsyncLifetime
             UpdatedAt = DateTime.UtcNow
         };
 
-        _dbContext.Set<StrategyModelMappingEntity>().Add(entity);
+        _dbContext!.Set<StrategyModelMappingEntity>().Add(entity);
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 
         // Act
-        var result = await _repository.HasMappingAsync(RagStrategy.Expert);
+        var result = await _repository!.HasMappingAsync(RagStrategy.Expert);
 
         // Assert
         result.Should().BeTrue();
@@ -286,12 +286,12 @@ public class StrategyModelMappingRepositoryIntegrationTests : IAsyncLifetime
             UpdatedAt = DateTime.UtcNow
         };
 
-        _dbContext.Set<StrategyModelMappingEntity>().Add(entity);
+        _dbContext!.Set<StrategyModelMappingEntity>().Add(entity);
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 
         // Act
-        var result = await _repository.GetByStrategyAsync(RagStrategy.Custom);
+        var result = await _repository!.GetByStrategyAsync(RagStrategy.Custom);
 
         // Assert
         result.Should().NotBeNull();

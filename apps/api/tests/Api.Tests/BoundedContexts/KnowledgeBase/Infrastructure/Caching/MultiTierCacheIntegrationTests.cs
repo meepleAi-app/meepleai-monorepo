@@ -354,7 +354,7 @@ public sealed class MultiTierCacheIntegrationTests : IAsyncLifetime
         // Clear L1 to simulate cold start
         _cache.GetType()
             .GetField("_l1Cache", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-            .GetValue(_cache)
+            .GetValue(_cache)!
             .GetType()
             .GetMethod("Clear")!
             .Invoke(_cache.GetType().GetField("_l1Cache", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_cache), null);

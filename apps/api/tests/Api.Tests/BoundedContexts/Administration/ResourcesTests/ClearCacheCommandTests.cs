@@ -54,21 +54,21 @@ public class ClearCacheCommandTests : IAsyncLifetime
         var db = _connection!.GetDatabase();
 
         // Add test data
-        await db.StringSetAsync("test:key1", "value1").ConfigureAwait(false);
-        await db.StringSetAsync("test:key2", "value2").ConfigureAwait(false);
+        await db.StringSetAsync("test:key1", "value1");
+        await db.StringSetAsync("test:key2", "value2");
 
         // Verify data exists
-        var valueBefore = await db.StringGetAsync("test:key1").ConfigureAwait(false);
+        var valueBefore = await db.StringGetAsync("test:key1");
         valueBefore.Should().Be("value1");
 
         // Act
-        var result = await handler.Handle(command, CancellationToken.None).ConfigureAwait(false);
+        var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.Should().BeTrue();
 
         // Verify cache is cleared
-        var valueAfter = await db.StringGetAsync("test:key1").ConfigureAwait(false);
+        var valueAfter = await db.StringGetAsync("test:key1");
         valueAfter.IsNull.Should().BeTrue("cache should be cleared");
     }
 
@@ -84,8 +84,7 @@ public class ClearCacheCommandTests : IAsyncLifetime
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*Confirmation is required*")
-            .ConfigureAwait(false);
+            .WithMessage("*Confirmation is required*");
     }
 
     [Fact]
@@ -98,8 +97,7 @@ public class ClearCacheCommandTests : IAsyncLifetime
         var act = () => handler.Handle(null!, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<ArgumentNullException>()
-            .ConfigureAwait(false);
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]

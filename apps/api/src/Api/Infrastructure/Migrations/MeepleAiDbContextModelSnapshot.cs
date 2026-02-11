@@ -6353,6 +6353,58 @@ namespace Api.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.WishlistItemEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Priority")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<decimal?>("TargetPrice")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Visibility")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_WishlistItems_UserId");
+
+                    b.HasIndex("UserId", "GameId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WishlistItems_UserId_GameId");
+
+                    b.HasIndex("UserId", "Priority")
+                        .HasDatabaseName("IX_WishlistItems_UserId_Priority");
+
+                    b.ToTable("wishlist_items", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.UserNotifications.NotificationEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -8000,6 +8052,25 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("PdfDocument");
 
                     b.Navigation("PrivateGame");
+
+                    b.Navigation("SharedGame");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserLibrary.WishlistItemEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("SharedGame");
 

@@ -16,6 +16,7 @@ import {
   RefreshCwIcon,
   FilterIcon,
   XIcon,
+  DownloadIcon,
 } from 'lucide-react';
 
 import { api } from '@/lib/api';
@@ -41,6 +42,7 @@ import { CreateLedgerEntryModal } from './CreateLedgerEntryModal';
 import { DeleteLedgerEntryDialog } from './DeleteLedgerEntryDialog';
 import { EditLedgerEntryModal } from './EditLedgerEntryModal';
 import { LedgerEntriesTable } from './LedgerEntriesTable';
+import { ExportLedgerPanel } from './ExportLedgerPanel';
 import { LedgerSummaryCards } from './LedgerSummaryCards';
 
 // Deterministic mock data to avoid hydration mismatch
@@ -140,6 +142,9 @@ export function FinancialLedgerTab() {
   const [filterSource, setFilterSource] = useState<number | undefined>(undefined);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
+
+  // Export panel
+  const [showExportPanel, setShowExportPanel] = useState(false);
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -269,6 +274,19 @@ export function FinancialLedgerTab() {
             Refresh
           </button>
           <button
+            onClick={() => setShowExportPanel(!showExportPanel)}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors',
+              showExportPanel
+                ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                : 'border-zinc-200/50 dark:border-zinc-700/50 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+            )}
+            data-testid="toggle-export"
+          >
+            <DownloadIcon className="h-4 w-4" />
+            Export
+          </button>
+          <button
             onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors"
             data-testid="new-entry-btn"
@@ -326,6 +344,9 @@ export function FinancialLedgerTab() {
           </div>
         </div>
       )}
+
+      {/* Export panel */}
+      {showExportPanel && <ExportLedgerPanel />}
 
       {/* Error banner */}
       {error && !loading && (

@@ -9,7 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace Api.Routing;
 
 /// <summary>
-/// Financial Ledger CRUD endpoints for admin users (Issue #3722: Manual Ledger CRUD)
+/// Financial Ledger CRUD and Export endpoints for admin users
+/// Issue #3722: Manual Ledger CRUD
+/// Issue #3724: Export Ledger (PDF/CSV/Excel)
 /// </summary>
 internal static class FinancialLedgerEndpoints
 {
@@ -70,6 +72,15 @@ internal static class FinancialLedgerEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound);
+
+        // GET /api/v1/admin/financial-ledger/export - Export entries as CSV, Excel, or PDF (Issue #3724)
+        ledgerGroup.MapGet("/export", HandleExportLedger)
+            .WithName("ExportLedgerEntries")
+            .WithSummary("Export ledger entries as CSV, Excel, or PDF")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
 
         return group;
     }
@@ -196,6 +207,24 @@ internal static class FinancialLedgerEndpoints
         var command = new DeleteLedgerEntryCommand(id);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleExportLedger(
+        HttpContext context,
+        IMediator mediator,
+        [FromQuery] LedgerExportFormat format = LedgerExportFormat.Csv,
+        [FromQuery] DateTime? dateFrom = null,
+        [FromQuery] DateTime? dateTo = null,
+        [FromQuery] LedgerEntryType? type = null,
+        [FromQuery] LedgerCategory? category = null,
+        CancellationToken cancellationToken = default)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var query = new ExportLedgerQuery(format, dateFrom, dateTo, type, category);
+        var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+        return Results.File(result.Content, result.ContentType, result.FileName);
     }
 }
 

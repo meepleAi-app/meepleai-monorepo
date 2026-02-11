@@ -122,6 +122,43 @@ export type GetLedgerSummaryParams = {
   dateTo: string;
 };
 
+// ========== Export Types (Issue #3724) ==========
+
+export const LedgerExportFormatSchema = z.enum(['Csv', 'Excel', 'Pdf']);
+export type LedgerExportFormat = z.infer<typeof LedgerExportFormatSchema>;
+
+export const LEDGER_EXPORT_FORMAT_MAP: Record<number, LedgerExportFormat> = {
+  0: 'Csv',
+  1: 'Excel',
+  2: 'Pdf',
+};
+
+export const LEDGER_EXPORT_FORMAT_LABELS: Record<LedgerExportFormat, string> = {
+  Csv: 'CSV',
+  Excel: 'Excel (.xlsx)',
+  Pdf: 'PDF Report',
+};
+
+export const LEDGER_EXPORT_FORMAT_MIME: Record<LedgerExportFormat, string> = {
+  Csv: 'text/csv',
+  Excel: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  Pdf: 'application/pdf',
+};
+
+export const LEDGER_EXPORT_FORMAT_EXT: Record<LedgerExportFormat, string> = {
+  Csv: 'csv',
+  Excel: 'xlsx',
+  Pdf: 'pdf',
+};
+
+export type ExportLedgerParams = {
+  format: number;
+  dateFrom?: string;
+  dateTo?: string;
+  type?: number;
+  category?: number;
+};
+
 // ========== Dashboard Schemas (Issue #3723) ==========
 
 export const MonthlyRevenueDataSchema = z.object({

@@ -13,6 +13,7 @@ namespace Api.BoundedContexts.BusinessSimulations.Infrastructure.DependencyInjec
 /// Issue #3720: Financial Ledger Data Model (Epic #3688)
 /// Issue #3721: Automatic Ledger Tracking (Epic #3688)
 /// Issue #3724: Export Ledger - Scheduled Reports (Epic #3688)
+/// Issue #3725: Agent Cost Calculator (Epic #3688)
 /// </summary>
 internal static class BusinessSimulationsServiceExtensions
 {
@@ -20,6 +21,7 @@ internal static class BusinessSimulationsServiceExtensions
     {
         // Repositories
         services.AddScoped<ILedgerEntryRepository, LedgerEntryRepository>();
+        services.AddScoped<ICostScenarioRepository, CostScenarioRepository>();
 
         // Services (Issue #3721)
         services.AddScoped<ILedgerTrackingService, LedgerTrackingService>();

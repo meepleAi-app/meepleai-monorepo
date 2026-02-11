@@ -9,23 +9,6 @@ import { z } from 'zod';
 
 import { getApiBase } from '../core/httpClient';
 import {
-  LedgerEntriesResponseSchema,
-  LedgerSummarySchema,
-  LedgerEntryDtoSchema,
-  LedgerDashboardDataSchema,
-  CreateLedgerEntryResponseSchema,
-  type LedgerEntriesResponse,
-  type LedgerSummary,
-  type LedgerEntryDto,
-  type LedgerDashboardData,
-  type CreateLedgerEntryResponse,
-  type CreateLedgerEntryRequest,
-  type UpdateLedgerEntryRequest,
-  type GetLedgerEntriesParams,
-  type GetLedgerSummaryParams,
-  type ExportLedgerParams,
-} from '../schemas/financial-ledger.schemas';
-import {
   PublishGameResponseSchema,
   AuditLogListResultSchema,
   type AuditLogListResult,
@@ -121,6 +104,34 @@ import {
   type BatchJobList,
   type CreateBatchJobRequest,
 } from '../schemas';
+import {
+  AgentCostEstimationResultSchema,
+  CostScenariosResponseSchema,
+  SaveScenarioResponseSchema,
+  type AgentCostEstimationResult,
+  type CostScenariosResponse,
+  type SaveScenarioResponse,
+  type EstimateAgentCostRequest,
+  type SaveCostScenarioRequest,
+  type GetCostScenariosParams,
+} from '../schemas/cost-calculator.schemas';
+import {
+  LedgerEntriesResponseSchema,
+  LedgerSummarySchema,
+  LedgerEntryDtoSchema,
+  LedgerDashboardDataSchema,
+  CreateLedgerEntryResponseSchema,
+  type LedgerEntriesResponse,
+  type LedgerSummary,
+  type LedgerEntryDto,
+  type LedgerDashboardData,
+  type CreateLedgerEntryResponse,
+  type CreateLedgerEntryRequest,
+  type UpdateLedgerEntryRequest,
+  type GetLedgerEntriesParams,
+  type GetLedgerSummaryParams,
+  type ExportLedgerParams,
+} from '../schemas/financial-ledger.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -1570,6 +1581,46 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
       const response = await fetch(url, { credentials: 'include' });
       if (!response.ok) throw new Error(`Export failed: ${response.statusText}`);
       return response.blob();
+    },
+
+    // ========== Cost Calculator (Issue #3725) ==========
+
+    /**
+     * Estimate agent costs based on strategy, model, and usage parameters
+     * POST /api/v1/admin/cost-calculator/estimate
+     */
+    async estimateAgentCost(request: EstimateAgentCostRequest): Promise<AgentCostEstimationResult> {
+      return httpClient.post('/api/v1/admin/cost-calculator/estimate', request, AgentCostEstimationResultSchema);
+    },
+
+    /**
+     * Save a cost estimation scenario
+     * POST /api/v1/admin/cost-calculator/scenarios
+     */
+    async saveCostScenario(request: SaveCostScenarioRequest): Promise<SaveScenarioResponse> {
+      return httpClient.post('/api/v1/admin/cost-calculator/scenarios', request, SaveScenarioResponseSchema);
+    },
+
+    /**
+     * Get saved cost scenarios for the current user
+     * GET /api/v1/admin/cost-calculator/scenarios
+     */
+    async getCostScenarios(params?: GetCostScenariosParams): Promise<CostScenariosResponse> {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+      const qs = searchParams.toString();
+      const url = `/api/v1/admin/cost-calculator/scenarios${qs ? `?${qs}` : ''}`;
+      const result = await httpClient.get(url, CostScenariosResponseSchema);
+      return result || { items: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Delete a saved cost scenario
+     * DELETE /api/v1/admin/cost-calculator/scenarios/{id}
+     */
+    async deleteCostScenario(id: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/cost-calculator/scenarios/${id}`);
     },
   };
 }

@@ -48,6 +48,7 @@ import { GameActionsModal } from '@/components/library/GameActionsModal';
 import type { ViewMode } from '@/components/library/ViewModeToggle';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/data-display/card';
+import { useEntityActions } from '@/hooks/use-entity-actions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -163,6 +164,9 @@ export function UserGameCard({
 
   // Check if game can be shared (Issue #2743)
   const { canShare: _canShare, reason: _shareBlockReason } = useCanShareGame(game.gameId);
+
+  // Issue #4045: Entity-specific quick actions (for future use)
+  const _entityActions = useEntityActions({ entity: 'game', id: game.gameId });
 
   // Agent status
   const agentConfigured = agentConfig !== null;

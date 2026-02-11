@@ -35,6 +35,7 @@ import { Heart, Bot, MapPin, Calendar, Gamepad2, Share2, Lock, MessageSquare } f
 
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
+import { useEntityActions } from '@/hooks/use-entity-actions';
 
 import type { ViewMode } from './DashboardSection';
 
@@ -103,6 +104,9 @@ export const GameCard = memo(function GameCard({
   className,
 }: GameCardProps) {
   const { name, imageUrl, rating, playCount, lastPlayedAt, isFavorite, ownershipStatus, location, hasPdf, hasActiveChat } = data;
+
+  // Issue #4047: Entity-specific quick actions (for future use)
+  const _entityActions = useEntityActions({ entity: 'game', id: data.id });
 
   // Grid View (Compact)
   if (viewMode === 'grid') {

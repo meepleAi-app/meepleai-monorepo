@@ -22,7 +22,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/forms/select';
+} from '@/components/ui/primitives/select';
 
 // TODO: Replace with actual API fetch
 // import { useQuery } from '@tanstack/react-query';

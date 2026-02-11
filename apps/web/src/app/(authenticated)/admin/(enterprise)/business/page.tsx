@@ -11,6 +11,7 @@
 import React from 'react';
 
 import { EnterpriseSectionPage } from '@/components/admin/enterprise/EnterpriseSectionPage';
+import { FinancialLedgerTab } from '@/components/admin/enterprise/financial-ledger';
 import { ENTERPRISE_SECTIONS } from '@/config/enterprise-navigation';
 
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -20,7 +21,9 @@ export default function BusinessPage() {
   return (
     <EnterpriseSectionPage
       section={section}
-      tabContent={{}}
+      tabContent={{
+        'financial-ledger': <FinancialLedgerTab />,
+      }}
     />
   );
 }

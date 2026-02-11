@@ -150,6 +150,49 @@ internal class LedgerEntryRepository : RepositoryBase, ILedgerEntryRepository
         return (entries, total);
     }
 
+    public async Task<(IReadOnlyList<LedgerEntry> Entries, int Total)> GetFilteredAsync(
+        LedgerEntryType? type = null,
+        LedgerCategory? category = null,
+        LedgerEntrySource? source = null,
+        DateTime? dateFrom = null,
+        DateTime? dateTo = null,
+        int page = 1,
+        int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        var query = DbContext.LedgerEntries.AsNoTracking().AsQueryable();
+
+        if (type.HasValue)
+            query = query.Where(e => e.Type == type.Value);
+
+        if (category.HasValue)
+            query = query.Where(e => e.Category == category.Value);
+
+        if (source.HasValue)
+            query = query.Where(e => e.Source == source.Value);
+
+        if (dateFrom.HasValue)
+            query = query.Where(e => e.Date >= dateFrom.Value);
+
+        if (dateTo.HasValue)
+            query = query.Where(e => e.Date <= dateTo.Value);
+
+        var total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
+
+        var entries = await query
+            .OrderByDescending(e => e.Date)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return (entries, total);
+    }
+
     public async Task<(decimal TotalIncome, decimal TotalExpense)> GetSummaryByDateRangeAsync(
         DateTime from,
         DateTime to,

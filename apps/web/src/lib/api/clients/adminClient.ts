@@ -9,6 +9,20 @@ import { z } from 'zod';
 
 import { getApiBase } from '../core/httpClient';
 import {
+  LedgerEntriesResponseSchema,
+  LedgerSummarySchema,
+  LedgerEntryDtoSchema,
+  CreateLedgerEntryResponseSchema,
+  type LedgerEntriesResponse,
+  type LedgerSummary,
+  type LedgerEntryDto,
+  type CreateLedgerEntryResponse,
+  type CreateLedgerEntryRequest,
+  type UpdateLedgerEntryRequest,
+  type GetLedgerEntriesParams,
+  type GetLedgerSummaryParams,
+} from '../schemas/financial-ledger.schemas';
+import {
   PublishGameResponseSchema,
   AuditLogListResultSchema,
   type AuditLogListResult,
@@ -1455,6 +1469,75 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async deleteBatchJob(id: string): Promise<void> {
       await httpClient.delete(`/api/v1/admin/batch-jobs/${id}`);
+    },
+
+    // ========== Financial Ledger (Issue #3722) ==========
+
+    /**
+     * Get paginated and filtered ledger entries
+     * GET /api/v1/admin/financial-ledger
+     */
+    async getLedgerEntries(params?: GetLedgerEntriesParams): Promise<LedgerEntriesResponse> {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+      if (params?.type !== undefined && params?.type !== null) searchParams.set('type', params.type.toString());
+      if (params?.category !== undefined && params?.category !== null) searchParams.set('category', params.category.toString());
+      if (params?.source !== undefined && params?.source !== null) searchParams.set('source', params.source.toString());
+      if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
+      if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
+
+      const qs = searchParams.toString();
+      const url = `/api/v1/admin/financial-ledger${qs ? `?${qs}` : ''}`;
+      const result = await httpClient.get(url, LedgerEntriesResponseSchema);
+      return result || { entries: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Get a single ledger entry by ID
+     * GET /api/v1/admin/financial-ledger/{id}
+     */
+    async getLedgerEntryById(id: string): Promise<LedgerEntryDto> {
+      const result = await httpClient.get(`/api/v1/admin/financial-ledger/${id}`, LedgerEntryDtoSchema);
+      if (!result) throw new Error('Ledger entry not found');
+      return result;
+    },
+
+    /**
+     * Get income/expense summary for a date range
+     * GET /api/v1/admin/financial-ledger/summary
+     */
+    async getLedgerSummary(params: GetLedgerSummaryParams): Promise<LedgerSummary> {
+      const qs = new URLSearchParams({
+        dateFrom: params.dateFrom,
+        dateTo: params.dateTo,
+      }).toString();
+      const result = await httpClient.get(`/api/v1/admin/financial-ledger/summary?${qs}`, LedgerSummarySchema);
+      return result || { totalIncome: 0, totalExpense: 0, netBalance: 0, from: params.dateFrom, to: params.dateTo };
+    },
+
+    /**
+     * Create a new manual ledger entry
+     * POST /api/v1/admin/financial-ledger
+     */
+    async createLedgerEntry(request: CreateLedgerEntryRequest): Promise<CreateLedgerEntryResponse> {
+      return httpClient.post('/api/v1/admin/financial-ledger', request, CreateLedgerEntryResponseSchema);
+    },
+
+    /**
+     * Update an existing ledger entry
+     * PUT /api/v1/admin/financial-ledger/{id}
+     */
+    async updateLedgerEntry(id: string, request: UpdateLedgerEntryRequest): Promise<void> {
+      await httpClient.put(`/api/v1/admin/financial-ledger/${id}`, request);
+    },
+
+    /**
+     * Delete a manual ledger entry
+     * DELETE /api/v1/admin/financial-ledger/{id}
+     */
+    async deleteLedgerEntry(id: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/financial-ledger/${id}`);
     },
   };
 }

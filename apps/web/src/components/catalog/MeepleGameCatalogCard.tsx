@@ -29,6 +29,7 @@ import { Users, Clock, BarChart2 } from 'lucide-react';
 import { toast } from '@/components/layout/Toast';
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardFlipData } from '@/components/ui/data-display/meeple-card-features/FlipCard';
+import { useEntityActions } from '@/hooks/use-entity-actions';
 import { useGameInLibraryStatus, useAddGameToLibrary } from '@/hooks/queries';
 import type { SharedGame, SharedGameDetail } from '@/lib/api';
 
@@ -108,6 +109,12 @@ export function MeepleGameCatalogCard({
 
   // Mutation for adding game to library
   const addMutation = useAddGameToLibrary();
+
+  // Issue #4040: Entity-specific quick actions
+  const entityActions = useEntityActions({
+    entity: 'game',
+    id: game.id,
+  });
 
   const handleAddToLibrary = async () => {
     setIsAdding(true);
@@ -197,6 +204,11 @@ export function MeepleGameCatalogCard({
       flipTrigger="button"
       className={className}
       data-testid={`catalog-game-card-${game.id}`}
+      // Issue #4040: New action system
+      entityQuickActions={entityActions.quickActions}
+      showInfoButton
+      infoHref={`/games/${game.id}`}
+      infoTooltip="Vai al dettaglio"
     />
   );
 }

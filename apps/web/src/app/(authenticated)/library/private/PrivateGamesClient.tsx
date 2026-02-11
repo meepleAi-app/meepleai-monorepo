@@ -27,7 +27,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { PrivateGameCard } from '@/components/library/PrivateGameCard';
-import { AddPrivateGameForm, type AddPrivateGameFormData } from '@/components/library/AddPrivateGameForm';
+import { type AddPrivateGameFormData } from '@/components/library/AddPrivateGameForm';
+import { AddPrivateGameWithBgg } from '@/components/library/AddPrivateGameWithBgg';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -143,11 +144,17 @@ export default function PrivateGamesClient() {
     loadGames({ page: newPage });
   };
 
-  const handleAddGame = async (data: AddPrivateGameFormData) => {
+  const handleAddGame = async (
+    data: AddPrivateGameFormData,
+    source: 'Manual' | 'Bgg' = 'Manual',
+    bggId?: number,
+    thumbnailUrl?: string,
+  ) => {
     setIsSubmitting(true);
     try {
       await api.library.addPrivateGame({
-        source: 'Manual',
+        source,
+        bggId: bggId ?? null,
         title: data.title,
         minPlayers: data.minPlayers,
         maxPlayers: data.maxPlayers,
@@ -157,6 +164,7 @@ export default function PrivateGamesClient() {
         complexityRating: data.complexityRating ?? null,
         description: data.description ?? null,
         imageUrl: data.imageUrl || null,
+        thumbnailUrl: thumbnailUrl ?? null,
       });
       setAddDialogOpen(false);
       await loadGames();
@@ -372,10 +380,10 @@ export default function PrivateGamesClient() {
           <DialogHeader>
             <DialogTitle>Add Private Game</DialogTitle>
             <DialogDescription>
-              Add a new game to your personal collection.
+              Search BoardGameGeek to auto-fill or enter details manually.
             </DialogDescription>
           </DialogHeader>
-          <AddPrivateGameForm
+          <AddPrivateGameWithBgg
             onSubmit={handleAddGame}
             onCancel={() => setAddDialogOpen(false)}
             isSubmitting={isSubmitting}

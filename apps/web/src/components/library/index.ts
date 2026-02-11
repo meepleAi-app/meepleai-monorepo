@@ -31,6 +31,10 @@ export { ViewModeToggle, type ViewModeToggleProps, type ViewMode } from './ViewM
 // Library Navigation Tabs (Issue #4055)
 export { LibraryNavTabs } from './LibraryNavTabs';
 
+// BGG Search Integration (Issue #4053)
+export { BggGameSearch, type BggGameSearchProps } from './BggGameSearch';
+export { AddPrivateGameWithBgg, type AddPrivateGameWithBggProps } from './AddPrivateGameWithBgg';
+
 // Game Detail Components (Issue #3513)
 export {
   GameDetailHero,

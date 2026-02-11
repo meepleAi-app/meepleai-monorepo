@@ -951,7 +951,7 @@ Peak = 512MB + (16MB × 150) = 2.9GB
 
 - [Docker Compose Configuration](../infra/docker-compose.yml)
 - [Test Crash Analysis](../docs/claudedocs/docker-memory-analysis-2026-01-19.md)
-- [Integration Test Optimization](./05-testing/backend/INTEGRATION_TEST_OPTIMIZATION.md)
+- [Integration Test Optimization](./05-testing/backend/integration-test-optimization.md)
 - [Architecture Overview](./01-architecture/README.md)
 
 ---

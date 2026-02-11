@@ -609,7 +609,7 @@ public async Task Update_WithStaleVersion_ThrowsConcurrencyException()
 
 - [Testing README](../README.md)
 - [Testcontainers Best Practices](./testcontainers-best-practices.md)
-- [Integration Test Optimization](./INTEGRATION_TEST_OPTIMIZATION.md)
+- [Integration Test Optimization](./integration-test-optimization.md)
 
 ---
 

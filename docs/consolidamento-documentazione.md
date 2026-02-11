@@ -14,7 +14,7 @@
 
 ### 2. Convenzioni Naming Inconsistenti
 ```
-UPPERCASE:    README.md, SKILLS-REFERENCE.md, INDEX.md
+UPPERCASE:    README.md, skills-reference.md, index.md
 kebab-case:   quick-start.md, git-workflow.md
 snake_case:   backend_testing.md, oauth_testing.md
 Mixed:        guida-visualcode.md (italiano)
@@ -45,7 +45,7 @@ Mixed:        guida-visualcode.md (italiano)
 - bounded-context-template.md
 
 ❌ Da convertire:
-- QUICK_START_GUIDE.md
+- quick-start-guide.md
 - backend_testing_patterns.md
 - OAuth_integration.md
 - BoundedContextTemplate.md
@@ -70,17 +70,17 @@ Mixed:        guida-visualcode.md (italiano)
    - (nota: `session-tracking.md` non esiste)
 
 2. **Rinominare** 11 file COMPLETE (rimuovere `-COMPLETE`):
-   - `administration-COMPLETE.md` → `administration.md`
-   - `authentication-COMPLETE.md` → `authentication.md`
-   - `document-processing-COMPLETE.md` → `document-processing.md`
-   - `game-management-COMPLETE.md` → `game-management.md`
-   - `knowledge-base-COMPLETE.md` → `knowledge-base.md`
-   - `session-tracking-COMPLETE.md` → `session-tracking.md`
-   - `shared-game-catalog-COMPLETE.md` → `shared-game-catalog.md`
-   - `system-configuration-COMPLETE.md` → `system-configuration.md`
-   - `user-library-COMPLETE.md` → `user-library.md`
-   - `user-notifications-COMPLETE.md` → `user-notifications.md`
-   - `workflow-integration-COMPLETE.md` → `workflow-integration.md`
+   - `administration.md` → `administration.md`
+   - `authentication.md` → `authentication.md`
+   - `document-processing.md` → `document-processing.md`
+   - `game-management.md` → `game-management.md`
+   - `knowledge-base.md` → `knowledge-base.md`
+   - `session-tracking.md` → `session-tracking.md`
+   - `shared-game-catalog.md` → `shared-game-catalog.md`
+   - `system-configuration.md` → `system-configuration.md`
+   - `user-library.md` → `user-library.md`
+   - `user-notifications.md` → `user-notifications.md`
+   - `workflow-integration.md` → `workflow-integration.md`
 
 3. **Aggiornare** riferimenti nel README.md
 
@@ -120,52 +120,52 @@ foreach ($file in $completeFiles) {
 **File da rinominare**:
 
 #### 02-development/
-- `AZUL_TEST_INSTRUCTIONS.md` → `azul-test-instructions.md`
-- `BGG_API_TOKEN_SETUP.md` → `bgg-api-token-setup.md`
-- `BRANCH_PROTECTION_SETUP.md` → `branch-protection-setup.md`
-- `QUICK_START_GUIDE.md` → `quick-start-guide.md`
-- `WORKFLOW_AUDIT_REPORT.md` → `workflow-audit-report.md`
+- `azul-test-instructions.md` → `azul-test-instructions.md`
+- `bgg-api-token-setup.md` → `bgg-api-token-setup.md`
+- `branch-protection-setup.md` → `branch-protection-setup.md`
+- `quick-start-guide.md` → `quick-start-guide.md`
+- `workflow-audit-report.md` → `workflow-audit-report.md`
 
 #### 02-development/monitoring/
-- `METRICS-LIMITATION.md` → `metrics-limitation.md`
+- `metrics-limitation.md` → `metrics-limitation.md`
 
 #### 04-deployment/
-- `CAPACITY_PLANNING.md` → `capacity-planning.md`
-- `NEW-GUIDES-INDEX.md` → `new-guides-index.md`
+- `capacity-planning.md` → `capacity-planning.md`
+- `new-guides-index.md` → `new-guides-index.md`
 
 #### 05-testing/
-- `CI_CD_PIPELINE.md` → `ci-cd-pipeline.md`
+- `ci-cd-pipeline.md` → `ci-cd-pipeline.md`
 
 #### 05-testing/backend/
-- `BACKEND_E2E_TESTING.md` → `backend-e2e-testing.md`
-- `INTEGRATION_TEST_OPTIMIZATION.md` → `integration-test-optimization.md`
+- `backend-e2-e-testing.md` → `backend-e2e-testing.md`
+- `integration-test-optimization.md` → `integration-test-optimization.md`
 
 #### 05-testing/e2e/
-- `BackgroundRulebookAnalysis-ManualTesting.md` → `background-rulebook-analysis-manual-testing.md`
-- `E2E_TEST_GUIDE.md` → `e2e-test-guide.md`
-- `RulebookAnalysis-ManualTesting.md` → `rulebook-analysis-manual-testing.md`
+- `background-rulebook-analysis-manual-testing.md` → `background-rulebook-analysis-manual-testing.md`
+- `e2-e-test-guide.md` → `e2e-test-guide.md`
+- `rulebook-analysis-manual-testing.md` → `rulebook-analysis-manual-testing.md`
 
 #### 07-frontend/epics/
-- `EPIC-GC-001-game-carousel-integration.md` → `epic-gc-001-game-carousel-integration.md`
-- `EPIC-GC-001-SUMMARY.md` → `epic-gc-001-summary.md`
+- `epic-gc-001-game-carousel-integration.md` → `epic-gc-001-game-carousel-integration.md`
+- `epic-gc-001-summary.md` → `epic-gc-001-summary.md`
 
 #### 04-features/admin-dashboard-enterprise/
-- `EPICS-AND-ISSUES.md` → `epics-and-issues.md`
-- `ISSUE-TRACKING.md` → `issue-tracking.md`
+- `epics-and-issues.md` → `epics-and-issues.md`
+- `issue-tracking.md` → `issue-tracking.md`
 - `ROADMAP.html` → `roadmap.html` (no change)
-- `SPECIFICATION.md` → `specification.md`
+- `specification.md` → `specification.md`
 
 #### 04-features/private-games-proposal/
-- `DESIGN.md` → `design.md`
-- `IMPLEMENTATION-PLAN.md` → `implementation-plan.md`
-- `USER-STORIES.md` → `user-stories.md`
+- `design.md` → `design.md`
+- `implementation-plan.md` → `implementation-plan.md`
+- `user-stories.md` → `user-stories.md`
 
 #### 09-bounded-contexts/
-- `DIAGRAM_SUMMARY.md` → `diagram-summary.md`
+- `diagram-summary.md` → `diagram-summary.md`
 
 #### Root docs/
-- `INDEX.md` → `index.md`
-- `SKILLS-REFERENCE.md` → `skills-reference.md`
+- `index.md` → `index.md`
+- `skills-reference.md` → `skills-reference.md`
 - `S3.md` → `s3.md` (già corretto)
 
 ### Script PowerShell Conversione Globale
@@ -272,7 +272,7 @@ foreach ($file in $files) {
 - [ ] **Fase 3**: Riorganizzare frontend docs
 - [ ] **Fase 4**: Rimuovere file obsoleti
 - [ ] **Fase 5**: Aggiornare tutti i link interni
-- [ ] **Fase 6**: Aggiornare INDEX.md root
+- [ ] **Fase 6**: Aggiornare index.md root
 
 ### Post-execution
 - [ ] Test build documentazione (se presente sistema build)
@@ -294,7 +294,7 @@ find docs -name "*.md" -exec markdown-link-check {} \;
 ```powershell
 # Cerca tutti i riferimenti a un file specifico
 Get-ChildItem -Path "docs" -Filter "*.md" -Recurse |
-    Select-String -Pattern "authentication-COMPLETE.md"
+    Select-String -Pattern "authentication.md"
 ```
 
 ---

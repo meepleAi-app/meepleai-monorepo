@@ -1334,7 +1334,7 @@ apps/api/src/Api/BoundedContexts/Authentication/
 
 ### Security Documentation
 - [OAuth Testing Guide](../05-testing/backend/oauth-testing.md) - OAuth flow testing patterns
-- [TOTP Vulnerability Analysis](../06-security/totp_vulnerability_analysis.md) - 2FA security review
+- [TOTP Vulnerability Analysis](../06-security/totp-vulnerability-analysis.md) - 2FA security review
 - [Secrets Management](../04-deployment/secrets-management.md) - OAuth client secrets
 
 ### API Reference

@@ -1660,7 +1660,7 @@ docker compose down postgres; docker volume rm meepleai_postgres_data; docker co
 - **Health Checks**: `docs/04-deployment/health-checks.md`
 - **Monitoring Setup**: `docs/04-deployment/monitoring/observability-validation-report.md`
 - **Testing Guide**: `docs/05-testing/README.md`
-- **E2E Test Guide**: `docs/05-testing/E2E_TEST_GUIDE.md`
+- **E2E Test Guide**: `docs/05-testing/e2-e-test-guide.md`
 - **Troubleshooting**: `docs/02-development/troubleshooting/`
 
 ### Script Utili

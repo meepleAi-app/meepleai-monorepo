@@ -99,7 +99,7 @@ docs/
 **Testing**
 - [Testing Philosophy](./05-testing/README.md#testing-philosophy)
 - [Testcontainers Best Practices](./05-testing/backend/testcontainers-best-practices.md)
-- [E2E Guide](./05-testing/e2e/E2E_TEST_GUIDE.md)
+- [E2E Guide](./05-testing/e2e/e2-e-test-guide.md)
 
 ---
 

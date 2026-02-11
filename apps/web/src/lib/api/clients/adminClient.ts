@@ -12,10 +12,12 @@ import {
   LedgerEntriesResponseSchema,
   LedgerSummarySchema,
   LedgerEntryDtoSchema,
+  LedgerDashboardDataSchema,
   CreateLedgerEntryResponseSchema,
   type LedgerEntriesResponse,
   type LedgerSummary,
   type LedgerEntryDto,
+  type LedgerDashboardData,
   type CreateLedgerEntryResponse,
   type CreateLedgerEntryRequest,
   type UpdateLedgerEntryRequest,
@@ -1538,6 +1540,16 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async deleteLedgerEntry(id: string): Promise<void> {
       await httpClient.delete(`/api/v1/admin/financial-ledger/${id}`);
+    },
+
+    /**
+     * Get dashboard visualization data (12-month revenue vs costs, category breakdown, KPIs)
+     * GET /api/v1/admin/financial-ledger/dashboard
+     */
+    async getLedgerDashboard(): Promise<LedgerDashboardData> {
+      const result = await httpClient.get('/api/v1/admin/financial-ledger/dashboard', LedgerDashboardDataSchema);
+      if (!result) throw new Error('Failed to load ledger dashboard data');
+      return result;
     },
   };
 }

@@ -256,7 +256,8 @@ function getSecurityHeaders(requestOrigin?: string) {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Required for Tailwind CSS + Google Fonts
       "img-src 'self' data: https:", // Allow images from data URIs and HTTPS
       "font-src 'self' data: https://fonts.gstatic.com", // Allow Google Fonts files
-      `connect-src ${connectSrcParts.join(' ')}`, // Allow API backend requests
+      `connect-src ${connectSrcParts.join(' ')} https://fonts.googleapis.com https://fonts.gstatic.com`, // Allow API + Google Fonts
+      "worker-src 'self' blob:", // Required for PDF.js web workers
       "frame-ancestors 'none'", // Prevent clickjacking
       "base-uri 'self'",
       "form-action 'self'",

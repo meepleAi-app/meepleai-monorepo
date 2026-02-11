@@ -13,6 +13,7 @@ import {
   MeepleCardSkeleton,
   type MeepleEntityType,
   type MeepleCardVariant,
+  type MeepleCardFlipData,
 } from '../meeple-card';
 
 // Mock Next.js Image component
@@ -21,6 +22,22 @@ vi.mock('next/image', () => ({
     // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt={alt} {...props} />
   ),
+}));
+
+// Mock framer-motion for FlipCard
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: React.forwardRef(
+      (
+        { children, animate, style, ...props }: React.PropsWithChildren<Record<string, unknown>>,
+        ref: React.Ref<HTMLDivElement>,
+      ) => (
+        <div ref={ref} style={style as React.CSSProperties} {...props}>
+          {children}
+        </div>
+      ),
+    ),
+  },
 }));
 
 describe('MeepleCard', () => {
@@ -448,5 +465,99 @@ describe('MeepleCardSkeleton', () => {
     rerender(<MeepleCardSkeleton variant="hero" />);
 
     expect(screen.getByTestId('meeple-card-skeleton')).toBeInTheDocument();
+  });
+});
+
+describe('MeepleCard Flip Integration', () => {
+  const defaultProps = {
+    entity: 'game' as MeepleEntityType,
+    title: 'Test Game',
+    subtitle: 'Test Publisher',
+  };
+
+  const flipData: MeepleCardFlipData = {
+    description: 'A great game about strategy.',
+    categories: [{ id: 'cat-1', name: 'Strategy' }],
+    designers: [{ id: 'des-1', name: 'Test Designer' }],
+  };
+
+  it('should NOT render flip container without flippable prop', () => {
+    render(<MeepleCard {...defaultProps} />);
+
+    expect(screen.queryByTestId('meeple-card-flip-container')).not.toBeInTheDocument();
+    expect(screen.getByTestId('meeple-card')).toBeInTheDocument();
+  });
+
+  it('should NOT render flip container without flipData', () => {
+    render(<MeepleCard {...defaultProps} flippable />);
+
+    expect(screen.queryByTestId('meeple-card-flip-container')).not.toBeInTheDocument();
+    expect(screen.getByTestId('meeple-card')).toBeInTheDocument();
+  });
+
+  it('should render flip container when flippable with flipData', () => {
+    render(
+      <MeepleCard {...defaultProps} flippable flipData={flipData} />,
+    );
+
+    expect(screen.getByTestId('meeple-card-flip-container')).toBeInTheDocument();
+    expect(screen.getByTestId('meeple-card-front')).toBeInTheDocument();
+    expect(screen.getByTestId('meeple-card-back')).toBeInTheDocument();
+  });
+
+  it('should still render card content inside flip front', () => {
+    render(
+      <MeepleCard {...defaultProps} flippable flipData={flipData} />,
+    );
+
+    expect(screen.getByText('Test Game')).toBeInTheDocument();
+  });
+
+  it('should show flip back content', () => {
+    render(
+      <MeepleCard {...defaultProps} flippable flipData={flipData} />,
+    );
+
+    expect(screen.getByText('A great game about strategy.')).toBeInTheDocument();
+  });
+
+  it('should show back categories', () => {
+    render(
+      <MeepleCard {...defaultProps} flippable flipData={flipData} />,
+    );
+
+    expect(screen.getByText('Strategy')).toBeInTheDocument();
+  });
+
+  it('should flip on click', () => {
+    const onFlip = vi.fn();
+    render(
+      <MeepleCard
+        {...defaultProps}
+        flippable
+        flipData={flipData}
+        onFlip={onFlip}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('meeple-card-flip-container'));
+    expect(onFlip).toHaveBeenCalledWith(true);
+  });
+
+  it('should not render HoverPreview when flippable (flip takes priority)', () => {
+    render(
+      <MeepleCard
+        {...defaultProps}
+        id="game-1"
+        flippable
+        flipData={flipData}
+        showPreview
+        onFetchPreview={vi.fn()}
+        previewData={{ description: 'Preview text' }}
+      />,
+    );
+
+    // FlipCard wrapper should be present, not HoverPreview
+    expect(screen.getByTestId('meeple-card-flip-container')).toBeInTheDocument();
   });
 });

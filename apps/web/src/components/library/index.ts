@@ -11,7 +11,6 @@ export { QuotaStickyHeader, type QuotaStickyHeaderProps } from './QuotaStickyHea
 export { LibraryFilters, type LibraryFiltersProps } from './LibraryFilters';
 export { EditNotesModal, type EditNotesModalProps } from './EditNotesModal';
 export { RemoveGameDialog, type RemoveGameDialogProps } from './RemoveGameDialog';
-export { UserGameCard } from './UserGameCard';
 export { MeepleLibraryGameCard, MeepleLibraryGameCardSkeleton } from './MeepleLibraryGameCard';
 export { AgentConfigModal } from './AgentConfigModal';
 export { PdfUploadModal } from './PdfUploadModal';

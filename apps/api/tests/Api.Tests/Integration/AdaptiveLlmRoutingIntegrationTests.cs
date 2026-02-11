@@ -15,6 +15,7 @@ using Api.Services.LlmClients;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MediatR;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
@@ -533,6 +534,8 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
 
         var mockModelConfigRepository = new Mock<IAiModelConfigurationRepository>();
 
+        var mockPublisher = new Mock<IPublisher>();
+
         return new HybridLlmService(
             clients,
             routingStrategy,
@@ -540,6 +543,7 @@ public class AdaptiveLlmRoutingIntegrationTests : IAsyncLifetime
             _serviceLogger,
             aiSettings,
             mockModelConfigRepository.Object,
+            mockPublisher.Object,
             healthCheckService: null);
     }
 

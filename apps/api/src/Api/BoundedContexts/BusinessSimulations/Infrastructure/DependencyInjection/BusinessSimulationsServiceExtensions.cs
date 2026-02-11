@@ -1,12 +1,17 @@
+using Api.BoundedContexts.BusinessSimulations.Application.Interfaces;
+using Api.BoundedContexts.BusinessSimulations.Application.Jobs;
 using Api.BoundedContexts.BusinessSimulations.Domain.Repositories;
 using Api.BoundedContexts.BusinessSimulations.Infrastructure.Persistence;
+using Api.BoundedContexts.BusinessSimulations.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Quartz;
 
 namespace Api.BoundedContexts.BusinessSimulations.Infrastructure.DependencyInjection;
 
 /// <summary>
 /// DI registration for BusinessSimulations bounded context.
 /// Issue #3720: Financial Ledger Data Model (Epic #3688)
+/// Issue #3721: Automatic Ledger Tracking (Epic #3688)
 /// </summary>
 internal static class BusinessSimulationsServiceExtensions
 {
@@ -14,6 +19,26 @@ internal static class BusinessSimulationsServiceExtensions
     {
         // Repositories
         services.AddScoped<ILedgerEntryRepository, LedgerEntryRepository>();
+
+        // Services (Issue #3721)
+        services.AddScoped<ILedgerTrackingService, LedgerTrackingService>();
+
+        // Quartz.NET job registration (Issue #3721)
+        services.AddQuartz(q =>
+        {
+            // Infrastructure cost tracking job - daily at 05:00 UTC
+            q.AddJob<InfrastructureCostTrackingJob>(opts => opts
+                .WithIdentity("infrastructure-cost-tracking-job", "business-simulations")
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob("infrastructure-cost-tracking-job", "business-simulations")
+                .WithIdentity("infrastructure-cost-tracking-trigger", "business-simulations")
+                .WithCronSchedule("0 0 5 * * ?")
+                .WithDescription("Runs daily at 05:00 UTC to aggregate previous day LLM API costs into financial ledger"));
+        });
+
+        // MediatR handlers (TokenUsageLedgerEventHandler) are auto-registered via assembly scanning
 
         return services;
     }

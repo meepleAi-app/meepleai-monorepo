@@ -36,11 +36,31 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
 
     public async Task<IReadOnlyList<PdfDocument>> FindByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default)
     {
+        // Direct match on pdf_documents.GameId
         var entities = await DbContext.PdfDocuments
             .AsNoTracking()
             .Where(p => p.GameId == gameId)
             .OrderByDescending(p => p.UploadedAt)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        // If no direct match, resolve via games.SharedGameId → games.Id → pdf_documents.GameId
+        if (entities.Count == 0)
+        {
+            var resolvedGameIds = await DbContext.Games
+                .AsNoTracking()
+                .Where(g => g.SharedGameId == gameId)
+                .Select(g => g.Id)
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+            if (resolvedGameIds.Count > 0)
+            {
+                entities = await DbContext.PdfDocuments
+                    .AsNoTracking()
+                    .Where(p => resolvedGameIds.Contains(p.GameId))
+                    .OrderByDescending(p => p.UploadedAt)
+                    .ToListAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
 
         return entities.Select(MapToDomain).ToList();
     }

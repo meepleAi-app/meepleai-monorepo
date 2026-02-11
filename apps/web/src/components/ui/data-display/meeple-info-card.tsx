@@ -10,7 +10,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import {
   BarChart3,
@@ -21,8 +21,10 @@ import {
   FileText,
   Globe,
   Link2,
+  Loader2,
   MessageSquare,
   Plus,
+  RefreshCw,
   Trophy,
   Upload,
 } from 'lucide-react';
@@ -30,6 +32,8 @@ import Link from 'next/link';
 
 import { PdfUploadModal } from '@/components/library/PdfUploadModal';
 import { Button } from '@/components/ui/primitives/button';
+import { api } from '@/lib/api';
+import type { PdfDocumentDto } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -98,6 +102,37 @@ const linkTypeIcons: Record<string, typeof Globe> = {
 };
 
 // ============================================================================
+// Helpers
+// ============================================================================
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+const documentTypeLabels: Record<string, string> = {
+  base: 'Regolamento',
+  expansion: 'Espansione',
+  errata: 'Errata',
+  homerule: 'Regole Casa',
+};
+
+const documentTypeColors: Record<string, string> = {
+  base: 'bg-[hsla(25,95%,38%,0.1)] text-[hsl(25,95%,38%)]',
+  expansion: 'bg-[hsla(168,76%,42%,0.1)] text-[hsl(168,76%,42%)]',
+  errata: 'bg-[hsla(262,83%,62%,0.1)] text-[hsl(262,83%,62%)]',
+  homerule: 'bg-[hsla(210,90%,50%,0.1)] text-[hsl(210,90%,50%)]',
+};
+
+const statusIndicators: Record<string, { label: string; color: string }> = {
+  pending: { label: 'In attesa', color: 'text-amber-600' },
+  processing: { label: 'Elaborazione...', color: 'text-blue-600' },
+  completed: { label: 'Completato', color: 'text-green-600' },
+  failed: { label: 'Errore', color: 'text-red-600' },
+};
+
+// ============================================================================
 // Component
 // ============================================================================
 
@@ -123,6 +158,33 @@ export function MeepleInfoCard({
   const [activeTab, setActiveTab] = useState<TabType>(availableTabs[0] || 'kb');
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
+  // Documents state
+  const [documents, setDocuments] = useState<PdfDocumentDto[]>([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [docsError, setDocsError] = useState<string | null>(null);
+
+  const fetchDocuments = useCallback(async () => {
+    if (!gameId) return;
+    setDocsLoading(true);
+    setDocsError(null);
+    try {
+      const docs = await api.documents.getDocumentsByGame(gameId);
+      setDocuments(docs);
+    } catch (err) {
+      console.error('[MeepleInfoCard] Failed to fetch documents:', err);
+      setDocsError('Impossibile caricare i documenti');
+    } finally {
+      setDocsLoading(false);
+    }
+  }, [gameId]);
+
+  // Fetch documents on mount
+  useEffect(() => {
+    if (showKnowledgeBase) {
+      fetchDocuments();
+    }
+  }, [showKnowledgeBase, fetchDocuments]);
+
   // Build social links from bggId
   const socialLinks = bggId
     ? [
@@ -134,26 +196,6 @@ export function MeepleInfoCard({
         },
       ]
     : [];
-
-  // Placeholder for documents - will come from API in future
-  const documents: Array<{
-    id: string;
-    name: string;
-    type: 'rulebook' | 'errata' | 'homerule';
-    version: string;
-  }> = [];
-
-  const documentTypeLabels: Record<string, string> = {
-    rulebook: 'Regolamento',
-    errata: 'Errata',
-    homerule: 'Regole Casa',
-  };
-
-  const documentTypeColors: Record<string, string> = {
-    rulebook: 'bg-[hsla(25,95%,38%,0.1)] text-[hsl(25,95%,38%)]',
-    errata: 'bg-[hsla(262,83%,62%,0.1)] text-[hsl(262,83%,62%)]',
-    homerule: 'bg-[hsla(210,90%,50%,0.1)] text-[hsl(210,90%,50%)]',
-  };
 
   return (
     <>
@@ -222,43 +264,90 @@ export function MeepleInfoCard({
                 )}
               </div>
 
-              {documents.length > 0 ? (
-                <div className="space-y-3">
-                  {documents.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center gap-3 rounded-xl bg-[rgba(45,42,38,0.04)] p-4 transition-colors hover:bg-[rgba(45,42,38,0.06)]"
-                    >
-                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
-                        <FileText className="h-5 w-5 text-[hsl(25,95%,38%)]" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-nunito text-sm font-medium text-[#2D2A26]">
-                          {doc.name}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={cn(
-                              'rounded px-1.5 py-0.5 text-xs font-medium',
-                              documentTypeColors[doc.type],
-                            )}
-                          >
-                            {documentTypeLabels[doc.type]}
-                          </span>
-                          <span className="text-xs text-[#9C958A]">v{doc.version}</span>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-[#6B665C] hover:text-[hsl(25,95%,38%)]"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+              {/* Loading state */}
+              {docsLoading && documents.length === 0 && (
+                <div className="flex flex-1 flex-col items-center justify-center text-center">
+                  <Loader2 className="mb-3 h-8 w-8 animate-spin text-[hsl(25,95%,38%)]" />
+                  <p className="font-nunito text-sm text-[#6B665C]">Caricamento documenti...</p>
                 </div>
-              ) : (
+              )}
+
+              {/* Error state */}
+              {docsError && !docsLoading && (
+                <div className="flex flex-1 flex-col items-center justify-center text-center">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50">
+                    <FileText className="h-8 w-8 text-red-400" />
+                  </div>
+                  <p className="mb-3 font-nunito text-sm text-red-600">{docsError}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchDocuments}
+                    className="text-[#6B665C]"
+                  >
+                    <RefreshCw className="mr-1.5 h-4 w-4" />
+                    Riprova
+                  </Button>
+                </div>
+              )}
+
+              {/* Documents list */}
+              {!docsLoading && !docsError && documents.length > 0 && (
+                <div className="space-y-3">
+                  {documents.map((doc) => {
+                    const status = statusIndicators[doc.processingStatus] || statusIndicators.pending;
+                    return (
+                      <div
+                        key={doc.id}
+                        className="flex items-center gap-3 rounded-xl bg-[rgba(45,42,38,0.04)] p-4 transition-colors hover:bg-[rgba(45,42,38,0.06)]"
+                      >
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+                          <FileText className="h-5 w-5 text-[hsl(25,95%,38%)]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-nunito text-sm font-medium text-[#2D2A26]">
+                            {doc.fileName}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                'rounded px-1.5 py-0.5 text-xs font-medium',
+                                documentTypeColors[doc.documentType] || documentTypeColors.base,
+                              )}
+                            >
+                              {documentTypeLabels[doc.documentType] || 'Documento'}
+                            </span>
+                            <span className="text-xs text-[#9C958A]">
+                              {formatFileSize(doc.fileSizeBytes)}
+                            </span>
+                            {doc.processingStatus !== 'completed' && (
+                              <span className={cn('text-xs font-medium', status.color)}>
+                                {status.label}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <a
+                          href={api.pdf.getPdfDownloadUrl(doc.id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-[#6B665C] hover:text-[hsl(25,95%,38%)]"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!docsLoading && !docsError && documents.length === 0 && (
                 <div className="flex flex-1 flex-col items-center justify-center text-center">
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[hsla(25,95%,38%,0.1)]">
                     <FileText className="h-8 w-8 text-[hsl(25,95%,38%)]" />
@@ -469,6 +558,7 @@ export function MeepleInfoCard({
           onClose={() => setIsPdfModalOpen(false)}
           gameId={gameId}
           gameTitle={gameTitle}
+          onUploadSuccess={fetchDocuments}
         />
       )}
     </>

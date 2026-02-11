@@ -7,9 +7,8 @@ import { createErrorContext } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
-// Note: CSS imports commented out due to module resolution issues in Next.js 15.5.4
-// import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-// import 'react-pdf/dist/esm/Page/TextLayer.css';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
 // Configure PDF.js worker - use version query to bust service worker cache
 if (typeof window !== 'undefined') {
@@ -48,10 +47,26 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
   const [jumpToPageInput, setJumpToPageInput] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(true);
+  const [fileData, setFileData] = useState<{ data: Uint8Array } | null>(null);
 
   const mainCanvasRef = useRef<HTMLDivElement>(null);
   const thumbnailListRef = useRef<ListRef | null>(null);
-  const fileUrl = useMemo(() => URL.createObjectURL(file), [file]);
+
+  // Read file into ArrayBuffer to avoid blob URL issues with service worker
+  useEffect(() => {
+    let cancelled = false;
+    file.arrayBuffer().then((buffer) => {
+      if (!cancelled) {
+        setFileData({ data: new Uint8Array(buffer) });
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setError('Failed to read the PDF file.');
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [file]);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -65,13 +80,6 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  // Cleanup URL on unmount
-  useEffect(() => {
-    return () => {
-      URL.revokeObjectURL(fileUrl);
-    };
-  }, [fileUrl]);
 
   // Update page width based on container
   useEffect(() => {
@@ -231,14 +239,12 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
               isActive ? 'border-[3px] border-blue-500' : 'border border-gray-300'
             )}
           >
-            <Document file={fileUrl} onLoadError={() => {}}>
-              <Page
-                pageNumber={pageNumber}
-                width={THUMBNAIL_WIDTH}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-              />
-            </Document>
+            <Page
+              pageNumber={pageNumber}
+              width={THUMBNAIL_WIDTH}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+            />
             <div
               className={cn(
                 'text-center p-1 text-xs',
@@ -253,7 +259,7 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
         </div>
       );
     },
-    [currentPage, fileUrl, handleThumbnailClick]
+    [currentPage, handleThumbnailClick]
   );
 
   if (error) {
@@ -274,6 +280,19 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
             Close Preview
           </button>
         )}
+      </div>
+    );
+  }
+
+  if (!fileData) {
+    return (
+      <div
+        data-testid="pdf-loading"
+        className="flex items-center justify-center h-[600px] border border-gray-300 rounded-md bg-gray-50"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="text-gray-600">Loading PDF data...</div>
       </div>
     );
   }
@@ -377,23 +396,26 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
           <div
             data-testid="thumbnail-sidebar"
             className={cn(
-              'border-gray-300 bg-white overflow-hidden',
+              'border-gray-300 bg-white flex flex-col',
               isMobile
                 ? 'w-full absolute z-10 h-full'
-                : `w-[${THUMBNAIL_WIDTH + 32}px] relative z-[1] border-r`
+                : 'relative z-[1] border-r'
             )}
+            style={!isMobile ? { width: THUMBNAIL_WIDTH + 32 } : undefined}
             role="navigation"
             aria-label="Page thumbnails"
           >
-            <List
-              listRef={thumbnailListRef}
-              defaultHeight={isMobile ? window.innerHeight - 120 : 600 - 60}
-              rowCount={numPages}
-              rowHeight={THUMBNAIL_HEIGHT + 16}
-              rowComponent={renderThumbnail}
-              // @ts-expect-error - react-window v2 rowProps type incompatibility
-              rowProps={{}}
-            />
+            <Document file={file} className="flex-1 min-h-0" onLoadError={() => {}}>
+              <List
+                listRef={thumbnailListRef}
+                defaultHeight={isMobile ? window.innerHeight - 120 : 540}
+                rowCount={numPages}
+                rowHeight={THUMBNAIL_HEIGHT + 16}
+                rowComponent={renderThumbnail}
+                // @ts-expect-error - react-window v2 rowProps type incompatibility
+                rowProps={{}}
+              />
+            </Document>
           </div>
         )}
 
@@ -413,7 +435,7 @@ export function PdfPreview({ file, onClose }: PdfPreviewProps) {
 
             <div className="flex justify-center" style={{ minHeight: loading ? 0 : 'auto' }}>
               <Document
-                file={fileUrl}
+                file={fileData}
                 onLoadSuccess={onDocumentLoadSuccess}
                 onLoadError={onDocumentLoadError}
                 loading=""

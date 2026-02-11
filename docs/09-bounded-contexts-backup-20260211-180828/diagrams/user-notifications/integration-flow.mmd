@@ -1,0 +1,64 @@
+graph TB
+    subgraph UN["🔔 UserNotifications Context"]
+        NotifCreate[Notification Creation]
+        NotifQuery[Notification Queries]
+        EmailSvc[Email Service]
+        BgJobs[Background Jobs]
+    end
+
+    subgraph SGC["🌐 SharedGameCatalog Context"]
+        ShareReqEvents[Share Request Events]
+        BadgeEvents[Badge Events]
+    end
+
+    subgraph Admin["📊 Administration Context"]
+        UserEvents[User Management Events]
+        AlertEvents[Alert Events]
+    end
+
+    subgraph DocProc["📄 DocumentProcessing Context"]
+        PdfEvents[PDF Processing Events]
+    end
+
+    subgraph UL["📚 UserLibrary Context"]
+        LibraryEvents[Library Events]
+    end
+
+    subgraph External["📧 External Services"]
+        SMTP[SMTP Server]
+        FCM[Firebase Cloud Messaging]
+    end
+
+    %% Event-Driven Communication - Inbound
+    ShareReqEvents -->|ShareRequestApprovedEvent| NotifCreate
+    ShareReqEvents -->|ShareRequestRejectedEvent| NotifCreate
+    ShareReqEvents -->|ChangesRequestedEvent| NotifCreate
+    BadgeEvents -->|BadgeEarnedEvent| NotifCreate
+    UserEvents -->|UserSuspendedEvent| NotifCreate
+    UserEvents -->|UserUnsuspendedEvent| NotifCreate
+    AlertEvents -->|AlertTriggeredEvent| NotifCreate
+    PdfEvents -->|ProcessingFailedEvent| NotifCreate
+    LibraryEvents -->|ShareLinkAccessedEvent| NotifCreate
+
+    %% External Communication
+    EmailSvc -.->|Send emails| SMTP
+    EmailSvc -.->|Send push future| FCM
+
+    %% Background Jobs
+    BgJobs -->|Daily digest| EmailSvc
+    BgJobs -->|Cleanup old notifications| NotifQuery
+
+    %% Styling
+    classDef unStyle fill:#fce4ec,stroke:#e91e63,stroke-width:2px
+    classDef sgcStyle fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    classDef adminStyle fill:#fff4e6,stroke:#ff9800,stroke-width:2px
+    classDef docStyle fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    classDef ulStyle fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef extStyle fill:#fafafa,stroke:#757575,stroke-width:2px
+
+    class NotifCreate,NotifQuery,EmailSvc,BgJobs unStyle
+    class ShareReqEvents,BadgeEvents sgcStyle
+    class UserEvents,AlertEvents adminStyle
+    class PdfEvents docStyle
+    class LibraryEvents ulStyle
+    class SMTP,FCM extStyle

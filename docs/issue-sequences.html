@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeepleAI - Open Issues Roadmap (2026-02-11)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Nunito', sans-serif; }
+        .glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); }
+        .epic-card {
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .epic-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+        .issue-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .issue-item:hover { background: #f9fafb; }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+            margin: 2px;
+        }
+        .badge-high { background: #fee2e2; color: #991b1b; }
+        .badge-medium { background: #fef3c7; color: #92400e; }
+        .badge-low { background: #e0e7ff; color: #3730a3; }
+        .badge-frontend { background: #dbeafe; color: #1e40af; }
+        .badge-backend { background: #fce7f3; color: #9f1239; }
+        .badge-ai { background: #dcfce7; color: #166534; }
+        .badge-testing { background: #fef3c7; color: #78350f; }
+        .badge-infra { background: #fef08a; color: #713f12; }
+        .section-card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 min-h-screen p-8">
+    <div class="max-w-7xl mx-auto">
+        <header class="glass rounded-2xl p-8 mb-8 text-center">
+            <h1 class="text-4xl font-bold font-quicksand mb-2">🎮 MeepleAI - Open Issues Roadmap</h1>
+            <p class="text-gray-600">Updated: 2026-02-11</p>
+            <div class="mt-4 flex justify-center gap-4">
+                <div class="bg-purple-100 px-4 py-2 rounded-lg">
+                    <span class="text-2xl font-bold text-purple-800">12</span>
+                    <span class="text-sm text-purple-600 ml-2">Epics</span>
+                </div>
+                <div class="bg-blue-100 px-4 py-2 rounded-lg">
+                    <span class="text-2xl font-bold text-blue-800">48</span>
+                    <span class="text-sm text-blue-600 ml-2">Sub-issues</span>
+                </div>
+                <div class="bg-green-100 px-4 py-2 rounded-lg">
+                    <span class="text-2xl font-bold text-green-800">60</span>
+                    <span class="text-sm text-green-600 ml-2">Total Open</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Epics Section -->
+        <section class="mb-8">
+            <h2 class="text-3xl font-bold font-quicksand mb-6 text-gray-800">🎯 Active Epics</h2>
+
+            <!-- Epic: Zero-Cost CI/CD Infrastructure -->
+            <div class="epic-card">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-2xl font-bold mb-2">#2967 - Zero-Cost CI/CD Infrastructure</h3>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <span class="badge badge-infra">infrastructure</span>
+                        </div>
+                        <div class="text-white/90 space-y-2">
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2968" class="hover:underline">#2968 - Oracle Cloud Setup & VM Provisioning</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2969" class="hover:underline">#2969 - GitHub Actions Runner Installation</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2970" class="hover:underline">#2970 - Workflow Migration to Self-Hosted</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2972" class="hover:underline">#2972 - Performance Monitoring</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2973" class="hover:underline">#2973 - Cost Validation</a></div>
+                        </div>
+                    </div>
+                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2967" target="_blank"
+                       class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition text-white">
+                        View on GitHub →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Epic: Multi-Agent Game AI System -->
+            <div class="epic-card">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-2xl font-bold mb-2">#3490 - Multi-Agent Game AI System (Tutor, Arbitro, Decisore)</h3>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <span class="badge badge-high">High Priority</span>
+                            <span class="badge badge-ai">AI/RAG</span>
+                            <span class="badge badge-backend">Backend</span>
+                        </div>
+                        <div class="text-white/90 space-y-2">
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3763" class="hover:underline">#3763 - Arbitro Agent Testing</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3874" class="hover:underline">#3874 - Arbitro Performance Benchmark</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3769" class="hover:underline">#3769 - Decisore: Strategic Analysis Engine</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3770" class="hover:underline">#3770 - Decisore: Move Suggestion Algorithm</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3771" class="hover:underline">#3771 - Decisore: Multi-Model Ensemble</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3772" class="hover:underline">#3772 - Decisore: Game State Parser</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3773" class="hover:underline">#3773 - Decisore: REST API Endpoint</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3774" class="hover:underline">#3774 - Decisore: Performance Tuning</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3775" class="hover:underline">#3775 - Decisore: Beta Testing</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3776" class="hover:underline">#3776 - Multi-Agent Orchestration</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3777" class="hover:underline">#3777 - Agent Switching Logic</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3778" class="hover:underline">#3778 - Unified Dashboard UI</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3779" class="hover:underline">#3779 - E2E Testing Suite</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3780" class="hover:underline">#3780 - Complete Documentation</a></div>
+                        </div>
+                    </div>
+                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3490" target="_blank"
+                       class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition text-white">
+                        View on GitHub →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Epic: Infrastructure Enhancements -->
+            <div class="epic-card">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-2xl font-bold mb-2">#3366 - Infrastructure Enhancements (Observability & Testing)</h3>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <span class="badge badge-medium">Medium Priority</span>
+                            <span class="badge badge-infra">Infrastructure</span>
+                        </div>
+                        <div class="text-white/90 space-y-2">
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3367" class="hover:underline">#3367 - Log Aggregation System</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3368" class="hover:underline">#3368 - k6 Load Testing Infrastructure</a></div>
+                        </div>
+                    </div>
+                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3366" target="_blank"
+                       class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition text-white">
+                        View on GitHub →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Epic: Advanced RAG Strategies -->
+            <div class="epic-card">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-2xl font-bold mb-2">#3356 - Advanced RAG Strategies (9 Variants)</h3>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <span class="badge badge-low">Low Priority</span>
+                            <span class="badge badge-ai">AI/RAG</span>
+                            <span class="badge badge-backend">Backend</span>
+                        </div>
+                        <div class="text-white/90 space-y-2">
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3358" class="hover:underline">#3358 - Iterative RAG Strategy</a></div>
+                        </div>
+                    </div>
+                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3356" target="_blank"
+                       class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition text-white">
+                        View on GitHub →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Epic: Advanced Features - AI, Admin & Collaboration -->
+            <div class="epic-card">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-2xl font-bold mb-2">#3348 - Advanced Features (AI, Admin & Collaboration)</h3>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <span class="badge badge-medium">Medium Priority</span>
+                            <span class="badge badge-frontend">Frontend</span>
+                            <span class="badge badge-backend">Backend</span>
+                        </div>
+                        <div class="text-white/90 space-y-2">
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3355" class="hover:underline">#3355 - Version History and Comparison UI</a></div>
+                        </div>
+                    </div>
+                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3348" target="_blank"
+                       class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition text-white">
+                        View on GitHub →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Epic: Game Session Toolkit Phase 2 -->
+            <div class="epic-card">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-2xl font-bold mb-2">#3341 - Game Session Toolkit Phase 2 (Advanced Tools)</h3>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <span class="badge badge-medium">Medium Priority</span>
+                            <span class="badge badge-frontend">Frontend</span>
+                            <span class="badge badge-backend">Backend</span>
+                        </div>
+                    </div>
+                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3341" target="_blank"
+                       class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition text-white">
+                        View on GitHub →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Epic: Gamification & Advanced Dashboard -->
+            <div class="epic-card">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-2xl font-bold mb-2">#3320 - Gamification & Advanced Dashboard Features</h3>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <span class="badge badge-medium">Medium Priority</span>
+                            <span class="badge badge-frontend">Frontend</span>
+                        </div>
+                    </div>
+                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3320" target="_blank"
+                       class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition text-white">
+                        View on GitHub →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Epic: Business & Simulations -->
+            <div class="epic-card">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-2xl font-bold mb-2">#3688 - Business & Simulations [Admin Enterprise]</h3>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <span class="badge badge-medium">Medium Priority</span>
+                        </div>
+                        <div class="text-white/90 space-y-2">
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3708" class="hover:underline">#3708 - AgentDefinition Data Model</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3709" class="hover:underline">#3709 - Agent Builder UI</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3710" class="hover:underline">#3710 - Agent Playground</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3711" class="hover:underline">#3711 - Strategy Editor</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3712" class="hover:underline">#3712 - Visual Pipeline Builder</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3713" class="hover:underline">#3713 - Agent Catalog & Usage Stats</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3714" class="hover:underline">#3714 - Chat Analytics</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3715" class="hover:underline">#3715 - PDF Analytics</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3716" class="hover:underline">#3716 - Model Performance Tracking</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3717" class="hover:underline">#3717 - A/B Testing Framework</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3718" class="hover:underline">#3718 - Testing - AI Platform</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3809" class="hover:underline">#3809 - Agent Builder Form & CRUD</a></div>
+                        </div>
+                    </div>
+                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3688" target="_blank"
+                       class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition text-white">
+                        View on GitHub →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Epic: AI Insights & Recommendations -->
+            <div class="epic-card">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-2xl font-bold mb-2">#3902 - AI Insights & Recommendations</h3>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <span class="badge badge-high">High Priority</span>
+                            <span class="badge badge-ai">AI/RAG</span>
+                            <span class="badge badge-frontend">Frontend</span>
+                            <span class="badge badge-backend">Backend</span>
+                        </div>
+                        <div class="text-white/90 space-y-2">
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3916" class="hover:underline">#3916 - AI Insights Service (RAG)</a></div>
+                            <div><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3919" class="hover:underline">#3919 - AI Insights Widget Component</a></div>
+                        </div>
+                    </div>
+                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3902" target="_blank"
+                       class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition text-white">
+                        View on GitHub →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Epic: Gamification & Advanced Features -->
+            <div class="epic-card">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-2xl font-bold mb-2">#3906 - Gamification & Advanced Features</h3>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <span class="badge badge-medium">Medium Priority</span>
+                            <span class="badge badge-frontend">Frontend</span>
+                            <span class="badge badge-backend">Backend</span>
+                        </div>
+                    </div>
+                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3906" target="_blank"
+                       class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition text-white">
+                        View on GitHub →
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Standalone Issues Section -->
+        <section>
+            <h2 class="text-3xl font-bold font-quicksand mb-6 text-gray-800">📋 Standalone Issues</h2>
+            <div class="section-card">
+
+                <div class="issue-item">
+                    <div class="flex-1">
+                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4047" target="_blank"
+                           class="font-semibold text-gray-800 hover:text-purple-600">
+                            #4047 - Integrate MeepleCard in Dashboard pages
+                        </a>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            <span class="badge badge-frontend">frontend</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="issue-item">
+                    <div class="flex-1">
+                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4045" target="_blank"
+                           class="font-semibold text-gray-800 hover:text-purple-600">
+                            #4045 - Integrate MeepleCard in Library pages
+                        </a>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            <span class="badge badge-frontend">frontend</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="issue-item">
+                    <div class="flex-1">
+                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4041" target="_blank"
+                           class="font-semibold text-gray-800 hover:text-purple-600">
+                            #4041 - Remove legacy GameCard components
+                        </a>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            <span class="badge badge-frontend">frontend</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="issue-item">
+                    <div class="flex-1">
+                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4040" target="_blank"
+                           class="font-semibold text-gray-800 hover:text-purple-600">
+                            #4040 - Integrate MeepleCard system across all pages
+                        </a>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            <span class="badge badge-frontend">frontend</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="issue-item">
+                    <div class="flex-1">
+                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3987" target="_blank"
+                           class="font-semibold text-gray-800 hover:text-purple-600">
+                            #3987 - Vector Embedding Query Performance Validation
+                        </a>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            <span class="badge badge-testing">testing</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="issue-item">
+                    <div class="flex-1">
+                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3986" target="_blank"
+                           class="font-semibold text-gray-800 hover:text-purple-600">
+                            #3986 - Migration Rollback Testing
+                        </a>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            <span class="badge badge-testing">testing</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="issue-item">
+                    <div class="flex-1">
+                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3894" target="_blank"
+                           class="font-semibold text-gray-800 hover:text-purple-600">
+                            #3894 - EntityListView - Test Coverage & Polish
+                        </a>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            <span class="badge badge-testing">testing</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="issue-item">
+                    <div class="flex-1">
+                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3120" target="_blank"
+                           class="font-semibold text-gray-800 hover:text-purple-600">
+                            #3120 - Private Games & Catalog Proposal System
+                        </a>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            <span class="badge badge-frontend">frontend</span>
+                            <span class="badge badge-backend">backend</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="issue-item">
+                    <div class="flex-1">
+                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3082" target="_blank"
+                           class="font-semibold text-gray-800 hover:text-purple-600">
+                            #3082 - Implement Missing E2E Test Flows (50 flows)
+                        </a>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            <span class="badge badge-high">High Priority</span>
+                            <span class="badge badge-testing">testing</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="issue-item">
+                    <div class="flex-1">
+                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2974" target="_blank"
+                           class="font-semibold text-gray-800 hover:text-purple-600">
+                            #2974 - Setup Monitoring (Prometheus + Grafana)
+                        </a>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            <span class="badge badge-infra">infrastructure</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="issue-item">
+                    <div class="flex-1">
+                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2975" target="_blank"
+                           class="font-semibold text-gray-800 hover:text-purple-600">
+                            #2975 - Document Troubleshooting Procedures
+                        </a>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            <span class="badge badge-infra">infrastructure</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="issue-item">
+                    <div class="flex-1">
+                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2976" target="_blank"
+                           class="font-semibold text-gray-800 hover:text-purple-600">
+                            #2976 - Create Maintenance Schedule Automation
+                        </a>
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            <span class="badge badge-infra">infrastructure</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <footer class="mt-8 text-center text-gray-600 text-sm">
+            <p>Generated from GitHub Issues API | MeepleAI Monorepo | Private Repository</p>
+            <p class="mt-2">Last updated: 2026-02-11 at 17:30 UTC</p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,52 @@
+sequenceDiagram
+    participant Client
+    participant Endpoint
+    participant Mediator
+    participant Validator
+    participant Handler
+    participant Domain as N8NConfiguration
+    participant Encryption
+    participant DB as Database
+    participant Events
+
+    Client->>Endpoint: POST /api/v1/admin/workflows/n8n
+    Note right of Client: {name, baseUrl, apiKey, webhookUrl}
+
+    Endpoint->>Endpoint: Extract payload
+    Endpoint->>Endpoint: Create CreateN8NConfigCommand
+
+    Endpoint->>Mediator: Send(command)
+
+    Mediator->>Validator: Validate(command)
+    Validator->>Validator: Check baseUrl is valid HTTP/HTTPS
+    Validator->>Validator: Check webhookUrl format
+    Validator->>Validator: Verify admin role
+    Validator->>Mediator: Validation passed ✓
+
+    Mediator->>Handler: Handle(command)
+
+    Handler->>DB: Check if active config exists
+    DB-->>Handler: Existing active config found
+
+    Handler->>Encryption: EncryptApiKey(apiKey)
+    Encryption->>Encryption: AES-256 encryption
+    Encryption-->>Handler: Encrypted key
+
+    Handler->>Domain: N8NConfiguration.Create(name, baseUrl, encryptedKey, webhookUrl, userId)
+    Domain->>Domain: Set IsActive = false (manual activation)
+    Domain->>Domain: CreatedAt = UtcNow
+    Domain->>Events: Raise N8NConfigurationCreatedEvent
+
+    Handler->>DB: Deactivate previous config (if setting as active)
+    Handler->>DB: SaveAsync(configuration)
+    DB-->>Handler: Configuration saved ✓
+
+    Handler->>Events: Publish N8NConfigurationCreatedEvent
+
+    Handler-->>Mediator: N8NConfigurationDto
+    Note over Handler: API key masked in response
+
+    Mediator-->>Endpoint: N8NConfigurationDto
+
+    Endpoint-->>Client: 201 Created
+    Note left of Client: {id, name, baseUrl, apiKey: "***"}

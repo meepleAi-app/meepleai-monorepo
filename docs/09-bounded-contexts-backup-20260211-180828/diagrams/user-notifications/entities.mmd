@@ -1,0 +1,30 @@
+erDiagram
+    User ||--o{ Notification : "receives"
+    NotificationType ||--o{ Notification : "categorizes"
+
+    Notification {
+        Guid Id PK
+        Guid UserId FK
+        string Type
+        NotificationSeverity Severity
+        string Title
+        string Message
+        string Link
+        string Metadata
+        bool IsRead
+        DateTime CreatedAt
+        DateTime ReadAt
+    }
+
+    NotificationType {
+        string Value PK
+        string Category
+        NotificationSeverity DefaultSeverity
+        bool RequiresEmail
+    }
+
+    User {
+        Guid Id PK
+        string Email
+        string DisplayName
+    }

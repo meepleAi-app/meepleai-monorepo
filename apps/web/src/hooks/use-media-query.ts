@@ -20,7 +20,10 @@
 import { useEffect, useState } from 'react';
 
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false);
+  const [matches, setMatches] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(query).matches;
+  });
 
   useEffect(() => {
     // SSR safety: window.matchMedia only available in browser
@@ -43,7 +46,7 @@ export function useMediaQuery(query: string): boolean {
     if (mediaQuery.addEventListener) {
       mediaQuery.addEventListener('change', handler);
     } else {
-      // @ts-expect-error - Legacy API
+      // @ts-ignore - Legacy API
       mediaQuery.addListener(handler);
     }
 
@@ -51,7 +54,7 @@ export function useMediaQuery(query: string): boolean {
       if (mediaQuery.removeEventListener) {
         mediaQuery.removeEventListener('change', handler);
       } else {
-        // @ts-expect-error - Legacy API
+        // @ts-ignore - Legacy API
         mediaQuery.removeListener(handler);
       }
     };

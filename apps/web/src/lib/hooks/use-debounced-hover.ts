@@ -8,7 +8,7 @@ import { useState, useCallback, useRef } from 'react';
 
 export function useDebouncedHover(delay: number = 100) {
   const [isHovered, setIsHovered] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const handleMouseEnter = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);

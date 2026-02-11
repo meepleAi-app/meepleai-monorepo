@@ -22,6 +22,7 @@ internal static class BusinessSimulationsServiceExtensions
         // Repositories
         services.AddScoped<ILedgerEntryRepository, LedgerEntryRepository>();
         services.AddScoped<ICostScenarioRepository, CostScenarioRepository>();
+        services.AddScoped<IResourceForecastRepository, ResourceForecastRepository>();
 
         // Services (Issue #3721)
         services.AddScoped<ILedgerTrackingService, LedgerTrackingService>();

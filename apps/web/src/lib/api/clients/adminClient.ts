@@ -132,6 +132,17 @@ import {
   type GetLedgerSummaryParams,
   type ExportLedgerParams,
 } from '../schemas/financial-ledger.schemas';
+import {
+  ResourceForecastEstimationResultSchema,
+  ResourceForecastsResponseSchema,
+  SaveForecastResponseSchema,
+  type ResourceForecastEstimationResult,
+  type ResourceForecastsResponse,
+  type SaveForecastResponse,
+  type EstimateResourceForecastRequest,
+  type SaveResourceForecastRequest,
+  type GetResourceForecastsParams,
+} from '../schemas/resource-forecast.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -1621,6 +1632,58 @@ export function createAdminClient({ httpClient }: CreateAdminClientParams) {
      */
     async deleteCostScenario(id: string): Promise<void> {
       await httpClient.delete(`/api/v1/admin/cost-calculator/scenarios/${id}`);
+    },
+
+    // ========== Resource Forecast Methods (Issue #3726) ==========
+
+    /**
+     * Estimate resource forecast based on current metrics and growth parameters
+     * POST /api/v1/admin/resource-forecast/estimate
+     */
+    async estimateResourceForecast(
+      request: EstimateResourceForecastRequest,
+    ): Promise<ResourceForecastEstimationResult> {
+      return httpClient.post(
+        '/api/v1/admin/resource-forecast/estimate',
+        request,
+        ResourceForecastEstimationResultSchema,
+      );
+    },
+
+    /**
+     * Save a resource forecast scenario
+     * POST /api/v1/admin/resource-forecast/scenarios
+     */
+    async saveResourceForecast(request: SaveResourceForecastRequest): Promise<SaveForecastResponse> {
+      return httpClient.post(
+        '/api/v1/admin/resource-forecast/scenarios',
+        request,
+        SaveForecastResponseSchema,
+      );
+    },
+
+    /**
+     * Get saved resource forecast scenarios for the current user
+     * GET /api/v1/admin/resource-forecast/scenarios
+     */
+    async getResourceForecasts(
+      params?: GetResourceForecastsParams,
+    ): Promise<ResourceForecastsResponse> {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+      const qs = searchParams.toString();
+      const url = `/api/v1/admin/resource-forecast/scenarios${qs ? `?${qs}` : ''}`;
+      const result = await httpClient.get(url, ResourceForecastsResponseSchema);
+      return result || { items: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Delete a saved resource forecast scenario
+     * DELETE /api/v1/admin/resource-forecast/scenarios/{id}
+     */
+    async deleteResourceForecast(id: string): Promise<void> {
+      await httpClient.delete(`/api/v1/admin/resource-forecast/scenarios/${id}`);
     },
   };
 }

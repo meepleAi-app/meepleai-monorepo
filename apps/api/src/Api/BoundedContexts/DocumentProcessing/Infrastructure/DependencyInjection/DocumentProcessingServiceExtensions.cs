@@ -5,6 +5,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.Infrastructure.BackgroundServices;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -101,6 +102,12 @@ internal static class DocumentProcessingServiceExtensions
             // Fallback: Docnet extractor
             services.AddScoped<IPdfTextExtractor, DocnetPdfTextExtractor>();
         }
+
+        // Shared PDF processing pipeline (used by recovery job and future handler consolidation)
+        services.AddScoped<IPdfProcessingPipelineService, PdfProcessingPipelineService>();
+
+        // Stale PDF recovery: runs once on startup to reprocess stuck PDFs
+        services.AddHostedService<StalePdfRecoveryService>();
 
         return services;
     }

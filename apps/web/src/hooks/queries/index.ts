@@ -31,6 +31,7 @@ export {
   useDashboardData,
   useDashboardAnalytics,
   useDashboardActivity,
+  useAppUsageStats,
   adminKeys,
 } from './useDashboardData';
 

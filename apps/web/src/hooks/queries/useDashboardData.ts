@@ -13,7 +13,7 @@
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 
-import { api, type DashboardStats, type RecentActivityDto, type InfrastructureDetails } from '@/lib/api';
+import { api, type DashboardStats, type RecentActivityDto, type InfrastructureDetails, type AppUsageStats } from '@/lib/api';
 
 /**
  * Polling configuration
@@ -32,6 +32,8 @@ export const adminKeys = {
   activity: (params?: { limit?: number; since?: Date }) =>
     [...adminKeys.dashboard(), 'activity', params] as const,
   infrastructure: () => [...adminKeys.dashboard(), 'infrastructure'] as const,
+  usageStats: (params?: { period?: '7d' | '30d' | '90d' }) =>
+    [...adminKeys.dashboard(), 'usage-stats', params] as const,
 };
 
 /**
@@ -140,6 +142,42 @@ export function useInfrastructureDetails(
     queryKey: adminKeys.infrastructure(),
     queryFn: async (): Promise<InfrastructureDetails | null> => {
       return api.admin.getInfrastructureDetails();
+    },
+    enabled,
+    refetchInterval: enablePolling ? POLLING_INTERVAL_MS : false,
+    refetchIntervalInBackground: !pauseOnHidden,
+    refetchOnWindowFocus: true,
+    staleTime: POLLING_INTERVAL_MS,
+    retry: (failureCount, error) => {
+      if (error.message?.includes('401') || error.message?.includes('403')) {
+        return false;
+      }
+      return failureCount < MAX_CONSECUTIVE_FAILURES;
+    },
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+}
+
+/**
+ * Hook to fetch app usage stats (Issue #3719)
+ *
+ * Provides DAU/MAU, session duration, retention cohorts,
+ * feature adoption funnel, and geo distribution.
+ *
+ * @param period Time period for stats (default: '30d')
+ * @param options Query options
+ * @returns UseQueryResult with AppUsageStats
+ */
+export function useAppUsageStats(
+  period: '7d' | '30d' | '90d' = '30d',
+  options: DashboardQueryOptions = {}
+): UseQueryResult<AppUsageStats | null, Error> {
+  const { enablePolling = true, pauseOnHidden = true, enabled = true } = options;
+
+  return useQuery({
+    queryKey: adminKeys.usageStats({ period }),
+    queryFn: async (): Promise<AppUsageStats | null> => {
+      return api.admin.getUsageStats({ period });
     },
     enabled,
     refetchInterval: enablePolling ? POLLING_INTERVAL_MS : false,

@@ -692,4 +692,59 @@ export const CreateBatchJobResponseSchema = z.object({
 });
 export type CreateBatchJobResponse = z.infer<typeof CreateBatchJobResponseSchema>;
 
+// ========== App Usage Stats (Issue #3719) ==========
+
+export const EngagementMetricsSchema = z.object({
+  dau: z.number().nonnegative(),
+  mau: z.number().nonnegative(),
+  dauMauRatio: z.number().min(0).max(1),
+  avgSessionDurationMinutes: z.number().nonnegative(),
+  totalSessions: z.number().nonnegative(),
+  bounceRate: z.number().min(0).max(1),
+});
+export type EngagementMetrics = z.infer<typeof EngagementMetricsSchema>;
+
+export const RetentionCohortSchema = z.object({
+  cohortDate: z.string(),
+  cohortSize: z.number().nonnegative(),
+  day1: z.number().min(0).max(100),
+  day7: z.number().min(0).max(100),
+  day14: z.number().min(0).max(100),
+  day30: z.number().min(0).max(100),
+});
+export type RetentionCohort = z.infer<typeof RetentionCohortSchema>;
+
+export const FeatureAdoptionItemSchema = z.object({
+  featureName: z.string(),
+  uniqueUsers: z.number().nonnegative(),
+  totalUsages: z.number().nonnegative(),
+  adoptionRate: z.number().min(0).max(100),
+});
+export type FeatureAdoptionItem = z.infer<typeof FeatureAdoptionItemSchema>;
+
+export const GeoDistributionItemSchema = z.object({
+  country: z.string(),
+  countryCode: z.string(),
+  users: z.number().nonnegative(),
+  percentage: z.number().min(0).max(100),
+});
+export type GeoDistributionItem = z.infer<typeof GeoDistributionItemSchema>;
+
+export const SessionDurationBucketSchema = z.object({
+  label: z.string(),
+  count: z.number().nonnegative(),
+  percentage: z.number().min(0).max(100),
+});
+export type SessionDurationBucket = z.infer<typeof SessionDurationBucketSchema>;
+
+export const AppUsageStatsSchema = z.object({
+  engagement: EngagementMetricsSchema,
+  retentionCohorts: z.array(RetentionCohortSchema),
+  featureAdoption: z.array(FeatureAdoptionItemSchema),
+  geoDistribution: z.array(GeoDistributionItemSchema),
+  sessionDurationDistribution: z.array(SessionDurationBucketSchema),
+  generatedAt: z.string(),
+});
+export type AppUsageStats = z.infer<typeof AppUsageStatsSchema>;
+
 // Note: PagedResult is defined in config.schemas.ts and re-exported via index.ts

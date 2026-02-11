@@ -10,6 +10,7 @@
  * - Activity Feed Timeline
  * - Wishlist Highlights (Issue #3920)
  * - Catalog Trending (Issue #3921)
+ * - Achievements Widget (Issue #3924)
  * - Chat History
  * - Quick Actions Grid
  * - Responsive Layout: Mobile (1-col), Tablet (2-col), Desktop (3-col asymmetric)
@@ -21,6 +22,7 @@
  *
  * @see Epic #3901 - Dashboard Hub Core (MVP)
  * @see Issue #3921 - Catalog Trending Widget
+ * @see Issue #3924 - Achievements Widget Component
  * @see docs/07-frontend/dashboard-overview-hub.md
  */
 
@@ -40,6 +42,7 @@ import {
 } from '@/lib/adapters/dashboardAdapter';
 import { useReducedMotion } from '@/lib/animations';
 
+import { AchievementsWidget } from './AchievementsWidget';
 import { ActiveSessionsWidget } from './ActiveSessionsWidget';
 import { ActivityFeed } from './ActivityFeed';
 import { CatalogTrending } from './CatalogTrending';
@@ -357,6 +360,19 @@ export function DashboardHub() {
             )}
           >
             <WishlistHighlights />
+          </SimpleErrorBoundary>
+        </LazySection>
+      </motion.section>
+
+      {/* Achievements Widget - Sidebar (1 col, lazy loaded) - Issue #3924 */}
+      <motion.section className="md:col-span-1 lg:col-span-1" variants={variants}>
+        <LazySection fallbackHeight="h-80">
+          <SimpleErrorBoundary
+            fallback={({ resetErrorBoundary }) => (
+              <SectionErrorFallback label="Achievements" onRetry={resetErrorBoundary} />
+            )}
+          >
+            <AchievementsWidget />
           </SimpleErrorBoundary>
         </LazySection>
       </motion.section>

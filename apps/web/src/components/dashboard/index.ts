@@ -27,6 +27,7 @@ export { ChatHistorySection, type ChatThread, type ChatHistorySectionProps } fro
 export { QuickActionsGrid, type QuickAction as QuickActionGridItem, type QuickActionsGridProps } from './QuickActionsGrid';
 export { ActivityFeed, type ActivityEvent, type ActivityEventType, type ActivityFeedProps } from './ActivityFeed';
 export { WishlistHighlights, type WishlistHighlightItem, type WishlistPriorityLevel, type WishlistHighlightsProps } from './WishlistHighlights';
+export { AchievementsWidget, type Achievement, type AchievementCategory, type AchievementRarity, type NextAchievementProgress, type AchievementsWidgetProps } from './AchievementsWidget';
 
 // Legacy components (Issue #1834: UI-007)
 export { QuickActions, type QuickActionsProps, type QuickAction } from './QuickActions';

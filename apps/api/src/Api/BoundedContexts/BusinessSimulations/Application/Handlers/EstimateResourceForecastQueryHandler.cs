@@ -59,13 +59,13 @@ internal sealed class EstimateResourceForecastQueryHandler
             var projectedDbGb = query.CurrentDbSizeGb + (additionalDbMb / 1024m);
 
             var projectedDailyTokens = query.CurrentDailyTokens +
-                ((long)newUsers * query.TokensPerUserPerDay);
+                (newUsers * query.TokensPerUserPerDay);
 
             var additionalCacheMb = newUsers * query.CachePerUserMb;
             var projectedCacheMb = query.CurrentCacheMb + additionalCacheMb;
 
             var projectedVectors = query.CurrentVectorEntries +
-                ((long)newUsers * query.VectorsPerUser);
+                (newUsers * query.VectorsPerUser);
 
             var monthlyCost = CalculateMonthlyCost(
                 projectedDbGb, projectedDailyTokens, projectedCacheMb, projectedVectors);

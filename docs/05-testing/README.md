@@ -49,7 +49,7 @@ Latency <5s Rate:   100%       - ✅ PASS (target: ≥95%)
 
 **E2E** (Playwright):
 - **Target**: 50 critical user flows
-- **Current**: [See E2E Test Guide](../05-testing/e2e/E2E_TEST_GUIDE.md)
+- **Current**: [See E2E Test Guide](../05-testing/e2e/e2-e-test-guide.md)
 - **Issue**: [#3082 - E2E Test Flows](https://github.com/your-org/meepleai-monorepo/issues/3082)
 
 ---

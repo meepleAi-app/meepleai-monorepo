@@ -955,9 +955,9 @@ SELECT * FROM games LIMIT 10;
 - **Documentation**: [docs/05-testing/README.md](../README.md)
 - **Issues**: [GitHub Issues](https://github.com/DegrassiAaron/meepleai-monorepo/issues)
 - **Related Docs**:
-  - [E2E Test Guide (Frontend)](../e2e/E2E_TEST_GUIDE.md)
+  - [E2E Test Guide (Frontend)](../e2e/e2-e-test-guide.md)
   - [Testcontainers Best Practices](testcontainers-best-practices.md)
-  - [Integration Test Optimization](INTEGRATION_TEST_OPTIMIZATION.md)
+  - [Integration Test Optimization](integration-test-optimization.md)
 
 ---
 

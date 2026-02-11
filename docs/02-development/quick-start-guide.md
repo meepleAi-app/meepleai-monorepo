@@ -292,7 +292,7 @@ git push origin main-staging
 ## 📚 Full Documentation
 
 - **Complete Workflow**: `docs/02-development/git-workflow.md`
-- **Branch Protection Setup**: `docs/02-development/BRANCH_PROTECTION_SETUP.md`
+- **Branch Protection Setup**: `docs/02-development/branch-protection-setup.md`
 - **Helper Script Source**: `scripts/git-workflow.sh`
 
 ---

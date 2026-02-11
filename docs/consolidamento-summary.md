@@ -24,7 +24,7 @@
 
 Esempio:
 - authentication.md (323 righe)
-- authentication-COMPLETE.md (1422 righe)
+- authentication.md (1422 righe)
 + authentication.md (1422 righe - versione completa)
 ```
 
@@ -33,10 +33,10 @@ Esempio:
 Files da rinominare: ~35
 
 Esempi:
-- AZUL_TEST_INSTRUCTIONS.md → azul-test-instructions.md
-- BGG_API_TOKEN_SETUP.md → bgg-api-token-setup.md
-- EPIC-GC-001-SUMMARY.md → epic-gc-001-summary.md
-- BackgroundRulebookAnalysis-ManualTesting.md → background-rulebook-analysis-manual-testing.md
+- azul-test-instructions.md → azul-test-instructions.md
+- bgg-api-token-setup.md → bgg-api-token-setup.md
+- epic-gc-001-summary.md → epic-gc-001-summary.md
+- background-rulebook-analysis-manual-testing.md → background-rulebook-analysis-manual-testing.md
 
 Eccezioni (invariati):
 ✓ README.md
@@ -112,7 +112,7 @@ cd D:\Repositories\meepleai-monorepo-dev
 ### 5. Aggiornamenti Manuali (1-2 ore)
 - Aggiorna link rotti segnalati dalla verifica
 - Unifica directory frontend (opzionale)
-- Aggiorna `docs/INDEX.md` e `docs/README.md`
+- Aggiorna `docs/index.md` e `docs/README.md`
 
 ### 6. Commit & PR
 ```powershell
@@ -153,7 +153,7 @@ git push -u origin docs/consolidation-review
 
 ### Documentazione
 - `docs/consolidamento-documentazione.md` - Piano dettagliato completo
-- `docs/CONSOLIDAMENTO-SUMMARY.md` - Questo documento
+- `docs/CONSOLIDAMENTO-summary.md` - Questo documento
 - `scripts/CONSOLIDAMENTO-README.md` - Guida esecuzione script
 
 ### Script PowerShell
@@ -179,7 +179,7 @@ git push -u origin docs/consolidation-review
 ### Post-esecuzione Manuale
 - [ ] Aggiorna link rotti (da output verifica)
 - [ ] (Opzionale) Unifica frontend docs
-- [ ] Aggiorna `docs/INDEX.md`
+- [ ] Aggiorna `docs/index.md`
 - [ ] Aggiorna `docs/README.md`
 - [ ] Commit e PR
 

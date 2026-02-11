@@ -556,7 +556,7 @@ Selection checkboxes, count indicator, and bulk approve/reject buttons in action
 - [Share Game Guide](./share-game-guide.md) - User guide for contributing games
 - [Share Requests Admin Guide](./share-requests-admin-guide.md) - Managing user share requests
 - [Admin Dashboard Guide](../02-development/admin-dashboard-guide.md) - General admin dashboard usage
-- [BGG API Token Setup](../02-development/BGG_API_TOKEN_SETUP.md) - Configuring BGG integration
+- [BGG API Token Setup](../02-development/bgg-api-token-setup.md) - Configuring BGG integration
 
 ---
 

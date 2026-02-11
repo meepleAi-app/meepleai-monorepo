@@ -2,7 +2,7 @@
 
 **Issue**: #3794 - Complete Bounded Context API Documentation
 **Strategy**: Sequential Approach - Week 1-2 Focus
-**Reference**: `authentication-COMPLETE.md` (example implementation)
+**Reference**: `authentication.md` (example implementation)
 
 ---
 
@@ -61,7 +61,7 @@ Documentare **completamente** tutti i commands/queries implementati nei 10 bound
 - Related Documentation (ADRs, altri contexts)
 
 ### 2. Reference Implementation
-**File**: `docs/09-bounded-contexts/authentication-COMPLETE.md`
+**File**: `docs/09-bounded-contexts/authentication.md`
 
 **Cosa guardare**:
 - ✅ Formato tabelle commands/queries (column order, info completeness)
@@ -122,7 +122,7 @@ Documentare **completamente** tutti i commands/queries implementati nei 10 bound
 
 4. **Commands Detail**:
    - For each command: Purpose, Request schema (JSON), Response schema (JSON), Validation rules, Side effects, Error codes, Domain events
-   - Use authentication-COMPLETE.md as formatting example
+   - Use authentication.md as formatting example
 
 5. **Queries Table**:
    - Same as commands (name, method, endpoint, auth, query params, response)
@@ -234,7 +234,7 @@ Create `docs/templates/common-patterns.md` for reusable snippets:
 - Rate limiting format
 
 ### Questions & Support
-- **Template Questions**: Check authentication-COMPLETE.md reference
+- **Template Questions**: Check authentication.md reference
 - **Technical Questions**: Ask context domain expert or check code
 - **Formatting Questions**: Ask peer reviewer or use template
 
@@ -255,4 +255,4 @@ Create `docs/templates/common-patterns.md` for reusable snippets:
 
 ---
 
-**Questions?** Refer to authentication-COMPLETE.md or ask in team channel.
+**Questions?** Refer to authentication.md or ask in team channel.

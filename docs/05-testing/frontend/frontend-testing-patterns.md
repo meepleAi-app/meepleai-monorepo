@@ -1407,7 +1407,7 @@ See [Windows Vitest Troubleshooting Guide](./windows-vitest-troubleshooting.md) 
 
 ## Related Documentation
 
-- [E2E Test Guide](./e2e/E2E_TEST_GUIDE.md)
+- [E2E Test Guide](./e2e/e2-e-test-guide.md)
 - [Playwright Best Practices](./e2e/e2e-selector-best-practices.md)
 - [Backend Testing](./backend/testcontainers-best-practices.md)
 - [Week 4 Component Plan](./frontend/week4-frontend-component-test-plan.md)

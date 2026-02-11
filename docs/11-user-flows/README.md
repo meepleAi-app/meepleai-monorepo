@@ -87,7 +87,7 @@ Each flow document contains:
 ## Testing & Gap Analysis
 
 ### Test Coverage Documentation
-- **[COMPLETE-TEST-FLOWS.md](./COMPLETE-TEST-FLOWS.md)** - Comprehensive list of all 105 user flows for E2E testing
+- **[complete-test-flows.md](./complete-test-flows.md)** - Comprehensive list of all 105 user flows for E2E testing
 - **[Gap Analysis](./gap-analysis.md)** - Implementation status and missing features
 
 ### Test Flow Categories
@@ -121,7 +121,7 @@ Must be tested before any release:
 - [Product Specification](../01-architecture/overview/product-specification.md)
 - [API Reference](../03-api/README.md)
 - [Bounded Contexts](../09-bounded-contexts/)
-- [E2E Test Guide](../05-testing/e2e/E2E_TEST_GUIDE.md)
+- [E2E Test Guide](../05-testing/e2e/e2-e-test-guide.md)
 
 ---
 

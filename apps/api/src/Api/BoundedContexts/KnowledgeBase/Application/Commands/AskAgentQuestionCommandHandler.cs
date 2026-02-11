@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
@@ -19,6 +20,7 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
     private readonly IEmbeddingService _embeddingService;
     private readonly ILlmService _llmService;
     private readonly ILlmCostLogRepository _costLogRepository;
+    private readonly IPdfDocumentRepository _pdfDocumentRepository;
     private readonly ILogger<AskAgentQuestionCommandHandler> _logger;
 
     public AskAgentQuestionCommandHandler(
@@ -26,12 +28,14 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         IEmbeddingService embeddingService,
         ILlmService llmService,
         ILlmCostLogRepository costLogRepository,
+        IPdfDocumentRepository pdfDocumentRepository,
         ILogger<AskAgentQuestionCommandHandler> logger)
     {
         _qdrantService = qdrantService ?? throw new ArgumentNullException(nameof(qdrantService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
+        _pdfDocumentRepository = pdfDocumentRepository ?? throw new ArgumentNullException(nameof(pdfDocumentRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -43,6 +47,25 @@ internal class AskAgentQuestionCommandHandler : IRequestHandler<AskAgentQuestion
         _logger.LogInformation(
             "Processing agent question with strategy={Strategy}, question={Question}",
             request.Strategy, request.Question);
+
+        // Step 0: Check if documents are still being processed
+        if (request.GameId.HasValue)
+        {
+            var documents = await _pdfDocumentRepository.FindByGameIdAsync(request.GameId.Value, cancellationToken).ConfigureAwait(false);
+            if (documents.Count > 0)
+            {
+                var notCompleted = documents.Count(d =>
+                    !string.Equals(d.ProcessingStatus, "completed", StringComparison.OrdinalIgnoreCase));
+                if (notCompleted > 0)
+                {
+                    _logger.LogInformation(
+                        "Documents not ready for game {GameId}: {Processing}/{Total} still processing",
+                        request.GameId, notCompleted, documents.Count);
+                    throw new InvalidOperationException(
+                        $"{notCompleted} of {documents.Count} documents are still being processed. Please wait for processing to complete before asking questions.");
+                }
+            }
+        }
 
         // Initialize tracking
         var tokenUsage = new TokenUsageDto

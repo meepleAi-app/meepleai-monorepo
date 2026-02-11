@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -30,6 +31,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
     private readonly QualityTrackingDomainService _qualityTrackingService;
     private readonly ChatContextDomainService _chatContextService;
     private readonly IChatThreadRepository _chatThreadRepository;
+    private readonly IPdfDocumentRepository _pdfDocumentRepository;
     private readonly ILlmService _llmService;
     private readonly IAiResponseCacheService _cache;
     private readonly IPromptTemplateService _promptTemplateService;
@@ -41,6 +43,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         QualityTrackingDomainService qualityTrackingService,
         ChatContextDomainService chatContextService,
         IChatThreadRepository chatThreadRepository,
+        IPdfDocumentRepository pdfDocumentRepository,
         ILlmService llmService,
         IAiResponseCacheService cache,
         IPromptTemplateService promptTemplateService,
@@ -51,6 +54,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         _qualityTrackingService = qualityTrackingService ?? throw new ArgumentNullException(nameof(qualityTrackingService));
         _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
+        _pdfDocumentRepository = pdfDocumentRepository ?? throw new ArgumentNullException(nameof(pdfDocumentRepository));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
@@ -130,6 +134,23 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
     {
         var startTime = _timeProvider.GetUtcNow();
         var cacheKey = _cache.GenerateQaCacheKey(query.GameId, query.Query);
+
+        // Step 0: Check if documents are still being processed
+        var gameGuid = Guid.Parse(query.GameId);
+        var documentIdsList = query.DocumentIds?.ToList();
+        var (allReady, processingCount, totalCount) = await CheckDocumentsReadyAsync(
+            gameGuid, documentIdsList, cancellationToken).ConfigureAwait(false);
+
+        if (!allReady)
+        {
+            _logger.LogInformation(
+                "Documents not ready for game {GameId}: {Processing}/{Total} still processing",
+                query.GameId, processingCount, totalCount);
+            yield return CreateEvent(StreamingEventType.Error, new StreamingError(
+                $"{processingCount} of {totalCount} documents are still being processed. Please wait for processing to complete before asking questions.",
+                "DOCUMENT_PROCESSING"));
+            yield break;
+        }
 
         // Step 1: Perform search and build citations
         yield return CreateEvent(StreamingEventType.StateUpdate,
@@ -378,6 +399,20 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
 
         return overallConfidence;
+    }
+
+    private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
+        Guid gameId, List<Guid>? documentIds, CancellationToken ct)
+    {
+        var documents = documentIds?.Count > 0
+            ? await _pdfDocumentRepository.GetByIdsAsync(documentIds, ct).ConfigureAwait(false)
+            : await _pdfDocumentRepository.FindByGameIdAsync(gameId, ct).ConfigureAwait(false);
+
+        if (documents.Count == 0) return (true, 0, 0);
+
+        var notCompleted = documents.Count(d =>
+            !string.Equals(d.ProcessingStatus, "completed", StringComparison.OrdinalIgnoreCase));
+        return (notCompleted == 0, notCompleted, documents.Count);
     }
 
     private RagStreamingEvent CreateEvent(StreamingEventType type, object? data)

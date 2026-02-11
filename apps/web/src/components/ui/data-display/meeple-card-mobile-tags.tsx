@@ -43,11 +43,11 @@ export function MobileTagDisplay({
   scrollDebounce = 100,
   className,
 }: MobileTagsProps) {
-  const isMobile = useMediaQuery('(max-width: 768px)' as const);
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const lastScrollY = useRef(0);
-  const scrollTimeout = useRef<NodeJS.Timeout>();
+  const scrollTimeout = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Scroll collapse behavior (mobile only, debounced)
   useEffect(() => {

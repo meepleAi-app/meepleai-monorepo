@@ -157,11 +157,29 @@
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             cursor: pointer;
             transition: all 0.3s ease;
+            position: relative;
         }
 
         .issue-card:hover {
             transform: translateX(5px);
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .issue-link {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: #667eea;
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.8rem;
+            transition: background 0.3s ease;
+        }
+
+        .issue-link:hover {
+            background: #5568d3;
         }
 
         .issue-header {
@@ -394,8 +412,9 @@
                         </h3>
 
                         <div class="issue-card" onclick="toggleDetails(this)">
+                            <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4073" target="_blank" class="issue-link" onclick="event.stopPropagation()">View →</a>
                             <div class="issue-header">
-                                <span class="issue-number">#4073</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4073" target="_blank" style="color: #667eea; text-decoration: none;">#4073</a></span>
                                 <div>
                                     <span class="epic-badge">Epic #1</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -416,7 +435,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4076</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4076" target="_blank" style="color: #667eea; text-decoration: none;">#4076</a></span>
                                 <div>
                                     <span class="epic-badge">Epic #1</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -437,7 +456,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4075</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4075" target="_blank" style="color: #667eea; text-decoration: none;">#4075</a></span>
                                 <div>
                                     <span class="epic-badge">Epic #1</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -457,7 +476,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4072</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4072" target="_blank" style="color: #667eea; text-decoration: none;">#4072</a></span>
                                 <div>
                                     <span class="epic-badge">Epic #1</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -477,7 +496,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4080</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4080" target="_blank" style="color: #667eea; text-decoration: none;">#4080</a></span>
                                 <div>
                                     <span class="epic-badge">Epic #1</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -497,7 +516,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4081</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4081" target="_blank" style="color: #667eea; text-decoration: none;">#4081</a></span>
                                 <div>
                                     <span class="epic-badge">Epic #1</span>
                                     <span class="priority priority-high">HIGH</span>
@@ -517,7 +536,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4114</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4114" target="_blank" style="color: #667eea; text-decoration: none;">#4114</a></span>
                                 <div>
                                     <span class="epic-badge">Gap</span>
                                     <span class="priority priority-critical">CRITICAL</span>
@@ -546,7 +565,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4079</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4079" target="_blank" style="color: #667eea; text-decoration: none;">#4079</a></span>
                                 <div>
                                     <span class="epic-badge">Epic #1</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -566,7 +585,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4078</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4078" target="_blank" style="color: #667eea; text-decoration: none;">#4078</a></span>
                                 <div>
                                     <span class="epic-badge">Epic #1</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -586,7 +605,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4077</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4077" target="_blank" style="color: #667eea; text-decoration: none;">#4077</a></span>
                                 <div>
                                     <span class="epic-badge">Epic #1</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -606,7 +625,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4074</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4074" target="_blank" style="color: #667eea; text-decoration: none;">#4074</a></span>
                                 <div>
                                     <span class="epic-badge">Epic #1</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -626,7 +645,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4113</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4113" target="_blank" style="color: #667eea; text-decoration: none;">#4113</a></span>
                                 <div>
                                     <span class="epic-badge">Gap</span>
                                     <span class="priority priority-critical">CRITICAL</span>
@@ -647,7 +666,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4115</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4115" target="_blank" style="color: #667eea; text-decoration: none;">#4115</a></span>
                                 <div>
                                     <span class="epic-badge">Gap</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -729,7 +748,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4113</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4113" target="_blank" style="color: #667eea; text-decoration: none;">#4113</a></span>
                                 <div>
                                     <span class="epic-badge">Gap</span>
                                     <span class="priority priority-critical">CRITICAL</span>
@@ -782,7 +801,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4117</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4117" target="_blank" style="color: #667eea; text-decoration: none;">#4117</a></span>
                                 <div>
                                     <span class="epic-badge">Gap</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -875,7 +894,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4117</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4117" target="_blank" style="color: #667eea; text-decoration: none;">#4117</a></span>
                                 <div>
                                     <span class="epic-badge">Gap</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -928,7 +947,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4116</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4116" target="_blank" style="color: #667eea; text-decoration: none;">#4116</a></span>
                                 <div>
                                     <span class="epic-badge">Gap</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -1005,7 +1024,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4116</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4116" target="_blank" style="color: #667eea; text-decoration: none;">#4116</a></span>
                                 <div>
                                     <span class="epic-badge">Gap</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -1025,7 +1044,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4115</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4115" target="_blank" style="color: #667eea; text-decoration: none;">#4115</a></span>
                                 <div>
                                     <span class="epic-badge">Gap</span>
                                     <span class="priority priority-medium">MEDIUM</span>
@@ -1072,7 +1091,7 @@
 
                         <div class="issue-card" onclick="toggleDetails(this)">
                             <div class="issue-header">
-                                <span class="issue-number">#4118</span>
+                                <span class="issue-number"><a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4118" target="_blank" style="color: #667eea; text-decoration: none;">#4118</a></span>
                                 <div>
                                     <span class="epic-badge">Gap</span>
                                     <span class="priority priority-medium">MEDIUM</span>

@@ -122,9 +122,9 @@ describe('enterprise-navigation config', () => {
       expect(section.tabs).toHaveLength(4);
     });
 
-    it('Business has 3 tabs', () => {
+    it('Business has 4 tabs', () => {
       const section = getEnterpriseSectionById('business')!;
-      expect(section.tabs).toHaveLength(3);
+      expect(section.tabs).toHaveLength(4);
     });
 
     it('Simulations has 3 tabs', () => {

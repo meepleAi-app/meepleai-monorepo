@@ -29,3 +29,4 @@ export * from './chatSessionsClient'; // ISSUE-3484
 export * from './testResultsClient'; // ISSUE-3379
 export * from './tierStrategyClient'; // ISSUE-3440
 export * from './dashboardClient'; // ISSUE-3316, ISSUE-3319
+export * from './knowledgeBaseClient'; // ISSUE-4065

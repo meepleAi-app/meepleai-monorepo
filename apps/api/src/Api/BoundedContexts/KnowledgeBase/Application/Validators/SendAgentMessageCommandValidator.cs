@@ -4,12 +4,12 @@ using FluentValidation;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Validators;
 
 /// <summary>
-/// Validator for ChatWithAgentCommand
+/// Validator for SendAgentMessageCommand
 /// Issue #4126
 /// </summary>
-internal sealed class ChatWithAgentCommandValidator : AbstractValidator<ChatWithAgentCommand>
+internal sealed class SendAgentMessageCommandValidator : AbstractValidator<SendAgentMessageCommand>
 {
-    public ChatWithAgentCommandValidator()
+    public SendAgentMessageCommandValidator()
     {
         RuleFor(x => x.AgentId)
             .NotEmpty()

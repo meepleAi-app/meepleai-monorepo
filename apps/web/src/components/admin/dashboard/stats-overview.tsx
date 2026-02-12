@@ -13,18 +13,15 @@ export function StatsOverview() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Block Header with Navigation */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-1 w-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full" />
-          <h2 className="font-quicksand font-bold text-2xl text-slate-900">
-            Collection Overview
-          </h2>
-        </div>
+        <h2 className="text-xl font-semibold text-foreground">
+          Collection Overview
+        </h2>
         <Link
           href="/admin/collection/overview"
-          className="font-nunito text-sm text-amber-600 hover:text-amber-700 font-semibold"
+          className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
         >
           View Details →
         </Link>

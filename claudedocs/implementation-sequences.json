@@ -1,0 +1,398 @@
+{
+  "sequences": [
+    {
+      "name": "Sequence A: Frontend-Focused UX Enhancement",
+      "description": "User-facing features prioritizing UI/UX improvements, AI insights, and dashboard enhancements",
+      "totalStoryPoints": 42,
+      "totalIssues": 12,
+      "estimatedWeeks": "4-5 weeks",
+      "issues": [
+        {
+          "number": 4070,
+          "title": "Epic #3: Navbar Restructuring",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4070",
+          "labels": ["p1-high", "epic"],
+          "priority": "high",
+          "area": "frontend",
+          "storyPoints": 5,
+          "dependencies": [],
+          "rationale": "Foundation work - restructure navbar before adding new features. High priority, affects entire UX."
+        },
+        {
+          "number": 4068,
+          "title": "Epic #1: MeepleCard Enhancements",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4068",
+          "labels": ["p1-high", "epic"],
+          "priority": "high",
+          "area": "frontend",
+          "storyPoints": 8,
+          "dependencies": [],
+          "rationale": "Core UI component improvements. Epic 3820 completed successfully, build on that momentum."
+        },
+        {
+          "number": 3919,
+          "title": "Frontend: AI Insights Widget Component",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3919",
+          "labels": ["kind/feature", "area/ai", "frontend", "priority: high"],
+          "priority": "high",
+          "area": "frontend-ai",
+          "storyPoints": 2,
+          "dependencies": ["#3916"],
+          "rationale": "AI insights frontend after backend (#3916) validation. Small story points = quick win."
+        },
+        {
+          "number": 3809,
+          "title": "Frontend: Agent Builder Form & CRUD",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3809",
+          "labels": ["kind/feature", "area/ai", "priority: high", "area/frontend"],
+          "priority": "high",
+          "area": "frontend",
+          "storyPoints": 3,
+          "dependencies": ["#3687"],
+          "rationale": "Agent system UI foundation. Medium complexity, enables user-facing agent management."
+        },
+        {
+          "number": 3778,
+          "title": "[Integration] Unified Multi-Agent Dashboard UI",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3778",
+          "labels": ["area/ai", "frontend", "priority: high"],
+          "priority": "high",
+          "area": "frontend",
+          "storyPoints": 5,
+          "dependencies": ["#3490"],
+          "rationale": "Dashboard for multi-agent system. Unifies agent UX after backend agents are implemented."
+        },
+        {
+          "number": 3709,
+          "title": "[Epic 3] Agent Builder UI",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3709",
+          "labels": ["kind/feature", "area/ai", "frontend"],
+          "priority": "medium",
+          "area": "frontend",
+          "storyPoints": 3,
+          "dependencies": ["#3708"],
+          "rationale": "Visual agent creation interface. Depends on data model (#3708) foundation."
+        },
+        {
+          "number": 3710,
+          "title": "[Epic 3] Agent Playground",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3710",
+          "labels": ["kind/feature", "area/ai", "frontend"],
+          "priority": "medium",
+          "area": "frontend",
+          "storyPoints": 3,
+          "dependencies": ["#3708"],
+          "rationale": "Interactive testing environment. Enables users to experiment with agents after builder UI."
+        },
+        {
+          "number": 3711,
+          "title": "[Epic 3] Strategy Editor",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3711",
+          "labels": ["kind/feature", "area/ai", "frontend"],
+          "priority": "medium",
+          "area": "frontend",
+          "storyPoints": 3,
+          "dependencies": ["#3708"],
+          "rationale": "Strategy configuration UI. Advanced feature building on agent foundation."
+        },
+        {
+          "number": 3712,
+          "title": "[Epic 3] Visual Pipeline Builder",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3712",
+          "labels": ["kind/feature", "area/ai", "frontend", "complexity: large"],
+          "priority": "medium",
+          "area": "frontend",
+          "storyPoints": 5,
+          "dependencies": ["#3710"],
+          "rationale": "Complex workflow builder. Large complexity, depends on playground testing environment."
+        },
+        {
+          "number": 3713,
+          "title": "[Epic 3] Agent Catalog & Usage Stats",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3713",
+          "labels": ["kind/feature", "area/ai", "frontend", "backend"],
+          "priority": "medium",
+          "area": "frontend",
+          "storyPoints": 3,
+          "dependencies": ["#3708"],
+          "rationale": "Analytics and discovery. Full-stack feature showing agent ecosystem health."
+        },
+        {
+          "number": 3894,
+          "title": "EntityListView - Test Coverage & Polish (Post-Epic Cleanup)",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3894",
+          "labels": [],
+          "priority": "low",
+          "area": "frontend",
+          "storyPoints": 2,
+          "dependencies": [],
+          "rationale": "Cleanup and testing. Polish existing components before moving to gamification features."
+        },
+        {
+          "number": 3355,
+          "title": "[Editor] Game/Document Version History and Comparison UI",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3355",
+          "labels": ["kind/feature", "area/ui", "frontend", "priority: medium"],
+          "priority": "medium",
+          "area": "frontend",
+          "storyPoints": 3,
+          "dependencies": [],
+          "rationale": "Version control UI. Adds collaboration features for document editing."
+        }
+      ],
+      "keyMilestones": [
+        {
+          "week": 1,
+          "deliverables": ["Navbar restructured (#4070)", "MeepleCard enhancements started (#4068)"]
+        },
+        {
+          "week": 2,
+          "deliverables": ["MeepleCard complete", "AI Insights Widget (#3919)", "Agent Builder Form (#3809)"]
+        },
+        {
+          "week": 3,
+          "deliverables": ["Multi-Agent Dashboard (#3778)", "Agent Builder UI (#3709)", "Agent Playground (#3710)"]
+        },
+        {
+          "week": 4,
+          "deliverables": ["Strategy Editor (#3711)", "Visual Pipeline Builder (#3712)", "Agent Catalog (#3713)"]
+        },
+        {
+          "week": 5,
+          "deliverables": ["EntityListView polish (#3894)", "Version History UI (#3355)"]
+        }
+      ],
+      "strategicGoals": [
+        "Modernize core UI components (navbar, cards)",
+        "Build comprehensive AI agent interface",
+        "Enable user-driven agent configuration",
+        "Improve collaboration and versioning"
+      ]
+    },
+    {
+      "name": "Sequence B: Backend-Focused AI & Infrastructure",
+      "description": "Backend services focusing on AI agents, PDF processing, infrastructure, and system reliability",
+      "totalStoryPoints": 48,
+      "totalIssues": 15,
+      "estimatedWeeks": "5-6 weeks",
+      "issues": [
+        {
+          "number": 4069,
+          "title": "Epic #2: Agent System",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4069",
+          "labels": ["epic", "p0-critical"],
+          "priority": "critical",
+          "area": "backend",
+          "storyPoints": 8,
+          "dependencies": [],
+          "rationale": "CRITICAL priority. Foundation for entire multi-agent system. Must be first."
+        },
+        {
+          "number": 3708,
+          "title": "[Epic 3] AgentDefinition Data Model",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3708",
+          "labels": ["kind/feature", "area/db", "area/ai", "backend"],
+          "priority": "high",
+          "area": "backend",
+          "storyPoints": 3,
+          "dependencies": [],
+          "rationale": "Database schema for agents. Foundational data model enabling all agent features."
+        },
+        {
+          "number": 3776,
+          "title": "[Integration] Multi-Agent Orchestration & Routing System",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3776",
+          "labels": ["area/ai", "priority: high", "backend"],
+          "priority": "high",
+          "area": "backend",
+          "storyPoints": 5,
+          "dependencies": ["#3490"],
+          "rationale": "Core orchestration logic. Routes requests to appropriate agents after system foundation."
+        },
+        {
+          "number": 3777,
+          "title": "[Integration] Agent Switching Logic & Context Preservation",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3777",
+          "labels": ["area/ai", "priority: high", "backend"],
+          "priority": "high",
+          "area": "backend",
+          "storyPoints": 3,
+          "dependencies": ["#3490"],
+          "rationale": "Context management between agents. Critical for seamless multi-agent conversations."
+        },
+        {
+          "number": 4071,
+          "title": "Epic #4: PDF Status Tracking",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4071",
+          "labels": ["p1-high", "epic"],
+          "priority": "high",
+          "area": "backend",
+          "storyPoints": 8,
+          "dependencies": [],
+          "rationale": "High priority user-facing feature. 7-state pipeline with real-time updates."
+        },
+        {
+          "number": 3769,
+          "title": "[Decisore Agent] Strategic Analysis Engine - Game State Evaluation",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3769",
+          "labels": ["area/ai", "priority: high", "backend"],
+          "priority": "high",
+          "area": "ai",
+          "storyPoints": 3,
+          "dependencies": ["#3490"],
+          "rationale": "Decisore agent core logic. Evaluates game states for strategic recommendations."
+        },
+        {
+          "number": 3770,
+          "title": "[Decisore Agent] Move Suggestion Algorithm with Priority Ranking",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3770",
+          "labels": ["area/ai", "priority: high", "backend"],
+          "priority": "high",
+          "area": "ai",
+          "storyPoints": 3,
+          "dependencies": ["#3490"],
+          "rationale": "Decisore move suggestions. Builds on analysis engine to rank moves."
+        },
+        {
+          "number": 3772,
+          "title": "[Decisore Agent] Game State Parser & Context Assembly",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3772",
+          "labels": ["area/ai", "priority: high", "backend"],
+          "priority": "high",
+          "area": "ai",
+          "storyPoints": 2,
+          "dependencies": ["#3490"],
+          "rationale": "Parse game state for Decisore. Data preprocessing for analysis engine."
+        },
+        {
+          "number": 3773,
+          "title": "[Decisore Agent] REST API Endpoint - /api/v1/agents/decisore/suggest",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3773",
+          "labels": ["area/ai", "area/api", "priority: high", "backend"],
+          "priority": "high",
+          "area": "backend",
+          "storyPoints": 2,
+          "dependencies": ["#3490"],
+          "rationale": "Decisore HTTP endpoint. Exposes agent capabilities via REST API."
+        },
+        {
+          "number": 3774,
+          "title": "[Decisore Agent] Performance Tuning - <10s Target for Expert Moves",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3774",
+          "labels": ["area/ai", "priority: high", "backend"],
+          "priority": "high",
+          "area": "ai",
+          "storyPoints": 3,
+          "dependencies": ["#3490"],
+          "rationale": "Optimize Decisore performance. <10s response time for production readiness."
+        },
+        {
+          "number": 4124,
+          "title": "Backend: AI Insights Runtime Validation (Performance + Accuracy)",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/4124",
+          "labels": [],
+          "priority": "medium",
+          "area": "backend",
+          "storyPoints": 2,
+          "dependencies": ["#3916"],
+          "rationale": "Validate AI insights production metrics. P95 <1s, accuracy >75%."
+        },
+        {
+          "number": 3779,
+          "title": "[Integration] E2E Testing Suite - All Agent Workflows",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3779",
+          "labels": ["area/ai", "kind/test", "tests", "priority: high"],
+          "priority": "high",
+          "area": "testing",
+          "storyPoints": 3,
+          "dependencies": ["#3490"],
+          "rationale": "Comprehensive agent testing. Validates entire multi-agent system integration."
+        },
+        {
+          "number": 3874,
+          "title": "[Arbitro Agent] Performance Benchmark Tests",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3874",
+          "labels": ["area/ai", "backend", "performance", "testing"],
+          "priority": "medium",
+          "area": "testing",
+          "storyPoints": 2,
+          "dependencies": ["#3759"],
+          "rationale": "Arbitro performance benchmarks. Ensure agent meets latency requirements."
+        },
+        {
+          "number": 3368,
+          "title": "[Infra] k6 Load Testing Infrastructure",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3368",
+          "labels": ["area/infra", "kind/test", "priority: medium"],
+          "priority": "medium",
+          "area": "infra",
+          "storyPoints": 3,
+          "dependencies": [],
+          "rationale": "Load testing framework. Infrastructure for validating system under stress."
+        },
+        {
+          "number": 3367,
+          "title": "[Infra] Log Aggregation System (Beyond Structured Logs)",
+          "url": "https://github.com/DegrassiAaron/meepleai-monorepo/issues/3367",
+          "labels": ["area/infra", "kind/feature", "area/ops", "priority: medium"],
+          "priority": "medium",
+          "area": "infra",
+          "storyPoints": 5,
+          "dependencies": [],
+          "rationale": "Advanced logging infrastructure. Observability for complex multi-agent system."
+        }
+      ],
+      "keyMilestones": [
+        {
+          "week": 1,
+          "deliverables": ["Agent System foundation (#4069)", "AgentDefinition model (#3708)"]
+        },
+        {
+          "week": 2,
+          "deliverables": ["Multi-Agent Orchestration (#3776)", "Context Preservation (#3777)", "PDF Status Tracking started (#4071)"]
+        },
+        {
+          "week": 3,
+          "deliverables": ["PDF Status complete", "Decisore Analysis Engine (#3769)", "Move Suggestion (#3770)"]
+        },
+        {
+          "week": 4,
+          "deliverables": ["Decisore Parser (#3772)", "API Endpoint (#3773)", "Performance Tuning (#3774)"]
+        },
+        {
+          "week": 5,
+          "deliverables": ["AI Insights Validation (#4124)", "E2E Testing Suite (#3779)", "Arbitro Benchmarks (#3874)"]
+        },
+        {
+          "week": 6,
+          "deliverables": ["k6 Load Testing (#3368)", "Log Aggregation (#3367)"]
+        }
+      ],
+      "strategicGoals": [
+        "Establish multi-agent AI platform foundation",
+        "Implement Decisore agent (strategic game decisions)",
+        "Add PDF processing visibility and tracking",
+        "Build production-grade testing infrastructure",
+        "Improve system observability and performance"
+      ]
+    }
+  ],
+  "analysisMetadata": {
+    "totalIssuesAnalyzed": 57,
+    "openIssues": 57,
+    "epicsIdentified": 11,
+    "criticalPriority": 1,
+    "highPriority": 18,
+    "mediumPriority": 14,
+    "lowPriority": 24,
+    "areaBreakdown": {
+      "frontend": 12,
+      "backend": 15,
+      "ai": 18,
+      "infra": 8,
+      "other": 4
+    },
+    "sequencingStrategy": "Priority-first with dependency respect, area batching, complexity balancing",
+    "recommendedApproach": "Execute sequences in parallel with separate teams OR execute Sequence B first (backend foundation) then Sequence A (frontend polish)"
+  }
+}

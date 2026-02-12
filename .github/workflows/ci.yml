@@ -302,6 +302,7 @@ jobs:
       - name: Run Arbitro Agent Tests
         run: |
           python -m pytest tests/test_arbitro_agent.py \
+            -o addopts="" \
             --cov=src/application/arbitro_agent \
             --cov=src/domain/arbitro_state \
             --cov-report=term \

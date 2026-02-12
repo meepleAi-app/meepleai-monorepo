@@ -20,16 +20,29 @@ namespace Api.Infrastructure.Migrations
                 maxLength: 32,
                 nullable: true);
 
-            // Step 2: Migrate existing data from processing_status to processing_state
+            // Step 2: Migrate existing data from ProcessingStatus to processing_state
+            // Only if ProcessingStatus column exists (it might not in test databases)
             migrationBuilder.Sql(@"
-                UPDATE pdf_documents SET processing_state =
-                    CASE processing_status
-                        WHEN 'pending' THEN 'Pending'
-                        WHEN 'processing' THEN 'Extracting'
-                        WHEN 'completed' THEN 'Ready'
-                        WHEN 'failed' THEN 'Failed'
-                        ELSE 'Pending'
-                    END;
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT FROM information_schema.columns
+                        WHERE table_name = 'pdf_documents'
+                        AND column_name = 'processing_status'
+                    ) THEN
+                        UPDATE pdf_documents SET processing_state =
+                            CASE processing_status
+                                WHEN 'pending' THEN 'Pending'
+                                WHEN 'processing' THEN 'Extracting'
+                                WHEN 'completed' THEN 'Ready'
+                                WHEN 'failed' THEN 'Failed'
+                                ELSE 'Pending'
+                            END;
+                    ELSE
+                        -- Column doesn't exist, set all to default
+                        UPDATE pdf_documents SET processing_state = 'Pending';
+                    END IF;
+                END $$;
             ");
 
             // Step 3: Make processing_state NOT NULL with default

@@ -16,8 +16,7 @@ import { Button } from '@/components/ui/primitives/button';
 
 export function NewGameClient() {
   const router = useRouter();
-  // Temporarily bypass auth for testing (Issue #4231 validation)
-  // const { user, loading: authLoading } = useAuthUser();
+  const { user, loading: authLoading } = useAuthUser();
 
   const handleSubmit = (gameId: string) => {
     // Navigate to the newly created game's edit page
@@ -28,9 +27,8 @@ export function NewGameClient() {
     router.push('/admin/shared-games');
   };
 
-  // TEMPORARY: Skip auth guard for Flusso 1 validation
   return (
-    // <AdminAuthGuard loading={authLoading} user={user}>
+    <AdminAuthGuard loading={authLoading} user={user}>
       <div className="container mx-auto py-8 px-4">
         {/* Header */}
         <div className="mb-8">
@@ -55,6 +53,6 @@ export function NewGameClient() {
           <GameForm game={null} onSubmit={handleSubmit} onCancel={handleCancel} />
         </div>
       </div>
-    // </AdminAuthGuard>
+    </AdminAuthGuard>
   );
 }

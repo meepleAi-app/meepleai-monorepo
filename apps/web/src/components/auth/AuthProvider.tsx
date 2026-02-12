@@ -79,31 +79,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [error, setError] = useState<string | null>(null);
 
   const loadCurrentUser = useCallback(async () => {
-    // Skip API call if we know user is not authenticated (no prior session)
-    // This prevents a 401 console error for anonymous users
-    const hadSession = typeof window !== 'undefined' && localStorage.getItem('meepleai_has_session') === 'true';
-    if (!hadSession) {
-      setUser(null);
-      setLoading(false);
-      setInitialLoading(false);
-      return;
-    }
-
     setLoading(true);
     setInitialLoading(true);
     setError(null);
     try {
       const user = await api.auth.getMe();
       setUser(user);
-      if (!user) {
-        // Session expired or invalid - clear the flag
+      if (user) {
+        // User authenticated - set flag for optimization
+        localStorage.setItem('meepleai_has_session', 'true');
+      } else {
         localStorage.removeItem('meepleai_has_session');
       }
     } catch (err) {
-      logger.warn('Failed to load current user', {
-        component: 'AuthProvider',
-        metadata: { error: err instanceof Error ? err.message : String(err) },
-      });
+      // 401 expected for anonymous users - not an error
       setUser(null);
       localStorage.removeItem('meepleai_has_session');
     } finally {

@@ -17,7 +17,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { useAuthUser } from '@/components/auth/AuthProvider';
-import { toast } from '@/components/layout';
 import { Spinner } from '@/components/loading';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/data-display/card';

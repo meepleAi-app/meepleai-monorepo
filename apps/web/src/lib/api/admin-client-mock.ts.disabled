@@ -4,13 +4,13 @@
  */
 
 import type {
-  PagedResult,
   AdminStats,
   ApprovalQueueItem,
-  User,
-  UserLibraryStats,
-  UserBadge,
-} from '@/types/admin-dashboard';
+} from './schemas/admin.schemas';
+import type { User } from './schemas/user.schemas';
+import type { UserBadge } from './schemas/badges.schemas';
+import type { UserLibraryStats } from './schemas/library.schemas';
+import type { PagedResult } from './client';
 
 // Simulate API delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

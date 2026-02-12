@@ -22,8 +22,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import dynamic from 'next/dynamic';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
 // Dynamic import to prevent DOMMatrix SSR error (Issue #4133)

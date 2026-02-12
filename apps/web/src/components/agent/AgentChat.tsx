@@ -19,6 +19,8 @@
 import React, { useState, useCallback } from 'react';
 
 import { X, Bot, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
+
 
 import { ChatMessageList, ChatInput } from '@/components/agent/chat';
 import { Badge } from '@/components/ui/data-display/badge';
@@ -141,6 +143,7 @@ export function AgentChat({
   // Handle retry on error
   const handleRetry = useCallback(() => {
     setError(null);
+    toast.info('Retrying connection...');
     // Re-send last user message or reconnect SSE
   }, []);
 

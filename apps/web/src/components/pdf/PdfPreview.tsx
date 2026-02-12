@@ -20,7 +20,7 @@ export interface PdfPreviewProps {
   onClose?: () => void;
 }
 
-export function PdfPreview({ file, onClose }: PdfPreviewProps) {
+export function PdfPreview({ file }: PdfPreviewProps) {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
 
   const defaultLayoutPluginInstance = defaultLayoutPlugin();

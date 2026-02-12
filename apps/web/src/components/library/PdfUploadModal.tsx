@@ -53,7 +53,6 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
   const [step, setStep] = useState<UploadStep>('select');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [pageCount, setPageCount] = useState<number | null>(null);
   const [isValidating, setIsValidating] = useState(false);
 
   // Reset state when modal opens/closes
@@ -64,7 +63,6 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
       setStep('select');
       setUploadProgress(0);
       setValidationErrors([]);
-      setPageCount(null);
       setIsValidating(false);
     }
   }, [isOpen]);
@@ -97,7 +95,6 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
 
     // Reset state
     setValidationErrors([]);
-    setPageCount(null);
 
     // Sync validation only
     const syncErrors = validateFileSync(selectedFile);
@@ -130,7 +127,6 @@ export function PdfUploadModal({ isOpen, onClose, gameId, gameTitle, onUploadSuc
     setStep('select');
     setUploadProgress(0);
     setValidationErrors([]);
-    setPageCount(null);
     setIsValidating(false);
     onClose();
   }, [onClose]);

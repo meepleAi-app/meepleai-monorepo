@@ -78,6 +78,14 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<IContextRetrievalStrategy, TemporalScoringStrategy>();
         services.AddSingleton<IContextRetrievalStrategy, PositionSimilarityStrategy>();
         services.AddSingleton<IContextRetrievalStrategy, HybridSearchStrategy>();
+
+        // Issue #3772: Game State Parser for Decisore Agent
+        services.AddSingleton<IGameStateParserService, GameStateParserFactory>();
+
+        // Issue #3770: Move Generator for Decisore Agent
+        services.AddScoped<IMoveGeneratorService, ChessMoveGenerator>();
+        services.AddScoped<ILegalMoveValidator, LegalMoveValidator>();
+        services.AddScoped<IMoveScorer, HeuristicMoveScorer>();
         services.AddSingleton<IContextRetrievalStrategy, CapabilityMatchingStrategy>();
         services.AddScoped<IContextSource, ConversationMemorySource>();
         services.AddScoped<GameStateSource>();

@@ -40,7 +40,7 @@ export default function AgentEditorPage({ params }: AgentEditorPageProps) {
       setAgent({
         name: existingAgent.name,
         description: existingAgent.description || '',
-        type: existingAgent.type as 'RagAgent' | 'ToolAgent' | 'ReasoningAgent',
+        type: existingAgent.type as 'RAG' | 'Citation' | 'Confidence' | 'Custom' | 'RulesInterpreter' | 'Conversation',
         model: existingAgent.model,
         maxTokens: existingAgent.maxTokens,
         temperature: existingAgent.temperature,

@@ -47,6 +47,7 @@ import {
   type UpdateFromBggRequest,
   type BatchApprovalResult,
 } from '../schemas/shared-games.schemas';
+import { type AgentDefinitionDto } from '../schemas/agent-definitions.schemas';
 
 export interface CreateSharedGamesClientParams {
   httpClient: HttpClient;
@@ -639,6 +640,53 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         z.string().uuid()
       );
       return result;
+    },
+
+    // ========== AI Agent Linking (Issue #4230 - Mock API) ==========
+    // TODO: Replace with real API when Issue #2 (Backend linking API) is complete
+
+    /**
+     * Get linked AI agent for a shared game (ADMIN/EDITOR)
+     *
+     * **Mock implementation** - returns null until backend API is ready.
+     * When backend is complete, this will call: `GET /api/v1/admin/shared-games/{gameId}/linked-agent`
+     *
+     * @param gameId - Game UUID
+     * @returns Linked agent or null if no agent linked
+     */
+    async getLinkedAgent(gameId: string): Promise<AgentDefinitionDto | null> {
+      // Mock: Always return null until backend API is implemented
+      console.warn('[Mock API] getLinkedAgent called for gameId:', gameId);
+      return Promise.resolve(null);
+    },
+
+    /**
+     * Link an AI agent to a shared game (ADMIN/EDITOR)
+     *
+     * **Mock implementation** - simulates successful linking until backend API is ready.
+     * When backend is complete, this will call: `POST /api/v1/admin/shared-games/{gameId}/link-agent/{agentId}`
+     *
+     * @param gameId - Game UUID
+     * @param agentId - Agent UUID
+     */
+    async linkAgent(gameId: string, agentId: string): Promise<void> {
+      // Mock: Simulate successful linking
+      console.warn('[Mock API] linkAgent called:', { gameId, agentId });
+      return Promise.resolve();
+    },
+
+    /**
+     * Unlink AI agent from a shared game (ADMIN/EDITOR)
+     *
+     * **Mock implementation** - simulates successful unlinking until backend API is ready.
+     * When backend is complete, this will call: `DELETE /api/v1/admin/shared-games/{gameId}/unlink-agent`
+     *
+     * @param gameId - Game UUID
+     */
+    async unlinkAgent(gameId: string): Promise<void> {
+      // Mock: Simulate successful unlinking
+      console.warn('[Mock API] unlinkAgent called for gameId:', gameId);
+      return Promise.resolve();
     },
   };
 }

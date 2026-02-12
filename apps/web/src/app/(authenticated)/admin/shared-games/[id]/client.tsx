@@ -38,6 +38,8 @@ import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+
+import { AgentSection } from './_components/AgentSection';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -510,6 +512,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
             Documents {documents?.length ? `(${documents.length})` : ''}
           </TabsTrigger>
           <TabsTrigger value="history">Review History</TabsTrigger>
+          <TabsTrigger value="agent">AI Agent</TabsTrigger>
         </TabsList>
 
         {/* Details Tab */}
@@ -696,6 +699,15 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* AI Agent Tab */}
+        <TabsContent value="agent" className="space-y-6">
+          <AgentSection
+            gameId={gameId}
+            gameTitle={game.title}
+            gameDescription={game.description}
+          />
         </TabsContent>
       </Tabs>
     </div>

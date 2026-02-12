@@ -187,6 +187,7 @@ internal static class PdfEndpoints
     {
         MapPdfIndexEndpoint(group);
         MapPdfExtractEndpoint(group);
+        MapPdfRetryEndpoint(group); // Issue #4216: Manual retry
     }
 
     private static void MapPdfIndexEndpoint(RouteGroupBuilder group)
@@ -199,6 +200,73 @@ internal static class PdfEndpoints
     {
         // BGAI-081: Extract text from existing PDF (reprocess stuck PDFs)
         group.MapPost("/ingest/pdf/{pdfId:guid}/extract", HandleExtractPdfText);
+    }
+
+    private static void MapPdfRetryEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #4216: Retry failed PDF processing
+        group.MapPost("/documents/{pdfId:guid}/retry", HandleRetryPdfProcessing)
+            .RequireSession()
+            .WithName("RetryPdfProcessing")
+            .WithOpenApi(operation =>
+            {
+                operation.Summary = "Retry processing of a failed PDF document";
+                operation.Description = "Attempts to retry processing of a PDF that failed. Maximum 3 retries allowed. Only the document owner can initiate retry.";
+                return operation;
+            });
+    }
+
+    private static async Task<IResult> HandleRetryPdfProcessing(
+        Guid pdfId,
+        IMediator mediator,
+        HttpContext context,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        // Validate session
+        var (authenticated, session, error) = context.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        var command = new RetryPdfProcessingCommand(
+            PdfId: pdfId,
+            UserId: session!.User!.Id
+        );
+
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+
+        if (!result.Success)
+        {
+            // Determine appropriate status code
+            var statusCode = result.Message?.Contains("not found") == true ? 404
+                : result.Message?.Contains("not authorized") == true ? 403
+                : result.Message?.Contains("Maximum retry") == true ? 429 // Too Many Requests
+                : 400; // Bad Request
+
+            return Results.Json(
+                new
+                {
+                    success = false,
+                    message = result.Message,
+                    currentState = result.CurrentState,
+                    retryCount = result.RetryCount
+                },
+                statusCode: statusCode
+            );
+        }
+
+        logger.LogInformation(
+            "User {UserId} initiated retry for PDF {PdfId}: {Message}",
+            session!.User!.Id,
+            pdfId,
+            result.Message);
+
+        return Results.Ok(new
+        {
+            success = true,
+            message = result.Message,
+            currentState = result.CurrentState,
+            retryCount = result.RetryCount
+        });
     }
 
     private static async Task<IResult> HandleStandardUpload(

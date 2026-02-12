@@ -93,6 +93,15 @@ internal interface IEmailService
         string leaderboardUrl,
         CancellationToken ct = default);
 
+    // ISSUE-4159: Shared game approval workflow - Admin notification
+    Task SendSharedGameSubmittedForApprovalEmailAsync(
+        string toEmail,
+        string toName,
+        string gameTitle,
+        string submitterName,
+        Guid gameId,
+        CancellationToken ct = default);
+
     // ISSUE-2742: Rate limit cooldown email
     Task SendCooldownEndedEmailAsync(
         string toEmail,

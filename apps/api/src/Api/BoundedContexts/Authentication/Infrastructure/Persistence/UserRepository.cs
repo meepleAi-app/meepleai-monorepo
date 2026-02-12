@@ -340,4 +340,20 @@ public class UserRepository : RepositoryBase, IUserRepository
 
         return userEntities.Select(MapToDomain).ToList();
     }
+
+    public async Task<IReadOnlyList<User>> GetAdminUsersAsync(CancellationToken cancellationToken = default)
+    {
+        var adminRole = Role.Admin.Value;
+        var superAdminRole = Role.SuperAdmin.Value;
+
+        // Include OAuthAccounts for domain logic that requires checking auth methods
+        var userEntities = await DbContext.Users
+            .Include(u => u.BackupCodes)
+            .Include(u => u.OAuthAccounts)
+            .Where(u => u.Role == adminRole || u.Role == superAdminRole)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return userEntities.Select(MapToDomain).ToList();
+    }
 }

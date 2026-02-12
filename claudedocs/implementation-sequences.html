@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeepleAI - Implementation Sequences</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="gradient-bg text-white py-8 px-4 shadow-lg">
+        <div class="max-w-7xl mx-auto">
+            <h1 class="text-4xl font-bold mb-2">🎲 MeepleAI Implementation Sequences</h1>
+            <p class="text-purple-100 text-lg">Strategic roadmap per issue aperte - 57 issues analizzate</p>
+        </div>
+    </header>
+
+    <!-- Stats Overview -->
+    <div class="max-w-7xl mx-auto px-4 -mt-6 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="text-center">
+                <div class="text-3xl font-bold text-purple-600">57</div>
+                <div class="text-sm text-gray-600">Open Issues</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold text-blue-600">11</div>
+                <div class="text-sm text-gray-600">Epics</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold text-green-600">90</div>
+                <div class="text-sm text-gray-600">Story Points</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold text-orange-600">9-11</div>
+                <div class="text-sm text-gray-600">Weeks Est.</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold text-red-600">1</div>
+                <div class="text-sm text-gray-600">Critical</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommended Approach -->
+    <div class="max-w-7xl mx-auto px-4 mb-8">
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+            <h3 class="text-lg font-semibold text-blue-900 mb-2">💡 Recommended Execution Strategy</h3>
+            <p class="text-blue-800 mb-3">
+                <strong>Option 1</strong>: Parallel execution con team separati (massima velocità)<br>
+                <strong>Option 2</strong>: Sequential - <span class="font-semibold">Sequence B first</span> (backend foundation) → Sequence A (frontend polish)
+            </p>
+            <p class="text-blue-700 text-sm">
+                <strong>Rationale</strong>: Backend #4069 Agent System è <span class="bg-red-100 text-red-800 px-2 py-1 rounded font-semibold">CRITICAL</span> priority e blocca molte feature frontend
+            </p>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 pb-12">
+        <!-- Sequence A: Frontend -->
+        <div class="mb-12">
+            <div class="bg-white rounded-lg shadow-xl overflow-hidden">
+                <div class="bg-gradient-to-r from-green-500 to-teal-500 text-white px-6 py-4">
+                    <h2 class="text-2xl font-bold">📱 Sequence A: Frontend-Focused UX Enhancement</h2>
+                    <p class="text-green-100 mt-1">User-facing features prioritizing UI/UX improvements, AI insights, and dashboard enhancements</p>
+                    <div class="flex gap-6 mt-3 text-sm">
+                        <span class="bg-white/20 px-3 py-1 rounded">12 issues</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">42 story points</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">4-5 weeks</span>
+                    </div>
+                </div>
+
+                <div class="p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">🎯 Strategic Goals</h3>
+                    <ul class="list-disc list-inside text-gray-700 mb-6 space-y-1">
+                        <li>Modernize core UI components (navbar, cards)</li>
+                        <li>Build comprehensive AI agent interface</li>
+                        <li>Enable user-driven agent configuration</li>
+                        <li>Improve collaboration and versioning</li>
+                    </ul>
+
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">📋 Issue Sequence</h3>
+                    <div class="space-y-3">
+                        <!-- Issue 1 -->
+                        <div class="card-hover border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4070" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #4070 - Epic #3: Navbar Restructuring
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">p1-high</span>
+                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">frontend</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 5 |
+                                        <strong>Rationale:</strong> Foundation work - restructure navbar before adding new features. High priority, affects entire UX.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-red-600">5</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 2 -->
+                        <div class="card-hover border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4068" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #4068 - Epic #1: MeepleCard Enhancements
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">p1-high</span>
+                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">frontend</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 8 |
+                                        <strong>Rationale:</strong> Core UI component improvements. Epic 3820 completed successfully, build on that momentum.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-red-600">8</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 3 -->
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3919" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3919 - Frontend: AI Insights Widget Component
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 2 |
+                                        <strong>Dependencies:</strong> #3916 ✅ |
+                                        <strong>Rationale:</strong> AI insights frontend after backend validation. Quick win.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">2</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 4 -->
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3809" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3809 - Frontend: Agent Builder Form & CRUD
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Dependencies:</strong> #3687 |
+                                        <strong>Rationale:</strong> Agent system UI foundation. Enables user-facing agent management.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">3</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 5 -->
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3778" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3778 - Unified Multi-Agent Dashboard UI
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">frontend</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 5 |
+                                        <strong>Dependencies:</strong> #3490 |
+                                        <strong>Rationale:</strong> Dashboard for multi-agent system. Unifies agent UX.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">5</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 6 -->
+                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3709" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3709 - Epic 3: Agent Builder UI
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Dependencies:</strong> #3708 |
+                                        <strong>Rationale:</strong> Visual agent creation interface.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-yellow-600">3</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 7 -->
+                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3710" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3710 - Epic 3: Agent Playground
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Dependencies:</strong> #3708 |
+                                        <strong>Rationale:</strong> Interactive testing environment for agents.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-yellow-600">3</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 8 -->
+                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3711" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3711 - Epic 3: Strategy Editor
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Dependencies:</strong> #3708 |
+                                        <strong>Rationale:</strong> Strategy configuration UI. Advanced feature.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-yellow-600">3</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 9 -->
+                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3712" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3712 - Epic 3: Visual Pipeline Builder
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
+                                        <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">complexity: large</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 5 |
+                                        <strong>Dependencies:</strong> #3710 |
+                                        <strong>Rationale:</strong> Complex workflow builder. Large complexity.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-yellow-600">5</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 10 -->
+                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3713" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3713 - Epic 3: Agent Catalog & Usage Stats
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Dependencies:</strong> #3708 |
+                                        <strong>Rationale:</strong> Analytics and discovery. Full-stack feature.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-yellow-600">3</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 11 -->
+                        <div class="card-hover border-l-4 border-gray-400 bg-gray-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3894" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3894 - EntityListView - Test Coverage & Polish
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">low</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">frontend</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 2 |
+                                        <strong>Rationale:</strong> Cleanup and testing. Polish existing components.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-gray-600">2</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 12 -->
+                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3355" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3355 - Game/Document Version History & Comparison UI
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">priority: medium</span>
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
+                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">area/ui</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Rationale:</strong> Version control UI. Collaboration features.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-yellow-600">3</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Milestones -->
+                    <div class="mt-8 bg-gray-50 p-4 rounded-lg">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">📅 Key Milestones</h3>
+                        <div class="space-y-2">
+                            <div class="flex items-start gap-3">
+                                <span class="bg-green-500 text-white px-2 py-1 rounded text-sm font-semibold">Week 1</span>
+                                <span class="text-gray-700">Navbar restructured (#4070), MeepleCard enhancements started (#4068)</span>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="bg-green-500 text-white px-2 py-1 rounded text-sm font-semibold">Week 2</span>
+                                <span class="text-gray-700">MeepleCard complete, AI Insights Widget (#3919), Agent Builder Form (#3809)</span>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="bg-green-500 text-white px-2 py-1 rounded text-sm font-semibold">Week 3</span>
+                                <span class="text-gray-700">Multi-Agent Dashboard (#3778), Agent Builder UI (#3709), Agent Playground (#3710)</span>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="bg-green-500 text-white px-2 py-1 rounded text-sm font-semibold">Week 4</span>
+                                <span class="text-gray-700">Strategy Editor (#3711), Visual Pipeline Builder (#3712), Agent Catalog (#3713)</span>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="bg-green-500 text-white px-2 py-1 rounded text-sm font-semibold">Week 5</span>
+                                <span class="text-gray-700">EntityListView polish (#3894), Version History UI (#3355)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sequence B: Backend -->
+        <div class="mb-12">
+            <div class="bg-white rounded-lg shadow-xl overflow-hidden">
+                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4">
+                    <h2 class="text-2xl font-bold">⚙️ Sequence B: Backend-Focused AI & Infrastructure</h2>
+                    <p class="text-indigo-100 mt-1">Backend services focusing on AI agents, PDF processing, infrastructure, and system reliability</p>
+                    <div class="flex gap-6 mt-3 text-sm">
+                        <span class="bg-white/20 px-3 py-1 rounded">15 issues</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">48 story points</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">5-6 weeks</span>
+                    </div>
+                </div>
+
+                <div class="p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">🎯 Strategic Goals</h3>
+                    <ul class="list-disc list-inside text-gray-700 mb-6 space-y-1">
+                        <li>Establish multi-agent AI platform foundation</li>
+                        <li>Implement Decisore agent (strategic game decisions)</li>
+                        <li>Add PDF processing visibility and tracking</li>
+                        <li>Build production-grade testing infrastructure</li>
+                        <li>Improve system observability and performance</li>
+                    </ul>
+
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">📋 Issue Sequence</h3>
+                    <div class="space-y-3">
+                        <!-- Issue 1 - CRITICAL -->
+                        <div class="card-hover border-l-4 border-red-700 bg-red-100 p-4 rounded-r-lg border-2 border-red-300">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase">CRITICAL</span>
+                                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4069" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                            #4069 - Epic #2: Agent System
+                                        </a>
+                                    </div>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-red-200 text-red-900 text-xs px-2 py-1 rounded">p0-critical</span>
+                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">backend</span>
+                                    </div>
+                                    <p class="text-gray-700 text-sm mt-2">
+                                        <strong>Story Points:</strong> 8 |
+                                        <strong>⚠️ MUST BE FIRST</strong> |
+                                        <strong>Rationale:</strong> Foundation for entire multi-agent system. Blocks many features.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-3xl font-bold text-red-700">8</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 2 -->
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3708" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3708 - Epic 3: AgentDefinition Data Model
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">high</span>
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
+                                        <span class="bg-teal-100 text-teal-800 text-xs px-2 py-1 rounded">area/db</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Rationale:</strong> Database schema for agents. Foundational data model.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">3</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 3 -->
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3776" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3776 - Multi-Agent Orchestration & Routing System
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">backend</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 5 |
+                                        <strong>Dependencies:</strong> #3490 |
+                                        <strong>Rationale:</strong> Core orchestration logic. Routes requests to agents.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">5</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 4 -->
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3777" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3777 - Agent Switching Logic & Context Preservation
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">backend</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Dependencies:</strong> #3490 |
+                                        <strong>Rationale:</strong> Context management. Seamless agent conversations.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">3</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 5 -->
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4071" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #4071 - Epic #4: PDF Status Tracking
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">p1-high</span>
+                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">backend</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 8 |
+                                        <strong>Rationale:</strong> 7-state pipeline with real-time updates. User-facing feature.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">8</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Decisore Agent Issues -->
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3769" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3769 - Decisore: Strategic Analysis Engine
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">backend</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Dependencies:</strong> #3490 |
+                                        <strong>Rationale:</strong> Game state evaluation for strategic recommendations.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">3</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3770" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3770 - Decisore: Move Suggestion Algorithm
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">backend</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Dependencies:</strong> #3490 |
+                                        <strong>Rationale:</strong> Priority ranking for moves.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">3</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3772" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3772 - Decisore: Game State Parser
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">backend</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 2 |
+                                        <strong>Dependencies:</strong> #3490 |
+                                        <strong>Rationale:</strong> Data preprocessing for analysis.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">2</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3773" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3773 - Decisore: REST API Endpoint
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/api</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">backend</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 2 |
+                                        <strong>Dependencies:</strong> #3490 |
+                                        <strong>Rationale:</strong> Exposes agent via REST API.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">2</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3774" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3774 - Decisore: Performance Tuning (<10s)
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">backend</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Dependencies:</strong> #3490 |
+                                        <strong>Rationale:</strong> <10s response time target.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">3</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 11 -->
+                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4124" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #4124 - AI Insights Runtime Validation
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">backend</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 2 |
+                                        <strong>Dependencies:</strong> #3916 ✅ |
+                                        <strong>Rationale:</strong> Validate AI insights production metrics.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-yellow-600">2</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 12 -->
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3779" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3779 - E2E Testing Suite - All Agent Workflows
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">kind/test</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Dependencies:</strong> #3490 |
+                                        <strong>Rationale:</strong> Comprehensive agent testing.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">3</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 13 -->
+                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3874" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3874 - Arbitro Agent: Performance Benchmarks
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">area/ai</span>
+                                        <span class="bg-pink-100 text-pink-800 text-xs px-2 py-1 rounded">performance</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 2 |
+                                        <strong>Dependencies:</strong> #3759 |
+                                        <strong>Rationale:</strong> Ensure agent meets latency requirements.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-yellow-600">2</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 14 -->
+                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3368" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3368 - Infra: k6 Load Testing Infrastructure
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">priority: medium</span>
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">kind/test</span>
+                                        <span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">area/infra</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Rationale:</strong> Load testing framework. System validation under stress.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-yellow-600">3</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Issue 15 -->
+                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3367" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3367 - Infra: Log Aggregation System
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">priority: medium</span>
+                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
+                                        <span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">area/ops</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 5 |
+                                        <strong>Rationale:</strong> Advanced logging infrastructure. Observability for multi-agent system.
+                                    </p>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-yellow-600">5</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Milestones -->
+                    <div class="mt-8 bg-gray-50 p-4 rounded-lg">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">📅 Key Milestones</h3>
+                        <div class="space-y-2">
+                            <div class="flex items-start gap-3">
+                                <span class="bg-indigo-600 text-white px-2 py-1 rounded text-sm font-semibold">Week 1</span>
+                                <span class="text-gray-700">Agent System foundation (#4069), AgentDefinition model (#3708)</span>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="bg-indigo-600 text-white px-2 py-1 rounded text-sm font-semibold">Week 2</span>
+                                <span class="text-gray-700">Multi-Agent Orchestration (#3776), Context Preservation (#3777), PDF Status started (#4071)</span>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="bg-indigo-600 text-white px-2 py-1 rounded text-sm font-semibold">Week 3</span>
+                                <span class="text-gray-700">PDF Status complete, Decisore Analysis (#3769), Move Suggestion (#3770)</span>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="bg-indigo-600 text-white px-2 py-1 rounded text-sm font-semibold">Week 4</span>
+                                <span class="text-gray-700">Decisore Parser (#3772), API Endpoint (#3773), Performance Tuning (#3774)</span>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="bg-indigo-600 text-white px-2 py-1 rounded text-sm font-semibold">Week 5</span>
+                                <span class="text-gray-700">AI Insights Validation (#4124), E2E Testing (#3779), Arbitro Benchmarks (#3874)</span>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <span class="bg-indigo-600 text-white px-2 py-1 rounded text-sm font-semibold">Week 6</span>
+                                <span class="text-gray-700">k6 Load Testing (#3368), Log Aggregation (#3367)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Metadata -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">📊 Analysis Metadata</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                    <div class="text-sm text-gray-600">Area Breakdown</div>
+                    <ul class="mt-2 space-y-1">
+                        <li class="text-sm"><span class="font-semibold">Frontend:</span> 12 issues</li>
+                        <li class="text-sm"><span class="font-semibold">Backend:</span> 15 issues</li>
+                        <li class="text-sm"><span class="font-semibold">AI:</span> 18 issues</li>
+                        <li class="text-sm"><span class="font-semibold">Infra:</span> 8 issues</li>
+                        <li class="text-sm"><span class="font-semibold">Other:</span> 4 issues</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-600">Priority Distribution</div>
+                    <ul class="mt-2 space-y-1">
+                        <li class="text-sm"><span class="font-semibold text-red-600">Critical:</span> 1</li>
+                        <li class="text-sm"><span class="font-semibold text-orange-600">High:</span> 18</li>
+                        <li class="text-sm"><span class="font-semibold text-yellow-600">Medium:</span> 14</li>
+                        <li class="text-sm"><span class="font-semibold text-gray-600">Low:</span> 24</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-600">Sequencing Strategy</div>
+                    <p class="mt-2 text-sm text-gray-700">
+                        Priority-first with dependency respect, area batching, complexity balancing
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-6 mt-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-gray-300">🤖 Generated with Claude Code</p>
+            <p class="text-gray-400 text-sm mt-1">Last updated: 2026-02-12</p>
+        </div>
+    </footer>
+
+    <script>
+        // Add click tracking
+        document.querySelectorAll('a[href*="github.com"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                console.log('Issue clicked:', link.href);
+            });
+        });
+
+        // Add smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

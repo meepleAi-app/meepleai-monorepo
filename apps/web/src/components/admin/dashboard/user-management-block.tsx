@@ -43,9 +43,9 @@ function UserDetailPanel({ userId, isOpen, onClose }: UserDetailPanelProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-lg bg-gradient-to-br from-white/95 to-amber-50/95 backdrop-blur-xl border-l-2 border-amber-300/60 overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="font-quicksand font-bold text-2xl text-slate-900">
+          <SheetTitle className="text-xl font-semibold">
             User Profile
           </SheetTitle>
         </SheetHeader>
@@ -224,24 +224,23 @@ export function UserManagementBlock() {
       {/* Block Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-1 w-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full" />
-          <h2 className="font-quicksand font-bold text-2xl text-slate-900">
+          <h2 className="text-xl font-semibold text-foreground">
             User Management
           </h2>
-          <Badge variant="secondary" className="font-nunito">
+          <Badge variant="secondary">
             {data?.totalCount ?? 0} users
           </Badge>
         </div>
         <Link
           href="/admin/users/management"
-          className="font-nunito text-sm text-amber-600 hover:text-amber-700 font-semibold"
+          className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
         >
           View All →
         </Link>
       </div>
 
       {/* Filters and View Toggle */}
-      <div className="bg-white/70 backdrop-blur-md rounded-xl border border-amber-200/60 p-4">
+      <div className="bg-card border rounded-lg p-4">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
           <div className="flex-1 relative">
@@ -250,13 +249,13 @@ export function UserManagementBlock() {
               placeholder="Search by name or email..."
               value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-white/80 border-amber-200/60 focus:border-amber-400"
+              className="pl-10 bg-background focus:border-amber-400"
             />
           </div>
 
           {/* Role Filter */}
           <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-[140px] bg-white/80 border-amber-200/60">
+            <SelectTrigger className="w-[140px] bg-background">
               <Filter className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Role" />
             </SelectTrigger>
@@ -269,7 +268,7 @@ export function UserManagementBlock() {
 
           {/* Tier Filter */}
           <Select value={tierFilter} onValueChange={setTierFilter}>
-            <SelectTrigger className="w-[140px] bg-white/80 border-amber-200/60">
+            <SelectTrigger className="w-[140px] bg-background">
               <Filter className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Tier" />
             </SelectTrigger>

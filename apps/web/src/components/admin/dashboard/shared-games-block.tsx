@@ -62,24 +62,23 @@ export function SharedGamesBlock() {
       {/* Block Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-1 w-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full" />
-          <h2 className="font-quicksand font-bold text-2xl text-slate-900">
+          <h2 className="text-xl font-semibold text-foreground">
             Approval Queue
           </h2>
-          <Badge variant="secondary" className="font-nunito">
+          <Badge variant="secondary">
             {data?.totalCount ?? 0} pending
           </Badge>
         </div>
         <Link
           href="/admin/shared-games/approvals"
-          className="font-nunito text-sm text-amber-600 hover:text-amber-700 font-semibold"
+          className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
         >
           View All →
         </Link>
       </div>
 
       {/* Filters and View Toggle */}
-      <div className="bg-white/70 backdrop-blur-md rounded-xl border border-amber-200/60 p-4">
+      <div className="bg-card border rounded-lg p-4">
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           {/* Search */}
           <div className="flex-1 w-full relative">
@@ -88,13 +87,13 @@ export function SharedGamesBlock() {
               placeholder="Search games..."
               value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-white/80 border-amber-200/60 focus:border-amber-400"
+              className="pl-10"
             />
           </div>
 
           {/* Status Filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px] bg-white/80 border-amber-200/60">
+            <SelectTrigger className="w-[160px] bg-background">
               <Filter className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -138,7 +137,7 @@ export function SharedGamesBlock() {
           ))}
         </div>
       ) : !data || !data.items || data.items.length === 0 ? (
-        <div className="text-center py-12 bg-white/50 backdrop-blur-sm rounded-xl border border-amber-200/60">
+        <div className="text-center py-12 bg-card border rounded-lg">
           <p className="font-nunito text-slate-500">No games in approval queue</p>
         </div>
       ) : (

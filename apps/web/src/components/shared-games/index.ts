@@ -16,6 +16,7 @@ export {
   type SharedGameSearchFiltersProps,
 } from './SharedGameSearchFilters';
 export { SharedGameDetailModal, type SharedGameDetailModalProps } from './SharedGameDetailModal';
+export { KnowledgeBaseTab, type KnowledgeBaseTabProps } from './KnowledgeBaseTab';
 export { ContributorsSection } from './ContributorsSection';
 export { ContributorCard } from './ContributorCard';
 export {

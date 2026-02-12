@@ -86,6 +86,9 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IMoveGeneratorService, ChessMoveGenerator>();
         services.AddScoped<ILegalMoveValidator, LegalMoveValidator>();
         services.AddScoped<IMoveScorer, HeuristicMoveScorer>();
+
+        // Issue #3769: Decisore Agent Strategic Analysis
+        services.AddScoped<IDecisoreAgentService, DecisoreAgentService>();
         services.AddSingleton<IContextRetrievalStrategy, CapabilityMatchingStrategy>();
         services.AddScoped<IContextSource, ConversationMemorySource>();
         services.AddScoped<GameStateSource>();

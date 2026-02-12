@@ -71,7 +71,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext);
-        var agent = AgentDefinition.Create("UniqueAgent", "Desc", AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("UniqueAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         await repository.AddAsync(agent);
 
         // Act
@@ -88,8 +88,8 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext);
-        await repository.AddAsync(AgentDefinition.Create("Agent1", "Desc1", AgentDefinitionConfig.Default()));
-        await repository.AddAsync(AgentDefinition.Create("Agent2", "Desc2", AgentDefinitionConfig.Default()));
+        await repository.AddAsync(AgentDefinition.Create("Agent1", "Desc1", AgentType.RagAgent, AgentDefinitionConfig.Default()));
+        await repository.AddAsync(AgentDefinition.Create("Agent2", "Desc2", AgentType.RagAgent, AgentDefinitionConfig.Default()));
 
         // Act
         var agents = await repository.GetAllAsync();
@@ -104,8 +104,8 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext);
-        var activeAgent = AgentDefinition.Create("ActiveAgent", "Desc", AgentDefinitionConfig.Default());
-        var inactiveAgent = AgentDefinition.Create("InactiveAgent", "Desc", AgentDefinitionConfig.Default());
+        var activeAgent = AgentDefinition.Create("ActiveAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var inactiveAgent = AgentDefinition.Create("InactiveAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         inactiveAgent.Deactivate();
 
         await repository.AddAsync(activeAgent);
@@ -125,8 +125,8 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext);
-        await repository.AddAsync(AgentDefinition.Create("SearchableAgent", "Desc", AgentDefinitionConfig.Default()));
-        await repository.AddAsync(AgentDefinition.Create("OtherAgent", "Desc", AgentDefinitionConfig.Default()));
+        await repository.AddAsync(AgentDefinition.Create("SearchableAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
+        await repository.AddAsync(AgentDefinition.Create("OtherAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
 
         // Act
         var results = await repository.SearchAsync("searchable");
@@ -142,7 +142,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext);
-        var agent = AgentDefinition.Create("OriginalName", "Desc", AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("OriginalName", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         await repository.AddAsync(agent);
 
         // Act
@@ -161,7 +161,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext);
-        var agent = AgentDefinition.Create("ToDelete", "Desc", AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("ToDelete", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         await repository.AddAsync(agent);
 
         // Act
@@ -178,7 +178,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext);
-        await repository.AddAsync(AgentDefinition.Create("ExistingAgent", "Desc", AgentDefinitionConfig.Default()));
+        await repository.AddAsync(AgentDefinition.Create("ExistingAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
 
         // Act
         var exists = await repository.ExistsAsync("ExistingAgent");
@@ -215,7 +215,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         {
             AgentToolConfig.Create("web_search", new Dictionary<string, object> { ["max"] = 10 })
         };
-        var agent = AgentDefinition.Create("ComplexAgent", "Desc", AgentDefinitionConfig.Default(), prompts, tools);
+        var agent = AgentDefinition.Create("ComplexAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default(), prompts, tools);
 
         // Act
         await repository.AddAsync(agent);

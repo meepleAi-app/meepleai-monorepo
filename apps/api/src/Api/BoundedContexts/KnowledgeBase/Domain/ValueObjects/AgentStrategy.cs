@@ -8,8 +8,9 @@ using System.Globalization;
 /// <remarks>
 /// AgentStrategy defines HOW the agent performs its task, including algorithm parameters.
 /// Uses the Strategy pattern for flexible agent behavior configuration.
+/// Issue #3708: Made public for use in AgentDefinition (AI Lab templates).
 /// </remarks>
-internal sealed record AgentStrategy
+public sealed record AgentStrategy
 {
     public string Name { get; init; }
     public IReadOnlyDictionary<string, object> Parameters { get; init; }

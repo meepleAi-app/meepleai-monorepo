@@ -29,6 +29,18 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
             .HasColumnName("description")
             .HasMaxLength(1000);
 
+        // AgentType (Issue #3708) - stored as value + description, computed property ignored
+        builder.Ignore(a => a.Type);
+        builder.Property<string>("_typeValue")
+            .HasColumnName("type_value")
+            .HasMaxLength(50)
+            .IsRequired();
+
+        builder.Property<string>("_typeDescription")
+            .HasColumnName("type_description")
+            .HasMaxLength(200)
+            .IsRequired();
+
         // AgentDefinitionConfig value object (owned)
         builder.OwnsOne(a => a.Config, config =>
         {
@@ -36,6 +48,13 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
             config.Property(c => c.MaxTokens).HasColumnName("max_tokens").IsRequired();
             config.Property(c => c.Temperature).HasColumnName("temperature").IsRequired();
         });
+
+        // AgentStrategy (Issue #3708) - stored as JSONB, computed property ignored
+        builder.Ignore(a => a.Strategy);
+        builder.Property<string>("_strategyJson")
+            .HasColumnName("strategy")
+            .HasColumnType("jsonb")
+            .IsRequired();
 
         // Prompts (JSON column - stored as string, handled by entity)
         builder.Ignore(a => a.Prompts);
@@ -58,5 +77,6 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
         // Indexes for search performance
         builder.HasIndex(a => a.IsActive);
         builder.HasIndex(a => a.CreatedAt);
+        builder.HasIndex("_typeValue").HasDatabaseName("ix_agent_definitions_type_value");
     }
 }

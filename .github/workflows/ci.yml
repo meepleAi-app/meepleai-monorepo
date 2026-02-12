@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main, main-staging]
   workflow_dispatch:
+  workflow_call:  # Allow reuse by deploy-staging.yml
 
 # Cancel in-progress runs for same PR/branch
 concurrency:

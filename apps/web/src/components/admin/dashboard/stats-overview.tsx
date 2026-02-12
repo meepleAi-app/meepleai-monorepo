@@ -4,9 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Users, Package, TrendingUp, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { StatCard } from '@/components/ui/data-display/stat-card';
-// TODO: Switch to real API when available
-// import { adminClient } from '@/lib/api/admin-client';
-import { adminClientMock as adminClient } from '@/lib/api/admin-client-mock';
+import { adminClient } from '@/lib/api/admin-client';
 
 export function StatsOverview() {
   const { data, isLoading } = useQuery({

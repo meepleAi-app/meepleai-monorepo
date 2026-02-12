@@ -10,9 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-// TODO: Switch to real API when available
-// import { adminClient } from '@/lib/api/admin-client';
-import { adminClientMock as adminClient } from '@/lib/api/admin-client-mock';
+import { adminClient } from '@/lib/api/admin-client';
 
 type ViewMode = 'grid' | 'list';
 

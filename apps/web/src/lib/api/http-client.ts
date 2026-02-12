@@ -6,17 +6,22 @@ class HttpClient {
   private baseUrl: string;
 
   constructor(baseUrl = '') {
-    this.baseUrl = baseUrl;
+    this.baseUrl = baseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
   }
 
   async get<T>(url: string): Promise<T> {
     const response = await fetch(`${this.baseUrl}${url}`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Add session token from cookie or localStorage if available
+      },
+      credentials: 'include', // Include cookies for session
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const error = await response.text().catch(() => response.statusText);
+      throw new Error(`HTTP ${response.status}: ${error}`);
     }
 
     return response.json();

@@ -1225,4 +1225,92 @@ public sealed class SharedGameTests
     }
 
     #endregion
+
+    #region Agent Linking Tests (Issue #4228)
+
+    [Fact]
+    public void LinkAgent_WithValidAgentId_LinksAgent()
+    {
+        // Arrange
+        var game = CreateValidGame();
+        var agentId = Guid.NewGuid();
+
+        // Act
+        game.LinkAgent(agentId);
+
+        // Assert
+        game.AgentDefinitionId.Should().Be(agentId);
+        game.DomainEvents.Should().ContainSingle(e => e is AgentLinkedToSharedGameEvent);
+        var domainEvent = game.DomainEvents.OfType<AgentLinkedToSharedGameEvent>().Single();
+        domainEvent.GameId.Should().Be(game.Id);
+        domainEvent.AgentDefinitionId.Should().Be(agentId);
+    }
+
+    [Fact]
+    public void LinkAgent_WhenAgentAlreadyLinked_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var game = CreateValidGame();
+        var firstAgentId = Guid.NewGuid();
+        var secondAgentId = Guid.NewGuid();
+        game.LinkAgent(firstAgentId);
+
+        // Act
+        var act = () => game.LinkAgent(secondAgentId);
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("An agent is already linked to this game");
+        game.AgentDefinitionId.Should().Be(firstAgentId); // Should not change
+    }
+
+    [Fact]
+    public void LinkAgent_WithEmptyGuid_ThrowsArgumentException()
+    {
+        // Arrange
+        var game = CreateValidGame();
+
+        // Act
+        var act = () => game.LinkAgent(Guid.Empty);
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*AgentId cannot be empty*");
+    }
+
+    [Fact]
+    public void UnlinkAgent_WhenAgentLinked_UnlinksAgent()
+    {
+        // Arrange
+        var game = CreateValidGame();
+        var agentId = Guid.NewGuid();
+        game.LinkAgent(agentId);
+        game.ClearDomainEvents(); // Clear link event
+
+        // Act
+        game.UnlinkAgent();
+
+        // Assert
+        game.AgentDefinitionId.Should().BeNull();
+        game.DomainEvents.Should().ContainSingle(e => e is AgentUnlinkedFromSharedGameEvent);
+        var domainEvent = game.DomainEvents.OfType<AgentUnlinkedFromSharedGameEvent>().Single();
+        domainEvent.GameId.Should().Be(game.Id);
+        domainEvent.AgentDefinitionId.Should().Be(agentId);
+    }
+
+    [Fact]
+    public void UnlinkAgent_WhenNoAgentLinked_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var game = CreateValidGame();
+
+        // Act
+        var act = () => game.UnlinkAgent();
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("No agent is currently linked to this game");
+    }
+
+    #endregion
 }

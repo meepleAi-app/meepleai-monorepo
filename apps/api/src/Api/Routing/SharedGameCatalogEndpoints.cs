@@ -398,6 +398,25 @@ internal static class SharedGameCatalogEndpoints
             .WithSummary("Remove document from game (Admin/Editor)")
             .Produces(StatusCodes.Status204NoContent);
 
+        // Agent Linking (Issue #4228)
+        group.MapPost("/admin/shared-games/{id:guid}/link-agent/{agentId:guid}", HandleLinkAgent)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("LinkAgentToSharedGame")
+            .WithSummary("Link AI agent to shared game (Admin/Editor)")
+            .WithDescription("Links an AI agent definition to a shared game for personalized assistance.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        group.MapDelete("/admin/shared-games/{id:guid}/unlink-agent", HandleUnlinkAgent)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("UnlinkAgentFromSharedGame")
+            .WithSummary("Unlink AI agent from shared game (Admin/Editor)")
+            .WithDescription("Removes the AI agent link from a shared game.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
         // Game State Template Management (Issue #2400)
         group.MapGet("/admin/shared-games/{id:guid}/state-template", HandleGetActiveStateTemplate)
             .RequireAuthorization("AdminOrEditorPolicy")
@@ -1445,6 +1464,65 @@ internal static class SharedGameCatalogEndpoints
         catch (InvalidOperationException ex)
         {
             return Results.BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // ========================================
+    // AGENT LINKING HANDLERS (Issue #4228)
+    // ========================================
+
+    private static async Task<IResult> HandleLinkAgent(
+        Guid id,
+        Guid agentId,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new LinkAgentToSharedGameCommand(id, agentId);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (NotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Agent already linked
+            return Results.Conflict(new { error = ex.Message });
+        }
+    }
+
+    private static async Task<IResult> HandleUnlinkAgent(
+        Guid id,
+        IMediator mediator,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        var (authorized, _, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        var command = new UnlinkAgentFromSharedGameCommand(id);
+
+        try
+        {
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            return Results.NoContent();
+        }
+        catch (NotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            // No agent linked
+            return Results.Conflict(new { error = ex.Message });
         }
     }
 #pragma warning restore S1172

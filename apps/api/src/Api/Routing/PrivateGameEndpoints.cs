@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Application.Queries.PrivateGames;
 using Api.Extensions;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,6 +23,8 @@ internal static class PrivateGameEndpoints
         MapUpdatePrivateGameEndpoint(group);
         MapDeletePrivateGameEndpoint(group);
         MapProposePrivateGameEndpoint(group);
+        MapLinkAgentEndpoint(group); // Issue #4228
+        MapUnlinkAgentEndpoint(group); // Issue #4228
 
         return group;
     }
@@ -268,6 +272,121 @@ internal static class PrivateGameEndpoints
         .Produces<ProblemDetails>(StatusCodes.Status403Forbidden)
         .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
         .Produces(StatusCodes.Status429TooManyRequests);
+    }
+
+    /// <summary>
+    /// POST /api/v1/private-games/{id}/link-agent/{agentId} - Link AI agent to private game
+    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
+    /// </summary>
+    private static void MapLinkAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/private-games/{id:guid}/link-agent/{agentId:guid}", async (
+            Guid id,
+            Guid agentId,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new LinkAgentToPrivateGameCommand(id, agentId, userId);
+
+            try
+            {
+                await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.NoContent();
+            }
+            catch (NotFoundException)
+            {
+                return Results.NotFound();
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Agent already linked
+                return Results.Conflict(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // Not the owner
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status403Forbidden);
+            }
+        })
+        .RequireAuthorization()
+        .WithName("LinkAgentToPrivateGame")
+        .WithTags("PrivateGames")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Link AI agent to private game";
+            operation.Description = "Links an AI agent definition to your private game for personalized assistance.";
+            return operation;
+        })
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
+        .Produces<ProblemDetails>(StatusCodes.Status403Forbidden)
+        .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
+    }
+
+    /// <summary>
+    /// DELETE /api/v1/private-games/{id}/unlink-agent - Unlink AI agent from private game
+    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
+    /// </summary>
+    private static void MapUnlinkAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/private-games/{id:guid}/unlink-agent", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new UnlinkAgentFromPrivateGameCommand(id, userId);
+
+            try
+            {
+                await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.NoContent();
+            }
+            catch (NotFoundException)
+            {
+                return Results.NotFound();
+            }
+            catch (InvalidOperationException ex)
+            {
+                // No agent linked
+                return Results.Conflict(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // Not the owner
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status403Forbidden);
+            }
+        })
+        .RequireAuthorization()
+        .WithName("UnlinkAgentFromPrivateGame")
+        .WithTags("PrivateGames")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "Unlink AI agent from private game";
+            operation.Description = "Removes the AI agent link from your private game.";
+            return operation;
+        })
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
+        .Produces<ProblemDetails>(StatusCodes.Status403Forbidden)
+        .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
     }
 
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)

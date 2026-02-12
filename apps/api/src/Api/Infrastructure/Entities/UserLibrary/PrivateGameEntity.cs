@@ -22,6 +22,12 @@ public class PrivateGameEntity
     public int? BggId { get; set; }
 
     /// <summary>
+    /// Foreign key to linked AI agent definition.
+    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
+    /// </summary>
+    public Guid? AgentDefinitionId { get; set; }
+
+    /// <summary>
     /// The title of the game.
     /// </summary>
     public string Title { get; set; } = string.Empty;

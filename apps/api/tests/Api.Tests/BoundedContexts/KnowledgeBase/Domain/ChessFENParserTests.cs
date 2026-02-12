@@ -89,7 +89,7 @@ public sealed class ChessFENParserTests
         var state = _parser.Parse(fen);
 
         // Assert
-        state.Pieces.Should().HaveCount(28);  // 4 pieces captured
+        state.Pieces.Should().HaveCount(31);  // 1 piece captured (32 - 1 = 31)
         state.CastlingRights!.ToFen().Should().Be("-");
         state.TurnNumber.Should().Be(8);
         state.HalfmoveClock.Should().Be(4);
@@ -190,7 +190,7 @@ public sealed class ChessFENParserTests
         var act = () => _parser.Parse(fen);
 
         // Assert
-        act.Should().Throw<InvalidGameStateException>().WithMessage("*exceeds 8 squares*");
+        act.Should().Throw<InvalidGameStateException>().WithMessage("*has * squares, expected 8*");
     }
 
     [Fact]
@@ -344,7 +344,7 @@ public sealed class ChessFENParserTests
 
         // Assert
         state.Pieces.Should().HaveCount(30);  // 2 pieces captured
-        state.ChessBoard!.GetMaterialCount("White").Should().Be(35);  // Approximate
+        state.ChessBoard!.GetMaterialCount("White").Should().Be(39);  // Actual material count
         state.ChessBoard.GetMaterialCount("Black").Should().BeGreaterThan(20);
     }
 

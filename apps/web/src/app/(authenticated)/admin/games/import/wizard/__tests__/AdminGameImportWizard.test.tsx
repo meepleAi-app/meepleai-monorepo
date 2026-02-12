@@ -131,8 +131,9 @@ describe('AdminGameImportWizardClient', () => {
     it('highlights step 1 as active on initial render', () => {
       render(<AdminGameImportWizardClient />);
 
-      const step1Indicator = screen.getByText('📄').closest('div');
-      expect(step1Indicator).toHaveClass('bg-primary');
+      // WizardSteps uses aria-current for active step
+      const step1Button = screen.getByLabelText(/step 1:/i);
+      expect(step1Button).toHaveAttribute('aria-current', 'step');
     });
 
     it('displays wizard state summary', () => {
@@ -416,6 +417,194 @@ describe('AdminGameImportWizardClient', () => {
       expect(within(summary!).getByText(/✗.*not extracted/i)).toBeInTheDocument();
       expect(within(summary!).getByText(/✗.*not selected/i)).toBeInTheDocument();
       expect(within(summary!).getByText(/✗.*not ready/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Wizard Navigation & Progress - Issue #4166', () => {
+    describe('Progress Bar', () => {
+      it('displays progress bar with correct percentage for step 1', () => {
+        render(<AdminGameImportWizardClient />);
+
+        expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
+        expect(screen.getByText('0%')).toBeInTheDocument();
+
+        const progressBar = screen.getByRole('progressbar');
+        expect(progressBar).toHaveAttribute('aria-valuenow', '0');
+        expect(progressBar).toHaveStyle({ width: '0%' });
+      });
+
+      it('displays progress bar with correct percentage for step 2', () => {
+        useGameImportWizardStore.setState({ currentStep: 2 });
+
+        render(<AdminGameImportWizardClient />);
+
+        expect(screen.getByText('Step 2 of 4')).toBeInTheDocument();
+        expect(screen.getByText('33%')).toBeInTheDocument();
+
+        const progressBar = screen.getByRole('progressbar');
+        expect(progressBar).toHaveAttribute('aria-valuenow', '33.33333333333333');
+      });
+
+      it('displays progress bar with correct percentage for step 3', () => {
+        useGameImportWizardStore.setState({ currentStep: 3 });
+
+        render(<AdminGameImportWizardClient />);
+
+        expect(screen.getByText('Step 3 of 4')).toBeInTheDocument();
+        expect(screen.getByText('67%')).toBeInTheDocument();
+
+        const progressBar = screen.getByRole('progressbar');
+        expect(progressBar).toHaveAttribute('aria-valuenow', '66.66666666666666');
+      });
+
+      it('displays progress bar with correct percentage for step 4', () => {
+        useGameImportWizardStore.setState({ currentStep: 4 });
+
+        render(<AdminGameImportWizardClient />);
+
+        expect(screen.getByText('Step 4 of 4')).toBeInTheDocument();
+        expect(screen.getByText('100%')).toBeInTheDocument();
+
+        const progressBar = screen.getByRole('progressbar');
+        expect(progressBar).toHaveAttribute('aria-valuenow', '100');
+        expect(progressBar).toHaveStyle({ width: '100%' });
+      });
+    });
+
+    describe('WizardSteps Integration', () => {
+      it('renders WizardSteps component with all steps', () => {
+        render(<AdminGameImportWizardClient />);
+
+        // WizardSteps should render all step labels
+        expect(screen.getByText('1. Upload PDF')).toBeInTheDocument();
+        expect(screen.getByText('2. Metadata')).toBeInTheDocument();
+        expect(screen.getByText('3. BGG Match')).toBeInTheDocument();
+        expect(screen.getByText('4. Finalize')).toBeInTheDocument();
+      });
+
+      it('highlights current step in WizardSteps', () => {
+        useGameImportWizardStore.setState({ currentStep: 2 });
+
+        render(<AdminGameImportWizardClient />);
+
+        // Step 2 should have active state (aria-current)
+        const step2 = screen.getByLabelText(/step 2:/i);
+        expect(step2).toHaveAttribute('aria-current', 'step');
+      });
+
+      it('shows completed checkmark for completed steps', () => {
+        useGameImportWizardStore.setState({ currentStep: 3 });
+
+        render(<AdminGameImportWizardClient />);
+
+        // Steps 1 and 2 should have completed state (green background)
+        const step1 = screen.getByLabelText(/step 1:/i);
+        const step2 = screen.getByLabelText(/step 2:/i);
+
+        // WizardSteps applies bg-green-600 to completed steps
+        const step1Indicator = within(step1).getByText('1. Upload PDF').previousSibling;
+        const step2Indicator = within(step2).getByText('2. Metadata').previousSibling;
+
+        expect(step1Indicator).toHaveClass('bg-green-600');
+        expect(step2Indicator).toHaveClass('bg-green-600');
+      });
+    });
+
+    describe('Breadcrumb Navigation', () => {
+      it('allows clicking on completed steps to navigate back', async () => {
+        useGameImportWizardStore.setState({
+          currentStep: 3,
+          uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
+          extractedMetadata: { title: 'Test' },
+        });
+
+        render(<AdminGameImportWizardClient />);
+
+        // Click on step 1 (completed)
+        const step1Button = screen.getByLabelText(/step 1:/i);
+        await userEvent.click(step1Button);
+
+        await waitFor(() => {
+          expect(useGameImportWizardStore.getState().currentStep).toBe(1);
+        });
+      });
+
+      it('allows clicking on active step (no effect)', async () => {
+        useGameImportWizardStore.setState({ currentStep: 2 });
+
+        render(<AdminGameImportWizardClient />);
+
+        // Click on step 2 (active)
+        const step2Button = screen.getByLabelText(/step 2:/i);
+        await userEvent.click(step2Button);
+
+        await waitFor(() => {
+          expect(useGameImportWizardStore.getState().currentStep).toBe(2);
+        });
+      });
+
+      it('does not allow clicking on future steps', async () => {
+        useGameImportWizardStore.setState({ currentStep: 1 });
+
+        render(<AdminGameImportWizardClient />);
+
+        // Step 3 button should be disabled
+        const step3Button = screen.getByLabelText(/step 3:/i);
+        expect(step3Button).toBeDisabled();
+      });
+    });
+
+    describe('Validation Gates', () => {
+      it('prevents navigation to step 2 without uploaded PDF', () => {
+        useGameImportWizardStore.setState({
+          currentStep: 1,
+          uploadedPdf: null,
+        });
+
+        render(<AdminGameImportWizardClient />);
+
+        const nextButton = screen.getByRole('button', { name: /next/i });
+        expect(nextButton).toBeDisabled();
+      });
+
+      it('allows navigation to step 2 with uploaded PDF', () => {
+        useGameImportWizardStore.setState({
+          currentStep: 1,
+          uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
+        });
+
+        render(<AdminGameImportWizardClient />);
+
+        const nextButton = screen.getByRole('button', { name: /next/i });
+        expect(nextButton).not.toBeDisabled();
+      });
+
+      it('prevents navigation to step 3 without extracted metadata', () => {
+        useGameImportWizardStore.setState({
+          currentStep: 2,
+          uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
+          extractedMetadata: null,
+        });
+
+        render(<AdminGameImportWizardClient />);
+
+        const nextButton = screen.getByRole('button', { name: /next/i });
+        expect(nextButton).toBeDisabled();
+      });
+
+      it('prevents navigation to step 4 without BGG selection', () => {
+        useGameImportWizardStore.setState({
+          currentStep: 3,
+          uploadedPdf: { id: 'pdf-123', fileName: 'test.pdf' },
+          extractedMetadata: { title: 'Test' },
+          selectedBggId: null,
+        });
+
+        render(<AdminGameImportWizardClient />);
+
+        const nextButton = screen.getByRole('button', { name: /next/i });
+        expect(nextButton).toBeDisabled();
+      });
     });
   });
 });

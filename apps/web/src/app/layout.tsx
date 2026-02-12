@@ -22,6 +22,7 @@ import '../styles/diff-viewer.css';
 import '../styles/agent-theme.css';
 import '../styles/agent-typography.css';
 import '../styles/agent-animations.css';
+import '../styles/admin-dashboard.css';
 import 'prismjs/themes/prism-tomorrow.css';
 
 const quicksand = Quicksand({

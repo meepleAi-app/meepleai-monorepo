@@ -190,7 +190,7 @@ internal sealed class EnrichGameMetadataFromBggCommandHandler
     /// <summary>
     /// Internal record for merged metadata fields.
     /// </summary>
-    private record MergedMetadata(
+    private sealed record MergedMetadata(
         string Title,
         int? Year,
         int? MinPlayers,

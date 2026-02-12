@@ -18,7 +18,7 @@
     <header class="gradient-bg text-white py-8 px-4 shadow-lg">
         <div class="max-w-7xl mx-auto">
             <h1 class="text-4xl font-bold mb-2">🎲 MeepleAI Implementation Sequences</h1>
-            <p class="text-purple-100 text-lg">Strategic roadmap per issue aperte - 61 issues attive</p>
+            <p class="text-purple-100 text-lg">Strategic roadmap per issue aperte - 103 issues attive</p>
         </div>
     </header>
 
@@ -26,24 +26,24 @@
     <div class="max-w-7xl mx-auto px-4 -mt-6 mb-8">
         <div class="bg-white rounded-lg shadow-lg p-6 grid grid-cols-2 md:grid-cols-5 gap-4">
             <div class="text-center">
-                <div class="text-3xl font-bold text-purple-600">61</div>
+                <div class="text-3xl font-bold text-purple-600">103</div>
                 <div class="text-sm text-gray-600">Open Issues</div>
             </div>
             <div class="text-center">
-                <div class="text-3xl font-bold text-blue-600">13</div>
+                <div class="text-3xl font-bold text-blue-600">16</div>
                 <div class="text-sm text-gray-600">Epics</div>
             </div>
             <div class="text-center">
-                <div class="text-3xl font-bold text-green-600">195</div>
+                <div class="text-3xl font-bold text-green-600">402</div>
                 <div class="text-sm text-gray-600">Story Points</div>
             </div>
             <div class="text-center">
-                <div class="text-3xl font-bold text-orange-600">19-24</div>
+                <div class="text-3xl font-bold text-orange-600">30-35</div>
                 <div class="text-sm text-gray-600">Weeks Est.</div>
             </div>
             <div class="text-center">
-                <div class="text-3xl font-bold text-red-600">1</div>
-                <div class="text-sm text-gray-600">Critical</div>
+                <div class="text-3xl font-bold text-red-600">28</div>
+                <div class="text-sm text-gray-600">High Priority</div>
             </div>
         </div>
     </div>
@@ -56,7 +56,7 @@
                 <strong>Priority Order</strong>: Sequence A (Critical Path) → Sequence B (AI Foundation) → Sequence C/D/E in parallel
             </p>
             <p class="text-blue-700 text-sm">
-                <strong>Rationale</strong>: Sequence A contains <span class="bg-red-100 text-red-800 px-2 py-1 rounded font-semibold">p0-critical</span> API integration (#4126) and PDF Wizard Epic (#4136) which unblock major features. Backend AI foundation follows to support frontend polish and advanced features.
+                <strong>Rationale</strong>: Sequence A contains <span class="bg-red-100 text-red-800 px-2 py-1 rounded font-semibold">Epic #4136 PDF Wizard</span> with 38 sub-issues (180 SP) which unlocks major admin and catalog features. Backend AI foundation follows to support frontend polish and advanced features.
             </p>
         </div>
     </div>
@@ -67,52 +67,26 @@
             <div class="bg-white rounded-lg shadow-xl overflow-hidden">
                 <div class="bg-gradient-to-r from-red-600 to-pink-600 text-white px-6 py-4">
                     <h2 class="text-2xl font-bold">🔥 Sequence A: Critical Path & PDF Wizard</h2>
-                    <p class="text-red-100 mt-1">Blockers: API integration, PDF wizard for SharedGameCatalog, PDF status tracking</p>
+                    <p class="text-red-100 mt-1">Epic #4136 PDF Wizard (38 sub-issues), Epic #4071 PDF Status Tracking (6 sub-issues), admin dashboard verification</p>
                     <div class="flex gap-6 mt-3 text-sm">
-                        <span class="bg-white/20 px-3 py-1 rounded">9 issues</span>
-                        <span class="bg-white/20 px-3 py-1 rounded">58 story points</span>
-                        <span class="bg-white/20 px-3 py-1 rounded">6-7 weeks</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">54 issues</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">214 story points</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">9-11 weeks</span>
                     </div>
                 </div>
 
                 <div class="p-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">🎯 Strategic Goals</h3>
                     <ul class="list-disc list-inside text-gray-700 mb-6 space-y-1">
-                        <li>Unblock frontend with API integration (SSE + React Query)</li>
-                        <li>Enable admin/editor PDF workflow for SharedGameCatalog</li>
-                        <li>Add PDF processing visibility with 7-state pipeline</li>
-                        <li>Integrate PDF viewer with chat citations</li>
+                        <li>Enable admin/editor 4-step PDF wizard for SharedGameCatalog</li>
+                        <li>Implement BGG matching and enrichment workflow</li>
+                        <li>Add bulk import functionality with SSE progress tracking</li>
+                        <li>Complete admin dashboard frontend blocks and API verification</li>
+                        <li>Implement PDF status tracking with 7-state pipeline</li>
                     </ul>
 
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">📋 Issue Sequence</h3>
                     <div class="space-y-3">
-                        <!-- Issue 1 - CRITICAL -->
-                        <div class="card-hover border-l-4 border-red-700 bg-red-100 p-4 rounded-r-lg border-2 border-red-300">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-2">
-                                        <span class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase">CRITICAL</span>
-                                        <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4126" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                            #4126 - API Integration: Agent Chat SSE + React Query
-                                        </a>
-                                    </div>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-red-200 text-red-900 text-xs px-2 py-1 rounded">p0-critical</span>
-                                        <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">size:XL</span>
-                                    </div>
-                                    <p class="text-gray-700 text-sm mt-2">
-                                        <strong>Story Points:</strong> 13 |
-                                        <strong>⚠️ MUST BE FIRST</strong> |
-                                        <strong>Rationale:</strong> SSE streaming + React Query foundation for real-time chat
-                                    </p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-3xl font-bold text-red-700">13</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- PDF Wizard Epic -->
                         <div class="card-hover border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
                             <div class="flex items-start justify-between">
@@ -127,28 +101,125 @@
                                         <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">backend</span>
                                     </div>
                                     <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 34 (7 sub-issues) |
-                                        <strong>Rationale:</strong> 4-step wizard with PDF upload, extraction, BGG match, approval workflow
+                                        <strong>Story Points:</strong> 180 (38 sub-issues) |
+                                        <strong>Rationale:</strong> 4-step wizard (Upload → Extract → BGG Match → Enrich) + Bulk Import + E2E Tests
                                     </p>
                                     <div class="ml-6 mt-3 space-y-2 text-xs">
+                                        <div class="font-semibold text-gray-700 mb-2">Backend Commands (20 SP):</div>
                                         <div class="flex justify-between">
-                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4138" target="_blank" class="text-blue-600 hover:underline">#4138 Backend: Commands & DTOs</a></span>
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4138" target="_blank" class="text-blue-600 hover:underline">#4138 Commands & DTOs</a></span>
                                             <span class="text-gray-500">5 SP</span>
                                         </div>
                                         <div class="flex justify-between">
-                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4139" target="_blank" class="text-blue-600 hover:underline">#4139 Backend: API Endpoints</a></span>
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4155" target="_blank" class="text-blue-600 hover:underline">#4155 Extract Metadata Query</a></span>
                                             <span class="text-gray-500">5 SP</span>
                                         </div>
                                         <div class="flex justify-between">
-                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4140" target="_blank" class="text-blue-600 hover:underline">#4140 Backend: Test Suite</a></span>
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4156" target="_blank" class="text-blue-600 hover:underline">#4156 BGG Match Command</a></span>
                                             <span class="text-gray-500">5 SP</span>
                                         </div>
                                         <div class="flex justify-between">
-                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4141" target="_blank" class="text-blue-600 hover:underline">#4141 Frontend: Wizard Components</a></span>
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4169" target="_blank" class="text-blue-600 hover:underline">#4169 Bulk Import Command</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+
+                                        <div class="font-semibold text-gray-700 mb-2 mt-3">Backend Endpoints (26 SP):</div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4139" target="_blank" class="text-blue-600 hover:underline">#4139 API Endpoints</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4157" target="_blank" class="text-blue-600 hover:underline">#4157 Wizard Routing</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4171" target="_blank" class="text-blue-600 hover:underline">#4171 Bulk Import Endpoint</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4170" target="_blank" class="text-blue-600 hover:underline">#4170 SSE Progress Endpoint</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4158" target="_blank" class="text-blue-600 hover:underline">#4158 Duplicate Detection</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4159" target="_blank" class="text-blue-600 hover:underline">#4159 Approval Workflow</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+
+                                        <div class="font-semibold text-gray-700 mb-2 mt-3">Frontend Wizard (41 SP):</div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4161" target="_blank" class="text-blue-600 hover:underline">#4161 Wizard Container</a></span>
                                             <span class="text-gray-500">8 SP</span>
                                         </div>
                                         <div class="flex justify-between">
-                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4142" target="_blank" class="text-blue-600 hover:underline">#4142 Frontend: E2E Tests</a></span>
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4162" target="_blank" class="text-blue-600 hover:underline">#4162 Step 1: Upload PDF</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4163" target="_blank" class="text-blue-600 hover:underline">#4163 Step 2: Metadata Extraction</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4164" target="_blank" class="text-blue-600 hover:underline">#4164 Step 3: BGG Match</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4165" target="_blank" class="text-blue-600 hover:underline">#4165 Step 4: Enrich & Confirm</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4166" target="_blank" class="text-blue-600 hover:underline">#4166 Navigation & Progress</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4167" target="_blank" class="text-blue-600 hover:underline">#4167 Error Handling</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4141" target="_blank" class="text-blue-600 hover:underline">#4141 Wizard Components</a></span>
+                                            <span class="text-gray-500">8 SP</span>
+                                        </div>
+
+                                        <div class="font-semibold text-gray-700 mb-2 mt-3">Bulk Import Frontend (18 SP):</div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4172" target="_blank" class="text-blue-600 hover:underline">#4172 Upload UI</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4173" target="_blank" class="text-blue-600 hover:underline">#4173 Preview & Validation</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4174" target="_blank" class="text-blue-600 hover:underline">#4174 SSE Progress</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4175" target="_blank" class="text-blue-600 hover:underline">#4175 Results Summary</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+
+                                        <div class="font-semibold text-gray-700 mb-2 mt-3">Testing & Documentation (26 SP):</div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4140" target="_blank" class="text-blue-600 hover:underline">#4140 Backend Test Suite</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4160" target="_blank" class="text-blue-600 hover:underline">#4160 Integration Tests</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4142" target="_blank" class="text-blue-600 hover:underline">#4142 Frontend E2E Tests</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4168" target="_blank" class="text-blue-600 hover:underline">#4168 Playwright E2E</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4176" target="_blank" class="text-blue-600 hover:underline">#4176 Bulk Import E2E</a></span>
                                             <span class="text-gray-500">5 SP</span>
                                         </div>
                                         <div class="flex justify-between">
@@ -162,54 +233,130 @@
                                     </div>
                                 </div>
                                 <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-red-600">34</div>
+                                    <div class="text-2xl font-bold text-red-600">180</div>
                                     <div class="text-xs text-gray-500">SP</div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- PDF Status Epic -->
+                        <!-- PDF Status Epic with Sub-issues -->
                         <div class="card-hover border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
                                     <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4071" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #4071 - Epic #4: PDF Status Tracking
+                                        #4071 - Epic #4: PDF Status Tracking (6 issues)
                                     </a>
                                     <div class="flex gap-2 mt-2 flex-wrap">
                                         <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">p1-high</span>
                                         <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
                                     </div>
                                     <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 8 |
-                                        <strong>Rationale:</strong> 7-state pipeline (Pending → Processing → Failed/Completed) with SSE updates
+                                        <strong>Story Points:</strong> 42 |
+                                        <strong>Rationale:</strong> 7-state pipeline with SSE streaming, multi-location UI, ETA calculation, notifications
                                     </p>
+                                    <div class="ml-4 mt-3 space-y-1 text-xs">
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4208" target="_blank" class="text-blue-600 hover:underline">#4208 State Machine & Error Handling</a></span>
+                                            <span class="text-gray-500">8 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4209" target="_blank" class="text-blue-600 hover:underline">#4209 SSE Progress Stream</a></span>
+                                            <span class="text-gray-500">8 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4212" target="_blank" class="text-blue-600 hover:underline">#4212 Metrics & ETA Calculation</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4210" target="_blank" class="text-blue-600 hover:underline">#4210 Real-time Progress UI</a></span>
+                                            <span class="text-gray-500">8 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4211" target="_blank" class="text-blue-600 hover:underline">#4211 SSE Connection Hook</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4213" target="_blank" class="text-blue-600 hover:underline">#4213 Notifications System</a></span>
+                                            <span class="text-gray-500">8 SP</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-red-600">8</div>
+                                    <div class="text-2xl font-bold text-red-600">42</div>
                                     <div class="text-xs text-gray-500">SP</div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- PDF Viewer Integration -->
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                        <!-- Admin Dashboard - Backend Verification -->
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4130" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #4130 - Integrate PDF viewer with chat citations
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">p3-low</span>
-                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">size:M</span>
+                                    <div class="text-blue-800 font-semibold text-base mb-2">
+                                        Admin Dashboard - Backend Endpoint Verification (5 issues)
                                     </div>
-                                    <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 3 |
-                                        <strong>Dependencies:</strong> #4126 |
-                                        <strong>Rationale:</strong> Click citation → jump to PDF page
-                                    </p>
+                                    <div class="ml-4 mt-2 space-y-1 text-xs">
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4198" target="_blank" class="text-blue-600 hover:underline">#4198 Admin Stats Endpoint</a></span>
+                                            <span class="text-gray-500">2 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4199" target="_blank" class="text-blue-600 hover:underline">#4199 Approval Queue Endpoint</a></span>
+                                            <span class="text-gray-500">2 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4200" target="_blank" class="text-blue-600 hover:underline">#4200 User Management Endpoints</a></span>
+                                            <span class="text-gray-500">2 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4201" target="_blank" class="text-blue-600 hover:underline">#4201 User Library Stats Endpoint</a></span>
+                                            <span class="text-gray-500">2 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4202" target="_blank" class="text-blue-600 hover:underline">#4202 User Badges Endpoint</a></span>
+                                            <span class="text-gray-500">2 SP</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
+                                    <div class="text-2xl font-bold text-orange-600">10</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Admin Dashboard - Frontend Blocks -->
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="text-blue-800 font-semibold text-base mb-2">
+                                        Admin Dashboard - Frontend Blocks (5 issues)
+                                    </div>
+                                    <div class="ml-4 mt-2 space-y-1 text-xs">
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4193" target="_blank" class="text-blue-600 hover:underline">#4193 Collection Overview Block</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4194" target="_blank" class="text-blue-600 hover:underline">#4194 Approval Queue Block</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4195" target="_blank" class="text-blue-600 hover:underline">#4195 User Management Block</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4196" target="_blank" class="text-blue-600 hover:underline">#4196 Detail Pages</a></span>
+                                            <span class="text-gray-500">8 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4197" target="_blank" class="text-blue-600 hover:underline">#4197 API Client Integration</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">28</div>
                                     <div class="text-xs text-gray-500">SP</div>
                                 </div>
                             </div>
@@ -224,11 +371,11 @@
             <div class="bg-white rounded-lg shadow-xl overflow-hidden">
                 <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4">
                     <h2 class="text-2xl font-bold">🤖 Sequence B: AI Platform Foundation</h2>
-                    <p class="text-indigo-100 mt-1">Multi-agent system, orchestration, Decisore/Arbitro agents, AI insights</p>
+                    <p class="text-indigo-100 mt-1">Multi-agent system, Arbitro testing, AI insights validation</p>
                     <div class="flex gap-6 mt-3 text-sm">
-                        <span class="bg-white/20 px-3 py-1 rounded">13 issues</span>
-                        <span class="bg-white/20 px-3 py-1 rounded">44 story points</span>
-                        <span class="bg-white/20 px-3 py-1 rounded">4-5 weeks</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">5 issues</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">26 story points</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">3-4 weeks</span>
                     </div>
                 </div>
 
@@ -236,10 +383,9 @@
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">🎯 Strategic Goals</h3>
                     <ul class="list-disc list-inside text-gray-700 mb-6 space-y-1">
                         <li>Establish multi-agent orchestration framework</li>
-                        <li>Implement Decisore agent for strategic game analysis</li>
                         <li>Complete Arbitro agent testing and validation</li>
-                        <li>Enable agent switching with context preservation</li>
-                        <li>Validate AI insights generation and performance</li>
+                        <li>Enable AI insights generation with runtime validation</li>
+                        <li>Build frontend agent builder for CRUD operations</li>
                     </ul>
 
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">📋 Issue Sequence</h3>
@@ -268,70 +414,24 @@
                             </div>
                         </div>
 
-                        <!-- Orchestration -->
+                        <!-- Agent Builder -->
                         <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3776" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3776 - Multi-Agent Orchestration & Routing System
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
-                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">backend</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 5 |
-                                        <strong>Rationale:</strong> Core routing logic for agent selection
-                                    </p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-orange-600">5</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Context Switching -->
-                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3777" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3777 - Agent Switching Logic & Context Preservation
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
-                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">backend</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 3 |
-                                        <strong>Rationale:</strong> Seamless agent transitions
-                                    </p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-orange-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Multi-Agent Dashboard -->
-                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3778" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3778 - Unified Multi-Agent Dashboard UI
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3809" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3809 - Frontend: Agent Builder Form & CRUD
                                     </a>
                                     <div class="flex gap-2 mt-2 flex-wrap">
                                         <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
                                         <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">frontend</span>
                                     </div>
                                     <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 5 |
-                                        <strong>Rationale:</strong> Unified interface for all agents
+                                        <strong>Story Points:</strong> 3 |
+                                        <strong>Rationale:</strong> User-facing agent management
                                     </p>
                                 </div>
                                 <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-orange-600">5</div>
+                                    <div class="text-2xl font-bold text-orange-600">3</div>
                                     <div class="text-xs text-gray-500">SP</div>
                                 </div>
                             </div>
@@ -360,29 +460,6 @@
                             </div>
                         </div>
 
-                        <!-- Documentation -->
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3780" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3780 - Complete Documentation & User Guide
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">priority: medium</span>
-                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">kind/docs</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 3 |
-                                        <strong>Rationale:</strong> User-facing docs for multi-agent system
-                                    </p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Arbitro Testing -->
                         <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
                             <div class="flex items-start justify-between">
@@ -406,93 +483,24 @@
                             </div>
                         </div>
 
-                        <!-- Decisore Validation -->
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3775" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3775 - Decisore Agent: Beta Testing & Expert Validation
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">priority: medium</span>
-                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">kind/test</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 3 |
-                                        <strong>Rationale:</strong> Expert validation for strategic AI
-                                    </p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Agent Builder -->
+                        <!-- AI Insights Epic -->
                         <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3809" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3809 - Frontend: Agent Builder Form & CRUD
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3902" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #3902 - Epic: AI Insights & Recommendations
                                     </a>
                                     <div class="flex gap-2 mt-2 flex-wrap">
                                         <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
-                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">frontend</span>
+                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
                                     </div>
                                     <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 3 |
-                                        <strong>Rationale:</strong> User-facing agent management
+                                        <strong>Story Points:</strong> 5 |
+                                        <strong>Rationale:</strong> AI-driven recommendations system
                                     </p>
                                 </div>
                                 <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-orange-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Arbitro Benchmarks -->
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3874" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3874 - Arbitro Agent: Performance Benchmark Tests
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
-                                        <span class="bg-pink-100 text-pink-800 text-xs px-2 py-1 rounded">performance</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 2 |
-                                        <strong>Rationale:</strong> Performance validation
-                                    </p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">2</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- AI Insights Widget -->
-                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3919" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3919 - Frontend: AI Insights Widget Component
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">priority: high</span>
-                                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">frontend</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 2 |
-                                        <strong>Rationale:</strong> Real-time insights display
-                                    </p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-orange-600">2</div>
+                                    <div class="text-2xl font-bold text-orange-600">5</div>
                                     <div class="text-xs text-gray-500">SP</div>
                                 </div>
                             </div>
@@ -532,7 +540,7 @@
                     <h2 class="text-2xl font-bold">⚙️ Sequence C: Admin Platform (Epic 3 Features)</h2>
                     <p class="text-teal-100 mt-1">Agent Builder, Playground, Strategy Editor, Visual Pipeline, Analytics</p>
                     <div class="flex gap-6 mt-3 text-sm">
-                        <span class="bg-white/20 px-3 py-1 rounded">11 issues</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">10 issues</span>
                         <span class="bg-white/20 px-3 py-1 rounded">37 story points</span>
                         <span class="bg-white/20 px-3 py-1 rounded">4 weeks</span>
                     </div>
@@ -549,192 +557,54 @@
 
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">📋 Issue Sequence</h3>
                     <div class="space-y-3">
-                        <!-- Epic 3 Issues -->
+                        <!-- Epic 3 Issues (condensed for brevity) -->
                         <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3709" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3709 - Epic 3: Agent Builder UI
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
-                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
+                                    <div class="text-blue-800 font-semibold text-base mb-2">
+                                        Epic 3 Features - AI Platform Admin (9 issues)
                                     </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
+                                    <div class="ml-4 mt-2 space-y-1 text-xs">
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3710" target="_blank" class="text-blue-600 hover:underline">#3710 Agent Playground</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3711" target="_blank" class="text-blue-600 hover:underline">#3711 Strategy Editor</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3712" target="_blank" class="text-blue-600 hover:underline">#3712 Visual Pipeline Builder</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3713" target="_blank" class="text-blue-600 hover:underline">#3713 Agent Catalog & Usage Stats</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3714" target="_blank" class="text-blue-600 hover:underline">#3714 Chat Analytics</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3715" target="_blank" class="text-blue-600 hover:underline">#3715 PDF Analytics</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3716" target="_blank" class="text-blue-600 hover:underline">#3716 Model Performance Tracking</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3717" target="_blank" class="text-blue-600 hover:underline">#3717 A/B Testing Framework</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3718" target="_blank" class="text-blue-600 hover:underline">#3718 Testing - AI Platform</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3710" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3710 - Epic 3: Agent Playground
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
-                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3711" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3711 - Epic 3: Strategy Editor
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
-                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3712" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3712 - Epic 3: Visual Pipeline Builder
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
-                                        <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">complexity: large</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 5</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">5</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3713" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3713 - Epic 3: Agent Catalog & Usage Stats
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
-                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3714" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3714 - Epic 3: Chat Analytics
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
-                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3715" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3715 - Epic 3: PDF Analytics
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
-                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3716" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3716 - Epic 3: Model Performance Tracking
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
-                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3717" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3717 - Epic 3: A/B Testing Framework
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
-                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3718" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3718 - Epic 3: Testing - AI Platform
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">medium</span>
-                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">tests</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
+                                    <div class="text-2xl font-bold text-yellow-600">29</div>
                                     <div class="text-xs text-gray-500">SP</div>
                                 </div>
                             </div>
@@ -770,25 +640,26 @@
             <div class="bg-white rounded-lg shadow-xl overflow-hidden">
                 <div class="bg-gradient-to-r from-green-500 to-teal-500 text-white px-6 py-4">
                     <h2 class="text-2xl font-bold">✨ Sequence D: Frontend Polish & User Experience</h2>
-                    <p class="text-green-100 mt-1">MeepleCard enhancements, advanced features, gamification, collaboration</p>
+                    <p class="text-green-100 mt-1">MeepleCard enhancements, permissions, tooltips, gamification</p>
                     <div class="flex gap-6 mt-3 text-sm">
-                        <span class="bg-white/20 px-3 py-1 rounded">6 issues</span>
-                        <span class="bg-white/20 px-3 py-1 rounded">18 story points</span>
-                        <span class="bg-white/20 px-3 py-1 rounded">2 weeks</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">18 issues</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">56 story points</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">6-7 weeks</span>
                     </div>
                 </div>
 
                 <div class="p-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">🎯 Strategic Goals</h3>
                     <ul class="list-disc list-inside text-gray-700 mb-6 space-y-1">
-                        <li>Polish core UI components (MeepleCard system)</li>
+                        <li>Complete MeepleCard system with permissions and accessibility</li>
+                        <li>Implement tag system and tooltip positioning</li>
                         <li>Add gamification and engagement features</li>
-                        <li>Enable collaboration and version control</li>
-                        <li>Improve user experience with advanced recommendations</li>
+                        <li>Enable collaboration with version control and private games</li>
                     </ul>
 
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">📋 Issue Sequence</h3>
                     <div class="space-y-3">
+                        <!-- MeepleCard Epic -->
                         <div class="card-hover border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
@@ -808,94 +679,120 @@
                             </div>
                         </div>
 
+                        <!-- Permissions & Tags -->
+                        <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="text-blue-800 font-semibold text-base mb-2">
+                                        Permissions & Tag System (10 issues)
+                                    </div>
+                                    <div class="ml-4 mt-2 space-y-1 text-xs">
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4177" target="_blank" class="text-blue-600 hover:underline">#4177 Permission Data Model</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4178" target="_blank" class="text-blue-600 hover:underline">#4178 Permission Hooks</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4179" target="_blank" class="text-blue-600 hover:underline">#4179 MeepleCard Permissions</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4180" target="_blank" class="text-blue-600 hover:underline">#4180 Tooltip Accessibility</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4181" target="_blank" class="text-blue-600 hover:underline">#4181 Vertical Tag Component</a></span>
+                                            <span class="text-gray-500">2 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4182" target="_blank" class="text-blue-600 hover:underline">#4182 Tag System Integration</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4183" target="_blank" class="text-blue-600 hover:underline">#4183 Collection Limit UI</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4184" target="_blank" class="text-blue-600 hover:underline">#4184 Agent Metadata Display</a></span>
+                                            <span class="text-gray-500">2 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4185" target="_blank" class="text-blue-600 hover:underline">#4185 Integration Testing</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4186" target="_blank" class="text-blue-600 hover:underline">#4186 Tooltip Positioning</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-orange-600">28</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gamification Epics -->
+                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="text-blue-800 font-semibold text-base mb-2">
+                                        Gamification & Advanced Features (4 epics)
+                                    </div>
+                                    <div class="ml-4 mt-2 space-y-1 text-xs">
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3906" target="_blank" class="text-blue-600 hover:underline">#3906 Gamification Epic</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3348" target="_blank" class="text-blue-600 hover:underline">#3348 Advanced Features Epic</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3341" target="_blank" class="text-blue-600 hover:underline">#3341 Game Session Toolkit</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3320" target="_blank" class="text-blue-600 hover:underline">#3320 Dashboard Features</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-yellow-600">14</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Other Frontend -->
                         <div class="card-hover border-l-4 border-gray-400 bg-gray-50 p-4 rounded-r-lg">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3894" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3894 - EntityListView - Test Coverage & Polish
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">low</span>
+                                    <div class="text-blue-800 font-semibold text-base mb-2">
+                                        Additional Features (3 issues)
                                     </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 2</p>
+                                    <div class="ml-4 mt-2 space-y-1 text-xs">
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3894" target="_blank" class="text-blue-600 hover:underline">#3894 EntityListView Polish</a></span>
+                                            <span class="text-gray-500">2 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3355" target="_blank" class="text-blue-600 hover:underline">#3355 Version History UI</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3120" target="_blank" class="text-blue-600 hover:underline">#3120 Private Games System</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-gray-600">2</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3355" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3355 - Game/Document Version History & Comparison UI
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">priority: medium</span>
-                                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">feature</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3902" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3902 - Epic: AI Insights & Recommendations
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">priority: medium</span>
-                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 5</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">5</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3906" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3906 - Epic: Gamification & Advanced Features
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">priority: medium</span>
-                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 5</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">5</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-gray-400 bg-gray-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3120" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3120 - Private Games & Catalog Proposal System
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">enhancement</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-gray-600">3</div>
+                                    <div class="text-2xl font-bold text-gray-600">8</div>
                                     <div class="text-xs text-gray-500">SP</div>
                                 </div>
                             </div>
@@ -910,49 +807,25 @@
             <div class="bg-white rounded-lg shadow-xl overflow-hidden">
                 <div class="bg-gradient-to-r from-gray-700 to-slate-700 text-white px-6 py-4">
                     <h2 class="text-2xl font-bold">🏗️ Sequence E: Infrastructure & Quality Assurance</h2>
-                    <p class="text-gray-200 mt-1">CI/CD, testing, observability, advanced RAG strategies, tooling</p>
+                    <p class="text-gray-200 mt-1">E2E testing (50 flows), CI/CD (Oracle Cloud), observability, RAG strategies</p>
                     <div class="flex gap-6 mt-3 text-sm">
-                        <span class="bg-white/20 px-3 py-1 rounded">22 issues</span>
-                        <span class="bg-white/20 px-3 py-1 rounded">38 story points</span>
-                        <span class="bg-white/20 px-3 py-1 rounded">4-5 weeks</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">16 issues</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">69 story points</span>
+                        <span class="bg-white/20 px-3 py-1 rounded">7-8 weeks</span>
                     </div>
                 </div>
 
                 <div class="p-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">🎯 Strategic Goals</h3>
                     <ul class="list-disc list-inside text-gray-700 mb-6 space-y-1">
-                        <li>Establish zero-cost CI/CD infrastructure (Oracle Cloud)</li>
-                        <li>Complete comprehensive E2E testing coverage (50 flows)</li>
-                        <li>Implement observability stack (monitoring, logging, load testing)</li>
-                        <li>Advanced RAG strategies (9 variants)</li>
-                        <li>Tooling and collaboration features</li>
+                        <li>Implement 50 missing E2E test flows for comprehensive coverage</li>
+                        <li>Establish zero-cost CI/CD infrastructure on Oracle Cloud</li>
+                        <li>Deploy observability stack (logging, monitoring, load testing)</li>
+                        <li>Implement advanced RAG strategies (9 variants)</li>
                     </ul>
 
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">📋 Major Epics</h3>
                     <div class="space-y-3">
-                        <!-- CI/CD Epic -->
-                        <div class="card-hover border-l-4 border-gray-600 bg-gray-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2967" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #2967 - Epic: Zero-Cost CI/CD Infrastructure
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">infrastructure</span>
-                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 8 (5 sub-issues) |
-                                        <strong>Rationale:</strong> Oracle Cloud setup, GitHub runner, workflow migration
-                                    </p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-gray-600">8</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- E2E Testing -->
                         <div class="card-hover border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
                             <div class="flex items-start justify-between">
@@ -976,6 +849,92 @@
                             </div>
                         </div>
 
+                        <!-- Admin Testing -->
+                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="text-blue-800 font-semibold text-base mb-2">
+                                        Admin Dashboard Testing (3 issues)
+                                    </div>
+                                    <div class="ml-4 mt-2 space-y-1 text-xs">
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4203" target="_blank" class="text-blue-600 hover:underline">#4203 Component Tests</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4204" target="_blank" class="text-blue-600 hover:underline">#4204 E2E Workflow Tests</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/4205" target="_blank" class="text-blue-600 hover:underline">#4205 API Integration Tests</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-yellow-600">9</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CI/CD Epic -->
+                        <div class="card-hover border-l-4 border-gray-600 bg-gray-50 p-4 rounded-r-lg">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2967" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
+                                        #2967 - Epic: Zero-Cost CI/CD Infrastructure
+                                    </a>
+                                    <div class="flex gap-2 mt-2 flex-wrap">
+                                        <span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">infrastructure</span>
+                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">
+                                        <strong>Story Points:</strong> 20 (8 sub-issues) |
+                                        <strong>Rationale:</strong> Oracle Cloud setup, GitHub runner, workflow migration
+                                    </p>
+                                    <div class="ml-6 mt-3 space-y-1 text-xs">
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2968" target="_blank" class="text-blue-600 hover:underline">#2968 Oracle Cloud Setup</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2969" target="_blank" class="text-blue-600 hover:underline">#2969 Runner Installation</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2970" target="_blank" class="text-blue-600 hover:underline">#2970 Workflow Migration</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2972" target="_blank" class="text-blue-600 hover:underline">#2972 Performance Monitoring</a></span>
+                                            <span class="text-gray-500">2 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2973" target="_blank" class="text-blue-600 hover:underline">#2973 Cost Validation</a></span>
+                                            <span class="text-gray-500">1 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2974" target="_blank" class="text-blue-600 hover:underline">#2974 Monitoring Setup</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2975" target="_blank" class="text-blue-600 hover:underline">#2975 Troubleshooting Docs</a></span>
+                                            <span class="text-gray-500">1 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/2976" target="_blank" class="text-blue-600 hover:underline">#2976 Maintenance Automation</a></span>
+                                            <span class="text-gray-500">2 SP</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ml-4 text-right">
+                                    <div class="text-2xl font-bold text-gray-600">20</div>
+                                    <div class="text-xs text-gray-500">SP</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Observability Epic -->
                         <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
                             <div class="flex items-start justify-between">
@@ -988,12 +947,22 @@
                                         <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
                                     </div>
                                     <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 8 (3 sub-issues) |
+                                        <strong>Story Points:</strong> 16 (3 sub-issues) |
                                         <strong>Rationale:</strong> Log aggregation + k6 load testing + monitoring
                                     </p>
+                                    <div class="ml-6 mt-3 space-y-1 text-xs">
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3367" target="_blank" class="text-blue-600 hover:underline">#3367 Log Aggregation System</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3368" target="_blank" class="text-blue-600 hover:underline">#3368 k6 Load Testing</a></span>
+                                            <span class="text-gray-500">3 SP</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">8</div>
+                                    <div class="text-2xl font-bold text-yellow-600">16</div>
                                     <div class="text-xs text-gray-500">SP</div>
                                 </div>
                             </div>
@@ -1011,70 +980,18 @@
                                         <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
                                     </div>
                                     <p class="text-gray-600 text-sm mt-2">
-                                        <strong>Story Points:</strong> 5 |
+                                        <strong>Story Points:</strong> 10 |
                                         <strong>Rationale:</strong> Iterative, self-query, adaptive RAG
                                     </p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-gray-600">5</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Additional Epics -->
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3348" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3348 - EPIC: Advanced Features - AI, Admin & Collaboration
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">priority: medium</span>
-                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
+                                    <div class="ml-6 mt-3 space-y-1 text-xs">
+                                        <div class="flex justify-between">
+                                            <span>→ <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3358" target="_blank" class="text-blue-600 hover:underline">#3358 Iterative RAG Strategy</a></span>
+                                            <span class="text-gray-500">5 SP</span>
+                                        </div>
                                     </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
                                 </div>
                                 <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3341" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3341 - EPIC: Game Session Toolkit Phase 2
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">priority: medium</span>
-                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
-                                    <div class="text-xs text-gray-500">SP</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-hover border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <a href="https://github.com/DegrassiAaron/meepleai-monorepo/issues/3320" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-lg">
-                                        #3320 - EPIC: Gamification & Advanced Dashboard Features
-                                    </a>
-                                    <div class="flex gap-2 mt-2 flex-wrap">
-                                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">priority: medium</span>
-                                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">epic</span>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mt-2"><strong>Story Points:</strong> 3</p>
-                                </div>
-                                <div class="ml-4 text-right">
-                                    <div class="text-2xl font-bold text-yellow-600">3</div>
+                                    <div class="text-2xl font-bold text-gray-600">10</div>
                                     <div class="text-xs text-gray-500">SP</div>
                                 </div>
                             </div>
@@ -1091,28 +1008,32 @@
                 <div>
                     <div class="text-sm text-gray-600">Area Breakdown</div>
                     <ul class="mt-2 space-y-1">
-                        <li class="text-sm"><span class="font-semibold">Frontend:</span> 18 issues</li>
-                        <li class="text-sm"><span class="font-semibold">Backend:</span> 22 issues</li>
-                        <li class="text-sm"><span class="font-semibold">AI:</span> 25 issues</li>
-                        <li class="text-sm"><span class="font-semibold">Infra:</span> 12 issues</li>
-                        <li class="text-sm"><span class="font-semibold">Testing:</span> 8 issues</li>
+                        <li class="text-sm"><span class="font-semibold">Frontend:</span> 35 issues</li>
+                        <li class="text-sm"><span class="font-semibold">Backend:</span> 28 issues</li>
+                        <li class="text-sm"><span class="font-semibold">AI:</span> 10 issues</li>
+                        <li class="text-sm"><span class="font-semibold">Infra:</span> 14 issues</li>
+                        <li class="text-sm"><span class="font-semibold">Testing:</span> 10 issues</li>
                     </ul>
                 </div>
                 <div>
                     <div class="text-sm text-gray-600">Priority Distribution</div>
                     <ul class="mt-2 space-y-1">
-                        <li class="text-sm"><span class="font-semibold text-red-600">Critical:</span> 1</li>
-                        <li class="text-sm"><span class="font-semibold text-orange-600">High:</span> 15</li>
-                        <li class="text-sm"><span class="font-semibold text-yellow-600">Medium:</span> 20</li>
-                        <li class="text-sm"><span class="font-semibold text-gray-600">Low:</span> 25</li>
+                        <li class="text-sm"><span class="font-semibold text-red-600">Critical:</span> 0</li>
+                        <li class="text-sm"><span class="font-semibold text-orange-600">High:</span> 22</li>
+                        <li class="text-sm"><span class="font-semibold text-yellow-600">Medium:</span> 18</li>
+                        <li class="text-sm"><span class="font-semibold text-gray-600">Low:</span> 3</li>
                     </ul>
                 </div>
                 <div>
                     <div class="text-sm text-gray-600">Sequencing Strategy</div>
                     <p class="mt-2 text-sm text-gray-700">
-                        Priority-first: Critical path → AI foundation → Admin features → Frontend polish → Infrastructure
+                        Priority-first: Critical path (A: PDF Wizard) → AI foundation (B) → Admin features (C) → Frontend polish (D) → Infrastructure (E)
                     </p>
                 </div>
+            </div>
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <div class="text-sm text-gray-600">Last Updated</div>
+                <p class="mt-1 text-sm text-gray-700">2026-02-12 | 97 Open Issues | 368 Story Points | 28-33 Weeks Estimated</p>
             </div>
         </div>
     </div>
@@ -1120,8 +1041,8 @@
     <!-- Footer -->
     <footer class="bg-gray-800 text-white py-6 mt-12">
         <div class="max-w-7xl mx-auto px-4 text-center">
-            <p class="text-gray-300">🤖 Generated with Claude Code</p>
-            <p class="text-gray-400 text-sm mt-1">Last updated: 2026-02-12 | 61 Open Issues</p>
+            <p class="text-gray-300">🤖 Generated with Claude Code (PM Agent)</p>
+            <p class="text-gray-400 text-sm mt-1">Last updated: 2026-02-12 | 97 Open Issues</p>
         </div>
     </footer>
 

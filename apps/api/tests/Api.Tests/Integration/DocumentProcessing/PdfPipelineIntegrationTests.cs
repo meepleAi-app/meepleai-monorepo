@@ -741,4 +741,129 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
     }
 
     #endregion
+
+    #region Issue #4215: 7-State Pipeline Progression
+
+    [Fact]
+    public async Task PdfDocument_SevenStateProgression_ShouldAdvanceThroughAllStates()
+    {
+        // Arrange
+        var pdf = new PdfDocument(
+            Guid.NewGuid(),
+            TestGameId,
+            new FileName("seven-state-test.pdf"),
+            "/uploads/seven-state-test.pdf",
+            new FileSize(1024 * 100),
+            TestUserId,
+            LanguageCode.English
+        );
+
+        await _pdfRepository!.AddAsync(pdf, TestCancellationToken);
+        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+
+        // Assert initial state
+        pdf.ProcessingState.Should().Be(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Pending);
+
+        // Act & Assert: Progress through all 7 states
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Uploading);
+        pdf.ProcessingState.Should().Be(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Uploading);
+
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Extracting);
+        pdf.ProcessingState.Should().Be(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Extracting);
+
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Chunking);
+        pdf.ProcessingState.Should().Be(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Chunking);
+
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Embedding);
+        pdf.ProcessingState.Should().Be(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Embedding);
+
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Indexing);
+        pdf.ProcessingState.Should().Be(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Indexing);
+
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready);
+        pdf.ProcessingState.Should().Be(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready);
+
+        // Verify domain events were emitted (6 transitions)
+        pdf.DomainEvents.Should().HaveCount(6);
+        pdf.DomainEvents.Should().AllBeOfType<Api.BoundedContexts.DocumentProcessing.Domain.Events.PdfStateChangedEvent>();
+
+        // Verify final state persists
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        var retrieved = await _pdfRepository.GetByIdAsync(pdf.Id, TestCancellationToken);
+        retrieved.Should().NotBeNull();
+        retrieved!.ProcessingState.Should().Be(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready);
+    }
+
+    [Fact]
+    public async Task PdfDocument_InvalidTransition_ShouldThrowException()
+    {
+        // Arrange
+        var pdf = new PdfDocument(
+            Guid.NewGuid(),
+            TestGameId,
+            new FileName("invalid-transition-test.pdf"),
+            "/uploads/invalid-transition-test.pdf",
+            new FileSize(1024 * 100),
+            TestUserId
+        );
+
+        // Act & Assert: Try to skip states (Pending → Chunking)
+        var act = () => pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Chunking);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("Invalid state transition: Pending * Chunking*");
+    }
+
+    [Fact]
+    public async Task PdfDocument_ReadyState_CannotTransition()
+    {
+        // Arrange
+        var pdf = new PdfDocument(
+            Guid.NewGuid(),
+            TestGameId,
+            new FileName("ready-state-test.pdf"),
+            "/uploads/ready-state-test.pdf",
+            new FileSize(1024 * 100),
+            TestUserId
+        );
+
+        // Progress to Ready
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Uploading);
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Extracting);
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Chunking);
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Embedding);
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Indexing);
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready);
+
+        // Act & Assert: Cannot transition from Ready
+        var act = () => pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Extracting);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("Cannot transition from Ready state");
+    }
+
+    [Fact]
+    public async Task PdfDocument_FailedState_CanRetry()
+    {
+        // Arrange
+        var pdf = new PdfDocument(
+            Guid.NewGuid(),
+            TestGameId,
+            new FileName("retry-test.pdf"),
+            "/uploads/retry-test.pdf",
+            new FileSize(1024 * 100),
+            TestUserId
+        );
+
+        // Progress to Extracting then fail
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Uploading);
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Extracting);
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Failed);
+
+        // Act: Retry from Failed allows any recovery state
+        pdf.TransitionTo(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Extracting);
+
+        // Assert
+        pdf.ProcessingState.Should().Be(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Extracting);
+    }
+
+    #endregion
 }

@@ -1,3 +1,5 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
@@ -6,6 +8,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 /// <summary>
 /// PdfDocument aggregate root representing an uploaded PDF with extraction metadata.
 /// Issue #2029: Added Language support for PDF language filtering
+/// Issue #4215: Added granular 7-state processing pipeline
 /// </summary>
 internal sealed class PdfDocument : AggregateRoot<Guid>
 {
@@ -16,7 +19,13 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     public string ContentType { get; private set; }
     public Guid UploadedByUserId { get; private set; }
     public DateTime UploadedAt { get; private set; }
-    public string ProcessingStatus { get; private set; } // "pending", "processing", "completed", "failed"
+
+    // Issue #4215: New granular state tracking (7 states)
+    public PdfProcessingState ProcessingState { get; private set; }
+
+    // Deprecated: Keep for backward compatibility (migrate all usages in Issue #4216)
+    public string ProcessingStatus { get; private set; }
+
     public DateTime? ProcessedAt { get; private set; }
     public int? PageCount { get; private set; }
     public string? ProcessingError { get; private set; }
@@ -69,7 +78,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         ContentType = "application/pdf";
         UploadedByUserId = uploadedByUserId;
         UploadedAt = DateTime.UtcNow;
-        ProcessingStatus = "pending";
+
+        // Issue #4215: Initialize with new granular state
+        ProcessingState = PdfProcessingState.Pending;
+        ProcessingStatus = "pending"; // Backward compat
+
         Language = language ?? LanguageCode.English; // Default to English
         CollectionId = collectionId;
         DocumentType = documentType ?? ValueObjects.DocumentType.Base; // Default to base
@@ -81,6 +94,7 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     /// Issue #2140: Replaces reflection-based property mutation
     /// Issue #2732: Added SharedGameId, ContributorId, SourceDocumentId
     /// Issue #3664: Added PrivateGameId
+    /// Issue #4215: Added ProcessingState enum support
     /// </summary>
     public static PdfDocument Reconstitute(
         Guid id,
@@ -102,7 +116,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         Guid? sharedGameId = null,
         Guid? contributorId = null,
         Guid? sourceDocumentId = null,
-        Guid? privateGameId = null)
+        Guid? privateGameId = null,
+        PdfProcessingState? processingState = null)
     {
         var document = new PdfDocument
         {
@@ -114,7 +129,14 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             ContentType = "application/pdf",
             UploadedByUserId = uploadedByUserId,
             UploadedAt = uploadedAt,
+
+            // Issue #4215: Prefer enum state, fallback to string parsing
+            ProcessingState = processingState ?? ParseProcessingState(processingStatus),
+
+#pragma warning disable CS0618 // Type or member is obsolete
             ProcessingStatus = processingStatus,
+#pragma warning restore CS0618
+
             ProcessedAt = processedAt,
             PageCount = pageCount,
             ProcessingError = processingError,
@@ -132,30 +154,115 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         return document;
     }
 
+    // Issue #4215: Deprecated methods - use TransitionTo() instead
+    // Deprecated: Use TransitionTo() instead (remove in Issue #4216)
     public void MarkAsProcessing()
     {
-        if (string.Equals(ProcessingStatus, "completed", StringComparison.Ordinal))
+        if (ProcessingState == PdfProcessingState.Ready)
             throw new InvalidOperationException("Cannot reprocess completed document");
 
-        ProcessingStatus = "processing";
+        TransitionTo(PdfProcessingState.Extracting);
     }
 
+    // Deprecated: Use TransitionTo() instead (remove in Issue #4216)
     public void MarkAsCompleted(int pageCount)
     {
         if (pageCount < 1)
             throw new ArgumentException("Page count must be at least 1", nameof(pageCount));
 
-        ProcessingStatus = "completed";
-        ProcessedAt = DateTime.UtcNow;
         PageCount = pageCount;
         ProcessingError = null;
+        TransitionTo(PdfProcessingState.Ready);
+        ProcessedAt = DateTime.UtcNow;
     }
 
+    // Deprecated: Use TransitionTo() instead (remove in Issue #4216)
     public void MarkAsFailed(string error)
     {
-        ProcessingStatus = "failed";
-        ProcessedAt = DateTime.UtcNow;
         ProcessingError = error;
+        TransitionTo(PdfProcessingState.Failed);
+        ProcessedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Transitions the document to a new processing state with validation.
+    /// Issue #4215: Granular state machine for 7-state pipeline.
+    /// </summary>
+    /// <param name="newState">The target state.</param>
+    /// <exception cref="InvalidOperationException">Thrown when transition is not allowed.</exception>
+    public void TransitionTo(PdfProcessingState newState)
+    {
+        var previousState = ProcessingState;
+
+        // Validate state transition
+        ValidateStateTransition(previousState, newState);
+
+        // Update state
+        ProcessingState = newState;
+
+        // Sync deprecated property for backward compatibility
+        ProcessingStatus = newState switch
+        {
+            PdfProcessingState.Pending => "pending",
+            PdfProcessingState.Uploading or PdfProcessingState.Extracting or
+            PdfProcessingState.Chunking or PdfProcessingState.Embedding or
+            PdfProcessingState.Indexing => "processing",
+            PdfProcessingState.Ready => "completed",
+            PdfProcessingState.Failed => "failed",
+            _ => "pending"
+        };
+
+        // Emit domain event for real-time updates (Issue #4218)
+        AddDomainEvent(new PdfStateChangedEvent(Id, previousState, newState, UploadedByUserId));
+    }
+
+    /// <summary>
+    /// Validates that a state transition is allowed.
+    /// Issue #4215: Prevent invalid state transitions.
+    /// </summary>
+    private void ValidateStateTransition(PdfProcessingState current, PdfProcessingState next)
+    {
+        // Terminal states cannot transition (except Failed can retry)
+        if (current == PdfProcessingState.Ready)
+            throw new InvalidOperationException("Cannot transition from Ready state");
+
+        // Allow retry: Failed → any recovery state
+        if (current == PdfProcessingState.Failed)
+            return; // Retry mechanism (Issue #4216) handles this
+
+        // Validate forward progression only (no backwards except retry)
+        var validTransitions = current switch
+        {
+            PdfProcessingState.Pending => new[] { PdfProcessingState.Uploading, PdfProcessingState.Failed },
+            PdfProcessingState.Uploading => new[] { PdfProcessingState.Extracting, PdfProcessingState.Failed },
+            PdfProcessingState.Extracting => new[] { PdfProcessingState.Chunking, PdfProcessingState.Failed },
+            PdfProcessingState.Chunking => new[] { PdfProcessingState.Embedding, PdfProcessingState.Failed },
+            PdfProcessingState.Embedding => new[] { PdfProcessingState.Indexing, PdfProcessingState.Failed },
+            PdfProcessingState.Indexing => new[] { PdfProcessingState.Ready, PdfProcessingState.Failed },
+            _ => Array.Empty<PdfProcessingState>()
+        };
+
+        if (!validTransitions.Contains(next))
+        {
+            throw new InvalidOperationException(
+                $"Invalid state transition: {current} → {next}. Allowed: {string.Join(", ", validTransitions)}");
+        }
+    }
+
+    /// <summary>
+    /// Parses legacy string status to enum state.
+    /// Issue #4215: Backward compatibility helper.
+    /// </summary>
+    private static PdfProcessingState ParseProcessingState(string status)
+    {
+        return status switch
+        {
+            "pending" => PdfProcessingState.Pending,
+            "processing" => PdfProcessingState.Extracting, // Default to mid-pipeline
+            "completed" => PdfProcessingState.Ready,
+            "failed" => PdfProcessingState.Failed,
+            _ => PdfProcessingState.Pending
+        };
     }
 
     // Issue #2029: Update detected language after processing
@@ -248,7 +355,12 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             ContentType = "application/pdf",
             UploadedByUserId = contributorId, // Contributor becomes uploader
             UploadedAt = DateTime.UtcNow,
+
+            // Issue #4215: Copy processing state
+            ProcessingState = source.ProcessingState,
+
             ProcessingStatus = source.ProcessingStatus,
+
             ProcessedAt = source.ProcessedAt,
             PageCount = source.PageCount,
             ProcessingError = null, // Clear errors on copy

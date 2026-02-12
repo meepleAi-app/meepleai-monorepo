@@ -239,6 +239,9 @@ builder.Services.AddInfrastructureServices(builder.Configuration, builder.Enviro
 // In production, uses TimeProvider.System. Tests can override with TestTimeProvider/FakeTimeProvider.
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
+// Epic #4068: Permission system registry
+builder.Services.AddSingleton<Api.BoundedContexts.Administration.Application.Services.PermissionRegistry>();
+
 // Register IHttpContextAccessor for audit logging and request context
 builder.Services.AddHttpContextAccessor();
 
@@ -458,6 +461,7 @@ app.MapHealthChecks("/health/config", new Microsoft.AspNetCore.Diagnostics.Healt
 var v1Api = app.MapGroup("/api/v1");
 
 v1Api.MapAuthEndpoints();
+v1Api.MapPermissionEndpoints(); // Epic #4068: Permission system endpoints
 v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserProfileEndpoints();
 v1Api.MapGameEndpoints();

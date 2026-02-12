@@ -10,12 +10,13 @@ public sealed class Role : ValueObject
 {
     public static readonly Role User = new("user");
     public static readonly Role Editor = new("editor");
+    public static readonly Role Creator = new("creator"); // Epic #4068
     public static readonly Role Admin = new("admin");
     public static readonly Role SuperAdmin = new("superadmin");
 
     private static readonly HashSet<string> ValidRoles = new(StringComparer.OrdinalIgnoreCase)
     {
-        "user", "editor", "admin", "superadmin"
+        "user", "editor", "creator", "admin", "superadmin"
     };
 
     public string Value { get; }
@@ -39,6 +40,7 @@ public sealed class Role : ValueObject
 
     public bool IsAdmin() => string.Equals(Value, "admin", StringComparison.Ordinal);
     public bool IsEditor() => string.Equals(Value, "editor", StringComparison.Ordinal);
+    public bool IsCreator() => string.Equals(Value, "creator", StringComparison.Ordinal); // Epic #4068
     public bool IsUser() => string.Equals(Value, "user", StringComparison.Ordinal);
     public bool IsSuperAdmin() => string.Equals(Value, "superadmin", StringComparison.Ordinal);
 
@@ -50,6 +52,9 @@ public sealed class Role : ValueObject
 
         // Admin has all permissions except SuperAdmin
         if (IsAdmin() && !requiredRole.IsSuperAdmin()) return true;
+
+        // Creator has creator + editor + user permissions (Epic #4068)
+        if (IsCreator() && (requiredRole.IsCreator() || requiredRole.IsEditor() || requiredRole.IsUser())) return true;
 
         // Editor has editor + user permissions
         if (IsEditor() && (requiredRole.IsEditor() || requiredRole.IsUser())) return true;

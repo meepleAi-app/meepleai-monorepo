@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.BoundedContexts.Administration.Domain.Enums; // Epic #4068: UserAccountStatus
 using Api.SharedKernel.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 
@@ -16,6 +17,7 @@ public sealed class User : AggregateRoot<Guid>
     public PasswordHash PasswordHash { get; private set; }
     public Role Role { get; private set; }
     public UserTier Tier { get; private set; }
+    public UserAccountStatus Status { get; private set; } // Epic #4068 (replaces IsSuspended)
     public DateTime CreatedAt { get; private set; }
     public bool IsDemoAccount { get; private set; }
 
@@ -85,6 +87,7 @@ public sealed class User : AggregateRoot<Guid>
         PasswordHash = passwordHash ?? throw new ArgumentNullException(nameof(passwordHash));
         Role = role ?? throw new ArgumentNullException(nameof(role));
         Tier = tier ?? UserTier.Free; // Default to Free tier
+        Status = UserAccountStatus.Active; // Epic #4068
         CreatedAt = DateTime.UtcNow;
 
         // Default preferences
@@ -145,14 +148,16 @@ public sealed class User : AggregateRoot<Guid>
 
     /// <summary>
     /// Suspends the user account. Suspended users cannot login.
+    /// Epic #4068: Updated to use UserAccountStatus
     /// </summary>
-    /// <param name="reason">The reason for suspension.</param>
-    /// <exception cref="DomainException">Thrown when user is already suspended.</exception>
     public void Suspend(string? reason = null)
     {
-        if (IsSuspended)
+        if (Status == UserAccountStatus.Suspended)
             throw new DomainException("User is already suspended");
+        if (Status == UserAccountStatus.Banned)
+            throw new DomainException("Cannot suspend banned user");
 
+        Status = UserAccountStatus.Suspended;
         IsSuspended = true;
         SuspendedAt = DateTime.UtcNow;
         SuspendReason = reason;
@@ -160,14 +165,32 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Unsuspends (reactivates) the user account.
+    /// Bans the user account permanently (Epic #4068)
     /// </summary>
-    /// <exception cref="DomainException">Thrown when user is not suspended.</exception>
+    public void Ban(string reason)
+    {
+        if (Status == UserAccountStatus.Banned)
+            throw new DomainException("User is already banned");
+
+        Status = UserAccountStatus.Banned;
+        IsSuspended = true; // Maintain backward compat
+        SuspendedAt = DateTime.UtcNow;
+        SuspendReason = reason;
+        AddDomainEvent(new UserSuspendedEvent(Id, reason)); // Reuse event
+    }
+
+    /// <summary>
+    /// Unsuspends (reactivates) the user account.
+    /// Epic #4068: Updated to use UserAccountStatus
+    /// </summary>
     public void Unsuspend()
     {
         if (!IsSuspended)
             throw new DomainException("User is not suspended");
+        if (Status == UserAccountStatus.Banned)
+            throw new DomainException("Cannot unsuspend banned user - use Unban instead");
 
+        Status = UserAccountStatus.Active;
         IsSuspended = false;
         SuspendedAt = null;
         SuspendReason = null;
@@ -175,9 +198,25 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Checks if the user can authenticate (not suspended).
+    /// Unbans the user account (Epic #4068)
     /// </summary>
-    public bool CanAuthenticate() => !IsSuspended;
+    public void Unban()
+    {
+        if (Status != UserAccountStatus.Banned)
+            throw new DomainException("User is not banned");
+
+        Status = UserAccountStatus.Active;
+        IsSuspended = false;
+        SuspendedAt = null;
+        SuspendReason = null;
+        AddDomainEvent(new UserUnsuspendedEvent(Id));
+    }
+
+    /// <summary>
+    /// Checks if the user can authenticate (not suspended/banned).
+    /// Epic #4068: Updated to check UserAccountStatus
+    /// </summary>
+    public bool CanAuthenticate() => Status == UserAccountStatus.Active;
 
     /// <summary>
     /// Updates the user's email address.

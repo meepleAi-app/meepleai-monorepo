@@ -18,7 +18,7 @@
     <header class="gradient-bg text-white py-8 px-4 shadow-lg">
         <div class="max-w-7xl mx-auto">
             <h1 class="text-4xl font-bold mb-2">🎲 MeepleAI Implementation Sequences</h1>
-            <p class="text-purple-100 text-lg">Strategic roadmap per issue aperte - 103 issues attive</p>
+            <p class="text-purple-100 text-lg">Strategic roadmap per issue aperte - 100 issues attive</p>
         </div>
     </header>
 
@@ -26,7 +26,7 @@
     <div class="max-w-7xl mx-auto px-4 -mt-6 mb-8">
         <div class="bg-white rounded-lg shadow-lg p-6 grid grid-cols-2 md:grid-cols-5 gap-4">
             <div class="text-center">
-                <div class="text-3xl font-bold text-purple-600">103</div>
+                <div class="text-3xl font-bold text-purple-600">100</div>
                 <div class="text-sm text-gray-600">Open Issues</div>
             </div>
             <div class="text-center">
@@ -1033,7 +1033,56 @@
             </div>
             <div class="mt-6 pt-6 border-t border-gray-200">
                 <div class="text-sm text-gray-600">Last Updated</div>
-                <p class="mt-1 text-sm text-gray-700">2026-02-12 | 97 Open Issues | 368 Story Points | 28-33 Weeks Estimated</p>
+                <p class="mt-1 text-sm text-gray-700">2026-02-12 | 100 Open Issues | 100 Closed (last 3mo) | 368 Story Points | 28-33 Weeks Estimated</p>
+            </div>
+        </div>
+
+        <!-- Issue Status Overview -->
+        <div class="bg-white rounded-lg shadow-xl overflow-hidden mt-12">
+            <div class="bg-gradient-to-r from-gray-700 to-slate-700 text-white px-6 py-4">
+                <h2 class="text-2xl font-bold">📋 Issue Status Overview</h2>
+                <p class="text-gray-200 mt-1">All issues with acceptance criteria progress (200 total: 100 open + 100 closed last 3mo)</p>
+                <div class="flex flex-col gap-3 mt-4 text-sm">
+                    <div class="flex gap-2 items-center">
+                        <span class="text-gray-300 text-xs font-semibold w-24">State:</span>
+                        <span class="bg-white/20 px-3 py-1 rounded cursor-pointer hover:bg-white/30 transition" onclick="setStateFilter('all')" id="state-all">All (200)</span>
+                        <span class="bg-white/20 px-3 py-1 rounded cursor-pointer hover:bg-white/30 transition" onclick="setStateFilter('open')" id="state-open">Open (100)</span>
+                        <span class="bg-white/20 px-3 py-1 rounded cursor-pointer hover:bg-white/30 transition" onclick="setStateFilter('closed')" id="state-closed">Closed (100)</span>
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <span class="text-gray-300 text-xs font-semibold w-24">Progress:</span>
+                        <span class="bg-white/20 px-3 py-1 rounded cursor-pointer hover:bg-white/30 transition" onclick="setProgressFilter('all')" id="progress-all">All (200)</span>
+                        <span class="bg-orange-500/30 px-3 py-1 rounded cursor-pointer hover:bg-orange-500/50 transition" onclick="setProgressFilter('incomplete')" id="progress-incomplete">Incomplete (154)</span>
+                        <span class="bg-yellow-500/30 px-3 py-1 rounded cursor-pointer hover:bg-yellow-500/50 transition" onclick="setProgressFilter('with-tasks')" id="progress-with-tasks">Has Tasks (171)</span>
+                        <span class="bg-green-500/30 px-3 py-1 rounded cursor-pointer hover:bg-green-500/50 transition" onclick="setProgressFilter('complete')" id="progress-complete">Complete (17)</span>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <input type="text" id="issueSearch" placeholder="Search by number or title..."
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                           onkeyup="searchIssues()">
+                </div>
+                <div class="overflow-x-auto max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">Done</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">#</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Progress</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="issuesTableBody" class="bg-white divide-y divide-gray-200">
+                            <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Loading issues...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 text-center text-sm text-gray-500" id="issueCount">
+                    Loading issues...
+                </div>
             </div>
         </div>
     </div>
@@ -1042,11 +1091,210 @@
     <footer class="bg-gray-800 text-white py-6 mt-12">
         <div class="max-w-7xl mx-auto px-4 text-center">
             <p class="text-gray-300">🤖 Generated with Claude Code (PM Agent)</p>
-            <p class="text-gray-400 text-sm mt-1">Last updated: 2026-02-12 | 97 Open Issues</p>
+            <p class="text-gray-400 text-sm mt-1">Last updated: 2026-02-12 | 100 Open | 100 Closed (3mo) | 75 Need Work</p>
         </div>
     </footer>
 
     <script>
+        // Issue data management
+        let allIssues = [];
+        let filteredIssues = [];
+        let stateFilter = 'all';
+        let progressFilter = 'all';
+
+        // Load issues from JSON
+        async function loadIssues() {
+            try {
+                const response = await fetch('./issues_data.json');
+                const data = await response.json();
+                allIssues = data.issues;
+                filteredIssues = allIssues;
+                updateFilterCounts();
+                renderIssues();
+            } catch (error) {
+                console.error('Error loading issues:', error);
+                const tbody = document.getElementById('issuesTableBody');
+                tbody.textContent = '';
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.setAttribute('colspan', '5');
+                td.className = 'px-4 py-8 text-center text-red-500';
+                td.textContent = 'Error loading issues. Check console.';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+            }
+        }
+
+        // Update filter button counts
+        function updateFilterCounts() {
+            const openCount = allIssues.filter(i => !i.c).length;
+            const closedCount = allIssues.filter(i => i.c).length;
+            const incompleteCount = allIssues.filter(i => i.cb && i.cb.c < i.cb.t).length;
+            const withTasksCount = allIssues.filter(i => i.cb && i.cb.t > 0).length;
+            const completeCount = allIssues.filter(i => i.cb && i.cb.c === i.cb.t).length;
+
+            document.getElementById('state-all').textContent = 'All (' + allIssues.length + ')';
+            document.getElementById('state-open').textContent = 'Open (' + openCount + ')';
+            document.getElementById('state-closed').textContent = 'Closed (' + closedCount + ')';
+            document.getElementById('progress-all').textContent = 'All (' + allIssues.length + ')';
+            document.getElementById('progress-incomplete').textContent = 'Incomplete (' + incompleteCount + ')';
+            document.getElementById('progress-with-tasks').textContent = 'Has Tasks (' + withTasksCount + ')';
+            document.getElementById('progress-complete').textContent = 'Complete (' + completeCount + ')';
+        }
+
+        // Set state filter
+        function setStateFilter(state) {
+            stateFilter = state;
+            updateActiveFilters('state');
+            applyFilters();
+        }
+
+        // Set progress filter
+        function setProgressFilter(progress) {
+            progressFilter = progress;
+            updateActiveFilters('progress');
+            applyFilters();
+        }
+
+        // Update active filter styling
+        function updateActiveFilters(filterType) {
+            const prefix = filterType === 'state' ? 'state-' : 'progress-';
+            document.querySelectorAll('[id^="' + prefix + '"]').forEach(el => {
+                el.classList.remove('bg-white/40', 'ring-2', 'ring-white');
+            });
+            const activeEl = document.getElementById(prefix + (filterType === 'state' ? stateFilter : progressFilter));
+            if (activeEl) {
+                activeEl.classList.add('bg-white/40', 'ring-2', 'ring-white');
+            }
+        }
+
+        // Apply combined filters
+        function applyFilters() {
+            filteredIssues = allIssues.filter(issue => {
+                let passesState = true;
+                if (stateFilter === 'open') passesState = !issue.c;
+                else if (stateFilter === 'closed') passesState = issue.c;
+
+                let passesProgress = true;
+                if (progressFilter === 'incomplete') {
+                    passesProgress = issue.cb && issue.cb.c < issue.cb.t;
+                } else if (progressFilter === 'with-tasks') {
+                    passesProgress = issue.cb && issue.cb.t > 0;
+                } else if (progressFilter === 'complete') {
+                    passesProgress = issue.cb && issue.cb.c === issue.cb.t;
+                }
+
+                return passesState && passesProgress;
+            });
+            renderIssues();
+        }
+
+        // Search issues
+        function searchIssues() {
+            const query = document.getElementById('issueSearch').value.toLowerCase();
+            filteredIssues = allIssues.filter(issue => {
+                const matchesSearch = query === '' || issue.t.toLowerCase().includes(query) || issue.n.toString().includes(query);
+                let passesState = true;
+                if (stateFilter === 'open') passesState = !issue.c;
+                else if (stateFilter === 'closed') passesState = issue.c;
+                let passesProgress = true;
+                if (progressFilter === 'incomplete') passesProgress = issue.cb && issue.cb.c < issue.cb.t;
+                else if (progressFilter === 'with-tasks') passesProgress = issue.cb && issue.cb.t > 0;
+                else if (progressFilter === 'complete') passesProgress = issue.cb && issue.cb.c === issue.cb.t;
+                return matchesSearch && passesState && passesProgress;
+            });
+            renderIssues();
+        }
+
+        // Render issues to table
+        function renderIssues() {
+            const tbody = document.getElementById('issuesTableBody');
+            const issueCount = document.getElementById('issueCount');
+            tbody.textContent = '';
+
+            if (filteredIssues.length === 0) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.setAttribute('colspan', '5');
+                td.className = 'px-4 py-8 text-center text-gray-500';
+                td.textContent = 'No issues found';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+                issueCount.textContent = 'No issues match your filters';
+                return;
+            }
+
+            filteredIssues.forEach(issue => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 ' + (issue.c ? 'bg-green-50/50' : '');
+
+                // Checkbox
+                const tdCheck = document.createElement('td');
+                tdCheck.className = 'px-4 py-2 text-center text-lg';
+                tdCheck.textContent = issue.c ? '☑' : '☐';
+                tr.appendChild(tdCheck);
+
+                // Number
+                const tdNum = document.createElement('td');
+                tdNum.className = 'px-4 py-2 font-mono text-sm';
+                tdNum.textContent = '#' + issue.n;
+                tr.appendChild(tdNum);
+
+                // Title
+                const tdTitle = document.createElement('td');
+                tdTitle.className = 'px-4 py-2';
+                const link = document.createElement('a');
+                link.href = 'https://github.com/DegrassiAaron/meepleai-monorepo/issues/' + issue.n;
+                link.target = '_blank';
+                link.className = 'text-blue-600 hover:text-blue-800 hover:underline';
+                link.textContent = issue.t;
+                tdTitle.appendChild(link);
+                tr.appendChild(tdTitle);
+
+                // Progress
+                const tdProg = document.createElement('td');
+                tdProg.className = 'px-4 py-2';
+                if (issue.cb && issue.cb.t > 0) {
+                    const div = document.createElement('div');
+                    div.className = 'flex flex-col gap-1';
+                    const text = document.createElement('span');
+                    text.className = 'text-xs font-mono';
+                    const pct = Math.round((issue.cb.c / issue.cb.t) * 100);
+                    text.textContent = issue.cb.c + '/' + issue.cb.t + ' (' + pct + '%)';
+                    const barCont = document.createElement('div');
+                    barCont.className = 'w-full bg-gray-200 rounded-full h-2';
+                    const barFill = document.createElement('div');
+                    barFill.className = 'h-2 rounded-full ' + (pct === 100 ? 'bg-green-500' : pct >= 50 ? 'bg-blue-500' : 'bg-orange-500');
+                    barFill.style.width = pct + '%';
+                    barCont.appendChild(barFill);
+                    div.appendChild(text);
+                    div.appendChild(barCont);
+                    tdProg.appendChild(div);
+                } else {
+                    const na = document.createElement('span');
+                    na.className = 'text-xs text-gray-400';
+                    na.textContent = 'N/A';
+                    tdProg.appendChild(na);
+                }
+                tr.appendChild(tdProg);
+
+                // Status
+                const tdStat = document.createElement('td');
+                tdStat.className = 'px-4 py-2';
+                const badge = document.createElement('span');
+                badge.className = 'px-2 py-1 text-xs rounded ' + (issue.c ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800');
+                badge.textContent = issue.c ? 'Closed' : 'Open';
+                tdStat.appendChild(badge);
+                tr.appendChild(tdStat);
+
+                tbody.appendChild(tr);
+            });
+
+            const openCnt = filteredIssues.filter(i => !i.c).length;
+            const closedCnt = filteredIssues.filter(i => i.c).length;
+            issueCount.textContent = 'Showing ' + filteredIssues.length + ' issues (' + openCnt + ' open, ' + closedCnt + ' closed)';
+        }
+
         // Add click tracking
         document.querySelectorAll('a[href*="github.com"]').forEach(link => {
             link.addEventListener('click', (e) => {
@@ -1063,6 +1311,13 @@
                     target.scrollIntoView({ behavior: 'smooth' });
                 }
             });
+        });
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadIssues();
+            updateActiveFilters('state');
+            updateActiveFilters('progress');
         });
     </script>
 </body>
